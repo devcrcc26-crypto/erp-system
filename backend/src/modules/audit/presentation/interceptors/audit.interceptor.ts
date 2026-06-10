@@ -12,6 +12,7 @@ import { AuditService } from '../../application/services/audit.service';
 const EXCLUDED_PATH_PREFIXES = [
   '/api/health',
   '/api/auth/login',
+  '/api/auth/logout',
   '/api/auth/refresh',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',

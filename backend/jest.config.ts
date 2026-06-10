@@ -19,6 +19,7 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@prisma/client$': '<rootDir>/generated/prisma',
   },
+  transformIgnorePatterns: ['node_modules/', '<rootDir>/generated/prisma/'],
 };
 
 export default config;

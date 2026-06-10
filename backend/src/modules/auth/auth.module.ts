@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { AuditModule } from '../audit/audit.module';
 import { AUTH_REPOSITORY } from './domain/repositories/auth.repository.interface';
 import { AuthRepository } from './infrastructure/repositories/auth.repository';
 import { ForgotPasswordHandler } from './application/commands/forgot-password.handler';
@@ -25,6 +26,7 @@ const CommandHandlers = [
 
 @Module({
   imports: [
+    AuditModule,
     CqrsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

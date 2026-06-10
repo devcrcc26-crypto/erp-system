@@ -10,5 +10,6 @@
     "^@/(.*)$": "<rootDir>/../src/$1",
     "^@prisma/client$": "<rootDir>/../src/generated/prisma"
   },
-  "setupFiles": ["<rootDir>/setup-env.ts"]
+  "setupFiles": ["<rootDir>/setup-env.ts"],
+  "transformIgnorePatterns": ["node_modules/", "<rootDir>/../src/generated/prisma/"]
 }

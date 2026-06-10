@@ -54,6 +54,20 @@ describe('AuditInterceptor', () => {
     expect(auditService.create).not.toHaveBeenCalled();
   });
 
+  it('skips logout (audited in LogoutHandler before session deletion)', async () => {
+    await lastValueFrom(
+      interceptor.intercept(
+        buildContext('POST', '/api/auth/logout', {
+          userId: 'user-1',
+          companyId: 'company-1',
+          sessionId: 'session-1',
+        }),
+        next,
+      ),
+    );
+    expect(auditService.create).not.toHaveBeenCalled();
+  });
+
   it('writes audit log on successful CUD', async () => {
     const user = {
       userId: 'user-1',
