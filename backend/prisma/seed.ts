@@ -500,6 +500,53 @@ async function main(): Promise<void> {
     },
   });
 
+  // ── Sample report definition ─────────────────────────────────────────────
+  await prisma.reportDefinition.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000050' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000050',
+      companyId: company.id,
+      createdBy: adminUser.id,
+      name: 'Active Users',
+      dataSource: 'users',
+      fields: [
+        { field: 'email' },
+        { field: 'firstName' },
+        { field: 'lastName' },
+        { field: 'isActive' },
+      ],
+      filters: [],
+      grouping: [],
+      sorting: [{ field: 'createdAt', direction: 'desc' }],
+      isSystem: true,
+      isShared: true,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  // ── Dashboard widget for System Administrator ────────────────────────────
+  if (adminRoleId) {
+    await prisma.dashboardWidget.upsert({
+      where: { id: '00000000-0000-0000-0000-000000000060' },
+      update: {},
+      create: {
+        id: '00000000-0000-0000-0000-000000000060',
+        companyId: company.id,
+        roleId: adminRoleId,
+        widgetType: 'kpi_card',
+        title: 'Active Users',
+        config: { dataSource: 'users', metric: 'count', filter: { isActive: true } },
+        positionX: 0,
+        positionY: 0,
+        width: 4,
+        height: 2,
+        createdBy: adminUser.id,
+        updatedBy: adminUser.id,
+      },
+    });
+  }
+
   // ── Notification template ────────────────────────────────────────────────
   await prisma.notificationTemplate.upsert({
     where: {

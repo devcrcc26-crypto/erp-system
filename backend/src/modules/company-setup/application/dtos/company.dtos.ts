@@ -1,0 +1,264 @@
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+export class UpdateCompanyDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  legalName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  registrationNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  vatNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  baseCurrency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  defaultLanguage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  defaultTimezone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  defaultDateFormat?: string;
+}
+
+export class CreateCompanySettingDto {
+  @ApiProperty()
+  @IsString()
+  module!: string;
+
+  @ApiProperty()
+  @IsString()
+  key!: string;
+
+  @ApiProperty()
+  @IsString()
+  value!: string;
+
+  @ApiPropertyOptional({ enum: ['STRING', 'NUMBER', 'BOOLEAN', 'JSON'] })
+  @IsOptional()
+  @IsIn(['STRING', 'NUMBER', 'BOOLEAN', 'JSON'])
+  dataType?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
+}
+
+export class UpdateCompanySettingDto extends PartialType(CreateCompanySettingDto) {}
+
+export class CreateBranchDto {
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isHeadOffice?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateBranchDto extends PartialType(CreateBranchDto) {}
+
+export class CreateDivisionDto {
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty()
+  @IsString()
+  code!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateDivisionDto extends PartialType(CreateDivisionDto) {}
+
+export class CreateDepartmentDto {
+  @ApiProperty()
+  @IsString()
+  divisionId!: string;
+
+  @ApiProperty()
+  @IsString()
+  branchId!: string;
+
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty()
+  @IsString()
+  code!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateDepartmentDto extends PartialType(CreateDepartmentDto) {}
+
+export class CreateCostCentreDto {
+  @ApiProperty()
+  @IsString()
+  departmentId!: string;
+
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty()
+  @IsString()
+  code!: string;
+
+  @ApiPropertyOptional({ enum: ['DIRECT', 'INDIRECT', 'OVERHEAD'] })
+  @IsOptional()
+  @IsEnum(['DIRECT', 'INDIRECT', 'OVERHEAD'])
+  type?: 'DIRECT' | 'INDIRECT' | 'OVERHEAD';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateCostCentreDto extends PartialType(CreateCostCentreDto) {}
+
+export class CreatePositionDto {
+  @ApiProperty()
+  @IsString()
+  departmentId!: string;
+
+  @ApiProperty()
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  grade?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdatePositionDto extends PartialType(CreatePositionDto) {}
+
+export class CreateFinancialYearDto {
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  startDate!: string;
+
+  @ApiProperty()
+  @IsDateString()
+  endDate!: string;
+
+  @ApiPropertyOptional({ enum: ['OPEN', 'CLOSED'] })
+  @IsOptional()
+  @IsIn(['OPEN', 'CLOSED'])
+  status?: 'OPEN' | 'CLOSED';
+}
+
+export class UpdateFinancialYearDto extends PartialType(CreateFinancialYearDto) {}
+
+export class CreateNumberSeriesDto {
+  @ApiProperty()
+  @IsString()
+  documentType!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  prefix?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  suffix?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  padding?: number;
+
+  @ApiPropertyOptional({ enum: ['NEVER', 'YEARLY', 'MONTHLY'] })
+  @IsOptional()
+  @IsIn(['NEVER', 'YEARLY', 'MONTHLY'])
+  resetFrequency?: 'NEVER' | 'YEARLY' | 'MONTHLY';
+}
+
+export class UpdateNumberSeriesDto extends PartialType(CreateNumberSeriesDto) {}

@@ -1,0 +1,75 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import {
+  CreateDashboardWidgetDto,
+  UpdateDashboardWidgetDto,
+} from '../../application/dtos/reporting.dtos';
+import { DashboardService } from '../../application/services/dashboard.service';
+
+@ApiTags('Dashboard')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@Controller('dashboard')
+export class DashboardController {
+  constructor(private readonly dashboardService: DashboardService) {}
+
+  private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('widgets')
+  @RequirePermission('reports', 'view')
+  @ApiOperation({ summary: 'List dashboard widgets for current user roles' })
+  listForUser(@CurrentUser() user: AuthenticatedUser): Promise<unknown[]> {
+    return this.dashboardService.listForUser(this.ctx(user));
+  }
+
+  @Get('widgets/all')
+  @RequirePermission('reports', 'edit')
+  @ApiOperation({ summary: 'List all dashboard widgets (admin)' })
+  listAll(@CurrentUser() user: AuthenticatedUser): Promise<unknown[]> {
+    return this.dashboardService.listAll(this.ctx(user));
+  }
+
+  @Post('widgets')
+  @RequirePermission('reports', 'edit')
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateDashboardWidgetDto,
+  ): Promise<unknown> {
+    return this.dashboardService.create(this.ctx(user), dto);
+  }
+
+  @Patch('widgets/:id')
+  @RequirePermission('reports', 'edit')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateDashboardWidgetDto,
+  ): Promise<unknown> {
+    return this.dashboardService.update(this.ctx(user), id, dto);
+  }
+
+  @Delete('widgets/:id')
+  @RequirePermission('reports', 'edit')
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.dashboardService.delete(this.ctx(user), id);
+    return { message: 'Widget deleted' };
+  }
+}

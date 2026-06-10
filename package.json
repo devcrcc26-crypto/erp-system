@@ -16,7 +16,9 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run prisma:migrate --workspace=backend",
     "db:seed": "npm run prisma:seed --workspace=backend",
-    "db:studio": "npm run prisma:studio --workspace=backend"
+    "db:studio": "npm run prisma:studio --workspace=backend",
+    "test:backend": "npm run test --workspace=backend",
+    "test:backend:e2e": "npm run test:e2e --workspace=backend"
   },
   "devDependencies": {
     "turbo": "^2.5.4"

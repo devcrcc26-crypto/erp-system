@@ -39,3 +39,4 @@ coverage/
 
 # Prisma
 backend/prisma/migrations/**/migration_lock.toml
+backend/src/generated/

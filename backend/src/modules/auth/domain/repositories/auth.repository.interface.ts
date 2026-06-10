@@ -1,0 +1,53 @@
+import { User, UserSession } from '@prisma/client';
+
+export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
+
+export interface UserWithCompany extends User {
+  company: {
+    id: string;
+    legalName: string;
+    defaultLanguage: string;
+    defaultTimezone: string;
+    defaultDateFormat: string;
+  };
+}
+
+export interface CreateSessionInput {
+  userId: string;
+  companyId: string;
+  refreshTokenHash: string;
+  deviceInfo?: string;
+  ipAddress?: string;
+  expiresAt: Date;
+}
+
+export interface CreatePasswordResetInput {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+}
+
+export interface IAuthRepository {
+  findActiveUserByEmail(email: string): Promise<UserWithCompany | null>;
+  findActiveUserById(userId: string): Promise<UserWithCompany | null>;
+  findSessionById(sessionId: string): Promise<UserSession | null>;
+  createSession(input: CreateSessionInput): Promise<UserSession>;
+  updateSessionRefreshToken(
+    sessionId: string,
+    refreshTokenHash: string,
+    expiresAt: Date,
+  ): Promise<UserSession>;
+  touchSession(sessionId: string): Promise<void>;
+  deleteSession(sessionId: string): Promise<void>;
+  updateUserLastLogin(userId: string): Promise<void>;
+  updateUserPassword(userId: string, passwordHash: string): Promise<void>;
+  createPasswordResetToken(input: CreatePasswordResetInput): Promise<void>;
+  findActivePasswordResetTokens(userId: string): Promise<
+    Array<{
+      id: string;
+      tokenHash: string;
+    }>
+  >;
+  markPasswordResetTokenUsed(tokenId: string): Promise<void>;
+  revokeUserSessions(userId: string): Promise<void>;
+}

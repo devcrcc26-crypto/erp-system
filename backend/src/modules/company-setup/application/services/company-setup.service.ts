@@ -1,0 +1,621 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { FinancialPeriodStatus, Prisma } from '@prisma/client';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  buildOrderBy,
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
+import {
+  CreateBranchDto,
+  CreateCompanySettingDto,
+  CreateCostCentreDto,
+  CreateDepartmentDto,
+  CreateDivisionDto,
+  CreateFinancialYearDto,
+  CreateNumberSeriesDto,
+  CreatePositionDto,
+  UpdateBranchDto,
+  UpdateCompanyDto,
+  UpdateCompanySettingDto,
+  UpdateCostCentreDto,
+  UpdateDepartmentDto,
+  UpdateDivisionDto,
+  UpdateFinancialYearDto,
+  UpdateNumberSeriesDto,
+  UpdatePositionDto,
+} from '../dtos/company.dtos';
+
+type AuditContext = { companyId: string; userId: string };
+
+@Injectable()
+export class CompanySetupService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getCompany(ctx: AuditContext): Promise<unknown> {
+    const company = await this.prisma.company.findFirst({
+      where: activeOnly({ id: ctx.companyId }),
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    return company;
+  }
+
+  async updateCompany(
+    ctx: AuditContext,
+    dto: UpdateCompanyDto,
+  ): Promise<unknown> {
+    return this.prisma.company.update({
+      where: { id: ctx.companyId },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async listCompanySettings(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = activeOnly({ companyId: ctx.companyId });
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.companySetting.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      this.prisma.companySetting.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async createCompanySetting(
+    ctx: AuditContext,
+    dto: CreateCompanySettingDto,
+  ): Promise<unknown> {
+    return this.prisma.companySetting.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateCompanySetting(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateCompanySettingDto,
+  ): Promise<unknown> {
+    await this.assertCompanySetting(id, ctx.companyId);
+    return this.prisma.companySetting.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteCompanySetting(ctx: AuditContext, id: string): Promise<void> {
+    await this.assertCompanySetting(id, ctx.companyId);
+    await this.prisma.companySetting.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listBranches(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('branch', ctx.companyId, query);
+  }
+
+  async getBranch(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findOrThrow('branch', id, ctx.companyId);
+  }
+
+  async createBranch(ctx: AuditContext, dto: CreateBranchDto): Promise<unknown> {
+    return this.prisma.branch.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateBranch(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateBranchDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('branch', id, ctx.companyId);
+    return this.prisma.branch.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteBranch(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('branch', id, ctx.companyId);
+    await this.prisma.branch.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listDivisions(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('division', ctx.companyId, query);
+  }
+
+  async getDivision(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findOrThrow('division', id, ctx.companyId);
+  }
+
+  async createDivision(
+    ctx: AuditContext,
+    dto: CreateDivisionDto,
+  ): Promise<unknown> {
+    return this.prisma.division.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateDivision(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateDivisionDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('division', id, ctx.companyId);
+    return this.prisma.division.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteDivision(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('division', id, ctx.companyId);
+    await this.prisma.division.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listDepartments(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('department', ctx.companyId, query);
+  }
+
+  async getDepartment(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findOrThrow('department', id, ctx.companyId);
+  }
+
+  async createDepartment(
+    ctx: AuditContext,
+    dto: CreateDepartmentDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('division', dto.divisionId, ctx.companyId);
+    await this.findOrThrow('branch', dto.branchId, ctx.companyId);
+    return this.prisma.department.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateDepartment(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateDepartmentDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('department', id, ctx.companyId);
+    if (dto.divisionId) {
+      await this.findOrThrow('division', dto.divisionId, ctx.companyId);
+    }
+    if (dto.branchId) {
+      await this.findOrThrow('branch', dto.branchId, ctx.companyId);
+    }
+    return this.prisma.department.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteDepartment(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('department', id, ctx.companyId);
+    await this.prisma.department.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listCostCentres(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('costCentre', ctx.companyId, query);
+  }
+
+  async getCostCentre(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findOrThrow('costCentre', id, ctx.companyId);
+  }
+
+  async createCostCentre(
+    ctx: AuditContext,
+    dto: CreateCostCentreDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('department', dto.departmentId, ctx.companyId);
+    return this.prisma.costCentre.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateCostCentre(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateCostCentreDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('costCentre', id, ctx.companyId);
+    if (dto.departmentId) {
+      await this.findOrThrow('department', dto.departmentId, ctx.companyId);
+    }
+    return this.prisma.costCentre.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteCostCentre(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('costCentre', id, ctx.companyId);
+    await this.prisma.costCentre.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listPositions(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('position', ctx.companyId, query);
+  }
+
+  async getPosition(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findOrThrow('position', id, ctx.companyId);
+  }
+
+  async createPosition(
+    ctx: AuditContext,
+    dto: CreatePositionDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('department', dto.departmentId, ctx.companyId);
+    return this.prisma.position.create({
+      data: {
+        companyId: ctx.companyId,
+        ...dto,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updatePosition(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdatePositionDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('position', id, ctx.companyId);
+    if (dto.departmentId) {
+      await this.findOrThrow('department', dto.departmentId, ctx.companyId);
+    }
+    return this.prisma.position.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deletePosition(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('position', id, ctx.companyId);
+    await this.prisma.position.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listFinancialYears(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = { companyId: ctx.companyId };
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.financialYear.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      this.prisma.financialYear.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async getFinancialYear(ctx: AuditContext, id: string): Promise<unknown> {
+    const year = await this.prisma.financialYear.findFirst({
+      where: { id, companyId: ctx.companyId },
+      include: { periods: { orderBy: { periodNumber: 'asc' } } },
+    });
+    if (!year) {
+      throw new NotFoundException('Financial year not found');
+    }
+    return year;
+  }
+
+  async createFinancialYear(
+    ctx: AuditContext,
+    dto: CreateFinancialYearDto,
+  ): Promise<unknown> {
+    return this.prisma.financialYear.create({
+      data: {
+        companyId: ctx.companyId,
+        name: dto.name,
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        status: dto.status ?? 'OPEN',
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateFinancialYear(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateFinancialYearDto,
+  ): Promise<unknown> {
+    await this.getFinancialYear(ctx, id);
+    return this.prisma.financialYear.update({
+      where: { id },
+      data: {
+        ...dto,
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async listFinancialPeriods(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+    financialYearId?: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const where: Prisma.FinancialPeriodWhereInput = {
+      companyId: ctx.companyId,
+      ...(financialYearId ? { financialYearId } : {}),
+    };
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.financialPeriod.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      this.prisma.financialPeriod.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async getFinancialPeriod(ctx: AuditContext, id: string): Promise<unknown> {
+    const period = await this.prisma.financialPeriod.findFirst({
+      where: { id, companyId: ctx.companyId },
+    });
+    if (!period) {
+      throw new NotFoundException('Financial period not found');
+    }
+    return period;
+  }
+
+  /**
+   * Locks a financial period (OPEN → LOCKED).
+   */
+  async lockFinancialPeriod(ctx: AuditContext, id: string): Promise<unknown> {
+    const period = await this.getFinancialPeriod(ctx, id);
+    const current = period as { status: FinancialPeriodStatus };
+    if (current.status !== FinancialPeriodStatus.OPEN) {
+      throw new BadRequestException('Only OPEN periods can be locked');
+    }
+    return this.prisma.financialPeriod.update({
+      where: { id },
+      data: {
+        status: FinancialPeriodStatus.LOCKED,
+        lockedAt: new Date(),
+        lockedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  /**
+   * Closes a financial period (LOCKED → CLOSED).
+   */
+  async closeFinancialPeriod(ctx: AuditContext, id: string): Promise<unknown> {
+    const period = await this.getFinancialPeriod(ctx, id);
+    const current = period as { status: FinancialPeriodStatus };
+    if (current.status !== FinancialPeriodStatus.LOCKED) {
+      throw new BadRequestException('Period must be LOCKED before closing');
+    }
+    return this.prisma.financialPeriod.update({
+      where: { id },
+      data: {
+        status: FinancialPeriodStatus.CLOSED,
+        closedAt: new Date(),
+        closedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async listNumberSeries(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    return this.paginate('numberSeries', ctx.companyId, query);
+  }
+
+  async createNumberSeries(
+    ctx: AuditContext,
+    dto: CreateNumberSeriesDto,
+  ): Promise<unknown> {
+    const sequenceName = `seq_${ctx.companyId.replace(/-/g, '_')}_${dto.documentType.toLowerCase()}`;
+    const existing = await this.prisma.numberSeries.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        documentType: dto.documentType,
+      }),
+    });
+    if (existing) {
+      throw new ConflictException('Number series already exists for document type');
+    }
+    await this.prisma.$executeRawUnsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "${sequenceName}" START WITH 1 INCREMENT BY 1`,
+    );
+    return this.prisma.numberSeries.create({
+      data: {
+        companyId: ctx.companyId,
+        documentType: dto.documentType,
+        prefix: dto.prefix ?? '',
+        suffix: dto.suffix ?? '',
+        sequenceName,
+        padding: dto.padding ?? 5,
+        resetFrequency: dto.resetFrequency ?? 'NEVER',
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateNumberSeries(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateNumberSeriesDto,
+  ): Promise<unknown> {
+    await this.findOrThrow('numberSeries', id, ctx.companyId);
+    return this.prisma.numberSeries.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteNumberSeries(ctx: AuditContext, id: string): Promise<void> {
+    await this.findOrThrow('numberSeries', id, ctx.companyId);
+    await this.prisma.numberSeries.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  /**
+   * Returns the next document number from the PostgreSQL sequence.
+   */
+  async getNextDocumentNumber(
+    ctx: AuditContext,
+    documentType: string,
+  ): Promise<{ documentNumber: string }> {
+    const series = await this.prisma.numberSeries.findFirst({
+      where: activeOnly({ companyId: ctx.companyId, documentType }),
+    });
+    if (!series) {
+      throw new NotFoundException('Number series not found');
+    }
+    const result = await this.prisma.$queryRawUnsafe<
+      Array<{ nextval: bigint | number }>
+    >(`SELECT nextval('${series.sequenceName}') as nextval`);
+    const next = Number(result[0]?.nextval ?? 1);
+    const padded = String(next).padStart(series.padding, '0');
+    return {
+      documentNumber: `${series.prefix}${padded}${series.suffix}`,
+    };
+  }
+
+  private async paginate(
+    model: 'branch' | 'division' | 'department' | 'costCentre' | 'position' | 'numberSeries',
+    companyId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = activeOnly({ companyId });
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const delegate = this.prisma[model] as {
+      findMany: (args: object) => Promise<unknown[]>;
+      count: (args: object) => Promise<number>;
+    };
+    const [data, total] = await Promise.all([
+      delegate.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      delegate.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  private async findOrThrow(
+    model: 'branch' | 'division' | 'department' | 'costCentre' | 'position' | 'numberSeries',
+    id: string,
+    companyId: string,
+  ): Promise<unknown> {
+    const delegate = this.prisma[model] as {
+      findFirst: (args: object) => Promise<unknown | null>;
+    };
+    const record = await delegate.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!record) {
+      throw new NotFoundException(`${model} not found`);
+    }
+    return record;
+  }
+
+  private async assertCompanySetting(
+    id: string,
+    companyId: string,
+  ): Promise<void> {
+    const setting = await this.prisma.companySetting.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!setting) {
+      throw new NotFoundException('Company setting not found');
+    }
+  }
+}

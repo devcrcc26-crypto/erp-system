@@ -1,0 +1,363 @@
+import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
+import { Queue } from 'bullmq';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  buildOrderBy,
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
+import {
+  NOTIFICATION_QUEUE,
+  SEND_NOTIFICATION_JOB,
+  SendNotificationJobData,
+} from '../constants/queue.constants';
+import {
+  CreateNotificationTemplateDto,
+  SendNotificationDto,
+  UpdateNotificationTemplateDto,
+  UpsertNotificationPreferenceDto,
+} from '../dtos/notification.dtos';
+import { TemplateRendererService } from './template-renderer.service';
+
+type AuditContext = { companyId: string; userId: string };
+
+@Injectable()
+export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly templateRenderer: TemplateRendererService,
+    @Optional()
+    @InjectQueue(NOTIFICATION_QUEUE)
+    private readonly notificationQueue?: Queue<SendNotificationJobData>,
+  ) {}
+
+  /**
+   * Sends a notification respecting user preferences and optional templates.
+   */
+  async send(
+    ctx: AuditContext,
+    dto: SendNotificationDto,
+  ): Promise<{ inAppId?: string; emailQueued: boolean }> {
+    const recipient = await this.prisma.user.findFirst({
+      where: activeOnly({ id: dto.recipientId, companyId: ctx.companyId }),
+    });
+    if (!recipient) {
+      throw new NotFoundException('Recipient not found');
+    }
+
+    const preference = await this.prisma.notificationPreference.findFirst({
+      where: activeOnly({ userId: dto.recipientId, eventType: dto.eventType }),
+    });
+
+    const sendInApp =
+      dto.channel === undefined || dto.channel === 'IN_APP';
+    const sendEmail =
+      dto.channel === undefined || dto.channel === 'EMAIL';
+
+    const inAppEnabled = sendInApp && (preference?.inApp ?? true);
+    const emailEnabled = sendEmail && (preference?.email ?? true);
+    const variables = dto.variables ?? {};
+
+    let inAppId: string | undefined;
+    let emailQueued = false;
+
+    if (inAppEnabled) {
+      const { subject, body, templateId } = await this.resolveContent(
+        ctx.companyId,
+        dto.eventType,
+        NotificationChannel.IN_APP,
+        dto.subject,
+        dto.body,
+        variables,
+      );
+
+      const notification = await this.prisma.notification.create({
+        data: {
+          companyId: ctx.companyId,
+          recipientId: dto.recipientId,
+          templateId,
+          channel: NotificationChannel.IN_APP,
+          subject,
+          body,
+          status: NotificationStatus.SENT,
+          readAt: null,
+          sentAt: new Date(),
+        },
+      });
+      inAppId = notification.id;
+    }
+
+    if (emailEnabled && !this.notificationQueue) {
+      this.logger.warn(
+        'Email notification skipped: enable Redis (REDIS_ENABLED=true) and run npm run db:up',
+      );
+    }
+
+    if (emailEnabled && this.notificationQueue) {
+      const { subject, body, templateId } = await this.resolveContent(
+        ctx.companyId,
+        dto.eventType,
+        NotificationChannel.EMAIL,
+        dto.subject,
+        dto.body,
+        variables,
+      );
+
+      const notification = await this.prisma.notification.create({
+        data: {
+          companyId: ctx.companyId,
+          recipientId: dto.recipientId,
+          templateId,
+          channel: NotificationChannel.EMAIL,
+          subject,
+          body,
+          status: NotificationStatus.PENDING,
+        },
+      });
+
+      try {
+        await this.notificationQueue.add(SEND_NOTIFICATION_JOB, {
+          notificationId: notification.id,
+        });
+        emailQueued = true;
+      } catch (error: unknown) {
+        this.logger.error(
+          `Failed to queue email notification ${notification.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        await this.prisma.notification.update({
+          where: { id: notification.id },
+          data: { status: NotificationStatus.FAILED },
+        });
+      }
+    }
+
+    return { inAppId, emailQueued };
+  }
+
+  async listInbox(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+    unreadOnly = false,
+  ): Promise<PaginatedResult<unknown>> {
+    const where: Prisma.NotificationWhereInput = {
+      companyId: ctx.companyId,
+      recipientId: ctx.userId,
+      channel: NotificationChannel.IN_APP,
+      ...(unreadOnly ? { readAt: null } : {}),
+    };
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async getUnreadCount(ctx: AuditContext): Promise<{ count: number }> {
+    const count = await this.prisma.notification.count({
+      where: {
+        companyId: ctx.companyId,
+        recipientId: ctx.userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+      },
+    });
+    return { count };
+  }
+
+  async markRead(ctx: AuditContext, id: string): Promise<unknown> {
+    const notification = await this.prisma.notification.findFirst({
+      where: {
+        id,
+        companyId: ctx.companyId,
+        recipientId: ctx.userId,
+        channel: NotificationChannel.IN_APP,
+      },
+    });
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+    return this.prisma.notification.update({
+      where: { id },
+      data: { readAt: new Date(), status: NotificationStatus.READ },
+    });
+  }
+
+  async markAllRead(ctx: AuditContext): Promise<{ updated: number }> {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        companyId: ctx.companyId,
+        recipientId: ctx.userId,
+        channel: NotificationChannel.IN_APP,
+        readAt: null,
+      },
+      data: { readAt: new Date(), status: NotificationStatus.READ },
+    });
+    return { updated: result.count };
+  }
+
+  async listTemplates(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = activeOnly({ companyId: ctx.companyId });
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.notificationTemplate.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+      }),
+      this.prisma.notificationTemplate.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async createTemplate(
+    ctx: AuditContext,
+    dto: CreateNotificationTemplateDto,
+  ): Promise<unknown> {
+    return this.prisma.notificationTemplate.create({
+      data: {
+        companyId: ctx.companyId,
+        eventType: dto.eventType,
+        channel: dto.channel,
+        subjectTemplate: dto.subjectTemplate,
+        bodyTemplate: dto.bodyTemplate,
+        isActive: dto.isActive ?? true,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  async updateTemplate(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateNotificationTemplateDto,
+  ): Promise<unknown> {
+    await this.assertTemplate(id, ctx.companyId);
+    return this.prisma.notificationTemplate.update({
+      where: { id },
+      data: { ...dto, updatedBy: ctx.userId },
+    });
+  }
+
+  async deleteTemplate(ctx: AuditContext, id: string): Promise<void> {
+    await this.assertTemplate(id, ctx.companyId);
+    await this.prisma.notificationTemplate.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  async listPreferences(ctx: AuditContext): Promise<unknown[]> {
+    return this.prisma.notificationPreference.findMany({
+      where: activeOnly({ userId: ctx.userId }),
+    });
+  }
+
+  async upsertPreference(
+    ctx: AuditContext,
+    dto: UpsertNotificationPreferenceDto,
+  ): Promise<unknown> {
+    return this.prisma.notificationPreference.upsert({
+      where: {
+        userId_eventType: {
+          userId: ctx.userId,
+          eventType: dto.eventType,
+        },
+      },
+      update: {
+        inApp: dto.inApp,
+        email: dto.email,
+        sms: dto.sms,
+        updatedBy: ctx.userId,
+        deletedAt: null,
+        deletedBy: null,
+      },
+      create: {
+        userId: ctx.userId,
+        eventType: dto.eventType,
+        inApp: dto.inApp ?? true,
+        email: dto.email ?? true,
+        sms: dto.sms ?? false,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  /**
+   * Hard-deletes notifications older than the retention period.
+   */
+  async purgeExpired(retentionDays: number): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+    const result = await this.prisma.notification.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    return result.count;
+  }
+
+  private async resolveContent(
+    companyId: string,
+    eventType: string,
+    channel: NotificationChannel,
+    subjectOverride: string | undefined,
+    bodyOverride: string | undefined,
+    variables: Record<string, string>,
+  ): Promise<{ subject: string; body: string; templateId: string | null }> {
+    const template = await this.prisma.notificationTemplate.findFirst({
+      where: activeOnly({
+        companyId,
+        eventType,
+        channel,
+        isActive: true,
+      }),
+    });
+
+    if (template) {
+      return {
+        subject: this.templateRenderer.render(
+          subjectOverride ?? template.subjectTemplate,
+          variables,
+        ),
+        body: this.templateRenderer.render(
+          bodyOverride ?? template.bodyTemplate,
+          variables,
+        ),
+        templateId: template.id,
+      };
+    }
+
+    return {
+      subject: subjectOverride ?? eventType,
+      body: bodyOverride ?? '',
+      templateId: null,
+    };
+  }
+
+  private async assertTemplate(id: string, companyId: string): Promise<void> {
+    const template = await this.prisma.notificationTemplate.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!template) {
+      throw new NotFoundException('Notification template not found');
+    }
+  }
+}

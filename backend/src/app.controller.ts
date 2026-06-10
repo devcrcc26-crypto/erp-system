@@ -1,6 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from './shared/decorators/public.decorator';
 import { PrismaService } from './shared/prisma/prisma.service';
 
+@ApiTags('Health')
 @Controller()
 export class AppController {
   constructor(private readonly prisma: PrismaService) {}
@@ -8,19 +11,15 @@ export class AppController {
   /**
    * Health check — verifies API and database connectivity.
    */
+  @Public()
   @Get('health')
-  async health(): Promise<{
-    success: true;
-    data: { status: string; database: string };
-  }> {
+  @ApiOperation({ summary: 'API and database health check' })
+  async health(): Promise<{ status: string; database: string }> {
     await this.prisma.$queryRaw`SELECT 1`;
 
     return {
-      success: true,
-      data: {
-        status: 'ok',
-        database: 'connected',
-      },
+      status: 'ok',
+      database: 'connected',
     };
   }
 }
