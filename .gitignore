@@ -1,2 +1,41 @@
 /.cursorrules
 /ERD files
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Build
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Test
+coverage/
+
+# Turbo
+.turbo/
+
+# Prisma
+backend/prisma/migrations/**/migration_lock.toml
