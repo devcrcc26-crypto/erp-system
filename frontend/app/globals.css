@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sidebar-bg: #1e293b;
+  --color-sidebar-active: #334155;
+  --color-sidebar-accent: #f97316;
+  --color-page-bg: #f1f5f9;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+/* Hide scrollbars globally while keeping scroll functionality */
+* {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge */
+}
+*::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / Opera */
+}
