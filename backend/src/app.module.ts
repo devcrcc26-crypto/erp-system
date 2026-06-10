@@ -5,6 +5,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 loadEnv({
   path: [resolve(__dirname, '../.env'), resolve(__dirname, '../../.env')],
 });
+
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -16,15 +17,15 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
-import { StorageModule } from './shared/storage/storage.module';
-import { PermissionsModule } from './shared/permissions/permissions.module';
 import { envValidationSchema } from './shared/config/env.validation';
 import { RequestContextMiddleware } from './shared/context/request-context.middleware';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './shared/interceptors/response-envelope.interceptor';
+import { PermissionsModule } from './shared/permissions/permissions.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
+import { StorageModule } from './shared/storage/storage.module';
 
 @Module({
   imports: [
