@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { Settings } from "lucide-react";
+import SettingsPageContent from '@/components/modules/settings/SettingsPageContent';
 
-export default function SettingsPage() {
-  return <PlaceholderPage icon={Settings} title="Settings" />;
+export default function SettingsPage(): React.ReactNode {
+  return <SettingsPageContent />;
 }
