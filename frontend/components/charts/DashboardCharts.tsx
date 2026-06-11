@@ -77,7 +77,7 @@ function CompletionGauge({ value }: { value: number }) {
           strokeLinecap="butt"
           strokeDasharray={`${filled} ${arcLength}`}
         />
-        {/* 63/100 — small label above percentage */}
+        {/* 63/100 - small label above percentage */}
         <text
           x={cx} y={cy - 62}
           textAnchor="middle"
@@ -87,7 +87,7 @@ function CompletionGauge({ value }: { value: number }) {
         >
           {value} / 100
         </text>
-        {/* Percentage — large bold */}
+        {/* Percentage - large bold */}
         <text
           x={cx} y={cy - 16}
           textAnchor="middle"
@@ -231,7 +231,7 @@ export default function DashboardCharts() {
         </div>
       </ChartCard>
 
-      {/* Discipline Workload — vertical dumbbell */}
+      {/* Discipline Workload - vertical dumbbell */}
       <ChartCard title="Discipline Workload" subtitle="Active tasks by discipline">
         <DisciplineDumbbell />
       </ChartCard>

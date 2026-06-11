@@ -9,7 +9,7 @@ export class AppController {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Health check — verifies API and database connectivity.
+   * Health check - verifies API and database connectivity.
    */
   @Public()
   @Get('health')

@@ -23,9 +23,9 @@ function UserRolesCell({ userId }: { userId: string }): React.ReactNode {
   }
 
   const roleNames =
-    data?.userRoles?.map((assignment) => assignment.role.name).join(', ') ?? '—';
+    data?.userRoles?.map((assignment) => assignment.role.name).join(', ') ?? '-';
 
-  return <span>{roleNames || '—'}</span>;
+  return <span>{roleNames || '-'}</span>;
 }
 
 export default function TeamPageContent(): React.ReactNode {

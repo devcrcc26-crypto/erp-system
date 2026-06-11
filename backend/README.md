@@ -1,4 +1,4 @@
-# Construction ERP — Backend
+# Construction ERP - Backend
 
 NestJS API for the Core Foundation module.
 
@@ -63,10 +63,10 @@ Permissions enforced via `@RequirePermission(module, action)` with role inherita
 **Audit:** Automatic CUD logging via global interceptor. `GET /api/audit-logs` (filter by module, action, user, dates).
 
 **Notifications:**
-- `GET /api/notifications` — in-app inbox
+- `GET /api/notifications` - in-app inbox
 - `GET /api/notifications/unread-count`
 - `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/read-all`
-- `POST /api/notifications/send` — dispatch in-app + email (BullMQ)
+- `POST /api/notifications/send` - dispatch in-app + email (BullMQ)
 - CRUD `/api/notification-templates`
 - `GET/PUT /api/notification-preferences`
 
@@ -78,17 +78,17 @@ In-app notifications work without Redis. For email queueing, set `REDIS_ENABLED=
 
 **Documents:**
 - `CRUD /document-folders`, `GET /document-folders/:id/documents`
-- `POST /document-folders/:folderId/documents` — multipart upload
+- `POST /document-folders/:folderId/documents` - multipart upload
 - `GET/PATCH/DELETE /documents/:id`
-- `GET /documents/:id/download-url` — presigned URL
-- `POST /documents/:id/versions` — upload new version
-- `GET/PUT/DELETE /document-folders/:folderId/access` — role-based folder ACL
+- `GET /documents/:id/download-url` - presigned URL
+- `POST /documents/:id/versions` - upload new version
+- `GET/PUT/DELETE /document-folders/:folderId/access` - role-based folder ACL
 
 **Reports:**
 - `CRUD /reports`, `POST /reports/:id/execute`, `POST /reports/:id/export?format=json|csv`
 - `CRUD /reports/:id/schedules`
-- `GET /dashboard/widgets` — widgets for current user's roles
-- `CRUD /dashboard/widgets` — admin widget management
+- `GET /dashboard/widgets` - widgets for current user's roles
+- `CRUD /dashboard/widgets` - admin widget management
 
 Data sources (MVP): `users`, `audit_logs`, `branches`, `departments`.
 

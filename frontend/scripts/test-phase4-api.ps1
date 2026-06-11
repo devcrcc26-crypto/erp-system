@@ -1,4 +1,4 @@
-# Phase 4 API integration test — role list, permissions matrix, HR Officer grant
+# Phase 4 API integration test - role list, permissions matrix, HR Officer grant
 $base = 'http://localhost:3008/api'
 
 Write-Host "1. Login as admin..."

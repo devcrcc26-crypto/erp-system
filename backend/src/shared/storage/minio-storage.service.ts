@@ -46,7 +46,7 @@ export class MinioStorageService implements IStorageService, OnModuleInit {
       this.logger.log('Minio storage ready');
     } catch (error: unknown) {
       this.logger.warn(
-        'Minio unavailable — document upload/download disabled until storage is running',
+        'Minio unavailable - document upload/download disabled until storage is running',
         error instanceof Error ? error.message : String(error),
       );
       this.client = null;

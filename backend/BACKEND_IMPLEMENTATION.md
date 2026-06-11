@@ -1,4 +1,4 @@
-# Construction ERP — Backend Implementation Reference
+# Construction ERP - Backend Implementation Reference
 
 This document describes everything implemented in the **Core Foundation** backend (Slices 1–6). It covers every source, config, and test file under `backend/`, excluding `prisma/`, `node_modules/`, `dist/`, and `src/generated/` (auto-generated Prisma client).
 
@@ -62,7 +62,7 @@ Interceptors (on response)
     └── ResponseEnvelopeInterceptor  ← { success, data, meta? }
 ```
 
-**Multi-tenancy:** Every data query includes `company_id` from the JWT — never from the request body.
+**Multi-tenancy:** Every data query includes `company_id` from the JWT - never from the request body.
 
 **Soft delete:** User-facing entities use `deleted_at` / `deleted_by`. Queries use `activeOnly()` helper.
 
@@ -142,7 +142,7 @@ Global module exporting `PrismaService` to all feature modules.
 Extends `PrismaClient`. Connects on module init, disconnects on destroy. Development logging: `warn` + `error`; production: `error` only.
 
 #### `src/shared/prisma/soft-delete.util.ts`
-Exports `activeOnly(where)` — merges `{ deletedAt: null }` into Prisma `where` clauses for soft-delete filtering.
+Exports `activeOnly(where)` - merges `{ deletedAt: null }` into Prisma `where` clauses for soft-delete filtering.
 
 ### Request Context
 
@@ -163,10 +163,10 @@ Swagger DTOs for the API error envelope shape (`ApiErrorResponseDto`).
 ### Decorators
 
 #### `src/shared/decorators/public.decorator.ts`
-`@Public()` — marks routes that skip `JwtAuthGuard` (login, health, etc.).
+`@Public()` - marks routes that skip `JwtAuthGuard` (login, health, etc.).
 
 #### `src/shared/decorators/current-user.decorator.ts`
-`@CurrentUser()` — injects `AuthenticatedUser` from the JWT payload into controller parameters.
+`@CurrentUser()` - injects `AuthenticatedUser` from the JWT payload into controller parameters.
 
 ### Guards
 
@@ -195,7 +195,7 @@ Defines `PermissionAction` union (`view | create | edit | delete | approve | exp
 Resolves effective permissions for a user on a module. Walks `user_role` assignments, follows `parent_role_id` inheritance chain, merges `role_permission` flags with OR logic. Filters by `company_id`.
 
 #### `src/shared/permissions/require-permission.decorator.ts`
-`@RequirePermission(module, action)` — sets metadata read by `PermissionsGuard`.
+`@RequirePermission(module, action)` - sets metadata read by `PermissionsGuard`.
 
 #### `src/shared/permissions/permissions.guard.ts`
 Nest guard that reads `@RequirePermission` metadata and calls `PermissionService.hasPermission()`. Throws `403 Forbidden` when denied.
@@ -234,7 +234,7 @@ Augments Express `Request` interface with optional `user: AuthenticatedUser`.
 ### Utilities
 
 #### `src/shared/utils/pagination.util.ts`
-`buildPrismaPagination`, `buildPaginatedResult`, `buildOrderBy` — shared pagination helpers used by all list services.
+`buildPrismaPagination`, `buildPaginatedResult`, `buildOrderBy` - shared pagination helpers used by all list services.
 
 ---
 
@@ -252,7 +252,7 @@ Port interface `IAuthRepository` and `UserWithCompany` type. Methods: find user 
 #### `src/modules/auth/infrastructure/repositories/auth.repository.ts`
 Prisma implementation of `IAuthRepository`. All queries use `activeOnly()`. Sessions are hard-deleted on logout/revocation. Password reset tokens stored as bcrypt hashes.
 
-### Application — Commands
+### Application - Commands
 
 #### `src/modules/auth/application/commands/login.command.ts`
 CQRS command: `email`, `password`, optional `deviceInfo`, `ipAddress`.
@@ -290,7 +290,7 @@ CQRS command: `email`, `token`, `newPassword`.
 #### `src/modules/auth/application/commands/reset-password.handler.ts`
 Validates reset token, updates password hash, marks token used, revokes all user sessions.
 
-### Application — Services
+### Application - Services
 
 #### `src/modules/auth/application/services/password.service.ts`
 bcrypt wrapper: `hash` (12 rounds), `verify`.
@@ -301,7 +301,7 @@ Unit tests for hash/verify round-trip.
 #### `src/modules/auth/application/services/token.service.ts`
 JWT access token generation, opaque refresh/reset token generation, bcrypt token hashing, expiry date calculation from config (`15m` access, `7d` refresh).
 
-### Application — DTOs
+### Application - DTOs
 
 #### `src/modules/auth/application/dtos/login.dto.ts`
 `email`, `password`, optional `deviceInfo`. class-validator + Swagger decorators.
@@ -424,9 +424,9 @@ Immutable append-only audit trail with automatic CUD logging and read API.
 Query filters: `module`, `action`, `userId`, `recordType`, `recordId`, `dateFrom`, `dateTo` + pagination.
 
 #### `src/modules/audit/application/services/audit.service.ts`
-- `create()` — append-only write to `audit_log`. Swallows DB errors (never breaks the request).
-- `list()` — paginated, filterable read per company.
-- `buildFromRequestContext()` — enriches audit input with correlation ID, IP, user-agent from `AsyncLocalStorage`.
+- `create()` - append-only write to `audit_log`. Swallows DB errors (never breaks the request).
+- `list()` - paginated, filterable read per company.
+- `buildFromRequestContext()` - enriches audit input with correlation ID, IP, user-agent from `AsyncLocalStorage`.
 
 #### `src/modules/audit/application/services/audit.service.spec.ts`
 Unit tests: create entry, error swallowing, paginated list with filters.
@@ -449,7 +449,7 @@ Logout is excluded here; audited explicitly in `LogoutHandler` before session de
 Unit tests: skip GET, skip auth paths, skip logout, write on CUD.
 
 #### `src/modules/audit/presentation/controllers/audit.controller.ts`
-`GET /api/audit-logs` — paginated list. Requires `audit.view` permission.
+`GET /api/audit-logs` - paginated list. Requires `audit.view` permission.
 
 ### Module
 
@@ -471,11 +471,11 @@ In-app notifications, email queue (BullMQ), templates, preferences, and retentio
 DTOs: template CRUD, preference upsert, `SendNotificationDto` (recipient, eventType, optional channel/subject/body/variables).
 
 #### `src/modules/notifications/application/services/notification.service.ts`
-- `send()` — respects user preferences and optional templates; creates in-app notification (`SENT` status) and/or queues email via BullMQ. Supports `channel: IN_APP` to skip email.
+- `send()` - respects user preferences and optional templates; creates in-app notification (`SENT` status) and/or queues email via BullMQ. Supports `channel: IN_APP` to skip email.
 - `listInbox()`, `getUnreadCount()`, `markRead()`, `markAllRead()`
 - Template CRUD (soft delete)
 - Preference list/upsert
-- `purgeExpired()` — hard-deletes notifications older than retention period
+- `purgeExpired()` - hard-deletes notifications older than retention period
 
 #### `src/modules/notifications/application/services/template-renderer.service.ts`
 Replaces `{{variable}}` placeholders in notification templates.
@@ -528,10 +528,10 @@ File key format: `{companyId}/{folderId}/{documentId}/v{version}/{filename}`.
 `GET/PATCH/DELETE /documents/:id`, `GET /:id/download-url`, `GET/POST /:id/versions`.
 
 #### `src/modules/documents/presentation/controllers/document-upload.controller.ts`
-`POST /document-folders/:folderId/documents` — multipart file upload (`FileInterceptor`).
+`POST /document-folders/:folderId/documents` - multipart file upload (`FileInterceptor`).
 
 #### `src/modules/documents/presentation/controllers/document-access.controller.ts`
-`GET/PUT/DELETE /document-folders/:folderId/access` — folder role ACL.
+`GET/PUT/DELETE /document-folders/:folderId/access` - folder role ACL.
 
 ### Module
 
@@ -554,13 +554,13 @@ Executes reports against an **allow-listed** data source (`users`, `audit_logs`,
 
 #### `src/modules/reporting/application/services/reporting.service.ts`
 - Report definition CRUD (owner or shared reports visible)
-- `executeReport()` — runs executor
-- `exportReport()` — JSON or CSV output with filename
+- `executeReport()` - runs executor
+- `exportReport()` - JSON or CSV output with filename
 - Schedule CRUD (metadata stored; cron execution deferred to future slice)
 
 #### `src/modules/reporting/application/services/dashboard.service.ts`
-- `listForUser()` — widgets matching current user's role IDs
-- `listAll()` — admin view of all widgets
+- `listForUser()` - widgets matching current user's role IDs
+- `listAll()` - admin view of all widgets
 - Widget CRUD (position, size, config JSON, linked to role)
 
 ### Presentation
@@ -591,10 +591,10 @@ Loads `backend/.env`, sets `NODE_ENV=test`, `REDIS_ENABLED=false`, provides fall
 ### Helpers
 
 #### `test/helpers/test-app.factory.ts`
-`createTestApp()` — bootstraps full `AppModule` with global prefix and `ValidationPipe` for Supertest.
+`createTestApp()` - bootstraps full `AppModule` with global prefix and `ValidationPipe` for Supertest.
 
 #### `test/helpers/auth.helper.ts`
-`loginAs(app, email, password)` — returns tokens from API envelope. `authHeader(token)` — Bearer header object.
+`loginAs(app, email, password)` - returns tokens from API envelope. `authHeader(token)` - Bearer header object.
 
 ### Integration Tests (e2e)
 
@@ -633,9 +633,9 @@ npm run test:e2e      # integration tests (12 tests, requires DB + seed)
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
-| `JWT_ACCESS_SECRET` | Yes | — | Access token signing (min 32 chars) |
-| `JWT_REFRESH_SECRET` | Yes | — | Refresh token signing (min 32 chars) |
+| `DATABASE_URL` | Yes | - | PostgreSQL connection string |
+| `JWT_ACCESS_SECRET` | Yes | - | Access token signing (min 32 chars) |
+| `JWT_REFRESH_SECRET` | Yes | - | Refresh token signing (min 32 chars) |
 | `JWT_ACCESS_EXPIRES_IN` | No | `15m` | Access token TTL |
 | `JWT_REFRESH_EXPIRES_IN` | No | `7d` | Refresh token TTL |
 | `PORT` | No | `3001` | HTTP port |
@@ -649,11 +649,11 @@ npm run test:e2e      # integration tests (12 tests, requires DB + seed)
 | `MINIO_ENDPOINT` | No | `localhost` | Minio host |
 | `MINIO_PORT` | No | `9000` | Minio port |
 | `MINIO_ACCESS_KEY` | No | `erp_minio` | Minio access key |
-| `MINIO_SECRET_KEY` | No | — | Minio secret key |
+| `MINIO_SECRET_KEY` | No | - | Minio secret key |
 | `MINIO_USE_SSL` | No | `false` | Minio SSL |
-| `MAIL_HOST` | No | — | SMTP host (omit for JSON transport) |
-| `MAIL_PORT` | No | — | SMTP port |
-| `MAIL_FROM` | No | — | Sender address |
+| `MAIL_HOST` | No | - | SMTP host (omit for JSON transport) |
+| `MAIL_PORT` | No | - | SMTP port |
+| `MAIL_FROM` | No | - | Sender address |
 | `NOTIFICATION_RETENTION_DAYS` | No | `90` | Notification purge age |
 
 ---

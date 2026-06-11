@@ -26,7 +26,7 @@ class NotificationsBootstrapLogger implements OnModuleInit {
   onModuleInit(): void {
     if (!this.configService.get<boolean>('REDIS_ENABLED', false)) {
       this.logger.warn(
-        'REDIS_ENABLED=false — in-app notifications only; email queue disabled',
+        'REDIS_ENABLED=false - in-app notifications only; email queue disabled',
       );
     }
   }

@@ -1,4 +1,4 @@
-# Phase 5 API integration test — dashboard stat sources
+# Phase 5 API integration test - dashboard stat sources
 $base = 'http://localhost:3008/api'
 
 Write-Host "1. Login as admin..."
@@ -40,7 +40,7 @@ try {
     Write-Host "   Warning: employee could list users"
   } catch {
     if ($_.Exception.Response.StatusCode.value__ -eq 403) {
-      Write-Host "   OK (403 — dashboard will use fallbacks)"
+      Write-Host "   OK (403 - dashboard will use fallbacks)"
     }
   }
 } catch {

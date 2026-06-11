@@ -1,4 +1,4 @@
-# Phase 3 API integration test — user create + role assign flow
+# Phase 3 API integration test - user create + role assign flow
 $base = 'http://localhost:3008/api'
 $testEmail = "employee.test.$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())@company.local"
 

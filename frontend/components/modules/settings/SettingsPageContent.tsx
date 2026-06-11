@@ -237,7 +237,7 @@ export default function SettingsPageContent(): React.ReactNode {
                       {role.name}
                     </td>
                     <td className="px-3 py-3 text-slate-600">
-                      {role.description ?? '—'}
+                      {role.description ?? '-'}
                     </td>
                     <td className="px-3 py-3">
                       <span
@@ -276,7 +276,7 @@ export default function SettingsPageContent(): React.ReactNode {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
-                Permissions — {selectedRole.name}
+                Permissions - {selectedRole.name}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Grant module access for this role.
@@ -341,7 +341,7 @@ export default function SettingsPageContent(): React.ReactNode {
                                 className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 disabled:opacity-50"
                               />
                             ) : (
-                              <span className="text-slate-300">—</span>
+                              <span className="text-slate-300">-</span>
                             )}
                           </td>
                         );

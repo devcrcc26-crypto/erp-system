@@ -3,7 +3,7 @@ import type { Capabilities } from '@/lib/api/types';
 
 /**
  * Probes backend RBAC by hitting read-only list endpoints.
- * JWT does not include permissions — this caches what the current session can do.
+ * JWT does not include permissions - this caches what the current session can do.
  */
 export async function probeCapabilities(): Promise<Capabilities> {
   const [canManageUsers, canManageRoles, canEditRoles] = await Promise.all([

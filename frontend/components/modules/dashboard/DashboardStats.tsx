@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import StatCard from '@/components/StatCard';
 import { useDashboardStats } from '@/lib/query/stats';
 import { useAuthStore } from '@/stores/auth.store';
@@ -33,11 +34,46 @@ function formatPercent(value: number | null, fallback: string, isLoading: boolea
   return `${value}%`;
 }
 
-export default function DashboardStats(): React.ReactNode {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-  const { data, isLoading, isFetching } = useDashboardStats(isAuthenticated);
+function FallbackStats(): React.ReactNode {
+  return (
+    <section className="grid grid-cols-2 gap-4 md:gap-6 xl:grid-cols-4">
+      <StatCard
+        label="Projects"
+        value={FALLBACK.projects}
+        icon={Network}
+        iconBg="#dbeafe"
+        iconColor="#2563eb"
+      />
+      <StatCard
+        label="Tasks"
+        value={FALLBACK.tasks}
+        icon={ListTodo}
+        iconBg="#fef3c7"
+        iconColor="#d97706"
+      />
+      <StatCard
+        label="Team Members"
+        value={FALLBACK.teamMembers}
+        icon={ThreePeopleIcon}
+        iconBg="#dcfce7"
+        iconColor="#16a34a"
+      />
+      <StatCard
+        label="Completion Rate"
+        value={FALLBACK.completionRate}
+        icon={PieChart}
+        iconBg="#ede9fe"
+        iconColor="#7c3aed"
+      />
+    </section>
+  );
+}
 
-  const loading = isLoading || isFetching;
+function LiveStats(): React.ReactNode {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const { data, isLoading, isFetching, isFetched } = useDashboardStats(isAuthenticated);
+
+  const loading = isAuthenticated && (isLoading || isFetching) && !isFetched;
 
   return (
     <section className="grid grid-cols-2 gap-4 md:gap-6 xl:grid-cols-4">
@@ -71,4 +107,18 @@ export default function DashboardStats(): React.ReactNode {
       />
     </section>
   );
+}
+
+export default function DashboardStats(): React.ReactNode {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <FallbackStats />;
+  }
+
+  return <LiveStats />;
 }
