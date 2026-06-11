@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -11,6 +11,8 @@ import {
   AuthTokensDto,
   MessageResponseDto,
 } from '../../application/dtos/auth-response.dto';
+import { CapabilitiesDto } from '../../application/dtos/capabilities.dto';
+import { SessionCapabilitiesService } from '../../application/services/session-capabilities.service';
 import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
 import { LoginDto } from '../../application/dtos/login.dto';
 import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
@@ -25,7 +27,10 @@ import { ResetPasswordCommand } from '../../application/commands/reset-password.
 @Throttle({ default: { limit: 10, ttl: 60_000 } })
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly sessionCapabilitiesService: SessionCapabilitiesService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -58,6 +63,15 @@ export class AuthController {
     return this.commandBus.execute(
       new RefreshTokenCommand(dto.sessionId, dto.refreshToken, req.ip),
     );
+  }
+
+  @Get('capabilities')
+  @ApiOperation({ summary: 'Get UI capability flags for the current session' })
+  @ApiResponse({ status: 200, type: CapabilitiesDto })
+  async getCapabilities(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CapabilitiesDto> {
+    return this.sessionCapabilitiesService.resolve(user.userId, user.companyId);
   }
 
   @Post('logout')

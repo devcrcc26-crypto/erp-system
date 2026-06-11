@@ -12,7 +12,13 @@ export default function DashboardHeader({
   onMenuClick?: () => void;
 }) {
   const user = useAuthStore((state) => state.user);
-  const { data: userDetail } = useUser(user?.id ?? '', Boolean(user?.id));
+  const canManageUsers = useAuthStore(
+    (state) => state.capabilities.canManageUsers,
+  );
+  const { data: userDetail } = useUser(
+    user?.id ?? '',
+    Boolean(user?.id) && canManageUsers,
+  );
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`

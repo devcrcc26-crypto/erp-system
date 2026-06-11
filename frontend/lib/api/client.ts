@@ -163,16 +163,3 @@ export async function apiDelete<T>(
   return unwrapEnvelope(response.data);
 }
 
-/** Probe an endpoint; returns true on 2xx, false on 403/401, rethrows other errors. */
-export async function apiProbe(url: string): Promise<boolean> {
-  try {
-    await apiClient.get(url);
-    return true;
-  } catch (error) {
-    const apiError = toApiRequestError(error);
-    if (apiError.status === 403 || apiError.status === 401) {
-      return false;
-    }
-    throw apiError;
-  }
-}

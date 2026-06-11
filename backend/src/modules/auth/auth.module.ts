@@ -12,6 +12,7 @@ import { LogoutHandler } from './application/commands/logout.handler';
 import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
 import { ResetPasswordHandler } from './application/commands/reset-password.handler';
 import { PasswordService } from './application/services/password.service';
+import { SessionCapabilitiesService } from './application/services/session-capabilities.service';
 import { TokenService } from './application/services/token.service';
 import { AuthController } from './presentation/controllers/auth.controller';
 import { JwtStrategy } from './presentation/strategies/jwt.strategy';
@@ -42,6 +43,7 @@ const CommandHandlers = [
     ...CommandHandlers,
     TokenService,
     PasswordService,
+    SessionCapabilitiesService,
     JwtStrategy,
     {
       provide: AUTH_REPOSITORY,

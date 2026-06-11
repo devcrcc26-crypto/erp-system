@@ -84,7 +84,10 @@ function StatsSection({
 function LiveStats(): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-  const canFetch = authHydrated && isAuthenticated;
+  const canManageUsers = useAuthStore(
+    (state) => state.capabilities.canManageUsers,
+  );
+  const canFetch = authHydrated && isAuthenticated && canManageUsers;
 
   const { data, isLoading, isFetching, isFetched } = useDashboardStats(canFetch);
 

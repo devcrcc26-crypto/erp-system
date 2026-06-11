@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { apiGetPaginated, apiPost } from '@/lib/api/client';
+import { apiPost } from '@/lib/api/client';
+import { silentPaginatedTotal } from '@/lib/api/silent-request';
 import type { ReportExecutionResult } from '@/lib/api/types';
 
 /** Seeded report definition ID from backend/prisma/seed.ts */
@@ -15,49 +16,35 @@ export interface DashboardStats {
   completionRate: number | null;
 }
 
-async function fetchCount(url: string): Promise<number | null> {
-  try {
-    const result = await apiGetPaginated<unknown>(`${url}?limit=1`);
-    return result.meta.total;
-  } catch {
+async function fetchCompletionRate(totalUsers: number | null): Promise<number | null> {
+  if (totalUsers === null) {
     return null;
   }
-}
+  if (totalUsers === 0) {
+    return 0;
+  }
 
-async function fetchCompletionRate(): Promise<number | null> {
   try {
-    const [usersResult, reportResult] = await Promise.all([
-      apiGetPaginated<{ isActive?: boolean }>('/users?limit=100'),
-      apiPost<ReportExecutionResult>(
-        `/reports/${SEEDED_ACTIVE_USERS_REPORT_ID}/execute`,
-      ),
-    ]);
-
-    const totalUsers = usersResult.meta.total;
-    if (totalUsers === 0) {
-      return 0;
+    const reportResult = await apiPost<ReportExecutionResult>(
+      `/reports/${SEEDED_ACTIVE_USERS_REPORT_ID}/execute`,
+    );
+    if (reportResult.rowCount > 0) {
+      return Math.round((reportResult.rowCount / totalUsers) * 100);
     }
-
-    const activeFromReport = reportResult.rowCount;
-    if (activeFromReport > 0) {
-      return Math.round((activeFromReport / totalUsers) * 100);
-    }
-
-    const activeFromList = usersResult.data.filter((u) => u.isActive).length;
-    return Math.round((activeFromList / totalUsers) * 100);
+    return 100;
   } catch {
     return null;
   }
 }
 
 async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [teamMembers, branches, departments, completionRate] =
-    await Promise.all([
-      fetchCount('/users'),
-      fetchCount('/branches'),
-      fetchCount('/departments'),
-      fetchCompletionRate(),
-    ]);
+  const [teamMembers, branches, departments] = await Promise.all([
+    silentPaginatedTotal('/users'),
+    silentPaginatedTotal('/branches'),
+    silentPaginatedTotal('/departments'),
+  ]);
+
+  const completionRate = await fetchCompletionRate(teamMembers);
 
   return {
     teamMembers,

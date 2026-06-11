@@ -1,21 +1,15 @@
-import { apiProbe } from '@/lib/api/client';
+import { apiGet } from '@/lib/api/client';
 import type { Capabilities } from '@/lib/api/types';
+import { EMPTY_CAPABILITIES } from '@/lib/api/types';
 
 /**
- * Probes backend RBAC by hitting read-only list endpoints.
- * JWT does not include permissions - this caches what the current session can do.
+ * Loads UI capability flags from the backend for the current session.
+ * Any authenticated user may call this — no RBAC probe requests needed.
  */
-export async function probeCapabilities(): Promise<Capabilities> {
-  const [canManageUsers, canManageRoles, canEditRoles] = await Promise.all([
-    apiProbe('/users?limit=1'),
-    apiProbe('/roles?limit=1'),
-    apiProbe('/permissions'),
-  ]);
-
-  return {
-    canManageUsers,
-    canCreateUsers: canManageUsers,
-    canManageRoles,
-    canEditRoles: canManageRoles && canEditRoles,
-  };
+export async function fetchCapabilities(): Promise<Capabilities> {
+  try {
+    return await apiGet<Capabilities>('/auth/capabilities');
+  } catch {
+    return { ...EMPTY_CAPABILITIES };
+  }
 }
