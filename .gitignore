@@ -1,5 +1,6 @@
 /.cursorrules
 /ERD files
+/.cursor
 
 # Dependencies
 node_modules/
