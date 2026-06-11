@@ -15,13 +15,6 @@ export interface DashboardStats {
   completionRate: number | null;
 }
 
-const FALLBACK_STATS: DashboardStats = {
-  teamMembers: null,
-  branches: null,
-  departments: null,
-  completionRate: null,
-};
-
 async function fetchCount(url: string): Promise<number | null> {
   try {
     const result = await apiGetPaginated<unknown>(`${url}?limit=1`);
@@ -80,6 +73,6 @@ export function useDashboardStats(enabled = true) {
     queryFn: fetchDashboardStats,
     enabled,
     retry: false,
-    placeholderData: FALLBACK_STATS,
+    staleTime: 30_000,
   });
 }
