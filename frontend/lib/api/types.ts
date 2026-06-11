@@ -148,6 +148,7 @@ export interface User {
   lastLogin: string | null;
   createdAt: string;
   updatedAt: string;
+  userRoles?: UserRoleAssignment[];
 }
 
 export interface CreateUserResponse extends User {

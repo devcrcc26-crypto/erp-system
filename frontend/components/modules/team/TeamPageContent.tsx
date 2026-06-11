@@ -23,17 +23,11 @@ const PAGE_SIZE = 20;
 const INPUT_CLASS =
   'w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
 
-function UserRolesCell({ userId }: { userId: string }): React.ReactNode {
-  const { data, isLoading } = useUser(userId);
-
-  if (isLoading) {
-    return <span className="text-slate-400">…</span>;
-  }
-
+function formatUserRoleNames(user: User): string {
   const roleNames =
-    data?.userRoles?.map((assignment) => assignment.role.name).join(', ') ?? '-';
+    user.userRoles?.map((assignment) => assignment.role.name).join(', ') ?? '';
 
-  return <span>{roleNames || '-'}</span>;
+  return roleNames || '-';
 }
 
 function InvitationSuccessModal({
@@ -232,20 +226,26 @@ function EditEmployeeModal({
   const [isActive, setIsActive] = useState(user.isActive);
   const [error, setError] = useState<string | null>(null);
 
-  const currentRoleId = userQuery.data?.userRoles[0]?.roleId ?? '';
+  const currentRoleId =
+    userQuery.data?.userRoles[0]?.roleId ??
+    userQuery.data?.userRoles[0]?.role?.id ??
+    user.userRoles?.[0]?.roleId ??
+    user.userRoles?.[0]?.role?.id ??
+    '';
 
   useEffect(() => {
     setFirstName(user.firstName);
     setLastName(user.lastName);
     setPhone(user.phone ?? '');
     setIsActive(user.isActive);
+    setRoleId('');
   }, [user]);
 
   useEffect(() => {
-    if (currentRoleId && !roleId) {
+    if (currentRoleId) {
       setRoleId(currentRoleId);
     }
-  }, [currentRoleId, roleId]);
+  }, [user.id, currentRoleId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -357,9 +357,12 @@ function EditEmployeeModal({
               required
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
-              disabled={userQuery.isLoading}
+              disabled={userQuery.isLoading || roles.length === 0}
               className={`${INPUT_CLASS} disabled:opacity-60`}
             >
+              <option value="" disabled>
+                {userQuery.isLoading ? 'Loading role…' : 'Select a role'}
+              </option>
               {roles.map((role) => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -623,6 +626,7 @@ export default function TeamPageContent(): React.ReactNode {
 
       {editingUser && (
         <EditEmployeeModal
+          key={editingUser.id}
           user={editingUser}
           roles={roles}
           onClose={() => setEditingUser(null)}
@@ -783,7 +787,7 @@ export default function TeamPageContent(): React.ReactNode {
                     <UserStatusBadge user={user} />
                   </td>
                   <td className="px-3 py-3 text-slate-600">
-                    <UserRolesCell userId={user.id} />
+                    {formatUserRoleNames(user)}
                   </td>
                   <td className="px-3 py-3">
                     <UserActionsMenu

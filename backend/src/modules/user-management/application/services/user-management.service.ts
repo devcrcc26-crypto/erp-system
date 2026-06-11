@@ -50,7 +50,7 @@ export class UserManagementService {
         skip,
         take,
         orderBy: buildOrderBy(query.sortBy, query.sortOrder),
-        select: this.userSelect(),
+        select: this.userListSelect(),
       }),
       this.prisma.user.count({ where }),
     ]);
@@ -471,6 +471,24 @@ export class UserManagementService {
       lastLogin: true,
       createdAt: true,
       updatedAt: true,
+    };
+  }
+
+  private userListSelect(): Prisma.UserSelect {
+    return {
+      ...this.userSelect(),
+      userRoles: this.userRolesListSelect(),
+    };
+  }
+
+  private userRolesListSelect(): Prisma.User$userRolesArgs {
+    return {
+      where: activeOnly({}),
+      select: {
+        id: true,
+        roleId: true,
+        role: { select: { id: true, name: true } },
+      },
     };
   }
 }
