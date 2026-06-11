@@ -27,7 +27,7 @@ export class ResetPasswordHandler
    * Resets a user password using a valid one-time reset token.
    */
   async execute(command: ResetPasswordCommand): Promise<{ message: string }> {
-    const user = await this.authRepository.findActiveUserByEmail(command.email);
+    const user = await this.authRepository.findUserForPasswordReset(command.email);
 
     if (!user) {
       throw new UnauthorizedException('Invalid reset token');
@@ -57,6 +57,12 @@ export class ResetPasswordHandler
     const passwordHash = await this.passwordService.hash(command.newPassword);
 
     await this.authRepository.updateUserPassword(user.id, passwordHash);
+    if (!user.isActive) {
+      await this.authRepository.reactivateUser(user.id);
+    }
+    if (!user.emailVerifiedAt) {
+      await this.authRepository.markEmailVerified(user.id);
+    }
     await this.authRepository.markPasswordResetTokenUsed(matchedTokenId);
     await this.authRepository.revokeUserSessions(user.id);
 

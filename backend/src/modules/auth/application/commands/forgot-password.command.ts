@@ -1,3 +1,9 @@
+import { normalizeEmail } from '../../../../shared/utils/email.util';
+
 export class ForgotPasswordCommand {
-  constructor(public readonly email: string) {}
+  public readonly email: string;
+
+  constructor(email: string) {
+    this.email = normalizeEmail(email);
+  }
 }

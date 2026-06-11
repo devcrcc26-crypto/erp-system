@@ -1,4 +1,4 @@
-import { Inject } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   AUTH_REPOSITORY,
@@ -12,6 +12,8 @@ import { ForgotPasswordCommand } from './forgot-password.command';
 export class ForgotPasswordHandler
   implements ICommandHandler<ForgotPasswordCommand, { message: string }>
 {
+  private readonly logger = new Logger(ForgotPasswordHandler.name);
+
   constructor(
     @Inject(AUTH_REPOSITORY)
     private readonly authRepository: IAuthRepository,
@@ -23,9 +25,16 @@ export class ForgotPasswordHandler
    * Creates a password-reset token. Always returns the same message to avoid email enumeration.
    */
   async execute(command: ForgotPasswordCommand): Promise<{ message: string }> {
-    const user = await this.authRepository.findActiveUserByEmail(command.email);
+    const user = await this.authRepository.findUserForPasswordReset(command.email);
 
-    if (user) {
+    if (!user) {
+      if (process.env.NODE_ENV === 'development') {
+        this.logger.warn(
+          `No account matched forgot-password request for ${command.email}. ` +
+            'Confirm the email is correct and the user was not deleted from Team.',
+        );
+      }
+    } else {
       await this.authRepository.invalidateUnusedPasswordResetTokens(user.id);
 
       const token = this.tokenService.generatePasswordResetToken();

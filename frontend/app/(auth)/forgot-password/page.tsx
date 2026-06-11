@@ -18,9 +18,11 @@ export default function ForgotPasswordPage(): React.ReactNode {
     setSuccessMessage(null);
 
     try {
-      const result = await forgotPassword.mutateAsync({ email });
+      const result = await forgotPassword.mutateAsync({
+        email: email.trim().toLowerCase(),
+      });
       setSuccessMessage(
-        `${result.message} In local development, check the backend terminal for the reset link.`,
+        `${result.message} If you do not see an email, double-check the address and that the account is still active. In local development, open Mailpit at http://localhost:8025 or check the backend terminal for a line starting with [DEV Password reset]. Emails are not delivered to real Gmail inboxes.`,
       );
     } catch (error) {
       if (error instanceof ApiRequestError) {
@@ -36,7 +38,8 @@ export default function ForgotPasswordPage(): React.ReactNode {
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold text-slate-900">Forgot password</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Enter your email and we will send you a reset link.
+          Enter the exact email address on your account. We will send a reset
+          link if it matches an active user.
         </p>
       </div>
 

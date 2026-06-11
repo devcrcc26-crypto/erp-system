@@ -9,10 +9,14 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { normalizeEmail } from '../../../../shared/utils/email.util';
 
 export class CreateUserDto {
   @ApiProperty()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeEmail(value) : value,
+  )
   @IsEmail()
   email!: string;
 

@@ -8,7 +8,7 @@ describe('ForgotPasswordHandler', () => {
   let authRepository: jest.Mocked<
     Pick<
       IAuthRepository,
-      | 'findActiveUserByEmail'
+      | 'findUserForPasswordReset'
       | 'invalidateUnusedPasswordResetTokens'
       | 'createPasswordResetToken'
     >
@@ -28,7 +28,7 @@ describe('ForgotPasswordHandler', () => {
 
   beforeEach(() => {
     authRepository = {
-      findActiveUserByEmail: jest.fn(),
+      findUserForPasswordReset: jest.fn(),
       invalidateUnusedPasswordResetTokens: jest.fn(),
       createPasswordResetToken: jest.fn(),
     };
@@ -40,7 +40,6 @@ describe('ForgotPasswordHandler', () => {
     authMailService = {
       sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
     };
-
     handler = new ForgotPasswordHandler(
       authRepository as unknown as IAuthRepository,
       tokenService as unknown as TokenService,
@@ -49,10 +48,12 @@ describe('ForgotPasswordHandler', () => {
   });
 
   it('creates a reset token and sends email when the user exists', async () => {
-    authRepository.findActiveUserByEmail.mockResolvedValue({
+    authRepository.findUserForPasswordReset.mockResolvedValue({
       id: 'user-1',
       email: 'user@test.local',
-    } as Awaited<ReturnType<IAuthRepository['findActiveUserByEmail']>>);
+      firstName: 'Test',
+      emailVerifiedAt: new Date('2026-01-01'),
+    } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
 
     const result = await handler.execute(
       new ForgotPasswordCommand('user@test.local'),
@@ -73,8 +74,48 @@ describe('ForgotPasswordHandler', () => {
     );
   });
 
+  it('sends reset email for inactive but non-deleted users', async () => {
+    authRepository.findUserForPasswordReset.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@test.local',
+      firstName: 'Test',
+      isActive: false,
+      emailVerifiedAt: new Date('2026-01-01'),
+    } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
+
+    const result = await handler.execute(
+      new ForgotPasswordCommand('user@test.local'),
+    );
+
+    expect(result.message).toBe(genericMessage);
+    expect(authMailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+      'user@test.local',
+      'reset-token',
+    );
+  });
+
+  it('sends reset email for unverified users as well', async () => {
+    authRepository.findUserForPasswordReset.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@test.local',
+      firstName: 'Test',
+      emailVerifiedAt: null,
+    } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
+
+    const result = await handler.execute(
+      new ForgotPasswordCommand('user@test.local'),
+    );
+
+    expect(result.message).toBe(genericMessage);
+    expect(authRepository.createPasswordResetToken).toHaveBeenCalled();
+    expect(authMailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+      'user@test.local',
+      'reset-token',
+    );
+  });
+
   it('returns the same message when the user does not exist', async () => {
-    authRepository.findActiveUserByEmail.mockResolvedValue(null);
+    authRepository.findUserForPasswordReset.mockResolvedValue(null);
 
     const result = await handler.execute(
       new ForgotPasswordCommand('missing@test.local'),

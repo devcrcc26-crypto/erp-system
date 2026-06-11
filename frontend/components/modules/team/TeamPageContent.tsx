@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -8,11 +9,14 @@ import { useRoles } from '@/lib/query/roles';
 import {
   useAssignRole,
   useCreateUser,
+  useDeleteUser,
   useResendInvitation,
+  useRevokeRole,
+  useUpdateUser,
   useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { User } from '@/lib/api/types';
+import type { Role, User } from '@/lib/api/types';
 
 const PAGE_SIZE = 20;
 
@@ -105,45 +109,381 @@ function UserStatusBadge({ user }: { user: User }): React.ReactNode {
   );
 }
 
-function ResendInvitationButton({
-  userId,
+function UserActionsMenu({
+  user,
+  isOpen,
+  onToggle,
+  onClose,
+  onUpdate,
+  onDelete,
+  onResend,
   disabled,
 }: {
-  userId: string;
+  user: User;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onUpdate: () => void;
+  onDelete: () => void;
+  onResend: () => void;
   disabled: boolean;
 }): React.ReactNode {
-  const resendInvitation = useResendInvitation();
-  const [message, setMessage] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const showResend = user.isActive && !user.emailVerifiedAt;
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handleClickOutside(event: MouseEvent): void {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
+  return (
+    <div ref={menuRef} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={disabled}
+        className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+        aria-label={`Actions for ${user.firstName} ${user.lastName}`}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 min-w-[11rem] rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onClose();
+              onUpdate();
+            }}
+            className="block w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+          >
+            Update
+          </button>
+          {showResend && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onClose();
+                onResend();
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+            >
+              Resend verification
+            </button>
+          )}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onClose();
+              onDelete();
+            }}
+            className="block w-full px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditEmployeeModal({
+  user,
+  roles,
+  onClose,
+  onSaved,
+}: {
+  user: User;
+  roles: Role[];
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  const userQuery = useUser(user.id);
+  const updateUser = useUpdateUser();
+  const assignRole = useAssignRole();
+  const revokeRole = useRevokeRole();
+
+  const [firstName, setFirstName] = useState(user.firstName);
+  const [lastName, setLastName] = useState(user.lastName);
+  const [phone, setPhone] = useState(user.phone ?? '');
+  const [roleId, setRoleId] = useState('');
+  const [isActive, setIsActive] = useState(user.isActive);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleResend(): Promise<void> {
-    setMessage(null);
+  const currentRoleId = userQuery.data?.userRoles[0]?.roleId ?? '';
+
+  useEffect(() => {
+    setFirstName(user.firstName);
+    setLastName(user.lastName);
+    setPhone(user.phone ?? '');
+    setIsActive(user.isActive);
+  }, [user]);
+
+  useEffect(() => {
+    if (currentRoleId && !roleId) {
+      setRoleId(currentRoleId);
+    }
+  }, [currentRoleId, roleId]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
     setError(null);
 
+    if (!roleId) {
+      setError('Please select a role.');
+      return;
+    }
+
     try {
-      const result = await resendInvitation.mutateAsync(userId);
-      setMessage(result.message);
+      await updateUser.mutateAsync({
+        userId: user.id,
+        body: {
+          firstName,
+          lastName,
+          phone: phone.trim() || undefined,
+          isActive,
+        },
+      });
+
+      if (roleId !== currentRoleId) {
+        if (currentRoleId) {
+          await revokeRole.mutateAsync({ userId: user.id, roleId: currentRoleId });
+        }
+        await assignRole.mutateAsync({ userId: user.id, roleId });
+      }
+
+      onSaved();
+      onClose();
     } catch (err) {
       setError(
         err instanceof ApiRequestError
           ? err.message
-          : 'Failed to resend invitation.',
+          : 'Failed to update employee.',
+      );
+    }
+  }
+
+  const isSubmitting =
+    updateUser.isPending || assignRole.isPending || revokeRole.isPending;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close dialog"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-employee-title"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md bg-white p-6 shadow-lg"
+      >
+        <h3 id="edit-employee-title" className="text-lg font-semibold text-slate-900">
+          Update employee
+        </h3>
+        <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+
+        <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="edit-firstName" className="mb-1 block text-sm font-medium text-slate-700">
+                First name
+              </label>
+              <input
+                id="edit-firstName"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-lastName" className="mb-1 block text-sm font-medium text-slate-700">
+                Last name
+              </label>
+              <input
+                id="edit-lastName"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="edit-phone" className="mb-1 block text-sm font-medium text-slate-700">
+              Phone
+            </label>
+            <input
+              id="edit-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-roleId" className="mb-1 block text-sm font-medium text-slate-700">
+              Role
+            </label>
+            <select
+              id="edit-roleId"
+              required
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              disabled={userQuery.isLoading}
+              className={`${INPUT_CLASS} disabled:opacity-60`}
+            >
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            Active account
+          </label>
+
+          {error && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || userQuery.isLoading}
+              className="rounded-md px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              style={{ backgroundColor: '#f97316' }}
+            >
+              {isSubmitting ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteEmployeeModal({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: User;
+  onClose: () => void;
+  onDeleted: () => void;
+}): React.ReactNode {
+  const deleteUser = useDeleteUser();
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete(): Promise<void> {
+    setError(null);
+
+    try {
+      await deleteUser.mutateAsync(user.id);
+      onDeleted();
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : 'Failed to delete employee.',
       );
     }
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        onClick={() => void handleResend()}
-        disabled={disabled || resendInvitation.isPending}
-        className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close dialog"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-employee-title"
+        className="relative w-full max-w-md rounded-md bg-white p-6 shadow-lg"
       >
-        {resendInvitation.isPending ? 'Sending…' : 'Resend invitation'}
-      </button>
-      {message && <span className="text-xs text-green-600">{message}</span>}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+        <h3 id="delete-employee-title" className="text-lg font-semibold text-slate-900">
+          Delete employee
+        </h3>
+        <p className="mt-3 text-sm text-slate-600">
+          Deactivate{' '}
+          <span className="font-medium">
+            {user.firstName} {user.lastName}
+          </span>{' '}
+          ({user.email})? They will no longer be able to sign in.
+        </p>
+
+        {error && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleteUser.isPending}
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+          >
+            {deleteUser.isPending ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -156,6 +496,13 @@ export default function TeamPageContent(): React.ReactNode {
   const [roleId, setRoleId] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
+  const [openMenuUserId, setOpenMenuUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const usersQuery = useUsers({ page, limit: PAGE_SIZE });
   const rolesQuery = useRoles(
@@ -164,6 +511,7 @@ export default function TeamPageContent(): React.ReactNode {
   );
   const createUser = useCreateUser();
   const assignRole = useAssignRole();
+  const resendInvitation = useResendInvitation();
 
   const roles = rolesQuery.data?.data ?? [];
   const employeeRole = roles.find((role) => role.name === 'Employee');
@@ -219,7 +567,7 @@ export default function TeamPageContent(): React.ReactNode {
       return;
     }
 
-    const invitedAddress = email.trim();
+    const invitedAddress = email.trim().toLowerCase();
 
     try {
       const user = await createUser.mutateAsync({
@@ -245,6 +593,23 @@ export default function TeamPageContent(): React.ReactNode {
     }
   }
 
+  async function handleResendVerification(user: User): Promise<void> {
+    setActionMessage(null);
+
+    try {
+      const result = await resendInvitation.mutateAsync(user.id);
+      setActionMessage({ type: 'success', text: result.message });
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text:
+          error instanceof ApiRequestError
+            ? error.message
+            : 'Failed to resend verification email.',
+      });
+    }
+  }
+
   const isSubmitting = createUser.isPending || assignRole.isPending;
 
   return (
@@ -254,6 +619,46 @@ export default function TeamPageContent(): React.ReactNode {
           email={invitedEmail}
           onClose={() => setInvitedEmail(null)}
         />
+      )}
+
+      {editingUser && (
+        <EditEmployeeModal
+          user={editingUser}
+          roles={roles}
+          onClose={() => setEditingUser(null)}
+          onSaved={() =>
+            setActionMessage({
+              type: 'success',
+              text: `${editingUser.firstName} ${editingUser.lastName} updated successfully.`,
+            })
+          }
+        />
+      )}
+
+      {deletingUser && (
+        <DeleteEmployeeModal
+          user={deletingUser}
+          onClose={() => setDeletingUser(null)}
+          onDeleted={() =>
+            setActionMessage({
+              type: 'success',
+              text: `${deletingUser.firstName} ${deletingUser.lastName} has been deactivated.`,
+            })
+          }
+        />
+      )}
+
+      {actionMessage && (
+        <div
+          className={[
+            'rounded-md px-4 py-3 text-sm',
+            actionMessage.type === 'success'
+              ? 'bg-green-50 text-green-700'
+              : 'bg-red-50 text-red-600',
+          ].join(' ')}
+        >
+          {actionMessage.text}
+        </div>
       )}
 
       <section className="rounded-md bg-white p-6 shadow-sm">
@@ -356,7 +761,7 @@ export default function TeamPageContent(): React.ReactNode {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500">
@@ -381,14 +786,20 @@ export default function TeamPageContent(): React.ReactNode {
                     <UserRolesCell userId={user.id} />
                   </td>
                   <td className="px-3 py-3">
-                    {user.isActive && !user.emailVerifiedAt ? (
-                      <ResendInvitationButton
-                        userId={user.id}
-                        disabled={isSubmitting}
-                      />
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
+                    <UserActionsMenu
+                      user={user}
+                      isOpen={openMenuUserId === user.id}
+                      onToggle={() =>
+                        setOpenMenuUserId((current) =>
+                          current === user.id ? null : user.id,
+                        )
+                      }
+                      onClose={() => setOpenMenuUserId(null)}
+                      onUpdate={() => setEditingUser(user)}
+                      onDelete={() => setDeletingUser(user)}
+                      onResend={() => void handleResendVerification(user)}
+                      disabled={isSubmitting || resendInvitation.isPending}
+                    />
                   </td>
                 </tr>
               ))}

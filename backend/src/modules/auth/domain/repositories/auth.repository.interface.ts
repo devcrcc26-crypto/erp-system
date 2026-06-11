@@ -39,6 +39,7 @@ export interface CreateEmailVerificationInput {
 
 export interface IAuthRepository {
   findActiveUserByEmail(email: string): Promise<UserWithCompany | null>;
+  findUserForPasswordReset(email: string): Promise<UserWithCompany | null>;
   findActiveUserById(userId: string): Promise<UserWithCompany | null>;
   findSessionById(sessionId: string): Promise<UserSession | null>;
   createSession(input: CreateSessionInput): Promise<UserSession>;
@@ -51,6 +52,7 @@ export interface IAuthRepository {
   deleteSession(sessionId: string): Promise<void>;
   updateUserLastLogin(userId: string): Promise<void>;
   updateUserPassword(userId: string, passwordHash: string): Promise<void>;
+  reactivateUser(userId: string): Promise<void>;
   createPasswordResetToken(input: CreatePasswordResetInput): Promise<void>;
   findActivePasswordResetTokens(userId: string): Promise<
     Array<{

@@ -78,8 +78,9 @@ export class UserManagementService {
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
+    const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findFirst({
-      where: activeOnly({ companyId: ctx.companyId, email: dto.email }),
+      where: activeOnly({ companyId: ctx.companyId, email }),
     });
     if (existing) {
       throw new ConflictException('Email already in use');
@@ -104,6 +105,7 @@ export class UserManagementService {
       data: {
         companyId: ctx.companyId,
         ...rest,
+        email,
         passwordHash,
         emailVerifiedAt,
         createdBy: ctx.userId,

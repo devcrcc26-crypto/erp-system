@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { normalizeEmail } from '../../../../shared/utils/email.util';
 import type { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import {
   CreateEmailVerificationInput,
@@ -15,8 +17,32 @@ export class AuthRepository implements IAuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findActiveUserByEmail(email: string): Promise<UserWithCompany | null> {
+    const normalizedEmail = normalizeEmail(email);
+
     return this.prisma.user.findFirst({
-      where: activeOnly({ email, isActive: true }),
+      where: {
+        deletedAt: null,
+        isActive: true,
+        email: {
+          equals: normalizedEmail,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+      include: this.userCompanyInclude(),
+    });
+  }
+
+  async findUserForPasswordReset(email: string): Promise<UserWithCompany | null> {
+    const normalizedEmail = normalizeEmail(email);
+
+    return this.prisma.user.findFirst({
+      where: {
+        deletedAt: null,
+        email: {
+          equals: normalizedEmail,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
       include: this.userCompanyInclude(),
     });
   }
@@ -110,6 +136,13 @@ export class AuthRepository implements IAuthRepository {
     await this.prisma.user.update({
       where: { id: userId },
       data: { passwordHash },
+    });
+  }
+
+  async reactivateUser(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: true },
     });
   }
 

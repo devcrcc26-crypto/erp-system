@@ -182,6 +182,19 @@ export interface CreateUserRequest {
   isActive?: boolean;
 }
 
+export interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  branchId?: string;
+  departmentId?: string;
+  positionId?: string;
+  preferredLanguage?: string;
+  preferredTimezone?: string;
+  preferredDateFormat?: string;
+  isActive?: boolean;
+}
+
 export interface AssignUserRoleRequest {
   roleId: string;
 }

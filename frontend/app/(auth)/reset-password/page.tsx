@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useResetPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -11,12 +11,18 @@ function ResetPasswordForm(): React.ReactNode {
   const searchParams = useSearchParams();
   const resetPassword = useResetPassword();
 
-  const emailFromUrl = searchParams.get('email') ?? '';
-  const tokenFromUrl = searchParams.get('token') ?? '';
+  const emailFromUrl = (searchParams.get('email') ?? '').trim().toLowerCase();
+  const tokenFromUrl = (searchParams.get('token') ?? '').trim();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tokenFromUrl && !emailFromUrl) {
+      router.replace(`/activate?token=${encodeURIComponent(tokenFromUrl)}`);
+    }
+  }, [tokenFromUrl, emailFromUrl, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -102,9 +108,20 @@ function ResetPasswordForm(): React.ReactNode {
           </p>
         )}
 
+        {errorMessage?.toLowerCase().includes('invalid or expired') && (
+          <p className="text-sm text-slate-500">
+            Reset links expire after 1 hour and can only be used once. Request a
+            new link from{' '}
+            <Link href="/forgot-password" className="font-medium text-orange-600 hover:underline">
+              forgot password
+            </Link>
+            .
+          </p>
+        )}
+
         <button
           type="submit"
-          disabled={resetPassword.isPending}
+          disabled={resetPassword.isPending || (Boolean(tokenFromUrl) && !emailFromUrl)}
           className="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: '#f97316' }}
         >

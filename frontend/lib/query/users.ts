@@ -10,6 +10,7 @@ import {
   apiDelete,
   apiGet,
   apiGetPaginated,
+  apiPatch,
   apiPost,
 } from '@/lib/api/client';
 import type {
@@ -18,6 +19,7 @@ import type {
   CreateUserResponse,
   MessageResponse,
   PaginationParams,
+  UpdateUserRequest,
   User,
   UserDetail,
 } from '@/lib/api/types';
@@ -82,6 +84,38 @@ export function useResendInvitation() {
   return useMutation({
     mutationFn: (userId: string) =>
       apiPost<MessageResponse>(`/users/${userId}/resend-invitation`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      body,
+    }: {
+      userId: string;
+      body: UpdateUserRequest;
+    }) => apiPatch<User>(`/users/${userId}`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.detail(variables.userId),
+      });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiDelete<MessageResponse>(`/users/${userId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
