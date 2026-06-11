@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import ThreePeopleIcon from "@/components/ThreePeopleIcon";
+import TeamPageContent from '@/components/modules/team/TeamPageContent';
 
-export default function TeamPage() {
-  return <PlaceholderPage icon={ThreePeopleIcon} title="Team" />;
+export default function TeamPage(): React.ReactNode {
+  return <TeamPageContent />;
 }
