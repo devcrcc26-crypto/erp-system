@@ -89,6 +89,7 @@ export class RefreshTokenHandler
           user.preferredTimezone ?? user.company.defaultTimezone,
         preferredDateFormat:
           user.preferredDateFormat ?? user.company.defaultDateFormat,
+        emailVerifiedAt: user.emailVerifiedAt,
       },
     };
   }

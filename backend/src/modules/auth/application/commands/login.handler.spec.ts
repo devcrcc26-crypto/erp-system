@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { LoginHandler } from './login.handler';
 import { LoginCommand } from './login.command';
 import { IAuthRepository, UserWithCompany } from '../../domain/repositories/auth.repository.interface';
@@ -16,6 +16,7 @@ describe('LoginHandler', () => {
     preferredLanguage: null,
     preferredTimezone: null,
     preferredDateFormat: null,
+    emailVerifiedAt: new Date('2026-01-01'),
     company: {
       id: 'company-1',
       legalName: 'Test Co',
@@ -98,5 +99,17 @@ describe('LoginHandler', () => {
     await expect(
       handler.execute(new LoginCommand('user@test.local', 'wrong')),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('throws when email is not verified', async () => {
+    authRepository.findActiveUserByEmail.mockResolvedValue({
+      ...mockUser,
+      emailVerifiedAt: null,
+    });
+    passwordService.verify.mockResolvedValue(true);
+
+    await expect(
+      handler.execute(new LoginCommand('user@test.local', 'password')),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

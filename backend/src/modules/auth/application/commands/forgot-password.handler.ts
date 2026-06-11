@@ -1,9 +1,10 @@
-import { Inject, Logger } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   AUTH_REPOSITORY,
   IAuthRepository,
 } from '../../domain/repositories/auth.repository.interface';
+import { AuthMailService } from '../services/auth-mail.service';
 import { TokenService } from '../services/token.service';
 import { ForgotPasswordCommand } from './forgot-password.command';
 
@@ -11,12 +12,11 @@ import { ForgotPasswordCommand } from './forgot-password.command';
 export class ForgotPasswordHandler
   implements ICommandHandler<ForgotPasswordCommand, { message: string }>
 {
-  private readonly logger = new Logger(ForgotPasswordHandler.name);
-
   constructor(
     @Inject(AUTH_REPOSITORY)
     private readonly authRepository: IAuthRepository,
     private readonly tokenService: TokenService,
+    private readonly authMailService: AuthMailService,
   ) {}
 
   /**
@@ -26,6 +26,8 @@ export class ForgotPasswordHandler
     const user = await this.authRepository.findActiveUserByEmail(command.email);
 
     if (user) {
+      await this.authRepository.invalidateUnusedPasswordResetTokens(user.id);
+
       const token = this.tokenService.generatePasswordResetToken();
       const tokenHash = await this.tokenService.hashToken(token);
 
@@ -35,11 +37,7 @@ export class ForgotPasswordHandler
         expiresAt: this.tokenService.getPasswordResetExpiryDate(),
       });
 
-      if (process.env.NODE_ENV === 'development') {
-        this.logger.debug(
-          `Password reset token for ${user.email}: ${token}`,
-        );
-      }
+      await this.authMailService.sendPasswordResetEmail(user.email, token);
     }
 
     return {

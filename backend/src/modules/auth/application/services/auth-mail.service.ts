@@ -7,6 +7,8 @@ export class AuthMailService {
   private readonly logger = new Logger(AuthMailService.name);
   private readonly frontendUrl: string;
   private readonly mailEnabled: boolean;
+  private readonly isDevelopment: boolean;
+  private readonly isLocalMailCatcher: boolean;
 
   constructor(
     private readonly mailerService: MailerService,
@@ -15,7 +17,11 @@ export class AuthMailService {
     this.frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ??
       'http://localhost:3000';
-    this.mailEnabled = Boolean(this.configService.get<string>('MAIL_HOST'));
+    const mailHost = this.configService.get<string>('MAIL_HOST') ?? '';
+    this.mailEnabled = Boolean(mailHost);
+    this.isDevelopment =
+      this.configService.get<string>('NODE_ENV') === 'development';
+    this.isLocalMailCatcher = ['localhost', '127.0.0.1'].includes(mailHost);
   }
 
   /**
@@ -27,16 +33,17 @@ export class AuthMailService {
     firstName: string,
   ): Promise<void> {
     const url = this.buildUrl('/activate', { token });
+    this.logDevAuthLink('Activation', email, url);
 
     if (!this.mailEnabled) {
-      this.logger.debug(`Activation link for ${email}: ${url}`);
       return;
     }
 
-    await this.mailerService.sendMail({
+    await this.deliverMail({
       to: email,
       subject: 'Activate your Construction ERP account',
       html: this.renderActivationBody(firstName, url),
+      fallbackUrl: url,
     });
   }
 
@@ -48,16 +55,17 @@ export class AuthMailService {
       token,
       email,
     });
+    this.logDevAuthLink('Password reset', email, url);
 
     if (!this.mailEnabled) {
-      this.logger.debug(`Password reset link for ${email}: ${url}`);
       return;
     }
 
-    await this.mailerService.sendMail({
+    await this.deliverMail({
       to: email,
       subject: 'Reset your Construction ERP password',
       html: this.renderPasswordResetBody(url),
+      fallbackUrl: url,
     });
   }
 
@@ -69,17 +77,60 @@ export class AuthMailService {
     token: string,
   ): Promise<void> {
     const url = this.buildUrl('/confirm-email-change', { token });
+    this.logDevAuthLink('Email change', email, url);
 
     if (!this.mailEnabled) {
-      this.logger.debug(`Email change confirmation for ${email}: ${url}`);
       return;
     }
 
-    await this.mailerService.sendMail({
+    await this.deliverMail({
       to: email,
       subject: 'Confirm your new email address',
       html: this.renderEmailChangeBody(url),
+      fallbackUrl: url,
     });
+  }
+
+  /**
+   * Attempts SMTP delivery; in development logs the link if delivery fails.
+   */
+  private async deliverMail(input: {
+    to: string;
+    subject: string;
+    html: string;
+    fallbackUrl: string;
+  }): Promise<void> {
+    try {
+      await this.mailerService.sendMail({
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+      });
+
+      if (this.isDevelopment && this.isLocalMailCatcher) {
+        this.logger.log(
+          `Email queued to local mail catcher for ${input.to}. ` +
+            'Real inboxes (e.g. Gmail) will not receive it — use the link logged above or open Mailpit at http://localhost:8025',
+        );
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Failed to send email to ${input.to} (${reason}). Use this link: ${input.fallbackUrl}`,
+      );
+    }
+  }
+
+  private logDevAuthLink(
+    kind: string,
+    email: string,
+    url: string,
+  ): void {
+    if (!this.isDevelopment) {
+      return;
+    }
+
+    this.logger.log(`[DEV ${kind}] ${email} → ${url}`);
   }
 
   private buildUrl(

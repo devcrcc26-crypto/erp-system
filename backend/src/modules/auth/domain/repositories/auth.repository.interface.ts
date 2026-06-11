@@ -64,11 +64,17 @@ export interface IAuthRepository {
     userId: string,
     purpose: EmailVerificationPurpose,
   ): Promise<Array<{ id: string; tokenHash: string }>>;
+  findActiveEmailVerificationTokensByPurpose(
+    purpose: EmailVerificationPurpose,
+  ): Promise<Array<{ id: string; userId: string; tokenHash: string }>>;
   markEmailVerificationTokenUsed(tokenId: string): Promise<void>;
   invalidateUnusedEmailVerificationTokens(
     userId: string,
     purpose: EmailVerificationPurpose,
   ): Promise<void>;
   markEmailVerified(userId: string): Promise<void>;
+  setUserPendingEmail(userId: string, pendingEmail: string | null): Promise<void>;
+  updateUserEmail(userId: string, email: string): Promise<void>;
   revokeUserSessions(userId: string): Promise<void>;
+  revokeUserSessionsExcept(userId: string, exceptSessionId: string): Promise<void>;
 }

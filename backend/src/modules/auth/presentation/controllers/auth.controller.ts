@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -12,15 +12,27 @@ import {
   MessageResponseDto,
 } from '../../application/dtos/auth-response.dto';
 import { CapabilitiesDto } from '../../application/dtos/capabilities.dto';
+import { ActivateAccountDto } from '../../application/dtos/activate-account.dto';
+import { ResendActivationDto } from '../../application/dtos/resend-activation.dto';
+import {
+  ChangeEmailDto,
+  ChangePasswordDto,
+  ConfirmEmailChangeDto,
+  ProfileResponseDto,
+  UpdateProfileDto,
+} from '../../application/dtos/profile.dto';
 import { SessionCapabilitiesService } from '../../application/services/session-capabilities.service';
+import { ProfileService } from '../../application/services/profile.service';
 import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
 import { LoginDto } from '../../application/dtos/login.dto';
 import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
 import { ResetPasswordDto } from '../../application/dtos/reset-password.dto';
+import { ActivateAccountCommand } from '../../application/commands/activate-account.command';
 import { ForgotPasswordCommand } from '../../application/commands/forgot-password.command';
 import { LoginCommand } from '../../application/commands/login.command';
 import { LogoutCommand } from '../../application/commands/logout.command';
 import { RefreshTokenCommand } from '../../application/commands/refresh-token.command';
+import { ResendActivationCommand } from '../../application/commands/resend-activation.command';
 import { ResetPasswordCommand } from '../../application/commands/reset-password.command';
 
 @ApiTags('Auth')
@@ -30,6 +42,7 @@ export class AuthController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly sessionCapabilitiesService: SessionCapabilitiesService,
+    private readonly profileService: ProfileService,
   ) {}
 
   @Public()
@@ -74,6 +87,81 @@ export class AuthController {
     return this.sessionCapabilitiesService.resolve(user.userId, user.companyId);
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'Get the current user profile' })
+  @ApiResponse({ status: 200, type: ProfileResponseDto })
+  async getProfile(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ProfileResponseDto> {
+    return this.profileService.getProfile({
+      userId: user.userId,
+      companyId: user.companyId,
+      sessionId: user.sessionId,
+    });
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update the current user profile' })
+  @ApiResponse({ status: 200, type: ProfileResponseDto })
+  async updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<ProfileResponseDto> {
+    return this.profileService.updateProfile(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        sessionId: user.sessionId,
+      },
+      dto,
+    );
+  }
+
+  @Post('change-password')
+  @ApiOperation({ summary: 'Change password for the current session' })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    return this.profileService.changePassword(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        sessionId: user.sessionId,
+      },
+      dto.currentPassword,
+      dto.newPassword,
+    );
+  }
+
+  @Post('change-email')
+  @ApiOperation({ summary: 'Request an email address change' })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  async changeEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangeEmailDto,
+  ): Promise<{ message: string }> {
+    return this.profileService.requestEmailChange(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        sessionId: user.sessionId,
+      },
+      dto.newEmail,
+    );
+  }
+
+  @Public()
+  @Post('confirm-email-change')
+  @ApiOperation({ summary: 'Confirm a pending email change' })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  async confirmEmailChange(
+    @Body() dto: ConfirmEmailChangeDto,
+  ): Promise<{ message: string }> {
+    return this.profileService.confirmEmailChange(dto.token);
+  }
+
   @Post('logout')
   @ApiOperation({ summary: 'Revoke the current session' })
   @ApiResponse({ status: 201, type: MessageResponseDto })
@@ -83,6 +171,29 @@ export class AuthController {
     return this.commandBus.execute(
       new LogoutCommand(user.sessionId, user.userId),
     );
+  }
+
+  @Public()
+  @Post('activate-account')
+  @ApiOperation({ summary: 'Activate account and set password' })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  @ApiResponse({ status: 400, type: ApiErrorResponseDto })
+  async activateAccount(
+    @Body() dto: ActivateAccountDto,
+  ): Promise<{ message: string }> {
+    return this.commandBus.execute(
+      new ActivateAccountCommand(dto.token, dto.newPassword),
+    );
+  }
+
+  @Public()
+  @Post('resend-activation')
+  @ApiOperation({ summary: 'Resend account activation email' })
+  @ApiResponse({ status: 201, type: MessageResponseDto })
+  async resendActivation(
+    @Body() dto: ResendActivationDto,
+  ): Promise<{ message: string }> {
+    return this.commandBus.execute(new ResendActivationCommand(dto.email));
   }
 
   @Public()

@@ -6,13 +6,17 @@ import { PassportModule } from '@nestjs/passport';
 import { AuditModule } from '../audit/audit.module';
 import { AUTH_REPOSITORY } from './domain/repositories/auth.repository.interface';
 import { AuthRepository } from './infrastructure/repositories/auth.repository';
+import { ActivateAccountHandler } from './application/commands/activate-account.handler';
 import { ForgotPasswordHandler } from './application/commands/forgot-password.handler';
 import { LoginHandler } from './application/commands/login.handler';
 import { LogoutHandler } from './application/commands/logout.handler';
 import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
+import { ResendActivationHandler } from './application/commands/resend-activation.handler';
 import { ResetPasswordHandler } from './application/commands/reset-password.handler';
+import { AccountActivationService } from './application/services/account-activation.service';
 import { AuthMailService } from './application/services/auth-mail.service';
 import { PasswordService } from './application/services/password.service';
+import { ProfileService } from './application/services/profile.service';
 import { SessionCapabilitiesService } from './application/services/session-capabilities.service';
 import { TokenService } from './application/services/token.service';
 import { AuthController } from './presentation/controllers/auth.controller';
@@ -24,6 +28,8 @@ const CommandHandlers = [
   LogoutHandler,
   ForgotPasswordHandler,
   ResetPasswordHandler,
+  ActivateAccountHandler,
+  ResendActivationHandler,
 ];
 
 @Module({
@@ -45,6 +51,8 @@ const CommandHandlers = [
     TokenService,
     PasswordService,
     AuthMailService,
+    AccountActivationService,
+    ProfileService,
     SessionCapabilitiesService,
     JwtStrategy,
     {
@@ -52,6 +60,12 @@ const CommandHandlers = [
       useClass: AuthRepository,
     },
   ],
-  exports: [TokenService, PasswordService, AuthMailService, AUTH_REPOSITORY],
+  exports: [
+    TokenService,
+    PasswordService,
+    AuthMailService,
+    AccountActivationService,
+    AUTH_REPOSITORY,
+  ],
 })
 export class AuthModule {}

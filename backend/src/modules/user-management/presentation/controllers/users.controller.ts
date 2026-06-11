@@ -81,6 +81,15 @@ export class UsersController {
     return { message: 'User deactivated' };
   }
 
+  @Post(':id/resend-invitation')
+  @RequirePermission('users', 'edit')
+  resendInvitation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    return this.userManagementService.resendInvitation(this.ctx(user), id);
+  }
+
   @Post(':id/roles')
   @RequirePermission('users', 'edit')
   assignRole(

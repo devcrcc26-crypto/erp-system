@@ -24,10 +24,11 @@ export class CreateUserDto {
   @IsString()
   lastName!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Omit to send an email activation invite instead' })
+  @IsOptional()
   @IsString()
   @MinLength(8)
-  password!: string;
+  password?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -5,7 +5,13 @@ import { apiPost } from '@/lib/api/client';
 import { clearAuthCookie } from '@/lib/auth/session';
 import { fetchCapabilities } from '@/lib/permissions/capabilities';
 import { useAuthStore } from '@/stores/auth.store';
-import type { AuthTokens, LoginRequest, MessageResponse } from '@/lib/api/types';
+import type {
+  ActivateAccountRequest,
+  AuthTokens,
+  LoginRequest,
+  MessageResponse,
+  ResendActivationRequest,
+} from '@/lib/api/types';
 
 export function useLogin() {
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -24,6 +30,22 @@ export function useLogin() {
       setAuth(tokens);
       const capabilities = await fetchCapabilities();
       setCapabilities(capabilities);
+    },
+  });
+}
+
+export function useActivateAccount() {
+  return useMutation({
+    mutationFn: async (body: ActivateAccountRequest): Promise<MessageResponse> => {
+      return apiPost<MessageResponse>('/auth/activate-account', body);
+    },
+  });
+}
+
+export function useResendActivation() {
+  return useMutation({
+    mutationFn: async (body: ResendActivationRequest): Promise<MessageResponse> => {
+      return apiPost<MessageResponse>('/auth/resend-activation', body);
     },
   });
 }

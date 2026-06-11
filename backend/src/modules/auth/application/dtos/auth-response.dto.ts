@@ -27,6 +27,9 @@ export class AuthUserDto {
 
   @ApiProperty({ nullable: true })
   preferredDateFormat!: string | null;
+
+  @ApiProperty({ nullable: true })
+  emailVerifiedAt!: Date | null;
 }
 
 export class AuthTokensDto {

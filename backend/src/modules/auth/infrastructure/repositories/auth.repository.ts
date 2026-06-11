@@ -182,6 +182,19 @@ export class AuthRepository implements IAuthRepository {
     });
   }
 
+  async findActiveEmailVerificationTokensByPurpose(
+    purpose: EmailVerificationPurpose,
+  ): Promise<Array<{ id: string; userId: string; tokenHash: string }>> {
+    return this.prisma.emailVerificationToken.findMany({
+      where: {
+        purpose,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true, userId: true, tokenHash: true },
+    });
+  }
+
   async markEmailVerificationTokenUsed(tokenId: string): Promise<void> {
     await this.prisma.emailVerificationToken.update({
       where: { id: tokenId },
@@ -211,9 +224,38 @@ export class AuthRepository implements IAuthRepository {
     });
   }
 
+  async setUserPendingEmail(
+    userId: string,
+    pendingEmail: string | null,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pendingEmail },
+    });
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { email, pendingEmail: null },
+    });
+  }
+
   async revokeUserSessions(userId: string): Promise<void> {
     await this.prisma.userSession.deleteMany({
       where: { userId },
+    });
+  }
+
+  async revokeUserSessionsExcept(
+    userId: string,
+    exceptSessionId: string,
+  ): Promise<void> {
+    await this.prisma.userSession.deleteMany({
+      where: {
+        userId,
+        id: { not: exceptSessionId },
+      },
     });
   }
 }

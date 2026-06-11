@@ -71,6 +71,15 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface ActivateAccountRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResendActivationRequest {
+  email: string;
+}
+
 export interface User {
   id: string;
   companyId: string;

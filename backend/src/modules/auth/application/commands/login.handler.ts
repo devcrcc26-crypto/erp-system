@@ -1,4 +1,8 @@
-import { Inject, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   AUTH_REPOSITORY,
@@ -36,6 +40,14 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
 
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new ForbiddenException({
+        message:
+          'Email address not verified. Please check your inbox for the activation link.',
+        error: 'EMAIL_NOT_VERIFIED',
+      });
     }
 
     const refreshToken = this.tokenService.generateRefreshToken();
@@ -86,6 +98,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
           user.preferredTimezone ?? user.company.defaultTimezone,
         preferredDateFormat:
           user.preferredDateFormat ?? user.company.defaultDateFormat,
+        emailVerifiedAt: user.emailVerifiedAt,
       },
     };
   }

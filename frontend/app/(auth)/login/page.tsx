@@ -2,7 +2,7 @@
 
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLogin } from '@/lib/query/auth';
+import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { setAuthCookie } from '@/lib/auth/session';
 import { ApiRequestError } from '@/lib/api/errors';
 
@@ -10,14 +10,23 @@ function LoginForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
+  const resendActivation = useResendActivation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(
+    searchParams.get('activated') === '1'
+      ? 'Your account is ready. Sign in with your new password.'
+      : null,
+  );
+  const [showResendActivation, setShowResendActivation] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
+    setInfoMessage(null);
+    setShowResendActivation(false);
 
     try {
       await login.mutateAsync({ email, password });
@@ -27,8 +36,34 @@ function LoginForm(): React.ReactNode {
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
+        if (error.code === 'EMAIL_NOT_VERIFIED') {
+          setShowResendActivation(true);
+        }
       } else {
         setErrorMessage('Login failed. Please try again.');
+      }
+    }
+  }
+
+  async function handleResendActivation(): Promise<void> {
+    if (!email) {
+      setErrorMessage('Enter your email address first.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      const result = await resendActivation.mutateAsync({ email });
+      setInfoMessage(
+        `${result.message} In local development, check the backend terminal for the activation link.`,
+      );
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Could not resend activation email.');
       }
     }
   }
@@ -79,10 +114,29 @@ function LoginForm(): React.ReactNode {
           />
         </div>
 
+        {infoMessage && (
+          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+            {infoMessage}
+          </p>
+        )}
+
         {errorMessage && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
             {errorMessage}
           </p>
+        )}
+
+        {showResendActivation && (
+          <button
+            type="button"
+            onClick={handleResendActivation}
+            disabled={resendActivation.isPending}
+            className="w-full rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 transition hover:bg-orange-100 disabled:opacity-60"
+          >
+            {resendActivation.isPending
+              ? 'Sending…'
+              : 'Resend activation email'}
+          </button>
         )}
 
         <button

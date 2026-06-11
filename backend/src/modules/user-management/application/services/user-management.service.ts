@@ -1,9 +1,12 @@
+import { randomBytes } from 'crypto';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AccountActivationService } from '../../../auth/application/services/account-activation.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -32,6 +35,7 @@ export class UserManagementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
+    private readonly accountActivationService: AccountActivationService,
   ) {}
 
   async listUsers(
@@ -80,18 +84,78 @@ export class UserManagementService {
     if (existing) {
       throw new ConflictException('Email already in use');
     }
-    const passwordHash = await this.passwordService.hash(dto.password);
-    const { password: _password, ...rest } = dto;
-    return this.prisma.user.create({
+
+    const { password, ...rest } = dto;
+    let invitationSent = false;
+    let emailVerifiedAt: Date | null = null;
+    let passwordHash: string;
+
+    if (password) {
+      passwordHash = await this.passwordService.hash(password);
+      emailVerifiedAt = new Date();
+    } else {
+      passwordHash = await this.passwordService.hash(
+        randomBytes(32).toString('hex'),
+      );
+      invitationSent = true;
+    }
+
+    const user = await this.prisma.user.create({
       data: {
         companyId: ctx.companyId,
         ...rest,
         passwordHash,
+        emailVerifiedAt,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
       select: this.userSelect(),
     });
+
+    if (invitationSent) {
+      await this.accountActivationService.sendInvitation({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+      });
+      return { ...user, invitationSent: true };
+    }
+
+    return user;
+  }
+
+  /**
+   * Resends the account activation email for an unverified user.
+   */
+  async resendInvitation(
+    ctx: AuditContext,
+    id: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        emailVerifiedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.emailVerifiedAt) {
+      throw new BadRequestException('User account is already activated');
+    }
+
+    await this.accountActivationService.sendInvitation({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+    });
+
+    return { message: 'Activation email sent' };
   }
 
   async updateUser(
@@ -400,6 +464,8 @@ export class UserManagementService {
       preferredDateFormat: true,
       isActive: true,
       mfaEnabled: true,
+      emailVerifiedAt: true,
+      pendingEmail: true,
       lastLogin: true,
       createdAt: true,
       updatedAt: true,

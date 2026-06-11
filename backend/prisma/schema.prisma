@@ -362,6 +362,7 @@ model User {
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
   email               String
+  pendingEmail        String?   @map("pending_email")
   phone               String?
   passwordHash        String    @map("password_hash")
   preferredLanguage   String?   @map("preferred_language")
