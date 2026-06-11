@@ -1,12 +1,32 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { LogOut } from "lucide-react";
+'use client';
 
-export default function LogoutPage() {
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useLogout } from '@/lib/query/auth';
+import { clearAuthCookie } from '@/lib/auth/session';
+
+export default function LogoutPage(): React.ReactNode {
+  const router = useRouter();
+  const logout = useLogout();
+
+  useEffect(() => {
+    async function performLogout(): Promise<void> {
+      try {
+        await logout.mutateAsync();
+      } catch {
+        clearAuthCookie();
+      }
+      router.replace('/login');
+    }
+
+    void performLogout();
+    // Run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <PlaceholderPage
-      icon={LogOut}
-      title="Logout"
-      description="Logout functionality will be wired up here once authentication is set up."
-    />
+    <div className="flex flex-1 items-center justify-center py-24 text-center text-sm text-slate-500">
+      Signing out…
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Network,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import type { SVGProps, ReactElement } from "react";
 import ThreePeopleIcon from "@/components/ThreePeopleIcon";
+import { useLogout } from "@/lib/query/auth";
+import { clearAuthCookie } from "@/lib/auth/session";
 
 type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -25,7 +27,6 @@ const navItems: { label: string; href: string; icon: IconComponent }[] = [
   { label: "Reports",      href: "/reports",      icon: BarChart3 as IconComponent },
   { label: "Messages",     href: "/messages",     icon: Mail as IconComponent },
   { label: "Settings",     href: "/settings",     icon: Settings as IconComponent },
-  { label: "Logout",       href: "/logout",       icon: LogOut as IconComponent },
 ];
 
 function NavLink({
@@ -56,6 +57,33 @@ function NavLink({
       <Icon width={18} height={18} className="shrink-0" />
       <span>{label}</span>
     </Link>
+  );
+}
+
+function LogoutButton({ onClick }: { onClick?: () => void }) {
+  const router = useRouter();
+  const logout = useLogout();
+
+  async function handleLogout(): Promise<void> {
+    try {
+      await logout.mutateAsync();
+    } catch {
+      clearAuthCookie();
+    }
+    onClick?.();
+    router.replace('/login');
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleLogout()}
+      disabled={logout.isPending}
+      className="flex w-full items-center gap-4 border-l-4 border-transparent py-4 pl-6 pr-6 text-sm font-normal text-slate-400 transition-colors hover:text-white disabled:opacity-60"
+    >
+      <LogOut width={18} height={18} className="shrink-0" />
+      <span>{logout.isPending ? 'Signing out…' : 'Logout'}</span>
+    </button>
   );
 }
 
@@ -95,6 +123,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               />
             </li>
           ))}
+          <li>
+            <LogoutButton onClick={onClose} />
+          </li>
         </ul>
       </nav>
     </aside>

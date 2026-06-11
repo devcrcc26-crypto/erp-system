@@ -1,4 +1,8 @@
-import { Search, Menu } from "lucide-react";
+'use client';
+
+import { Search, Menu } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth.store';
+import { useUser } from '@/lib/query/users';
 
 export default function DashboardHeader({
   title,
@@ -7,9 +11,18 @@ export default function DashboardHeader({
   title: string;
   onMenuClick?: () => void;
 }) {
+  const user = useAuthStore((state) => state.user);
+  const { data: userDetail } = useUser(user?.id ?? '', Boolean(user?.id));
+
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`
+    : 'User';
+  const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
+  const roleName =
+    userDetail?.userRoles?.[0]?.role?.name ?? 'User';
+
   return (
     <header className="mb-4 mt-1 flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white px-4 py-4 shadow-sm md:mb-6 md:mt-2 md:px-6">
-      {/* Left: hamburger + title + search stacked */}
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <button
           onClick={onMenuClick}
@@ -35,14 +48,13 @@ export default function DashboardHeader({
         </div>
       </div>
 
-      {/* Right: user avatar + name */}
       <div className="flex shrink-0 items-center gap-2 md:gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white md:h-10 md:w-10 md:text-sm">
-          C
+          {avatarInitial}
         </div>
         <div className="hidden text-sm md:block">
-          <p className="font-semibold text-slate-900">Chen Yangqiang</p>
-          <p className="text-slate-500">Manager</p>
+          <p className="font-semibold text-slate-900">{displayName}</p>
+          <p className="text-slate-500">{roleName}</p>
         </div>
       </div>
     </header>

@@ -13,7 +13,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/reports":      "Reports",
   "/messages":     "Messages",
   "/settings":     "Settings",
-  "/logout":       "Logout",
 };
 
 export default function DashboardShell({

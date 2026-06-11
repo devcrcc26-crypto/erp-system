@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { apiPost } from '@/lib/api/client';
+import { clearAuthCookie } from '@/lib/auth/session';
 import { probeCapabilities } from '@/lib/permissions/capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import type { AuthTokens, LoginRequest, MessageResponse } from '@/lib/api/types';
@@ -35,6 +36,7 @@ export function useLogout() {
       return apiPost<MessageResponse>('/auth/logout');
     },
     onSettled: () => {
+      clearAuthCookie();
       clearAuth();
     },
   });
