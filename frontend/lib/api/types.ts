@@ -90,6 +90,45 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface ProfileRole {
+  id: string;
+  name: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  pendingEmail: string | null;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  companyId: string;
+  companyName: string;
+  preferredLanguage: string | null;
+  preferredTimezone: string | null;
+  preferredDateFormat: string | null;
+  emailVerifiedAt: string | null;
+  roles: ProfileRole[];
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  preferredLanguage?: string;
+  preferredTimezone?: string;
+  preferredDateFormat?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangeEmailRequest {
+  newEmail: string;
+}
+
 export interface User {
   id: string;
   companyId: string;

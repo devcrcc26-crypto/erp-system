@@ -11,6 +11,7 @@ interface AuthState {
   user: AuthUser | null;
   capabilities: Capabilities;
   setAuth: (tokens: AuthTokens) => void;
+  updateUser: (partial: Partial<AuthUser>) => void;
   setCapabilities: (capabilities: Capabilities) => void;
   clearAuth: () => void;
   isAuthenticated: () => boolean;
@@ -38,6 +39,11 @@ export const useAuthStore = create<AuthState>()(
           sessionId: tokens.sessionId,
           user: tokens.user,
         });
+      },
+      updateUser: (partial: Partial<AuthUser>) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...partial } : null,
+        }));
       },
       setCapabilities: (capabilities: Capabilities) => {
         set({ capabilities });

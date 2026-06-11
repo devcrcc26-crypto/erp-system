@@ -9,6 +9,7 @@ import {
   BarChart3,
   Mail,
   Settings,
+  User,
   LogOut,
   X,
 } from "lucide-react";
@@ -123,6 +124,15 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               />
             </li>
           ))}
+          <li>
+            <NavLink
+              href="/profile"
+              label="Profile"
+              icon={User as IconComponent}
+              isActive={pathname === '/profile'}
+              onClick={onClose}
+            />
+          </li>
           <li>
             <LogoutButton onClick={onClose} />
           </li>

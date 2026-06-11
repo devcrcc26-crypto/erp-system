@@ -12,7 +12,7 @@
     "lint": "turbo run lint",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "db:up": "docker compose up -d postgres redis minio",
+    "db:up": "docker compose up -d postgres redis minio mailpit",
     "db:down": "docker compose down",
     "db:migrate": "npm run prisma:migrate --workspace=backend",
     "db:seed": "npm run prisma:seed --workspace=backend",

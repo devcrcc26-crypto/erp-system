@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Search, Menu } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUser } from '@/lib/query/users';
@@ -54,7 +55,11 @@ export default function DashboardHeader({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 md:gap-3">
+      <Link
+        href="/profile"
+        className="flex shrink-0 items-center gap-2 rounded-md transition-colors hover:bg-slate-50 md:gap-3 md:px-2 md:py-1"
+        aria-label="Open profile"
+      >
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white md:h-10 md:w-10 md:text-sm">
           {avatarInitial}
         </div>
@@ -62,7 +67,7 @@ export default function DashboardHeader({
           <p className="font-semibold text-slate-900">{displayName}</p>
           <p className="text-slate-500">{roleName}</p>
         </div>
-      </div>
+      </Link>
     </header>
   );
 }

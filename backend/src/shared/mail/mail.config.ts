@@ -13,6 +13,8 @@ export function buildMailerOptions(config: ConfigService): MailerOptions {
           host,
           port: config.get<number>('MAIL_PORT', 1025),
           secure: false,
+          // Avoid Windows resolving localhost to ::1 when only IPv4 is listening.
+          family: 4,
         }
       : { jsonTransport: true },
     defaults: {
