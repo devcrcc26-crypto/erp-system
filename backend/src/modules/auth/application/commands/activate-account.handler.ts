@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { EmailVerificationPurpose } from '@prisma/client';
+import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import {
   AUTH_REPOSITORY,
   IAuthRepository,

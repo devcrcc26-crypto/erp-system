@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { EmailVerificationPurpose } from '@prisma/client';
+import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import {
   AUTH_REPOSITORY,
   IAuthRepository,

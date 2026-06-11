@@ -17,9 +17,8 @@ const config: Config = {
   testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@prisma/client$': '<rootDir>/generated/prisma',
   },
-  transformIgnorePatterns: ['node_modules/', '<rootDir>/generated/prisma/'],
+  transformIgnorePatterns: ['node_modules/'],
 };
 
 export default config;

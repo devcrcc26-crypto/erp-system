@@ -1,5 +1,6 @@
 import * as bcrypt from 'bcrypt';
-import { EmailVerificationPurpose, PrismaClient } from '../../src/generated/prisma';
+import { PrismaClient } from '@prisma/client';
+import { EmailVerificationPurpose } from '../../src/shared/prisma/prisma-enums';
 import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();

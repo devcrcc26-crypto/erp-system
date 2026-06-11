@@ -8,9 +8,11 @@ import { useAuthStore } from '@/stores/auth.store';
 import type {
   ActivateAccountRequest,
   AuthTokens,
+  ForgotPasswordRequest,
   LoginRequest,
   MessageResponse,
   ResendActivationRequest,
+  ResetPasswordRequest,
 } from '@/lib/api/types';
 
 export function useLogin() {
@@ -46,6 +48,22 @@ export function useResendActivation() {
   return useMutation({
     mutationFn: async (body: ResendActivationRequest): Promise<MessageResponse> => {
       return apiPost<MessageResponse>('/auth/resend-activation', body);
+    },
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (body: ForgotPasswordRequest): Promise<MessageResponse> => {
+      return apiPost<MessageResponse>('/auth/forgot-password', body);
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (body: ResetPasswordRequest): Promise<MessageResponse> => {
+      return apiPost<MessageResponse>('/auth/reset-password', body);
     },
   });
 }

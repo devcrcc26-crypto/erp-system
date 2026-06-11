@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { EmailVerificationPurpose } from '@prisma/client';
+import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {

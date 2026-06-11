@@ -80,6 +80,16 @@ export interface ResendActivationRequest {
   email: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
 export interface User {
   id: string;
   companyId: string;

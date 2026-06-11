@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
@@ -15,11 +16,15 @@ function LoginForm(): React.ReactNode {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(
-    searchParams.get('activated') === '1'
-      ? 'Your account is ready. Sign in with your new password.'
-      : null,
-  );
+  const [infoMessage, setInfoMessage] = useState<string | null>(() => {
+    if (searchParams.get('activated') === '1') {
+      return 'Your account is ready. Sign in with your new password.';
+    }
+    if (searchParams.get('reset') === '1') {
+      return 'Password reset successfully. Sign in with your new password.';
+    }
+    return null;
+  });
   const [showResendActivation, setShowResendActivation] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -96,12 +101,20 @@ function LoginForm(): React.ReactNode {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Password
-          </label>
+          <div className="mb-1 flex items-center justify-between">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-orange-600 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             type="password"

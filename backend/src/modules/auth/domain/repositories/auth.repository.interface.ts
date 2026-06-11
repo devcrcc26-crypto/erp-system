@@ -1,6 +1,7 @@
-import { EmailVerificationPurpose, User, UserSession } from '@prisma/client';
+import { User, UserSession } from '@prisma/client';
+import type { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 
-export { EmailVerificationPurpose };
+export type { EmailVerificationPurpose };
 
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 

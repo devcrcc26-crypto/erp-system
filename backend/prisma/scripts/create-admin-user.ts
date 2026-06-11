@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { PrismaClient } from '../../src/generated/prisma';
+import { PrismaClient } from '@prisma/client';
 
 const COMPANY_ID = '00000000-0000-0000-0000-000000000001';
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';

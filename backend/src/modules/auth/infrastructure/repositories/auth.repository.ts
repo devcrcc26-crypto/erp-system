@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { EmailVerificationPurpose } from '@prisma/client';
+import type { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import {
   CreateEmailVerificationInput,
   CreatePasswordResetInput,
