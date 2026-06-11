@@ -77,6 +77,11 @@ enum DataScopeType {
   SELF
 }
 
+enum EmailVerificationPurpose {
+  ACCOUNT_ACTIVATION
+  EMAIL_CHANGE
+}
+
 // ─── Company & Settings ──────────────────────────────────────────────────────
 
 model Company {
@@ -364,6 +369,7 @@ model User {
   preferredDateFormat String?   @map("preferred_date_format")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
+  emailVerifiedAt     DateTime? @map("email_verified_at")
   lastLogin           DateTime? @map("last_login")
   createdAt           DateTime  @default(now()) @map("created_at")
   createdBy           String    @map("created_by")
@@ -378,6 +384,7 @@ model User {
   position               Position?               @relation(fields: [positionId], references: [id])
   sessions               UserSession[]
   passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   userRoles              UserRole[]
   auditLogs              AuditLog[]
   notifications          Notification[]
@@ -426,6 +433,23 @@ model PasswordResetToken {
   @@index([userId], map: "idx_password_reset_token_user_id")
   @@index([expiresAt], map: "idx_password_reset_token_expires_at")
   @@map("password_reset_token")
+}
+
+model EmailVerificationToken {
+  id        String                   @id @default(uuid())
+  userId    String                   @map("user_id")
+  tokenHash String                   @map("token_hash")
+  purpose   EmailVerificationPurpose
+  expiresAt DateTime                 @map("expires_at")
+  usedAt    DateTime?                @map("used_at")
+  createdAt DateTime                 @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_email_verification_token_user_id")
+  @@index([expiresAt], map: "idx_email_verification_token_expires_at")
+  @@index([userId, purpose], map: "idx_email_verification_token_user_purpose")
+  @@map("email_verification_token")
 }
 
 // ─── RBAC ────────────────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './shared/interceptors/response-envelope.interceptor';
+import { MailModule } from './shared/mail/mail.module';
 import { PermissionsModule } from './shared/permissions/permissions.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
 import { StorageModule } from './shared/storage/storage.module';
@@ -47,6 +48,7 @@ import { StorageModule } from './shared/storage/storage.module';
       },
     ]),
     PrismaModule,
+    MailModule,
     StorageModule,
     PermissionsModule,
     AuthModule,

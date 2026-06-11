@@ -1,4 +1,3 @@
-import { MailerModule } from '@nestjs-modules/mailer';
 import { BullModule } from '@nestjs/bullmq';
 import {
   DynamicModule,
@@ -61,32 +60,7 @@ export class NotificationsModule {
 
     return {
       module: NotificationsModule,
-      imports: [
-        ScheduleModule.forRoot(),
-        ...bullImports,
-        MailerModule.forRootAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: (config: ConfigService) => {
-            const host = config.get<string>('MAIL_HOST');
-            return {
-              transport: host
-                ? {
-                    host,
-                    port: config.get<number>('MAIL_PORT', 1025),
-                    secure: false,
-                  }
-                : { jsonTransport: true },
-              defaults: {
-                from: config.get<string>(
-                  'MAIL_FROM',
-                  'noreply@construction-erp.local',
-                ),
-              },
-            };
-          },
-        }),
-      ],
+      imports: [ScheduleModule.forRoot(), ...bullImports],
       controllers: [NotificationsController, NotificationAdminController],
       providers: [
         NotificationService,

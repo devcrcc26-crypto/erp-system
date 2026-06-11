@@ -47,6 +47,13 @@ export class TokenService {
   }
 
   /**
+   * Generates an opaque email-verification token.
+   */
+  generateEmailVerificationToken(): string {
+    return randomBytes(48).toString('hex');
+  }
+
+  /**
    * Hashes a token for secure storage (bcrypt, rounds 12).
    */
   async hashToken(token: string): Promise<string> {
@@ -72,6 +79,13 @@ export class TokenService {
    */
   getPasswordResetExpiryDate(): Date {
     return new Date(Date.now() + 60 * 60 * 1000);
+  }
+
+  /**
+   * Returns email-verification token expiry (24 hours).
+   */
+  getEmailVerificationExpiryDate(): Date {
+    return new Date(Date.now() + 24 * 60 * 60 * 1000);
   }
 
   getAccessExpiresInSeconds(): number {

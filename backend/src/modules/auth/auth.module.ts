@@ -11,6 +11,7 @@ import { LoginHandler } from './application/commands/login.handler';
 import { LogoutHandler } from './application/commands/logout.handler';
 import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
 import { ResetPasswordHandler } from './application/commands/reset-password.handler';
+import { AuthMailService } from './application/services/auth-mail.service';
 import { PasswordService } from './application/services/password.service';
 import { SessionCapabilitiesService } from './application/services/session-capabilities.service';
 import { TokenService } from './application/services/token.service';
@@ -43,6 +44,7 @@ const CommandHandlers = [
     ...CommandHandlers,
     TokenService,
     PasswordService,
+    AuthMailService,
     SessionCapabilitiesService,
     JwtStrategy,
     {
@@ -50,6 +52,6 @@ const CommandHandlers = [
       useClass: AuthRepository,
     },
   ],
-  exports: [TokenService, PasswordService, AUTH_REPOSITORY],
+  exports: [TokenService, PasswordService, AuthMailService, AUTH_REPOSITORY],
 })
 export class AuthModule {}

@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { EmailVerificationPurpose } from '@prisma/client';
 import {
+  CreateEmailVerificationInput,
   CreatePasswordResetInput,
   CreateSessionInput,
   IAuthRepository,
@@ -138,6 +140,74 @@ export class AuthRepository implements IAuthRepository {
     await this.prisma.passwordResetToken.update({
       where: { id: tokenId },
       data: { usedAt: new Date() },
+    });
+  }
+
+  async invalidateUnusedPasswordResetTokens(userId: string): Promise<void> {
+    await this.prisma.passwordResetToken.updateMany({
+      where: {
+        userId,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async createEmailVerificationToken(
+    input: CreateEmailVerificationInput,
+  ): Promise<void> {
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId: input.userId,
+        tokenHash: input.tokenHash,
+        purpose: input.purpose,
+        expiresAt: input.expiresAt,
+      },
+    });
+  }
+
+  async findActiveEmailVerificationTokens(
+    userId: string,
+    purpose: EmailVerificationPurpose,
+  ): Promise<Array<{ id: string; tokenHash: string }>> {
+    return this.prisma.emailVerificationToken.findMany({
+      where: {
+        userId,
+        purpose,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true, tokenHash: true },
+    });
+  }
+
+  async markEmailVerificationTokenUsed(tokenId: string): Promise<void> {
+    await this.prisma.emailVerificationToken.update({
+      where: { id: tokenId },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async invalidateUnusedEmailVerificationTokens(
+    userId: string,
+    purpose: EmailVerificationPurpose,
+  ): Promise<void> {
+    await this.prisma.emailVerificationToken.updateMany({
+      where: {
+        userId,
+        purpose,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date() },
     });
   }
 

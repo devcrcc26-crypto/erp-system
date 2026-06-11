@@ -1,4 +1,6 @@
-import { User, UserSession } from '@prisma/client';
+import { EmailVerificationPurpose, User, UserSession } from '@prisma/client';
+
+export { EmailVerificationPurpose };
 
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
@@ -27,6 +29,13 @@ export interface CreatePasswordResetInput {
   expiresAt: Date;
 }
 
+export interface CreateEmailVerificationInput {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  purpose: EmailVerificationPurpose;
+}
+
 export interface IAuthRepository {
   findActiveUserByEmail(email: string): Promise<UserWithCompany | null>;
   findActiveUserById(userId: string): Promise<UserWithCompany | null>;
@@ -49,5 +58,17 @@ export interface IAuthRepository {
     }>
   >;
   markPasswordResetTokenUsed(tokenId: string): Promise<void>;
+  invalidateUnusedPasswordResetTokens(userId: string): Promise<void>;
+  createEmailVerificationToken(input: CreateEmailVerificationInput): Promise<void>;
+  findActiveEmailVerificationTokens(
+    userId: string,
+    purpose: EmailVerificationPurpose,
+  ): Promise<Array<{ id: string; tokenHash: string }>>;
+  markEmailVerificationTokenUsed(tokenId: string): Promise<void>;
+  invalidateUnusedEmailVerificationTokens(
+    userId: string,
+    purpose: EmailVerificationPurpose,
+  ): Promise<void>;
+  markEmailVerified(userId: string): Promise<void>;
   revokeUserSessions(userId: string): Promise<void>;
 }
