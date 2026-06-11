@@ -144,9 +144,14 @@ export interface User {
   preferredDateFormat: string | null;
   isActive: boolean;
   mfaEnabled: boolean;
+  emailVerifiedAt: string | null;
   lastLogin: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateUserResponse extends User {
+  invitationSent?: boolean;
 }
 
 export interface UserRoleAssignment {
@@ -166,7 +171,7 @@ export interface CreateUserRequest {
   email: string;
   firstName: string;
   lastName: string;
-  password: string;
+  password?: string;
   phone?: string;
   branchId?: string;
   departmentId?: string;

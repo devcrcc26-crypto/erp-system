@@ -40,11 +40,13 @@ import { StorageModule } from './shared/storage/storage.module';
         name: 'default',
         ttl: 60_000,
         limit: 100,
+        skipIf: () => process.env.NODE_ENV === 'test',
       },
       {
         name: 'auth',
         ttl: 60_000,
         limit: 10,
+        skipIf: () => process.env.NODE_ENV === 'test',
       },
     ]),
     PrismaModule,

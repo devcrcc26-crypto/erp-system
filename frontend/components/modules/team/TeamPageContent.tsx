@@ -8,12 +8,16 @@ import { useRoles } from '@/lib/query/roles';
 import {
   useAssignRole,
   useCreateUser,
+  useResendInvitation,
   useUser,
   useUsers,
 } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
 
 const PAGE_SIZE = 20;
+
+const INPUT_CLASS =
+  'w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
 
 function UserRolesCell({ userId }: { userId: string }): React.ReactNode {
   const { data, isLoading } = useUser(userId);
@@ -28,15 +32,130 @@ function UserRolesCell({ userId }: { userId: string }): React.ReactNode {
   return <span>{roleNames || '-'}</span>;
 }
 
+function InvitationSuccessModal({
+  email,
+  onClose,
+}: {
+  email: string;
+  onClose: () => void;
+}): React.ReactNode {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close dialog"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invitation-success-title"
+        className="relative w-full max-w-md rounded-md bg-white p-6 shadow-lg"
+      >
+        <h3
+          id="invitation-success-title"
+          className="text-lg font-semibold text-slate-900"
+        >
+          Invitation sent
+        </h3>
+        <p className="mt-3 text-sm text-slate-600">
+          Invitation sent to <span className="font-medium">{email}</span>. The
+          employee must verify their email and set a password before they can
+          sign in.
+        </p>
+        <p className="mt-2 text-xs text-slate-500">
+          In development, check Mailpit at http://localhost:8025 for the
+          activation email.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: '#f97316' }}
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UserStatusBadge({ user }: { user: User }): React.ReactNode {
+  if (!user.isActive) {
+    return (
+      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+        Inactive
+      </span>
+    );
+  }
+
+  if (!user.emailVerifiedAt) {
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+        Pending activation
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+      Active
+    </span>
+  );
+}
+
+function ResendInvitationButton({
+  userId,
+  disabled,
+}: {
+  userId: string;
+  disabled: boolean;
+}): React.ReactNode {
+  const resendInvitation = useResendInvitation();
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleResend(): Promise<void> {
+    setMessage(null);
+    setError(null);
+
+    try {
+      const result = await resendInvitation.mutateAsync(userId);
+      setMessage(result.message);
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : 'Failed to resend invitation.',
+      );
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <button
+        type="button"
+        onClick={() => void handleResend()}
+        disabled={disabled || resendInvitation.isPending}
+        className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+      >
+        {resendInvitation.isPending ? 'Sending…' : 'Resend invitation'}
+      </button>
+      {message && <span className="text-xs text-green-600">{message}</span>}
+      {error && <span className="text-xs text-red-600">{error}</span>}
+    </div>
+  );
+}
+
 export default function TeamPageContent(): React.ReactNode {
   const [page, setPage] = useState(1);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
 
   const usersQuery = useUsers({ page, limit: PAGE_SIZE });
   const rolesQuery = useRoles(
@@ -94,19 +213,19 @@ export default function TeamPageContent(): React.ReactNode {
   async function handleCreateUser(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setFormError(null);
-    setSuccessMessage(null);
 
     if (!roleId) {
       setFormError('Please select a role.');
       return;
     }
 
+    const invitedAddress = email.trim();
+
     try {
       const user = await createUser.mutateAsync({
-        email,
+        email: invitedAddress,
         firstName,
         lastName,
-        password,
         isActive: true,
       });
 
@@ -115,11 +234,8 @@ export default function TeamPageContent(): React.ReactNode {
       setEmail('');
       setFirstName('');
       setLastName('');
-      setPassword('');
       setRoleId(employeeRole?.id ?? '');
-      setSuccessMessage(
-        `Account created for ${user.firstName} ${user.lastName}.`,
-      );
+      setInvitedEmail(invitedAddress);
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setFormError(error.message);
@@ -133,10 +249,18 @@ export default function TeamPageContent(): React.ReactNode {
 
   return (
     <div className="space-y-6">
+      {invitedEmail && (
+        <InvitationSuccessModal
+          email={invitedEmail}
+          onClose={() => setInvitedEmail(null)}
+        />
+      )}
+
       <section className="rounded-md bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Create employee account</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Invite employee</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Add a new user and assign their role.
+          An activation email will be sent so they can verify their email and
+          set their password. You never need to choose or share a password.
         </p>
 
         <form onSubmit={handleCreateUser} className="mt-6 grid gap-4 md:grid-cols-2">
@@ -149,7 +273,7 @@ export default function TeamPageContent(): React.ReactNode {
               required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -162,11 +286,11 @@ export default function TeamPageContent(): React.ReactNode {
               required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+              className={INPUT_CLASS}
             />
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
               Email
             </label>
@@ -176,22 +300,7 @@ export default function TeamPageContent(): React.ReactNode {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+              className={INPUT_CLASS}
             />
           </div>
 
@@ -205,7 +314,7 @@ export default function TeamPageContent(): React.ReactNode {
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
               disabled={rolesQuery.isLoading}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 disabled:opacity-60"
+              className={`${INPUT_CLASS} disabled:opacity-60`}
             >
               {roles.length === 0 && (
                 <option value="">No roles available</option>
@@ -224,12 +333,6 @@ export default function TeamPageContent(): React.ReactNode {
             </p>
           )}
 
-          {successMessage && (
-            <p className="md:col-span-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              {successMessage}
-            </p>
-          )}
-
           <div className="md:col-span-2">
             <button
               type="submit"
@@ -237,7 +340,7 @@ export default function TeamPageContent(): React.ReactNode {
               className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
               style={{ backgroundColor: '#f97316' }}
             >
-              {isSubmitting ? 'Creating…' : 'Create account'}
+              {isSubmitting ? 'Sending invitation…' : 'Send invitation'}
             </button>
           </div>
         </form>
@@ -261,6 +364,7 @@ export default function TeamPageContent(): React.ReactNode {
                 <th className="px-3 py-3 font-medium">Email</th>
                 <th className="px-3 py-3 font-medium">Status</th>
                 <th className="px-3 py-3 font-medium">Roles</th>
+                <th className="px-3 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -271,25 +375,26 @@ export default function TeamPageContent(): React.ReactNode {
                   </td>
                   <td className="px-3 py-3 text-slate-600">{user.email}</td>
                   <td className="px-3 py-3">
-                    <span
-                      className={[
-                        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
-                        user.isActive
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-600',
-                      ].join(' ')}
-                    >
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    <UserStatusBadge user={user} />
                   </td>
                   <td className="px-3 py-3 text-slate-600">
                     <UserRolesCell userId={user.id} />
+                  </td>
+                  <td className="px-3 py-3">
+                    {user.isActive && !user.emailVerifiedAt ? (
+                      <ResendInvitationButton
+                        userId={user.id}
+                        disabled={isSubmitting}
+                      />
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
                     No users found.
                   </td>
                 </tr>

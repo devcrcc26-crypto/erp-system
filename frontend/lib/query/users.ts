@@ -15,6 +15,7 @@ import {
 import type {
   AssignUserRoleRequest,
   CreateUserRequest,
+  CreateUserResponse,
   MessageResponse,
   PaginationParams,
   User,
@@ -67,7 +68,20 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: CreateUserRequest) => apiPost<User>('/users', body),
+    mutationFn: (body: CreateUserRequest) =>
+      apiPost<CreateUserResponse>('/users', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+}
+
+export function useResendInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiPost<MessageResponse>(`/users/${userId}/resend-invitation`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
