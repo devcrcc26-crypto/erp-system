@@ -12,11 +12,15 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   AssignUserRoleRequest,
   CreateUserRequest,
   CreateUserResponse,
+  ImportCommitResult,
+  ImportPreviewResult,
   MessageResponse,
   PaginationParams,
   UpdateUserRequest,
@@ -143,6 +147,42 @@ export function useAssignRole() {
       });
     },
   });
+}
+
+export function useImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<ImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<ImportPreviewResult>('/users/import/preview', formData);
+    },
+  });
+}
+
+export function useImportUsers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      file,
+      sendInvitations,
+    }: {
+      file: File;
+      sendInvitations: boolean;
+    }): Promise<ImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('sendInvitations', String(sendInvitations));
+      return apiPostForm<ImportCommitResult>('/users/import', formData);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+  });
+}
+
+export async function downloadUserImportTemplate(): Promise<void> {
+  await downloadApiFile('/users/import/template', 'user-import-template.xlsx');
 }
 
 export function useRevokeRole() {

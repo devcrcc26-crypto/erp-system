@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -6,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AccountActivationService } from '../../../auth/application/services/account-activation.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -27,6 +25,7 @@ import {
   UpdateRolePermissionsDto,
   UpdateUserDto,
 } from '../dtos/user-management.dtos';
+import { UserProvisioningService } from './user-provisioning.service';
 
 type AuditContext = { companyId: string; userId: string };
 
@@ -35,7 +34,7 @@ export class UserManagementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
-    private readonly accountActivationService: AccountActivationService,
+    private readonly userProvisioningService: UserProvisioningService,
   ) {}
 
   async listUsers(
@@ -78,52 +77,55 @@ export class UserManagementService {
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
-    const email = dto.email.trim().toLowerCase();
-    const existing = await this.prisma.user.findFirst({
-      where: activeOnly({ companyId: ctx.companyId, email }),
-    });
-    if (existing) {
-      throw new ConflictException('Email already in use');
-    }
-
-    const { password, ...rest } = dto;
-    let invitationSent = false;
-    let emailVerifiedAt: Date | null = null;
-    let passwordHash: string;
+    const { password, email, firstName, lastName, ...rest } = dto;
 
     if (password) {
-      passwordHash = await this.passwordService.hash(password);
-      emailVerifiedAt = new Date();
-    } else {
-      passwordHash = await this.passwordService.hash(
-        randomBytes(32).toString('hex'),
+      const user = await this.userProvisioningService.provisionWithPassword(
+        ctx,
+        {
+          email,
+          firstName,
+          lastName,
+          password,
+          phone: rest.phone,
+          branchId: rest.branchId,
+          departmentId: rest.departmentId,
+          positionId: rest.positionId,
+          preferredLanguage: rest.preferredLanguage,
+          preferredTimezone: rest.preferredTimezone,
+          preferredDateFormat: rest.preferredDateFormat,
+          isActive: rest.isActive,
+        },
       );
-      invitationSent = true;
+
+      return this.prisma.user.findFirst({
+        where: activeOnly({ id: user.id, companyId: ctx.companyId }),
+        select: this.userSelect(),
+      });
     }
 
-    const user = await this.prisma.user.create({
-      data: {
-        companyId: ctx.companyId,
-        ...rest,
-        email,
-        passwordHash,
-        emailVerifiedAt,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    const user = await this.userProvisioningService.provisionInvitedUser(ctx, {
+      email,
+      firstName,
+      lastName,
+      phone: rest.phone,
+      branchId: rest.branchId,
+      departmentId: rest.departmentId,
+      positionId: rest.positionId,
+      preferredLanguage: rest.preferredLanguage,
+      preferredTimezone: rest.preferredTimezone,
+      preferredDateFormat: rest.preferredDateFormat,
+      isActive: rest.isActive,
+    });
+
+    await this.userProvisioningService.sendActivationInvite(user);
+
+    const created = await this.prisma.user.findFirst({
+      where: activeOnly({ id: user.id, companyId: ctx.companyId }),
       select: this.userSelect(),
     });
 
-    if (invitationSent) {
-      await this.accountActivationService.sendInvitation({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-      });
-      return { ...user, invitationSent: true };
-    }
-
-    return user;
+    return { ...created, invitationSent: true };
   }
 
   /**
@@ -139,6 +141,7 @@ export class UserManagementService {
         id: true,
         email: true,
         firstName: true,
+        lastName: true,
         emailVerifiedAt: true,
       },
     });
@@ -151,10 +154,11 @@ export class UserManagementService {
       throw new BadRequestException('User account is already activated');
     }
 
-    await this.accountActivationService.sendInvitation({
+    await this.userProvisioningService.sendActivationInvite({
       id: user.id,
       email: user.email,
       firstName: user.firstName,
+      lastName: user.lastName,
     });
 
     return { message: 'Activation email sent' };

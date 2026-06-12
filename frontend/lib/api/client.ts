@@ -163,3 +163,34 @@ export async function apiDelete<T>(
   return unwrapEnvelope(response.data);
 }
 
+export async function apiPostForm<T>(
+  url: string,
+  formData: FormData,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const response = await apiClient.post<ApiEnvelope<T>>(url, formData, {
+    ...config,
+    headers: {
+      ...config?.headers,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return unwrapEnvelope(response.data);
+}
+
+export async function downloadApiFile(
+  url: string,
+  filename: string,
+): Promise<void> {
+  const response = await apiClient.get(url, { responseType: 'blob' });
+  const blob = new Blob([response.data as BlobPart], {
+    type: response.headers['content-type'] ?? 'application/octet-stream',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(objectUrl);
+}
+

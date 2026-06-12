@@ -200,6 +200,45 @@ export interface AssignUserRoleRequest {
   roleId: string;
 }
 
+export type ImportRowStatus =
+  | 'ok'
+  | 'error'
+  | 'duplicate'
+  | 'duplicate_in_file';
+
+export interface ImportRowPreview {
+  line: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  phone?: string;
+  status: ImportRowStatus;
+  message?: string;
+  roleId?: string;
+}
+
+export interface ImportPreviewResult {
+  valid: number;
+  invalid: number;
+  duplicate: number;
+  rows: ImportRowPreview[];
+}
+
+export interface ImportCommitError {
+  line: number;
+  email: string;
+  message: string;
+}
+
+export interface ImportCommitResult {
+  created: number;
+  skipped: number;
+  invitationsSent: number;
+  invitationsFailed: number;
+  errors: ImportCommitError[];
+}
+
 export interface Role {
   id: string;
   companyId: string;

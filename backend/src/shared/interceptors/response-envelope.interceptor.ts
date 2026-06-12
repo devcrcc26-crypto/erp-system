@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import { PaginationMeta } from '../dtos/pagination-query.dto';
@@ -39,9 +40,13 @@ export class ResponseEnvelopeInterceptor implements NestInterceptor {
   intercept(
     _context: ExecutionContext,
     next: CallHandler,
-  ): Observable<EnvelopeResponse<unknown>> {
+  ): Observable<EnvelopeResponse<unknown> | StreamableFile> {
     return next.handle().pipe(
       map((value: unknown) => {
+        if (value instanceof StreamableFile) {
+          return value;
+        }
+
         if (isEnvelope(value)) {
           return value;
         }

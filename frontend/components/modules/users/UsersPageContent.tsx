@@ -6,6 +6,7 @@ import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useRoles } from '@/lib/query/roles';
+import UserImportModal from '@/components/modules/users/UserImportModal';
 import {
   useAssignRole,
   useCreateUser,
@@ -506,6 +507,7 @@ export default function UsersPageContent(): React.ReactNode {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const usersQuery = useUsers({ page, limit: PAGE_SIZE });
   const rolesQuery = useRoles(
@@ -624,6 +626,15 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
+      {importOpen && (
+        <UserImportModal
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) =>
+            setActionMessage({ type: 'success', text: summary })
+          }
+        />
+      )}
+
       {editingUser && (
         <EditEmployeeModal
           key={editingUser.id}
@@ -666,11 +677,22 @@ export default function UsersPageContent(): React.ReactNode {
       )}
 
       <section className="rounded-md bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Invite employee</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          An activation email will be sent so they can verify their email and
-          set their password. You never need to choose or share a password.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Invite employee</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              An activation email will be sent so they can verify their email and
+              set their password. You never need to choose or share a password.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Import from Excel
+          </button>
+        </div>
 
         <form onSubmit={handleCreateUser} className="mt-6 grid gap-4 md:grid-cols-2">
           <div>
