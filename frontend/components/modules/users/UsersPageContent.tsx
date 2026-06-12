@@ -491,7 +491,7 @@ function DeleteEmployeeModal({
   );
 }
 
-export default function TeamPageContent(): React.ReactNode {
+export default function UsersPageContent(): React.ReactNode {
   const [page, setPage] = useState(1);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -528,7 +528,7 @@ export default function TeamPageContent(): React.ReactNode {
   if (usersQuery.isLoading) {
     return (
       <div className="rounded-md bg-white p-6 text-sm text-slate-500 shadow-sm">
-        Loading team…
+        Loading users…
       </div>
     );
   }
@@ -543,7 +543,7 @@ export default function TeamPageContent(): React.ReactNode {
       return (
         <PlaceholderPage
           icon={ThreePeopleIcon}
-          title="Team"
+          title="Users"
           description="You do not have permission to manage users."
         />
       );
@@ -552,7 +552,7 @@ export default function TeamPageContent(): React.ReactNode {
     return (
       <PlaceholderPage
         icon={ThreePeopleIcon}
-        title="Team"
+        title="Users"
         description="Unable to load users. Please try again later."
       />
     );
@@ -758,7 +758,7 @@ export default function TeamPageContent(): React.ReactNode {
       <section className="rounded-md bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Team members</h2>
+            <h2 className="text-lg font-semibold text-slate-900">All users</h2>
             <p className="text-sm text-slate-500">
               {meta?.total ?? 0} user{meta?.total === 1 ? '' : 's'} total
             </p>

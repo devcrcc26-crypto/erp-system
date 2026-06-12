@@ -10,6 +10,7 @@ import {
   Mail,
   Settings,
   User,
+  Users,
   LogOut,
   X,
 } from "lucide-react";
@@ -24,7 +25,8 @@ const navItems: { label: string; href: string; icon: IconComponent }[] = [
   { label: "Dashboard",    href: "/",             icon: LayoutDashboard as IconComponent },
   { label: "Projects",     href: "/projects",     icon: Network as IconComponent },
   { label: "Kanban Board", href: "/kanban-board", icon: ListChecks as IconComponent },
-  { label: "Team",         href: "/team",         icon: ThreePeopleIcon as IconComponent },
+  { label: "Users",        href: "/users",        icon: Users as IconComponent },
+  { label: "Teams",        href: "/teams",        icon: ThreePeopleIcon as IconComponent },
   { label: "Reports",      href: "/reports",      icon: BarChart3 as IconComponent },
   { label: "Messages",     href: "/messages",     icon: Mail as IconComponent },
   { label: "Settings",     href: "/settings",     icon: Settings as IconComponent },
