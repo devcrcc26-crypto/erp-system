@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -160,9 +160,11 @@ export class UserImportService {
 
         createdUsers.push(user);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to create user';
-        errors.push({ line: row.line, email: row.email, message });
+        errors.push({
+          line: row.line,
+          email: row.email,
+          message: this.formatImportError(error),
+        });
       }
     }
 
@@ -367,6 +369,26 @@ export class UserImportService {
       normalizedEmail,
     );
 
+    if (existing?.deletedAt) {
+      const role = roleByNormalizedName.get(this.normalizeRoleName(row.role));
+      if (!role) {
+        return {
+          ...base,
+          email: normalizedEmail,
+          status: 'error',
+          message: `Unknown role: ${row.role}`,
+        };
+      }
+
+      return {
+        ...base,
+        email: normalizedEmail,
+        status: 'ok',
+        roleId: role.id,
+        message: 'Previously deleted user will be restored',
+      };
+    }
+
     if (existing) {
       return {
         ...base,
@@ -460,5 +482,20 @@ export class UserImportService {
       hasValue = true;
     });
     return !hasValue;
+  }
+
+  private formatImportError(error: unknown): string {
+    if (error instanceof ConflictException) {
+      return error.message;
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      return 'Email already exists for this company';
+    }
+
+    return error instanceof Error ? error.message : 'Failed to create user';
   }
 }

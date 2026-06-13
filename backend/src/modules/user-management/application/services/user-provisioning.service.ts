@@ -4,7 +4,6 @@ import { Prisma } from '@prisma/client';
 import { AccountActivationService } from '../../../auth/application/services/account-activation.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
-import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 
 type AuditContext = { companyId: string; userId: string };
@@ -46,11 +45,19 @@ export class UserProvisioningService {
     input: ProvisionInvitedUserInput,
   ): Promise<ProvisionedUser> {
     const email = normalizeEmail(input.email);
-    await this.assertEmailAvailable(ctx.companyId, email);
-
     const passwordHash = await this.passwordService.hash(
       randomBytes(32).toString('hex'),
     );
+
+    const existing = await this.findUserRecordByEmail(ctx.companyId, email);
+
+    if (existing?.deletedAt === null) {
+      throw new ConflictException('Email already in use');
+    }
+
+    if (existing) {
+      return this.reactivateInvitedUser(ctx, existing.id, input, passwordHash);
+    }
 
     const user = await this.prisma.user.create({
       data: {
@@ -136,15 +143,64 @@ export class UserProvisioningService {
   }
 
   /**
-   * Returns whether an active user already exists for the email.
+   * Returns any user record for the email, including soft-deleted rows.
    */
   async findExistingUserByEmail(
     companyId: string,
     email: string,
-  ): Promise<{ id: string; emailVerifiedAt: Date | null } | null> {
+  ): Promise<{
+    id: string;
+    emailVerifiedAt: Date | null;
+    deletedAt: Date | null;
+  } | null> {
+    return this.findUserRecordByEmail(companyId, email);
+  }
+
+  private async findUserRecordByEmail(
+    companyId: string,
+    email: string,
+  ): Promise<{
+    id: string;
+    emailVerifiedAt: Date | null;
+    deletedAt: Date | null;
+  } | null> {
     return this.prisma.user.findFirst({
-      where: activeOnly({ companyId, email: normalizeEmail(email) }),
-      select: { id: true, emailVerifiedAt: true },
+      where: { companyId, email: normalizeEmail(email) },
+      select: { id: true, emailVerifiedAt: true, deletedAt: true },
+    });
+  }
+
+  private async reactivateInvitedUser(
+    ctx: AuditContext,
+    userId: string,
+    input: ProvisionInvitedUserInput,
+    passwordHash: string,
+  ): Promise<ProvisionedUser> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        phone: input.phone?.trim() || null,
+        branchId: input.branchId ?? null,
+        departmentId: input.departmentId ?? null,
+        positionId: input.positionId ?? null,
+        preferredLanguage: input.preferredLanguage ?? null,
+        preferredTimezone: input.preferredTimezone ?? null,
+        preferredDateFormat: input.preferredDateFormat ?? null,
+        isActive: input.isActive ?? true,
+        passwordHash,
+        emailVerifiedAt: null,
+        updatedBy: ctx.userId,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
     });
   }
 
@@ -152,11 +208,14 @@ export class UserProvisioningService {
     companyId: string,
     email: string,
   ): Promise<void> {
-    const existing = await this.prisma.user.findFirst({
-      where: activeOnly({ companyId, email }),
-    });
-    if (existing) {
+    const existing = await this.findUserRecordByEmail(companyId, email);
+    if (existing?.deletedAt === null) {
       throw new ConflictException('Email already in use');
+    }
+    if (existing) {
+      throw new ConflictException(
+        'Email belongs to a deactivated user. Import the user instead of creating manually.',
+      );
     }
   }
 }

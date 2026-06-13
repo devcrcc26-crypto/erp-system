@@ -135,6 +135,33 @@ describe('UserImportService', () => {
     expect(result.rows[0].message).toContain('Unknown role');
   });
 
+  it('allows restoring previously deleted users in preview', async () => {
+    userProvisioningService.findExistingUserByEmail.mockResolvedValue({
+      id: 'deleted-user',
+      emailVerifiedAt: new Date('2026-01-01'),
+      deletedAt: new Date('2026-06-01'),
+    });
+
+    const file = buildFile(
+      await buildWorkbookBuffer([
+        {
+          email: 'restored@test.local',
+          firstName: 'Restored',
+          lastName: 'User',
+          role: 'Employee',
+        },
+      ]),
+    );
+
+    const result = await service.previewImport(ctx, file);
+
+    expect(result.valid).toBe(1);
+    expect(result.rows[0]).toMatchObject({
+      status: 'ok',
+      message: 'Previously deleted user will be restored',
+    });
+  });
+
   it('flags duplicate emails in the file', async () => {
     const file = buildFile(
       await buildWorkbookBuffer([
