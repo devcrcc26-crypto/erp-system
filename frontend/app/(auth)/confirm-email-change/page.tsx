@@ -4,15 +4,17 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
-import { useConfirmEmailChange } from '@/lib/query/auth';
+import { apiPost } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
+import type { MessageResponse } from '@/lib/api/types';
 
-const confirmingTokens = new Set<string>();
+function storageKeyForToken(token: string): string {
+  return `email-change-confirm:${token}`;
+}
 
 function ConfirmEmailChangeContent(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const confirmEmailChange = useConfirmEmailChange();
   usePrepareIdentityAuthFlow();
 
   const tokenFromUrl = (searchParams.get('token') ?? '').trim();
@@ -26,36 +28,45 @@ function ConfirmEmailChangeContent(): React.ReactNode {
       return;
     }
 
-    const storageKey = `email-change-confirm:${tokenFromUrl}`;
+    const storageKey = storageKeyForToken(tokenFromUrl);
+    const status = sessionStorage.getItem(storageKey);
 
-    if (sessionStorage.getItem(storageKey) === 'done') {
+    if (status === 'done') {
       router.replace('/login?emailChanged=1');
       return;
     }
 
-    if (confirmingTokens.has(tokenFromUrl)) {
+    if (status === 'pending') {
       return;
     }
 
-    confirmingTokens.add(tokenFromUrl);
+    sessionStorage.setItem(storageKey, 'pending');
 
-    void confirmEmailChange
-      .mutateAsync({ token: tokenFromUrl })
+    void apiPost<MessageResponse>('/auth/confirm-email-change', {
+      token: tokenFromUrl,
+    })
       .then(() => {
         sessionStorage.setItem(storageKey, 'done');
         router.replace('/login?emailChanged=1');
       })
       .catch((error: unknown) => {
+        sessionStorage.removeItem(storageKey);
+
         if (error instanceof ApiRequestError) {
+          if (error.status === 429) {
+            setErrorMessage(
+              'Too many confirmation attempts. Please wait a minute and open the link again.',
+            );
+            return;
+          }
+
           setErrorMessage(error.message);
-        } else {
-          setErrorMessage('Email confirmation failed. Please try again.');
+          return;
         }
-      })
-      .finally(() => {
-        confirmingTokens.delete(tokenFromUrl);
+
+        setErrorMessage('Email confirmation failed. Please try again.');
       });
-  }, [tokenFromUrl, confirmEmailChange, router]);
+  }, [tokenFromUrl, router]);
 
   if (errorMessage) {
     return (
@@ -89,9 +100,7 @@ function ConfirmEmailChangeContent(): React.ReactNode {
     <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
       <h1 className="text-2xl font-bold text-slate-900">Confirming email change</h1>
       <p className="mt-2 text-sm text-slate-500">
-        {confirmEmailChange.isPending
-          ? 'Please wait while we verify your new email address…'
-          : 'Redirecting you to sign in…'}
+        Please wait while we verify your new email address…
       </p>
     </div>
   );

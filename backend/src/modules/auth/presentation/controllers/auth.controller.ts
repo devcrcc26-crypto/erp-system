@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Patch, Post, Req } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { Public } from '../../../../shared/decorators/public.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
@@ -153,6 +153,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle()
   @Post('confirm-email-change')
   @ApiOperation({ summary: 'Confirm a pending email change' })
   @ApiResponse({ status: 201, type: MessageResponseDto })
@@ -174,6 +175,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle()
   @Post('activate-account')
   @ApiOperation({ summary: 'Activate account and set password' })
   @ApiResponse({ status: 201, type: MessageResponseDto })
@@ -207,6 +209,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle()
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password using a one-time token' })
   @ApiResponse({ status: 201, type: MessageResponseDto })

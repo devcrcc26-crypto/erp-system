@@ -80,6 +80,7 @@ export function useConfirmEmailChange() {
     mutationFn: async (body: ConfirmEmailChangeRequest): Promise<MessageResponse> => {
       return apiPost<MessageResponse>('/auth/confirm-email-change', body);
     },
+    retry: false,
   });
 }
 
