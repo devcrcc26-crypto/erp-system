@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLogout } from '@/lib/query/auth';
-import { clearAuthCookie } from '@/lib/auth/session';
+import { signOutLocally } from '@/lib/auth/sign-out-locally';
 
 export default function LogoutPage(): React.ReactNode {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function LogoutPage(): React.ReactNode {
       try {
         await logout.mutateAsync();
       } catch {
-        clearAuthCookie();
+        signOutLocally();
       }
       router.replace('/login');
     }

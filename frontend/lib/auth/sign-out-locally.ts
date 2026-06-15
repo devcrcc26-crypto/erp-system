@@ -1,0 +1,31 @@
+import { useAuthStore } from '@/stores/auth.store';
+import { getQueryClient } from '@/lib/query/query-client-ref';
+import { broadcastAuthSessionChange } from '@/lib/auth/auth-session-channel';
+import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session';
+
+interface SignOutLocallyOptions {
+  broadcast?: boolean;
+  clearQuery?: boolean;
+}
+
+/** Clears client auth state without calling the logout API. */
+export function signOutLocally(options?: SignOutLocallyOptions): void {
+  const { broadcast = true, clearQuery = true } = options ?? {};
+
+  useAuthStore.getState().clearAuth();
+  clearAuthCookie();
+
+  if (clearQuery) {
+    getQueryClient()?.clear();
+  }
+
+  if (broadcast) {
+    broadcastAuthSessionChange('signed-out');
+  }
+}
+
+/** Marks the client as authenticated after a successful login. */
+export function completeLocalSignIn(): void {
+  setAuthCookie();
+  // Other tabs pick up the new session via the storage event on persist write.
+}

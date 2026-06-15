@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
-import { setAuthCookie } from '@/lib/auth/session';
+import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { ApiRequestError } from '@/lib/api/errors';
 
 function LoginForm(): React.ReactNode {
@@ -12,6 +12,11 @@ function LoginForm(): React.ReactNode {
   const searchParams = useSearchParams();
   const login = useLogin();
   const resendActivation = useResendActivation();
+
+  const activated = searchParams.get('activated') === '1';
+  const reset = searchParams.get('reset') === '1';
+  const emailChanged = searchParams.get('emailChanged') === '1';
+  const hasExplicitLoginIntent = activated || reset || emailChanged;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +35,12 @@ function LoginForm(): React.ReactNode {
   });
   const [showResendActivation, setShowResendActivation] = useState(false);
 
+  useEffect(() => {
+    if (hasExplicitLoginIntent) {
+      signOutLocally();
+    }
+  }, [hasExplicitLoginIntent]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
@@ -38,7 +49,6 @@ function LoginForm(): React.ReactNode {
 
     try {
       await login.mutateAsync({ email, password });
-      setAuthCookie();
       const redirectTo = searchParams.get('from') ?? '/';
       router.replace(redirectTo);
     } catch (error) {
@@ -129,6 +139,13 @@ function LoginForm(): React.ReactNode {
             className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
           />
         </div>
+
+        {hasExplicitLoginIntent && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Sign in with the account you just updated. Any previous session in this browser
+            has been cleared.
+          </p>
+        )}
 
         {infoMessage && (
           <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">

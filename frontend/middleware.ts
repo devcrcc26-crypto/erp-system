@@ -16,6 +16,14 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
+function hasExplicitLoginIntent(searchParams: URLSearchParams): boolean {
+  return (
+    searchParams.get('activated') === '1' ||
+    searchParams.get('reset') === '1' ||
+    searchParams.get('emailChanged') === '1'
+  );
+}
+
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const isAuthenticated =
@@ -28,7 +36,11 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAuthenticated && pathname === '/login') {
+  if (
+    isAuthenticated &&
+    pathname === '/login' &&
+    !hasExplicitLoginIntent(request.nextUrl.searchParams)
+  ) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

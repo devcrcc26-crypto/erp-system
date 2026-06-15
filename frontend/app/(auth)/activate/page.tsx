@@ -3,6 +3,8 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { PriorSessionNotice } from '@/components/auth/PriorSessionNotice';
+import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
 import { useActivateAccount } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
 
@@ -10,6 +12,7 @@ function ActivateForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token') ?? '';
+  const { priorUserEmail } = usePrepareIdentityAuthFlow();
 
   const activate = useActivateAccount();
 
@@ -56,6 +59,11 @@ function ActivateForm(): React.ReactNode {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <PriorSessionNotice
+          priorUserEmail={priorUserEmail}
+          message="You have been signed out so this account can be activated."
+        />
+
         <div>
           <label
             htmlFor="password"

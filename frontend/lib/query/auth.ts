@@ -2,7 +2,10 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { apiPost } from '@/lib/api/client';
-import { clearAuthCookie } from '@/lib/auth/session';
+import {
+  completeLocalSignIn,
+  signOutLocally,
+} from '@/lib/auth/sign-out-locally';
 import { fetchCapabilities } from '@/lib/permissions/capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import type {
@@ -22,6 +25,8 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (credentials: LoginRequest): Promise<AuthTokens> => {
+      signOutLocally({ broadcast: false });
+
       return apiPost<AuthTokens>('/auth/login', {
         ...credentials,
         deviceInfo:
@@ -31,6 +36,7 @@ export function useLogin() {
     },
     onSuccess: async (tokens) => {
       setAuth(tokens);
+      completeLocalSignIn();
       const capabilities = await fetchCapabilities();
       setCapabilities(capabilities);
     },
@@ -78,15 +84,12 @@ export function useConfirmEmailChange() {
 }
 
 export function useLogout() {
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-
   return useMutation({
     mutationFn: async (): Promise<MessageResponse> => {
       return apiPost<MessageResponse>('/auth/logout');
     },
     onSettled: () => {
-      clearAuthCookie();
-      clearAuth();
+      signOutLocally();
     },
   });
 }

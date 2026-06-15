@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
 import { useConfirmEmailChange } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
 
@@ -12,6 +13,7 @@ function ConfirmEmailChangeContent(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const confirmEmailChange = useConfirmEmailChange();
+  usePrepareIdentityAuthFlow();
 
   const tokenFromUrl = (searchParams.get('token') ?? '').trim();
 

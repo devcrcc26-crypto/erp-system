@@ -17,6 +17,8 @@ interface AuthState {
   isAuthenticated: () => boolean;
 }
 
+export const AUTH_PERSIST_KEY = 'erp-auth';
+
 const initialCapabilities: Capabilities = {
   canManageUsers: false,
   canCreateUsers: false,
@@ -60,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: () => Boolean(get().accessToken),
     }),
     {
-      name: 'erp-auth',
+      name: AUTH_PERSIST_KEY,
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

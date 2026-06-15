@@ -17,7 +17,7 @@ import {
 import type { SVGProps, ReactElement } from "react";
 import ThreePeopleIcon from "@/components/ThreePeopleIcon";
 import { useLogout } from "@/lib/query/auth";
-import { clearAuthCookie } from "@/lib/auth/session";
+import { signOutLocally } from "@/lib/auth/sign-out-locally";
 
 type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -71,7 +71,7 @@ function LogoutButton({ onClick }: { onClick?: () => void }) {
     try {
       await logout.mutateAsync();
     } catch {
-      clearAuthCookie();
+      signOutLocally();
     }
     onClick?.();
     router.replace('/login');
