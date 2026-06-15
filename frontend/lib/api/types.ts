@@ -90,6 +90,10 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface ConfirmEmailChangeRequest {
+  token: string;
+}
+
 export interface ProfileRole {
   id: string;
   name: string;

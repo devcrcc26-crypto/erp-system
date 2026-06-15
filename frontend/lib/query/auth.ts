@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import type {
   ActivateAccountRequest,
   AuthTokens,
+  ConfirmEmailChangeRequest,
   ForgotPasswordRequest,
   LoginRequest,
   MessageResponse,
@@ -64,6 +65,14 @@ export function useResetPassword() {
   return useMutation({
     mutationFn: async (body: ResetPasswordRequest): Promise<MessageResponse> => {
       return apiPost<MessageResponse>('/auth/reset-password', body);
+    },
+  });
+}
+
+export function useConfirmEmailChange() {
+  return useMutation({
+    mutationFn: async (body: ConfirmEmailChangeRequest): Promise<MessageResponse> => {
+      return apiPost<MessageResponse>('/auth/confirm-email-change', body);
     },
   });
 }

@@ -23,6 +23,9 @@ function LoginForm(): React.ReactNode {
     if (searchParams.get('reset') === '1') {
       return 'Password reset successfully. Sign in with your new password.';
     }
+    if (searchParams.get('emailChanged') === '1') {
+      return 'Your email address was updated. Sign in with your new email.';
+    }
     return null;
   });
   const [showResendActivation, setShowResendActivation] = useState(false);
