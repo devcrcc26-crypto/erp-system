@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import StatCard from '@/components/StatCard';
+import KPICard from '@/components/ui/KPICard/KPICard';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useDashboardStats } from '@/lib/query/stats';
 import { useAuthStore } from '@/stores/auth.store';
@@ -49,28 +49,28 @@ function StatsSection({
 }): React.ReactNode {
   return (
     <section className="grid grid-cols-2 gap-4 md:gap-6 xl:grid-cols-4">
-      <StatCard
+      <KPICard
         label="Projects"
         value={projects}
         icon={Network}
         iconBg="#dbeafe"
         iconColor="#2563eb"
       />
-      <StatCard
+      <KPICard
         label="Tasks"
         value={tasks}
         icon={ListTodo}
         iconBg="#fef3c7"
         iconColor="#d97706"
       />
-      <StatCard
+      <KPICard
         label="Team Members"
         value={teamMembers}
         icon={ThreePeopleIcon}
         iconBg="#dcfce7"
         iconColor="#16a34a"
       />
-      <StatCard
+      <KPICard
         label="Completion Rate"
         value={completionRate}
         icon={PieChart}

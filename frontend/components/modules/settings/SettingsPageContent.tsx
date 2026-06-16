@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Checkbox, Spin } from 'antd';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { Settings } from 'lucide-react';
 import { ApiRequestError } from '@/lib/api/errors';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import {
   usePermissions,
   useRole,
@@ -123,8 +127,8 @@ export default function SettingsPageContent(): React.ReactNode {
 
   if (rolesQuery.isLoading) {
     return (
-      <div className="rounded-md bg-white p-6 text-sm text-slate-500 shadow-sm">
-        Loading settings…
+      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+        <Spin />
       </div>
     );
   }
@@ -201,156 +205,112 @@ export default function SettingsPageContent(): React.ReactNode {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-md bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Roles</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Select a role to manage its permissions.
-        </p>
-
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="px-3 py-3 font-medium">Name</th>
-                <th className="px-3 py-3 font-medium">Description</th>
-                <th className="px-3 py-3 font-medium">Type</th>
-                <th className="px-3 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((role: Role) => {
-                const isSelected = role.id === selectedRoleId;
-                return (
-                  <tr
-                    key={role.id}
-                    onClick={() => {
-                      setSelectedRoleId(role.id);
-                      setSaveError(null);
-                      setSaveSuccess(null);
-                    }}
-                    className={[
-                      'cursor-pointer border-b border-slate-100 transition-colors',
-                      isSelected ? 'bg-orange-50' : 'hover:bg-slate-50',
-                    ].join(' ')}
-                  >
-                    <td className="px-3 py-3 font-medium text-slate-900">
-                      {role.name}
-                    </td>
-                    <td className="px-3 py-3 text-slate-600">
-                      {role.description ?? '-'}
-                    </td>
-                    <td className="px-3 py-3">
-                      <span
-                        className={[
-                          'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
-                          role.isSystemRole
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-slate-100 text-slate-600',
-                        ].join(' ')}
-                      >
-                        {role.isSystemRole ? 'System' : 'Custom'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span
-                        className={[
-                          'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
-                          role.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-slate-100 text-slate-600',
-                        ].join(' ')}
-                      >
-                        {role.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <FormLayout
+        title="Roles"
+        description="Select a role to manage its permissions."
+      >
+        <DataTable<Role>
+          rowKey="id"
+          dataSource={roles}
+          onRow={(record) => ({
+            onClick: () => {
+              setSelectedRoleId(record.id);
+              setSaveError(null);
+              setSaveSuccess(null);
+            },
+            style: {
+              cursor: 'pointer',
+              backgroundColor:
+                record.id === selectedRoleId ? '#fff7ed' : undefined,
+            },
+          })}
+          columns={[
+            { title: 'Name', dataIndex: 'name', key: 'name' },
+            {
+              title: 'Description',
+              key: 'description',
+              render: (_, record) => record.description ?? '-',
+            },
+            {
+              title: 'Type',
+              key: 'type',
+              render: (_, record) => (
+                <StatusBadge
+                  label={record.isSystemRole ? 'System' : 'Custom'}
+                  variant={record.isSystemRole ? 'info' : 'default'}
+                />
+              ),
+            },
+            {
+              title: 'Status',
+              key: 'status',
+              render: (_, record) => (
+                <StatusBadge
+                  label={record.isActive ? 'Active' : 'Inactive'}
+                  variant={record.isActive ? 'success' : 'default'}
+                />
+              ),
+            },
+          ]}
+        />
+      </FormLayout>
 
       {selectedRole && (
-        <section className="rounded-md bg-white p-6 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Permissions - {selectedRole.name}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Grant module access for this role.
-              </p>
-            </div>
-            {canEditRoles && (
-              <button
-                type="button"
+        <FormLayout
+          title={`Permissions - ${selectedRole.name}`}
+          description="Grant module access for this role."
+          extra={
+            canEditRoles ? (
+              <Button
+                type="primary"
                 onClick={() => void handleSave()}
-                disabled={updatePermissions.isPending || roleQuery.isLoading}
-                className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                style={{ backgroundColor: '#f97316' }}
+                loading={updatePermissions.isPending || roleQuery.isLoading}
               >
-                {updatePermissions.isPending ? 'Saving…' : 'Save permissions'}
-              </button>
-            )}
-          </div>
-
+                Save permissions
+              </Button>
+            ) : undefined
+          }
+        >
           {roleQuery.isLoading || permissionsQuery.isLoading ? (
-            <p className="text-sm text-slate-500">Loading permissions…</p>
+            <Spin />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="px-3 py-3 font-medium">Module</th>
-                    {ACTIONS.map((action) => (
-                      <th
-                        key={action}
-                        className="px-3 py-3 text-center font-medium capitalize"
-                      >
-                        {action}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {modules.map((module) => (
-                    <tr key={module} className="border-b border-slate-100">
-                      <td className="px-3 py-3 font-medium capitalize text-slate-900">
-                        {module.replace(/_/g, ' ')}
-                      </td>
-                      {ACTIONS.map((action) => {
-                        const permission = permissionFor(module, action);
-                        const checked =
-                          matrix[matrixKey(module, action)] ?? false;
+            <DataTable<{ module: string }>
+              rowKey="module"
+              dataSource={modules.map((module) => ({ module }))}
+              columns={[
+                {
+                  title: 'Module',
+                  dataIndex: 'module',
+                  key: 'module',
+                  render: (module: string) =>
+                    module.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                },
+                ...ACTIONS.map((action) => ({
+                  title: action.charAt(0).toUpperCase() + action.slice(1),
+                  key: action,
+                  align: 'center' as const,
+                  render: (_: unknown, record: { module: string }) => {
+                    const permission = permissionFor(record.module, action);
+                    const checked =
+                      matrix[matrixKey(record.module, action)] ?? false;
 
-                        return (
-                          <td key={action} className="px-3 py-3 text-center">
-                            {permission ? (
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={!canEditRoles}
-                                onChange={(event) =>
-                                  handleToggle(
-                                    module,
-                                    action,
-                                    event.target.checked,
-                                  )
-                                }
-                                className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 disabled:opacity-50"
-                              />
-                            ) : (
-                              <span className="text-slate-300">-</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    if (!permission) {
+                      return <span className="text-slate-300">-</span>;
+                    }
+
+                    return (
+                      <Checkbox
+                        checked={checked}
+                        disabled={!canEditRoles}
+                        onChange={(event: { target: { checked: boolean } }) =>
+                          handleToggle(record.module, action, event.target.checked)
+                        }
+                      />
+                    );
+                  },
+                })),
+              ]}
+            />
           )}
 
           {!canEditRoles && (
@@ -360,17 +320,13 @@ export default function SettingsPageContent(): React.ReactNode {
           )}
 
           {saveError && (
-            <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-              {saveError}
-            </p>
+            <Alert type="error" showIcon message={saveError} className="!mt-4" />
           )}
 
           {saveSuccess && (
-            <p className="mt-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              {saveSuccess}
-            </p>
+            <Alert type="success" showIcon message={saveSuccess} className="!mt-4" />
           )}
-        </section>
+        </FormLayout>
       )}
     </div>
   );

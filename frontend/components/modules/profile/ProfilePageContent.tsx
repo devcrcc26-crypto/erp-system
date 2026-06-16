@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useResendActivation } from '@/lib/query/auth';
 import {
@@ -11,9 +14,6 @@ import {
   useCurrentUser,
   useUpdateProfile,
 } from '@/lib/query/profile';
-
-const INPUT_CLASS =
-  'w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
 
 const LANGUAGE_OPTIONS = [
   { value: '', label: 'Company default' },
@@ -37,27 +37,30 @@ const DATE_FORMAT_OPTIONS = [
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
 ];
 
-function SectionCard({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}): React.ReactNode {
-  return (
-    <section className="rounded-md bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-      {description && (
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
-      )}
-      <div className="mt-6">{children}</div>
-    </section>
-  );
+interface AccountFormValues {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
+interface PreferencesFormValues {
+  preferredLanguage: string;
+  preferredTimezone: string;
+  preferredDateFormat: string;
+}
+
+interface PasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export default function ProfilePageContent(): React.ReactNode {
+  const [accountForm] = Form.useForm<AccountFormValues>();
+  const [prefsForm] = Form.useForm<PreferencesFormValues>();
+  const [passwordForm] = Form.useForm<PasswordFormValues>();
+  const [emailForm] = Form.useForm<{ newEmail: string }>();
+
   const profileQuery = useCurrentUser();
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
@@ -66,47 +69,37 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const profile = profileQuery.data;
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [preferredLanguage, setPreferredLanguage] = useState('');
-  const [preferredTimezone, setPreferredTimezone] = useState('');
-  const [preferredDateFormat, setPreferredDateFormat] = useState('');
-
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
   const [prefsError, setPrefsError] = useState<string | null>(null);
   const [prefsSuccess, setPrefsSuccess] = useState<string | null>(null);
-
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-
-  const [showChangeEmail, setShowChangeEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
-
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) {
       return;
     }
-    setFirstName(profile.firstName);
-    setLastName(profile.lastName);
-    setPhone(profile.phone ?? '');
-    setPreferredLanguage(profile.preferredLanguage ?? '');
-    setPreferredTimezone(profile.preferredTimezone ?? '');
-    setPreferredDateFormat(profile.preferredDateFormat ?? '');
-  }, [profile]);
+    accountForm.setFieldsValue({
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone ?? '',
+    });
+    prefsForm.setFieldsValue({
+      preferredLanguage: profile.preferredLanguage ?? '',
+      preferredTimezone: profile.preferredTimezone ?? '',
+      preferredDateFormat: profile.preferredDateFormat ?? '',
+    });
+  }, [profile, accountForm, prefsForm]);
 
   if (profileQuery.isLoading) {
     return (
-      <div className="rounded-md bg-white p-6 text-sm text-slate-500 shadow-sm">
-        Loading profile…
+      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+        <Spin />
       </div>
     );
   }
@@ -121,20 +114,18 @@ export default function ProfilePageContent(): React.ReactNode {
     );
   }
 
-  const userEmail = profile.email;
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
   const roleNames = profile.roles.map((role) => role.name).join(', ') || '—';
 
-  async function handleAccountSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function handleAccountSubmit(values: AccountFormValues): Promise<void> {
     setAccountError(null);
     setAccountSuccess(null);
 
     try {
       await updateProfile.mutateAsync({
-        firstName,
-        lastName,
-        phone: phone.trim() || undefined,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        phone: values.phone?.trim() || undefined,
       });
       setAccountSuccess('Account details saved.');
     } catch (error) {
@@ -147,17 +138,16 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   async function handlePreferencesSubmit(
-    event: FormEvent<HTMLFormElement>,
+    values: PreferencesFormValues,
   ): Promise<void> {
-    event.preventDefault();
     setPrefsError(null);
     setPrefsSuccess(null);
 
     try {
       await updateProfile.mutateAsync({
-        preferredLanguage: preferredLanguage || undefined,
-        preferredTimezone: preferredTimezone || undefined,
-        preferredDateFormat: preferredDateFormat || undefined,
+        preferredLanguage: values.preferredLanguage || undefined,
+        preferredTimezone: values.preferredTimezone || undefined,
+        preferredDateFormat: values.preferredDateFormat || undefined,
       });
       setPrefsSuccess('Preferences saved.');
     } catch (error) {
@@ -169,28 +159,21 @@ export default function ProfilePageContent(): React.ReactNode {
     }
   }
 
-  async function handlePasswordSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
+  async function handlePasswordSubmit(values: PasswordFormValues): Promise<void> {
     setPasswordError(null);
     setPasswordSuccess(null);
 
-    if (newPassword !== confirmPassword) {
+    if (values.newPassword !== values.confirmPassword) {
       setPasswordError('New passwords do not match.');
       return;
     }
 
-    if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters.');
-      return;
-    }
-
     try {
-      await changePassword.mutateAsync({ currentPassword, newPassword });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      await changePassword.mutateAsync({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+      passwordForm.resetFields();
       setPasswordSuccess(
         'Password changed. Other sessions have been signed out.',
       );
@@ -203,17 +186,14 @@ export default function ProfilePageContent(): React.ReactNode {
     }
   }
 
-  async function handleEmailChangeSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
+  async function handleEmailChangeSubmit(values: { newEmail: string }): Promise<void> {
     setEmailError(null);
     setEmailSuccess(null);
 
     try {
-      const result = await changeEmail.mutateAsync({ newEmail });
+      const result = await changeEmail.mutateAsync({ newEmail: values.newEmail });
       setEmailSuccess(result.message);
-      setNewEmail('');
+      emailForm.resetFields();
       setShowChangeEmail(false);
     } catch (error) {
       setEmailError(
@@ -225,11 +205,15 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   async function handleResendActivation(): Promise<void> {
+    if (!profile) {
+      return;
+    }
+
     setResendMessage(null);
 
     try {
       const result = await resendActivation.mutateAsync({
-        email: userEmail,
+        email: profile.email,
       });
       setResendMessage(result.message);
     } catch (error) {
@@ -244,335 +228,190 @@ export default function ProfilePageContent(): React.ReactNode {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {!isEmailVerified && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <p className="font-medium">Email not verified</p>
-          <p className="mt-1 text-amber-800">
-            Your account must be verified before you can use all features.
-          </p>
-          <button
-            type="button"
-            onClick={() => void handleResendActivation()}
-            disabled={resendActivation.isPending}
-            className="mt-3 rounded-md px-3 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-            style={{ backgroundColor: '#f97316' }}
-          >
-            {resendActivation.isPending
-              ? 'Sending…'
-              : 'Resend activation email'}
-          </button>
-          {resendMessage && (
-            <p className="mt-2 text-amber-800">{resendMessage}</p>
-          )}
-        </div>
+        <Alert
+          type="warning"
+          showIcon
+          message="Email not verified"
+          description={
+            <div>
+              <p>Your account must be verified before you can use all features.</p>
+              <Button
+                type="primary"
+                size="small"
+                className="!mt-3"
+                loading={resendActivation.isPending}
+                onClick={() => void handleResendActivation()}
+              >
+                Resend activation email
+              </Button>
+              {resendMessage && <p className="mt-2">{resendMessage}</p>}
+            </div>
+          }
+        />
       )}
 
-      <SectionCard
+      <FormLayout
         title="Account"
         description={`${profile.companyName} · ${roleNames}`}
       >
-        <form onSubmit={handleAccountSubmit} className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label htmlFor="firstName" className="mb-1 block text-sm font-medium text-slate-700">
-              First name
-            </label>
-            <input
-              id="firstName"
-              required
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="lastName" className="mb-1 block text-sm font-medium text-slate-700">
-              Last name
-            </label>
-            <input
-              id="lastName"
-              required
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="phone" className="mb-1 block text-sm font-medium text-slate-700">
-              Phone
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Email
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="email"
-                readOnly
-                value={profile.email}
-                className={`${INPUT_CLASS} cursor-not-allowed opacity-80`}
-              />
-              {isEmailVerified ? (
-                <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  Verified
-                </span>
-              ) : (
-                <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                  Unverified
-                </span>
+        <Form<AccountFormValues>
+          form={accountForm}
+          layout="vertical"
+          onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
+        >
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label="First name"
+              name="firstName"
+              rules={[{ required: true, message: 'First name is required' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label="Last name"
+              name="lastName"
+              rules={[{ required: true, message: 'Last name is required' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item label="Phone" name="phone">
+              <Input type="tel" />
+            </Form.Item>
+            <Form.Item label="Email">
+              <div className="flex items-center gap-2">
+                <Input readOnly value={profile.email} className="!opacity-80" />
+                <StatusBadge
+                  label={isEmailVerified ? 'Verified' : 'Unverified'}
+                  variant={isEmailVerified ? 'success' : 'warning'}
+                />
+              </div>
+              {profile.pendingEmail && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Pending confirmation: {profile.pendingEmail}
+                </p>
               )}
-            </div>
-            {profile.pendingEmail && (
-              <p className="mt-1 text-xs text-slate-500">
-                Pending confirmation: {profile.pendingEmail}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setShowChangeEmail((current) => !current);
-                setEmailError(null);
-                setEmailSuccess(null);
-              }}
-              className="mt-2 text-sm font-medium text-orange-600 hover:text-orange-700"
-            >
-              {showChangeEmail ? 'Cancel email change' : 'Change email'}
-            </button>
+              <Button
+                type="link"
+                className="!px-0 !text-orange-600"
+                onClick={() => {
+                  setShowChangeEmail((current) => !current);
+                  setEmailError(null);
+                  setEmailSuccess(null);
+                }}
+              >
+                {showChangeEmail ? 'Cancel email change' : 'Change email'}
+              </Button>
+            </Form.Item>
           </div>
 
-          {accountError && (
-            <p className="md:col-span-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-              {accountError}
-            </p>
-          )}
-          {accountSuccess && (
-            <p className="md:col-span-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              {accountSuccess}
-            </p>
-          )}
+          {accountError && <Alert type="error" showIcon message={accountError} className="!mb-4" />}
+          {accountSuccess && <Alert type="success" showIcon message={accountSuccess} className="!mb-4" />}
 
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={updateProfile.isPending}
-              className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#f97316' }}
-            >
-              {updateProfile.isPending ? 'Saving…' : 'Save account'}
-            </button>
-          </div>
-        </form>
+          <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
+            Save account
+          </Button>
+        </Form>
 
         {showChangeEmail && (
-          <form
-            onSubmit={handleEmailChangeSubmit}
-            className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4 space-y-3"
+          <Form
+            form={emailForm}
+            layout="vertical"
+            className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4"
+            onFinish={(values: { newEmail: string }) => void handleEmailChangeSubmit(values)}
           >
-            <div>
-              <label htmlFor="newEmail" className="mb-1 block text-sm font-medium text-slate-700">
-                New email address
-              </label>
-              <input
-                id="newEmail"
-                type="email"
-                required
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className={INPUT_CLASS}
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                A confirmation link will be sent to the new address.
-              </p>
-            </div>
-            {emailError && (
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-                {emailError}
-              </p>
-            )}
-            {emailSuccess && (
-              <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-                {emailSuccess}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={changeEmail.isPending}
-              className="rounded-md px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#f97316' }}
+            <Form.Item
+              label="New email address"
+              name="newEmail"
+              rules={[
+                { required: true, message: 'Email is required' },
+                { type: 'email', message: 'Enter a valid email' },
+              ]}
+              extra="A confirmation link will be sent to the new address."
             >
-              {changeEmail.isPending ? 'Sending…' : 'Send confirmation'}
-            </button>
-          </form>
+              <Input type="email" />
+            </Form.Item>
+            {emailError && <Alert type="error" showIcon message={emailError} className="!mb-4" />}
+            {emailSuccess && <Alert type="success" showIcon message={emailSuccess} className="!mb-4" />}
+            <Button type="primary" htmlType="submit" loading={changeEmail.isPending}>
+              Send confirmation
+            </Button>
+          </Form>
         )}
-      </SectionCard>
+      </FormLayout>
 
-      <SectionCard
+      <FormLayout
         title="Preferences"
         description="Leave blank to use your company defaults."
       >
-        <form onSubmit={handlePreferencesSubmit} className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label htmlFor="preferredLanguage" className="mb-1 block text-sm font-medium text-slate-700">
-              Language
-            </label>
-            <select
-              id="preferredLanguage"
-              value={preferredLanguage}
-              onChange={(e) => setPreferredLanguage(e.target.value)}
-              className={INPUT_CLASS}
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.value || 'default'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+        <Form<PreferencesFormValues>
+          form={prefsForm}
+          layout="vertical"
+          onFinish={(values: PreferencesFormValues) => void handlePreferencesSubmit(values)}
+        >
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item label="Language" name="preferredLanguage">
+              <Select options={LANGUAGE_OPTIONS} />
+            </Form.Item>
+            <Form.Item label="Timezone" name="preferredTimezone">
+              <Select options={TIMEZONE_OPTIONS} />
+            </Form.Item>
+            <Form.Item label="Date format" name="preferredDateFormat" className="md:col-span-2">
+              <Select options={DATE_FORMAT_OPTIONS} />
+            </Form.Item>
           </div>
 
-          <div>
-            <label htmlFor="preferredTimezone" className="mb-1 block text-sm font-medium text-slate-700">
-              Timezone
-            </label>
-            <select
-              id="preferredTimezone"
-              value={preferredTimezone}
-              onChange={(e) => setPreferredTimezone(e.target.value)}
-              className={INPUT_CLASS}
-            >
-              {TIMEZONE_OPTIONS.map((option) => (
-                <option key={option.value || 'default'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {prefsError && <Alert type="error" showIcon message={prefsError} className="!mb-4" />}
+          {prefsSuccess && <Alert type="success" showIcon message={prefsSuccess} className="!mb-4" />}
 
-          <div className="md:col-span-2">
-            <label htmlFor="preferredDateFormat" className="mb-1 block text-sm font-medium text-slate-700">
-              Date format
-            </label>
-            <select
-              id="preferredDateFormat"
-              value={preferredDateFormat}
-              onChange={(e) => setPreferredDateFormat(e.target.value)}
-              className={INPUT_CLASS}
-            >
-              {DATE_FORMAT_OPTIONS.map((option) => (
-                <option key={option.value || 'default'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
+            Save preferences
+          </Button>
+        </Form>
+      </FormLayout>
 
-          {prefsError && (
-            <p className="md:col-span-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-              {prefsError}
-            </p>
-          )}
-          {prefsSuccess && (
-            <p className="md:col-span-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              {prefsSuccess}
-            </p>
-          )}
-
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              disabled={updateProfile.isPending}
-              className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#f97316' }}
-            >
-              {updateProfile.isPending ? 'Saving…' : 'Save preferences'}
-            </button>
-          </div>
-        </form>
-      </SectionCard>
-
-      <SectionCard
+      <FormLayout
         title="Security"
         description="Update your password. Other active sessions will be signed out."
       >
-        <form onSubmit={handlePasswordSubmit} className="grid max-w-md gap-4">
-          <div>
-            <label htmlFor="currentPassword" className="mb-1 block text-sm font-medium text-slate-700">
-              Current password
-            </label>
-            <input
-              id="currentPassword"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
+        <Form<PasswordFormValues>
+          form={passwordForm}
+          layout="vertical"
+          className="max-w-md"
+          onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
+        >
+          <Form.Item
+            label="Current password"
+            name="currentPassword"
+            rules={[{ required: true, message: 'Current password is required' }]}
+          >
+            <Input.Password autoComplete="current-password" />
+          </Form.Item>
+          <Form.Item
+            label="New password"
+            name="newPassword"
+            rules={[
+              { required: true, message: 'New password is required' },
+              { min: 8, message: 'Password must be at least 8 characters' },
+            ]}
+          >
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            label="Confirm new password"
+            name="confirmPassword"
+            rules={[{ required: true, message: 'Please confirm your password' }]}
+          >
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
 
-          <div>
-            <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-slate-700">
-              New password
-            </label>
-            <input
-              id="newPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
+          {passwordError && <Alert type="error" showIcon message={passwordError} className="!mb-4" />}
+          {passwordSuccess && <Alert type="success" showIcon message={passwordSuccess} className="!mb-4" />}
 
-          <div>
-            <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-slate-700">
-              Confirm new password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          {passwordError && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-              {passwordError}
-            </p>
-          )}
-          {passwordSuccess && (
-            <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              {passwordSuccess}
-            </p>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={changePassword.isPending}
-              className="rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#f97316' }}
-            >
-              {changePassword.isPending ? 'Updating…' : 'Change password'}
-            </button>
-          </div>
-        </form>
-      </SectionCard>
+          <Button type="primary" htmlType="submit" loading={changePassword.isPending}>
+            Change password
+          </Button>
+        </Form>
+      </FormLayout>
     </div>
   );
 }

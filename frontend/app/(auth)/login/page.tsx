@@ -1,25 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Alert, Button, Form, Input, Spin } from 'antd';
+import Card from '@/components/ui/Card/Card';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { ApiRequestError } from '@/lib/api/errors';
+
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
 
 function LoginForm(): React.ReactNode {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
   const resendActivation = useResendActivation();
+  const [form] = Form.useForm<LoginFormValues>();
 
   const activated = searchParams.get('activated') === '1';
   const reset = searchParams.get('reset') === '1';
   const emailChanged = searchParams.get('emailChanged') === '1';
   const hasExplicitLoginIntent = activated || reset || emailChanged;
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(() => {
     if (searchParams.get('activated') === '1') {
@@ -41,14 +47,13 @@ function LoginForm(): React.ReactNode {
     }
   }, [hasExplicitLoginIntent]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function handleSubmit(values: LoginFormValues): Promise<void> {
     setErrorMessage(null);
     setInfoMessage(null);
     setShowResendActivation(false);
 
     try {
-      await login.mutateAsync({ email, password });
+      await login.mutateAsync(values);
       const redirectTo = searchParams.get('from') ?? '/';
       router.replace(redirectTo);
     } catch (error) {
@@ -64,6 +69,7 @@ function LoginForm(): React.ReactNode {
   }
 
   async function handleResendActivation(): Promise<void> {
+    const email = form.getFieldValue('email');
     if (!email) {
       setErrorMessage('Enter your email address first.');
       return;
@@ -87,101 +93,89 @@ function LoginForm(): React.ReactNode {
   }
 
   return (
-    <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 shadow-sm">
+    <Card
+      className="w-full max-w-md shadow-sm"
+      styles={{ body: { padding: 32 } }}
+      style={{ borderRadius: 6 }}
+    >
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold text-slate-900">CCECC PWF</h1>
         <p className="mt-2 text-sm text-slate-500">Sign in to your account</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-            placeholder="admin@company.local"
-          />
-        </div>
+      <Form<LoginFormValues>
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        onFinish={(values: LoginFormValues) => void handleSubmit(values)}
+      >
+        <Form.Item
+          label="Email"
+          name="email"
+          rules={[
+            { required: true, message: 'Email is required' },
+            { type: 'email', message: 'Enter a valid email' },
+          ]}
+        >
+          <Input placeholder="admin@company.local" autoComplete="email" />
+        </Form.Item>
 
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Password
-            </label>
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-orange-600 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-          />
-        </div>
+        <Form.Item
+          label={
+            <div className="flex w-full items-center justify-between">
+              <span>Password</span>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-orange-600 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          }
+          name="password"
+          rules={[
+            { required: true, message: 'Password is required' },
+            { min: 8, message: 'Password must be at least 8 characters' },
+          ]}
+        >
+          <Input.Password autoComplete="current-password" />
+        </Form.Item>
 
         {hasExplicitLoginIntent && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Sign in with the account you just updated. Any previous session in this browser
-            has been cleared.
-          </p>
+          <Alert
+            type="warning"
+            showIcon
+            className="!mb-4"
+            message="Sign in with the account you just updated. Any previous session in this browser has been cleared."
+          />
         )}
 
         {infoMessage && (
-          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-            {infoMessage}
-          </p>
+          <Alert type="success" showIcon className="!mb-4" message={infoMessage} />
         )}
 
         {errorMessage && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            {errorMessage}
-          </p>
+          <Alert type="error" showIcon className="!mb-4" message={errorMessage} />
         )}
 
         {showResendActivation && (
-          <button
-            type="button"
-            onClick={handleResendActivation}
-            disabled={resendActivation.isPending}
-            className="w-full rounded-md border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 transition hover:bg-orange-100 disabled:opacity-60"
+          <Button
+            block
+            className="!mb-4"
+            onClick={() => void handleResendActivation()}
+            loading={resendActivation.isPending}
           >
-            {resendActivation.isPending
-              ? 'Sending…'
-              : 'Resend activation email'}
-          </button>
+            Resend activation email
+          </Button>
         )}
 
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-          style={{ backgroundColor: '#f97316' }}
-        >
-          {login.isPending ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-    </div>
+        <Form.Item className="!mb-0">
+          <Button type="primary" htmlType="submit" block loading={login.isPending}>
+            {login.isPending ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
   );
 }
 
@@ -189,9 +183,9 @@ export default function LoginPage(): React.ReactNode {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading…
-        </div>
+        <Card className="w-full max-w-md text-center shadow-sm" style={{ borderRadius: 6 }}>
+          <Spin />
+        </Card>
       }
     >
       <LoginForm />

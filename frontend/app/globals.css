@@ -22,6 +22,24 @@ body {
   font-family: Arial, sans-serif;
 }
 
+/* Ant Design sidebar — match original orange active accent */
+.erp-sidebar-menu.ant-menu-dark .ant-menu-item {
+  margin: 0;
+  width: 100%;
+  border-radius: 0;
+  border-left: 4px solid transparent;
+}
+
+.erp-sidebar-menu.ant-menu-dark .ant-menu-item-selected {
+  background-color: #334155 !important;
+  border-left-color: #f97316 !important;
+  font-weight: 600;
+}
+
+.erp-sidebar-menu.ant-menu-dark .ant-menu-item:hover {
+  color: #ffffff !important;
+}
+
 /* Hide scrollbars globally while keeping scroll functionality */
 * {
   scrollbar-width: none;        /* Firefox */
