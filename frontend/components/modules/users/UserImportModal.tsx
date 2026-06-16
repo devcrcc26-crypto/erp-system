@@ -197,7 +197,7 @@ export default function UserImportModal({
       </p>
 
       {step === 'upload' && (
-        <Space direction="vertical" size="middle" className="w-full">
+        <Space orientation="vertical" size="middle" className="w-full">
           <Button
             onClick={() => void handleDownloadTemplate()}
             loading={isDownloadingTemplate}
