@@ -22,7 +22,7 @@ export default function FormLayout({
 }): React.ReactNode {
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       title={
         title ? (
           <div>

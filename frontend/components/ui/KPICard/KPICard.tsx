@@ -30,7 +30,7 @@ export default function KPICard({
 }: KPICardProps): React.ReactNode {
   return (
     <Card
-      bordered={false}
+      variant="borderless"
       styles={{ body: { padding: '16px 20px' } }}
       className="shadow-sm md:[&_.ant-card-body]:!p-6"
       style={{ borderRadius: 6, boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' }}

@@ -203,7 +203,7 @@ export default function AppShell({
         placement="left"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        width={tokens.sidebarWidth}
+        size={tokens.sidebarWidth}
         closable={false}
         styles={{
           body: { padding: 0, background: tokens.colorSidebarBg },

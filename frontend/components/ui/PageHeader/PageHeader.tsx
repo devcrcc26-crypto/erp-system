@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Input, Avatar } from 'antd';
 import { SearchOutlined, MenuOutlined } from '@ant-design/icons';
+import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUser } from '@/lib/query/users';
 
@@ -63,22 +64,25 @@ export default function PageHeader({
         </div>
       </div>
 
-      <Link
-        href="/profile"
-        className="flex shrink-0 items-center gap-2 rounded-md transition-colors hover:bg-slate-50 md:gap-3 md:px-2 md:py-1"
-        aria-label="Open profile"
-      >
-        <Avatar
-          size={{ xs: 36, md: 40 }}
-          style={{ backgroundColor: '#1e293b', fontWeight: 600 }}
+      <div className="flex shrink-0 items-center gap-2 md:gap-3">
+        <NotificationPanel />
+        <Link
+          href="/profile"
+          className="flex shrink-0 items-center gap-2 rounded-md transition-colors hover:bg-slate-50 md:gap-3 md:px-2 md:py-1"
+          aria-label="Open profile"
         >
-          {avatarInitial}
-        </Avatar>
-        <div className="hidden text-sm md:block">
-          <p className="font-semibold text-slate-900">{displayName}</p>
-          <p className="text-slate-500">{roleName}</p>
-        </div>
-      </Link>
+          <Avatar
+            size={{ xs: 36, md: 40 }}
+            style={{ backgroundColor: '#1e293b', fontWeight: 600 }}
+          >
+            {avatarInitial}
+          </Avatar>
+          <div className="hidden text-sm md:block">
+            <p className="font-semibold text-slate-900">{displayName}</p>
+            <p className="text-slate-500">{roleName}</p>
+          </div>
+        </Link>
+      </div>
     </header>
   );
 }
