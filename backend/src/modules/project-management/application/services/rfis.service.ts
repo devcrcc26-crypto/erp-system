@@ -1,0 +1,281 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, RfiStatus } from '@prisma/client';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
+import {
+  CreateRfiDto,
+  CreateRfiResponseDto,
+  PmListQueryDto,
+  UpdateRfiDto,
+} from '../dtos/pm.dtos';
+import { PmContext } from '../types/pm-context.type';
+import {
+  mapRfi,
+  mapRfiResponse,
+  MappedRfi,
+  MappedRfiResponse,
+  parseOptionalDate,
+} from '../utils/pm-mapper.util';
+import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { DocumentNumberService } from './document-number.service';
+import { ProjectScopeService } from './project-scope.service';
+
+const RFI_SORT_FIELDS = new Set([
+  'createdAt',
+  'updatedAt',
+  'title',
+  'rfiNumber',
+  'status',
+  'dueDate',
+  'dateRaised',
+]);
+
+@Injectable()
+export class RfisService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly projectScopeService: ProjectScopeService,
+    private readonly documentNumberService: DocumentNumberService,
+  ) {}
+
+  /**
+   * Returns a paginated list of RFIs for a project.
+   */
+  async listRfis(
+    ctx: PmContext,
+    projectId: string,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedRfi>> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const where = this.buildRfiListWhere(projectId, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      RFI_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.rfi.findMany({ where, skip, take, orderBy }),
+      this.prisma.rfi.count({ where }),
+    ]);
+
+    return buildPaginatedResult(
+      rows.map(mapRfi),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  /**
+   * Returns a single RFI by id scoped to a project.
+   */
+  async getRfi(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<MappedRfi> {
+    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    return mapRfi(rfi);
+  }
+
+  /**
+   * Creates an RFI with an auto-generated document number.
+   */
+  async createRfi(
+    ctx: PmContext,
+    projectId: string,
+    dto: CreateRfiDto,
+  ): Promise<MappedRfi> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    if (dto.assignedTo) {
+      await this.assertUserInCompany(ctx, dto.assignedTo);
+    }
+
+    const rfiNumber = await this.documentNumberService.getNextNumber(
+      ctx,
+      'RFI',
+    );
+
+    const rfi = await this.prisma.rfi.create({
+      data: {
+        projectId,
+        raisedBy: ctx.userId,
+        assignedTo: dto.assignedTo,
+        rfiNumber,
+        title: dto.title,
+        description: dto.description,
+        discipline: dto.discipline,
+        priority: dto.priority,
+        dueDate: parseOptionalDate(dto.dueDate),
+        dateRaised: this.todayDate(),
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return mapRfi(rfi);
+  }
+
+  /**
+   * Updates an existing RFI scoped to a project.
+   */
+  async updateRfi(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+    dto: UpdateRfiDto,
+  ): Promise<MappedRfi> {
+    await this.getRfiOrThrow(projectId, rfiId);
+
+    if (dto.assignedTo) {
+      await this.assertUserInCompany(ctx, dto.assignedTo);
+    }
+
+    const rfi = await this.prisma.rfi.update({
+      where: { id: rfiId },
+      data: {
+        title: dto.title,
+        description: dto.description,
+        discipline: dto.discipline,
+        priority: dto.priority,
+        assignedTo: dto.assignedTo,
+        dueDate: parseOptionalDate(dto.dueDate),
+        status: dto.status,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return mapRfi(rfi);
+  }
+
+  /**
+   * Soft-deletes an RFI scoped to a project.
+   */
+  async deleteRfi(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<void> {
+    await this.getRfiOrThrow(projectId, rfiId);
+    await this.prisma.rfi.update({
+      where: { id: rfiId },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  /**
+   * Returns all responses for an RFI.
+   */
+  async listRfiResponses(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<MappedRfiResponse[]> {
+    await this.getRfiOrThrow(projectId, rfiId);
+
+    const responses = await this.prisma.rfiResponse.findMany({
+      where: { rfiId },
+      orderBy: { respondedAt: 'asc' },
+    });
+
+    return responses.map(mapRfiResponse);
+  }
+
+  /**
+   * Adds a response to an RFI and marks it answered when applicable.
+   */
+  async addRfiResponse(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+    dto: CreateRfiResponseDto,
+  ): Promise<MappedRfiResponse> {
+    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+
+    const response = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.rfiResponse.create({
+        data: {
+          rfiId,
+          respondedBy: ctx.userId,
+          responseText: dto.responseText,
+        },
+      });
+
+      if (rfi.status !== RfiStatus.CLOSED) {
+        await tx.rfi.update({
+          where: { id: rfiId },
+          data: {
+            status: RfiStatus.ANSWERED,
+            dateAnswered: this.todayDate(),
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+
+      return created;
+    });
+
+    return mapRfiResponse(response);
+  }
+
+  private buildRfiListWhere(
+    projectId: string,
+    query: PmListQueryDto,
+  ): Prisma.RfiWhereInput {
+    const where: Prisma.RfiWhereInput = activeOnly({ projectId });
+
+    if (query.status) {
+      where.status = query.status as RfiStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.OR = [
+        { rfiNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        { discipline: { contains: term, mode: 'insensitive' } },
+      ];
+    }
+
+    return where;
+  }
+
+  private async getRfiOrThrow(projectId: string, rfiId: string) {
+    const rfi = await this.prisma.rfi.findFirst({
+      where: activeOnly({ id: rfiId, projectId }),
+    });
+    if (!rfi) {
+      throw new NotFoundException('RFI not found');
+    }
+    return rfi;
+  }
+
+  private async assertUserInCompany(
+    ctx: PmContext,
+    userId: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: { id: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  private todayDate(): Date {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }
+}

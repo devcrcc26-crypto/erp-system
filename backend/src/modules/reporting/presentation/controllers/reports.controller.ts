@@ -54,6 +54,15 @@ export class ReportsController {
     return this.reportingService.createReport(this.ctx(user), dto);
   }
 
+  @Get('completion-rate')
+  @RequirePermission('reports', 'view')
+  @ApiOperation({ summary: 'Portfolio project completion rate' })
+  completionRate(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ rate: number }> {
+    return this.reportingService.getPortfolioCompletionRate(this.ctx(user));
+  }
+
   @Get(':id')
   @RequirePermission('reports', 'view')
   get(

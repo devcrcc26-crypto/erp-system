@@ -118,6 +118,7 @@ model Company {
   documents        Document[]
   reportDefinitions ReportDefinition[]
   dashboardWidgets DashboardWidget[]
+  projects         Project[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -168,6 +169,7 @@ model Branch {
   company     Company      @relation(fields: [companyId], references: [id])
   departments Department[]
   users       User[]
+  projects    Project[]
 
   @@index([companyId], map: "idx_branch_company_id")
   @@index([companyId, deletedAt], map: "idx_branch_company_deleted")
@@ -391,6 +393,28 @@ model User {
   notificationPreferences NotificationPreference[]
   documentVersions       DocumentVersion[]
   reportDefinitions      ReportDefinition[]
+  managedProjects        Project[]              @relation("ProjectManager")
+  projectTeamMemberships ProjectTeam[]
+  assignedTasks          Task[]                 @relation("TaskAssignee")
+  raisedRfis             Rfi[]                  @relation("RfiRaisedBy")
+  assignedRfis           Rfi[]                  @relation("RfiAssignedTo")
+  rfiResponses           RfiResponse[]
+  submittedSubmittals    Submittal[]            @relation("SubmittalSubmittedBy")
+  reviewedSubmittals     Submittal[]            @relation("SubmittalReviewedBy")
+  submittalReviews       SubmittalReview[]
+  drawingVersions        DrawingVersion[]
+  dailyLogsAsEngineer    DailyLog[]
+  organizedMeetings      Meeting[]
+  meetingAgendaItems     MeetingAgendaItem[]
+  meetingAttendees       MeetingAttendee[]
+  meetingActionItems     ActionItem[]
+  correspondenceSent     Correspondence[]
+  ownedRisks             Risk[]
+  raisedIssues           Issue[]                @relation("IssueRaisedBy")
+  assignedIssues         Issue[]                @relation("IssueAssignedTo")
+  raisedPunchItems       PunchItem[]            @relation("PunchRaisedBy")
+  assignedPunchItems     PunchItem[]            @relation("PunchAssignedTo")
+  verifiedChecklistItems CloseoutChecklistItem[]
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -692,6 +716,7 @@ model DocumentFolder {
   children       DocumentFolder[] @relation("FolderHierarchy")
   documents      Document[]
   documentAccess DocumentAccess[]
+  drawings       Drawing[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -847,4 +872,810 @@ model DashboardWidget {
   @@index([roleId], map: "idx_dashboard_widget_role_id")
   @@index([companyId, deletedAt], map: "idx_dashboard_widget_company_deleted")
   @@map("dashboard_widget")
+}
+
+// ─── Project Management ──────────────────────────────────────────────────────
+
+enum ProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  INFRASTRUCTURE
+  INDUSTRIAL
+}
+
+enum ProjectStatus {
+  PLANNING
+  TENDER
+  MOBILIZATION
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CLOSED
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DELAYED
+  COMPLETED
+}
+
+enum TaskDependencyType {
+  FS
+  SS
+  FF
+  SF
+}
+
+enum RfiPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum RfiStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ANSWERED
+  CLOSED
+}
+
+enum SubmittalStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  APPROVED_WITH_COMMENTS
+  REVISE_AND_RESUBMIT
+  REJECTED
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  VERIFIED
+  CLOSED
+}
+
+enum PunchItemSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum PunchItemStatus {
+  RAISED
+  ASSIGNED
+  CORRECTED
+  VERIFIED
+  CLOSED
+}
+
+enum RiskCategory {
+  COST
+  SCHEDULE
+  SAFETY
+  QUALITY
+  ENVIRONMENTAL
+  CONTRACTUAL
+}
+
+enum RiskStatus {
+  OPEN
+  MONITORING
+  MITIGATED
+  CLOSED
+}
+
+enum CorrespondenceType {
+  LETTER
+  EMAIL
+  NOTICE
+  INSTRUCTION
+  MEMO
+}
+
+enum CorrespondenceStatus {
+  DRAFT
+  SENT
+  ACKNOWLEDGED
+  CLOSED
+}
+
+enum MeetingType {
+  PROGRESS
+  DESIGN_COORDINATION
+  SAFETY
+  CLIENT
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  CONDUCTED
+  MINUTES_ISSUED
+  CLOSED
+}
+
+enum CloseoutStatus {
+  PRACTICAL_COMPLETION
+  DEFECTS_LIABILITY_PERIOD
+  FINAL_COMPLETION
+  FINANCIAL_CLOSEOUT
+  ARCHIVE
+}
+
+model Project {
+  id                String        @id @default(uuid())
+  companyId         String        @map("company_id")
+  clientCompanyId   String?       @map("client_company_id")
+  branchId          String?       @map("branch_id")
+  projectCode       String        @map("project_code")
+  name              String
+  location          String?
+  projectType       ProjectType?  @map("project_type")
+  contractType      String?       @map("contract_type")
+  status            ProjectStatus @default(PLANNING)
+  startDate         DateTime?     @map("start_date") @db.Date
+  plannedFinishDate DateTime?     @map("planned_finish_date") @db.Date
+  actualFinishDate  DateTime?     @map("actual_finish_date") @db.Date
+  budget            Decimal?      @db.Decimal(18, 2)
+  currency          String?
+  projectManagerId  String?       @map("project_manager_id")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  createdBy         String        @map("created_by")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  updatedBy         String        @map("updated_by")
+  deletedAt         DateTime?     @map("deleted_at")
+  deletedBy         String?       @map("deleted_by")
+
+  company        Company        @relation(fields: [companyId], references: [id])
+  branch         Branch?        @relation(fields: [branchId], references: [id])
+  projectManager User?          @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  teamMembers    ProjectTeam[]
+  milestones     Milestone[]
+  tasks          Task[]
+  rfis           Rfi[]
+  submittals     Submittal[]
+  drawings       Drawing[]
+  dailyLogs      DailyLog[]
+  meetings       Meeting[]
+  correspondence Correspondence[]
+  risks          Risk[]
+  issues         Issue[]
+  punchItems     PunchItem[]
+  closeout       Closeout?
+
+  @@unique([companyId, projectCode], map: "uq_project_company_code")
+  @@index([companyId], map: "idx_project_company_id")
+  @@index([companyId, deletedAt], map: "idx_project_company_deleted")
+  @@index([status], map: "idx_project_status")
+  @@index([projectManagerId], map: "idx_project_manager_id")
+  @@map("project")
+}
+
+model ProjectTeam {
+  id             String    @id @default(uuid())
+  projectId      String    @map("project_id")
+  userId         String    @map("user_id")
+  roleOnProject  String    @map("role_on_project")
+  assignedFrom   DateTime? @map("assigned_from") @db.Date
+  assignedTo     DateTime? @map("assigned_to") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at")
+  createdBy      String    @map("created_by")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  updatedBy      String    @map("updated_by")
+  deletedAt      DateTime? @map("deleted_at")
+  deletedBy      String?   @map("deleted_by")
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([projectId], map: "idx_project_team_project_id")
+  @@index([userId], map: "idx_project_team_user_id")
+  @@index([deletedAt], map: "idx_project_team_deleted_at")
+  @@map("project_team")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  name        String
+  plannedDate DateTime? @map("planned_date") @db.Date
+  actualDate  DateTime? @map("actual_date") @db.Date
+  status      String    @default("PLANNED")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String    @map("updated_by")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
+
+  project Project @relation(fields: [projectId], references: [id])
+  tasks   Task[]
+
+  @@index([projectId], map: "idx_milestone_project_id")
+  @@index([projectId, deletedAt], map: "idx_milestone_project_deleted")
+  @@map("milestone")
+}
+
+model Task {
+  id           String     @id @default(uuid())
+  projectId    String     @map("project_id")
+  milestoneId  String?    @map("milestone_id")
+  parentTaskId String?    @map("parent_task_id")
+  assignedTo   String?    @map("assigned_to")
+  taskIdCode   String     @map("task_id_code")
+  name         String
+  description  String?
+  startDate    DateTime?  @map("start_date") @db.Date
+  finishDate   DateTime?  @map("finish_date") @db.Date
+  durationDays Int?       @map("duration_days")
+  progressPct  Int        @default(0) @map("progress_pct")
+  status       TaskStatus @default(NOT_STARTED)
+  isCritical   Boolean    @default(false) @map("is_critical")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  createdBy    String     @map("created_by")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  updatedBy    String     @map("updated_by")
+  deletedAt    DateTime?  @map("deleted_at")
+  deletedBy    String?    @map("deleted_by")
+
+  project            Project          @relation(fields: [projectId], references: [id])
+  milestone          Milestone?       @relation(fields: [milestoneId], references: [id])
+  parentTask         Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  childTasks         Task[]           @relation("TaskHierarchy")
+  assignee           User?            @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  predecessorLinks   TaskDependency[] @relation("PredecessorTask")
+  successorLinks     TaskDependency[] @relation("SuccessorTask")
+
+  @@index([projectId], map: "idx_task_project_id")
+  @@index([projectId, deletedAt], map: "idx_task_project_deleted")
+  @@index([milestoneId], map: "idx_task_milestone_id")
+  @@index([assignedTo], map: "idx_task_assigned_to")
+  @@map("task")
+}
+
+model TaskDependency {
+  id                String             @id @default(uuid())
+  predecessorTaskId String             @map("predecessor_task_id")
+  successorTaskId   String             @map("successor_task_id")
+  dependencyType    TaskDependencyType @map("dependency_type")
+  lagDays           Int                @default(0) @map("lag_days")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  createdBy         String             @map("created_by")
+
+  predecessorTask Task @relation("PredecessorTask", fields: [predecessorTaskId], references: [id])
+  successorTask   Task @relation("SuccessorTask", fields: [successorTaskId], references: [id])
+
+  @@index([predecessorTaskId], map: "idx_task_dependency_predecessor")
+  @@index([successorTaskId], map: "idx_task_dependency_successor")
+  @@map("task_dependency")
+}
+
+model Rfi {
+  id           String      @id @default(uuid())
+  projectId    String      @map("project_id")
+  raisedBy     String      @map("raised_by")
+  assignedTo   String?     @map("assigned_to")
+  rfiNumber    String      @map("rfi_number")
+  title        String
+  description  String?
+  discipline   String?
+  priority     RfiPriority @default(MEDIUM)
+  status       RfiStatus   @default(DRAFT)
+  dateRaised   DateTime?   @map("date_raised") @db.Date
+  dueDate      DateTime?   @map("due_date") @db.Date
+  dateAnswered DateTime?   @map("date_answered") @db.Date
+  createdAt    DateTime    @default(now()) @map("created_at")
+  createdBy    String      @map("created_by")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  updatedBy    String      @map("updated_by")
+  deletedAt    DateTime?   @map("deleted_at")
+  deletedBy    String?     @map("deleted_by")
+
+  project   Project       @relation(fields: [projectId], references: [id])
+  raiser    User          @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
+  assignee  User?         @relation("RfiAssignedTo", fields: [assignedTo], references: [id])
+  responses RfiResponse[]
+
+  @@index([projectId], map: "idx_rfi_project_id")
+  @@index([projectId, deletedAt], map: "idx_rfi_project_deleted")
+  @@index([status], map: "idx_rfi_status")
+  @@map("rfi")
+}
+
+model RfiResponse {
+  id           String   @id @default(uuid())
+  rfiId        String   @map("rfi_id")
+  respondedBy  String   @map("responded_by")
+  responseText String   @map("response_text")
+  respondedAt  DateTime @default(now()) @map("responded_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  rfi        Rfi  @relation(fields: [rfiId], references: [id])
+  responder  User @relation(fields: [respondedBy], references: [id])
+
+  @@index([rfiId], map: "idx_rfi_response_rfi_id")
+  @@map("rfi_response")
+}
+
+model Submittal {
+  id              String          @id @default(uuid())
+  projectId       String          @map("project_id")
+  submittedBy     String          @map("submitted_by")
+  reviewedBy      String?         @map("reviewed_by")
+  submittalNumber String          @map("submittal_number")
+  category        String
+  title           String
+  contractor      String?
+  supplier        String?
+  specReference   String?         @map("spec_reference")
+  revisionNumber  Int             @default(1) @map("revision_number")
+  status          SubmittalStatus @default(DRAFT)
+  submissionDate  DateTime?       @map("submission_date") @db.Date
+  dueDate         DateTime?       @map("due_date") @db.Date
+  reviewDate      DateTime?       @map("review_date") @db.Date
+  createdAt       DateTime        @default(now()) @map("created_at")
+  createdBy       String          @map("created_by")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  updatedBy       String          @map("updated_by")
+  deletedAt       DateTime?       @map("deleted_at")
+  deletedBy       String?         @map("deleted_by")
+
+  project  Project           @relation(fields: [projectId], references: [id])
+  submitter User             @relation("SubmittalSubmittedBy", fields: [submittedBy], references: [id])
+  reviewer  User?             @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
+  reviews   SubmittalReview[]
+
+  @@index([projectId], map: "idx_submittal_project_id")
+  @@index([projectId, deletedAt], map: "idx_submittal_project_deleted")
+  @@map("submittal")
+}
+
+model SubmittalReview {
+  id             String          @id @default(uuid())
+  submittalId    String          @map("submittal_id")
+  reviewedBy     String          @map("reviewed_by")
+  revisionNumber Int             @map("revision_number")
+  status         SubmittalStatus
+  comments       String?
+  reviewedAt     DateTime        @default(now()) @map("reviewed_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  submittal Submittal @relation(fields: [submittalId], references: [id])
+  reviewer  User      @relation(fields: [reviewedBy], references: [id])
+
+  @@index([submittalId], map: "idx_submittal_review_submittal_id")
+  @@map("submittal_review")
+}
+
+model Drawing {
+  id            String    @id @default(uuid())
+  projectId     String    @map("project_id")
+  folderId      String?   @map("folder_id")
+  drawingNumber String    @map("drawing_number")
+  title         String
+  discipline    String?
+  revision      String
+  status        String    @default("CURRENT")
+  isLatest      Boolean   @default(true) @map("is_latest")
+  dateIssued    DateTime? @map("date_issued") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at")
+  createdBy     String    @map("created_by")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  updatedBy     String    @map("updated_by")
+  deletedAt     DateTime? @map("deleted_at")
+  deletedBy     String?   @map("deleted_by")
+
+  project  Project         @relation(fields: [projectId], references: [id])
+  folder   DocumentFolder? @relation(fields: [folderId], references: [id])
+  versions DrawingVersion[]
+  links    DrawingLink[]
+
+  @@index([projectId], map: "idx_drawing_project_id")
+  @@index([projectId, deletedAt], map: "idx_drawing_project_deleted")
+  @@map("drawing")
+}
+
+model DrawingVersion {
+  id         String   @id @default(uuid())
+  drawingId  String   @map("drawing_id")
+  uploadedBy String   @map("uploaded_by")
+  revision   String
+  fileKey    String   @map("file_key")
+  status     String   @default("CURRENT")
+  changeNote String?  @map("change_note")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  drawing  Drawing @relation(fields: [drawingId], references: [id])
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+
+  @@index([drawingId], map: "idx_drawing_version_drawing_id")
+  @@map("drawing_version")
+}
+
+model DrawingLink {
+  id               String   @id @default(uuid())
+  drawingId        String   @map("drawing_id")
+  linkedEntityType String   @map("linked_entity_type")
+  linkedEntityId   String   @map("linked_entity_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  createdBy        String   @map("created_by")
+
+  drawing Drawing @relation(fields: [drawingId], references: [id])
+
+  @@index([drawingId], map: "idx_drawing_link_drawing_id")
+  @@index([linkedEntityType, linkedEntityId], map: "idx_drawing_link_entity")
+  @@map("drawing_link")
+}
+
+model DailyLog {
+  id                String   @id @default(uuid())
+  projectId         String   @map("project_id")
+  siteEngineerId    String   @map("site_engineer_id")
+  logDate           DateTime @map("log_date") @db.Date
+  shift             String?
+  weatherCondition  String?  @map("weather_condition")
+  temperatureC      Decimal? @map("temperature_c") @db.Decimal(6, 2)
+  rainfallMm        Decimal? @map("rainfall_mm") @db.Decimal(8, 2)
+  workSummary       String?  @map("work_summary")
+  status            String   @default("DRAFT")
+  createdAt         DateTime @default(now()) @map("created_at")
+  createdBy         String   @map("created_by")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  updatedBy         String   @map("updated_by")
+  deletedAt         DateTime? @map("deleted_at")
+  deletedBy         String?  @map("deleted_by")
+
+  project    Project             @relation(fields: [projectId], references: [id])
+  engineer   User                @relation(fields: [siteEngineerId], references: [id])
+  workforce  DailyLogWorkforce[]
+  equipment  DailyLogEquipment[]
+  visitors   DailyLogVisitor[]
+  incidents  DailyLogIncident[]
+
+  @@index([projectId], map: "idx_daily_log_project_id")
+  @@index([projectId, deletedAt], map: "idx_daily_log_project_deleted")
+  @@map("daily_log")
+}
+
+model DailyLogWorkforce {
+  id         String   @id @default(uuid())
+  dailyLogId String   @map("daily_log_id")
+  trade      String
+  contractor String?
+  workerCount Int     @map("worker_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  createdBy  String   @map("created_by")
+
+  dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+
+  @@index([dailyLogId], map: "idx_daily_log_workforce_log_id")
+  @@map("daily_log_workforce")
+}
+
+model DailyLogEquipment {
+  id             String   @id @default(uuid())
+  dailyLogId     String   @map("daily_log_id")
+  equipmentType  String   @map("equipment_type")
+  quantity       Int      @default(1)
+  hoursUsed      Decimal? @map("hours_used") @db.Decimal(8, 2)
+  hoursDowntime  Decimal? @map("hours_downtime") @db.Decimal(8, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdBy      String   @map("created_by")
+
+  dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+
+  @@index([dailyLogId], map: "idx_daily_log_equipment_log_id")
+  @@map("daily_log_equipment")
+}
+
+model DailyLogVisitor {
+  id          String   @id @default(uuid())
+  dailyLogId  String   @map("daily_log_id")
+  visitorName String   @map("visitor_name")
+  company     String?
+  purpose     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+
+  dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+
+  @@index([dailyLogId], map: "idx_daily_log_visitor_log_id")
+  @@map("daily_log_visitor")
+}
+
+model DailyLogIncident {
+  id           String   @id @default(uuid())
+  dailyLogId   String   @map("daily_log_id")
+  incidentType String   @map("incident_type")
+  description  String
+  severity     String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdBy    String   @map("created_by")
+
+  dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+
+  @@index([dailyLogId], map: "idx_daily_log_incident_log_id")
+  @@map("daily_log_incident")
+}
+
+model Meeting {
+  id               String        @id @default(uuid())
+  projectId        String        @map("project_id")
+  organizerId      String        @map("organizer_id")
+  meetingNumber    String        @map("meeting_number")
+  meetingType      MeetingType   @map("meeting_type")
+  title            String
+  meetingDate      DateTime      @map("meeting_date")
+  location         String?
+  status           MeetingStatus @default(SCHEDULED)
+  minutesIssuedAt  DateTime?     @map("minutes_issued_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  createdBy        String        @map("created_by")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  updatedBy        String        @map("updated_by")
+  deletedAt        DateTime?     @map("deleted_at")
+  deletedBy        String?       @map("deleted_by")
+
+  project     Project            @relation(fields: [projectId], references: [id])
+  organizer   User               @relation(fields: [organizerId], references: [id])
+  agendaItems MeetingAgendaItem[]
+  attendees   MeetingAttendee[]
+  actionItems ActionItem[]
+
+  @@index([projectId], map: "idx_meeting_project_id")
+  @@index([projectId, deletedAt], map: "idx_meeting_project_deleted")
+  @@map("meeting")
+}
+
+model MeetingAgendaItem {
+  id              String   @id @default(uuid())
+  meetingId       String   @map("meeting_id")
+  presenterId     String?  @map("presenter_id")
+  itemOrder       Int      @map("item_order")
+  topic           String
+  discussionNotes String?  @map("discussion_notes")
+  decisionsMade   String?  @map("decisions_made")
+  createdAt       DateTime @default(now()) @map("created_at")
+  createdBy       String   @map("created_by")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  updatedBy       String   @map("updated_by")
+
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  presenter User?   @relation(fields: [presenterId], references: [id])
+
+  @@index([meetingId], map: "idx_meeting_agenda_meeting_id")
+  @@map("meeting_agenda_item")
+}
+
+model MeetingAttendee {
+  id             String   @id @default(uuid())
+  meetingId      String   @map("meeting_id")
+  userId         String?  @map("user_id")
+  externalName   String?  @map("external_name")
+  organization   String?
+  roleAtMeeting  String?  @map("role_at_meeting")
+  attended       Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  createdBy      String   @map("created_by")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([meetingId], map: "idx_meeting_attendee_meeting_id")
+  @@map("meeting_attendee")
+}
+
+model ActionItem {
+  id          String    @id @default(uuid())
+  meetingId   String    @map("meeting_id")
+  ownerId     String    @map("owner_id")
+  description String
+  dueDate     DateTime? @map("due_date") @db.Date
+  status      String    @default("OPEN")
+  closedAt    DateTime? @map("closed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String    @map("updated_by")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  owner   User    @relation(fields: [ownerId], references: [id])
+
+  @@index([meetingId], map: "idx_action_item_meeting_id")
+  @@map("action_item")
+}
+
+model Correspondence {
+  id                 String               @id @default(uuid())
+  projectId          String               @map("project_id")
+  senderUserId       String?              @map("sender_user_id")
+  referenceNumber    String               @map("reference_number")
+  correspondenceType CorrespondenceType   @map("correspondence_type")
+  subject            String
+  senderName         String               @map("sender_name")
+  recipientName      String               @map("recipient_name")
+  correspondenceDate DateTime             @map("correspondence_date") @db.Date
+  status             CorrespondenceStatus @default(DRAFT)
+  createdAt          DateTime             @default(now()) @map("created_at")
+  createdBy          String               @map("created_by")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  updatedBy          String               @map("updated_by")
+  deletedAt          DateTime?            @map("deleted_at")
+  deletedBy          String?              @map("deleted_by")
+
+  project    Project @relation(fields: [projectId], references: [id])
+  senderUser User?   @relation(fields: [senderUserId], references: [id])
+
+  @@index([projectId], map: "idx_correspondence_project_id")
+  @@index([projectId, deletedAt], map: "idx_correspondence_project_deleted")
+  @@map("correspondence")
+}
+
+model Risk {
+  id               String       @id @default(uuid())
+  projectId        String       @map("project_id")
+  ownerId          String       @map("owner_id")
+  riskIdCode       String       @map("risk_id_code")
+  title            String
+  description      String?
+  category         RiskCategory
+  probability      Int
+  impact           Int
+  riskScore        Int          @map("risk_score")
+  mitigationPlan   String?      @map("mitigation_plan")
+  contingencyPlan  String?      @map("contingency_plan")
+  reviewDate       DateTime?    @map("review_date") @db.Date
+  status           RiskStatus   @default(OPEN)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  createdBy        String       @map("created_by")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  updatedBy        String       @map("updated_by")
+  deletedAt        DateTime?    @map("deleted_at")
+  deletedBy        String?      @map("deleted_by")
+
+  project Project @relation(fields: [projectId], references: [id])
+  owner   User    @relation(fields: [ownerId], references: [id])
+
+  @@index([projectId], map: "idx_risk_project_id")
+  @@index([projectId, deletedAt], map: "idx_risk_project_deleted")
+  @@map("risk")
+}
+
+model Issue {
+  id           String        @id @default(uuid())
+  projectId    String        @map("project_id")
+  raisedBy     String        @map("raised_by")
+  assignedTo   String?       @map("assigned_to")
+  issueNumber  String        @map("issue_number")
+  issueType    String        @map("issue_type")
+  description  String
+  location     String?
+  severity     IssueSeverity
+  status       IssueStatus   @default(OPEN)
+  dueDate      DateTime?     @map("due_date") @db.Date
+  resolvedAt   DateTime?     @map("resolved_at")
+  verifiedAt   DateTime?     @map("verified_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  createdBy    String        @map("created_by")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  updatedBy    String        @map("updated_by")
+  deletedAt    DateTime?     @map("deleted_at")
+  deletedBy    String?       @map("deleted_by")
+
+  project  Project @relation(fields: [projectId], references: [id])
+  raiser   User    @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
+  assignee User?   @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
+
+  @@index([projectId], map: "idx_issue_project_id")
+  @@index([projectId, deletedAt], map: "idx_issue_project_deleted")
+  @@map("issue")
+}
+
+model PunchItem {
+  id               String            @id @default(uuid())
+  projectId        String            @map("project_id")
+  raisedBy         String            @map("raised_by")
+  assignedTo       String?           @map("assigned_to")
+  punchNumber      String            @map("punch_number")
+  description      String
+  roomOrArea       String?           @map("room_or_area")
+  tradeResponsible String?           @map("trade_responsible")
+  severity         PunchItemSeverity
+  status           PunchItemStatus   @default(RAISED)
+  dueDate          DateTime?         @map("due_date") @db.Date
+  correctedAt      DateTime?         @map("corrected_at")
+  verifiedAt       DateTime?         @map("verified_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  createdBy        String            @map("created_by")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  updatedBy        String            @map("updated_by")
+  deletedAt        DateTime?         @map("deleted_at")
+  deletedBy        String?           @map("deleted_by")
+
+  project  Project @relation(fields: [projectId], references: [id])
+  raiser   User    @relation("PunchRaisedBy", fields: [raisedBy], references: [id])
+  assignee User?   @relation("PunchAssignedTo", fields: [assignedTo], references: [id])
+
+  @@index([projectId], map: "idx_punch_item_project_id")
+  @@index([projectId, deletedAt], map: "idx_punch_item_project_deleted")
+  @@map("punch_item")
+}
+
+model Closeout {
+  id                      String         @id @default(uuid())
+  projectId               String         @unique @map("project_id")
+  practicalCompletionDate DateTime?      @map("practical_completion_date") @db.Date
+  defectsLiabilityEndDate DateTime?      @map("defects_liability_end_date") @db.Date
+  finalCompletionDate     DateTime?      @map("final_completion_date") @db.Date
+  status                  CloseoutStatus @default(PRACTICAL_COMPLETION)
+  contractValue           Decimal?       @map("contract_value") @db.Decimal(18, 2)
+  variationsTotal         Decimal?       @map("variations_total") @db.Decimal(18, 2)
+  claimsTotal             Decimal?       @map("claims_total") @db.Decimal(18, 2)
+  finalSettlement         Decimal?       @map("final_settlement") @db.Decimal(18, 2)
+  createdAt               DateTime       @default(now()) @map("created_at")
+  createdBy               String         @map("created_by")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+  updatedBy               String         @map("updated_by")
+
+  project         Project                 @relation(fields: [projectId], references: [id])
+  checklistItems  CloseoutChecklistItem[]
+  warranties      Warranty[]
+
+  @@index([projectId], map: "idx_closeout_project_id")
+  @@map("closeout")
+}
+
+model CloseoutChecklistItem {
+  id          String    @id @default(uuid())
+  closeoutId  String    @map("closeout_id")
+  verifiedBy  String?   @map("verified_by")
+  category    String
+  description String
+  isComplete  Boolean   @default(false) @map("is_complete")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String    @map("updated_by")
+
+  closeout Closeout @relation(fields: [closeoutId], references: [id], onDelete: Cascade)
+  verifier User?    @relation(fields: [verifiedBy], references: [id])
+
+  @@index([closeoutId], map: "idx_closeout_checklist_closeout_id")
+  @@map("closeout_checklist_item")
+}
+
+model Warranty {
+  id              String    @id @default(uuid())
+  closeoutId      String    @map("closeout_id")
+  itemDescription String    @map("item_description")
+  supplier        String?
+  startDate       DateTime? @map("start_date") @db.Date
+  expiryDate      DateTime? @map("expiry_date") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String    @map("created_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  updatedBy       String    @map("updated_by")
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       String?   @map("deleted_by")
+
+  closeout Closeout @relation(fields: [closeoutId], references: [id], onDelete: Cascade)
+
+  @@index([closeoutId], map: "idx_warranty_closeout_id")
+  @@map("warranty")
 }

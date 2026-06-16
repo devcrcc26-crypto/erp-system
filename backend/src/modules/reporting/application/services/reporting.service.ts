@@ -247,6 +247,29 @@ export class ReportingService {
     return report;
   }
 
+  /**
+   * Returns portfolio completion rate (% of projects completed or closed).
+   */
+  async getPortfolioCompletionRate(
+    ctx: RequestContext,
+  ): Promise<{ rate: number }> {
+    const where = activeOnly({ companyId: ctx.companyId });
+    const [total, completed] = await Promise.all([
+      this.prisma.project.count({ where }),
+      this.prisma.project.count({
+        where: {
+          ...where,
+          status: { in: ['COMPLETED', 'CLOSED'] },
+        },
+      }),
+    ]);
+
+    const rate =
+      total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    return { rate };
+  }
+
   private async findScheduleOrThrow(
     reportId: string,
     scheduleId: string,

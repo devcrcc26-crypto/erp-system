@@ -70,6 +70,66 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'reports', action: 'create', description: 'Create reports' },
   { module: 'reports', action: 'edit', description: 'Edit reports' },
   { module: 'reports', action: 'export', description: 'Export reports' },
+
+  { module: 'projects', action: 'view', description: 'View projects' },
+  { module: 'projects', action: 'create', description: 'Create projects' },
+  { module: 'projects', action: 'edit', description: 'Edit projects' },
+  { module: 'projects', action: 'delete', description: 'Delete projects' },
+
+  { module: 'schedule', action: 'view', description: 'View project schedule' },
+  { module: 'schedule', action: 'create', description: 'Create schedule items' },
+  { module: 'schedule', action: 'edit', description: 'Edit schedule items' },
+  { module: 'schedule', action: 'delete', description: 'Delete schedule items' },
+
+  { module: 'rfis', action: 'view', description: 'View RFIs' },
+  { module: 'rfis', action: 'create', description: 'Create RFIs' },
+  { module: 'rfis', action: 'edit', description: 'Edit RFIs' },
+  { module: 'rfis', action: 'delete', description: 'Delete RFIs' },
+
+  { module: 'submittals', action: 'view', description: 'View submittals' },
+  { module: 'submittals', action: 'create', description: 'Create submittals' },
+  { module: 'submittals', action: 'edit', description: 'Edit submittals' },
+  { module: 'submittals', action: 'delete', description: 'Delete submittals' },
+
+  { module: 'drawings', action: 'view', description: 'View drawings' },
+  { module: 'drawings', action: 'create', description: 'Create drawings' },
+  { module: 'drawings', action: 'edit', description: 'Edit drawings' },
+  { module: 'drawings', action: 'delete', description: 'Delete drawings' },
+
+  { module: 'daily_logs', action: 'view', description: 'View daily logs' },
+  { module: 'daily_logs', action: 'create', description: 'Create daily logs' },
+  { module: 'daily_logs', action: 'edit', description: 'Edit daily logs' },
+  { module: 'daily_logs', action: 'delete', description: 'Delete daily logs' },
+
+  { module: 'meetings', action: 'view', description: 'View meetings' },
+  { module: 'meetings', action: 'create', description: 'Create meetings' },
+  { module: 'meetings', action: 'edit', description: 'Edit meetings' },
+  { module: 'meetings', action: 'delete', description: 'Delete meetings' },
+
+  { module: 'correspondence', action: 'view', description: 'View correspondence' },
+  { module: 'correspondence', action: 'create', description: 'Create correspondence' },
+  { module: 'correspondence', action: 'edit', description: 'Edit correspondence' },
+  { module: 'correspondence', action: 'delete', description: 'Delete correspondence' },
+
+  { module: 'risks', action: 'view', description: 'View risks' },
+  { module: 'risks', action: 'create', description: 'Create risks' },
+  { module: 'risks', action: 'edit', description: 'Edit risks' },
+  { module: 'risks', action: 'delete', description: 'Delete risks' },
+
+  { module: 'issues', action: 'view', description: 'View issues' },
+  { module: 'issues', action: 'create', description: 'Create issues' },
+  { module: 'issues', action: 'edit', description: 'Edit issues' },
+  { module: 'issues', action: 'delete', description: 'Delete issues' },
+
+  { module: 'punch_items', action: 'view', description: 'View punch items' },
+  { module: 'punch_items', action: 'create', description: 'Create punch items' },
+  { module: 'punch_items', action: 'edit', description: 'Edit punch items' },
+  { module: 'punch_items', action: 'delete', description: 'Delete punch items' },
+
+  { module: 'closeout', action: 'view', description: 'View project closeout' },
+  { module: 'closeout', action: 'create', description: 'Initialize closeout' },
+  { module: 'closeout', action: 'edit', description: 'Edit closeout' },
+  { module: 'closeout', action: 'delete', description: 'Delete closeout' },
 ];
 
 const ACTION_TO_FLAG: Record<string, keyof PermissionFlags> = {
@@ -99,6 +159,105 @@ function fullPermissionFlags(): PermissionFlags {
     canApprove: true,
     canExport: true,
   };
+}
+
+function viewCreateEditFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+    canApprove: false,
+    canExport: false,
+  };
+}
+
+function viewOnlyFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canApprove: false,
+    canExport: false,
+  };
+}
+
+const PM_MODULES = [
+  'projects',
+  'schedule',
+  'rfis',
+  'submittals',
+  'drawings',
+  'daily_logs',
+  'meetings',
+  'correspondence',
+  'risks',
+  'issues',
+  'punch_items',
+  'closeout',
+] as const;
+
+function pmPermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
+    return null;
+  }
+
+  if (roleName === 'Project Manager' || roleName === 'Managing Director') {
+    return fullPermissionFlags();
+  }
+
+  const siteModules = [
+    'projects',
+    'schedule',
+    'rfis',
+    'daily_logs',
+    'issues',
+    'punch_items',
+    'risks',
+  ];
+  const docModules = ['projects', 'submittals', 'drawings', 'correspondence'];
+  const safetyModules = ['projects', 'risks', 'issues', 'daily_logs'];
+
+  let allowedModules: string[] = [];
+  if (roleName === 'Site Engineer') {
+    allowedModules = siteModules;
+  } else if (roleName === 'Document Controller') {
+    allowedModules = docModules;
+  } else if (roleName === 'Safety Officer') {
+    allowedModules = safetyModules;
+  } else {
+    return null;
+  }
+
+  if (allowedModules.includes(module)) {
+    if (action === 'delete') {
+      return null;
+    }
+    const flag = ACTION_TO_FLAG[action];
+    if (!flag) {
+      return null;
+    }
+    return {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+      [flag]: true,
+    };
+  }
+
+  if (action === 'view') {
+    return viewOnlyFlags();
+  }
+
+  return null;
 }
 
 function employeePermissionFlags(
@@ -239,6 +398,70 @@ async function main(): Promise<void> {
         },
       });
     }
+  }
+
+  const pmRoleNames = [
+    'Managing Director',
+    'Project Manager',
+    'Site Engineer',
+    'Document Controller',
+    'Safety Officer',
+  ] as const;
+
+  for (const roleName of pmRoleNames) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      continue;
+    }
+    for (const permission of permissions) {
+      const flags = pmPermissionFlags(roleName, permission.module, permission.action);
+      if (!flags) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        update: flags,
+        create: {
+          roleId,
+          permissionId: permission.id,
+          ...flags,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
+  }
+
+  // Employee gets read-only project portfolio access
+  const employeePmViewFlags = viewOnlyFlags();
+  for (const permission of permissions) {
+    if (!PM_MODULES.includes(permission.module as (typeof PM_MODULES)[number])) {
+      continue;
+    }
+    if (permission.action !== 'view') {
+      continue;
+    }
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: employeeRoleId,
+          permissionId: permission.id,
+        },
+      },
+      update: employeePmViewFlags,
+      create: {
+        roleId: employeeRoleId,
+        permissionId: permission.id,
+        ...employeePmViewFlags,
+        createdBy: SYSTEM_USER_ID,
+        updatedBy: SYSTEM_USER_ID,
+      },
+    });
   }
 
   // ── Organisation bootstrap ─────────────────────────────────────────────
@@ -460,7 +683,16 @@ async function main(): Promise<void> {
   }
 
   // ── Number series + PostgreSQL sequences ─────────────────────────────────
-  const documentTypes = ['PURCHASE_ORDER', 'INVOICE', 'RFI', 'SUBMITTAL'];
+  const documentTypes = [
+    'PURCHASE_ORDER',
+    'INVOICE',
+    'RFI',
+    'SUBMITTAL',
+    'ISSUE',
+    'PUNCH_ITEM',
+    'MEETING',
+    'CORRESPONDENCE',
+  ];
 
   for (const docType of documentTypes) {
     const sequenceName = `seq_${company.id.replace(/-/g, '_')}_${docType.toLowerCase()}`;
@@ -577,6 +809,181 @@ async function main(): Promise<void> {
   console.log(`  Admin password: (from SEED_ADMIN_PASSWORD env or default)`);
   console.log(`  Roles seeded: ${CORE_ROLES.length}`);
   console.log(`  Permissions seeded: ${permissions.length}`);
+
+  // ── Sample project (demo data) ───────────────────────────────────────────
+  const demoProject = await prisma.project.upsert({
+    where: {
+      companyId_projectCode: {
+        companyId: company.id,
+        projectCode: 'DEMO-001',
+      },
+    },
+    update: {},
+    create: {
+      companyId: company.id,
+      branchId: branch.id,
+      projectCode: 'DEMO-001',
+      name: 'Marina Tower Construction',
+      location: 'Dubai Marina',
+      projectType: 'COMMERCIAL',
+      contractType: 'LUMP_SUM',
+      status: 'ACTIVE',
+      startDate: new Date('2026-01-15'),
+      plannedFinishDate: new Date('2027-06-30'),
+      budget: 12500000,
+      currency: 'USD',
+      projectManagerId: adminUser.id,
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.projectTeam.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000070' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000070',
+      projectId: demoProject.id,
+      userId: adminUser.id,
+      roleOnProject: 'Project Manager',
+      assignedFrom: new Date('2026-01-15'),
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  const milestone = await prisma.milestone.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000071' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000071',
+      projectId: demoProject.id,
+      name: 'Structure Complete',
+      plannedDate: new Date('2026-09-30'),
+      status: 'PLANNED',
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.task.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000072' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000072',
+      projectId: demoProject.id,
+      milestoneId: milestone.id,
+      assignedTo: adminUser.id,
+      taskIdCode: 'T-100',
+      name: 'Foundation works',
+      startDate: new Date('2026-01-15'),
+      finishDate: new Date('2026-04-30'),
+      durationDays: 105,
+      progressPct: 75,
+      status: 'IN_PROGRESS',
+      isCritical: true,
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.task.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000073' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000073',
+      projectId: demoProject.id,
+      milestoneId: milestone.id,
+      assignedTo: adminUser.id,
+      taskIdCode: 'T-200',
+      name: 'Superstructure',
+      startDate: new Date('2026-05-01'),
+      finishDate: new Date('2026-09-30'),
+      durationDays: 152,
+      progressPct: 20,
+      status: 'NOT_STARTED',
+      isCritical: true,
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.rfi.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000074' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000074',
+      projectId: demoProject.id,
+      raisedBy: adminUser.id,
+      assignedTo: adminUser.id,
+      rfiNumber: 'RFI-00001',
+      title: 'Clarification on pile cap reinforcement',
+      description: 'Please confirm bar spacing at grid B4.',
+      discipline: 'Structural',
+      priority: 'HIGH',
+      status: 'UNDER_REVIEW',
+      dateRaised: new Date('2026-03-01'),
+      dueDate: new Date('2026-03-15'),
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.issue.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000075' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000075',
+      projectId: demoProject.id,
+      raisedBy: adminUser.id,
+      issueNumber: 'ISS-00001',
+      issueType: 'Quality',
+      description: 'Honeycombing observed at column C2',
+      location: 'Level 3',
+      severity: 'MEDIUM',
+      status: 'OPEN',
+      dueDate: new Date('2026-03-20'),
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.punchItem.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000076' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000076',
+      projectId: demoProject.id,
+      raisedBy: adminUser.id,
+      punchNumber: 'PUN-00001',
+      description: 'Touch-up paint required in lobby',
+      roomOrArea: 'Ground floor lobby',
+      tradeResponsible: 'Painting',
+      severity: 'MINOR',
+      status: 'RAISED',
+      dueDate: new Date('2026-04-01'),
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  await prisma.documentFolder.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000077' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000077',
+      companyId: company.id,
+      name: 'Marina Tower Documents',
+      path: `/projects/${demoProject.id}`,
+      contextType: 'PROJECT',
+      contextId: demoProject.id,
+      isSystem: false,
+      createdBy: adminUser.id,
+      updatedBy: adminUser.id,
+    },
+  });
+
+  console.log(`  Demo project: ${demoProject.projectCode} (${demoProject.id})`);
 }
 
 main()

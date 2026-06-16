@@ -15,6 +15,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { CompanySetupModule } from './modules/company-setup/company-setup.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
 import { envValidationSchema } from './shared/config/env.validation';
@@ -60,6 +61,7 @@ import { StorageModule } from './shared/storage/storage.module';
     NotificationsModule.register(),
     DocumentsModule,
     ReportingModule,
+    ProjectManagementModule,
   ],
   controllers: [AppController],
   providers: [
