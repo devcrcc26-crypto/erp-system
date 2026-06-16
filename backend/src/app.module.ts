@@ -40,7 +40,7 @@ import { StorageModule } from './shared/storage/storage.module';
       {
         name: 'default',
         ttl: 60_000,
-        limit: 100,
+        limit: process.env.NODE_ENV === 'production' ? 100 : 1000,
         skipIf: () => process.env.NODE_ENV === 'test',
       },
       {

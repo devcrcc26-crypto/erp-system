@@ -28,6 +28,11 @@ import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
+/** Maximum page size allowed by the API pagination DTO. */
+export const PROJECT_LIST_PAGE_SIZE = 100;
+
+export type ProjectListParams = PaginationParams & ProjectListFilters;
+
 export const projectKeys = {
   all: ['pm', 'projects'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
@@ -40,7 +45,7 @@ export const projectKeys = {
 };
 
 export function useProjects(
-  params: PaginationParams & ProjectListFilters = { page: 1, limit: 20 },
+  params: ProjectListParams = { page: 1, limit: 20 },
   enabled = true,
   options?: Omit<UseQueryOptions<PaginatedResult<Project>>, 'queryKey' | 'queryFn'>,
 ) {
@@ -50,6 +55,61 @@ export function useProjects(
       apiGetPaginated<Project>(`/projects${toQueryString(params)}`),
     enabled,
     retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Loads all projects for portfolio views by walking paginated list endpoints.
+ */
+export function useAllProjects(
+  params: Omit<ProjectListParams, 'page' | 'limit'> = {},
+  enabled = true,
+  options?: Omit<UseQueryOptions<PaginatedResult<Project>>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: [...projectKeys.lists(), 'all', params] as const,
+    queryFn: async (): Promise<PaginatedResult<Project>> => {
+      const firstPage = await apiGetPaginated<Project>(
+        `/projects${toQueryString({
+          ...params,
+          page: 1,
+          limit: PROJECT_LIST_PAGE_SIZE,
+        })}`,
+      );
+
+      if (firstPage.meta.pages <= 1) {
+        return firstPage;
+      }
+
+      const data: Project[] = [...firstPage.data];
+
+      // Fetch pages sequentially (instead of Promise.all) to avoid throttling
+      // on the backend for large portfolios.
+      for (let page = 2; page <= firstPage.meta.pages; page += 1) {
+        const result = await apiGetPaginated<Project>(
+          `/projects${toQueryString({
+            ...params,
+            page,
+            limit: PROJECT_LIST_PAGE_SIZE,
+          })}`,
+        );
+        data.push(...result.data);
+      }
+
+      return {
+        data,
+        meta: {
+          total: firstPage.meta.total,
+          page: 1,
+          limit: firstPage.meta.total,
+          pages: 1,
+        },
+      };
+    },
+    enabled,
+    retry: false,
+    staleTime: 30_000,
     ...options,
   });
 }

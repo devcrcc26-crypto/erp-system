@@ -57,6 +57,7 @@ export function useUsers(
     queryKey: userKeys.list(params),
     queryFn: () => apiGetPaginated<User>(`/users${toQueryString(params)}`),
     retry: false,
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }

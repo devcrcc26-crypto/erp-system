@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Button, Dropdown, Empty, List, Spin, Typography } from 'antd';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -13,6 +13,7 @@ import {
 } from '@/lib/query/notifications';
 import type { InAppNotification } from '@/lib/api/documents.types';
 import { ApiRequestError } from '@/lib/api/errors';
+import { useAuthStore } from '@/stores/auth.store';
 
 dayjs.extend(relativeTime);
 
@@ -73,13 +74,41 @@ function NotificationItem({
  */
 export default function NotificationPanel(): React.ReactNode {
   const [open, setOpen] = useState(false);
-  const unreadQuery = useUnreadNotificationCount(true);
+  const canViewNotifications = useAuthStore(
+    (state) => state.capabilities.canViewNotifications,
+  );
+  const [allowed, setAllowed] = useState(canViewNotifications);
+
+  useEffect(() => {
+    setAllowed(canViewNotifications);
+  }, [canViewNotifications]);
+
+  const unreadQuery = useUnreadNotificationCount(allowed);
   const notificationsQuery = useNotifications(
     { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' },
-    open,
+    allowed && open,
   );
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+
+  useEffect(() => {
+    if (!unreadQuery.isError) {
+      return;
+    }
+
+    const status =
+      unreadQuery.error instanceof ApiRequestError
+        ? unreadQuery.error.status
+        : 0;
+
+    if (status === 403 || status === 401) {
+      setAllowed(false);
+    }
+  }, [unreadQuery.isError, unreadQuery.error]);
+
+  if (!canViewNotifications) {
+    return null;
+  }
 
   if (unreadQuery.isError) {
     const status =

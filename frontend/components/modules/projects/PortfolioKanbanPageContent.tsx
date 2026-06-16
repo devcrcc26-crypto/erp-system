@@ -14,40 +14,32 @@ import {
 import { Alert, Input, Spin } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { ListChecks } from 'lucide-react';
-import { useQueries } from '@tanstack/react-query';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { layout } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  Project,
-  ProjectDashboardStats,
-  ProjectStatus,
-} from '@/lib/api/project-management.types';
+import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
-import { apiGet } from '@/lib/api/client';
-import {
-  projectKeys,
-  useProjects,
-  useUpdateProject,
-} from '@/lib/query/projects';
+import { useAllProjects, useUpdateProject } from '@/lib/query/projects';
 import { useUsers } from '@/lib/query/users';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
-import {
-  formatProjectStatus,
-} from '@/lib/utils/project-display';
+import { formatProjectStatus } from '@/lib/utils/project-display';
 import { groupProjectsByStatus } from '@/lib/utils/portfolio-kanban';
 import KanbanColumn from '@/components/modules/projects/KanbanColumn';
 import {
   ProjectKanbanCardPreview,
 } from '@/components/modules/projects/ProjectKanbanCard';
 
-const KANBAN_PAGE_SIZE = 500;
-const MAX_STATS_PREFETCH = 30;
-
-function useProjectManagerNames(): Record<string, string> {
-  const usersQuery = useUsers({ page: 1, limit: 100 });
+function useProjectManagerNames(enabled: boolean): Record<string, string> {
+  const canManageUsers = useAuthStore(
+    (state) => state.capabilities.canManageUsers,
+  );
+  const usersQuery = useUsers(
+    { page: 1, limit: 100 },
+    { enabled: enabled && canManageUsers },
+  );
   const users = usersQuery.data?.data ?? [];
 
   return useMemo(() => {
@@ -57,32 +49,6 @@ function useProjectManagerNames(): Record<string, string> {
     }
     return map;
   }, [users]);
-}
-
-function useProjectStatsMap(
-  projects: Project[],
-  enabled: boolean,
-): Record<string, ProjectDashboardStats | undefined> {
-  const projectsForStats = projects.slice(0, MAX_STATS_PREFETCH);
-
-  const statsQueries = useQueries({
-    queries: projectsForStats.map((project) => ({
-      queryKey: projectKeys.dashboard(project.id),
-      queryFn: () =>
-        apiGet<ProjectDashboardStats>(`/projects/${project.id}/dashboard`),
-      enabled: enabled && projectsForStats.length > 0,
-      retry: false,
-      staleTime: 60_000,
-    })),
-  });
-
-  return useMemo(() => {
-    const map: Record<string, ProjectDashboardStats | undefined> = {};
-    projectsForStats.forEach((project, index) => {
-      map[project.id] = statsQueries[index]?.data;
-    });
-    return map;
-  }, [projectsForStats, statsQueries]);
 }
 
 interface PendingStatusMove {
@@ -100,13 +66,11 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const updateProject = useUpdateProject();
-  const projectManagerNames = useProjectManagerNames();
   const canFetchProjects = authHydrated && isAuthenticated;
+  const projectManagerNames = useProjectManagerNames(canFetchProjects);
 
-  const projectsQuery = useProjects(
+  const projectsQuery = useAllProjects(
     {
-      page: 1,
-      limit: KANBAN_PAGE_SIZE,
       search: search.trim() || undefined,
       sortBy: 'projectCode',
       sortOrder: 'asc',
@@ -115,8 +79,6 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   );
 
   const projects = projectsQuery.data?.data ?? [];
-  const statsEnabled = projectsQuery.isSuccess && projects.length > 0;
-  const projectStats = useProjectStatsMap(projects, statsEnabled);
 
   const groupedProjects = useMemo(
     () => groupProjectsByStatus(projects),
@@ -174,7 +136,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
 
   if (!authHydrated) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+      <div className={layout.loadingCard}>
         <Spin />
       </div>
     );
@@ -192,7 +154,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
 
   if (projectsQuery.isLoading) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+      <div className={layout.loadingCard}>
         <Spin />
       </div>
     );
@@ -265,7 +227,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
             onDragEnd={handleDragEnd}
           >
             <div className="overflow-x-auto pb-2">
-              <div className="flex min-w-max gap-4">
+              <div className="flex min-w-max gap-6">
                 {PROJECT_STATUS_WORKFLOW.map((step) => {
                   const status = step.key as ProjectStatus;
                   return (
@@ -274,7 +236,6 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
                       status={status}
                       projects={groupedProjects[status]}
                       projectManagerNames={projectManagerNames}
-                      projectStats={projectStats}
                       dragEnabled
                     />
                   );
@@ -291,7 +252,6 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
                       ? projectManagerNames[activeProject.projectManagerId]
                       : undefined
                   }
-                  stats={projectStats[activeProject.id]}
                 />
               ) : null}
             </DragOverlay>

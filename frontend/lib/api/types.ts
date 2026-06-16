@@ -319,6 +319,7 @@ export interface AuthCapabilities {
   canCreateUsers: boolean;
   canManageRoles: boolean;
   canEditRoles: boolean;
+  canViewNotifications: boolean;
 }
 
 export interface Capabilities extends AuthCapabilities {
@@ -330,5 +331,6 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateUsers: false,
   canManageRoles: false,
   canEditRoles: false,
+  canViewNotifications: false,
   pm: createEmptyPmCapabilities(),
 };

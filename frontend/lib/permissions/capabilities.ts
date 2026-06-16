@@ -82,13 +82,12 @@ export async function fetchPmCapabilities(): Promise<PmCapabilities> {
     return pm;
   }
 
-  await Promise.all(
-    submoduleEntries.map(async ([moduleKey, resource]) => {
-      pm[moduleKey] = await probeListEndpoint(
-        projectPath(sampleProjectId as string, resource),
-      );
-    }),
-  );
+  // Probe endpoints sequentially to avoid bursts that trip backend throttling.
+  for (const [moduleKey, resource] of submoduleEntries) {
+    pm[moduleKey] = await probeListEndpoint(
+      projectPath(sampleProjectId as string, resource),
+    );
+  }
 
   return pm;
 }
@@ -102,6 +101,7 @@ export async function fetchCapabilities(): Promise<Capabilities> {
     canCreateUsers: EMPTY_CAPABILITIES.canCreateUsers,
     canManageRoles: EMPTY_CAPABILITIES.canManageRoles,
     canEditRoles: EMPTY_CAPABILITIES.canEditRoles,
+    canViewNotifications: EMPTY_CAPABILITIES.canViewNotifications,
   };
 
   try {
@@ -112,6 +112,7 @@ export async function fetchCapabilities(): Promise<Capabilities> {
       canCreateUsers: false,
       canManageRoles: false,
       canEditRoles: false,
+      canViewNotifications: false,
     };
   }
 

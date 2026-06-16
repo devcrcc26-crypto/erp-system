@@ -14,13 +14,13 @@ export default function KanbanColumn({
   status,
   projects,
   projectManagerNames,
-  projectStats,
+  projectStats = {},
   dragEnabled,
 }: {
   status: ProjectStatus;
   projects: Project[];
   projectManagerNames: Record<string, string>;
-  projectStats: Record<string, ProjectDashboardStats | undefined>;
+  projectStats?: Record<string, ProjectDashboardStats | undefined>;
   dragEnabled: boolean;
 }): React.ReactNode {
   const { setNodeRef, isOver } = useDroppable({

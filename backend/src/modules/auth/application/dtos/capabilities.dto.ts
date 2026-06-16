@@ -12,4 +12,7 @@ export class CapabilitiesDto {
 
   @ApiProperty({ description: 'Can edit role permissions' })
   canEditRoles!: boolean;
+
+  @ApiProperty({ description: 'Can view in-app notifications' })
+  canViewNotifications!: boolean;
 }
