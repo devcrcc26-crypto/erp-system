@@ -5,7 +5,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 
 /**
- * Project documents tab — wires to Core Foundation document folders when available.
+ * Project documents tab ? wires to Core Foundation document folders when available.
  * Project-specific folder resolution will come from the backend project module.
  */
 export default function ProjectDocumentsPanel({
@@ -18,7 +18,7 @@ export default function ProjectDocumentsPanel({
       <Alert
         type="info"
         showIcon
-        message="Project document folders"
+        title="Project document folders"
         description="When the backend exposes a document folder for this project, files will appear here. Until then, use company-level document management from Settings."
       />
 

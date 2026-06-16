@@ -44,7 +44,7 @@ export default function MeetingsPageContent({
           type="info"
           showIcon
           className="!mb-4"
-          message="Meeting APIs are not connected yet."
+          title="Meeting APIs are not connected yet."
         />
       )}
       <Table<Meeting>

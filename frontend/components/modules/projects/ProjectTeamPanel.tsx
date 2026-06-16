@@ -156,7 +156,7 @@ export default function ProjectTeamPanel({
             type="info"
             showIcon
             className="!mb-4"
-            message="Team management will be available when the project API is connected."
+            title="Team management will be available when the project API is connected."
           />
         )}
 
@@ -164,7 +164,7 @@ export default function ProjectTeamPanel({
           <Alert
             type="info"
             showIcon
-            message="No team members assigned yet."
+            title="No team members assigned yet."
           />
         ) : (
           <DataTable<ProjectTeamMember>

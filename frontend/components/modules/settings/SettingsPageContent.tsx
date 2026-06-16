@@ -320,11 +320,11 @@ export default function SettingsPageContent(): React.ReactNode {
           )}
 
           {saveError && (
-            <Alert type="error" showIcon message={saveError} className="!mt-4" />
+            <Alert type="error" showIcon title={saveError} className="!mt-4" />
           )}
 
           {saveSuccess && (
-            <Alert type="success" showIcon message={saveSuccess} className="!mt-4" />
+            <Alert type="success" showIcon title={saveSuccess} className="!mt-4" />
           )}
         </FormLayout>
       )}

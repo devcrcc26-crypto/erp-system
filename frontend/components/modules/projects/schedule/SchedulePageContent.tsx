@@ -59,7 +59,7 @@ export default function SchedulePageContent({
         <Alert
           type="info"
           showIcon
-          message="Schedule APIs are not connected yet."
+          title="Schedule APIs are not connected yet."
           description="Milestones, tasks, Gantt, and dependencies will populate when the project management backend module is available."
         />
       )}

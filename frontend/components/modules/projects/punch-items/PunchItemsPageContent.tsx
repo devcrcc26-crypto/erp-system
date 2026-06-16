@@ -46,7 +46,7 @@ export default function PunchItemsPageContent({
           type="info"
           showIcon
           className="!mb-4"
-          message="Punch list APIs are not connected yet."
+          title="Punch list APIs are not connected yet."
         />
       )}
       <Table<PunchItem>

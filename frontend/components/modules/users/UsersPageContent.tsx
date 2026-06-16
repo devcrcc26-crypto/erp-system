@@ -198,13 +198,13 @@ function EditEmployeeModal({
           <Select
             loading={userQuery.isLoading}
             options={roles.map((role) => ({ value: role.id, label: role.name }))}
-            placeholder={userQuery.isLoading ? 'Loading role…' : 'Select a role'}
+            placeholder={userQuery.isLoading ? 'Loading roles...' : 'Select a role'}
           />
         </Form.Item>
         <Form.Item name="isActive" valuePropName="checked">
           <Checkbox>Active account</Checkbox>
         </Form.Item>
-        {error && <Alert type="error" showIcon message={error} className="!mb-0" />}
+        {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
       </Form>
     </Modal>
   );
@@ -447,7 +447,7 @@ export default function UsersPageContent(): React.ReactNode {
         <Alert
           type={actionMessage.type === 'success' ? 'success' : 'error'}
           showIcon
-          message={actionMessage.text}
+          title={actionMessage.text}
           closable
           onClose={() => setActionMessage(null)}
         />
@@ -504,7 +504,7 @@ export default function UsersPageContent(): React.ReactNode {
             />
           </Form.Item>
           {formError && (
-            <Alert type="error" showIcon message={formError} className="!mb-4" />
+            <Alert type="error" showIcon title={formError} className="!mb-4" />
           )}
           <Button
             type="primary"
@@ -512,7 +512,7 @@ export default function UsersPageContent(): React.ReactNode {
             loading={isSubmitting}
             disabled={roles.length === 0}
           >
-            {isSubmitting ? 'Sending invitation…' : 'Send invitation'}
+            {isSubmitting ? 'Sending invitation...' : 'Send invitation'}
           </Button>
         </Form>
       </FormLayout>

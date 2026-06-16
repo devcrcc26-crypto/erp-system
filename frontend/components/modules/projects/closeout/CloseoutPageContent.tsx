@@ -55,7 +55,7 @@ export default function CloseoutPageContent({
         <Alert
           type="info"
           showIcon
-          message="Closeout API is initializing. Please refresh in a moment."
+          title="Closeout API is initializing. Please refresh in a moment."
         />
       )}
 

@@ -175,7 +175,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         <PlaceholderPage
           icon={Network}
           title="Projects"
-          description="Project management APIs are not available yet. The frontend is ready — connect the backend module to enable this page."
+          description="Project management APIs are not available yet. The frontend is ready —connect the backend module to enable this page."
         />
       );
     }
@@ -240,7 +240,7 @@ export default function ProjectsPageContent(): React.ReactNode {
           <Alert
             type="info"
             showIcon
-            message="No projects found"
+            title="No projects found"
             description="Create your first project to start tracking RFIs, schedule, and site operations."
           />
         ) : (

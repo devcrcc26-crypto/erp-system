@@ -96,7 +96,7 @@ export default function SubmittalDetailDrawer({
       onClose={onClose}
       title={
         submittal
-          ? `${submittal.submittalNumber} — ${submittal.title}`
+          ? `${submittal.submittalNumber} —${submittal.title}`
           : 'Submittal detail'
       }
       size="large"
@@ -263,7 +263,7 @@ export default function SubmittalDetailDrawer({
           <Alert
             type="info"
             showIcon
-            message="PDF markup viewer"
+            title="PDF markup viewer"
             description="Inline PDF review with stamps and markups is planned for v2. Upload submittal files via document attachments when folders are linked."
           />
 

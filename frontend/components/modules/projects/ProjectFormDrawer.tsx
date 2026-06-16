@@ -230,7 +230,7 @@ export default function ProjectFormDrawer({
         </Form.Item>
 
         {isSubmitting && (
-          <Alert type="info" showIcon message="Saving project…" className="!mb-4" />
+          <Alert type="info" showIcon title="Saving project..." className="!mb-4" />
         )}
 
         <div className="flex justify-end gap-2">

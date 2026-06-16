@@ -231,7 +231,7 @@ export default function ProfilePageContent(): React.ReactNode {
         <Alert
           type="warning"
           showIcon
-          message="Email not verified"
+          title="Email not verified"
           description={
             <div>
               <p>Your account must be verified before you can use all features.</p>
@@ -304,8 +304,8 @@ export default function ProfilePageContent(): React.ReactNode {
             </Form.Item>
           </div>
 
-          {accountError && <Alert type="error" showIcon message={accountError} className="!mb-4" />}
-          {accountSuccess && <Alert type="success" showIcon message={accountSuccess} className="!mb-4" />}
+          {accountError && <Alert type="error" showIcon title={accountError} className="!mb-4" />}
+          {accountSuccess && <Alert type="success" showIcon title={accountSuccess} className="!mb-4" />}
 
           <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
             Save account
@@ -330,8 +330,8 @@ export default function ProfilePageContent(): React.ReactNode {
             >
               <Input type="email" />
             </Form.Item>
-            {emailError && <Alert type="error" showIcon message={emailError} className="!mb-4" />}
-            {emailSuccess && <Alert type="success" showIcon message={emailSuccess} className="!mb-4" />}
+            {emailError && <Alert type="error" showIcon title={emailError} className="!mb-4" />}
+            {emailSuccess && <Alert type="success" showIcon title={emailSuccess} className="!mb-4" />}
             <Button type="primary" htmlType="submit" loading={changeEmail.isPending}>
               Send confirmation
             </Button>
@@ -360,8 +360,8 @@ export default function ProfilePageContent(): React.ReactNode {
             </Form.Item>
           </div>
 
-          {prefsError && <Alert type="error" showIcon message={prefsError} className="!mb-4" />}
-          {prefsSuccess && <Alert type="success" showIcon message={prefsSuccess} className="!mb-4" />}
+          {prefsError && <Alert type="error" showIcon title={prefsError} className="!mb-4" />}
+          {prefsSuccess && <Alert type="success" showIcon title={prefsSuccess} className="!mb-4" />}
 
           <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
             Save preferences
@@ -404,8 +404,8 @@ export default function ProfilePageContent(): React.ReactNode {
             <Input.Password autoComplete="new-password" />
           </Form.Item>
 
-          {passwordError && <Alert type="error" showIcon message={passwordError} className="!mb-4" />}
-          {passwordSuccess && <Alert type="success" showIcon message={passwordSuccess} className="!mb-4" />}
+          {passwordError && <Alert type="error" showIcon title={passwordError} className="!mb-4" />}
+          {passwordSuccess && <Alert type="success" showIcon title={passwordSuccess} className="!mb-4" />}
 
           <Button type="primary" htmlType="submit" loading={changePassword.isPending}>
             Change password

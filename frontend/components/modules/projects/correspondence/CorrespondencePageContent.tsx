@@ -46,7 +46,7 @@ export default function CorrespondencePageContent({
           type="info"
           showIcon
           className="!mb-4"
-          message="Correspondence APIs are not connected yet."
+          title="Correspondence APIs are not connected yet."
         />
       )}
       <Table<Correspondence>

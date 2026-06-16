@@ -114,7 +114,7 @@ export default function DrawingDetailDrawer({
       onClose={onClose}
       title={
         drawing
-          ? `${drawing.drawingNumber} Rev ${drawing.revision} — ${drawing.title}`
+          ? `${drawing.drawingNumber} Rev ${drawing.revision} —${drawing.title}`
           : 'Drawing detail'
       }
       size="large"
@@ -164,7 +164,7 @@ export default function DrawingDetailDrawer({
           <Alert
             type="info"
             showIcon
-            message="Drawing viewer"
+            title="Drawing viewer"
             description="Inline PDF viewing will be enabled when file versions are stored. DWG and IFC files will be available for download only."
           />
 

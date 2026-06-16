@@ -293,8 +293,8 @@ export default function IssuesPageContent({
             type="info"
             showIcon
             className="!mb-4"
-            message="Issue APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            title="Issue APIs are not connected yet."
+            description="This page is ready —data will appear when the project management backend module is available."
           />
         )}
 

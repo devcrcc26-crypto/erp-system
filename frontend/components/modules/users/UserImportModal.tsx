@@ -299,7 +299,7 @@ export default function UserImportModal({
                 <Alert
                   type="warning"
                   showIcon
-                  message={`${result.invitationsFailed} invitation${result.invitationsFailed === 1 ? '' : 's'} failed to send. Use Resend verification on the Users page.`}
+                  title={`${result.invitationsFailed} invitation${result.invitationsFailed === 1 ? '' : 's'} failed to send. Use Resend verification on the Users page.`}
                 />
               )}
             </>
@@ -308,7 +308,7 @@ export default function UserImportModal({
             <Alert
               type="error"
               showIcon
-              message="Errors during import"
+              title="Errors during import"
               description={
                 <ul className="mt-1 list-disc pl-5">
                   {result.errors.map((error) => (
@@ -324,7 +324,7 @@ export default function UserImportModal({
       )}
 
       {errorMessage && (
-        <Alert type="error" showIcon message={errorMessage} className="!mt-4" />
+        <Alert type="error" showIcon title={errorMessage} className="!mt-4" />
       )}
 
       {isBusy && step === 'upload' && (

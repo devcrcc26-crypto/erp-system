@@ -42,7 +42,7 @@ function formatCount(value: number | undefined, hasStats: boolean): string {
   if (hasStats && value != null) {
     return String(value);
   }
-  return '—';
+  return '?';
 }
 
 export default function ProjectDashboard({
@@ -93,7 +93,7 @@ export default function ProjectDashboard({
         <Alert
           type="info"
           showIcon
-          message="Dashboard metrics will appear when the project management API is connected."
+          title="Dashboard metrics will appear when the project management API is connected."
           description={
             scheduleFallback
               ? 'Schedule progress is estimated from task data until the dashboard endpoint is available.'
@@ -144,19 +144,19 @@ export default function ProjectDashboard({
               <div>
                 <dt className="text-slate-500">Planned progress</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '—'}
+                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '?'}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-500">Actual progress</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {actualProgressPct != null ? `${actualProgressPct}%` : '—'}
+                  {actualProgressPct != null ? `${actualProgressPct}%` : '?'}
                 </dd>
               </div>
               <div className="col-span-2">
                 <dt className="text-slate-500">Schedule variance</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '—'}
+                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '?'}
                 </dd>
               </div>
             </dl>

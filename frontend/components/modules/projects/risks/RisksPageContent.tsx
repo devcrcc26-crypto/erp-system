@@ -47,7 +47,7 @@ export default function RisksPageContent({
           type="info"
           showIcon
           className="!mb-4"
-          message="Risk APIs are not connected yet."
+          title="Risk APIs are not connected yet."
         />
       )}
       <Table<Risk>

@@ -55,7 +55,7 @@ export default function DocumentAttachmentPanel({
         <Alert
           type="info"
           showIcon
-          message="Save this record first to enable file attachments."
+          title="Save this record first to enable file attachments."
         />
       </FormLayout>
     );
@@ -82,7 +82,7 @@ export default function DocumentAttachmentPanel({
         <Alert
           type={status === 403 ? 'warning' : 'error'}
           showIcon
-          message={
+          title={
             status === 403
               ? 'You do not have permission to view documents in this folder.'
               : 'Unable to load attachments.'

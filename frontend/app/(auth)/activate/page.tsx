@@ -114,7 +114,7 @@ function ActivateForm(): React.ReactNode {
           className="w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: '#f97316' }}
         >
-          {activate.isPending ? 'Activating…' : 'Activate account'}
+          {activate.isPending ? 'Activating...' : 'Activate account'}
         </button>
       </form>
 
@@ -132,7 +132,7 @@ export default function ActivatePage(): React.ReactNode {
     <Suspense
       fallback={
         <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading…
+          Loading...
         </div>
       }
     >

@@ -195,9 +195,9 @@ export default function EntityLinkPicker({
           <Alert
             type="info"
             showIcon
-            message="Entity search will connect to the project API in the next phase."
+            title="Entity search will connect to the project API in the next phase."
           />
-          {error && <Alert type="error" showIcon message={error} />}
+          {error && <Alert type="error" showIcon title={error} />}
         </div>
       </Modal>
     </FormLayout>

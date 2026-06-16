@@ -254,7 +254,7 @@ export default function RfisPageContent({
     <>
       <FormLayout
         title="RFIs"
-        description="Requests for information — track clarifications from design to closeout."
+        description="Requests for information —track clarifications from design to closeout."
         extra={
           <Button
             type="primary"
@@ -271,8 +271,8 @@ export default function RfisPageContent({
             type="info"
             showIcon
             className="!mb-4"
-            message="RFI APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            title="RFI APIs are not connected yet."
+            description="This page is ready —data will appear when the project management backend module is available."
           />
         )}
 

@@ -226,7 +226,7 @@ export default function SubmittalsPageContent({
         title: 'Contractor',
         dataIndex: 'contractor',
         key: 'contractor',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
     ],
     [],
@@ -269,8 +269,8 @@ export default function SubmittalsPageContent({
             type="info"
             showIcon
             className="!mb-4"
-            message="Submittal APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            title="Submittal APIs are not connected yet."
+            description="This page is ready - data will appear when the project management backend module is available."
           />
         )}
 

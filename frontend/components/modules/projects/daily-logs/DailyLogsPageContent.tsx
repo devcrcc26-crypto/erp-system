@@ -243,8 +243,8 @@ export default function DailyLogsPageContent({
             type="info"
             showIcon
             className="!mb-4"
-            message="Daily log APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            title="Daily log APIs are not connected yet."
+            description="This page is ready —data will appear when the project management backend module is available."
           />
         )}
 

@@ -146,16 +146,16 @@ function LoginForm(): React.ReactNode {
             type="warning"
             showIcon
             className="!mb-4"
-            message="Sign in with the account you just updated. Any previous session in this browser has been cleared."
+            title="Sign in with the account you just updated. Any previous session in this browser has been cleared."
           />
         )}
 
         {infoMessage && (
-          <Alert type="success" showIcon className="!mb-4" message={infoMessage} />
+          <Alert type="success" showIcon className="!mb-4" title={infoMessage} />
         )}
 
         {errorMessage && (
-          <Alert type="error" showIcon className="!mb-4" message={errorMessage} />
+          <Alert type="error" showIcon className="!mb-4" title={errorMessage} />
         )}
 
         {showResendActivation && (
@@ -171,7 +171,7 @@ function LoginForm(): React.ReactNode {
 
         <Form.Item className="!mb-0">
           <Button type="primary" htmlType="submit" block loading={login.isPending}>
-            {login.isPending ? 'Signing in…' : 'Sign in'}
+            {login.isPending ? 'Signing in...' : 'Sign in'}
           </Button>
         </Form.Item>
       </Form>

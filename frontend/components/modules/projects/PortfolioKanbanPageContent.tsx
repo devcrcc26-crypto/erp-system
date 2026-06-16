@@ -254,7 +254,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
           <Alert
             type="info"
             showIcon
-            message="No projects on the board"
+            title="No projects on the board"
             description="Create a project from the Projects page to see it here."
           />
         ) : (

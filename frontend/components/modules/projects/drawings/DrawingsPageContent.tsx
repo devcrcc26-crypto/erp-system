@@ -254,8 +254,8 @@ export default function DrawingsPageContent({
             type="info"
             showIcon
             className="!mb-4"
-            message="Drawing APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            title="Drawing APIs are not connected yet."
+            description="This page is ready —data will appear when the project management backend module is available."
           />
         )}
 
