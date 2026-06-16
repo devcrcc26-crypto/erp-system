@@ -32,6 +32,7 @@ import {
   useUpdateProject,
 } from '@/lib/query/projects';
 import { useUsers } from '@/lib/query/users';
+import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   formatProjectStatus,
@@ -96,9 +97,11 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
     null,
   );
 
+  const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const updateProject = useUpdateProject();
   const projectManagerNames = useProjectManagerNames();
+  const canFetchProjects = authHydrated && isAuthenticated;
 
   const projectsQuery = useProjects(
     {
@@ -108,7 +111,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
       sortBy: 'projectCode',
       sortOrder: 'asc',
     },
-    isAuthenticated,
+    canFetchProjects,
   );
 
   const projects = projectsQuery.data?.data ?? [];
@@ -167,6 +170,14 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
     });
     setPendingMove(null);
     void projectsQuery.refetch();
+  }
+
+  if (!authHydrated) {
+    return (
+      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+        <Spin />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {

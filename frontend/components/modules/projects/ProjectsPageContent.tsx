@@ -22,6 +22,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { useProjects } from '@/lib/query/projects';
+import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   formatProjectBudget,
@@ -41,7 +42,9 @@ export default function ProjectsPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
+  const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const canFetchProjects = authHydrated && isAuthenticated;
 
   const projectsQuery = useProjects(
     {
@@ -52,7 +55,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       sortBy: 'createdAt',
       sortOrder: 'desc',
     },
-    isAuthenticated,
+    canFetchProjects,
   );
 
   const columns: ColumnsType<Project> = useMemo(
@@ -124,6 +127,14 @@ export default function ProjectsPageContent(): React.ReactNode {
     ],
     [],
   );
+
+  if (!authHydrated) {
+    return (
+      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+        <Spin />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
