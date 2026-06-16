@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/client';
 import type {
   CreateSubmittalRequest,
+  CreateSubmittalReviewRequest,
   PmListFilters,
   Submittal,
   SubmittalReview,
@@ -167,6 +168,37 @@ export function useDeleteSubmittal() {
         `${submittalsPath(projectId)}/${submittalId}`,
       ),
     onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useAddSubmittalReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body,
+    }: {
+      projectId: string;
+      submittalId: string;
+      body: CreateSubmittalReviewRequest;
+    }) =>
+      apiPost<SubmittalReview>(
+        `${submittalsPath(projectId)}/${submittalId}/reviews`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.reviews(variables.projectId, variables.submittalId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.detail(variables.projectId, variables.submittalId),
+      });
       void queryClient.invalidateQueries({
         queryKey: submittalKeys.lists(variables.projectId),
       });

@@ -14,6 +14,7 @@ import {
   apiPost,
 } from '@/lib/api/client';
 import type {
+  CreateDrawingLinkRequest,
   CreateDrawingRequest,
   Drawing,
   DrawingLink,
@@ -184,6 +185,55 @@ export function useDeleteDrawing() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: drawingKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useCreateDrawingLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      drawingId,
+      body,
+    }: {
+      projectId: string;
+      drawingId: string;
+      body: CreateDrawingLinkRequest;
+    }) =>
+      apiPost<DrawingLink>(
+        `${drawingsPath(projectId)}/${drawingId}/links`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: drawingKeys.links(variables.projectId, variables.drawingId),
+      });
+    },
+  });
+}
+
+export function useDeleteDrawingLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      drawingId,
+      linkId,
+    }: {
+      projectId: string;
+      drawingId: string;
+      linkId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${drawingsPath(projectId)}/${drawingId}/links/${linkId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: drawingKeys.links(variables.projectId, variables.drawingId),
       });
     },
   });

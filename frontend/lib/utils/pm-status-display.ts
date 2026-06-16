@@ -3,11 +3,14 @@ import type {
   IssueStatus,
   RfiPriority,
   RfiStatus,
+  SubmittalStatus,
+  TaskStatus,
 } from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import {
   ISSUE_WORKFLOW,
   RFI_WORKFLOW,
+  SUBMITTAL_WORKFLOW,
 } from '@/lib/api/workflow';
 
 export function formatRfiStatus(status: RfiStatus): string {
@@ -16,6 +19,48 @@ export function formatRfiStatus(status: RfiStatus): string {
 
 export function formatIssueStatus(status: IssueStatus): string {
   return ISSUE_WORKFLOW.find((step) => step.key === status)?.label ?? status;
+}
+
+export function formatSubmittalStatus(status: SubmittalStatus): string {
+  return (
+    SUBMITTAL_WORKFLOW.find((step) => step.key === status)?.label ?? status
+  );
+}
+
+export function submittalStatusVariant(
+  status: SubmittalStatus,
+): StatusBadgeVariant {
+  const variants: Record<SubmittalStatus, StatusBadgeVariant> = {
+    DRAFT: 'default',
+    SUBMITTED: 'info',
+    UNDER_REVIEW: 'warning',
+    APPROVED: 'success',
+    APPROVED_WITH_COMMENTS: 'success',
+    REVISE_AND_RESUBMIT: 'orange',
+    REJECTED: 'error',
+  };
+  return variants[status];
+}
+
+const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  NOT_STARTED: 'Not started',
+  IN_PROGRESS: 'In progress',
+  DELAYED: 'Delayed',
+  COMPLETED: 'Completed',
+};
+
+export function formatTaskStatus(status: TaskStatus): string {
+  return TASK_STATUS_LABELS[status] ?? status;
+}
+
+export function taskStatusVariant(status: TaskStatus): StatusBadgeVariant {
+  const variants: Record<TaskStatus, StatusBadgeVariant> = {
+    NOT_STARTED: 'default',
+    IN_PROGRESS: 'info',
+    DELAYED: 'error',
+    COMPLETED: 'success',
+  };
+  return variants[status];
 }
 
 export function rfiStatusVariant(status: RfiStatus): StatusBadgeVariant {

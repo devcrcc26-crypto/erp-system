@@ -668,6 +668,18 @@ export interface CreateDrawingRequest {
 
 export type UpdateDrawingRequest = Partial<CreateDrawingRequest>;
 
+export interface CreateDrawingLinkRequest {
+  linkedEntityType: string;
+  linkedEntityId: string;
+  label?: string;
+}
+
+export interface CreateSubmittalReviewRequest {
+  status: SubmittalStatus;
+  comments?: string;
+  revisionNumber?: number;
+}
+
 export interface CreateDailyLogRequest {
   logDate: string;
   shift?: string;
