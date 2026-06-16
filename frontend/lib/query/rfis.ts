@@ -18,6 +18,7 @@ import type {
   CreateRfiResponseRequest,
   PmListFilters,
   Rfi,
+  RfiPriority,
   RfiResponse,
   RfiStatus,
   UpdateRfiRequest,
@@ -34,7 +35,8 @@ export const rfiKeys = {
   lists: (projectId: string) => [...rfiKeys.all, projectId, 'list'] as const,
   list: (
     projectId: string,
-    params: PaginationParams & PmListFilters & { status?: RfiStatus } = {
+    params: PaginationParams &
+      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
       page: 1,
       limit: 20,
     },
@@ -49,7 +51,8 @@ export const rfiKeys = {
 
 export function useRfis(
   projectId: string,
-  params: PaginationParams & PmListFilters & { status?: RfiStatus } = {
+  params: PaginationParams &
+    PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
     page: 1,
     limit: 20,
   },

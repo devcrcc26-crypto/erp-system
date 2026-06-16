@@ -20,7 +20,6 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
-import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateRfiRequest,
