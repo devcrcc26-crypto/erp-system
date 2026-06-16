@@ -114,7 +114,7 @@ function RfiFormDrawer({
         <Form.Item label="Description" name="description">
           <Input.TextArea rows={4} placeholder="Detailed question or clarification" />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Discipline" name="discipline">
             <Input placeholder="e.g. Structural" />
           </Form.Item>
@@ -126,7 +126,7 @@ function RfiFormDrawer({
             <Select options={PRIORITY_OPTIONS} />
           </Form.Item>
         </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Assigned to" name="assignedTo">
             <UserSelect placeholder="Select reviewer" />
           </Form.Item>

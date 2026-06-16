@@ -79,7 +79,7 @@ function DrawingFormDrawer({
         initialValues={{ revision: 'A' }}
         onFinish={(values: DrawingFormValues) => void handleSubmit(values)}
       >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Drawing number"
             name="drawingNumber"
@@ -102,7 +102,7 @@ function DrawingFormDrawer({
         >
           <Input placeholder="Drawing title" />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Discipline" name="discipline">
             <Input placeholder="e.g. Architectural" />
           </Form.Item>

@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import Card from '@/components/ui/Card/Card';
+import { cardStyles } from '@/lib/theme/layout';
 
 type IconProps = {
   size?: number;
@@ -31,11 +32,11 @@ export default function KPICard({
   return (
     <Card
       variant="borderless"
-      styles={{ body: { padding: '16px 20px' } }}
-      className="shadow-sm md:[&_.ant-card-body]:!p-6"
-      style={{ borderRadius: 6, boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' }}
+      styles={cardStyles}
+      className="h-full border border-slate-200 shadow-sm"
+      style={{ borderRadius: 8, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
     >
-      <div className="flex items-center gap-3 md:gap-4">
+      <div className="flex items-center gap-4">
         {Icon && (
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md md:h-12 md:w-12"

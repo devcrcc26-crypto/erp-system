@@ -14,6 +14,7 @@ import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPa
 import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
 import ScheduleCalendar from '@/components/modules/projects/schedule/ScheduleCalendar';
+import { layout } from '@/lib/theme/layout';
 
 export default function SchedulePageContent({
   projectId,
@@ -47,14 +48,14 @@ export default function SchedulePageContent({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+      <div className={layout.loadingCard}>
         <Spin />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className={layout.pageStack}>
       {apiUnavailable && (
         <Alert
           type="info"

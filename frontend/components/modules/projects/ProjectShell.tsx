@@ -17,6 +17,7 @@ import { useProjectContextStore } from '@/stores/project-context.store';
 import { useEffect } from 'react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { Network } from 'lucide-react';
+import { layout } from '@/lib/theme/layout';
 
 const PROJECT_TABS = [
   { key: 'dashboard', label: 'Dashboard', href: (id: string) => `/projects/${id}` },
@@ -111,7 +112,7 @@ export default function ProjectShell({
 
   if (projectQuery.isLoading) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+      <div className={layout.loadingCard}>
         <Spin />
       </div>
     );
@@ -140,7 +141,7 @@ export default function ProjectShell({
   const activeTab = resolveActiveTab(pathname, projectId);
 
   return (
-    <div className="space-y-4">
+    <div className={layout.pageStack}>
       <Breadcrumb
         items={[
           { title: <Link href="/projects">Projects</Link> },
@@ -148,57 +149,60 @@ export default function ProjectShell({
         ]}
       />
 
-      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm md:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <section className={`${layout.cardSurface} ${layout.cardPadding}`}>
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900">{project.name}</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl font-bold text-slate-900 md:text-2xl">
+                {project.name}
+              </h2>
               <StatusBadge
                 label={formatProjectStatus(project.status)}
                 variant={projectStatusVariant(project.status)}
               />
             </div>
-            <p className="mt-1 text-sm text-slate-500">{project.projectCode}</p>
+            <p className="mt-2 text-sm text-slate-500">{project.projectCode}</p>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:text-right">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm md:text-right">
             <div>
               <p className="text-slate-500">Start</p>
-              <p className="font-medium text-slate-800">
+              <p className="mt-0.5 font-medium text-slate-800">
                 {formatProjectDate(project.startDate)}
               </p>
             </div>
             <div>
               <p className="text-slate-500">Planned finish</p>
-              <p className="font-medium text-slate-800">
+              <p className="mt-0.5 font-medium text-slate-800">
                 {formatProjectDate(project.plannedFinishDate)}
               </p>
             </div>
             <div>
               <p className="text-slate-500">Budget</p>
-              <p className="font-medium text-slate-800">
+              <p className="mt-0.5 font-medium text-slate-800">
                 {formatProjectBudget(project.budget, project.currency)}
               </p>
             </div>
             <div>
               <p className="text-slate-500">Location</p>
-              <p className="font-medium text-slate-800">
+              <p className="mt-0.5 font-medium text-slate-800">
                 {project.location ?? '—'}
               </p>
             </div>
           </div>
         </div>
+      </section>
 
+      <section className={`${layout.cardSurface} px-4 py-2 md:px-6 md:py-3`}>
         <Tabs
-          className="!mt-4"
           activeKey={activeTab}
           items={PROJECT_TABS.map((tab) => ({
             key: tab.key,
             label: <Link href={tab.href(projectId)}>{tab.label}</Link>,
           }))}
         />
-      </div>
+      </section>
 
-      {children}
+      <div className={layout.pageStack}>{children}</div>
     </div>
   );
 }

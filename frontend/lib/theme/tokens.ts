@@ -22,4 +22,13 @@ export const tokens = {
 
   borderRadius: 6,
   sidebarWidth: 256,
+
+  /** Outer page padding (matches Tailwind p-6 / md:p-8). */
+  pagePadding: 24,
+  pagePaddingMd: 32,
+  /** Vertical gap between page sections and cards. */
+  sectionGap: 24,
+  sectionGapMd: 32,
+  /** Default Ant Design Card body padding. */
+  cardPadding: 28,
 } as const;

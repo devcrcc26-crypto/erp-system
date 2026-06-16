@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { layout } from '@/lib/theme/layout';
 import {
   Bar,
   BarChart,
@@ -41,7 +42,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md bg-white p-6 shadow-sm">
+    <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <p className="mb-4 text-sm text-slate-500">{subtitle}</p>
       {/* Fixed pixel height so ResponsiveContainer can measure it */}
@@ -197,7 +198,7 @@ function DisciplineDumbbell() {
 
 export default function DashboardCharts() {
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className={`${layout.cardGrid} sm:grid-cols-2 xl:grid-cols-4`}>
       {/* Task Status , donut */}
       <ChartCard title="Task Status" subtitle="Current vs Planned">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT - 30}>

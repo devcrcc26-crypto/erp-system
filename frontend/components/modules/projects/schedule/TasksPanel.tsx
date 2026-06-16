@@ -162,7 +162,7 @@ function TaskFormDrawer({
         layout="vertical"
         onFinish={(values: TaskFormValues) => void handleSubmit(values)}
       >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Task ID"
             name="taskIdCode"
@@ -188,7 +188,7 @@ function TaskFormDrawer({
         <Form.Item label="Description" name="description">
           <Input.TextArea rows={2} />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Milestone" name="milestoneId">
             <Select
               allowClear
@@ -203,7 +203,7 @@ function TaskFormDrawer({
             <UserSelect />
           </Form.Item>
         </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Start date" name="startDate">
             <DatePicker className="w-full" />
           </Form.Item>
@@ -211,7 +211,7 @@ function TaskFormDrawer({
             <DatePicker className="w-full" />
           </Form.Item>
         </div>
-        <div className="grid gap-0 md:grid-cols-3 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
           <Form.Item label="Duration (days)" name="durationDays">
             <InputNumber className="!w-full" min={0} />
           </Form.Item>

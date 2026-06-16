@@ -1,6 +1,7 @@
 'use client';
 
 import Card from '@/components/ui/Card/Card';
+import { cardStyles } from '@/lib/theme/layout';
 import type { ReactNode } from 'react';
 
 /**
@@ -34,9 +35,9 @@ export default function FormLayout({
         ) : undefined
       }
       extra={extra}
-      className={className}
-      styles={{ body: { paddingTop: title ? undefined : 24 } }}
-      style={{ borderRadius: 6, boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' }}
+      className={`border border-slate-200 ${className ?? ''}`}
+      styles={cardStyles}
+      style={{ borderRadius: 8, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
     >
       {children}
     </Card>

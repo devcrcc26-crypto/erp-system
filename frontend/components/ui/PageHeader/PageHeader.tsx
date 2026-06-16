@@ -35,8 +35,8 @@ export default function PageHeader({
 
   return (
     <header
-      className="mb-4 mt-1 flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white px-4 py-4 shadow-sm md:mb-6 md:mt-2 md:px-6"
-      style={{ borderRadius: 6 }}
+      className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-6 py-5 shadow-sm md:px-8 md:py-6"
+      style={{ borderRadius: 8 }}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
         {onMenuClick && (

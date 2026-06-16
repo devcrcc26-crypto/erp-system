@@ -1,5 +1,7 @@
 "use client";
 
+import { layout } from '@/lib/theme/layout';
+
 const filters = [
     {label: "Status", defaultValue: "All Statuses"},
     { label: "Date Range", defaultValue: "All Time" },
@@ -10,8 +12,8 @@ const filters = [
 
 export default function FilterSection() {
     return (
-        <section className="rounded-md bg-white p-4 shadow-sm md:p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
+        <section className={`${layout.cardSurface} ${layout.cardPadding}`}>
+            <div className="mb-6 flex items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold text-slate-900">Filters & Search</h2>
                 <button
                     type="button"
@@ -20,7 +22,7 @@ export default function FilterSection() {
                     Clear Filters
                 </button>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
                 {
                     filters.map((filter) =>(
                         <label key={filter.label} className="flex flex-col gap-2 text-sm">

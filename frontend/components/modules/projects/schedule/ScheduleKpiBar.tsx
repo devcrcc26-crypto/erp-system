@@ -7,6 +7,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import KPICard from '@/components/ui/KPICard/KPICard';
+import { layout } from '@/lib/theme/layout';
 import type { ScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import { formatScheduleVariance } from '@/lib/utils/schedule-metrics';
 
@@ -24,7 +25,7 @@ export default function ScheduleKpiBar({
         : '#dc2626';
 
   return (
-    <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+    <section className={`${layout.cardGrid} grid-cols-2 xl:grid-cols-4`}>
       <KPICard
         label="Planned progress"
         value={

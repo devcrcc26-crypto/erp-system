@@ -91,7 +91,7 @@ function DailyLogFormDrawer({
         initialValues={{ logDate: dayjs() }}
         onFinish={(values: DailyLogFormValues) => void handleSubmit(values)}
       >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Log date"
             name="logDate"
@@ -106,7 +106,7 @@ function DailyLogFormDrawer({
         <Form.Item label="Weather" name="weatherCondition">
           <Input placeholder="e.g. Clear, overcast" />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Temperature (°C)" name="temperatureC">
             <InputNumber className="!w-full" />
           </Form.Item>

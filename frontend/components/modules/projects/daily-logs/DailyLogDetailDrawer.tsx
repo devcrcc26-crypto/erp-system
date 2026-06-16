@@ -124,7 +124,7 @@ export default function DailyLogDetailDrawer({
               <Form.Item label="Weather" name="weatherCondition">
                 <Input />
               </Form.Item>
-              <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+              <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
                 <Form.Item label="Temperature (°C)" name="temperatureC">
                   <InputNumber className="!w-full" />
                 </Form.Item>

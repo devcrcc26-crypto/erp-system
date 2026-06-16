@@ -2,7 +2,14 @@
 
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
-import { FolderKanban, CheckSquare, Users, TrendingUp } from 'lucide-react';
+import {
+  ProjectOutlined,
+  CheckSquareOutlined,
+  TeamOutlined,
+  RiseOutlined,
+} from '@ant-design/icons';
+import KPICard from '@/components/ui/KPICard/KPICard';
+import { layout } from '@/lib/theme/layout';
 import { useDashboardStats } from '@/lib/query/stats';
 
 function formatCount(value: number | null | undefined, loading: boolean): string {
@@ -30,66 +37,54 @@ function StatsSection({
   activeProjects,
   teamMembers,
   completionRate,
-  loading,
 }: {
   projects: string;
   activeProjects: string;
   teamMembers: string;
   completionRate: string;
-  loading: boolean;
 }): React.ReactNode {
   const cards = [
     {
       label: 'Projects',
       value: projects,
-      icon: FolderKanban,
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
+      icon: ProjectOutlined,
+      iconBg: '#ffedd5',
+      iconColor: '#c2410c',
     },
     {
       label: 'Active Projects',
       value: activeProjects,
-      icon: CheckSquare,
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
+      icon: CheckSquareOutlined,
+      iconBg: '#dbeafe',
+      iconColor: '#2563eb',
     },
     {
       label: 'Team Members',
       value: teamMembers,
-      icon: Users,
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
+      icon: TeamOutlined,
+      iconBg: '#dcfce7',
+      iconColor: '#16a34a',
     },
     {
       label: 'Completion Rate',
       value: completionRate,
-      icon: TrendingUp,
-      iconBg: 'bg-purple-100',
-      iconColor: 'text-purple-600',
+      icon: RiseOutlined,
+      iconBg: '#f3e8ff',
+      iconColor: '#9333ea',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={`${layout.cardGrid} sm:grid-cols-2 lg:grid-cols-4`}>
       {cards.map((card) => (
-        <div
+        <KPICard
           key={card.label}
-          className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">{card.label}</p>
-              <p
-                className={`mt-1 text-2xl font-bold text-gray-900 ${loading ? 'animate-pulse' : ''}`}
-              >
-                {card.value}
-              </p>
-            </div>
-            <div className={`rounded-lg p-3 ${card.iconBg}`}>
-              <card.icon className={`h-6 w-6 ${card.iconColor}`} />
-            </div>
-          </div>
-        </div>
+          label={card.label}
+          value={card.value}
+          icon={card.icon}
+          iconBg={card.iconBg}
+          iconColor={card.iconColor}
+        />
       ))}
     </div>
   );
@@ -108,7 +103,6 @@ function LiveStats(): React.ReactNode {
       activeProjects={formatCount(data?.activeProjects, loading)}
       teamMembers={formatCount(data?.teamMembers, loading)}
       completionRate={formatPercent(data?.completionRate, loading)}
-      loading={loading}
     />
   );
 }

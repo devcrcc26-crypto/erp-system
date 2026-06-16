@@ -24,6 +24,8 @@ export const antdTheme: ThemeConfig = {
     },
     Card: {
       borderRadiusLG: tokens.borderRadius,
+      padding: tokens.cardPadding,
+      paddingLG: tokens.cardPadding,
     },
     Table: {
       headerBg: tokens.colorCardBg,

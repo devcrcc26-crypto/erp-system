@@ -87,7 +87,7 @@ export default function ScheduleGantt({
   }, [dateRange]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500">
           {dateRange

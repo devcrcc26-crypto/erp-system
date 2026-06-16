@@ -18,6 +18,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import PageHeader from '@/components/ui/PageHeader/PageHeader';
+import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
@@ -217,12 +218,14 @@ export default function AppShell({
 
       <Layout style={{ background: tokens.colorPageBg }}>
         <Content className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="flex-1 p-4 md:p-6">
-            <PageHeader
-              title={title}
-              onMenuClick={() => setMobileOpen(true)}
-            />
-            {children}
+          <div className="flex-1 p-6 md:p-8">
+            <div className={layout.pageStack}>
+              <PageHeader
+                title={title}
+                onMenuClick={() => setMobileOpen(true)}
+              />
+              {children}
+            </div>
           </div>
         </Content>
       </Layout>

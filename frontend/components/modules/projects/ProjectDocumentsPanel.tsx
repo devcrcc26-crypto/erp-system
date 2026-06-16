@@ -14,7 +14,7 @@ export default function ProjectDocumentsPanel({
   projectId: string;
 }): React.ReactNode {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Alert
         type="info"
         showIcon

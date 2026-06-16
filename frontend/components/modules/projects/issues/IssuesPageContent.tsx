@@ -121,7 +121,7 @@ function IssueFormDrawer({
         <Form.Item label="Location" name="location">
           <Input placeholder="Room, level, or grid reference" />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Severity"
             name="severity"

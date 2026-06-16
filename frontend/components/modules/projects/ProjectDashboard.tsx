@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
+import { layout } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
 import { useTasks } from '@/lib/query/schedule';
@@ -42,7 +43,7 @@ function formatCount(value: number | undefined, hasStats: boolean): string {
   if (hasStats && value != null) {
     return String(value);
   }
-  return '?';
+  return '—';
 }
 
 export default function ProjectDashboard({
@@ -65,7 +66,7 @@ export default function ProjectDashboard({
 
   if (statsQuery.isLoading) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+      <div className={layout.loadingCard}>
         <Spin />
       </div>
     );
@@ -88,7 +89,7 @@ export default function ProjectDashboard({
   const scheduleLoading = statsApiUnavailable && tasksQuery.isLoading;
 
   return (
-    <div className="space-y-4">
+    <div className={layout.pageStack}>
       {statsApiUnavailable && (
         <Alert
           type="info"
@@ -102,7 +103,7 @@ export default function ProjectDashboard({
         />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={`${layout.cardGrid} sm:grid-cols-2 xl:grid-cols-4`}>
         <KPICard
           label="Open RFIs"
           value={formatCount(stats?.openRfis, hasStats)}
@@ -133,7 +134,7 @@ export default function ProjectDashboard({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={`${layout.cardGrid} lg:grid-cols-2`}>
         <FormLayout title="Schedule snapshot">
           {scheduleLoading ? (
             <div className="flex justify-center py-6">
@@ -144,19 +145,19 @@ export default function ProjectDashboard({
               <div>
                 <dt className="text-slate-500">Planned progress</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '?'}
+                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '—'}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-500">Actual progress</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {actualProgressPct != null ? `${actualProgressPct}%` : '?'}
+                  {actualProgressPct != null ? `${actualProgressPct}%` : '—'}
                 </dd>
               </div>
               <div className="col-span-2">
                 <dt className="text-slate-500">Schedule variance</dt>
                 <dd className="text-lg font-semibold text-slate-900">
-                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '?'}
+                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '—'}
                 </dd>
               </div>
             </dl>

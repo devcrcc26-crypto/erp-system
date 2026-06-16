@@ -106,7 +106,7 @@ function SubmittalFormDrawer({
         >
           <Input placeholder="Submittal title" />
         </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Contractor" name="contractor">
             <Input />
           </Form.Item>
@@ -114,7 +114,7 @@ function SubmittalFormDrawer({
             <Input />
           </Form.Item>
         </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Spec reference" name="specReference">
             <Input placeholder="e.g. Section 03 30 00" />
           </Form.Item>

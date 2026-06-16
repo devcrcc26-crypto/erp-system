@@ -154,7 +154,7 @@ export default function ProjectFormDrawer({
         layout="vertical"
         onFinish={(values: ProjectFormValues) => void handleSubmit(values)}
       >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Project code"
             name="projectCode"
@@ -188,7 +188,7 @@ export default function ProjectFormDrawer({
           <Input placeholder="Site location" />
         </Form.Item>
 
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Project type" name="projectType">
             <Select
               allowClear
@@ -201,7 +201,7 @@ export default function ProjectFormDrawer({
           </Form.Item>
         </div>
 
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Start date" name="startDate">
             <DatePicker className="w-full" />
           </Form.Item>
@@ -216,7 +216,7 @@ export default function ProjectFormDrawer({
           </Form.Item>
         )}
 
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Budget" name="budget">
             <InputNumber className="!w-full" min={0} placeholder="0" />
           </Form.Item>

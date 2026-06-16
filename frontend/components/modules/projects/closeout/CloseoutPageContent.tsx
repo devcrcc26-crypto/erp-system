@@ -50,7 +50,7 @@ export default function CloseoutPageContent({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {apiUnavailable && (
         <Alert
           type="info"
