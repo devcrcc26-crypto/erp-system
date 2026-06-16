@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthTokens, AuthUser, Capabilities } from '@/lib/api/types';
+import { EMPTY_CAPABILITIES } from '@/lib/api/types';
 
 interface AuthState {
   accessToken: string | null;
@@ -19,12 +20,7 @@ interface AuthState {
 
 export const AUTH_PERSIST_KEY = 'erp-auth';
 
-const initialCapabilities: Capabilities = {
-  canManageUsers: false,
-  canCreateUsers: false,
-  canManageRoles: false,
-  canEditRoles: false,
-};
+const initialCapabilities: Capabilities = { ...EMPTY_CAPABILITIES };
 
 export const useAuthStore = create<AuthState>()(
   persist(

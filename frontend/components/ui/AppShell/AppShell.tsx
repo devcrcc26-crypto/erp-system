@@ -170,7 +170,9 @@ export default function AppShell({
 }): React.ReactNode {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? 'Dashboard';
+  const title = pathname.startsWith('/projects')
+    ? 'Projects'
+    : (PAGE_TITLES[pathname] ?? 'Dashboard');
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 768px)');

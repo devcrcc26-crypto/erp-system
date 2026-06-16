@@ -1,0 +1,269 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import {
+  Alert,
+  Button,
+  Input,
+  Pagination,
+  Select,
+  Space,
+  Spin,
+} from 'antd';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Network } from 'lucide-react';
+import type { ColumnsType } from 'antd/es/table';
+import PlaceholderPage from '@/components/PlaceholderPage';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { ApiRequestError } from '@/lib/api/errors';
+import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
+import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
+import { useProjects } from '@/lib/query/projects';
+import { useAuthStore } from '@/stores/auth.store';
+import {
+  formatProjectBudget,
+  formatProjectDate,
+  formatProjectStatus,
+  formatProjectType,
+  projectStatusVariant,
+} from '@/lib/utils/project-display';
+import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
+
+const PAGE_SIZE = 20;
+
+export default function ProjectsPageContent(): React.ReactNode {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | undefined>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+
+  const projectsQuery = useProjects(
+    {
+      page,
+      limit: PAGE_SIZE,
+      search: search.trim() || undefined,
+      status: statusFilter,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    },
+    isAuthenticated,
+  );
+
+  const columns: ColumnsType<Project> = useMemo(
+    () => [
+      {
+        title: 'Code',
+        dataIndex: 'projectCode',
+        key: 'projectCode',
+        render: (code: string, record) => (
+          <Link
+            href={`/projects/${record.id}`}
+            className="font-medium text-orange-600 hover:text-orange-700"
+          >
+            {code}
+          </Link>
+        ),
+      },
+      {
+        title: 'Name',
+        dataIndex: 'name',
+        key: 'name',
+        ellipsis: true,
+      },
+      {
+        title: 'Type',
+        dataIndex: 'projectType',
+        key: 'projectType',
+        render: (type: Project['projectType']) => formatProjectType(type),
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        key: 'status',
+        render: (status: ProjectStatus) => (
+          <StatusBadge
+            label={formatProjectStatus(status)}
+            variant={projectStatusVariant(status)}
+          />
+        ),
+      },
+      {
+        title: 'Planned finish',
+        dataIndex: 'plannedFinishDate',
+        key: 'plannedFinishDate',
+        render: (value: string | null) => formatProjectDate(value),
+      },
+      {
+        title: 'Budget',
+        key: 'budget',
+        render: (_value, record) =>
+          formatProjectBudget(record.budget, record.currency),
+      },
+      {
+        title: '',
+        key: 'actions',
+        width: 48,
+        render: (_value, record) => (
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            aria-label="Edit project"
+            onClick={() => {
+              setEditingProject(record);
+              setDrawerOpen(true);
+            }}
+          />
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <PlaceholderPage
+        icon={Network}
+        title="Projects"
+        description="Sign in to view projects."
+      />
+    );
+  }
+
+  if (projectsQuery.isLoading) {
+    return (
+      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
+        <Spin />
+      </div>
+    );
+  }
+
+  if (projectsQuery.isError) {
+    const status =
+      projectsQuery.error instanceof ApiRequestError
+        ? projectsQuery.error.status
+        : 0;
+
+    if (status === 403 || status === 401) {
+      return (
+        <PlaceholderPage
+          icon={Network}
+          title="Projects"
+          description="You do not have permission to view projects."
+        />
+      );
+    }
+
+    if (status === 404) {
+      return (
+        <PlaceholderPage
+          icon={Network}
+          title="Projects"
+          description="Project management APIs are not available yet. The frontend is ready — connect the backend module to enable this page."
+        />
+      );
+    }
+
+    return (
+      <PlaceholderPage
+        icon={Network}
+        title="Projects"
+        description="Unable to load projects. Please try again later."
+      />
+    );
+  }
+
+  const projects = projectsQuery.data?.data ?? [];
+  const meta = projectsQuery.data?.meta;
+
+  return (
+    <>
+      <FormLayout
+        title="Project register"
+        description="Search and manage construction projects across your portfolio."
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingProject(null);
+              setDrawerOpen(true);
+            }}
+          >
+            New project
+          </Button>
+        }
+      >
+        <Space wrap className="!mb-4">
+          <Input.Search
+            allowClear
+            placeholder="Search by code or name"
+            style={{ width: 280 }}
+            onSearch={(value: string) => {
+              setPage(1);
+              setSearch(value);
+            }}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by status"
+            style={{ width: 200 }}
+            value={statusFilter}
+            onChange={(value: ProjectStatus | undefined) => {
+              setPage(1);
+              setStatusFilter(value);
+            }}
+            options={PROJECT_STATUS_WORKFLOW.map((step) => ({
+              value: step.key,
+              label: step.label,
+            }))}
+          />
+        </Space>
+
+        {projects.length === 0 ? (
+          <Alert
+            type="info"
+            showIcon
+            message="No projects found"
+            description="Create your first project to start tracking RFIs, schedule, and site operations."
+          />
+        ) : (
+          <DataTable<Project>
+            rowKey="id"
+            columns={columns}
+            dataSource={projects}
+          />
+        )}
+
+        {meta && meta.pages > 1 && (
+          <div className="mt-4 flex justify-end">
+            <Pagination
+              current={meta.page}
+              pageSize={meta.limit}
+              total={meta.total}
+              showSizeChanger={false}
+              onChange={(nextPage: number) => setPage(nextPage)}
+            />
+          </div>
+        )}
+      </FormLayout>
+
+      <ProjectFormDrawer
+        open={drawerOpen}
+        project={editingProject ?? undefined}
+        onClose={() => {
+          setDrawerOpen(false);
+          setEditingProject(null);
+        }}
+        onSaved={() => {
+          void projectsQuery.refetch();
+        }}
+      />
+    </>
+  );
+}

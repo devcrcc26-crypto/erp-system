@@ -1,0 +1,143 @@
+'use client';
+
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
+import {
+  apiDelete,
+  apiGet,
+  apiGetPaginated,
+  apiPatch,
+  apiPost,
+} from '@/lib/api/client';
+import type {
+  CreateIssueRequest,
+  Issue,
+  IssueSeverity,
+  IssueStatus,
+  PmListFilters,
+  UpdateIssueRequest,
+} from '@/lib/api/project-management.types';
+import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
+import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
+
+type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
+
+const issuesPath = (projectId: string): string =>
+  projectPath(projectId, 'issues');
+
+export const issueKeys = {
+  all: ['pm', 'issues'] as const,
+  lists: (projectId: string) => [...issueKeys.all, projectId, 'list'] as const,
+  list: (
+    projectId: string,
+    params: PaginationParams &
+      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...issueKeys.lists(projectId), params] as const,
+  details: (projectId: string) =>
+    [...issueKeys.all, projectId, 'detail'] as const,
+  detail: (projectId: string, issueId: string) =>
+    [...issueKeys.details(projectId), issueId] as const,
+};
+
+export function useIssues(
+  projectId: string,
+  params: PaginationParams &
+    PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Issue>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: issueKeys.list(projectId, params),
+    queryFn: () =>
+      apiGetPaginated<Issue>(
+        `${issuesPath(projectId)}${toQueryString(params)}`,
+      ),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+export function useIssue(projectId: string, issueId: string, enabled = true) {
+  return useQuery({
+    queryKey: issueKeys.detail(projectId, issueId),
+    queryFn: () => apiGet<Issue>(`${issuesPath(projectId)}/${issueId}`),
+    enabled: Boolean(projectId) && Boolean(issueId) && enabled,
+    retry: false,
+  });
+}
+
+export function useCreateIssue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: CreateIssueRequest;
+    }) => apiPost<Issue>(issuesPath(projectId), body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useUpdateIssue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      body,
+    }: {
+      projectId: string;
+      issueId: string;
+      body: UpdateIssueRequest;
+    }) => apiPatch<Issue>(`${issuesPath(projectId)}/${issueId}`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.detail(variables.projectId, variables.issueId),
+      });
+    },
+  });
+}
+
+export function useDeleteIssue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+    }: {
+      projectId: string;
+      issueId: string;
+    }) => apiDelete<MessageResponse>(`${issuesPath(projectId)}/${issueId}`),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: issueKeys.lists(variables.projectId),
+      });
+    },
+  });
+}

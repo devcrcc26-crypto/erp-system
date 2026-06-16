@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { Network } from "lucide-react";
+import ProjectsPageContent from '@/components/modules/projects/ProjectsPageContent';
 
-export default function ProjectsPage() {
-  return <PlaceholderPage icon={Network} title="Projects" />;
+export default function ProjectsPage(): React.ReactNode {
+  return <ProjectsPageContent />;
 }

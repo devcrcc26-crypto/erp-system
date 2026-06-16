@@ -311,11 +311,18 @@ export interface ReportExecutionResult {
   rowCount: number;
 }
 
-export interface Capabilities {
+import type { PmCapabilities } from '@/lib/api/project-management.types';
+import { createEmptyPmCapabilities } from '@/lib/api/project-management.types';
+
+export interface AuthCapabilities {
   canManageUsers: boolean;
   canCreateUsers: boolean;
   canManageRoles: boolean;
   canEditRoles: boolean;
+}
+
+export interface Capabilities extends AuthCapabilities {
+  pm: PmCapabilities;
 }
 
 export const EMPTY_CAPABILITIES: Capabilities = {
@@ -323,4 +330,5 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateUsers: false,
   canManageRoles: false,
   canEditRoles: false,
+  pm: createEmptyPmCapabilities(),
 };

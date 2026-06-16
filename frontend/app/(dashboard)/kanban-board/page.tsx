@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { ListChecks } from "lucide-react";
+import PortfolioKanbanPageContent from '@/components/modules/projects/PortfolioKanbanPageContent';
 
-export default function KanbanBoardPage() {
-  return <PlaceholderPage icon={ListChecks} title="Kanban Board" />;
+export default function KanbanBoardPage(): React.ReactNode {
+  return <PortfolioKanbanPageContent />;
 }
