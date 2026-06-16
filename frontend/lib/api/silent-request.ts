@@ -19,9 +19,13 @@ export async function silentApiGet(path: string): Promise<Response> {
   });
 }
 
-export async function silentPaginatedTotal(path: string): Promise<number | null> {
+export async function silentPaginatedTotal(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<number | null> {
   try {
-    const response = await silentApiGet(`${path}?limit=1`);
+    const query = new URLSearchParams({ limit: '1', ...params });
+    const response = await silentApiGet(`${path}?${query.toString()}`);
     if (!response.ok) {
       return null;
     }

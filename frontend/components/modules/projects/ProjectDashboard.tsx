@@ -12,6 +12,8 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
+import { useTasks } from '@/lib/query/schedule';
+import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 
 const QUICK_LINKS = [
   {
@@ -36,12 +38,30 @@ const QUICK_LINKS = [
   },
 ] as const;
 
+function formatCount(value: number | undefined, hasStats: boolean): string {
+  if (hasStats && value != null) {
+    return String(value);
+  }
+  return '—';
+}
+
 export default function ProjectDashboard({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
   const statsQuery = useProjectDashboardStats(projectId);
+
+  const statsApiUnavailable =
+    statsQuery.isError &&
+    statsQuery.error instanceof ApiRequestError &&
+    (statsQuery.error.status === 404 || statsQuery.error.status === 0);
+
+  const tasksQuery = useTasks(
+    projectId,
+    { page: 1, limit: 500 },
+    statsApiUnavailable,
+  );
 
   if (statsQuery.isLoading) {
     return (
@@ -52,46 +72,61 @@ export default function ProjectDashboard({
   }
 
   const stats = statsQuery.data;
-  const apiUnavailable =
-    statsQuery.isError &&
-    statsQuery.error instanceof ApiRequestError &&
-    (statsQuery.error.status === 404 || statsQuery.error.status === 0);
+  const hasStats = stats != null;
+  const scheduleFallback =
+    statsApiUnavailable && tasksQuery.data?.data
+      ? computeScheduleMetrics(tasksQuery.data.data)
+      : null;
+
+  const plannedProgressPct =
+    stats?.plannedProgressPct ?? scheduleFallback?.plannedProgressPct ?? null;
+  const actualProgressPct =
+    stats?.actualProgressPct ?? scheduleFallback?.actualProgressPct ?? null;
+  const scheduleVariancePct =
+    stats?.scheduleVariancePct ?? scheduleFallback?.scheduleVariancePct ?? null;
+
+  const scheduleLoading = statsApiUnavailable && tasksQuery.isLoading;
 
   return (
     <div className="space-y-4">
-      {apiUnavailable && (
+      {statsApiUnavailable && (
         <Alert
           type="info"
           showIcon
           message="Dashboard metrics will appear when the project management API is connected."
+          description={
+            scheduleFallback
+              ? 'Schedule progress is estimated from task data until the dashboard endpoint is available.'
+              : undefined
+          }
         />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="Open RFIs"
-          value={String(stats?.openRfis ?? 0)}
+          value={formatCount(stats?.openRfis, hasStats)}
           icon={FileTextOutlined}
           iconBg="#ffedd5"
           iconColor="#c2410c"
         />
         <KPICard
           label="Overdue RFIs"
-          value={String(stats?.overdueRfis ?? 0)}
+          value={formatCount(stats?.overdueRfis, hasStats)}
           icon={CalendarOutlined}
           iconBg="#fef3c7"
           iconColor="#92400e"
         />
         <KPICard
           label="Open issues"
-          value={String(stats?.openIssues ?? 0)}
+          value={formatCount(stats?.openIssues, hasStats)}
           icon={IssuesCloseOutlined}
           iconBg="#fee2e2"
           iconColor="#dc2626"
         />
         <KPICard
           label="Open punch items"
-          value={String(stats?.openPunchItems ?? 0)}
+          value={formatCount(stats?.openPunchItems, hasStats)}
           icon={TeamOutlined}
           iconBg="#e0f2fe"
           iconColor="#0369a1"
@@ -100,32 +135,32 @@ export default function ProjectDashboard({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <FormLayout title="Schedule snapshot">
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-slate-500">Planned progress</dt>
-              <dd className="text-lg font-semibold text-slate-900">
-                {stats?.plannedProgressPct != null
-                  ? `${stats.plannedProgressPct}%`
-                  : '—'}
-              </dd>
+          {scheduleLoading ? (
+            <div className="flex justify-center py-6">
+              <Spin size="small" />
             </div>
-            <div>
-              <dt className="text-slate-500">Actual progress</dt>
-              <dd className="text-lg font-semibold text-slate-900">
-                {stats?.actualProgressPct != null
-                  ? `${stats.actualProgressPct}%`
-                  : '—'}
-              </dd>
-            </div>
-            <div className="col-span-2">
-              <dt className="text-slate-500">Schedule variance</dt>
-              <dd className="text-lg font-semibold text-slate-900">
-                {stats?.scheduleVariancePct != null
-                  ? `${stats.scheduleVariancePct}%`
-                  : '—'}
-              </dd>
-            </div>
-          </dl>
+          ) : (
+            <dl className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <dt className="text-slate-500">Planned progress</dt>
+                <dd className="text-lg font-semibold text-slate-900">
+                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Actual progress</dt>
+                <dd className="text-lg font-semibold text-slate-900">
+                  {actualProgressPct != null ? `${actualProgressPct}%` : '—'}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-slate-500">Schedule variance</dt>
+                <dd className="text-lg font-semibold text-slate-900">
+                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '—'}
+                </dd>
+              </div>
+            </dl>
+          )}
         </FormLayout>
 
         <FormLayout title="Quick links">

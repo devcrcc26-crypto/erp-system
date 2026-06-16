@@ -1,55 +1,59 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { apiPost } from '@/lib/api/client';
-import { silentPaginatedTotal } from '@/lib/api/silent-request';
-import type { ReportExecutionResult } from '@/lib/api/types';
-
-/** Seeded report definition ID from backend/prisma/seed.ts */
-export const SEEDED_ACTIVE_USERS_REPORT_ID =
-  '00000000-0000-0000-0000-000000000050';
+import { silentApiGet, silentPaginatedTotal } from '@/lib/api/silent-request';
+import type { ApiEnvelope } from '@/lib/api/types';
 
 export interface DashboardStats {
+  projects: number | null;
+  activeProjects: number | null;
   teamMembers: number | null;
-  branches: number | null;
-  departments: number | null;
   completionRate: number | null;
 }
 
-async function fetchCompletionRate(totalUsers: number | null): Promise<number | null> {
-  if (totalUsers === null) {
-    return null;
+function formatCount(value: number | null): string {
+  if (value === null) {
+    return '—';
   }
-  if (totalUsers === 0) {
-    return 0;
-  }
+  return value.toLocaleString();
+}
 
+function formatPercent(value: number | null): string {
+  if (value === null) {
+    return '—';
+  }
+  return `${value}%`;
+}
+
+async function fetchCompletionRate(): Promise<number | null> {
   try {
-    const reportResult = await apiPost<ReportExecutionResult>(
-      `/reports/${SEEDED_ACTIVE_USERS_REPORT_ID}/execute`,
-    );
-    if (reportResult.rowCount > 0) {
-      return Math.round((reportResult.rowCount / totalUsers) * 100);
+    const response = await silentApiGet('/reports/completion-rate');
+    if (!response.ok) {
+      return null;
     }
-    return 100;
+    const body = (await response.json()) as ApiEnvelope<{ rate: number }>;
+    if (!body.success || body.data?.rate == null) {
+      return null;
+    }
+    return body.data.rate;
   } catch {
     return null;
   }
 }
 
+/** Portfolio KPIs — project counts from PM API; team/completion from core APIs when permitted. */
 async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [teamMembers, branches, departments] = await Promise.all([
+  const [projects, activeProjects, teamMembers, completionRate] = await Promise.all([
+    silentPaginatedTotal('/projects'),
+    silentPaginatedTotal('/projects', { status: 'ACTIVE' }),
     silentPaginatedTotal('/users'),
-    silentPaginatedTotal('/branches'),
-    silentPaginatedTotal('/departments'),
+    fetchCompletionRate(),
   ]);
 
-  const completionRate = await fetchCompletionRate(teamMembers);
-
   return {
+    projects,
+    activeProjects,
     teamMembers,
-    branches,
-    departments,
     completionRate,
   };
 }
@@ -59,7 +63,9 @@ export function useDashboardStats(enabled = true) {
     queryKey: ['dashboard-stats'],
     queryFn: fetchDashboardStats,
     enabled,
+    staleTime: 60_000,
     retry: false,
-    staleTime: 30_000,
   });
 }
+
+export { formatCount, formatPercent };
