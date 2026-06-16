@@ -183,8 +183,9 @@ export async function downloadApiFile(
   filename: string,
 ): Promise<void> {
   const response = await apiClient.get(url, { responseType: 'blob' });
+  const contentType = response.headers['content-type'];
   const blob = new Blob([response.data as BlobPart], {
-    type: response.headers['content-type'] ?? 'application/octet-stream',
+    type: typeof contentType === 'string' ? contentType : 'application/octet-stream',
   });
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

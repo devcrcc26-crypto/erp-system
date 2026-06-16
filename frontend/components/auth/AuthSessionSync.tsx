@@ -17,7 +17,7 @@ import { fetchCapabilities } from '@/lib/permissions/capabilities';
 export function AuthSessionSync(): null {
   useEffect(() => {
     const syncFromStorage = (): void => {
-      void useAuthStore.persist.rehydrate().then(() => {
+      void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
         const { accessToken, setCapabilities } = useAuthStore.getState();
         const queryClient = getQueryClient();
 
