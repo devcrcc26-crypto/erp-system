@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { seedPmDemoData } from './seed-pm-demo';
 
 const prisma = new PrismaClient();
 
@@ -810,180 +811,16 @@ async function main(): Promise<void> {
   console.log(`  Roles seeded: ${CORE_ROLES.length}`);
   console.log(`  Permissions seeded: ${permissions.length}`);
 
-  // ── Sample project (demo data) ───────────────────────────────────────────
-  const demoProject = await prisma.project.upsert({
-    where: {
-      companyId_projectCode: {
-        companyId: company.id,
-        projectCode: 'DEMO-001',
-      },
-    },
-    update: {},
-    create: {
-      companyId: company.id,
-      branchId: branch.id,
-      projectCode: 'DEMO-001',
-      name: 'Marina Tower Construction',
-      location: 'Dubai Marina',
-      projectType: 'COMMERCIAL',
-      contractType: 'LUMP_SUM',
-      status: 'ACTIVE',
-      startDate: new Date('2026-01-15'),
-      plannedFinishDate: new Date('2027-06-30'),
-      budget: 12500000,
-      currency: 'USD',
-      projectManagerId: adminUser.id,
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
+  await seedPmDemoData({
+    prisma,
+    companyId: company.id,
+    branchId: branch.id,
+    departmentId: department.id,
+    positionId: position.id,
+    adminUserId: adminUser.id,
+    roleMap,
+    defaultPassword: adminPassword,
   });
-
-  await prisma.projectTeam.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000070' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000070',
-      projectId: demoProject.id,
-      userId: adminUser.id,
-      roleOnProject: 'Project Manager',
-      assignedFrom: new Date('2026-01-15'),
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  const milestone = await prisma.milestone.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000071' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000071',
-      projectId: demoProject.id,
-      name: 'Structure Complete',
-      plannedDate: new Date('2026-09-30'),
-      status: 'PLANNED',
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.task.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000072' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000072',
-      projectId: demoProject.id,
-      milestoneId: milestone.id,
-      assignedTo: adminUser.id,
-      taskIdCode: 'T-100',
-      name: 'Foundation works',
-      startDate: new Date('2026-01-15'),
-      finishDate: new Date('2026-04-30'),
-      durationDays: 105,
-      progressPct: 75,
-      status: 'IN_PROGRESS',
-      isCritical: true,
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.task.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000073' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000073',
-      projectId: demoProject.id,
-      milestoneId: milestone.id,
-      assignedTo: adminUser.id,
-      taskIdCode: 'T-200',
-      name: 'Superstructure',
-      startDate: new Date('2026-05-01'),
-      finishDate: new Date('2026-09-30'),
-      durationDays: 152,
-      progressPct: 20,
-      status: 'NOT_STARTED',
-      isCritical: true,
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.rfi.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000074' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000074',
-      projectId: demoProject.id,
-      raisedBy: adminUser.id,
-      assignedTo: adminUser.id,
-      rfiNumber: 'RFI-00001',
-      title: 'Clarification on pile cap reinforcement',
-      description: 'Please confirm bar spacing at grid B4.',
-      discipline: 'Structural',
-      priority: 'HIGH',
-      status: 'UNDER_REVIEW',
-      dateRaised: new Date('2026-03-01'),
-      dueDate: new Date('2026-03-15'),
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.issue.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000075' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000075',
-      projectId: demoProject.id,
-      raisedBy: adminUser.id,
-      issueNumber: 'ISS-00001',
-      issueType: 'Quality',
-      description: 'Honeycombing observed at column C2',
-      location: 'Level 3',
-      severity: 'MEDIUM',
-      status: 'OPEN',
-      dueDate: new Date('2026-03-20'),
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.punchItem.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000076' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000076',
-      projectId: demoProject.id,
-      raisedBy: adminUser.id,
-      punchNumber: 'PUN-00001',
-      description: 'Touch-up paint required in lobby',
-      roomOrArea: 'Ground floor lobby',
-      tradeResponsible: 'Painting',
-      severity: 'MINOR',
-      status: 'RAISED',
-      dueDate: new Date('2026-04-01'),
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  await prisma.documentFolder.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000077' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000077',
-      companyId: company.id,
-      name: 'Marina Tower Documents',
-      path: `/projects/${demoProject.id}`,
-      contextType: 'PROJECT',
-      contextId: demoProject.id,
-      isSystem: false,
-      createdBy: adminUser.id,
-      updatedBy: adminUser.id,
-    },
-  });
-
-  console.log(`  Demo project: ${demoProject.projectCode} (${demoProject.id})`);
 }
 
 main()

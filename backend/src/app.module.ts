@@ -41,7 +41,8 @@ import { StorageModule } from './shared/storage/storage.module';
         name: 'default',
         ttl: 60_000,
         limit: process.env.NODE_ENV === 'production' ? 100 : 1000,
-        skipIf: () => process.env.NODE_ENV === 'test',
+        // Local development should not trip rate limits during normal UI navigation.
+        skipIf: () => process.env.NODE_ENV !== 'production',
       },
       {
         name: 'auth',

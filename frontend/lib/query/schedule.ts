@@ -23,8 +23,21 @@ import type {
   UpdateMilestoneRequest,
   UpdateTaskRequest,
 } from '@/lib/api/project-management.types';
+import { ApiRequestError } from '@/lib/api/errors';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
+
+const SCHEDULE_STALE_MS = 60_000;
+
+/** Maximum page size allowed by the API pagination DTO. */
+export const SCHEDULE_PAGE_SIZE = 100;
+
+function scheduleReadRetry(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiRequestError && (error.status === 429 || error.status === 403)) {
+    return false;
+  }
+  return failureCount < 1;
+}
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -62,14 +75,16 @@ export function useMilestones(
         `${scheduleBase(projectId)}/milestones${toQueryString(params)}`,
       ),
     enabled: Boolean(projectId) && enabled,
-    retry: false,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
     ...options,
   });
 }
 
 export function useTasks(
   projectId: string,
-  params: PaginationParams = { page: 1, limit: 100 },
+  params: PaginationParams = { page: 1, limit: SCHEDULE_PAGE_SIZE },
   enabled = true,
   options?: Omit<UseQueryOptions<PaginatedResult<Task>>, 'queryKey' | 'queryFn'>,
 ) {
@@ -80,7 +95,61 @@ export function useTasks(
         `${scheduleBase(projectId)}/tasks${toQueryString(params)}`,
       ),
     enabled: Boolean(projectId) && enabled,
-    retry: false,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
+    ...options,
+  });
+}
+
+/**
+ * Loads all schedule tasks for Gantt/list views by walking paginated endpoints.
+ */
+export function useAllTasks(
+  projectId: string,
+  enabled = true,
+  options?: Omit<UseQueryOptions<PaginatedResult<Task>>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: [...scheduleKeys.tasks(projectId), 'all'] as const,
+    queryFn: async (): Promise<PaginatedResult<Task>> => {
+      const firstPage = await apiGetPaginated<Task>(
+        `${scheduleBase(projectId)}/tasks${toQueryString({
+          page: 1,
+          limit: SCHEDULE_PAGE_SIZE,
+        })}`,
+      );
+
+      if (firstPage.meta.pages <= 1) {
+        return firstPage;
+      }
+
+      const data: Task[] = [...firstPage.data];
+
+      for (let page = 2; page <= firstPage.meta.pages; page += 1) {
+        const result = await apiGetPaginated<Task>(
+          `${scheduleBase(projectId)}/tasks${toQueryString({
+            page,
+            limit: SCHEDULE_PAGE_SIZE,
+          })}`,
+        );
+        data.push(...result.data);
+      }
+
+      return {
+        data,
+        meta: {
+          total: firstPage.meta.total,
+          page: 1,
+          limit: firstPage.meta.total,
+          pages: 1,
+        },
+      };
+    },
+    enabled: Boolean(projectId) && enabled,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
     ...options,
   });
 }
@@ -91,7 +160,9 @@ export function useTaskDependencies(projectId: string, enabled = true) {
     queryFn: () =>
       apiGet<TaskDependency[]>(`${scheduleBase(projectId)}/task-dependencies`),
     enabled: Boolean(projectId) && enabled,
-    retry: false,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
   });
 }
 

@@ -4,9 +4,9 @@ import { useMemo, useState } from 'react';
 import { Alert, Spin, Tabs } from 'antd';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
+  useAllTasks,
   useMilestones,
   useTaskDependencies,
-  useTasks,
 } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ScheduleKpiBar from '@/components/modules/projects/schedule/ScheduleKpiBar';
@@ -24,14 +24,18 @@ export default function SchedulePageContent({
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [activeTab, setActiveTab] = useState('gantt');
 
-  const tasksQuery = useTasks(projectId, { page: 1, limit: 200 });
-  const milestonesQuery = useMilestones(projectId);
-  const dependenciesQuery = useTaskDependencies(projectId);
+  const tasksQuery = useAllTasks(projectId);
+  const milestonesQuery = useMilestones(
+    projectId,
+    { page: 1, limit: 50 },
+    activeTab === 'milestones',
+  );
+  const dependenciesQuery = useTaskDependencies(projectId, activeTab === 'gantt');
 
   const isLoading =
     tasksQuery.isLoading ||
-    milestonesQuery.isLoading ||
-    dependenciesQuery.isLoading;
+    (activeTab === 'gantt' && dependenciesQuery.isLoading) ||
+    (activeTab === 'milestones' && milestonesQuery.isLoading);
 
   const apiUnavailable =
     (tasksQuery.isError &&
@@ -70,6 +74,7 @@ export default function SchedulePageContent({
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
+        destroyOnHidden
         items={[
           {
             key: 'gantt',
@@ -89,6 +94,7 @@ export default function SchedulePageContent({
             children: (
               <TasksPanel
                 projectId={projectId}
+                tasks={tasks}
                 criticalOnly={criticalOnly}
                 onCriticalOnlyChange={setCriticalOnly}
               />

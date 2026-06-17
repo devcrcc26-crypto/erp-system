@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Checkbox,
@@ -33,8 +34,8 @@ import {
   useCreateTaskDependency,
   useDeleteTask,
   useMilestones,
-  useTasks,
   useUpdateTask,
+  scheduleKeys,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -88,12 +89,12 @@ function TaskFormDrawer({
   projectId: string;
   task?: Task;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved?: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<TaskFormValues>();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const milestonesQuery = useMilestones(projectId);
+  const milestonesQuery = useMilestones(projectId, { page: 1, limit: 50 }, open);
   const milestones = milestonesQuery.data?.data ?? [];
   const isEditing = Boolean(task);
 
@@ -118,7 +119,7 @@ function TaskFormDrawer({
       await createTask.mutateAsync({ projectId, body });
     }
     form.resetFields();
-    onSaved();
+    onSaved?.();
     onClose();
   }
 
@@ -239,13 +240,16 @@ function TaskFormDrawer({
 
 export default function TasksPanel({
   projectId,
+  tasks: allTasks,
   criticalOnly,
   onCriticalOnlyChange,
 }: {
   projectId: string;
+  tasks: Task[];
   criticalOnly: boolean;
   onCriticalOnlyChange: (value: boolean) => void;
 }): React.ReactNode {
+  const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dependencyOpen, setDependencyOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -253,11 +257,9 @@ export default function TasksPanel({
   const [depForm] = Form.useForm<DependencyFormValues>();
 
   const resolveUserName = useUserNameLookup();
-  const tasksQuery = useTasks(projectId, { page: 1, limit: 200 });
   const createDependency = useCreateTaskDependency();
   const deleteTask = useDeleteTask();
 
-  const allTasks = tasksQuery.data?.data ?? [];
   const tasks = useMemo(
     () =>
       criticalOnly ? allTasks.filter((task) => task.isCritical) : allTasks,
@@ -364,7 +366,6 @@ export default function TasksPanel({
     });
     depForm.resetFields();
     setDependencyOpen(false);
-    void tasksQuery.refetch();
   }
 
   return (
@@ -412,7 +413,6 @@ export default function TasksPanel({
           setDrawerOpen(false);
           setEditing(null);
         }}
-        onSaved={() => void tasksQuery.refetch()}
       />
 
       <Modal
@@ -473,7 +473,9 @@ export default function TasksPanel({
             .mutateAsync({ projectId, taskId: deleting.id })
             .then(() => {
               setDeleting(null);
-              void tasksQuery.refetch();
+              void queryClient.invalidateQueries({
+                queryKey: scheduleKeys.tasks(projectId),
+              });
             });
         }}
         onCancel={() => setDeleting(null)}
