@@ -13,7 +13,7 @@ import KPICard from '@/components/ui/KPICard/KPICard';
 import { layout } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
-import { useTasks } from '@/lib/query/schedule';
+import { useAllTasks } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 
 const QUICK_LINKS = [
@@ -58,11 +58,7 @@ export default function ProjectDashboard({
     statsQuery.error instanceof ApiRequestError &&
     (statsQuery.error.status === 404 || statsQuery.error.status === 0);
 
-  const tasksQuery = useTasks(
-    projectId,
-    { page: 1, limit: 500 },
-    statsApiUnavailable,
-  );
+  const tasksQuery = useAllTasks(projectId, statsApiUnavailable);
 
   if (statsQuery.isLoading) {
     return (
