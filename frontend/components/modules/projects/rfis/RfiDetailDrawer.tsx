@@ -7,7 +7,6 @@ import {
   Drawer,
   Form,
   Input,
-  List,
   Select,
   Spin,
 } from 'antd';
@@ -162,21 +161,27 @@ export default function RfiDetailDrawer({
             <h3 className="mb-3 text-sm font-semibold text-slate-900">
               Responses
             </h3>
-            <List
-              dataSource={responses}
-              locale={{ emptyText: 'No responses yet' }}
-              renderItem={(item) => (
-                <List.Item>
-                  <List.Item.Meta
-                    title={resolveUserName(item.respondedBy)}
-                    description={formatProjectDate(item.respondedAt)}
-                  />
-                  <p className="whitespace-pre-wrap text-sm text-slate-700">
-                    {item.responseText}
-                  </p>
-                </List.Item>
-              )}
-            />
+            {responses.length === 0 ? (
+              <p className="text-sm text-slate-500">No responses yet</p>
+            ) : (
+              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+                {responses.map((item) => (
+                  <li key={item.id} className="px-4 py-3">
+                    <div className="mb-1 flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-medium text-slate-900">
+                        {resolveUserName(item.respondedBy)}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {formatProjectDate(item.respondedAt)}
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-slate-700">
+                      {item.responseText}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <Form<ResponseFormValues>
               form={form}

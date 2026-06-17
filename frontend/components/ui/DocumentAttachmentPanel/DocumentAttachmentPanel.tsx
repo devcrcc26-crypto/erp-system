@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Empty, List, Spin, Upload } from 'antd';
+import { Alert, Button, Empty, Spin, Upload } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type { DocumentRecord } from '@/lib/api/documents.types';
@@ -125,28 +125,29 @@ export default function DocumentAttachmentPanel({
           description="No files attached yet."
         />
       ) : (
-        <List
-          dataSource={documents}
-          renderItem={(document) => (
-            <List.Item
-              actions={[
-                <Button
-                  key="download"
-                  type="link"
-                  icon={<DownloadOutlined />}
-                  onClick={() => void downloadDocument(document)}
-                >
-                  Download
-                </Button>,
-              ]}
+        <ul className="divide-y divide-slate-200">
+          {documents.map((document) => (
+            <li
+              key={document.id}
+              className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
             >
-              <List.Item.Meta
-                title={document.name}
-                description={`${document.fileType} · ${formatFileSize(document.fileSizeBytes)} · v${document.version}`}
-              />
-            </List.Item>
-          )}
-        />
+              <div className="min-w-0">
+                <p className="font-medium text-slate-900">{document.name}</p>
+                <p className="text-sm text-slate-500">
+                  {document.fileType} · {formatFileSize(document.fileSizeBytes)} ·
+                  v{document.version}
+                </p>
+              </div>
+              <Button
+                type="link"
+                icon={<DownloadOutlined />}
+                onClick={() => void downloadDocument(document)}
+              >
+                Download
+              </Button>
+            </li>
+          ))}
+        </ul>
       )}
     </FormLayout>
   );

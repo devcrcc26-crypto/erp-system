@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Badge, Button, Dropdown, Empty, List, Spin, Typography } from 'antd';
+import { Badge, Button, Dropdown, Empty, Spin, Typography } from 'antd';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -27,45 +27,42 @@ function NotificationItem({
   const isUnread = !notification.readAt;
 
   return (
-    <List.Item
-      className={isUnread ? 'bg-orange-50/60' : undefined}
-      actions={
-        isUnread
-          ? [
-              <Button
-                key="read"
-                type="link"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={() => onRead(notification.id)}
-              >
-                Mark read
-              </Button>,
-            ]
-          : undefined
-      }
+    <div
+      className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isUnread ? 'bg-orange-50/60' : ''}`}
     >
-      <List.Item.Meta
-        title={
-          <span className={isUnread ? 'font-semibold text-slate-900' : 'text-slate-800'}>
-            {notification.subject}
+      <div className="min-w-0 flex-1">
+        <p
+          className={
+            isUnread
+              ? 'text-sm font-semibold text-slate-900'
+              : 'text-sm text-slate-800'
+          }
+        >
+          {notification.subject}
+        </p>
+        <div className="mt-1 space-y-1">
+          <Typography.Paragraph
+            className="!mb-0 text-sm text-slate-600"
+            ellipsis={{ rows: 2 }}
+          >
+            {notification.body}
+          </Typography.Paragraph>
+          <span className="text-xs text-slate-400">
+            {dayjs(notification.createdAt).fromNow()}
           </span>
-        }
-        description={
-          <div className="space-y-1">
-            <Typography.Paragraph
-              className="!mb-0 text-sm text-slate-600"
-              ellipsis={{ rows: 2 }}
-            >
-              {notification.body}
-            </Typography.Paragraph>
-            <span className="text-xs text-slate-400">
-              {dayjs(notification.createdAt).fromNow()}
-            </span>
-          </div>
-        }
-      />
-    </List.Item>
+        </div>
+      </div>
+      {isUnread && (
+        <Button
+          type="link"
+          size="small"
+          icon={<CheckOutlined />}
+          onClick={() => onRead(notification.id)}
+        >
+          Mark read
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -153,16 +150,15 @@ export default function NotificationPanel(): React.ReactNode {
           description="No notifications"
         />
       ) : (
-        <List
-          className="max-h-96 overflow-y-auto"
-          dataSource={notifications}
-          renderItem={(notification) => (
+        <div className="max-h-96 overflow-y-auto">
+          {notifications.map((notification) => (
             <NotificationItem
+              key={notification.id}
               notification={notification}
               onRead={(id) => void markRead.mutateAsync(id)}
             />
-          )}
-        />
+          ))}
+        </div>
       )}
     </div>
   );

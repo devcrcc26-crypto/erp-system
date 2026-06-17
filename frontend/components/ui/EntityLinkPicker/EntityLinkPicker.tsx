@@ -6,7 +6,6 @@ import {
   Button,
   Empty,
   Input,
-  List,
   Modal,
   Select,
   Space,
@@ -112,24 +111,11 @@ export default function EntityLinkPicker({
           description="No linked records yet."
         />
       ) : (
-        <List
-          dataSource={value}
-          renderItem={(link) => (
-            <List.Item
-              actions={
-                readOnly
-                  ? undefined
-                  : [
-                      <Button
-                        key="remove"
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemove(link)}
-                        aria-label={`Remove link ${link.label}`}
-                      />,
-                    ]
-              }
+        <ul className="divide-y divide-slate-200">
+          {value.map((link) => (
+            <li
+              key={`${link.entityType}-${link.entityId}`}
+              className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
             >
               <Space>
                 <LinkOutlined className="text-slate-400" />
@@ -137,9 +123,18 @@ export default function EntityLinkPicker({
                 <span className="font-medium text-slate-900">{link.label}</span>
                 <span className="text-xs text-slate-500">{link.entityId}</span>
               </Space>
-            </List.Item>
-          )}
-        />
+              {!readOnly && (
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleRemove(link)}
+                  aria-label={`Remove link ${link.label}`}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
       )}
 
       <Modal
