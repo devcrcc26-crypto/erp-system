@@ -135,6 +135,135 @@ export interface GanttBarLayout {
   widthPct: number;
 }
 
+export const GANTT_DAY_WIDTH_PX = 32;
+export const GANTT_TASK_COLUMN_PX = 300;
+export const GANTT_HEADER_HEIGHT_PX = 72;
+export const GANTT_ROW_HEIGHT_PX = 64;
+
+export interface GanttTimelineMonth {
+  key: string;
+  label: string;
+  startDay: number;
+  dayCount: number;
+}
+
+export interface GanttTimelineWeek {
+  key: string;
+  label: string;
+  startDay: number;
+  dayCount: number;
+}
+
+export interface GanttTimeline {
+  months: GanttTimelineMonth[];
+  weeks: GanttTimelineWeek[];
+  totalWidthPx: number;
+  todayDayIndex: number | null;
+}
+
+function startOfDay(date: Date): Date {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+
+function addDays(date: Date, days: number): Date {
+  const value = new Date(date);
+  value.setDate(value.getDate() + days);
+  return value;
+}
+
+/** Builds month/week header segments and pixel width for the Gantt timeline. */
+export function buildGanttTimeline(range: GanttDateRange): GanttTimeline {
+  const totalWidthPx = range.totalDays * GANTT_DAY_WIDTH_PX;
+  const rangeStart = startOfDay(range.start);
+  const rangeEnd = startOfDay(range.end);
+
+  const months: GanttTimelineMonth[] = [];
+  let monthCursor = new Date(
+    rangeStart.getFullYear(),
+    rangeStart.getMonth(),
+    1,
+  );
+
+  while (monthCursor <= rangeEnd) {
+    const monthStart =
+      monthCursor < rangeStart ? rangeStart : startOfDay(monthCursor);
+    const nextMonth = new Date(
+      monthCursor.getFullYear(),
+      monthCursor.getMonth() + 1,
+      1,
+    );
+    const monthEnd =
+      addDays(nextMonth, -1) <= rangeEnd
+        ? addDays(nextMonth, -1)
+        : rangeEnd;
+    const startDay = Math.floor(
+      (monthStart.getTime() - rangeStart.getTime()) / MS_PER_DAY,
+    );
+    const endDay = Math.floor(
+      (monthEnd.getTime() - rangeStart.getTime()) / MS_PER_DAY,
+    );
+
+    months.push({
+      key: `${monthCursor.getFullYear()}-${monthCursor.getMonth()}`,
+      label: monthCursor.toLocaleDateString(undefined, {
+        month: 'long',
+        year: 'numeric',
+      }),
+      startDay,
+      dayCount: endDay - startDay + 1,
+    });
+
+    monthCursor = nextMonth;
+  }
+
+  const weeks: GanttTimelineWeek[] = [];
+  for (let day = 0; day < range.totalDays; day += 7) {
+    const weekStart = addDays(rangeStart, day);
+    weeks.push({
+      key: `week-${day}`,
+      label: weekStart.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      }),
+      startDay: day,
+      dayCount: Math.min(7, range.totalDays - day),
+    });
+  }
+
+  const today = startOfDay(new Date());
+  const todayDayIndex =
+    today >= rangeStart && today <= rangeEnd
+      ? Math.floor((today.getTime() - rangeStart.getTime()) / MS_PER_DAY)
+      : null;
+
+  return {
+    months,
+    weeks,
+    totalWidthPx,
+    todayDayIndex,
+  };
+}
+
+export function getGanttBarLayoutPx(
+  task: Task,
+  range: GanttDateRange,
+): { leftPx: number; widthPx: number } | null {
+  const layout = getGanttBarLayout(task, range);
+  if (!layout) {
+    return null;
+  }
+
+  return {
+    leftPx: (layout.leftPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
+    widthPx: Math.max(
+      (layout.widthPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
+      16,
+    ),
+  };
+}
+
 export function getGanttBarLayout(
   task: Task,
   range: GanttDateRange,
