@@ -13,27 +13,87 @@ import {
 } from '@/lib/api/client';
 import type {
   DocumentDownloadUrl,
+  DocumentFolder,
   DocumentRecord,
+  FolderContextType,
 } from '@/lib/api/documents.types';
-import type { PaginationParams } from '@/lib/api/types';
+import type { PaginationMeta, PaginationParams } from '@/lib/api/types';
+
+export const DOCUMENT_FOLDER_PAGE_SIZE = 100;
+
+type FolderListParams = PaginationParams & {
+  contextType?: FolderContextType;
+  contextId?: string;
+  parentId?: string;
+};
+
+type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
 export const documentKeys = {
   all: ['documents'] as const,
-  folderLists: () => [...documentKeys.all, 'folder'] as const,
-  folderList: (folderId: string, params: PaginationParams) =>
-    [...documentKeys.folderLists(), folderId, params] as const,
+  folders: () => [...documentKeys.all, 'folders'] as const,
+  folderSearch: (params: FolderListParams) =>
+    [...documentKeys.folders(), params] as const,
+  folderDocuments: () => [...documentKeys.all, 'folder-documents'] as const,
+  folderDocumentList: (folderId: string, params: PaginationParams) =>
+    [...documentKeys.folderDocuments(), folderId, params] as const,
   downloadUrl: (documentId: string) =>
     [...documentKeys.all, 'download-url', documentId] as const,
 };
 
-function toQueryString(params: PaginationParams): string {
+function toQueryString(params: FolderListParams): string {
   const search = new URLSearchParams();
   if (params.page !== undefined) search.set('page', String(params.page));
   if (params.limit !== undefined) search.set('limit', String(params.limit));
   if (params.sortBy) search.set('sortBy', params.sortBy);
   if (params.sortOrder) search.set('sortOrder', params.sortOrder);
+  if (params.contextType) search.set('contextType', params.contextType);
+  if (params.contextId) search.set('contextId', params.contextId);
+  if (params.parentId) search.set('parentId', params.parentId);
   const query = search.toString();
   return query ? `?${query}` : '';
+}
+
+export function useDocumentFolders(
+  params: FolderListParams = { page: 1, limit: DOCUMENT_FOLDER_PAGE_SIZE },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<DocumentFolder>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: documentKeys.folderSearch(params),
+    queryFn: () =>
+      apiGetPaginated<DocumentFolder>(
+        `/document-folders${toQueryString(params)}`,
+      ),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+export function useProjectDocumentFolder(
+  projectId: string,
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<DocumentFolder>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useDocumentFolders(
+    {
+      page: 1,
+      limit: DOCUMENT_FOLDER_PAGE_SIZE,
+      contextType: 'PROJECT',
+      contextId: projectId,
+      sortBy: 'createdAt',
+      sortOrder: 'asc',
+    },
+    Boolean(projectId) && enabled,
+    options,
+  );
 }
 
 export function useFolderDocuments(
@@ -41,19 +101,28 @@ export function useFolderDocuments(
   params: PaginationParams = { page: 1, limit: 20 },
   enabled = true,
   options?: Omit<
-    UseQueryOptions<{
-      data: DocumentRecord[];
-      meta: { total: number; page: number; limit: number; pages: number };
-    }>,
+    UseQueryOptions<PaginatedResult<DocumentRecord>>,
     'queryKey' | 'queryFn'
   >,
 ) {
+  const queryParams: PaginationParams = params;
   return useQuery({
-    queryKey: documentKeys.folderList(folderId, params),
-    queryFn: () =>
-      apiGetPaginated<DocumentRecord>(
-        `/document-folders/${folderId}/documents${toQueryString(params)}`,
-      ),
+    queryKey: documentKeys.folderDocumentList(folderId, params),
+    queryFn: () => {
+      const search = new URLSearchParams();
+      if (queryParams.page !== undefined) {
+        search.set('page', String(queryParams.page));
+      }
+      if (queryParams.limit !== undefined) {
+        search.set('limit', String(queryParams.limit));
+      }
+      if (queryParams.sortBy) search.set('sortBy', queryParams.sortBy);
+      if (queryParams.sortOrder) search.set('sortOrder', queryParams.sortOrder);
+      const query = search.toString();
+      return apiGetPaginated<DocumentRecord>(
+        `/document-folders/${folderId}/documents${query ? `?${query}` : ''}`,
+      );
+    },
     enabled: Boolean(folderId) && enabled,
     retry: false,
     ...options,
@@ -84,10 +153,10 @@ export function useUploadDocumentToFolder() {
     },
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: documentKeys.folderLists(),
+        queryKey: documentKeys.folderDocuments(),
       });
       void queryClient.invalidateQueries({
-        queryKey: documentKeys.folderList(variables.folderId, {
+        queryKey: documentKeys.folderDocumentList(variables.folderId, {
           page: 1,
           limit: 20,
         }),

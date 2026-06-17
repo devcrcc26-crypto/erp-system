@@ -17,6 +17,7 @@ import { RequirePermission } from '../../../../shared/permissions/require-permis
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateDocumentFolderDto,
+  DocumentFolderListQueryDto,
   UpdateDocumentFolderDto,
 } from '../../application/dtos/document.dtos';
 import { DocumentService } from '../../application/services/document.service';
@@ -37,10 +38,9 @@ export class DocumentFoldersController {
   @ApiOperation({ summary: 'List document folders' })
   list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
-    @Query('parentId') parentId?: string,
+    @Query() query: DocumentFolderListQueryDto,
   ): Promise<unknown> {
-    return this.documentService.listFolders(this.ctx(user), query, parentId);
+    return this.documentService.listFolders(this.ctx(user), query);
   }
 
   @Get(':id')

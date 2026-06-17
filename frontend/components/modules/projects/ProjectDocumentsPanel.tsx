@@ -1,38 +1,76 @@
 'use client';
 
-import { Alert } from 'antd';
+import { Alert, Spin } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
+import { ApiRequestError } from '@/lib/api/errors';
+import { useProjectDocumentFolder } from '@/lib/query/documents';
+import { layout } from '@/lib/theme/layout';
 
-/**
- * Project documents tab ? wires to Core Foundation document folders when available.
- * Project-specific folder resolution will come from the backend project module.
- */
 export default function ProjectDocumentsPanel({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
-  return (
-    <div className="space-y-6">
-      <Alert
-        type="info"
-        showIcon
-        title="Project document folders"
-        description="When the backend exposes a document folder for this project, files will appear here. Until then, use company-level document management from Settings."
-      />
+  const foldersQuery = useProjectDocumentFolder(projectId);
+  const projectFolder = foldersQuery.data?.data[0];
+  const folderId = projectFolder?.id;
 
-      <FormLayout
-        title="Project files"
-        description={`Document repository for project ${projectId}.`}
-      >
-        <DocumentAttachmentPanel
-          folderId={undefined}
-          readOnly
-          title="Project documents"
-          description="Upload drawings, contracts, and site photos once the project folder is provisioned."
+  if (foldersQuery.isLoading) {
+    return (
+      <div className={layout.loadingCard}>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (foldersQuery.isError) {
+    const status =
+      foldersQuery.error instanceof ApiRequestError
+        ? foldersQuery.error.status
+        : 0;
+
+    return (
+      <Alert
+        type={status === 403 ? 'warning' : 'error'}
+        showIcon
+        title={
+          status === 403
+            ? 'You do not have permission to view project documents.'
+            : 'Unable to load project document folders.'
+        }
+        description={
+          status === 403
+            ? 'Ask your administrator for documents view access, or use company-level document management from Settings.'
+            : foldersQuery.error instanceof ApiRequestError
+              ? foldersQuery.error.message
+              : undefined
+        }
+      />
+    );
+  }
+
+  return (
+    <div className={layout.pageStack}>
+      {!folderId ? (
+        <Alert
+          type="info"
+          showIcon
+          title="No project document folder yet"
+          description="This project does not have a document folder provisioned. Create one from Settings → Documents, or contact your administrator."
         />
-      </FormLayout>
+      ) : (
+        <FormLayout
+          title={projectFolder.name}
+          description={`Repository path: ${projectFolder.path}`}
+        >
+          <DocumentAttachmentPanel
+            folderId={folderId}
+            title="Project files"
+            description="Contracts, drawings, site photos, and other project documentation."
+          />
+        </FormLayout>
+      )}
     </div>
   );
 }

@@ -14,6 +14,26 @@ export interface UnreadNotificationCount {
   count: number;
 }
 
+export type FolderContextType =
+  | 'SYSTEM'
+  | 'COMPANY'
+  | 'PROJECT'
+  | 'DEPARTMENT'
+  | 'USER';
+
+export interface DocumentFolder {
+  id: string;
+  companyId: string;
+  parentId: string | null;
+  name: string;
+  path: string;
+  contextType: FolderContextType;
+  contextId: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DocumentRecord {
   id: string;
   folderId: string;

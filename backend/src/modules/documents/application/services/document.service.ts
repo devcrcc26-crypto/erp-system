@@ -23,6 +23,7 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   CreateDocumentFolderDto,
+  DocumentFolderListQueryDto,
   UpdateDocumentDto,
   UpdateDocumentFolderDto,
   UploadDocumentVersionDto,
@@ -47,12 +48,21 @@ export class DocumentService {
 
   async listFolders(
     ctx: RequestContext,
-    query: PaginationQueryDto,
-    parentId?: string,
+    query: DocumentFolderListQueryDto,
   ): Promise<PaginatedResult<unknown>> {
+    if (query.contextId && !query.contextType) {
+      throw new BadRequestException(
+        'contextType is required when contextId is provided',
+      );
+    }
+
     const where = activeOnly({
       companyId: ctx.companyId,
-      ...(parentId !== undefined ? { parentId: parentId || null } : {}),
+      ...(query.contextType ? { contextType: query.contextType } : {}),
+      ...(query.contextId ? { contextId: query.contextId } : {}),
+      ...(query.parentId !== undefined
+        ? { parentId: query.parentId || null }
+        : {}),
     });
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const [data, total] = await Promise.all([
