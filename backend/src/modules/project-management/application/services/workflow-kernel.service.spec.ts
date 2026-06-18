@@ -65,6 +65,12 @@ describe('WorkflowKernelService', () => {
     triggerRevision: jest.fn(),
   };
 
+  const workflowTransactionRunner = {
+    runPhaseAB: jest.fn((fn: (tx: unknown) => Promise<unknown>) =>
+      epcWorkflowRepository.runPhaseAB(fn),
+    ),
+  };
+
   let kernel: WorkflowKernelService;
 
   beforeEach(() => {
@@ -81,6 +87,7 @@ describe('WorkflowKernelService', () => {
       reviewWorkflow as never,
       submittalWorkflow as never,
       revisionOrchestrator as never,
+      workflowTransactionRunner as never,
     );
   });
 

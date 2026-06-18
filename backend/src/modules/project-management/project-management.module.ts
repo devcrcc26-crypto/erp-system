@@ -1,42 +1,57 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PermissionsModule } from '../../shared/permissions/permissions.module';
+import {
+  WORKFLOW_COMMITTED_QUEUE,
+  WORKFLOW_SLA_QUEUE,
+} from './application/constants/workflow-queue.constants';
+import { WorkflowCommittedProcessor } from './application/processors/workflow-committed.processor';
+import { WorkflowSlaProcessor } from './application/processors/workflow-sla.processor';
 import { CloseoutService } from './application/services/closeout.service';
 import { CorrespondenceService } from './application/services/correspondence.service';
 import { DailyLogsService } from './application/services/daily-logs.service';
+import { DecisionTraceService } from './application/services/decision-trace.service';
+import { DefinitionOfDoneService } from './application/services/definition-of-done.service';
+import { DependencyGraphService } from './application/services/dependency-graph.service';
 import { DesignPackagesService } from './application/services/design-packages.service';
 import { DocumentNumberService } from './application/services/document-number.service';
 import { DrawingsService } from './application/services/drawings.service';
+import { EdvTransitionService } from './application/services/edv-transition.service';
 import { EngineeringDocumentFolderService } from './application/services/engineering-document-folder.service';
 import { EngineeringDocumentsService } from './application/services/engineering-documents.service';
+import { EpcWorkspaceService } from './application/services/epc-workspace.service';
+import { ExternalReviewTriggerService } from './application/services/external-review-trigger.service';
 import { IssuesService } from './application/services/issues.service';
 import { MeetingsService } from './application/services/meetings.service';
+import { PermissionResolverService } from './application/services/permission-resolver.service';
+import { ProjectChangeRequestService } from './application/services/project-change-request.service';
 import { ProjectScopeService } from './application/services/project-scope.service';
 import { ProjectsService } from './application/services/projects.service';
 import { PunchItemsService } from './application/services/punch-items.service';
+import { ReviewBatchService } from './application/services/review-batch.service';
+import { ReviewCommentsService } from './application/services/review-comments.service';
+import { ReviewContextSnapshotService } from './application/services/review-context-snapshot.service';
+import { ReviewRoutingService } from './application/services/review-routing.service';
+import { ReviewSlaService } from './application/services/review-sla.service';
+import { ReviewWorkflowService } from './application/services/review-workflow.service';
+import { RevisionOrchestratorService } from './application/services/revision-orchestrator.service';
 import { RisksService } from './application/services/risks.service';
 import { RfisService } from './application/services/rfis.service';
 import { ScheduleService } from './application/services/schedule.service';
-import { SubmittalsService } from './application/services/submittals.service';
-import { WorkflowEventLogService } from './application/services/workflow-event-log.service';
-import { WorkflowKernelService } from './application/services/workflow-kernel.service';
 import { StateProjectionService } from './application/services/state-projection.service';
-import { EdvTransitionService } from './application/services/edv-transition.service';
-import { ReviewWorkflowService } from './application/services/review-workflow.service';
-import { ReviewContextSnapshotService } from './application/services/review-context-snapshot.service';
-import { DefinitionOfDoneService } from './application/services/definition-of-done.service';
-import { ReviewSlaService } from './application/services/review-sla.service';
-import { ReviewCommentsService } from './application/services/review-comments.service';
-import { ReviewBatchService } from './application/services/review-batch.service';
-import { DependencyGraphService } from './application/services/dependency-graph.service';
-import { DecisionTraceService } from './application/services/decision-trace.service';
-import { RevisionOrchestratorService } from './application/services/revision-orchestrator.service';
-import { SubmittalWorkflowService } from './application/services/submittal-workflow.service';
-import { SubmittalSnapshotService } from './application/services/submittal-snapshot.service';
-import { ExternalReviewTriggerService } from './application/services/external-review-trigger.service';
 import { StatusWriteGateService } from './application/services/status-write-gate.service';
 import { ConflictGuardService } from './application/services/conflict-guard.service';
-import { PermissionResolverService } from './application/services/permission-resolver.service';
+import { SubmittalSnapshotService } from './application/services/submittal-snapshot.service';
+import { SubmittalWorkflowService } from './application/services/submittal-workflow.service';
+import { SubmittalsService } from './application/services/submittals.service';
+import { WorkflowCommittedDispatcher } from './application/services/workflow-committed-dispatcher.service';
+import { WorkflowCommittedService } from './application/services/workflow-committed.service';
+import { WorkflowCorrectionService } from './application/services/workflow-correction.service';
+import { WorkflowEventLogService } from './application/services/workflow-event-log.service';
+import { WorkflowKernelService } from './application/services/workflow-kernel.service';
+import { WorkflowSlaDispatcher } from './application/services/workflow-sla-dispatcher.service';
+import { WorkflowTransactionRunner } from './application/services/workflow-transaction-runner.service';
 import {
   DesignPackageRepository,
   EngineeringDocumentRepository,
@@ -44,29 +59,46 @@ import {
   TaskDisciplineScopeRepository,
   WorkflowEventLogRepository,
 } from './infrastructure/repositories/epc-storage.repository';
-import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflow.repository';
 import { EpcReviewRepository } from './infrastructure/repositories/epc-review.repository';
 import { EpcSubmittalRepository } from './infrastructure/repositories/epc-submittal.repository';
+import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflow.repository';
 import { CloseoutController } from './presentation/controllers/closeout.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
 import { DesignPackagesController } from './presentation/controllers/design-packages.controller';
-import { ReviewCommentsController } from './presentation/controllers/review-comments.controller';
-import { ReviewBatchController } from './presentation/controllers/review-batch.controller';
-import { EngineeringBatchController } from './presentation/controllers/engineering-batch.controller';
 import { DrawingsController } from './presentation/controllers/drawings.controller';
+import { EngineeringBatchController } from './presentation/controllers/engineering-batch.controller';
 import { EngineeringDocumentsController } from './presentation/controllers/engineering-documents.controller';
+import { EpcWorkspaceController } from './presentation/controllers/epc-workspace.controller';
 import { IssuesController } from './presentation/controllers/issues.controller';
 import { MeetingsController } from './presentation/controllers/meetings.controller';
 import { ProjectsController } from './presentation/controllers/projects.controller';
 import { PunchItemsController } from './presentation/controllers/punch-items.controller';
+import { ReviewBatchController } from './presentation/controllers/review-batch.controller';
+import { ReviewCommentsController } from './presentation/controllers/review-comments.controller';
 import { RisksController } from './presentation/controllers/risks.controller';
 import { RfisController } from './presentation/controllers/rfis.controller';
 import { ScheduleController } from './presentation/controllers/schedule.controller';
 import { SubmittalsController } from './presentation/controllers/submittals.controller';
+import { WorkflowEventsController } from './presentation/controllers/workflow-events.controller';
+import { ProjectionReconciliationCron } from './presentation/cron/projection-reconciliation.cron';
+import { ReviewSlaCron } from './presentation/cron/review-sla.cron';
+
+const redisEnabled = process.env.REDIS_ENABLED === 'true';
+
+const workflowBullImports = redisEnabled
+  ? [
+      BullModule.registerQueue({ name: WORKFLOW_COMMITTED_QUEUE }),
+      BullModule.registerQueue({ name: WORKFLOW_SLA_QUEUE }),
+    ]
+  : [];
+
+const workflowBullProcessors = redisEnabled
+  ? [WorkflowCommittedProcessor, WorkflowSlaProcessor]
+  : [];
 
 @Module({
-  imports: [PermissionsModule, ScheduleModule.forRoot()],
+  imports: [PermissionsModule, ScheduleModule.forRoot(), ...workflowBullImports],
   controllers: [
     ProjectsController,
     ScheduleController,
@@ -79,6 +111,8 @@ import { SubmittalsController } from './presentation/controllers/submittals.cont
     ReviewCommentsController,
     ReviewBatchController,
     EngineeringBatchController,
+    EpcWorkspaceController,
+    WorkflowEventsController,
     DailyLogsController,
     MeetingsController,
     CorrespondenceController,
@@ -106,6 +140,7 @@ import { SubmittalsController } from './presentation/controllers/submittals.cont
     ReviewContextSnapshotService,
     DefinitionOfDoneService,
     ReviewSlaService,
+    ReviewRoutingService,
     ReviewCommentsService,
     ReviewBatchService,
     DependencyGraphService,
@@ -114,6 +149,15 @@ import { SubmittalsController } from './presentation/controllers/submittals.cont
     SubmittalWorkflowService,
     SubmittalSnapshotService,
     ExternalReviewTriggerService,
+    ProjectChangeRequestService,
+    EpcWorkspaceService,
+    WorkflowCommittedService,
+    WorkflowCommittedDispatcher,
+    WorkflowTransactionRunner,
+    WorkflowCorrectionService,
+    WorkflowSlaDispatcher,
+    ProjectionReconciliationCron,
+    ReviewSlaCron,
     EpcSubmittalRepository,
     StatusWriteGateService,
     ConflictGuardService,
@@ -131,6 +175,7 @@ import { SubmittalsController } from './presentation/controllers/submittals.cont
     RisksService,
     PunchItemsService,
     CloseoutService,
+    ...workflowBullProcessors,
   ],
   exports: [
     ProjectsService,

@@ -8,6 +8,7 @@ import {
   MeetingType,
   PrismaClient,
   ProjectStatus,
+  ProjectTeamRole,
   ProjectType,
   PunchItemSeverity,
   PunchItemStatus,
@@ -78,7 +79,65 @@ const DEMO_USERS: DemoUser[] = [
     lastName: 'Mansour',
     roleName: 'Document Controller',
   },
+  {
+    id: '00000000-0000-0000-0000-000000000084',
+    email: 'reviewer@company.local',
+    firstName: 'Nadia',
+    lastName: 'Saleh',
+    roleName: 'Reviewer',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000085',
+    email: 'lead@company.local',
+    firstName: 'Khalid',
+    lastName: 'Nasser',
+    roleName: 'Discipline Lead',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000086',
+    email: 'deptchief@company.local',
+    firstName: 'Rania',
+    lastName: 'Aziz',
+    roleName: 'Department Chief',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000087',
+    email: 'deputychief@company.local',
+    firstName: 'Youssef',
+    lastName: 'Hamdan',
+    roleName: 'Deputy Chief',
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000088',
+    email: 'sitecoord@company.local',
+    firstName: 'Maya',
+    lastName: 'Fahad',
+    roleName: 'Site Coordinator',
+  },
 ];
+
+function mapProjectTeamRole(label: string): ProjectTeamRole {
+  const normalized = label.toLowerCase();
+  if (normalized.includes('project manager')) {
+    return ProjectTeamRole.PROJECT_MANAGER;
+  }
+  if (normalized.includes('dispatcher')) {
+    return ProjectTeamRole.DISPATCHER;
+  }
+  if (normalized.includes('coordinator')) {
+    return ProjectTeamRole.SITE_COORDINATOR;
+  }
+  if (normalized.includes('deputy')) {
+    return ProjectTeamRole.DEPUTY_CHIEF;
+  }
+  if (normalized.includes('document')) {
+    return ProjectTeamRole.DOCUMENT_CONTROLLER;
+  }
+  if (normalized.includes('chief')) {
+    return ProjectTeamRole.DEPARTMENT_CHIEF;
+  }
+  return ProjectTeamRole.OTHER;
+}
 
 interface DemoProjectDef {
   index: number;
@@ -310,7 +369,7 @@ async function seedProjectBundle(
         id: sid(p, member.entity),
         projectId,
         userId: member.userId,
-        roleOnProject: member.role,
+        roleOnProject: mapProjectTeamRole(member.role),
         assignedFrom: d(def.startDate),
         createdBy: adminUserId,
         updatedBy: adminUserId,

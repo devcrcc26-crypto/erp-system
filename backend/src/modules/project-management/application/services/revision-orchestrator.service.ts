@@ -22,7 +22,8 @@ import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
-import { EdvTransitionService } from './edv-transition.service';
+import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
+import { EdvTransitionService, PhaseATransitionResult } from './edv-transition.service';
 import { PermissionResolverService } from './permission-resolver.service';
 import { StateProjectionService } from './state-projection.service';
 import { PmContext } from '../types/pm-context.type';
@@ -40,6 +41,7 @@ export class RevisionOrchestratorService {
     private readonly edvTransitionService: EdvTransitionService,
     private readonly permissionResolver: PermissionResolverService,
     private readonly stateProjection: StateProjectionService,
+    private readonly workflowTransactionRunner: WorkflowTransactionRunner,
   ) {}
 
   /**
@@ -49,7 +51,8 @@ export class RevisionOrchestratorService {
     command: TriggerRevisionCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.workflowTransactionRunner.runPhaseAB(
+      async (tx) => {
       const document = await tx.engineeringDocument.findFirst({
         where: {
           id: command.engineeringDocumentId,
@@ -113,7 +116,8 @@ export class RevisionOrchestratorService {
           v.status !== EdvStatus.SUPERSEDED,
       );
 
-      const transitionResults = await this.edvTransitionService.applyInTx(tx, {
+      const transitionResults: PhaseATransitionResult[] =
+        await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
         correlationId,
@@ -184,7 +188,9 @@ export class RevisionOrchestratorService {
         intentEventIds: transitionResults.map((r) => r.intentEventId),
         newEdvId: newEdv.id,
       };
-    });
+    },
+    { companyId: command.companyId, correlationId },
+    );
   }
 
   /**

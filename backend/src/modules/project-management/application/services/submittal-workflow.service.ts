@@ -22,6 +22,7 @@ import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
+import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
 import { PermissionResolverService } from './permission-resolver.service';
 import { SubmittalSnapshotService } from './submittal-snapshot.service';
 
@@ -35,7 +36,19 @@ export class SubmittalWorkflowService {
     private readonly epcSubmittalRepository: EpcSubmittalRepository,
     private readonly submittalSnapshot: SubmittalSnapshotService,
     private readonly permissionResolver: PermissionResolverService,
+    private readonly workflowTransactionRunner: WorkflowTransactionRunner,
   ) {}
+
+  private runTx<T>(
+    companyId: string,
+    correlationId: string,
+    work: (tx: PrismaTx) => Promise<T>,
+  ): Promise<T> {
+    return this.workflowTransactionRunner.runPhaseAB(work, {
+      companyId,
+      correlationId,
+    });
+  }
 
   /**
    * Creates DRAFT submittal with design package items (no snapshot until issue).
@@ -44,7 +57,7 @@ export class SubmittalWorkflowService {
     command: CreateDesignSubmittalCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       await this.permissionResolver.assertActionAllowed({
         companyId: command.companyId,
         userId: command.actorId,
@@ -130,7 +143,7 @@ export class SubmittalWorkflowService {
     command: IssueSubmittalCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const projectId = await this.resolveProjectIdForSubmittal(
         tx,
         command.companyId,
@@ -233,7 +246,7 @@ export class SubmittalWorkflowService {
     command: AddSubmittalItemsCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const submittal = await this.epcSubmittalRepository.findSubmittalWithItems(
         tx,
         command.projectId,

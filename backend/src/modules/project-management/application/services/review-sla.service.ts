@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReviewTier } from '@prisma/client';
 import { REVIEW_TIER_ORDER } from '../../domain/contracts/enums/review-tier.enum';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
@@ -135,9 +134,8 @@ export class ReviewSlaService {
   }
 
   /**
-   * Hourly cron — escalates SLA violations without blocking workflow.
+   * Processes overdue sessions across all companies (worker or sync fallback).
    */
-  @Cron(CronExpression.EVERY_HOUR)
   async runHourlyEscalation(): Promise<void> {
     const now = new Date();
     const overdue = await this.epcReviewRepository.findAllOverdueActiveSessions(now);

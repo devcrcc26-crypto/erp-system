@@ -10,6 +10,7 @@ import {
   MeetingStatus,
   MeetingType,
   ProjectStatus,
+  ProjectTeamRole,
   ProjectType,
   PunchItemSeverity,
   PunchItemStatus,
@@ -185,9 +186,9 @@ export class AddProjectTeamMemberDto {
   @IsUUID()
   userId!: string;
 
-  @ApiProperty()
-  @IsString()
-  roleOnProject!: string;
+  @ApiProperty({ enum: ProjectTeamRole })
+  @IsEnum(ProjectTeamRole)
+  roleOnProject!: ProjectTeamRole;
 
   @ApiPropertyOptional()
   @IsOptional()

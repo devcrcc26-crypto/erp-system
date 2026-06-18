@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
+import { ProjectChangeRequestService } from './project-change-request.service';
 
 export interface ExternalReviewTriggerInput {
   readonly companyId: string;
@@ -23,7 +24,10 @@ export interface ExternalReviewTriggerInput {
  */
 @Injectable()
 export class ExternalReviewTriggerService {
-  constructor(private readonly epcSubmittalRepository: EpcSubmittalRepository) {}
+  constructor(
+    private readonly epcSubmittalRepository: EpcSubmittalRepository,
+    private readonly projectChangeRequestService: ProjectChangeRequestService,
+  ) {}
 
   /**
    * Creates PENDING RFI/CR trigger drafts for revise/reject outcomes.
@@ -50,7 +54,7 @@ export class ExternalReviewTriggerService {
       note: 'Trigger only — revision orchestrator processes in Wave 6',
     };
 
-    await this.epcSubmittalRepository.createExternalReviewTrigger(tx, {
+    const triggerId = await this.epcSubmittalRepository.createExternalReviewTrigger(tx, {
       companyId: input.companyId,
       projectId: input.projectId,
       triggerType,
@@ -60,6 +64,20 @@ export class ExternalReviewTriggerService {
       submittalItemIds: input.submittalItemIds,
       payload,
       createdBy: input.actorId,
+    });
+
+    await this.projectChangeRequestService.createFromExternalTrigger(tx, {
+      companyId: input.companyId,
+      projectId: input.projectId,
+      triggerId,
+      triggerType,
+      sourceEntityId: input.submittalReviewId,
+      title:
+        triggerType === ExternalReviewTriggerType.RFI
+          ? 'Submittal RFI revision'
+          : 'Submittal change request',
+      description: input.comments,
+      actorId: input.actorId,
     });
   }
 }

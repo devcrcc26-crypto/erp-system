@@ -1,0 +1,422 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  CommentStatus,
+  ReviewSessionStatus,
+  WorkflowEntityType,
+  WorkflowEventPhase,
+} from '@prisma/client';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PmContext } from '../types/pm-context.type';
+import { ProjectScopeService } from './project-scope.service';
+
+export interface ReviewInboxItem {
+  readonly reviewSessionId: string;
+  readonly designPackageId: string;
+  readonly designPackageName: string;
+  readonly taskDisciplineId: string;
+  readonly disciplineName: string;
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly currentTier: string;
+  readonly slaDeadlineAt: string | null;
+  readonly slaOverdue: boolean;
+  readonly openedAt: string;
+}
+
+export interface MyCommentItem {
+  readonly commentId: string;
+  readonly body: string;
+  readonly status: CommentStatus;
+  readonly severity: string;
+  readonly engineeringDocumentVersionId: string;
+  readonly reviewSessionId: string;
+  readonly createdAt: string;
+}
+
+export interface ProjectStatusBoard {
+  readonly projectId: string;
+  readonly packagesByStatus: Record<string, number>;
+  readonly disciplinesByStatus: Record<string, number>;
+  readonly activeReviewSessions: number;
+  readonly slaOverdueSessions: number;
+  readonly openComments: number;
+  readonly pendingSubmittals: number;
+}
+
+export interface DispatcherWorkloadItem {
+  userId: string;
+  displayName: string;
+  assignedReviewSessions: number;
+  openComments: number;
+  slaOverdue: number;
+}
+
+export interface ReviewModeView {
+  readonly designPackageId: string;
+  readonly reviewSessionId: string | null;
+  readonly sessionStatus: string | null;
+  readonly currentTier: string | null;
+  readonly snapshotEdvIds: readonly string[];
+  readonly contentHash: string | null;
+  readonly comments: readonly {
+    id: string;
+    body: string;
+    status: CommentStatus;
+    severity: string;
+    engineeringDocumentVersionId: string;
+  }[];
+}
+
+export interface VersionHistoryEntry {
+  readonly engineeringDocumentVersionId: string;
+  readonly revisionLabel: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly loop: 'INTERNAL' | 'EXTERNAL';
+  readonly events: readonly {
+    action: string;
+    phase: WorkflowEventPhase;
+    createdAt: string;
+  }[];
+}
+
+/**
+ * Read-model queries for EPC workspaces (inbox, dashboard, trace).
+ */
+@Injectable()
+export class EpcWorkspaceService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly projectScopeService: ProjectScopeService,
+  ) {}
+
+  /**
+   * Review inbox for assignee with SLA overdue flags.
+   */
+  async getReviewInbox(ctx: PmContext): Promise<ReviewInboxItem[]> {
+    const now = new Date();
+    const sessions = await this.prisma.reviewSession.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        status: ReviewSessionStatus.ACTIVE,
+        assignedToUserId: ctx.userId,
+      }),
+      include: {
+        designPackage: {
+          include: {
+            taskDiscipline: {
+              include: { task: { include: { project: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { slaDeadlineAt: 'asc' },
+    });
+
+    return sessions.map((s) => ({
+      reviewSessionId: s.id,
+      designPackageId: s.designPackageId,
+      designPackageName: s.designPackage.name,
+      taskDisciplineId: s.taskDisciplineId,
+      disciplineName: s.designPackage.taskDiscipline.disciplineName,
+      projectId: s.designPackage.taskDiscipline.task.projectId,
+      projectName: s.designPackage.taskDiscipline.task.project.name,
+      currentTier: s.currentTier,
+      slaDeadlineAt: s.slaDeadlineAt?.toISOString() ?? null,
+      slaOverdue: s.slaDeadlineAt ? s.slaDeadlineAt < now : false,
+      openedAt: s.openedAt.toISOString(),
+    }));
+  }
+
+  /**
+   * Designer comment queue — OPEN / IN_PROGRESS assigned to user.
+   */
+  async getMyComments(ctx: PmContext): Promise<MyCommentItem[]> {
+    const rows = await this.prisma.reviewComment.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        assignedToUserId: ctx.userId,
+        status: { in: [CommentStatus.OPEN, CommentStatus.IN_PROGRESS] },
+      }),
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return rows.map((r) => ({
+      commentId: r.id,
+      body: r.body,
+      status: r.status,
+      severity: r.severity,
+      engineeringDocumentVersionId: r.engineeringDocumentVersionId,
+      reviewSessionId: r.reviewSessionId,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  /**
+   * Project status board with bottleneck KPIs.
+   */
+  async getStatusBoard(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<ProjectStatusBoard> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const now = new Date();
+
+    const disciplines = await this.prisma.taskDiscipline.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        task: { projectId, deletedAt: null },
+      }),
+      select: { projectedStatus: true },
+    });
+
+    const packages = await this.prisma.designPackage.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        taskDiscipline: { task: { projectId, deletedAt: null } },
+      }),
+      select: { projectedStatus: true },
+    });
+
+    const packagesByStatus: Record<string, number> = {};
+    for (const p of packages) {
+      packagesByStatus[p.projectedStatus] =
+        (packagesByStatus[p.projectedStatus] ?? 0) + 1;
+    }
+
+    const disciplinesByStatus: Record<string, number> = {};
+    for (const d of disciplines) {
+      disciplinesByStatus[d.projectedStatus] =
+        (disciplinesByStatus[d.projectedStatus] ?? 0) + 1;
+    }
+
+    const [activeReviewSessions, slaOverdueSessions, openComments, pendingSubmittals] =
+      await Promise.all([
+        this.prisma.reviewSession.count({
+          where: activeOnly({
+            companyId: ctx.companyId,
+            status: ReviewSessionStatus.ACTIVE,
+            designPackage: {
+              taskDiscipline: { task: { projectId } },
+            },
+          }),
+        }),
+        this.prisma.reviewSession.count({
+          where: activeOnly({
+            companyId: ctx.companyId,
+            status: ReviewSessionStatus.ACTIVE,
+            slaDeadlineAt: { lt: now },
+            designPackage: {
+              taskDiscipline: { task: { projectId } },
+            },
+          }),
+        }),
+        this.prisma.reviewComment.count({
+          where: activeOnly({
+            companyId: ctx.companyId,
+            status: {
+              in: [
+                CommentStatus.OPEN,
+                CommentStatus.ACKNOWLEDGED,
+                CommentStatus.IN_PROGRESS,
+              ],
+            },
+            reviewSession: {
+              designPackage: {
+                taskDiscipline: { task: { projectId } },
+              },
+            },
+          }),
+        }),
+        this.prisma.submittal.count({
+          where: activeOnly({
+            projectId,
+            issuedAt: null,
+          }),
+        }),
+      ]);
+
+    return {
+      projectId,
+      packagesByStatus,
+      disciplinesByStatus,
+      activeReviewSessions,
+      slaOverdueSessions,
+      openComments,
+      pendingSubmittals,
+    };
+  }
+
+  /**
+   * Dispatcher workload — assigned sessions and comments per user.
+   */
+  async getWorkload(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<DispatcherWorkloadItem[]> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const now = new Date();
+
+    const sessions = await this.prisma.reviewSession.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        status: ReviewSessionStatus.ACTIVE,
+        designPackage: {
+          taskDiscipline: { task: { projectId } },
+        },
+        assignedToUserId: { not: null },
+      }),
+      select: {
+        assignedToUserId: true,
+        slaDeadlineAt: true,
+        assignedToUser: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+
+    const comments = await this.prisma.reviewComment.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        status: { in: [CommentStatus.OPEN, CommentStatus.IN_PROGRESS] },
+        reviewSession: {
+          designPackage: {
+            taskDiscipline: { task: { projectId } },
+          },
+        },
+      }),
+      select: { assignedToUserId: true },
+    });
+
+    const map = new Map<string, DispatcherWorkloadItem>();
+
+    for (const s of sessions) {
+      if (!s.assignedToUserId || !s.assignedToUser) {
+        continue;
+      }
+      const existing = map.get(s.assignedToUserId) ?? {
+        userId: s.assignedToUserId,
+        displayName: `${s.assignedToUser.firstName} ${s.assignedToUser.lastName}`,
+        assignedReviewSessions: 0,
+        openComments: 0,
+        slaOverdue: 0,
+      };
+      existing.assignedReviewSessions++;
+      if (s.slaDeadlineAt && s.slaDeadlineAt < now) {
+        existing.slaOverdue++;
+      }
+      map.set(s.assignedToUserId, existing);
+    }
+
+    for (const c of comments) {
+      const existing = map.get(c.assignedToUserId);
+      if (existing) {
+        existing.openComments++;
+      }
+    }
+
+    return [...map.values()].sort(
+      (a, b) => b.assignedReviewSessions - a.assignedReviewSessions,
+    );
+  }
+
+  /**
+   * Review mode payload — session, snapshot, comments.
+   */
+  async getReviewMode(
+    ctx: PmContext,
+    designPackageId: string,
+  ): Promise<ReviewModeView> {
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: designPackageId, companyId: ctx.companyId }),
+    });
+    if (!pkg) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const session = await this.prisma.reviewSession.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        designPackageId,
+        status: ReviewSessionStatus.ACTIVE,
+      }),
+      include: {
+        contextSnapshot: true,
+        comments: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    return {
+      designPackageId,
+      reviewSessionId: session?.id ?? null,
+      sessionStatus: session?.status ?? null,
+      currentTier: session?.currentTier ?? null,
+      snapshotEdvIds: session?.contextSnapshot?.referencedVersionIds ?? [],
+      contentHash: session?.contextSnapshot?.contentHash ?? null,
+      comments:
+        session?.comments.map((c) => ({
+          id: c.id,
+          body: c.body,
+          status: c.status,
+          severity: c.severity,
+          engineeringDocumentVersionId: c.engineeringDocumentVersionId,
+        })) ?? [],
+    };
+  }
+
+  /**
+   * Version history with internal/external event classification per EDV.
+   */
+  async getVersionHistory(
+    ctx: PmContext,
+    engineeringDocumentId: string,
+  ): Promise<VersionHistoryEntry[]> {
+    const doc = await this.prisma.engineeringDocument.findFirst({
+      where: activeOnly({ id: engineeringDocumentId, companyId: ctx.companyId }),
+      include: {
+        versions: {
+          where: activeOnly({}),
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!doc) {
+      throw new NotFoundException('Engineering document not found');
+    }
+
+    const entries: VersionHistoryEntry[] = [];
+    for (const version of doc.versions) {
+      const events = await this.prisma.workflowEventLog.findMany({
+        where: {
+          companyId: ctx.companyId,
+          entityType: WorkflowEntityType.EngineeringDocumentVersion,
+          entityId: version.id,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const hasExternal = events.some((e) =>
+        e.action.toUpperCase().includes('TRIGGER_REVISION'),
+      );
+
+      entries.push({
+        engineeringDocumentVersionId: version.id,
+        revisionLabel: version.revisionLabel,
+        status: version.status,
+        createdAt: version.createdAt.toISOString(),
+        loop: hasExternal ? 'EXTERNAL' : 'INTERNAL',
+        events: events.map((e) => ({
+          action: e.action,
+          phase: e.phase,
+          createdAt: e.createdAt.toISOString(),
+        })),
+      });
+    }
+
+    return entries;
+  }
+}

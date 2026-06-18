@@ -192,8 +192,8 @@ export class EpcSubmittalRepository {
       payload: Prisma.InputJsonValue;
       createdBy: string;
     },
-  ): Promise<void> {
-    await tx.externalReviewTrigger.create({
+  ): Promise<string> {
+    const row = await tx.externalReviewTrigger.create({
       data: {
         companyId: input.companyId,
         projectId: input.projectId,
@@ -207,6 +207,7 @@ export class EpcSubmittalRepository {
         createdBy: input.createdBy,
       },
     });
+    return row.id;
   }
 
   async appendWorkflowIntentEvent(

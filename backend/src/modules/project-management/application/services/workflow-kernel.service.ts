@@ -35,13 +35,14 @@ import { DefinitionOfDoneService } from './definition-of-done.service';
 import { EdvTransitionService, PhaseATransitionResult } from './edv-transition.service';
 import { PermissionResolverService } from './permission-resolver.service';
 import { ReviewWorkflowService } from './review-workflow.service';
+import { StatusWriteGateService } from './status-write-gate.service';
 import { SubmittalWorkflowService } from './submittal-workflow.service';
 import { RevisionOrchestratorService } from './revision-orchestrator.service';
 import {
   PhaseBProjectionResult,
   StateProjectionService,
 } from './state-projection.service';
-import { StatusWriteGateService } from './status-write-gate.service';
+import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
 
 interface ProjectionHints {
   readonly packageId?: string;
@@ -66,6 +67,7 @@ export class WorkflowKernelService {
     private readonly reviewWorkflow: ReviewWorkflowService,
     private readonly submittalWorkflow: SubmittalWorkflowService,
     private readonly revisionOrchestrator: RevisionOrchestratorService,
+    private readonly workflowTransactionRunner: WorkflowTransactionRunner,
   ) {}
 
   /**
@@ -128,7 +130,7 @@ export class WorkflowKernelService {
     command: TransitionEdvStatusCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.workflowTransactionRunner.runPhaseAB(async (tx) => {
       const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
@@ -165,14 +167,14 @@ export class WorkflowKernelService {
           disciplineId: ctx?.taskDisciplineId,
         },
       );
-    });
+    }, { companyId: command.companyId, correlationId });
   }
 
   private async executeBatchApproveEdvs(
     command: BatchApproveEdvsCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.workflowTransactionRunner.runPhaseAB(async (tx) => {
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
         command.companyId,
@@ -260,14 +262,14 @@ export class WorkflowKernelService {
         },
         session.id,
       );
-    });
+    }, { companyId: command.companyId, correlationId });
   }
 
   private async executeLockPackageEdvs(
     command: LockPackageEdvsCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.workflowTransactionRunner.runPhaseAB(async (tx) => {
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
         command.companyId,
@@ -330,7 +332,7 @@ export class WorkflowKernelService {
           disciplineId: pkg.taskDisciplineId,
         },
       );
-    });
+    }, { companyId: command.companyId, correlationId });
   }
 
   private buildSnapshot(

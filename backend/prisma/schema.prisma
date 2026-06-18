@@ -132,6 +132,9 @@ model Company {
   reviewComments          ReviewComment[]
   submittalItems          SubmittalItem[]
   externalReviewTriggers  ExternalReviewTrigger[]
+  deliverables            Deliverable[]
+  changeRequests          ProjectChangeRequest[]
+  taskDisciplineReviews   TaskDisciplineReview[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -1130,6 +1133,47 @@ enum CommentSeverity {
   MAJOR
 }
 
+enum ProjectTeamRole {
+  PROJECT_MANAGER
+  DISPATCHER
+  SITE_COORDINATOR
+  DEPARTMENT_CHIEF
+  INSTITUTE_CHIEF
+  DEPUTY_CHIEF
+  DOCUMENT_CONTROLLER
+  OTHER
+}
+
+enum DeliverableStatus {
+  PLANNED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  WAIVED
+}
+
+enum TaskDisciplineReviewStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  RETURNED
+}
+
+enum ProjectChangeRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum ProjectChangeRequestSource {
+  RFI
+  SUBMITTAL_REVIEW
+  EXTERNAL_TRIGGER
+  MANUAL
+}
+
 enum ReviewSessionStatus {
   ACTIVE
   APPROVED
@@ -1211,6 +1255,8 @@ model Project {
   rfis           Rfi[]
   submittals     Submittal[]
   externalReviewTriggers ExternalReviewTrigger[]
+  deliverables   Deliverable[]
+  changeRequests ProjectChangeRequest[]
   drawings       Drawing[]
   dailyLogs      DailyLog[]
   meetings       Meeting[]
@@ -1231,10 +1277,10 @@ model Project {
 }
 
 model ProjectTeam {
-  id             String    @id @default(uuid())
-  projectId      String    @map("project_id")
-  userId         String    @map("user_id")
-  roleOnProject  String    @map("role_on_project")
+  id             String          @id @default(uuid())
+  projectId      String          @map("project_id")
+  userId         String          @map("user_id")
+  roleOnProject  ProjectTeamRole @default(OTHER) @map("role_on_project")
   assignedFrom   DateTime? @map("assigned_from") @db.Date
   assignedTo     DateTime? @map("assigned_to") @db.Date
   createdAt      DateTime  @default(now()) @map("created_at")
@@ -1367,6 +1413,8 @@ model TaskDiscipline {
   engineeringDocuments  EngineeringDocument[]
   designPackages        DesignPackage[]
   reviewSessions        ReviewSession[]
+  disciplineReviews     TaskDisciplineReview[]
+  deliverables          Deliverable[]
 
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
@@ -1394,6 +1442,7 @@ model EngineeringDocument {
   company        Company                      @relation(fields: [companyId], references: [id])
   taskDiscipline TaskDiscipline               @relation(fields: [taskDisciplineId], references: [id])
   versions       EngineeringDocumentVersion[]
+  deliverables   Deliverable[]
 
   @@index([companyId], map: "idx_engineering_document_company_id")
   @@index([companyId, deletedAt], map: "idx_engineering_document_company_deleted")
@@ -1453,6 +1502,7 @@ model DesignPackage {
   dependedOnBy DesignPackageDependency[] @relation("PrerequisitePackage")
   reviewSessions ReviewSession[]
   submittalItems SubmittalItem[]
+  deliverables   Deliverable[]
 
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
@@ -1781,6 +1831,90 @@ model ExternalReviewTrigger {
   @@index([submittalId], map: "idx_external_review_trigger_submittal_id")
   @@index([status], map: "idx_external_review_trigger_status")
   @@map("external_review_trigger")
+}
+
+model Deliverable {
+  id                    String            @id @default(uuid())
+  companyId             String            @map("company_id")
+  projectId             String            @map("project_id")
+  taskDisciplineId      String?           @map("task_discipline_id")
+  designPackageId       String?           @map("design_package_id")
+  engineeringDocumentId String?           @map("engineering_document_id")
+  name                  String
+  status                DeliverableStatus @default(PLANNED)
+  dueDate               DateTime?         @map("due_date") @db.Date
+  createdAt             DateTime          @default(now()) @map("created_at")
+  createdBy             String            @map("created_by")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  updatedBy             String            @map("updated_by")
+  deletedAt             DateTime?         @map("deleted_at")
+  deletedBy             String?           @map("deleted_by")
+
+  company             Company              @relation(fields: [companyId], references: [id])
+  project             Project              @relation(fields: [projectId], references: [id])
+  taskDiscipline      TaskDiscipline?      @relation(fields: [taskDisciplineId], references: [id])
+  designPackage       DesignPackage?       @relation(fields: [designPackageId], references: [id])
+  engineeringDocument EngineeringDocument? @relation(fields: [engineeringDocumentId], references: [id])
+
+  @@index([companyId], map: "idx_deliverable_company_id")
+  @@index([companyId, deletedAt], map: "idx_deliverable_company_deleted")
+  @@index([projectId], map: "idx_deliverable_project_id")
+  @@index([taskDisciplineId], map: "idx_deliverable_task_discipline_id")
+  @@map("deliverable")
+}
+
+model TaskDisciplineReview {
+  id               String                     @id @default(uuid())
+  companyId        String                     @map("company_id")
+  taskDisciplineId String                     @map("task_discipline_id")
+  reviewTier       ReviewTier                 @map("review_tier")
+  status           TaskDisciplineReviewStatus @default(PENDING)
+  reviewedAt       DateTime?                  @map("reviewed_at")
+  reviewedBy       String?                    @map("reviewed_by")
+  notes            String?
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  createdBy        String                     @map("created_by")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  updatedBy        String                     @map("updated_by")
+  deletedAt        DateTime?                  @map("deleted_at")
+  deletedBy        String?                    @map("deleted_by")
+
+  company        Company        @relation(fields: [companyId], references: [id])
+  taskDiscipline TaskDiscipline @relation(fields: [taskDisciplineId], references: [id])
+
+  @@unique([taskDisciplineId, reviewTier], map: "uq_task_discipline_review_tier")
+  @@index([companyId], map: "idx_task_discipline_review_company_id")
+  @@index([companyId, deletedAt], map: "idx_task_discipline_review_company_deleted")
+  @@map("task_discipline_review")
+}
+
+model ProjectChangeRequest {
+  id                      String                     @id @default(uuid())
+  companyId               String                     @map("company_id")
+  projectId               String                     @map("project_id")
+  changeNumber            String                     @map("change_number")
+  title                   String
+  description             String?
+  status                  ProjectChangeRequestStatus @default(DRAFT)
+  sourceType              ProjectChangeRequestSource @map("source_type")
+  sourceEntityId          String?                    @map("source_entity_id")
+  externalReviewTriggerId String?                    @map("external_review_trigger_id")
+  createdAt               DateTime                   @default(now()) @map("created_at")
+  createdBy               String                     @map("created_by")
+  updatedAt               DateTime                   @updatedAt @map("updated_at")
+  updatedBy               String                     @map("updated_by")
+  deletedAt               DateTime?                  @map("deleted_at")
+  deletedBy               String?                    @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([companyId, changeNumber], map: "uq_project_change_request_company_number")
+  @@index([companyId], map: "idx_project_change_request_company_id")
+  @@index([companyId, deletedAt], map: "idx_project_change_request_company_deleted")
+  @@index([projectId], map: "idx_project_change_request_project_id")
+  @@index([status], map: "idx_project_change_request_status")
+  @@map("project_change_request")
 }
 
 model Drawing {

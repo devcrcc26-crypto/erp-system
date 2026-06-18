@@ -12,6 +12,7 @@ import {
   ReviewTier,
   WorkflowEntityType,
 } from '@prisma/client';
+import { CommentSeverity as DomainCommentSeverity } from '../../domain/contracts/enums/comment-severity.enum';
 import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
@@ -36,11 +37,13 @@ import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
+import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
 import { ConflictGuardService } from './conflict-guard.service';
 import { DefinitionOfDoneService } from './definition-of-done.service';
 import { EdvTransitionService, PhaseATransitionResult } from './edv-transition.service';
 import { PermissionResolverService } from './permission-resolver.service';
 import { ReviewContextSnapshotService } from './review-context-snapshot.service';
+import { ReviewRoutingService } from './review-routing.service';
 import { ReviewSlaService } from './review-sla.service';
 import {
   PhaseBProjectionResult,
@@ -61,9 +64,22 @@ export class ReviewWorkflowService {
     private readonly definitionOfDone: DefinitionOfDoneService,
     private readonly permissionResolver: PermissionResolverService,
     private readonly reviewContextSnapshot: ReviewContextSnapshotService,
+    private readonly reviewRouting: ReviewRoutingService,
     private readonly reviewSla: ReviewSlaService,
     private readonly stateProjection: StateProjectionService,
+    private readonly workflowTransactionRunner: WorkflowTransactionRunner,
   ) {}
+
+  private runTx<T>(
+    companyId: string,
+    correlationId: string,
+    work: (tx: PrismaTx) => Promise<T>,
+  ): Promise<T> {
+    return this.workflowTransactionRunner.runPhaseAB(work, {
+      companyId,
+      correlationId,
+    });
+  }
 
   /**
    * Opens ReviewSession, freezes context snapshot, transitions EDVs to IN_REVIEW.
@@ -72,7 +88,7 @@ export class ReviewWorkflowService {
     command: SubmitPackageForReviewCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
         command.companyId,
@@ -223,7 +239,7 @@ export class ReviewWorkflowService {
     command: AddReviewCommentCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const session = await this.epcReviewRepository.findSessionById(
         tx,
         command.companyId,
@@ -256,6 +272,11 @@ export class ReviewWorkflowService {
         taskDisciplineId: session.taskDisciplineId,
       });
 
+      const routing = this.reviewRouting.route({
+        severity: command.severity as DomainCommentSeverity,
+        currentTier: session.currentTier,
+      });
+
       const comment = await this.epcReviewRepository.createReviewComment(tx, {
         companyId: command.companyId,
         reviewSessionId: command.reviewSessionId,
@@ -277,7 +298,12 @@ export class ReviewWorkflowService {
           status: comment.status,
           severity: comment.severity,
           assignedToUserId: comment.assignedToUserId,
-        },
+          routing: {
+            escalate: routing.escalate,
+            nextTier: routing.nextTier,
+            requiresLeadApproval: routing.requiresLeadApproval,
+          },
+        } as Prisma.InputJsonValue,
         correlationId,
       });
 
@@ -299,7 +325,7 @@ export class ReviewWorkflowService {
     command: TransitionCommentStatusCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const comment = await this.epcReviewRepository.findCommentById(
         tx,
         command.companyId,
@@ -388,7 +414,7 @@ export class ReviewWorkflowService {
     command: ApproveReviewSessionCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const session = await this.epcReviewRepository.findSessionById(
         tx,
         command.companyId,
@@ -507,7 +533,7 @@ export class ReviewWorkflowService {
     command: ReturnPackageForReworkCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const session = await this.epcReviewRepository.findSessionById(
         tx,
         command.companyId,
@@ -589,7 +615,7 @@ export class ReviewWorkflowService {
     command: BatchReturnEdvsCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
       const session = await this.epcReviewRepository.findSessionById(
         tx,
         command.companyId,

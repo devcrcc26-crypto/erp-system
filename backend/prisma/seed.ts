@@ -26,6 +26,12 @@ const CORE_ROLES = [
   'Chief Engineer',
   'Designer',
   'Dispatcher',
+  'Reviewer',
+  'Discipline Lead',
+  'Department Chief',
+  'Institute Chief',
+  'Deputy Chief',
+  'Site Coordinator',
 ] as const;
 
 const DESIGN_WORKFLOW_ROLES = [
@@ -35,6 +41,15 @@ const DESIGN_WORKFLOW_ROLES = [
   'Chief Engineer',
   'Designer',
   'Dispatcher',
+] as const;
+
+const EPC_WORKFLOW_ROLES = [
+  'Reviewer',
+  'Discipline Lead',
+  'Department Chief',
+  'Institute Chief',
+  'Deputy Chief',
+  'Site Coordinator',
 ] as const;
 
 const PERMISSION_DEFINITIONS: Array<{
@@ -370,6 +385,80 @@ function designWorkflowRolePermissionFlags(
   return null;
 }
 
+function epcWorkflowPermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
+    return null;
+  }
+
+  const flag = ACTION_TO_FLAG[action];
+  if (!flag) {
+    return null;
+  }
+
+  const engineeringModules = ['projects', 'schedule', 'drawings', 'submittals'];
+  const reviewModules = ['projects', 'schedule', 'drawings'];
+  const coordinationModules = ['projects', 'schedule'];
+
+  let allowedModules: string[] = [];
+  let canApprove = false;
+
+  if (roleName === 'Reviewer') {
+    allowedModules = reviewModules;
+  } else if (roleName === 'Discipline Lead') {
+    allowedModules = engineeringModules;
+    canApprove = action === 'approve';
+  } else if (
+    roleName === 'Department Chief' ||
+    roleName === 'Institute Chief' ||
+    roleName === 'Deputy Chief'
+  ) {
+    allowedModules = engineeringModules;
+    canApprove = action === 'approve' || action === 'edit';
+  } else if (roleName === 'Site Coordinator') {
+    allowedModules = coordinationModules;
+  } else {
+    return null;
+  }
+
+  if (allowedModules.includes(module)) {
+    if (action === 'delete') {
+      return null;
+    }
+    if (action === 'approve' && !canApprove && roleName !== 'Reviewer') {
+      return null;
+    }
+    if (action === 'approve' && roleName === 'Reviewer') {
+      return {
+        canView: false,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: true,
+        canExport: false,
+      };
+    }
+    return {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+      [flag]: true,
+    };
+  }
+
+  if (action === 'view') {
+    return viewOnlyFlags();
+  }
+
+  return null;
+}
+
 function employeePermissionFlags(
   module: string,
   action: string,
@@ -554,6 +643,39 @@ async function main(): Promise<void> {
     }
     for (const permission of permissions) {
       const flags = designWorkflowRolePermissionFlags(
+        roleName,
+        permission.module,
+        permission.action,
+      );
+      if (!flags) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        update: flags,
+        create: {
+          roleId,
+          permissionId: permission.id,
+          ...flags,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
+  }
+
+  for (const roleName of EPC_WORKFLOW_ROLES) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      continue;
+    }
+    for (const permission of permissions) {
+      const flags = epcWorkflowPermissionFlags(
         roleName,
         permission.module,
         permission.action,
