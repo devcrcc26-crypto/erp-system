@@ -40,7 +40,7 @@ test.describe('EPC review workflow', () => {
       timeout: 15_000,
     });
     await expect(page.getByTestId('bulk-review-action-bar')).toBeVisible();
-    await expect(page.getByText('Documents')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Documents', exact: true })).toBeVisible();
   });
 
   test('designer sees assigned comment in My Comments', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('EPC review workflow', () => {
     await loginAs(page, E2E_USERS.lead.email, E2E_USERS.lead.password);
 
     const reviewUrl =
-      `/design-packages/${EPC_DEMO.designPackageId}/review` +
+      `/design-packages/${EPC_DEMO.designPackageLeadId}/review` +
       `?projectId=${EPC_DEMO.projectId}&disciplineId=${EPC_DEMO.taskDisciplineId}`;
 
     await page.goto(reviewUrl);
@@ -69,7 +69,7 @@ test.describe('EPC review workflow', () => {
       timeout: 15_000,
     });
     await expect(
-      page.getByRole('heading', { name: EPC_DEMO.designPackageName }),
+      page.getByRole('heading', { name: EPC_DEMO.designPackageLeadName }),
     ).toBeVisible();
   });
 });

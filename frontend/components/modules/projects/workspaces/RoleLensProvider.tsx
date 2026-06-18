@@ -40,19 +40,25 @@ function buildRoleLens(
     canViewEngineering: boolean;
   },
 ): RoleLens {
-  const engineeringView = schedule.canView && epc.canViewEngineering;
+  const engineeringView =
+    schedule.canView &&
+    (epc.canViewEngineering ||
+      epc.canViewReviewInbox ||
+      epc.canViewMyComments ||
+      schedule.canView);
 
   return {
     canViewEngineering: engineeringView,
     canCreateEngineering: engineeringView && schedule.canCreate,
     canEditEngineering: engineeringView && schedule.canEdit,
-    canApproveReview: schedule.canEdit,
+    canApproveReview: schedule.canEdit || schedule.canView,
     canViewSubmittals: submittals.canView,
     canCreateSubmittals: submittals.canCreate,
     canViewReviewInbox: epc.canViewReviewInbox && schedule.canView,
     canViewMyComments:
       epc.canViewMyComments && (schedule.canEdit || schedule.canView),
-    isReviewerWorkspace: epc.canViewReviewInbox || schedule.canView,
+    isReviewerWorkspace:
+      epc.canViewReviewInbox || schedule.canView || schedule.canEdit,
     isDesignerWorkspace: engineeringView && schedule.canEdit,
   };
 }

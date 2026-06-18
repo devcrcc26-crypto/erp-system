@@ -86,7 +86,7 @@ export async function fetchEpcCapabilities(
   }
 
   if (!canViewEngineering && scheduleCanView) {
-    canViewEngineering = scheduleCanView;
+    canViewEngineering = true;
   }
 
   return {

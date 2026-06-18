@@ -26,12 +26,12 @@ export default function ReviewModePanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
-  const reviewModeQuery = useDesignPackageReviewMode(packageId, lens.canViewEngineering);
+  const reviewModeQuery = useDesignPackageReviewMode(packageId, Boolean(packageId));
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
     packageId,
-    lens.canViewEngineering,
+    Boolean(projectId) && Boolean(taskDisciplineId),
   );
 
   const batchApprove = useBatchReviewApprove();

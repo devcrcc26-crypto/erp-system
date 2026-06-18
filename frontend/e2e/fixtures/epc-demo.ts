@@ -10,7 +10,9 @@ export const EPC_DEMO = {
   projectId: sid(1, 1),
   taskDisciplineId: sid(1, 200),
   designPackageId: sid(1, 210),
+  designPackageLeadId: sid(1, 212),
   designPackageName: 'Foundation Drawings — Review Package',
+  designPackageLeadName: 'Structural Calculations — Lead Review',
   reviewCommentSnippet: 'Clarify pile cap reinforcement',
 } as const;
 

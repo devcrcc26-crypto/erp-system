@@ -29,14 +29,21 @@ export const EPC_DEMO = {
   documentVersionId: sid(DEMO_PROJECT_INDEX, 203),
   designPackageId: sid(DEMO_PROJECT_INDEX, 210),
   designPackageItemId: sid(DEMO_PROJECT_INDEX, 211),
+  designPackageLeadId: sid(DEMO_PROJECT_INDEX, 212),
+  designPackageLeadItemId: sid(DEMO_PROJECT_INDEX, 213),
+  engineeringDocumentLeadVersionId: sid(DEMO_PROJECT_INDEX, 204),
   reviewSessionId: sid(DEMO_PROJECT_INDEX, 220),
+  reviewSessionLeadId: sid(DEMO_PROJECT_INDEX, 226),
   reviewContextSnapshotId: sid(DEMO_PROJECT_INDEX, 221),
+  reviewContextSnapshotLeadId: sid(DEMO_PROJECT_INDEX, 227),
   reviewCommentId: sid(DEMO_PROJECT_INDEX, 222),
   designPackageName: 'Foundation Drawings — Review Package',
+  designPackageLeadName: 'Structural Calculations — Lead Review',
 } as const;
 
 const REVIEWER_USER_ID = '00000000-0000-0000-0000-000000000084';
 const ENGINEER_USER_ID = '00000000-0000-0000-0000-000000000081';
+const LEAD_USER_ID = '00000000-0000-0000-0000-000000000085';
 
 function d(iso: string): Date {
   return new Date(iso);
@@ -50,19 +57,36 @@ export async function cleanupEpcDemoData(prisma: PrismaClient): Promise<void> {
     where: { id: EPC_DEMO.reviewCommentId },
   });
   await prisma.reviewContextSnapshot.deleteMany({
-    where: { id: EPC_DEMO.reviewContextSnapshotId },
+    where: {
+      id: {
+        in: [EPC_DEMO.reviewContextSnapshotId, EPC_DEMO.reviewContextSnapshotLeadId],
+      },
+    },
   });
   await prisma.reviewSession.deleteMany({
-    where: { id: EPC_DEMO.reviewSessionId },
+    where: {
+      id: { in: [EPC_DEMO.reviewSessionId, EPC_DEMO.reviewSessionLeadId] },
+    },
   });
   await prisma.designPackageItem.deleteMany({
-    where: { id: EPC_DEMO.designPackageItemId },
+    where: {
+      id: {
+        in: [EPC_DEMO.designPackageItemId, EPC_DEMO.designPackageLeadItemId],
+      },
+    },
   });
   await prisma.designPackage.deleteMany({
-    where: { id: EPC_DEMO.designPackageId },
+    where: { id: { in: [EPC_DEMO.designPackageId, EPC_DEMO.designPackageLeadId] } },
   });
   await prisma.engineeringDocumentVersion.deleteMany({
-    where: { id: EPC_DEMO.engineeringDocumentVersionId },
+    where: {
+      id: {
+        in: [
+          EPC_DEMO.engineeringDocumentVersionId,
+          EPC_DEMO.engineeringDocumentLeadVersionId,
+        ],
+      },
+    },
   });
   await prisma.engineeringDocument.deleteMany({
     where: { id: EPC_DEMO.engineeringDocumentId },
@@ -264,6 +288,97 @@ export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
       assignedToUserId: ENGINEER_USER_ID,
       createdBy: REVIEWER_USER_ID,
       updatedBy: REVIEWER_USER_ID,
+    },
+  });
+
+  await prisma.engineeringDocumentVersion.upsert({
+    where: { id: EPC_DEMO.engineeringDocumentLeadVersionId },
+    update: {
+      status: EdvStatus.IN_REVIEW,
+      updatedBy: adminUserId,
+    },
+    create: {
+      id: EPC_DEMO.engineeringDocumentLeadVersionId,
+      companyId,
+      engineeringDocumentId: EPC_DEMO.engineeringDocumentId,
+      documentVersionId: EPC_DEMO.documentVersionId,
+      revisionLabel: 'B',
+      status: EdvStatus.IN_REVIEW,
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.designPackage.upsert({
+    where: { id: EPC_DEMO.designPackageLeadId },
+    update: {
+      name: EPC_DEMO.designPackageLeadName,
+      projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
+      submittedAt: d('2026-03-05'),
+      updatedBy: adminUserId,
+    },
+    create: {
+      id: EPC_DEMO.designPackageLeadId,
+      companyId,
+      taskDisciplineId: EPC_DEMO.taskDisciplineId,
+      name: EPC_DEMO.designPackageLeadName,
+      projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
+      submittedAt: d('2026-03-05'),
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.designPackageItem.upsert({
+    where: { id: EPC_DEMO.designPackageLeadItemId },
+    update: {},
+    create: {
+      id: EPC_DEMO.designPackageLeadItemId,
+      companyId,
+      designPackageId: EPC_DEMO.designPackageLeadId,
+      engineeringDocumentVersionId: EPC_DEMO.engineeringDocumentLeadVersionId,
+      sortOrder: 0,
+      createdBy: adminUserId,
+    },
+  });
+
+  await prisma.reviewSession.upsert({
+    where: { id: EPC_DEMO.reviewSessionLeadId },
+    update: {
+      status: ReviewSessionStatus.ACTIVE,
+      assignedToUserId: LEAD_USER_ID,
+      currentTier: ReviewTier.DISCIPLINE_LEAD,
+      slaDeadlineAt: d('2026-04-20'),
+      updatedBy: adminUserId,
+    },
+    create: {
+      id: EPC_DEMO.reviewSessionLeadId,
+      companyId,
+      designPackageId: EPC_DEMO.designPackageLeadId,
+      taskDisciplineId: EPC_DEMO.taskDisciplineId,
+      status: ReviewSessionStatus.ACTIVE,
+      currentTier: ReviewTier.DISCIPLINE_LEAD,
+      assignedToUserId: LEAD_USER_ID,
+      openedAt: d('2026-03-06'),
+      slaDeadlineAt: d('2026-04-20'),
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.reviewContextSnapshot.upsert({
+    where: { id: EPC_DEMO.reviewContextSnapshotLeadId },
+    update: {
+      referencedVersionIds: [EPC_DEMO.engineeringDocumentLeadVersionId],
+      contentHash: 'epc-demo-lead-snapshot-v1',
+    },
+    create: {
+      id: EPC_DEMO.reviewContextSnapshotLeadId,
+      companyId,
+      reviewSessionId: EPC_DEMO.reviewSessionLeadId,
+      referencedVersionIds: [EPC_DEMO.engineeringDocumentLeadVersionId],
+      contentHash: 'epc-demo-lead-snapshot-v1',
+      capturedBy: adminUserId,
     },
   });
 
