@@ -13,6 +13,7 @@ import {
 } from '@/lib/query/closeout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { layout } from '@/lib/theme/layout';
 
 export default function CloseoutPageContent({
   projectId,
@@ -50,7 +51,7 @@ export default function CloseoutPageContent({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={layout.pageStack}>
       {apiUnavailable && (
         <Alert
           type="info"

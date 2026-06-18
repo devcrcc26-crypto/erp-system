@@ -3,6 +3,7 @@
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DecisionTraceView from '@/components/modules/projects/review/DecisionTraceView';
 import VersionHistoryTimeline from '@/components/modules/projects/engineering/VersionHistoryTimeline';
+import { layout } from '@/lib/theme/layout';
 
 export default function EngineeringDocumentDetailPageContent({
   projectId,
@@ -12,12 +13,12 @@ export default function EngineeringDocumentDetailPageContent({
   engineeringDocumentId: string;
 }): React.ReactNode {
   return (
-    <div className="space-y-6">
+    <div className={layout.pageStack}>
       <FormLayout
         title="Engineering Document"
         description="Decision trace and version history for this document."
       >
-        <div className="space-y-6">
+        <div className={layout.sectionStack}>
           <DecisionTraceView
             projectId={projectId}
             engineeringDocumentId={engineeringDocumentId}

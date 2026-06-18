@@ -9,6 +9,7 @@ import EngineeringDocumentPanel from '@/components/modules/projects/engineering/
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
+import { layout } from '@/lib/theme/layout';
 
 export default function DisciplineDetailPageContent({
   projectId,
@@ -41,7 +42,7 @@ export default function DisciplineDetailPageContent({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={layout.pageStack}>
       <Breadcrumb
         items={[
           { title: <Link href={`/projects/${projectId}/disciplines`}>Disciplines</Link> },

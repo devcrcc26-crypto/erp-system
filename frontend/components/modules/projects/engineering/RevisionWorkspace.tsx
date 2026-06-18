@@ -4,6 +4,7 @@ import { Drawer, Form, Input, Button, message } from 'antd';
 import type { MyCommentItem } from '@/lib/api/epc.types';
 import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
 
 export default function RevisionWorkspace({
   open,
@@ -52,6 +53,7 @@ export default function RevisionWorkspace({
       open={open}
       size={480}
       onClose={onClose}
+      styles={antDrawerBodyStyles}
       footer={
         <Button
           type="primary"
@@ -63,24 +65,27 @@ export default function RevisionWorkspace({
       }
     >
       {comment && (
-        <>
-          <p className="mb-2 text-sm text-slate-600">{comment.body}</p>
-          <p className="mb-4 text-xs text-slate-500">
-            EDV: <code>{comment.engineeringDocumentVersionId}</code>
-          </p>
+        <div className={layout.drawerStack}>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600">{comment.body}</p>
+            <p className="text-xs text-slate-500">
+              EDV: <code>{comment.engineeringDocumentVersionId}</code>
+            </p>
+          </div>
           <Form
             form={form}
             layout="vertical"
+            className="erp-drawer-form"
             onFinish={(values: { resolutionNote: string }) => void handleResolve(values)}
           >
             <Form.Item name="resolutionNote" label="Resolution note">
               <Input.TextArea
-                rows={3}
+                rows={4}
                 placeholder="Describe changes made or upload location"
               />
             </Form.Item>
           </Form>
-        </>
+        </div>
       )}
     </Drawer>
   );

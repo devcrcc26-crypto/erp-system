@@ -17,6 +17,7 @@ import {
   CloseOutlined,
   InboxOutlined,
   CommentOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import PageHeader from '@/components/ui/PageHeader/PageHeader';
@@ -209,6 +210,8 @@ export default function AppShell({
   const pathname = usePathname();
   const { t } = useEpcTranslation();
 
+  const isProjectDetailPage = /^\/projects\/[^/]+/.test(pathname);
+
   const title = pathname.startsWith('/projects')
     ? t('nav.projects')
     : pathname.startsWith('/design-packages')
@@ -262,10 +265,21 @@ export default function AppShell({
         <Content className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="flex-1 p-6 md:p-8">
             <div className={layout.pageStack}>
-              <PageHeader
-                title={title}
-                onMenuClick={() => setMobileOpen(true)}
-              />
+              {isProjectDetailPage ? (
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(true)}
+                  className="shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+                  aria-label="Open menu"
+                >
+                  <MenuOutlined style={{ fontSize: 22 }} />
+                </button>
+              ) : (
+                <PageHeader
+                  title={title}
+                  onMenuClick={() => setMobileOpen(true)}
+                />
+              )}
               {children}
             </div>
           </div>

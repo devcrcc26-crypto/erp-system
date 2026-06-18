@@ -17,9 +17,12 @@ import { formatDisciplineDateTime } from '@/components/modules/projects/discipli
 export default function TaskDisciplinePanel({
   projectId,
   taskId,
+  embedded = false,
 }: {
   projectId: string;
   taskId: string;
+  /** When true, omit outer section chrome (used inside task drawer). */
+  embedded?: boolean;
 }): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<TaskDiscipline | null>(null);
@@ -101,11 +104,11 @@ export default function TaskDisciplinePanel({
   ];
 
   return (
-    <div className="mt-6 border-t border-slate-200 pt-6">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <div className={embedded ? 'flex flex-col gap-4' : 'mt-6 flex flex-col gap-4 border-t border-slate-200 pt-6'}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Disciplines</h3>
-          <p className="text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500">
             Design discipline breakdown — open the full workspace for packages and documents.
           </p>
         </div>

@@ -41,7 +41,7 @@ export default function ProjectStatusBoard({
   const board = boardQuery.data;
 
   const kpiSection = (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[24, 24]}>
       <Col xs={12} lg={6}>
         <KPICard
           label="Active reviews"
@@ -98,7 +98,7 @@ export default function ProjectStatusBoard({
 
       {kpiSection}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-8 grid gap-6 md:grid-cols-2">
         <StatusBreakdownCard
           title="Packages by status"
           data={board?.packagesByStatus ?? {}}

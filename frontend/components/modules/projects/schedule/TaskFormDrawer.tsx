@@ -32,6 +32,7 @@ import {
 } from '@/lib/query/schedule';
 import TaskDisciplinePanel from '@/components/modules/projects/schedule/TaskDisciplinePanel';
 import { projectDisciplinesHref } from '@/lib/navigation/project-workspace-nav';
+import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -252,6 +253,7 @@ export default function TaskFormDrawer({
       onClose={onClose}
       size="large"
       destroyOnHidden
+      styles={antDrawerBodyStyles}
       afterOpenChange={(visible: boolean) => {
         if (!visible) {
           return;
@@ -264,11 +266,13 @@ export default function TaskFormDrawer({
         form.setFieldsValue(defaultFormValues());
       }}
     >
-      <Form<TaskFormValues>
-        form={form}
-        layout="vertical"
-        onFinish={(values: TaskFormValues) => void handleSubmit(values)}
-      >
+      <div className={layout.drawerStack}>
+        <Form<TaskFormValues>
+          form={form}
+          layout="vertical"
+          className="erp-drawer-form"
+          onFinish={(values: TaskFormValues) => void handleSubmit(values)}
+        >
         {isEditing && (
           <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
             <Form.Item label="Task ID" name="taskIdCode">
@@ -327,17 +331,17 @@ export default function TaskFormDrawer({
             <DatePicker className="w-full" />
           </Form.Item>
         </div>
-        <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Duration (days)" name="durationDays">
             <InputNumber className="!w-full" min={0} />
           </Form.Item>
           <Form.Item label="Progress %" name="progressPct">
             <InputNumber className="!w-full" min={0} max={100} />
           </Form.Item>
-          <Form.Item name="isCritical" valuePropName="checked">
-            <Checkbox className="!mt-8">Critical path task</Checkbox>
-          </Form.Item>
         </div>
+        <Form.Item name="isCritical" valuePropName="checked">
+          <Checkbox>Critical path task</Checkbox>
+        </Form.Item>
 
         <Divider titlePlacement="left">Extended Fields</Divider>
 
@@ -416,7 +420,7 @@ export default function TaskFormDrawer({
           <Input.TextArea rows={2} />
         </Form.Item>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-3 pt-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button
             type="primary"
@@ -426,24 +430,24 @@ export default function TaskFormDrawer({
             Save task
           </Button>
         </div>
-      </Form>
+        </Form>
 
-      {task?.id && (
-        <>
-          <Divider />
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-slate-600">
-              Manage design packages and engineering documents for this task.
-            </p>
-            <Link href={projectDisciplinesHref(projectId, task.id)}>
-              <Button type="primary" size="small">
-                View disciplines workspace
-              </Button>
-            </Link>
-          </div>
-          <TaskDisciplinePanel projectId={projectId} taskId={task.id} />
-        </>
-      )}
+        {task?.id && (
+          <section className={layout.drawerSection}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Manage design packages and engineering documents for this task.
+              </p>
+              <Link href={projectDisciplinesHref(projectId, task.id)}>
+                <Button type="primary" size="small">
+                  View disciplines workspace
+                </Button>
+              </Link>
+            </div>
+            <TaskDisciplinePanel projectId={projectId} taskId={task.id} embedded />
+          </section>
+        )}
+      </div>
     </Drawer>
   );
 }

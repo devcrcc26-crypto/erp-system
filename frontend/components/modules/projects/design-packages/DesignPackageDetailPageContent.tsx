@@ -37,6 +37,7 @@ import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { getPackageLockEligibility } from '@/lib/utils/package-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { layout } from '@/lib/theme/layout';
 
 export default function DesignPackageDetailPageContent({
   projectId,
@@ -170,7 +171,7 @@ export default function DesignPackageDetailPageContent({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={layout.pageStack}>
       <Breadcrumb
         items={[
           { title: <Link href={`/projects/${projectId}/disciplines`}>Disciplines</Link> },
@@ -253,7 +254,7 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        <div className="mb-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-6 rounded-lg border border-slate-200 bg-slate-50 p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-xs text-slate-500">Projected status</p>
             <ProjectedStatusBadge

@@ -38,6 +38,7 @@ import EdvMetadataForm, {
   type EdvMetadataFormValues,
   buildMetadataFromForm,
 } from '@/components/modules/projects/engineering/EdvMetadataForm';
+import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
 
 interface DocumentWithVersions {
   id: string;
@@ -244,6 +245,7 @@ export default function EngineeringDocumentPanel({
           setPendingFile(null);
           form.resetFields();
         }}
+        styles={antDrawerBodyStyles}
         footer={
           <Space>
             <Button onClick={() => setRegisterOpen(false)}>Cancel</Button>
@@ -257,32 +259,30 @@ export default function EngineeringDocumentPanel({
           </Space>
         }
       >
-        <Upload
-          beforeUpload={(file: RcFile) => {
-            setPendingFile(file);
-            return false;
-          }}
-          maxCount={1}
-          onRemove={() => setPendingFile(null)}
-        >
-          <Button icon={<UploadOutlined />}>Select file</Button>
-        </Upload>
+        <div className={layout.drawerStack}>
+          <Upload
+            beforeUpload={(file: RcFile) => {
+              setPendingFile(file);
+              return false;
+            }}
+            maxCount={1}
+            onRemove={() => setPendingFile(null)}
+          >
+            <Button icon={<UploadOutlined />}>Select file</Button>
+          </Upload>
 
-        {!uploadFolderId && (
-          <Spin className="mt-4 block" />
-        )}
+          {!uploadFolderId && <Spin />}
 
-        <Form<EdvMetadataFormValues>
-          form={form}
-          layout="vertical"
-          className="mt-4"
-          initialValues={{ documentType: 'DRAWING' as EngineeringDocumentType }}
-          onFinish={(values: EdvMetadataFormValues) => void handleRegister(values)}
-        >
-          <EdvMetadataForm
-            documentType={documentType ?? 'DRAWING'}
-          />
-        </Form>
+          <Form<EdvMetadataFormValues>
+            form={form}
+            layout="vertical"
+            className="erp-drawer-form"
+            initialValues={{ documentType: 'DRAWING' as EngineeringDocumentType }}
+            onFinish={(values: EdvMetadataFormValues) => void handleRegister(values)}
+          >
+            <EdvMetadataForm documentType={documentType ?? 'DRAWING'} />
+          </Form>
+        </div>
       </Drawer>
     </FormLayout>
   );

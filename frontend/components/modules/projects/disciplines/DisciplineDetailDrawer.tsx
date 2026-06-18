@@ -61,6 +61,7 @@ export default function DisciplineDetailDrawer({
       confirmLoading={isSubmitting}
       destroyOnHidden
       size={720}
+      styles={{ body: { paddingTop: 8, paddingBottom: 8 } }}
       afterOpenChange={(visible: boolean) => {
         if (visible) {
           setDisciplineFormValues(form, discipline);
@@ -70,6 +71,7 @@ export default function DisciplineDetailDrawer({
       <Form<DisciplineFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         onFinish={(values: DisciplineFormValues) => void handleSubmit(values)}
       >
         <DisciplineFormFields />

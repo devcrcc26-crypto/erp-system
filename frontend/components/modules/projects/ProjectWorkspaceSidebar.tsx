@@ -31,6 +31,7 @@ import {
   resolveProjectNavKey,
   type ProjectWorkspaceNavItem,
 } from '@/lib/navigation/project-workspace-nav';
+import { layout } from '@/lib/theme/layout';
 import {
   useEpcCapabilities,
   usePmCapabilities,
@@ -132,7 +133,7 @@ export default function ProjectWorkspaceSidebar({
       mode="inline"
       selectedKeys={[selectedKey]}
       items={menuItems}
-      className="!border-none !bg-transparent"
+      className={`${layout.projectSidebarMenu} !border-none !bg-transparent`}
       style={{ borderInlineEnd: 'none' }}
     />
   );

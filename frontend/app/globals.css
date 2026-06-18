@@ -40,6 +40,89 @@ body {
   color: #ffffff !important;
 }
 
+/* Project workspace sidebar — grouped engineering nav */
+.erp-project-sidebar-menu.ant-menu {
+  padding: 4px 8px 12px;
+  border-inline-end: none !important;
+}
+
+.erp-project-sidebar-menu .ant-menu-item-group {
+  margin-bottom: 20px;
+}
+
+.erp-project-sidebar-menu .ant-menu-item-group:last-child {
+  margin-bottom: 0;
+}
+
+.erp-project-sidebar-menu .ant-menu-item-group-title {
+  padding: 10px 12px 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.erp-project-sidebar-menu .ant-menu-item-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.erp-project-sidebar-menu .ant-menu-item {
+  margin: 0;
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  border-radius: 8px;
+  padding-inline: 12px !important;
+}
+
+.erp-project-sidebar-menu .ant-menu-item .ant-menu-title-content {
+  line-height: 40px;
+}
+
+.erp-project-sidebar-menu .ant-menu-item-selected {
+  background-color: #fef0e6 !important;
+  color: #d4610a !important;
+  font-weight: 600;
+}
+
+.erp-project-sidebar-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+.erp-project-sidebar-menu .ant-menu-item .anticon {
+  font-size: 16px;
+}
+
+/* Drawer / modal form spacing */
+.erp-drawer-form.ant-form-vertical .ant-form-item {
+  margin-bottom: 20px;
+}
+
+.erp-drawer-form.ant-form-vertical .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Drawer content stacks */
+.erp-drawer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.erp-drawer-stack .ant-divider {
+  margin: 4px 0 8px;
+}
+
+.erp-drawer-section > .ant-table-wrapper {
+  margin-top: 4px;
+}
+
 /* Hide scrollbars globally while keeping scroll functionality */
 * {
   scrollbar-width: none;        /* Firefox */
