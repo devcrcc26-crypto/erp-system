@@ -1,0 +1,72 @@
+import { EpcWorkflowAction } from './enums/epc-workflow-action.enum';
+import { ProjectDesignPhase } from './enums/project-design-phase.enum';
+import { ProjectTeamRole } from './enums/project-team-role.enum';
+import { EdvStatus } from './enums/edv-status.enum';
+
+export enum PermissionLayerVerdict {
+  ALLOW = 'ALLOW',
+  DENY = 'DENY',
+  ABSTAIN = 'ABSTAIN',
+}
+
+export enum PermissionLayerId {
+  SYSTEM_ROLE = 'SYSTEM_ROLE',
+  PROJECT_TEAM_ROLE = 'PROJECT_TEAM_ROLE',
+  DISCIPLINE_ASSIGNMENT = 'DISCIPLINE_ASSIGNMENT',
+  PROJECT_DESIGN_PHASE = 'PROJECT_DESIGN_PHASE',
+  WORKFLOW_STATE = 'WORKFLOW_STATE',
+}
+
+/** Per-layer evaluation result — evaluated in PermissionLayerId order. */
+export interface PermissionLayerResult {
+  readonly layer: PermissionLayerId;
+  readonly verdict: PermissionLayerVerdict;
+  readonly reason?: string;
+}
+
+export interface PermissionContext {
+  readonly companyId: string;
+  readonly userId: string;
+  readonly projectId: string;
+  readonly action: EpcWorkflowAction;
+  readonly taskDisciplineId?: string;
+  readonly designPackageId?: string;
+  readonly engineeringDocumentVersionId?: string;
+  readonly reviewSessionId?: string;
+  readonly currentAssigneeUserId?: string;
+  readonly projectTeamRole?: ProjectTeamRole;
+  readonly projectDesignPhase?: ProjectDesignPhase;
+  readonly edvStatus?: EdvStatus;
+  readonly grantedActions?: ReadonlySet<EpcWorkflowAction>;
+  readonly disciplineDesignerUserId?: string;
+  readonly disciplineReviewerUserId?: string;
+  readonly disciplineLeadUserId?: string;
+  readonly disciplineChiefUserId?: string;
+}
+
+/**
+ * Tier actions (approve, verify) require ctx.userId === currentAssigneeUserId
+ * in addition to permission allow.
+ */
+export const TIER_ACTIONS_REQUIRING_ASSIGNEE: readonly EpcWorkflowAction[] = [
+  EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+  EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
+];
+
+/** Workflow-state gates — layer 5 examples (extended in Wave 0.5). */
+export const WORKFLOW_STATE_ACTION_GATES: Readonly<
+  Partial<Record<EpcWorkflowAction, readonly EdvStatus[]>>
+> = {
+  [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK]: [
+    EdvStatus.APPROVED,
+  ],
+};
+
+export interface PermissionResolverContract {
+  canPerform(context: PermissionContext): Promise<boolean>;
+}
+
+export interface PermissionEvaluatorContract {
+  evaluateLayerResults(layerResults: readonly PermissionLayerResult[]): boolean;
+  requiresAssigneeMatch(action: EpcWorkflowAction): boolean;
+}
