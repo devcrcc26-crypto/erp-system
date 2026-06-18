@@ -41,7 +41,7 @@ export default function DecisionTraceView({
       <Timeline
         items={(trace?.entries ?? []).map((entry) => ({
           key: entry.id,
-          children: (
+          content: (
             <div className="text-sm">
               <div className="mb-1 flex flex-wrap items-center gap-2">
                 <span className="font-medium">{entry.action}</span>

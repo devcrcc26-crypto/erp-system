@@ -76,7 +76,7 @@ function VersionEntryBlock({ entry }: { entry: VersionHistoryEntry }): React.Rea
         size="small"
         items={entry.events.map((event, index) => ({
           key: `${entry.engineeringDocumentVersionId}-${index}`,
-          children: (
+          content: (
             <span className="text-sm">
               <strong>{event.action}</strong>{' '}
               <span className="text-slate-500">({event.phase})</span>{' '}

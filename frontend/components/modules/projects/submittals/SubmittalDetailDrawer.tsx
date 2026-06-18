@@ -192,7 +192,7 @@ export default function SubmittalDetailDrawer({
             ) : (
               <Timeline
                 items={reviews.map((review) => ({
-                  children: (
+                  content: (
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge

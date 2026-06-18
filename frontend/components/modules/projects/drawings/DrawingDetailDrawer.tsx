@@ -186,7 +186,7 @@ export default function DrawingDetailDrawer({
             ) : (
               <Timeline
                 items={versions.map((version) => ({
-                  children: (
+                  content: (
                     <div>
                       <p className="font-medium text-slate-900">
                         Revision {version.revision}
