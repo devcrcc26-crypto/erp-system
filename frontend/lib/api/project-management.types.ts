@@ -219,17 +219,28 @@ export interface TaskDiscipline {
   taskId: string;
   companyId: string;
   disciplineName: string;
+  projectedStatus?: TaskDisciplineProjectedStatus;
   designerName: string | null;
   reviewerName: string | null;
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
   instituteChiefEngineer: string | null;
+  designerUserId?: string | null;
+  reviewerUserId?: string | null;
+  disciplineLeadUserId?: string | null;
+  chiefUserId?: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
   instituteReviewTime: string | null;
   createdAt: string;
   createdBy: string;
 }
+
+export type TaskDisciplineProjectedStatus =
+  | 'IN_PROGRESS'
+  | 'PENDING_LEAD'
+  | 'APPROVED'
+  | 'REWORK_REQUIRED';
 
 export interface TaskDependency {
   id: string;

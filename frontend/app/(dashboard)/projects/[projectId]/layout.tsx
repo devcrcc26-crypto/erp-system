@@ -1,4 +1,5 @@
 import ProjectShell from '@/components/modules/projects/ProjectShell';
+import { RoleLensProvider } from '@/components/modules/projects/workspaces/RoleLensProvider';
 
 export default async function ProjectDetailLayout({
   children,
@@ -9,5 +10,9 @@ export default async function ProjectDetailLayout({
 }): Promise<React.ReactNode> {
   const { projectId } = await params;
 
-  return <ProjectShell projectId={projectId}>{children}</ProjectShell>;
+  return (
+    <RoleLensProvider>
+      <ProjectShell projectId={projectId}>{children}</ProjectShell>
+    </RoleLensProvider>
+  );
 }
