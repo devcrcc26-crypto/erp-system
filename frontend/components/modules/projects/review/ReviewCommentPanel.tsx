@@ -4,8 +4,13 @@ import { Button, Form, Input, Select, Space, message } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type { CommentSeverity, ReviewModeView } from '@/lib/api/epc.types';
-import { useAddReviewComment } from '@/lib/query/review-comments';
+import {
+  useAddReviewComment,
+  useVerifyReviewComment,
+} from '@/lib/query/review-comments';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
+import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface CommentFormValues {
   engineeringDocumentVersionId: string;
@@ -23,6 +28,8 @@ export default function ReviewCommentPanel({
 }): React.ReactNode {
   const [form] = Form.useForm<CommentFormValues>();
   const addComment = useAddReviewComment();
+  const verifyComment = useVerifyReviewComment();
+  const lens = useRoleLens();
 
   const edvOptions = (reviewMode?.snapshotEdvIds ?? []).map((id) => ({
     value: id,
@@ -97,9 +104,32 @@ export default function ReviewCommentPanel({
               key={comment.id}
               className="rounded border border-slate-200 bg-white p-3 text-sm"
             >
-              <div className="mb-1 flex items-center gap-2">
-                <CommentSeverityTag severity={comment.severity} />
-                <span className="text-xs text-slate-500">{comment.status}</span>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CommentSeverityTag severity={comment.severity} />
+                  <span className="text-xs text-slate-500">{comment.status}</span>
+                </div>
+                {lens.canApproveReview && comment.status === 'RESOLVED' && (
+                  <Button
+                    type="link"
+                    size="small"
+                    className="!px-0"
+                    loading={verifyComment.isPending}
+                    onClick={() => {
+                      void verifyComment
+                        .mutateAsync({ commentId: comment.id })
+                        .then(() => {
+                          message.success('Comment verified');
+                          onCommentAdded();
+                        })
+                        .catch((error: unknown) => {
+                          notifyApiError(error);
+                        });
+                    }}
+                  >
+                    Verify
+                  </Button>
+                )}
               </div>
               <p>{comment.body}</p>
             </div>

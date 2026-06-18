@@ -19,6 +19,7 @@ import {
   useCanViewMyComments,
 } from '@/hooks/use-pm-capabilities';
 import { Alert } from 'antd';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function MyCommentsPageContent(): React.ReactNode {
   const commentsQuery = useMyComments();
@@ -78,18 +79,44 @@ export default function MyCommentsPageContent(): React.ReactNode {
                 void transitionComment
                   .mutateAsync({
                     commentId: record.commentId,
+                    body: { targetStatus: 'ACKNOWLEDGED' },
+                  })
+                  .then(() => {
+                    message.success('Comment acknowledged');
+                    void commentsQuery.refetch();
+                  })
+                  .catch((error: unknown) => {
+                    notifyApiError(error);
+                  });
+              }}
+            >
+              Acknowledge
+            </Button>
+          )}
+          {record.status === 'ACKNOWLEDGED' && (
+            <Button
+              type="link"
+              className="!px-0"
+              loading={transitionComment.isPending}
+              onClick={() => {
+                void transitionComment
+                  .mutateAsync({
+                    commentId: record.commentId,
                     body: { targetStatus: 'IN_PROGRESS' },
                   })
                   .then(() => {
                     message.success('Marked in progress');
                     void commentsQuery.refetch();
+                  })
+                  .catch((error: unknown) => {
+                    notifyApiError(error);
                   });
               }}
             >
               Start
             </Button>
           )}
-          {['OPEN', 'IN_PROGRESS', 'ACKNOWLEDGED'].includes(record.status) && (
+          {record.status === 'IN_PROGRESS' && (
             <Button
               type="link"
               className="!px-0"
@@ -109,6 +136,9 @@ export default function MyCommentsPageContent(): React.ReactNode {
                   .then(() => {
                     message.success('Comment verified');
                     void commentsQuery.refetch();
+                  })
+                  .catch((error: unknown) => {
+                    notifyApiError(error);
                   });
               }}
             >

@@ -2,11 +2,15 @@
 
 import { Button, Space, message } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import {
   useApproveReviewSession,
   useReturnPackageForRework,
 } from '@/lib/query/design-packages';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import type { ReviewModeComment } from '@/lib/api/epc.types';
+import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function DisciplineLeadConsole({
   projectId,
@@ -14,6 +18,7 @@ export default function DisciplineLeadConsole({
   packageId,
   reviewSessionId,
   currentTier,
+  comments,
   onAction,
 }: {
   projectId: string;
@@ -21,6 +26,7 @@ export default function DisciplineLeadConsole({
   packageId: string;
   reviewSessionId: string | null;
   currentTier: string | null;
+  comments: readonly ReviewModeComment[];
   onAction: () => void;
 }): React.ReactNode {
   const lens = useRoleLens();
@@ -38,14 +44,18 @@ export default function DisciplineLeadConsole({
     return null;
   }
 
+  const approvalAllowed = canApproveReviewSession(comments.map((comment) => comment.status));
+
   return (
     <FormLayout
       title="Discipline lead console"
       description="Approve or return at discipline lead tier."
     >
+      <ReviewApprovalBlockedAlert comments={comments} />
       <Space wrap>
         <Button
           type="primary"
+          disabled={!approvalAllowed}
           loading={approveSession.isPending}
           onClick={() => {
             void approveSession
@@ -58,6 +68,9 @@ export default function DisciplineLeadConsole({
               .then(() => {
                 message.success('Session approved');
                 onAction();
+              })
+              .catch((error: unknown) => {
+                notifyApiError(error);
               });
           }}
         >
@@ -80,6 +93,9 @@ export default function DisciplineLeadConsole({
               .then(() => {
                 message.success('Package returned');
                 onAction();
+              })
+              .catch((error: unknown) => {
+                notifyApiError(error);
               });
           }}
         >

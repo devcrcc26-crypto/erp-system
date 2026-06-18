@@ -786,8 +786,8 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
     where: { id: sid(p, 232) },
     update: {
       body: 'Confirm chilled water pipe sizing for concourse zone B.',
-      status: CommentStatus.ACKNOWLEDGED,
-      updatedBy: DEPT_CHIEF_USER_ID,
+      status: CommentStatus.RESOLVED,
+      updatedBy: ENGINEER_USER_ID,
     },
     create: {
       id: sid(p, 232),
@@ -796,7 +796,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       engineeringDocumentVersionId: sid(p, 204),
       body: 'Confirm chilled water pipe sizing for concourse zone B.',
       severity: CommentSeverity.MAJOR,
-      status: CommentStatus.ACKNOWLEDGED,
+      status: CommentStatus.RESOLVED,
       assignedToUserId: ENGINEER_USER_ID,
       createdBy: DEPT_CHIEF_USER_ID,
       updatedBy: DEPT_CHIEF_USER_ID,

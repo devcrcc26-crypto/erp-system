@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Alert, Checkbox, List, Spin } from 'antd';
+import { Alert, Checkbox, message, Spin } from 'antd';
 import BulkReviewActionBar from '@/components/modules/projects/review/BulkReviewActionBar';
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
+import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ReviewCommentPanel from '@/components/modules/projects/review/ReviewCommentPanel';
 import DisciplineLeadConsole from '@/components/modules/projects/review/DisciplineLeadConsole';
 import GovernanceReviewPanel from '@/components/modules/projects/review/GovernanceReviewPanel';
@@ -14,7 +15,8 @@ import {
 import { useBatchReviewApprove, useBatchReviewReturn } from '@/lib/query/review-batch';
 import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { message } from 'antd';
+import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function ReviewModePanel({
   packageId,
@@ -50,6 +52,9 @@ export default function ReviewModePanel({
   const reviewMode = reviewModeQuery.data;
   const snapshotIds = [...(reviewMode?.snapshotEdvIds ?? [])];
   const reviewSessionId = reviewMode?.reviewSessionId ?? null;
+  const sessionComments = reviewMode?.comments ?? [];
+  const commentStatuses = sessionComments.map((comment) => comment.status);
+  const approvalAllowed = canApproveReviewSession(commentStatuses);
 
   useEffect(() => {
     setActiveDesignPackage(packageId);
@@ -65,29 +70,37 @@ export default function ReviewModePanel({
     if (!reviewSessionId || selectedEdvIds.length === 0) {
       return;
     }
-    await batchApprove.mutateAsync({
-      designPackageId: packageId,
-      reviewSessionId,
-      engineeringDocumentVersionIds: selectedEdvIds,
-    });
-    message.success('Selected EDVs approved');
-    clearEdvSelection();
-    refetchAll();
+    try {
+      await batchApprove.mutateAsync({
+        designPackageId: packageId,
+        reviewSessionId,
+        engineeringDocumentVersionIds: selectedEdvIds,
+      });
+      message.success('Selected EDVs approved');
+      clearEdvSelection();
+      refetchAll();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   async function handleBatchReturn(): Promise<void> {
     if (!reviewSessionId || selectedEdvIds.length === 0) {
       return;
     }
-    await batchReturn.mutateAsync({
-      designPackageId: packageId,
-      reviewSessionId,
-      engineeringDocumentVersionIds: selectedEdvIds,
-      commentTemplate: 'Returned in batch review',
-    });
-    message.success('Selected EDVs returned');
-    clearEdvSelection();
-    refetchAll();
+    try {
+      await batchReturn.mutateAsync({
+        designPackageId: packageId,
+        reviewSessionId,
+        engineeringDocumentVersionIds: selectedEdvIds,
+        commentTemplate: 'Returned in batch review',
+      });
+      message.success('Selected EDVs returned');
+      clearEdvSelection();
+      refetchAll();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   if (reviewModeQuery.isLoading) {
@@ -111,6 +124,7 @@ export default function ReviewModePanel({
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4" data-testid="review-mode-panel">
+      <ReviewApprovalBlockedAlert comments={sessionComments} />
       <BulkReviewActionBar
         selectedCount={selectedEdvIds.length}
         totalCount={snapshotIds.length}
@@ -120,7 +134,7 @@ export default function ReviewModePanel({
         onReturnAll={() => void handleBatchReturn()}
         approveLoading={batchApprove.isPending}
         returnLoading={batchReturn.isPending}
-        disabled={!lens.canApproveReview}
+        disabled={!lens.canApproveReview || !approvalAllowed}
       />
 
       <div className="grid flex-1 gap-4 lg:grid-cols-4">
@@ -130,10 +144,9 @@ export default function ReviewModePanel({
           <p className="mb-3 text-xs text-slate-500">
             PDF coordinate markup is planned for v2. Select EDVs for batch actions.
           </p>
-          <List
-            dataSource={snapshotIds}
-            renderItem={(edvId) => (
-              <List.Item>
+          <ul className="divide-y divide-slate-100">
+            {snapshotIds.map((edvId) => (
+              <li key={edvId} className="py-2">
                 <Checkbox
                   checked={isEdvSelected(edvId)}
                   disabled={!lens.canApproveReview}
@@ -141,9 +154,9 @@ export default function ReviewModePanel({
                 >
                   <span className="font-mono text-xs">{edvId}</span>
                 </Checkbox>
-              </List.Item>
-            )}
-          />
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* CENTER 25% — comments */}
@@ -160,6 +173,7 @@ export default function ReviewModePanel({
             packageId={packageId}
             reviewSessionId={reviewSessionId}
             currentTier={reviewMode?.currentTier ?? null}
+            comments={sessionComments}
             onAction={refetchAll}
           />
           <GovernanceReviewPanel

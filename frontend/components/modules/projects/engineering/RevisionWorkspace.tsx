@@ -3,6 +3,7 @@
 import { Drawer, Form, Input, Button, message } from 'antd';
 import type { MyCommentItem } from '@/lib/api/epc.types';
 import { useTransitionReviewComment } from '@/lib/query/review-comments';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function RevisionWorkspace({
   open,
@@ -22,19 +23,27 @@ export default function RevisionWorkspace({
     if (!comment) {
       return;
     }
+    if (comment.status !== 'IN_PROGRESS') {
+      message.warning('Acknowledge and start the comment before marking it resolved.');
+      return;
+    }
 
-    await transitionComment.mutateAsync({
-      commentId: comment.commentId,
-      body: { targetStatus: 'RESOLVED' },
-    });
+    try {
+      await transitionComment.mutateAsync({
+        commentId: comment.commentId,
+        body: { targetStatus: 'RESOLVED' },
+      });
 
-    message.success(
-      values.resolutionNote.trim()
-        ? 'Comment resolved — upload revision from the engineering document panel.'
-        : 'Comment marked resolved',
-    );
-    form.resetFields();
-    onResolved();
+      message.success(
+        values.resolutionNote.trim()
+          ? 'Comment resolved — upload revision from the engineering document panel.'
+          : 'Comment marked resolved',
+      );
+      form.resetFields();
+      onResolved();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   return (

@@ -14,6 +14,7 @@ import {
   message,
 } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import {
@@ -33,6 +34,8 @@ import {
 import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
+import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function DesignPackageDetailPageContent({
   projectId,
@@ -82,6 +85,10 @@ export default function DesignPackageDetailPageContent({
   const pkg = packageQuery.data;
   const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId;
+  const sessionComments = reviewMode?.comments ?? [];
+  const approvalAllowed = canApproveReviewSession(
+    sessionComments.map((comment) => comment.status),
+  );
 
   if (packageQuery.isLoading || disciplineQuery.isLoading) {
     return (
@@ -120,15 +127,19 @@ export default function DesignPackageDetailPageContent({
     if (!reviewSessionId) {
       return;
     }
-    await approveSession.mutateAsync({
-      projectId,
-      taskDisciplineId,
-      packageId,
-      reviewSessionId,
-    });
-    message.success('Review session approved');
-    void packageQuery.refetch();
-    void reviewModeQuery.refetch();
+    try {
+      await approveSession.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        packageId,
+        reviewSessionId,
+      });
+      message.success('Review session approved');
+      void packageQuery.refetch();
+      void reviewModeQuery.refetch();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   async function handleBatchLockPackage(): Promise<void> {
@@ -177,6 +188,7 @@ export default function DesignPackageDetailPageContent({
             {lens.canApproveReview && reviewSessionId && (
               <Button
                 type="primary"
+                disabled={!approvalAllowed}
                 loading={approveSession.isPending}
                 onClick={() => void handleApproveSession()}
               >
@@ -202,6 +214,12 @@ export default function DesignPackageDetailPageContent({
         }
       >
         <ProjectionLagHelper pending={pkg.projectionPending} />
+
+        {reviewSessionId && (
+          <div className="mb-4">
+            <ReviewApprovalBlockedAlert comments={sessionComments} />
+          </div>
+        )}
 
         <div className="mb-6 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>

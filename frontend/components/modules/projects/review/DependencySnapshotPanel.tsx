@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, List } from 'antd';
+import { Alert } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type { ReviewModeView } from '@/lib/api/epc.types';
 
@@ -25,16 +25,13 @@ export default function DependencySnapshotPanel({
       {snapshotIds.length === 0 ? (
         <Alert type="info" showIcon title="No snapshot EDVs" />
       ) : (
-        <List
-          size="small"
-          bordered
-          dataSource={[...snapshotIds]}
-          renderItem={(edvId) => (
-            <List.Item>
+        <ul className="divide-y divide-slate-100 rounded border border-slate-200">
+          {snapshotIds.map((edvId) => (
+            <li key={edvId} className="px-3 py-2">
               <span className="font-mono text-xs">{edvId}</span>
-            </List.Item>
-          )}
-        />
+            </li>
+          ))}
+        </ul>
       )}
     </FormLayout>
   );
