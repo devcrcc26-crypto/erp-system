@@ -34,6 +34,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const MILESTONE_SORT_FIELDS = new Set([
@@ -60,6 +61,7 @@ export class ScheduleService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -426,7 +428,7 @@ export class ScheduleService {
     await this.getTaskOrThrow(projectId, taskId);
 
     const disciplines = await this.prisma.taskDiscipline.findMany({
-      where: { taskId, companyId: ctx.companyId },
+      where: activeOnly({ taskId, companyId: ctx.companyId }),
       orderBy: { createdAt: 'asc' },
     });
 
@@ -454,12 +456,23 @@ export class ScheduleService {
         disciplinaryLeader: dto.disciplinaryLeader,
         deptChiefEngineer: dto.deptChiefEngineer,
         instituteChiefEngineer: dto.instituteChiefEngineer,
+        designerUserId: dto.designerUserId,
+        reviewerUserId: dto.reviewerUserId,
+        disciplineLeadUserId: dto.disciplineLeadUserId,
+        chiefUserId: dto.chiefUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
         instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
         createdBy: ctx.userId,
+        updatedBy: ctx.userId,
       },
     });
+
+    await this.engineeringDocumentFolderService.ensureDisciplineFolder(
+      ctx,
+      discipline.id,
+      discipline.disciplineName,
+    );
 
     return mapTaskDiscipline(discipline);
   }
@@ -485,9 +498,14 @@ export class ScheduleService {
         disciplinaryLeader: dto.disciplinaryLeader,
         deptChiefEngineer: dto.deptChiefEngineer,
         instituteChiefEngineer: dto.instituteChiefEngineer,
+        designerUserId: dto.designerUserId,
+        reviewerUserId: dto.reviewerUserId,
+        disciplineLeadUserId: dto.disciplineLeadUserId,
+        chiefUserId: dto.chiefUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
         instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
+        updatedBy: ctx.userId,
       },
     });
 
@@ -504,7 +522,10 @@ export class ScheduleService {
     disciplineId: string,
   ): Promise<void> {
     await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
-    await this.prisma.taskDiscipline.delete({ where: { id: disciplineId } });
+    await this.prisma.taskDiscipline.update({
+      where: { id: disciplineId },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
   }
 
   private async getMilestoneOrThrow(
@@ -544,7 +565,7 @@ export class ScheduleService {
     await this.getTaskOrThrow(projectId, taskId);
 
     const discipline = await this.prisma.taskDiscipline.findFirst({
-      where: { id: disciplineId, taskId, companyId: ctx.companyId },
+      where: activeOnly({ id: disciplineId, taskId, companyId: ctx.companyId }),
       select: { id: true },
     });
     if (!discipline) {

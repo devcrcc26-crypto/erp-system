@@ -841,16 +841,23 @@ export interface MappedTaskDiscipline {
   taskId: string;
   companyId: string;
   disciplineName: string;
+  projectedStatus: TaskDiscipline['projectedStatus'];
   designerName: string | null;
   reviewerName: string | null;
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
   instituteChiefEngineer: string | null;
+  designerUserId: string | null;
+  reviewerUserId: string | null;
+  disciplineLeadUserId: string | null;
+  chiefUserId: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
   instituteReviewTime: string | null;
   createdAt: string;
   createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
 }
 
 export interface MappedTaskDependency {
@@ -976,16 +983,23 @@ export function mapTaskDiscipline(
     taskId: discipline.taskId,
     companyId: discipline.companyId,
     disciplineName: discipline.disciplineName,
+    projectedStatus: discipline.projectedStatus,
     designerName: discipline.designerName,
     reviewerName: discipline.reviewerName,
     disciplinaryLeader: discipline.disciplinaryLeader,
     deptChiefEngineer: discipline.deptChiefEngineer,
     instituteChiefEngineer: discipline.instituteChiefEngineer,
+    designerUserId: discipline.designerUserId,
+    reviewerUserId: discipline.reviewerUserId,
+    disciplineLeadUserId: discipline.disciplineLeadUserId,
+    chiefUserId: discipline.chiefUserId,
     actualCompletionTime: toIsoString(discipline.actualCompletionTime),
     deptReviewTime: toIsoString(discipline.deptReviewTime),
     instituteReviewTime: toIsoString(discipline.instituteReviewTime),
     createdAt: toIsoString(discipline.createdAt)!,
     createdBy: discipline.createdBy,
+    updatedAt: toIsoString(discipline.updatedAt)!,
+    updatedBy: discipline.updatedBy,
   };
 }
 

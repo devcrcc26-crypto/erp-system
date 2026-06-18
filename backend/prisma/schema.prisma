@@ -33,6 +33,7 @@ enum FolderContextType {
   PROJECT
   DEPARTMENT
   USER
+  TASK_DISCIPLINE
 }
 
 enum NotificationChannel {
@@ -118,8 +119,14 @@ model Company {
   documents        Document[]
   reportDefinitions ReportDefinition[]
   dashboardWidgets DashboardWidget[]
-  projects         Project[]
-  taskDisciplines  TaskDiscipline[]
+  projects                Project[]
+  taskDisciplines         TaskDiscipline[]
+  engineeringDocuments    EngineeringDocument[]
+  engineeringDocVersions  EngineeringDocumentVersion[]
+  designPackages          DesignPackage[]
+  designPackageItems      DesignPackageItem[]
+  designPackageDependencies DesignPackageDependency[]
+  workflowEventLogs       WorkflowEventLog[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -419,6 +426,11 @@ model User {
   raisedPunchItems       PunchItem[]            @relation("PunchRaisedBy")
   assignedPunchItems     PunchItem[]            @relation("PunchAssignedTo")
   verifiedChecklistItems CloseoutChecklistItem[]
+  designerDisciplines      TaskDiscipline[] @relation("DisciplineDesigner")
+  reviewerDisciplines      TaskDiscipline[] @relation("DisciplineReviewer")
+  leadDisciplines          TaskDiscipline[] @relation("DisciplineLead")
+  chiefDisciplines         TaskDiscipline[] @relation("DisciplineChief")
+  workflowEventLogs        WorkflowEventLog[]
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -768,8 +780,9 @@ model DocumentVersion {
   changeNote    String?  @map("change_note")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  document Document @relation(fields: [documentId], references: [id])
-  uploader User     @relation(fields: [uploadedBy], references: [id])
+  document                    Document                     @relation(fields: [documentId], references: [id])
+  uploader                    User                         @relation(fields: [uploadedBy], references: [id])
+  engineeringDocumentVersions EngineeringDocumentVersion[]
 
   @@unique([documentId, versionNumber], map: "uq_document_version_doc_number")
   @@index([documentId], map: "idx_document_version_document_id")
@@ -1041,6 +1054,57 @@ enum CloseoutStatus {
   ARCHIVE
 }
 
+enum EngineeringDocumentType {
+  DRAWING
+  REPORT
+  CALCULATION
+  SPECIFICATION
+  PROGRAMME_SCHEDULE
+  OTHER
+}
+
+enum EdvStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  LOCKED
+  SUPERSEDED
+}
+
+enum DesignPackageProjectedStatus {
+  IN_PROGRESS
+  PENDING_LEAD
+  APPROVED
+  REWORK_REQUIRED
+}
+
+enum TaskDisciplineProjectedStatus {
+  IN_PROGRESS
+  PENDING_LEAD
+  APPROVED
+  REWORK_REQUIRED
+}
+
+enum DesignPackageDependencyType {
+  FINISH_TO_START
+  COORDINATION_ONLY
+}
+
+enum WorkflowEventPhase {
+  INTENT
+  COMMITTED
+  CORRECTION
+}
+
+enum WorkflowEntityType {
+  EngineeringDocumentVersion
+  DesignPackage
+  TaskDiscipline
+  ReviewSession
+  ReviewComment
+  Submittal
+}
+
 model Project {
   id                String        @id @default(uuid())
   companyId         String        @map("company_id")
@@ -1207,27 +1271,191 @@ model Task {
 }
 
 model TaskDiscipline {
-  id                     String    @id @default(uuid())
-  taskId                 String    @map("task_id")
-  companyId              String    @map("company_id")
-  disciplineName         String    @map("discipline_name")
-  designerName           String?   @map("designer_name")
-  reviewerName           String?   @map("reviewer_name")
-  disciplinaryLeader     String?   @map("disciplinary_leader")
-  deptChiefEngineer      String?   @map("dept_chief_engineer")
-  instituteChiefEngineer String?   @map("institute_chief_engineer")
-  actualCompletionTime   DateTime? @map("actual_completion_time")
-  deptReviewTime         DateTime? @map("dept_review_time")
-  instituteReviewTime    DateTime? @map("institute_review_time")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  createdBy              String    @map("created_by")
+  id                     String                       @id @default(uuid())
+  taskId                 String                       @map("task_id")
+  companyId              String                       @map("company_id")
+  disciplineName         String                       @map("discipline_name")
+  projectedStatus        TaskDisciplineProjectedStatus @default(IN_PROGRESS) @map("projected_status")
+  designerName           String?                      @map("designer_name")
+  reviewerName           String?                      @map("reviewer_name")
+  disciplinaryLeader     String?                      @map("disciplinary_leader")
+  deptChiefEngineer      String?                      @map("dept_chief_engineer")
+  instituteChiefEngineer String?                      @map("institute_chief_engineer")
+  designerUserId         String?                      @map("designer_user_id")
+  reviewerUserId         String?                      @map("reviewer_user_id")
+  disciplineLeadUserId   String?                      @map("discipline_lead_user_id")
+  chiefUserId            String?                      @map("chief_user_id")
+  actualCompletionTime   DateTime?                    @map("actual_completion_time")
+  deptReviewTime         DateTime?                    @map("dept_review_time")
+  instituteReviewTime    DateTime?                    @map("institute_review_time")
+  createdAt              DateTime                     @default(now()) @map("created_at")
+  createdBy              String                       @map("created_by")
+  updatedAt              DateTime                     @updatedAt @map("updated_at")
+  updatedBy              String                       @map("updated_by")
+  deletedAt              DateTime?                    @map("deleted_at")
+  deletedBy              String?                      @map("deleted_by")
 
-  task    Task    @relation(fields: [taskId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
+  task                  Task                  @relation(fields: [taskId], references: [id])
+  company               Company               @relation(fields: [companyId], references: [id])
+  designerUser          User?                 @relation("DisciplineDesigner", fields: [designerUserId], references: [id])
+  reviewerUser          User?                 @relation("DisciplineReviewer", fields: [reviewerUserId], references: [id])
+  disciplineLeadUser    User?                 @relation("DisciplineLead", fields: [disciplineLeadUserId], references: [id])
+  chiefUser             User?                 @relation("DisciplineChief", fields: [chiefUserId], references: [id])
+  engineeringDocuments  EngineeringDocument[]
+  designPackages        DesignPackage[]
 
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
+  @@index([companyId, deletedAt], map: "idx_task_discipline_company_deleted")
+  @@index([designerUserId], map: "idx_task_discipline_designer_user_id")
+  @@index([reviewerUserId], map: "idx_task_discipline_reviewer_user_id")
   @@map("task_discipline")
+}
+
+model EngineeringDocument {
+  id               String                  @id @default(uuid())
+  companyId        String                  @map("company_id")
+  taskDisciplineId String                  @map("task_discipline_id")
+  documentType     EngineeringDocumentType @map("document_type")
+  documentNumber   String?                 @map("document_number")
+  title            String
+  metadata         Json                    @default("{}")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  createdBy        String                  @map("created_by")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  updatedBy        String                  @map("updated_by")
+  deletedAt        DateTime?               @map("deleted_at")
+  deletedBy        String?                 @map("deleted_by")
+
+  company        Company                      @relation(fields: [companyId], references: [id])
+  taskDiscipline TaskDiscipline               @relation(fields: [taskDisciplineId], references: [id])
+  versions       EngineeringDocumentVersion[]
+
+  @@index([companyId], map: "idx_engineering_document_company_id")
+  @@index([companyId, deletedAt], map: "idx_engineering_document_company_deleted")
+  @@index([taskDisciplineId], map: "idx_engineering_document_task_discipline_id")
+  @@map("engineering_document")
+}
+
+model EngineeringDocumentVersion {
+  id                    String    @id @default(uuid())
+  companyId             String    @map("company_id")
+  engineeringDocumentId String    @map("engineering_document_id")
+  documentVersionId     String    @map("document_version_id")
+  revisionLabel         String    @map("revision_label")
+  status                EdvStatus @default(DRAFT)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  createdBy             String    @map("created_by")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  updatedBy             String    @map("updated_by")
+  deletedAt             DateTime? @map("deleted_at")
+  deletedBy             String?   @map("deleted_by")
+
+  company             Company             @relation(fields: [companyId], references: [id])
+  engineeringDocument EngineeringDocument @relation(fields: [engineeringDocumentId], references: [id])
+  documentVersion     DocumentVersion     @relation(fields: [documentVersionId], references: [id])
+  designPackageItems  DesignPackageItem[]
+
+  @@unique([engineeringDocumentId, revisionLabel], map: "uq_edv_document_revision_label")
+  @@index([companyId], map: "idx_engineering_document_version_company_id")
+  @@index([companyId, deletedAt], map: "idx_engineering_document_version_company_deleted")
+  @@index([engineeringDocumentId], map: "idx_engineering_document_version_document_id")
+  @@index([documentVersionId], map: "idx_engineering_document_version_doc_version_id")
+  @@index([status], map: "idx_engineering_document_version_status")
+  @@map("engineering_document_version")
+}
+
+model DesignPackage {
+  id                String                       @id @default(uuid())
+  companyId         String                       @map("company_id")
+  taskDisciplineId  String                       @map("task_discipline_id")
+  name              String
+  projectedStatus   DesignPackageProjectedStatus @default(IN_PROGRESS) @map("projected_status")
+  projectionPending Boolean                      @default(false) @map("projection_pending")
+  submittedAt       DateTime?                    @map("submitted_at")
+  approvedAt        DateTime?                    @map("approved_at")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  createdBy         String                       @map("created_by")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+  updatedBy         String                       @map("updated_by")
+  deletedAt         DateTime?                    @map("deleted_at")
+  deletedBy         String?                      @map("deleted_by")
+
+  company      Company                   @relation(fields: [companyId], references: [id])
+  taskDiscipline TaskDiscipline          @relation(fields: [taskDisciplineId], references: [id])
+  items        DesignPackageItem[]
+  dependencies DesignPackageDependency[] @relation("DependentPackage")
+  dependedOnBy DesignPackageDependency[] @relation("PrerequisitePackage")
+
+  @@index([companyId], map: "idx_design_package_company_id")
+  @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
+  @@index([taskDisciplineId], map: "idx_design_package_task_discipline_id")
+  @@map("design_package")
+}
+
+model DesignPackageItem {
+  id                           String   @id @default(uuid())
+  companyId                    String   @map("company_id")
+  designPackageId              String   @map("design_package_id")
+  engineeringDocumentVersionId String   @map("engineering_document_version_id")
+  sortOrder                    Int      @default(0) @map("sort_order")
+  createdAt                    DateTime @default(now()) @map("created_at")
+  createdBy                    String   @map("created_by")
+
+  company                    Company                    @relation(fields: [companyId], references: [id])
+  designPackage              DesignPackage              @relation(fields: [designPackageId], references: [id])
+  engineeringDocumentVersion EngineeringDocumentVersion @relation(fields: [engineeringDocumentVersionId], references: [id])
+
+  @@unique([designPackageId, engineeringDocumentVersionId], map: "uq_design_package_item_package_edv")
+  @@index([companyId], map: "idx_design_package_item_company_id")
+  @@index([designPackageId], map: "idx_design_package_item_package_id")
+  @@index([engineeringDocumentVersionId], map: "idx_design_package_item_edv_id")
+  @@map("design_package_item")
+}
+
+model DesignPackageDependency {
+  id                 String                      @id @default(uuid())
+  companyId          String                      @map("company_id")
+  designPackageId    String                      @map("design_package_id")
+  dependsOnPackageId String                      @map("depends_on_package_id")
+  dependencyType     DesignPackageDependencyType @map("dependency_type")
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  createdBy          String                      @map("created_by")
+
+  company          Company       @relation(fields: [companyId], references: [id])
+  designPackage    DesignPackage @relation("DependentPackage", fields: [designPackageId], references: [id])
+  dependsOnPackage DesignPackage @relation("PrerequisitePackage", fields: [dependsOnPackageId], references: [id])
+
+  @@unique([designPackageId, dependsOnPackageId], map: "uq_design_package_dependency")
+  @@index([companyId], map: "idx_design_package_dependency_company_id")
+  @@index([designPackageId], map: "idx_design_package_dependency_package_id")
+  @@index([dependsOnPackageId], map: "idx_design_package_dependency_depends_on_id")
+  @@map("design_package_dependency")
+}
+
+model WorkflowEventLog {
+  id              String             @id @default(uuid())
+  companyId       String             @map("company_id")
+  entityType      WorkflowEntityType @map("entity_type")
+  entityId        String             @map("entity_id")
+  actorId         String             @map("actor_id")
+  action          String
+  phase           WorkflowEventPhase
+  beforeState     Json               @default("{}") @map("before_state")
+  afterState      Json               @default("{}") @map("after_state")
+  reason          String?
+  correlationId   String?            @map("correlation_id")
+  correctsEventId String?            @map("corrects_event_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  actor   User    @relation(fields: [actorId], references: [id])
+
+  @@index([companyId], map: "idx_workflow_event_log_company_id")
+  @@index([entityType, entityId], map: "idx_workflow_event_log_entity")
+  @@index([correlationId], map: "idx_workflow_event_log_correlation_id")
+  @@index([createdAt], map: "idx_workflow_event_log_created_at")
+  @@map("workflow_event_log")
 }
 
 model TaskDependency {

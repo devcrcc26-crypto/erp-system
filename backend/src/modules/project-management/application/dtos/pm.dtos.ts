@@ -421,6 +421,26 @@ export class CreateTaskDisciplineDto {
   @IsOptional()
   @IsDateString()
   instituteReviewTime?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  designerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  reviewerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  disciplineLeadUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  chiefUserId?: string;
 }
 
 export class UpdateTaskDisciplineDto extends PartialType(CreateTaskDisciplineDto) {}
