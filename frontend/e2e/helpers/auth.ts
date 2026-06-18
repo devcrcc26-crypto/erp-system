@@ -8,7 +8,17 @@ export async function loginAs(
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.locator('input[type="password"]').fill(password);
+
+  const capabilityProbe = page.waitForResponse(
+    (response) =>
+      response.url().includes('/projects') &&
+      response.request().method() === 'GET' &&
+      response.ok(),
+    { timeout: 30_000 },
+  );
+
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await capabilityProbe.catch(() => undefined);
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
     timeout: 30_000,
   });

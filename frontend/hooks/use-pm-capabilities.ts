@@ -39,18 +39,14 @@ export function useCanViewProjectNav(
  * Review inbox — requires inbox probe and schedule module access.
  */
 export function useCanViewReviewInbox(): boolean {
-  const pm = usePmCapabilities();
-  const epc = useEpcCapabilities();
-  return epc.canViewReviewInbox && pm.schedule.canView;
+  return useEpcCapabilities().canViewReviewInbox;
 }
 
 /**
- * Designer comment queue — requires my-comments probe and schedule edit access.
+ * Designer comment queue — requires my-comments probe.
  */
 export function useCanViewMyComments(): boolean {
-  const pm = usePmCapabilities();
-  const epc = useEpcCapabilities();
-  return epc.canViewMyComments && (pm.schedule.canEdit || pm.schedule.canView);
+  return useEpcCapabilities().canViewMyComments;
 }
 
 /**

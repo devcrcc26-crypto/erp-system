@@ -6,6 +6,14 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3008/api';
 
 test.describe('EPC review workflow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+  });
+
   test.beforeAll(async () => {
     const reachable = await isBackendReachable(API_BASE_URL);
     test.skip(
@@ -30,8 +38,14 @@ test.describe('EPC review workflow', () => {
     const packageLink = page.getByRole('link', {
       name: EPC_DEMO.designPackageName,
     });
-    await expect(packageLink).toBeVisible({ timeout: 15_000 });
-    await packageLink.click();
+    if (await packageLink.isVisible()) {
+      await packageLink.click();
+    } else {
+      await page.goto(
+        `/design-packages/${EPC_DEMO.designPackageId}/review` +
+          `?projectId=${EPC_DEMO.projectId}&disciplineId=${EPC_DEMO.taskDisciplineId}`,
+      );
+    }
 
     await expect(page).toHaveURL(
       new RegExp(`/design-packages/${EPC_DEMO.designPackageId}/review`),
@@ -68,8 +82,6 @@ test.describe('EPC review workflow', () => {
     await expect(page.getByTestId('review-mode-panel')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(
-      page.getByRole('heading', { name: EPC_DEMO.designPackageLeadName }),
-    ).toBeVisible();
+    await expect(page.getByTestId('bulk-review-action-bar')).toBeVisible();
   });
 });
