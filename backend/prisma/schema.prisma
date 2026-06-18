@@ -119,6 +119,7 @@ model Company {
   reportDefinitions ReportDefinition[]
   dashboardWidgets DashboardWidget[]
   projects         Project[]
+  taskDisciplines  TaskDiscipline[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -217,9 +218,10 @@ model Department {
   company     Company      @relation(fields: [companyId], references: [id])
   division    Division     @relation(fields: [divisionId], references: [id])
   branch      Branch       @relation(fields: [branchId], references: [id])
-  costCentres CostCentre[]
-  positions   Position[]
-  users       User[]
+  costCentres        CostCentre[]
+  positions          Position[]
+  users              User[]
+  responsibleProjects Project[]
 
   @@unique([companyId, code], map: "uq_department_company_code")
   @@index([companyId], map: "idx_department_company_id")
@@ -394,8 +396,10 @@ model User {
   documentVersions       DocumentVersion[]
   reportDefinitions      ReportDefinition[]
   managedProjects        Project[]              @relation("ProjectManager")
+  responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
   assignedTasks          Task[]                 @relation("TaskAssignee")
+  responsibleTasks       Task[]                 @relation("TaskResponsiblePerson")
   raisedRfis             Rfi[]                  @relation("RfiRaisedBy")
   assignedRfis           Rfi[]                  @relation("RfiAssignedTo")
   rfiResponses           RfiResponse[]
@@ -907,6 +911,28 @@ enum TaskDependencyType {
   SF
 }
 
+enum UrgencyLevel {
+  NORMAL
+  URGENT
+  CRITICAL
+}
+
+enum TaskLanguage {
+  CHINESE
+  ENGLISH
+}
+
+enum ApprovalLevel {
+  DEPARTMENT
+  INSTITUTE
+}
+
+enum CompletionStatus {
+  NORMAL
+  AHEAD
+  BEHIND
+}
+
 enum RfiPriority {
   LOW
   MEDIUM
@@ -1030,8 +1056,17 @@ model Project {
   plannedFinishDate DateTime?     @map("planned_finish_date") @db.Date
   actualFinishDate  DateTime?     @map("actual_finish_date") @db.Date
   budget            Decimal?      @db.Decimal(18, 2)
-  currency          String?
-  projectManagerId  String?       @map("project_manager_id")
+  currency                String?
+  projectManagerId        String?       @map("project_manager_id")
+  client                  String?
+  commissioningMethod     String?       @map("commissioning_method")
+  responsibleDepartmentId String?       @map("responsible_department_id")
+  designProperties        String?       @map("design_properties")
+  designStage             String?       @map("design_stage")
+  responsiblePersonId     String?       @map("responsible_person_id")
+  description             String?
+  overallProgressPct      Int           @default(0) @map("overall_progress_pct")
+  isOutsourced            Boolean       @default(false) @map("is_outsourced")
   createdAt         DateTime      @default(now()) @map("created_at")
   createdBy         String        @map("created_by")
   updatedAt         DateTime      @updatedAt @map("updated_at")
@@ -1039,9 +1074,11 @@ model Project {
   deletedAt         DateTime?     @map("deleted_at")
   deletedBy         String?       @map("deleted_by")
 
-  company        Company        @relation(fields: [companyId], references: [id])
-  branch         Branch?        @relation(fields: [branchId], references: [id])
-  projectManager User?          @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  company               Company     @relation(fields: [companyId], references: [id])
+  branch                Branch?     @relation(fields: [branchId], references: [id])
+  projectManager        User?       @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  responsibleDepartment Department? @relation(fields: [responsibleDepartmentId], references: [id])
+  responsiblePerson     User?       @relation("ProjectResponsiblePerson", fields: [responsiblePersonId], references: [id])
   teamMembers    ProjectTeam[]
   milestones     Milestone[]
   tasks          Task[]
@@ -1061,6 +1098,8 @@ model Project {
   @@index([companyId, deletedAt], map: "idx_project_company_deleted")
   @@index([status], map: "idx_project_status")
   @@index([projectManagerId], map: "idx_project_manager_id")
+  @@index([responsibleDepartmentId], map: "idx_project_responsible_department_id")
+  @@index([responsiblePersonId], map: "idx_project_responsible_person_id")
   @@map("project")
 }
 
@@ -1122,8 +1161,26 @@ model Task {
   finishDate   DateTime?  @map("finish_date") @db.Date
   durationDays Int?       @map("duration_days")
   progressPct  Int        @default(0) @map("progress_pct")
-  status       TaskStatus @default(NOT_STARTED)
-  isCritical   Boolean    @default(false) @map("is_critical")
+  status                TaskStatus        @default(NOT_STARTED)
+  isCritical            Boolean           @default(false) @map("is_critical")
+  commissioningMethod   String?           @map("commissioning_method")
+  requiresArchiving     Boolean           @default(false) @map("requires_archiving")
+  taskAttributes        String?           @map("task_attributes")
+  onSiteReceivingTime   DateTime?         @map("on_site_receiving_time")
+  assignmentToHqTime    DateTime?         @map("assignment_to_hq_time")
+  contactFormNumber     String?           @map("contact_form_number")
+  designStage           String?           @map("design_stage")
+  urgencyLevel          UrgencyLevel      @default(NORMAL) @map("urgency_level")
+  hasCustomSchedule     Boolean           @default(false) @map("has_custom_schedule")
+  language              TaskLanguage      @default(CHINESE)
+  approvalLevel         ApprovalLevel?    @map("approval_level")
+  chiefEngineerName     String?           @map("chief_engineer_name")
+  dispatcherName        String?           @map("dispatcher_name")
+  responsiblePersonId   String?           @map("responsible_person_id")
+  actualCompletionTime  DateTime?         @map("actual_completion_time")
+  actualWorkdays        Int?              @map("actual_workdays")
+  completionStatus      CompletionStatus? @map("completion_status")
+  remark                String?
   createdAt    DateTime   @default(now()) @map("created_at")
   createdBy    String     @map("created_by")
   updatedAt    DateTime   @updatedAt @map("updated_at")
@@ -1135,15 +1192,42 @@ model Task {
   milestone          Milestone?       @relation(fields: [milestoneId], references: [id])
   parentTask         Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   childTasks         Task[]           @relation("TaskHierarchy")
-  assignee           User?            @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  predecessorLinks   TaskDependency[] @relation("PredecessorTask")
-  successorLinks     TaskDependency[] @relation("SuccessorTask")
+  assignee           User?             @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  responsiblePerson  User?             @relation("TaskResponsiblePerson", fields: [responsiblePersonId], references: [id])
+  predecessorLinks   TaskDependency[]  @relation("PredecessorTask")
+  successorLinks     TaskDependency[]  @relation("SuccessorTask")
+  disciplines        TaskDiscipline[]
 
   @@index([projectId], map: "idx_task_project_id")
   @@index([projectId, deletedAt], map: "idx_task_project_deleted")
   @@index([milestoneId], map: "idx_task_milestone_id")
   @@index([assignedTo], map: "idx_task_assigned_to")
+  @@index([responsiblePersonId], map: "idx_task_responsible_person_id")
   @@map("task")
+}
+
+model TaskDiscipline {
+  id                     String    @id @default(uuid())
+  taskId                 String    @map("task_id")
+  companyId              String    @map("company_id")
+  disciplineName         String    @map("discipline_name")
+  designerName           String?   @map("designer_name")
+  reviewerName           String?   @map("reviewer_name")
+  disciplinaryLeader     String?   @map("disciplinary_leader")
+  deptChiefEngineer      String?   @map("dept_chief_engineer")
+  instituteChiefEngineer String?   @map("institute_chief_engineer")
+  actualCompletionTime   DateTime? @map("actual_completion_time")
+  deptReviewTime         DateTime? @map("dept_review_time")
+  instituteReviewTime    DateTime? @map("institute_review_time")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  createdBy              String    @map("created_by")
+
+  task    Task    @relation(fields: [taskId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([taskId], map: "idx_task_discipline_task_id")
+  @@index([companyId], map: "idx_task_discipline_company_id")
+  @@map("task_discipline")
 }
 
 model TaskDependency {
