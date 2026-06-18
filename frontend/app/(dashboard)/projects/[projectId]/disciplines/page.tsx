@@ -2,9 +2,12 @@ import DisciplinesPageContent from '@/components/modules/projects/disciplines/Di
 
 export default async function ProjectDisciplinesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ taskId?: string }>;
 }): Promise<React.ReactNode> {
   const { projectId } = await params;
-  return <DisciplinesPageContent projectId={projectId} />;
+  const { taskId } = await searchParams;
+  return <DisciplinesPageContent projectId={projectId} taskId={taskId} />;
 }

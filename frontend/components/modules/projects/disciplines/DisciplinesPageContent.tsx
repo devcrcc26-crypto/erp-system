@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Input } from 'antd';
+import { Alert, Button, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -12,6 +12,7 @@ import { useProjectDisciplines, type ProjectDisciplineRow } from '@/lib/query/di
 import { useDesignPackages } from '@/lib/query/design-packages';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { projectDisciplinesHref } from '@/lib/navigation/project-workspace-nav';
 
 function DisciplinePackageCount({
   projectId,
@@ -29,8 +30,10 @@ function DisciplinePackageCount({
 
 export default function DisciplinesPageContent({
   projectId,
+  taskId,
 }: {
   projectId: string;
+  taskId?: string;
 }): React.ReactNode {
   const lens = useRoleLens();
   const { t } = useEpcTranslation();
@@ -44,16 +47,24 @@ export default function DisciplinesPageContent({
 
   const filtered = useMemo(() => {
     const rows = disciplinesQuery.data ?? [];
+    const byTask = taskId ? rows.filter((row) => row.taskId === taskId) : rows;
     const term = search.trim().toLowerCase();
     if (!term) {
-      return rows;
+      return byTask;
     }
-    return rows.filter(
+    return byTask.filter(
       (row) =>
         row.disciplineName.toLowerCase().includes(term) ||
         row.taskName.toLowerCase().includes(term),
     );
-  }, [disciplinesQuery.data, search]);
+  }, [disciplinesQuery.data, search, taskId]);
+
+  const taskFilterLabel = useMemo(() => {
+    if (!taskId) {
+      return null;
+    }
+    return (disciplinesQuery.data ?? []).find((row) => row.taskId === taskId)?.taskName ?? null;
+  }, [disciplinesQuery.data, taskId]);
 
   const columns: ColumnsType<ProjectDisciplineRow> = [
     {
@@ -116,6 +127,25 @@ export default function DisciplinesPageContent({
           className="mb-4"
           title="EPC disciplines API not connected"
           description="Disciplines are sourced from schedule tasks. Design package counts appear when the backend is available."
+        />
+      )}
+
+      {taskId && (
+        <Alert
+          type="info"
+          showIcon
+          className="mb-4"
+          title={t('pages.disciplines.filteredTitle')}
+          description={
+            taskFilterLabel
+              ? `${t('pages.disciplines.filteredDescriptionPrefix')} ${taskFilterLabel}.`
+              : t('pages.disciplines.filteredDescriptionUnknown')
+          }
+          action={
+            <Link href={projectDisciplinesHref(projectId)}>
+              <Button size="small">{t('pages.disciplines.clearTaskFilter')}</Button>
+            </Link>
+          }
         />
       )}
 

@@ -239,6 +239,17 @@ export function projectNavHref(projectId: string, pathSuffix: string): string {
 }
 
 /**
+ * Disciplines list, optionally filtered to a schedule task.
+ */
+export function projectDisciplinesHref(projectId: string, taskId?: string): string {
+  const base = projectNavHref(projectId, 'disciplines');
+  if (!taskId) {
+    return base;
+  }
+  return `${base}?taskId=${encodeURIComponent(taskId)}`;
+}
+
+/**
  * Flat list of all nav items for active-key and breadcrumb resolution.
  */
 export function flattenProjectNavItems(): ProjectWorkspaceNavItem[] {

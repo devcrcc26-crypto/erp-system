@@ -46,7 +46,11 @@
   "pages": {
     "disciplines": {
       "title": "Disciplines & Packages",
-      "description": "Task disciplines and design packages grouped by workflow status."
+      "description": "Task disciplines and design packages grouped by workflow status.",
+      "filteredTitle": "Filtered by schedule task",
+      "filteredDescriptionPrefix": "Showing disciplines linked to",
+      "filteredDescriptionUnknown": "Showing disciplines for the selected schedule task.",
+      "clearTaskFilter": "Show all disciplines"
     },
     "statusBoard": {
       "title": "Status Board",

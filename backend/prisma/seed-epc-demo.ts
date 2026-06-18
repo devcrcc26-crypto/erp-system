@@ -184,6 +184,7 @@ export async function cleanupEpcDemoData(
     sid(p, 203),
     sid(p, 205),
     sid(p, 207),
+    ...(p === 1 ? [sid(p, 206)] : []),
   ]);
   await prisma.documentVersion.deleteMany({ where: { id: { in: epcDocVersionIds } } });
 }
@@ -543,6 +544,64 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
       createdBy: ENGINEER_USER_ID,
       updatedBy: ENGINEER_USER_ID,
+    },
+  });
+
+  await prisma.documentVersion.upsert({
+    where: { id: sid(p, 206) },
+    update: {},
+    create: {
+      id: sid(p, 206),
+      documentId: sid(p, 11),
+      uploadedBy: adminUserId,
+      versionNumber: 4,
+      fileKey: 'demo/DEMO-001/MEP-Coordination-Rev-A.pdf',
+      fileSizeBytes: 445_000,
+      changeNote: 'MEP coordination overlay',
+    },
+  });
+
+  await prisma.engineeringDocument.upsert({
+    where: { id: sid(p, 205) },
+    update: { title: 'MEP Coordination Layout', updatedBy: adminUserId },
+    create: {
+      id: sid(p, 205),
+      companyId,
+      taskDisciplineId: sid(p, 200),
+      documentType: EngineeringDocumentType.DRAWING,
+      documentNumber: 'STR-MEP-001',
+      title: 'MEP Coordination Layout',
+      metadata: { sheet: 'M-301' },
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.engineeringDocumentVersion.upsert({
+    where: { id: sid(p, 207) },
+    update: { status: EdvStatus.DRAFT, updatedBy: adminUserId },
+    create: {
+      id: sid(p, 207),
+      companyId,
+      engineeringDocumentId: sid(p, 205),
+      documentVersionId: sid(p, 206),
+      revisionLabel: 'A',
+      status: EdvStatus.DRAFT,
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.designPackageItem.upsert({
+    where: { id: sid(p, 215) },
+    update: {},
+    create: {
+      id: sid(p, 215),
+      companyId,
+      designPackageId: sid(p, 214),
+      engineeringDocumentVersionId: sid(p, 207),
+      sortOrder: 0,
+      createdBy: ENGINEER_USER_ID,
     },
   });
 

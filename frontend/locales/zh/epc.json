@@ -46,7 +46,11 @@
   "pages": {
     "disciplines": {
       "title": "专业与包",
-      "description": "按工作流状态分组的任务专业与设计包。"
+      "description": "按工作流状态分组的任务专业与设计包。",
+      "filteredTitle": "按进度任务筛选",
+      "filteredDescriptionPrefix": "显示关联至进度任务",
+      "filteredDescriptionUnknown": "显示所选进度任务的专业。",
+      "clearTaskFilter": "显示全部专业"
     },
     "statusBoard": {
       "title": "状态看板",

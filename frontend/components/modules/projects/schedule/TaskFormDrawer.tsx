@@ -12,6 +12,7 @@ import {
   Select,
   Switch,
 } from 'antd';
+import Link from 'next/link';
 import dayjs, { type Dayjs } from 'dayjs';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type {
@@ -30,6 +31,7 @@ import {
   useUpdateTask,
 } from '@/lib/query/schedule';
 import TaskDisciplinePanel from '@/components/modules/projects/schedule/TaskDisciplinePanel';
+import { projectDisciplinesHref } from '@/lib/navigation/project-workspace-nav';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -427,7 +429,20 @@ export default function TaskFormDrawer({
       </Form>
 
       {task?.id && (
-        <TaskDisciplinePanel projectId={projectId} taskId={task.id} />
+        <>
+          <Divider />
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-600">
+              Manage design packages and engineering documents for this task.
+            </p>
+            <Link href={projectDisciplinesHref(projectId, task.id)}>
+              <Button type="primary" size="small">
+                View disciplines workspace
+              </Button>
+            </Link>
+          </div>
+          <TaskDisciplinePanel projectId={projectId} taskId={task.id} />
+        </>
       )}
     </Drawer>
   );

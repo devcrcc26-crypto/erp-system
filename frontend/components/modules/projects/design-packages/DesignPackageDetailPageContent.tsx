@@ -35,6 +35,7 @@ import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { getPackageLockEligibility } from '@/lib/utils/package-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function DesignPackageDetailPageContent({
@@ -102,25 +103,38 @@ export default function DesignPackageDetailPageContent({
     return <Alert type="error" showIcon title="Design package not found" />;
   }
 
+  const lockEligibility = getPackageLockEligibility(
+    pkg.items,
+    documentsQuery.data?.data ?? [],
+  );
+
   async function handleSubmitForReview(): Promise<void> {
-    await submitForReview.mutateAsync({
-      projectId,
-      taskDisciplineId,
-      packageId,
-    });
-    message.success('Package submitted for review');
-    void packageQuery.refetch();
-    void reviewModeQuery.refetch();
+    try {
+      await submitForReview.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        packageId,
+      });
+      message.success('Package submitted for review');
+      void packageQuery.refetch();
+      void reviewModeQuery.refetch();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   async function handleLockEdvs(): Promise<void> {
-    await lockEdvs.mutateAsync({
-      projectId,
-      taskDisciplineId,
-      packageId,
-    });
-    message.success('Package EDVs locked');
-    void packageQuery.refetch();
+    try {
+      await lockEdvs.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        packageId,
+      });
+      message.success('Package EDVs locked');
+      void packageQuery.refetch();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   async function handleApproveSession(): Promise<void> {
@@ -143,12 +157,16 @@ export default function DesignPackageDetailPageContent({
   }
 
   async function handleBatchLockPackage(): Promise<void> {
-    await batchLock.mutateAsync({
-      projectId,
-      body: { designPackageIds: [packageId] },
-    });
-    message.success('Batch lock requested');
-    void packageQuery.refetch();
+    try {
+      await batchLock.mutateAsync({
+        projectId,
+        body: { designPackageIds: [packageId] },
+      });
+      message.success('Batch lock requested');
+      void packageQuery.refetch();
+    } catch (error) {
+      notifyApiError(error);
+    }
   }
 
   return (
@@ -196,12 +214,20 @@ export default function DesignPackageDetailPageContent({
               </Button>
             )}
             {lens.canEditEngineering && (
-              <Button loading={lockEdvs.isPending} onClick={() => void handleLockEdvs()}>
+              <Button
+                loading={lockEdvs.isPending}
+                disabled={!lockEligibility.eligible}
+                onClick={() => void handleLockEdvs()}
+              >
                 Lock EDVs
               </Button>
             )}
             {lens.canApproveReview && (
-              <Button loading={batchLock.isPending} onClick={() => void handleBatchLockPackage()}>
+              <Button
+                loading={batchLock.isPending}
+                disabled={!lockEligibility.eligible}
+                onClick={() => void handleBatchLockPackage()}
+              >
                 Batch lock
               </Button>
             )}
@@ -218,6 +244,12 @@ export default function DesignPackageDetailPageContent({
         {reviewSessionId && (
           <div className="mb-4">
             <ReviewApprovalBlockedAlert comments={sessionComments} />
+          </div>
+        )}
+
+        {lens.canEditEngineering && !lockEligibility.eligible && lockEligibility.reason && (
+          <div className="mb-4">
+            <Alert type="info" showIcon title="Lock not available" description={lockEligibility.reason} />
           </div>
         )}
 
