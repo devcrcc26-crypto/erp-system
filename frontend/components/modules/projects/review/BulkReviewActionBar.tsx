@@ -33,7 +33,10 @@ export default function BulkReviewActionBar({
   const indeterminate = selectedCount > 0 && selectedCount < totalCount;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+      data-testid="bulk-review-action-bar"
+    >
       <Space size="middle" wrap>
         <Checkbox
           checked={allSelected}

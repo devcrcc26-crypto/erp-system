@@ -110,7 +110,7 @@ export default function ReviewModePanel({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
+    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4" data-testid="review-mode-panel">
       <BulkReviewActionBar
         selectedCount={selectedEdvIds.length}
         totalCount={snapshotIds.length}

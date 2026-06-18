@@ -81,6 +81,7 @@ export default function ReviewInboxTable({
   ];
 
   return (
+    <div data-testid="review-inbox-table">
     <DataTable<ReviewInboxItem>
       rowKey="reviewSessionId"
       columns={columns}
@@ -88,5 +89,6 @@ export default function ReviewInboxTable({
       loading={inboxQuery.isLoading}
       locale={{ emptyText: t('empty.noReviewInbox') }}
     />
+    </div>
   );
 }

@@ -18,7 +18,9 @@
     "db:seed": "npm run prisma:seed --workspace=backend",
     "db:studio": "npm run prisma:studio --workspace=backend",
     "test:backend": "npm run test --workspace=backend",
-    "test:backend:e2e": "npm run test:e2e --workspace=backend"
+    "test:backend:e2e": "npm run test:e2e --workspace=backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:frontend:e2e": "npm run test:e2e --workspace=frontend"
   },
   "devDependencies": {
     "turbo": "^2.5.4"

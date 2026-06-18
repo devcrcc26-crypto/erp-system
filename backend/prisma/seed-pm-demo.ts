@@ -20,6 +20,7 @@ import {
   TaskStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { cleanupEpcDemoData, seedEpcDemoData } from './seed-epc-demo';
 
 /** Deterministic UUID for PM demo records (project 1–9, entity 1–999). */
 function sid(project: number, entity: number): string {
@@ -1214,6 +1215,8 @@ async function cleanupDemoPmData(ctx: PmSeedContext): Promise<void> {
       })
     ).map((d) => d.id);
 
+    await cleanupEpcDemoData(prisma);
+
     if (documentIds.length > 0) {
       await prisma.documentVersion.deleteMany({
         where: { documentId: { in: documentIds } },
@@ -1260,6 +1263,8 @@ export async function seedPmDemoData(ctx: PmSeedContext): Promise<void> {
     const result = await seedProjectBundle(ctx, def, users);
     seeded.push(result.projectCode);
   }
+
+  await seedEpcDemoData(ctx);
 
   console.log(`  PM demo projects seeded: ${seeded.join(', ')}`);
   console.log('  Demo users (password same as admin):');
