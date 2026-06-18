@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "reviewInbox": "审阅收件箱",
+    "myComments": "我的意见"
+  },
+  "workspace": {
+    "groups": {
+      "overview": "概览",
+      "engineering": "工程",
+      "reviewRelease": "审阅与发布",
+      "siteOps": "现场运营",
+      "records": "项目记录"
+    },
+    "items": {
+      "dashboard": "仪表板",
+      "statusBoard": "状态看板",
+      "workload": "工作量",
+      "schedule": "进度与任务",
+      "disciplines": "专业与包",
+      "deliverables": "交付物",
+      "submittals": "送审文件",
+      "rfis": "RFI",
+      "issues": "问题",
+      "dailyLogs": "施工日志",
+      "meetings": "会议",
+      "correspondence": "函件",
+      "risks": "风险",
+      "punchList": "尾项清单",
+      "documents": "文档",
+      "drawings": "图纸",
+      "team": "团队",
+      "closeout": "竣工"
+    }
+  },
+  "pages": {
+    "disciplines": {
+      "title": "专业与包",
+      "description": "按工作流状态分组的任务专业与设计包。"
+    },
+    "statusBoard": {
+      "title": "状态看板",
+      "description": "EPC 工作流 KPI 及包/专业明细。"
+    },
+    "workload": {
+      "title": "审阅人工作量",
+      "description": "按指派人查看审阅会话与意见负荷的调度视图。"
+    },
+    "deliverables": {
+      "title": "交付物",
+      "description": "在设计包与 EDV 状态 API 完善前，由设计包派生。"
+    },
+    "reviewInbox": {
+      "title": "审阅收件箱",
+      "description": "已分配的审阅会话，含 SLA 跟踪与层级筛选。"
+    },
+    "myComments": {
+      "title": "我的意见",
+      "description": "设计人员队列——处理审阅意见并上传修订版。"
+    },
+    "reviewMode": {
+      "title": "审阅模式",
+      "description": "三栏审阅工作区——文档、意见、依赖关系。"
+    },
+    "engineeringDocument": {
+      "title": "工程文档",
+      "description": "本文档的决策追溯与版本历史。"
+    },
+    "epcSnapshot": {
+      "title": "EPC 工作流快照"
+    }
+  },
+  "edvStatus": {
+    "DRAFT": "草稿",
+    "IN_REVIEW": "审阅中",
+    "APPROVED": "已批准",
+    "LOCKED": "已锁定",
+    "SUPERSEDED": "已替代"
+  },
+  "projectedStatus": {
+    "IN_PROGRESS": "进行中",
+    "PENDING_LEAD": "待专业负责人",
+    "APPROVED": "已批准",
+    "REWORK_REQUIRED": "需返工",
+    "updating": "更新中…"
+  },
+  "reviewTier": {
+    "ALL": "全部层级",
+    "REVIEWER": "审阅人",
+    "DISCIPLINE_LEAD": "专业负责人",
+    "DEPT_CHIEF": "部门主管",
+    "INSTITUTE_CHIEF": "院级主管"
+  },
+  "commentSeverity": {
+    "MINOR": "轻微",
+    "MODERATE": "中等",
+    "MAJOR": "严重"
+  },
+  "commentStatus": {
+    "OPEN": "未处理",
+    "ACKNOWLEDGED": "已确认",
+    "IN_PROGRESS": "处理中",
+    "RESOLVED": "已解决",
+    "VERIFIED": "已核实",
+    "CLOSED": "已关闭"
+  },
+  "reviewSessionStatus": {
+    "ACTIVE": "进行中",
+    "APPROVED": "已批准",
+    "RETURNED_FOR_REWORK": "退回返工",
+    "CLOSED": "已关闭",
+    "SUPERSEDED": "已替代"
+  },
+  "projection": {
+    "lagInfoTitle": "汇总状态由文档版本派生",
+    "lagInfoDescription": "工作流操作完成后，包与专业状态标识可能需要片刻才会更新。",
+    "lagPendingTitle": "状态投影进行中",
+    "lagPendingDescription": "工作流已提交——汇总标识将在投影任务运行后刷新。文档级状态为准。"
+  },
+  "empty": {
+    "noModules": "您当前角色无可用的项目模块。",
+    "noDisciplines": "未找到专业——请从进度任务详情中添加专业。",
+    "noReviewInbox": "收件箱中暂无审阅会话",
+    "noComments": "暂无分配给您的意见",
+    "noDeliverables": "未找到交付包",
+    "noWorkload": "暂无审阅人工作量数据"
+  },
+  "actions": {
+    "submitForReview": "提交审阅",
+    "lockEdvs": "锁定 EDV",
+    "approveSession": "批准会话",
+    "batchLock": "批量锁定",
+    "returnForRework": "退回返工",
+    "openReviewMode": "打开审阅模式",
+    "registerDocument": "登记文档",
+    "newPackage": "新建包",
+    "designPackageSubmittal": "设计包送审"
+  }
+}

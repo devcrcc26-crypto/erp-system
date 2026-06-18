@@ -322,8 +322,21 @@ export interface AuthCapabilities {
   canViewNotifications: boolean;
 }
 
+export interface EpcCapabilities {
+  canViewReviewInbox: boolean;
+  canViewMyComments: boolean;
+  canViewEngineering: boolean;
+}
+
+export const EMPTY_EPC_CAPABILITIES: EpcCapabilities = {
+  canViewReviewInbox: false,
+  canViewMyComments: false,
+  canViewEngineering: false,
+};
+
 export interface Capabilities extends AuthCapabilities {
   pm: PmCapabilities;
+  epc: EpcCapabilities;
 }
 
 export const EMPTY_CAPABILITIES: Capabilities = {
@@ -333,4 +346,5 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canEditRoles: false,
   canViewNotifications: false,
   pm: createEmptyPmCapabilities(),
+  epc: { ...EMPTY_EPC_CAPABILITIES },
 };

@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "reviewInbox": "Review Inbox",
+    "myComments": "My Comments"
+  },
+  "workspace": {
+    "groups": {
+      "overview": "Overview",
+      "engineering": "Engineering",
+      "reviewRelease": "Review & Release",
+      "siteOps": "Site Operations",
+      "records": "Project Records"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "statusBoard": "Status Board",
+      "workload": "Workload",
+      "schedule": "Schedule & Tasks",
+      "disciplines": "Disciplines & Packages",
+      "deliverables": "Deliverables",
+      "submittals": "Submittals",
+      "rfis": "RFIs",
+      "issues": "Issues",
+      "dailyLogs": "Daily Logs",
+      "meetings": "Meetings",
+      "correspondence": "Correspondence",
+      "risks": "Risks",
+      "punchList": "Punch List",
+      "documents": "Documents",
+      "drawings": "Drawings",
+      "team": "Team",
+      "closeout": "Closeout"
+    }
+  },
+  "pages": {
+    "disciplines": {
+      "title": "Disciplines & Packages",
+      "description": "Task disciplines and design packages grouped by workflow status."
+    },
+    "statusBoard": {
+      "title": "Status Board",
+      "description": "EPC workflow KPIs and package/discipline breakdown."
+    },
+    "workload": {
+      "title": "Reviewer Workload",
+      "description": "Dispatcher view of review session and comment load by assignee."
+    },
+    "deliverables": {
+      "title": "Deliverables",
+      "description": "Derived from design packages and EDV statuses until full Deliverable API ships."
+    },
+    "reviewInbox": {
+      "title": "Review Inbox",
+      "description": "Assigned review sessions with SLA tracking and tier filtering."
+    },
+    "myComments": {
+      "title": "My Comments",
+      "description": "Designer queue — resolve reviewer comments and upload revisions."
+    },
+    "reviewMode": {
+      "title": "Review Mode",
+      "description": "Three-column review workspace — documents, comments, dependencies."
+    },
+    "engineeringDocument": {
+      "title": "Engineering Document",
+      "description": "Decision trace and version history for this document."
+    },
+    "epcSnapshot": {
+      "title": "EPC workflow snapshot"
+    }
+  },
+  "edvStatus": {
+    "DRAFT": "Draft",
+    "IN_REVIEW": "In Review",
+    "APPROVED": "Approved",
+    "LOCKED": "Locked",
+    "SUPERSEDED": "Superseded"
+  },
+  "projectedStatus": {
+    "IN_PROGRESS": "In Progress",
+    "PENDING_LEAD": "Pending Lead",
+    "APPROVED": "Approved",
+    "REWORK_REQUIRED": "Rework Required",
+    "updating": "updating…"
+  },
+  "reviewTier": {
+    "ALL": "All tiers",
+    "REVIEWER": "Reviewer",
+    "DISCIPLINE_LEAD": "Discipline lead",
+    "DEPT_CHIEF": "Dept chief",
+    "INSTITUTE_CHIEF": "Institute chief"
+  },
+  "commentSeverity": {
+    "MINOR": "Minor",
+    "MODERATE": "Moderate",
+    "MAJOR": "Major"
+  },
+  "commentStatus": {
+    "OPEN": "Open",
+    "ACKNOWLEDGED": "Acknowledged",
+    "IN_PROGRESS": "In Progress",
+    "RESOLVED": "Resolved",
+    "VERIFIED": "Verified",
+    "CLOSED": "Closed"
+  },
+  "reviewSessionStatus": {
+    "ACTIVE": "Active",
+    "APPROVED": "Approved",
+    "RETURNED_FOR_REWORK": "Returned for rework",
+    "CLOSED": "Closed",
+    "SUPERSEDED": "Superseded"
+  },
+  "projection": {
+    "lagInfoTitle": "Aggregate status is derived from document versions",
+    "lagInfoDescription": "Package and discipline status badges may take a moment to update after workflow actions complete.",
+    "lagPendingTitle": "Status projection in progress",
+    "lagPendingDescription": "Workflow committed — aggregate badges refresh after the projection job runs. Document-level statuses are authoritative."
+  },
+  "empty": {
+    "noModules": "No project modules available for your role.",
+    "noDisciplines": "No disciplines found — add disciplines from the schedule task detail.",
+    "noReviewInbox": "No review sessions in your inbox",
+    "noComments": "No comments assigned to you",
+    "noDeliverables": "No deliverable packages found",
+    "noWorkload": "No reviewer workload data"
+  },
+  "actions": {
+    "submitForReview": "Submit for review",
+    "lockEdvs": "Lock EDVs",
+    "approveSession": "Approve session",
+    "batchLock": "Batch lock",
+    "returnForRework": "Return for rework",
+    "openReviewMode": "Open review mode",
+    "registerDocument": "Register document",
+    "newPackage": "New package",
+    "designPackageSubmittal": "Design package submittal"
+  }
+}

@@ -20,7 +20,11 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import PageHeader from '@/components/ui/PageHeader/PageHeader';
-import { useCanViewEpcWorkspaces } from '@/hooks/use-pm-capabilities';
+import {
+  useCanViewMyComments,
+  useCanViewReviewInbox,
+} from '@/hooks/use-pm-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { useLogout } from '@/lib/query/auth';
@@ -44,41 +48,47 @@ const PAGE_TITLES: Record<string, string> = {
 
 type NavItem = {
   key: string;
-  label: string;
+  labelKey: string;
   href: string;
   icon: React.ReactNode;
-  requiresEpcAccess?: boolean;
+  visible: boolean;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { key: '/', label: 'Dashboard', href: '/', icon: <DashboardOutlined /> },
-  { key: '/projects', label: 'Projects', href: '/projects', icon: <ProjectOutlined /> },
-  {
-    key: '/review-inbox',
-    label: 'Review Inbox',
-    href: '/review-inbox',
-    icon: <InboxOutlined />,
-    requiresEpcAccess: true,
-  },
-  {
-    key: '/my-comments',
-    label: 'My Comments',
-    href: '/my-comments',
-    icon: <CommentOutlined />,
-    requiresEpcAccess: true,
-  },
-  {
-    key: '/kanban-board',
-    label: 'Kanban Board',
-    href: '/kanban-board',
-    icon: <UnorderedListOutlined />,
-  },
-  { key: '/users', label: 'Users', href: '/users', icon: <TeamOutlined /> },
-  { key: '/teams', label: 'Teams', href: '/teams', icon: <TeamOutlined /> },
-  { key: '/reports', label: 'Reports', href: '/reports', icon: <BarChartOutlined /> },
-  { key: '/messages', label: 'Messages', href: '/messages', icon: <MailOutlined /> },
-  { key: '/settings', label: 'Settings', href: '/settings', icon: <SettingOutlined /> },
-];
+function buildNavItems(
+  canViewReviewInbox: boolean,
+  canViewMyComments: boolean,
+): NavItem[] {
+  return [
+    { key: '/', labelKey: 'workspace.items.dashboard', href: '/', icon: <DashboardOutlined />, visible: true },
+    { key: '/projects', labelKey: 'workspace.items.dashboard', href: '/projects', icon: <ProjectOutlined />, visible: true },
+    {
+      key: '/review-inbox',
+      labelKey: 'nav.reviewInbox',
+      href: '/review-inbox',
+      icon: <InboxOutlined />,
+      visible: canViewReviewInbox,
+    },
+    {
+      key: '/my-comments',
+      labelKey: 'nav.myComments',
+      href: '/my-comments',
+      icon: <CommentOutlined />,
+      visible: canViewMyComments,
+    },
+    {
+      key: '/kanban-board',
+      labelKey: 'workspace.items.dashboard',
+      href: '/kanban-board',
+      icon: <UnorderedListOutlined />,
+      visible: true,
+    },
+    { key: '/users', labelKey: 'workspace.items.team', href: '/users', icon: <TeamOutlined />, visible: true },
+    { key: '/teams', labelKey: 'workspace.items.team', href: '/teams', icon: <TeamOutlined />, visible: true },
+    { key: '/reports', labelKey: 'workspace.items.dashboard', href: '/reports', icon: <BarChartOutlined />, visible: true },
+    { key: '/messages', labelKey: 'workspace.items.correspondence', href: '/messages', icon: <MailOutlined />, visible: true },
+    { key: '/settings', labelKey: 'workspace.items.dashboard', href: '/settings', icon: <SettingOutlined />, visible: true },
+  ];
+}
 
 function SidebarBrand({ onClose }: { onClose?: () => void }): React.ReactNode {
   return (
@@ -105,11 +115,12 @@ function SidebarNav({
   const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
-  const canViewEpc = useCanViewEpcWorkspaces();
+  const canViewReviewInbox = useCanViewReviewInbox();
+  const canViewMyComments = useCanViewMyComments();
+  const { t } = useEpcTranslation();
 
-  const visibleNavItems = NAV_ITEMS.filter(
-    (item) => !item.requiresEpcAccess || canViewEpc,
-  );
+  const navItems = buildNavItems(canViewReviewInbox, canViewMyComments);
+  const visibleNavItems = navItems.filter((item) => item.visible);
 
   const selectedKey =
     pathname === '/profile'
@@ -124,7 +135,7 @@ function SidebarNav({
       icon: item.icon,
       label: (
         <Link href={item.href} onClick={onNavigate}>
-          {item.label}
+          {t(item.labelKey)}
         </Link>
       ),
     })),
@@ -196,10 +207,17 @@ export default function AppShell({
 }): React.ReactNode {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { t } = useEpcTranslation();
+
   const title = pathname.startsWith('/projects')
     ? 'Projects'
-    : (PAGE_TITLES[pathname] ??
-        (pathname.startsWith('/design-packages') ? 'Review Mode' : 'Dashboard'));
+    : pathname === '/review-inbox'
+      ? t('pages.reviewInbox.title')
+      : pathname === '/my-comments'
+        ? t('pages.myComments.title')
+        : pathname.startsWith('/design-packages')
+          ? t('pages.reviewMode.title')
+          : (PAGE_TITLES[pathname] ?? 'Dashboard');
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 768px)');

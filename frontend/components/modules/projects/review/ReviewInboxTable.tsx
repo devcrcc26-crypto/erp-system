@@ -8,6 +8,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { ReviewInboxItem } from '@/lib/api/epc.types';
 import { useReviewInbox } from '@/lib/query/epc-workspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function ReviewInboxTable({
   tierFilter = 'ALL',
@@ -15,6 +16,7 @@ export default function ReviewInboxTable({
   tierFilter?: string;
 }): React.ReactNode {
   const inboxQuery = useReviewInbox();
+  const { t } = useEpcTranslation();
 
   const filtered = useMemo(() => {
     const items = inboxQuery.data ?? [];
@@ -84,7 +86,7 @@ export default function ReviewInboxTable({
       columns={columns}
       dataSource={filtered}
       loading={inboxQuery.isLoading}
-      locale={{ emptyText: 'No review sessions in your inbox' }}
+      locale={{ emptyText: t('empty.noReviewInbox') }}
     />
   );
 }

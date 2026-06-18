@@ -16,6 +16,7 @@ import { useProjectDashboardStats } from '@/lib/query/projects';
 import { useAllTasks } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ProjectStatusBoard from '@/components/modules/projects/workspaces/ProjectStatusBoard';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const QUICK_LINKS = [
   {
@@ -52,6 +53,7 @@ export default function ProjectDashboard({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const statsQuery = useProjectDashboardStats(projectId);
 
   const statsApiUnavailable =
@@ -131,7 +133,7 @@ export default function ProjectDashboard({
         />
       </div>
 
-      <FormLayout title="EPC workflow snapshot">
+      <FormLayout title={t('pages.epcSnapshot.title')}>
         <ProjectStatusBoard projectId={projectId} compact />
       </FormLayout>
 

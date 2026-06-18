@@ -31,7 +31,11 @@ import {
   resolveProjectNavKey,
   type ProjectWorkspaceNavItem,
 } from '@/lib/navigation/project-workspace-nav';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import {
+  useEpcCapabilities,
+  usePmCapabilities,
+} from '@/hooks/use-pm-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -58,9 +62,18 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 function canViewNavItem(
   item: ProjectWorkspaceNavItem,
   pm: ReturnType<typeof usePmCapabilities>,
+  epc: ReturnType<typeof useEpcCapabilities>,
 ): boolean {
   const cap = pm[item.capability as PmModuleKey];
-  return cap?.canView ?? false;
+  if (!cap?.canView) {
+    return false;
+  }
+
+  if (item.epcSurface === 'engineering' && !epc.canViewEngineering) {
+    return false;
+  }
+
+  return true;
 }
 
 export default function ProjectWorkspaceSidebar({
@@ -72,13 +85,17 @@ export default function ProjectWorkspaceSidebar({
 }): React.ReactNode {
   const pathname = usePathname();
   const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const { t } = useEpcTranslation();
   const selectedKey = resolveProjectNavKey(pathname, projectId);
 
   const menuItems: MenuProps['items'] = useMemo(() => {
     const groups: MenuProps['items'] = [];
 
     for (const group of PROJECT_WORKSPACE_NAV) {
-      const visibleItems = group.items.filter((item) => canViewNavItem(item, pm));
+      const visibleItems = group.items.filter((item) =>
+        canViewNavItem(item, pm, epc),
+      );
       if (visibleItems.length === 0) {
         continue;
       }
@@ -86,13 +103,13 @@ export default function ProjectWorkspaceSidebar({
       groups.push({
         key: `group-${group.key}`,
         type: 'group',
-        label: group.label,
+        label: t(group.labelKey),
         children: visibleItems.map((item) => ({
           key: item.key,
           icon: NAV_ICONS[item.key] ?? <ProjectOutlined />,
           label: (
             <Link href={projectNavHref(projectId, item.pathSuffix)} onClick={onNavigate}>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ),
         })),
@@ -100,12 +117,12 @@ export default function ProjectWorkspaceSidebar({
     }
 
     return groups;
-  }, [pm, projectId, onNavigate]);
+  }, [epc, pm, projectId, onNavigate, t]);
 
   if (!menuItems || menuItems.length === 0) {
     return (
       <p className="px-4 py-3 text-sm text-slate-500">
-        No project modules available for your role.
+        {t('empty.noModules')}
       </p>
     );
   }

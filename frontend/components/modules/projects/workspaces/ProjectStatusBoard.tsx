@@ -6,6 +6,7 @@ import KPICard from '@/components/ui/KPICard/KPICard';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectStatusBoard } from '@/lib/query/epc-workspace';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatProjectedStatus } from '@/lib/utils/epc-display';
 import {
   CheckCircleOutlined,
@@ -22,6 +23,7 @@ export default function ProjectStatusBoard({
   compact?: boolean;
 }): React.ReactNode {
   const boardQuery = useProjectStatusBoard(projectId);
+  const { t } = useEpcTranslation();
 
   const apiUnavailable =
     boardQuery.isError &&
@@ -85,8 +87,8 @@ export default function ProjectStatusBoard({
 
   return (
     <FormLayout
-      title="EPC status board"
-      description="Workflow KPIs derived from design packages, review sessions, and submittals."
+      title={t('pages.statusBoard.title')}
+      description={t('pages.statusBoard.description')}
     >
       {apiUnavailable && (
         <p className="mb-4 text-sm text-slate-500">

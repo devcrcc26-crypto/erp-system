@@ -5,10 +5,8 @@ import type {
   DesignPackageProjectedStatus,
   TaskDisciplineProjectedStatus,
 } from '@/lib/api/epc.types';
-import {
-  formatProjectedStatus,
-  PROJECTED_STATUS_VARIANTS,
-} from '@/lib/utils/epc-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { PROJECTED_STATUS_VARIANTS } from '@/lib/utils/epc-display';
 
 export default function ProjectedStatusBadge({
   status,
@@ -17,11 +15,13 @@ export default function ProjectedStatusBadge({
   status: DesignPackageProjectedStatus | TaskDisciplineProjectedStatus | string;
   pending?: boolean;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const normalized = status as DesignPackageProjectedStatus;
   const variant = PROJECTED_STATUS_VARIANTS[normalized] ?? 'default';
+  const baseLabel = t(`projectedStatus.${normalized}`);
   const label = pending
-    ? `${formatProjectedStatus(status)} (updating…)`
-    : formatProjectedStatus(status);
+    ? `${baseLabel} (${t('projectedStatus.updating')})`
+    : baseLabel;
 
   return <StatusBadge label={label} variant={variant} />;
 }

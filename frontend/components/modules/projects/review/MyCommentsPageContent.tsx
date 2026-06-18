@@ -14,12 +14,25 @@ import {
 } from '@/lib/query/review-comments';
 import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import {
+  useCanViewMyComments,
+} from '@/hooks/use-pm-capabilities';
+import { Alert } from 'antd';
 
 export default function MyCommentsPageContent(): React.ReactNode {
   const commentsQuery = useMyComments();
   const transitionComment = useTransitionReviewComment();
   const verifyComment = useVerifyReviewComment();
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
+  const { t } = useEpcTranslation();
+  const canViewMyComments = useCanViewMyComments();
+
+  if (!canViewMyComments) {
+    return (
+      <Alert type="warning" showIcon title="You do not have access to the designer comment queue." />
+    );
+  }
 
   const columns: ColumnsType<MyCommentItem> = [
     {
@@ -109,8 +122,8 @@ export default function MyCommentsPageContent(): React.ReactNode {
 
   return (
     <FormLayout
-      title="My Comments"
-      description="Designer queue — resolve reviewer comments and upload revisions."
+      title={t('pages.myComments.title')}
+      description={t('pages.myComments.description')}
     >
       <Table<MyCommentItem>
         rowKey="commentId"
@@ -119,7 +132,7 @@ export default function MyCommentsPageContent(): React.ReactNode {
         dataSource={commentsQuery.data ?? []}
         loading={commentsQuery.isLoading}
         pagination={false}
-        locale={{ emptyText: 'No comments assigned to you' }}
+        locale={{ emptyText: t('empty.noComments') }}
       />
 
       <RevisionWorkspace

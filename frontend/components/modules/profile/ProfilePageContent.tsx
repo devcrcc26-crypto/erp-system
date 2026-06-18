@@ -18,7 +18,7 @@ import {
 const LANGUAGE_OPTIONS = [
   { value: '', label: 'Company default' },
   { value: 'en', label: 'English' },
-  { value: 'ar', label: 'Arabic' },
+  { value: 'zh', label: 'Chinese (Simplified)' },
 ];
 
 const TIMEZONE_OPTIONS = [

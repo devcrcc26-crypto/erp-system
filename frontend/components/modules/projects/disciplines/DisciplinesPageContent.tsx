@@ -11,6 +11,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDisciplines, type ProjectDisciplineRow } from '@/lib/query/disciplines';
 import { useDesignPackages } from '@/lib/query/design-packages';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 function DisciplinePackageCount({
   projectId,
@@ -32,6 +33,7 @@ export default function DisciplinesPageContent({
   projectId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const { t } = useEpcTranslation();
   const [search, setSearch] = useState('');
   const disciplinesQuery = useProjectDisciplines(projectId, lens.canViewEngineering);
 
@@ -104,8 +106,8 @@ export default function DisciplinesPageContent({
 
   return (
     <FormLayout
-      title="Disciplines & Packages"
-      description="Task disciplines and design packages grouped by workflow status."
+      title={t('pages.disciplines.title')}
+      description={t('pages.disciplines.description')}
     >
       {apiUnavailable && (
         <Alert
@@ -129,7 +131,7 @@ export default function DisciplinesPageContent({
         columns={columns}
         dataSource={filtered}
         loading={disciplinesQuery.isLoading}
-        locale={{ emptyText: 'No disciplines found — add disciplines from the schedule task detail.' }}
+        locale={{ emptyText: t('empty.noDisciplines') }}
       />
     </FormLayout>
   );

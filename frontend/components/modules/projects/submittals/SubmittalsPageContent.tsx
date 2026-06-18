@@ -36,6 +36,8 @@ import {
 } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 
 const PAGE_SIZE = 20;
 
@@ -154,6 +156,8 @@ export default function SubmittalsPageContent({
   const [selectedSubmittalId, setSelectedSubmittalId] = useState<string | null>(
     null,
   );
+  const { t } = useEpcTranslation();
+  const lens = useRoleLens();
 
   const submittalsQuery = useSubmittals(projectId, {
     page,
@@ -257,9 +261,11 @@ export default function SubmittalsPageContent({
         description="Material approvals, shop drawings, and product data submittals."
         extra={
           <Space>
-            <Button onClick={() => setDesignSubmittalOpen(true)} disabled={apiUnavailable}>
-              Design package submittal
-            </Button>
+            {lens.canCreateSubmittals && (
+              <Button onClick={() => setDesignSubmittalOpen(true)} disabled={apiUnavailable}>
+                {t('actions.designPackageSubmittal')}
+              </Button>
+            )}
             <Button
               type="primary"
               icon={<PlusOutlined />}

@@ -5,13 +5,19 @@ import type {
   PmCapabilities,
   PmModuleKey,
   Project,
+  Task,
+  TaskDiscipline,
 } from '@/lib/api/project-management.types';
 import {
   createEmptyPmCapabilities,
   EMPTY_MODULE_CAPABILITIES,
 } from '@/lib/api/project-management.types';
-import type { AuthCapabilities, Capabilities } from '@/lib/api/types';
-import { EMPTY_CAPABILITIES } from '@/lib/api/types';
+import type {
+  AuthCapabilities,
+  Capabilities,
+  EpcCapabilities,
+} from '@/lib/api/types';
+import { EMPTY_CAPABILITIES, EMPTY_EPC_CAPABILITIES } from '@/lib/api/types';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 const PM_RESOURCE_PATHS: Record<Exclude<PmModuleKey, 'projects'>, string> = {
@@ -44,6 +50,87 @@ async function probeListEndpoint(path: string): Promise<ModuleCapabilities> {
       }
     }
     return { ...EMPTY_MODULE_CAPABILITIES };
+  }
+}
+
+async function probeGetCollection(path: string): Promise<boolean> {
+  try {
+    await apiGet<unknown>(path);
+    return true;
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (error.status === 403 || error.status === 401) {
+        return false;
+      }
+    }
+    return false;
+  }
+}
+
+/**
+ * Probes EPC workspace read endpoints (review inbox, comments, engineering list).
+ */
+export async function fetchEpcCapabilities(
+  sampleProjectId?: string,
+  scheduleCanView = false,
+): Promise<EpcCapabilities> {
+  const [canViewReviewInbox, canViewMyComments] = await Promise.all([
+    probeGetCollection('/review-inbox'),
+    probeGetCollection('/my-comments'),
+  ]);
+
+  let canViewEngineering = false;
+
+  if (sampleProjectId) {
+    canViewEngineering = await probeEngineeringDocuments(sampleProjectId);
+  }
+
+  if (!canViewEngineering && scheduleCanView) {
+    canViewEngineering = scheduleCanView;
+  }
+
+  return {
+    canViewReviewInbox,
+    canViewMyComments,
+    canViewEngineering,
+  };
+}
+
+async function probeEngineeringDocuments(projectId: string): Promise<boolean> {
+  try {
+    const tasks = await apiGetPaginated<Task>(
+      `${projectPath(projectId, 'schedule')}/tasks${toQueryString({
+        page: 1,
+        limit: 20,
+      })}`,
+    );
+
+    for (const task of tasks.data) {
+      const disciplines = await apiGet<TaskDiscipline[]>(
+        `${projectPath(projectId, 'schedule')}/tasks/${task.id}/disciplines`,
+      );
+
+      if (disciplines.length === 0) {
+        continue;
+      }
+
+      const disciplineId = disciplines[0]!.id;
+      await apiGetPaginated<unknown>(
+        `${projectPath(projectId)}/task-disciplines/${disciplineId}/engineering-documents${toQueryString(
+          { page: 1, limit: 1 },
+        )}`,
+      );
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (error.status === 403 || error.status === 401) {
+        return false;
+      }
+    }
+    return false;
   }
 }
 
@@ -82,7 +169,6 @@ export async function fetchPmCapabilities(): Promise<PmCapabilities> {
     return pm;
   }
 
-  // Probe endpoints sequentially to avoid bursts that trip backend throttling.
   for (const [moduleKey, resource] of submoduleEntries) {
     pm[moduleKey] = await probeListEndpoint(
       projectPath(sampleProjectId as string, resource),
@@ -118,8 +204,28 @@ export async function fetchCapabilities(): Promise<Capabilities> {
 
   const pm = await fetchPmCapabilities();
 
+  let sampleProjectId: string | undefined;
+  if (pm.projects.canView) {
+    try {
+      const projects = await apiGetPaginated<Project>(
+        `/projects${toQueryString({ page: 1, limit: 1 })}`,
+      );
+      sampleProjectId = projects.data[0]?.id;
+    } catch {
+      sampleProjectId = undefined;
+    }
+  }
+
+  const epc = await fetchEpcCapabilities(
+    sampleProjectId,
+    pm.schedule.canView,
+  );
+
   return {
     ...authCapabilities,
     pm,
+    epc,
   };
 }
+
+export { EMPTY_EPC_CAPABILITIES };
