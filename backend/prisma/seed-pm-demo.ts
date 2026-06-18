@@ -191,55 +191,6 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2027-09-30',
     contractType: 'LUMP_SUM',
   },
-  {
-    index: 4,
-    code: 'DEMO-004',
-    name: 'Highway Bridge Rehabilitation',
-    location: 'Ras Al Khaimah',
-    projectType: 'INFRASTRUCTURE',
-    status: 'PLANNING',
-    budget: 3_500_000,
-    startDate: '2026-07-01',
-    plannedFinishDate: '2027-03-31',
-    contractType: 'UNIT_PRICE',
-  },
-  {
-    index: 5,
-    code: 'DEMO-005',
-    name: 'Industrial Warehouse Fit-out',
-    location: 'Jebel Ali',
-    projectType: 'INDUSTRIAL',
-    status: 'ON_HOLD',
-    budget: 2_100_000,
-    startDate: '2026-02-01',
-    plannedFinishDate: '2026-11-30',
-    contractType: 'LUMP_SUM',
-  },
-  {
-    index: 6,
-    code: 'DEMO-006',
-    name: 'City Mall Renovation',
-    location: 'Dubai',
-    projectType: 'COMMERCIAL',
-    status: 'COMPLETED',
-    budget: 6_800_000,
-    startDate: '2024-03-01',
-    plannedFinishDate: '2025-12-15',
-    actualFinishDate: '2025-12-20',
-    contractType: 'LUMP_SUM',
-  },
-  {
-    index: 7,
-    code: 'DEMO-007',
-    name: 'Metro Station Upgrade',
-    location: 'Dubai',
-    projectType: 'INFRASTRUCTURE',
-    status: 'TENDER',
-    budget: 18_000_000,
-    startDate: '2026-09-01',
-    plannedFinishDate: '2028-06-30',
-    contractType: 'DESIGN_BUILD',
-  },
 ];
 
 async function seedDemoUsers(ctx: PmSeedContext): Promise<{
@@ -1215,7 +1166,7 @@ async function cleanupDemoPmData(ctx: PmSeedContext): Promise<void> {
       })
     ).map((d) => d.id);
 
-    await cleanupEpcDemoData(prisma);
+    await cleanupEpcDemoData(prisma, companyId);
 
     if (documentIds.length > 0) {
       await prisma.documentVersion.deleteMany({
