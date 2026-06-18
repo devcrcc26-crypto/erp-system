@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -79,22 +79,6 @@ export default function ProfilePageContent(): React.ReactNode {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-    accountForm.setFieldsValue({
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      phone: profile.phone ?? '',
-    });
-    prefsForm.setFieldsValue({
-      preferredLanguage: profile.preferredLanguage ?? '',
-      preferredTimezone: profile.preferredTimezone ?? '',
-      preferredDateFormat: profile.preferredDateFormat ?? '',
-    });
-  }, [profile, accountForm, prefsForm]);
 
   if (profileQuery.isLoading) {
     return (
@@ -256,7 +240,13 @@ export default function ProfilePageContent(): React.ReactNode {
       >
         <Form<AccountFormValues>
           form={accountForm}
+          key={`account-${profile.id}`}
           layout="vertical"
+          initialValues={{
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            phone: profile.phone ?? '',
+          }}
           onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
         >
           <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
@@ -345,7 +335,13 @@ export default function ProfilePageContent(): React.ReactNode {
       >
         <Form<PreferencesFormValues>
           form={prefsForm}
+          key={`prefs-${profile.id}`}
           layout="vertical"
+          initialValues={{
+            preferredLanguage: profile.preferredLanguage ?? '',
+            preferredTimezone: profile.preferredTimezone ?? '',
+            preferredDateFormat: profile.preferredDateFormat ?? '',
+          }}
           onFinish={(values: PreferencesFormValues) => void handlePreferencesSubmit(values)}
         >
           <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import {
   Descriptions,
   Drawer,
@@ -41,18 +40,6 @@ export default function DailyLogDetailDrawer({
   const logQuery = useDailyLog(projectId, dailyLogId ?? '', open);
   const updateDailyLog = useUpdateDailyLog();
   const log = logQuery.data;
-
-  useEffect(() => {
-    if (!log) {
-      return;
-    }
-    form.setFieldsValue({
-      weatherCondition: log.weatherCondition ?? undefined,
-      temperatureC: log.temperatureC ? Number(log.temperatureC) : undefined,
-      rainfallMm: log.rainfallMm ? Number(log.rainfallMm) : undefined,
-      workSummary: log.workSummary ?? undefined,
-    });
-  }, [log, form]);
 
   async function handleSave(values: DailyLogEditValues): Promise<void> {
     if (!dailyLogId) {
@@ -118,7 +105,16 @@ export default function DailyLogDetailDrawer({
           <FormLayout title="Weather & work summary">
             <Form<DailyLogEditValues>
               form={form}
+              key={log.id}
               layout="vertical"
+              initialValues={{
+                weatherCondition: log.weatherCondition ?? undefined,
+                temperatureC: log.temperatureC
+                  ? Number(log.temperatureC)
+                  : undefined,
+                rainfallMm: log.rainfallMm ? Number(log.rainfallMm) : undefined,
+                workSummary: log.workSummary ?? undefined,
+              }}
               onFinish={(values: DailyLogEditValues) => void handleSave(values)}
             >
               <Form.Item label="Weather" name="weatherCondition">

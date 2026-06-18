@@ -337,7 +337,7 @@ export default function TaskFormDrawer({
           </Form.Item>
         </div>
 
-        <Divider orientation="left">Extended Fields</Divider>
+        <Divider titlePlacement="left">Extended Fields</Divider>
 
         <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
           <Form.Item label="Urgency" name="urgencyLevel">

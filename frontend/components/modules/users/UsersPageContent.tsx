@@ -107,10 +107,7 @@ function EditEmployeeModal({
     user.userRoles?.[0]?.role?.id ??
     '';
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  function resetFormValues(): void {
     form.setFieldsValue({
       firstName: user.firstName,
       lastName: user.lastName,
@@ -118,7 +115,14 @@ function EditEmployeeModal({
       isActive: user.isActive,
       roleId: currentRoleId || undefined,
     });
-  }, [open, user, currentRoleId, form]);
+  }
+
+  useEffect(() => {
+    if (!open || !currentRoleId) {
+      return;
+    }
+    form.setFieldValue('roleId', currentRoleId);
+  }, [open, currentRoleId, form]);
 
   async function handleSubmit(values: EditFormValues): Promise<void> {
     setError(null);
@@ -164,6 +168,12 @@ function EditEmployeeModal({
       okText="Save changes"
       confirmLoading={isSubmitting}
       destroyOnHidden
+      afterOpenChange={(visible: boolean) => {
+        if (!visible) {
+          return;
+        }
+        resetFormValues();
+      }}
     >
       <p className="mb-4 text-sm text-slate-500">{user.email}</p>
       <Form<EditFormValues>
@@ -236,12 +246,6 @@ export default function UsersPageContent(): React.ReactNode {
   const roles = rolesQuery.data?.data ?? [];
   const employeeRole = roles.find((role) => role.name === 'Employee');
 
-  useEffect(() => {
-    if (employeeRole && !form.getFieldValue('roleId')) {
-      form.setFieldValue('roleId', employeeRole.id);
-    }
-  }, [employeeRole, form]);
-
   if (usersQuery.isLoading) {
     return (
       <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
@@ -294,7 +298,7 @@ export default function UsersPageContent(): React.ReactNode {
 
       form.resetFields();
       if (employeeRole) {
-        form.setFieldValue('roleId', employeeRole.id);
+        form.setFieldsValue({ roleId: employeeRole.id });
       }
       setInvitedEmail(invitedAddress);
     } catch (error) {
@@ -463,6 +467,8 @@ export default function UsersPageContent(): React.ReactNode {
         <Form<InviteFormValues>
           form={form}
           layout="vertical"
+          key={employeeRole?.id ?? 'invite'}
+          initialValues={{ roleId: employeeRole?.id }}
           onFinish={(values: InviteFormValues) => void handleCreateUser(values)}
           className="max-w-3xl"
         >

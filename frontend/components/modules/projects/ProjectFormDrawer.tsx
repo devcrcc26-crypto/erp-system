@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import {
   Alert,
   DatePicker,
@@ -135,10 +134,7 @@ export default function ProjectFormDrawer({
   const isEditing = Boolean(project);
   const isSubmitting = createProject.isPending || updateProject.isPending;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  function resetFormValues(): void {
     if (project) {
       form.setFieldsValue(toFormValues(project));
       return;
@@ -150,7 +146,7 @@ export default function ProjectFormDrawer({
       overallProgressPct: 0,
       isOutsourced: false,
     });
-  }, [open, project, form]);
+  }
 
   async function handleSubmit(values: ProjectFormValues): Promise<void> {
     try {
@@ -180,6 +176,12 @@ export default function ProjectFormDrawer({
       onClose={onClose}
       size="large"
       destroyOnHidden
+      afterOpenChange={(visible: boolean) => {
+        if (!visible) {
+          return;
+        }
+        resetFormValues();
+      }}
       extra={null}
       footer={null}
     >
@@ -263,7 +265,7 @@ export default function ProjectFormDrawer({
           <UserSelect placeholder="Assign project manager" />
         </Form.Item>
 
-        <Divider orientation="left">Project Details</Divider>
+        <Divider titlePlacement="left">Project Details</Divider>
 
         <Form.Item label="Client" name="client">
           <Input placeholder="Client name" />
