@@ -1,10 +1,5 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import ReviewInboxPageContent from '@/components/modules/projects/review/ReviewInboxPageContent';
 
 export default function ReviewInboxPage(): React.ReactNode {
-  return (
-    <EpcWorkspacePlaceholder
-      title="Review Inbox"
-      description="Assigned review sessions across all projects with SLA status will appear here."
-    />
-  );
+  return <ReviewInboxPageContent />;
 }

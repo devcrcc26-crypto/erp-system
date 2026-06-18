@@ -1,15 +1,15 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import EngineeringDocumentDetailPageContent from '@/components/modules/projects/engineering/EngineeringDocumentDetailPageContent';
 
-export default async function EngineeringDocumentDetailPage({
+export default async function EngineeringDocumentPage({
   params,
 }: {
   params: Promise<{ projectId: string; edId: string }>;
 }): Promise<React.ReactNode> {
-  await params;
+  const { projectId, edId } = await params;
   return (
-    <EpcWorkspacePlaceholder
-      title="Engineering Document"
-      description="Document metadata, versions, and workflow history will appear here."
+    <EngineeringDocumentDetailPageContent
+      projectId={projectId}
+      engineeringDocumentId={edId}
     />
   );
 }

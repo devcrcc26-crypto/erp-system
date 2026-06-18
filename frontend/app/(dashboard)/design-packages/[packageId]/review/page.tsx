@@ -1,15 +1,10 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import DesignPackageReviewModeClient from './DesignPackageReviewModeClient';
 
 export default async function DesignPackageReviewModePage({
   params,
 }: {
   params: Promise<{ packageId: string }>;
 }): Promise<React.ReactNode> {
-  await params;
-  return (
-    <EpcWorkspacePlaceholder
-      title="Review Mode"
-      description="Three-column review workspace with document preview, comments, and dependency snapshot."
-    />
-  );
+  const { packageId } = await params;
+  return <DesignPackageReviewModeClient packageId={packageId} />;
 }

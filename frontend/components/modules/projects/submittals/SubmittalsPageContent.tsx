@@ -35,6 +35,7 @@ import {
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
+import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 
 const PAGE_SIZE = 20;
 
@@ -149,6 +150,7 @@ export default function SubmittalsPageContent({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
+  const [designSubmittalOpen, setDesignSubmittalOpen] = useState(false);
   const [selectedSubmittalId, setSelectedSubmittalId] = useState<string | null>(
     null,
   );
@@ -254,14 +256,19 @@ export default function SubmittalsPageContent({
         title="Submittals"
         description="Material approvals, shop drawings, and product data submittals."
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateOpen(true)}
-            disabled={apiUnavailable}
-          >
-            New submittal
-          </Button>
+          <Space>
+            <Button onClick={() => setDesignSubmittalOpen(true)} disabled={apiUnavailable}>
+              Design package submittal
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateOpen(true)}
+              disabled={apiUnavailable}
+            >
+              New submittal
+            </Button>
+          </Space>
         }
       >
         {apiUnavailable && (
@@ -332,6 +339,13 @@ export default function SubmittalsPageContent({
         submittalId={selectedSubmittalId}
         onClose={() => setSelectedSubmittalId(null)}
         onUpdated={() => void submittalsQuery.refetch()}
+      />
+
+      <SubmittalPackageDrawer
+        open={designSubmittalOpen}
+        projectId={projectId}
+        onClose={() => setDesignSubmittalOpen(false)}
+        onCreated={() => void submittalsQuery.refetch()}
       />
     </>
   );

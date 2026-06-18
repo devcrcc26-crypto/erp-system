@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  Alert,
   Button,
   Descriptions,
   Drawer,
@@ -212,6 +213,14 @@ export default function RfiDetailDrawer({
             readOnly
             title="Attachments"
             description="Drawing and photo attachments will be enabled when document folders are linked to this RFI."
+          />
+
+          <Alert
+            type="info"
+            showIcon
+            className="mt-4"
+            title="EPC revision"
+            description="If this RFI requires a new engineering document revision, open the linked document from Disciplines and use Trigger Revision on the engineering document detail page."
           />
         </div>
       )}

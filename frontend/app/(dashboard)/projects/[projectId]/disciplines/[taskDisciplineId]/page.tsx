@@ -1,15 +1,15 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import DisciplineDetailPageContent from '@/components/modules/projects/disciplines/DisciplineDetailPageContent';
 
 export default async function TaskDisciplineDetailPage({
   params,
 }: {
   params: Promise<{ projectId: string; taskDisciplineId: string }>;
 }): Promise<React.ReactNode> {
-  await params;
+  const { projectId, taskDisciplineId } = await params;
   return (
-    <EpcWorkspacePlaceholder
-      title="Discipline Detail"
-      description="Design packages and engineering documents for this discipline will appear here."
+    <DisciplineDetailPageContent
+      projectId={projectId}
+      taskDisciplineId={taskDisciplineId}
     />
   );
 }

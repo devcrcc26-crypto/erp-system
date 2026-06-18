@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Alert,
   Descriptions,
   Drawer,
   Select,
@@ -133,6 +134,14 @@ export default function IssueDetailDrawer({
             readOnly
             title="Photos & drawings"
             description="Photo evidence and drawing references will be enabled when document folders are linked."
+          />
+
+          <Alert
+            type="info"
+            showIcon
+            className="mt-4"
+            title="EPC revision"
+            description="For defects tied to engineering documents, use Trigger Revision from the engineering document detail page after linking the issue in correspondence."
           />
         </div>
       )}

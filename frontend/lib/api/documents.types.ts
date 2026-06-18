@@ -19,7 +19,8 @@ export type FolderContextType =
   | 'COMPANY'
   | 'PROJECT'
   | 'DEPARTMENT'
-  | 'USER';
+  | 'USER'
+  | 'TASK_DISCIPLINE';
 
 export interface DocumentFolder {
   id: string;

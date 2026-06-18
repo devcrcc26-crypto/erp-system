@@ -24,6 +24,8 @@ import {
   useSubmittalReviews,
   useUpdateSubmittal,
 } from '@/lib/query/submittals';
+import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
+import { useIssueSubmittal } from '@/lib/query/epc-submittals';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -54,6 +56,7 @@ export default function SubmittalDetailDrawer({
   const reviewsQuery = useSubmittalReviews(projectId, submittalId ?? '', open);
   const updateSubmittal = useUpdateSubmittal();
   const addReview = useAddSubmittalReview();
+  const issueSubmittal = useIssueSubmittal();
 
   const submittal = submittalQuery.data;
   const reviews = reviewsQuery.data ?? [];
@@ -266,6 +269,25 @@ export default function SubmittalDetailDrawer({
             title="PDF markup viewer"
             description="Inline PDF review with stamps and markups is planned for v2. Upload submittal files via document attachments when folders are linked."
           />
+
+          {submittalId && (
+            <SubmittalExternalReviewPanel submittalId={submittalId} />
+          )}
+
+          {submittal?.status === 'APPROVED' && submittalId && (
+            <Button
+              type="primary"
+              className="mb-4"
+              loading={issueSubmittal.isPending}
+              onClick={() => {
+                void issueSubmittal
+                  .mutateAsync({ projectId, submittalId })
+                  .then(() => onUpdated());
+              }}
+            >
+              Issue submittal (EPC)
+            </Button>
+          )}
 
           <DocumentAttachmentPanel
             readOnly

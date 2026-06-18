@@ -15,6 +15,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
 import { useAllTasks } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
+import ProjectStatusBoard from '@/components/modules/projects/workspaces/ProjectStatusBoard';
 
 const QUICK_LINKS = [
   {
@@ -129,6 +130,10 @@ export default function ProjectDashboard({
           iconColor="#0369a1"
         />
       </div>
+
+      <FormLayout title="EPC workflow snapshot">
+        <ProjectStatusBoard projectId={projectId} compact />
+      </FormLayout>
 
       <div className={`${layout.cardGrid} lg:grid-cols-2`}>
         <FormLayout title="Schedule snapshot">

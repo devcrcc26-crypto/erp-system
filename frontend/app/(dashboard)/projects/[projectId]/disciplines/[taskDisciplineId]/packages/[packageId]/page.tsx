@@ -1,4 +1,4 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import DesignPackageDetailPageContent from '@/components/modules/projects/design-packages/DesignPackageDetailPageContent';
 
 export default async function DesignPackageDetailPage({
   params,
@@ -9,11 +9,12 @@ export default async function DesignPackageDetailPage({
     packageId: string;
   }>;
 }): Promise<React.ReactNode> {
-  await params;
+  const { projectId, taskDisciplineId, packageId } = await params;
   return (
-    <EpcWorkspacePlaceholder
-      title="Design Package"
-      description="Package items, dependencies, and workflow actions will appear here."
+    <DesignPackageDetailPageContent
+      projectId={projectId}
+      taskDisciplineId={taskDisciplineId}
+      packageId={packageId}
     />
   );
 }

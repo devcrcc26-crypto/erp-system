@@ -1,15 +1,10 @@
-import EpcWorkspacePlaceholder from '@/components/modules/projects/workspaces/EpcWorkspacePlaceholder';
+import DeliverablesPageContent from '@/components/modules/projects/workspaces/DeliverablesPageContent';
 
 export default async function ProjectDeliverablesPage({
   params,
 }: {
   params: Promise<{ projectId: string }>;
 }): Promise<React.ReactNode> {
-  await params;
-  return (
-    <EpcWorkspacePlaceholder
-      title="Deliverables"
-      description="Deliverables grouped by status will appear here once engineering packages are connected."
-    />
-  );
+  const { projectId } = await params;
+  return <DeliverablesPageContent projectId={projectId} />;
 }
