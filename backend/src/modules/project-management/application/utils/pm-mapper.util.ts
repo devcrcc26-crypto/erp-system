@@ -24,6 +24,7 @@ import {
   RfiResponse,
   Risk,
   Submittal,
+  SubmittalItem,
   SubmittalReview,
   Task,
   TaskDependency,
@@ -201,8 +202,22 @@ export interface MappedSubmittal {
   submissionDate: string | null;
   dueDate: string | null;
   reviewDate: string | null;
+  issuedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MappedSubmittalItem {
+  id: string;
+  submittalId: string;
+  designPackageId: string;
+  itemType: SubmittalItem['itemType'];
+  sortOrder: number;
+  snapshotCaptured: boolean;
+  snapshotEdvIds: string[];
+  contentHash: string | null;
+  capturedAt: string | null;
+  createdAt: string;
 }
 
 export interface MappedSubmittalReview {
@@ -464,8 +479,24 @@ export function mapSubmittal(row: Submittal): MappedSubmittal {
     submissionDate: toDateString(row.submissionDate),
     dueDate: toDateString(row.dueDate),
     reviewDate: toDateString(row.reviewDate),
+    issuedAt: toIsoString(row.issuedAt),
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+  };
+}
+
+export function mapSubmittalItem(row: SubmittalItem): MappedSubmittalItem {
+  return {
+    id: row.id,
+    submittalId: row.submittalId,
+    designPackageId: row.designPackageId,
+    itemType: row.itemType,
+    sortOrder: row.sortOrder,
+    snapshotCaptured: row.snapshotCaptured,
+    snapshotEdvIds: row.snapshotEdvIds,
+    contentHash: row.contentHash,
+    capturedAt: toIsoString(row.capturedAt),
+    createdAt: toIsoString(row.createdAt)!,
   };
 }
 

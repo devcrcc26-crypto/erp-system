@@ -61,7 +61,14 @@ function mockEdv(id: string, status: EdvStatus): EdvWithDiscipline {
 }
 
 describe('ConflictGuardService', () => {
-  const guard = new ConflictGuardService();
+  const epcReviewRepository = {
+    findActiveSessionForPackage: jest.fn(),
+    findActiveSessionForEdv: jest.fn(),
+    findPackageDependencies: jest.fn(),
+    findLockedEdvIdsForPackage: jest.fn(),
+    findActiveSessionForEngineeringDocument: jest.fn(),
+  };
+  const guard = new ConflictGuardService(epcReviewRepository as never);
 
   it('rejects batch when EDV count mismatch', () => {
     expect(() =>

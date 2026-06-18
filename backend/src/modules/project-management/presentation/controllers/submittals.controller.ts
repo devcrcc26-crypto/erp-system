@@ -17,6 +17,11 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateSubmittalDto,
   CreateSubmittalReviewDto,
+  CreateDesignSubmittalDto,
+  IssueSubmittalDto,
+  AddSubmittalItemsDto,
+  BatchIssueSubmittalsDto,
+  BatchAddSubmittalItemsDto,
   PmListQueryDto,
   UpdateSubmittalDto,
 } from '../../application/dtos/pm.dtos';
@@ -53,6 +58,67 @@ export class SubmittalsController {
     @Body() dto: CreateSubmittalDto,
   ): Promise<unknown> {
     return this.submittalsService.createSubmittal(this.ctx(user), projectId, dto);
+  }
+
+  @Post('design-package')
+  @RequirePermission('submittals', 'create')
+  @ApiOperation({ summary: 'Create design-package submittal (DRAFT)' })
+  createDesign(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateDesignSubmittalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.createDesignSubmittal(
+      this.ctx(user),
+      projectId,
+      dto,
+    );
+  }
+
+  @Post(':id/issue')
+  @RequirePermission('submittals', 'create')
+  @ApiOperation({ summary: 'Issue submittal — freeze package snapshots' })
+  issue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: IssueSubmittalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.issueSubmittal(this.ctx(user), projectId, id, dto);
+  }
+
+  @Post(':id/items')
+  @RequirePermission('submittals', 'edit')
+  @ApiOperation({ summary: 'Add design packages to DRAFT submittal' })
+  addItems(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: AddSubmittalItemsDto,
+  ): Promise<unknown> {
+    return this.submittalsService.addItems(this.ctx(user), projectId, id, dto);
+  }
+
+  @Post('batch-issue')
+  @RequirePermission('submittals', 'create')
+  @ApiOperation({ summary: 'Issue multiple submittals — freeze snapshots each' })
+  batchIssue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: BatchIssueSubmittalsDto,
+  ): Promise<unknown> {
+    return this.submittalsService.batchIssue(this.ctx(user), projectId, dto);
+  }
+
+  @Post('batch-add-items')
+  @RequirePermission('submittals', 'edit')
+  @ApiOperation({ summary: 'Add design packages to multiple DRAFT submittals' })
+  batchAddItems(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: BatchAddSubmittalItemsDto,
+  ): Promise<unknown> {
+    return this.submittalsService.batchAddItems(this.ctx(user), projectId, dto);
   }
 
   @Get(':id/reviews')

@@ -1,0 +1,13 @@
+export enum ReviewTier {
+  REVIEWER = 'REVIEWER',
+  DISCIPLINE_LEAD = 'DISCIPLINE_LEAD',
+  DEPT_CHIEF = 'DEPT_CHIEF',
+  INSTITUTE_CHIEF = 'INSTITUTE_CHIEF',
+}
+
+export const REVIEW_TIER_ORDER: readonly ReviewTier[] = [
+  ReviewTier.REVIEWER,
+  ReviewTier.DISCIPLINE_LEAD,
+  ReviewTier.DEPT_CHIEF,
+  ReviewTier.INSTITUTE_CHIEF,
+];

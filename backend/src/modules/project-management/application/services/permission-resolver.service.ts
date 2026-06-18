@@ -18,6 +18,15 @@ export interface EdvTransitionPermissionInput {
   readonly currentAssigneeUserId?: string;
 }
 
+export interface WorkflowActionPermissionInput {
+  readonly companyId: string;
+  readonly userId: string;
+  readonly projectId: string;
+  readonly action: EpcWorkflowAction;
+  readonly taskDisciplineId: string;
+  readonly currentAssigneeUserId?: string;
+}
+
 /**
  * Resolves EPC action-level permissions for workflow mutations.
  */
@@ -70,6 +79,50 @@ export class PermissionResolverService {
 
     if (!allowed) {
       throw new ForbiddenException(`Permission denied for action ${action}`);
+    }
+  }
+
+  /**
+   * Asserts user may perform a workflow action — deny wins.
+   */
+  async assertActionAllowed(input: WorkflowActionPermissionInput): Promise<void> {
+    const grantedActions = await this.resolveGrantedActions(
+      input.userId,
+      input.companyId,
+    );
+
+    const discipline = await this.epcWorkflowRepository.findTaskDisciplineContext(
+      input.companyId,
+      input.taskDisciplineId,
+    );
+    if (!discipline) {
+      throw new ForbiddenException('Task discipline not found');
+    }
+
+    const projectTeamRole = await this.epcWorkflowRepository.findProjectTeamRole(
+      input.companyId,
+      input.projectId,
+      input.userId,
+    );
+
+    const allowed = canPerformFromContext({
+      companyId: input.companyId,
+      userId: input.userId,
+      projectId: input.projectId,
+      action: input.action,
+      taskDisciplineId: input.taskDisciplineId,
+      grantedActions,
+      projectTeamRole: projectTeamRole as never,
+      projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+      disciplineDesignerUserId: discipline.designerUserId ?? undefined,
+      disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
+      disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
+      disciplineChiefUserId: discipline.chiefUserId ?? undefined,
+      currentAssigneeUserId: input.currentAssigneeUserId,
+    });
+
+    if (!allowed) {
+      throw new ForbiddenException(`Permission denied for action ${input.action}`);
     }
   }
 

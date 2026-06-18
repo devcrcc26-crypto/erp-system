@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsObject,
@@ -20,6 +21,8 @@ import {
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
+import { CommentSeverity } from '../../domain/contracts/enums/comment-severity.enum';
+import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum';
 
 export class RegisterEngineeringDocumentDto {
   @ApiProperty({ format: 'uuid' })
@@ -111,11 +114,146 @@ export class BatchApproveEdvsDto {
   @IsUUID('4', { each: true })
   engineeringDocumentVersionIds!: string[];
 
-  @ApiPropertyOptional({ format: 'uuid' })
-  @IsOptional()
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
-  reviewSessionId?: string;
+  reviewSessionId!: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class BatchReturnEdvsDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  engineeringDocumentVersionIds!: string[];
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  reviewSessionId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  commentTemplate!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class BatchReviewApproveDto extends BatchApproveEdvsDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  designPackageId!: string;
+}
+
+export class BatchReviewReturnDto extends BatchReturnEdvsDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  designPackageId!: string;
+}
+
+export class BatchLockPackagesDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  designPackageIds!: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class TriggerRevisionDto {
+  @ApiProperty({ enum: ['RFI', 'CHANGE_REQUEST', 'SUBMITTAL_REVIEW'] })
+  @IsIn(['RFI', 'CHANGE_REQUEST', 'SUBMITTAL_REVIEW'])
+  triggerSource!: 'RFI' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  triggerEntityId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class SubmitPackageForReviewDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class ReturnPackageForReworkDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  reviewSessionId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  reason!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class ApproveReviewSessionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class AddReviewCommentDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  reviewSessionId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  engineeringDocumentVersionId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  body!: string;
+
+  @ApiProperty({ enum: CommentSeverity })
+  @IsEnum(CommentSeverity)
+  severity!: CommentSeverity;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  assignedToUserId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class TransitionReviewCommentDto {
+  @ApiProperty({ enum: CommentStatus })
+  @IsEnum(CommentStatus)
+  targetStatus!: CommentStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
+export class VerifyReviewCommentDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

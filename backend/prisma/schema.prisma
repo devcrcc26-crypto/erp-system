@@ -127,6 +127,11 @@ model Company {
   designPackageItems      DesignPackageItem[]
   designPackageDependencies DesignPackageDependency[]
   workflowEventLogs       WorkflowEventLog[]
+  reviewSessions          ReviewSession[]
+  reviewContextSnapshots  ReviewContextSnapshot[]
+  reviewComments          ReviewComment[]
+  submittalItems          SubmittalItem[]
+  externalReviewTriggers  ExternalReviewTrigger[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -431,6 +436,10 @@ model User {
   leadDisciplines          TaskDiscipline[] @relation("DisciplineLead")
   chiefDisciplines         TaskDiscipline[] @relation("DisciplineChief")
   workflowEventLogs        WorkflowEventLog[]
+  assignedReviewSessions   ReviewSession[]  @relation("ReviewSessionAssignee")
+  authoredReviewComments   ReviewComment[] @relation("ReviewCommentAuthor")
+  assignedReviewComments   ReviewComment[] @relation("ReviewCommentAssignee")
+  capturedReviewSnapshots  ReviewContextSnapshot[] @relation("ReviewSnapshotCapturedBy")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -971,6 +980,22 @@ enum SubmittalStatus {
   REJECTED
 }
 
+enum SubmittalItemType {
+  DESIGN_PACKAGE
+}
+
+enum ExternalReviewTriggerType {
+  RFI
+  CHANGE_REQUEST
+  SUBMITTAL_REVIEW
+}
+
+enum ExternalReviewTriggerStatus {
+  PENDING
+  PROCESSED
+  CANCELLED
+}
+
 enum IssueSeverity {
   LOW
   MEDIUM
@@ -1090,6 +1115,43 @@ enum DesignPackageDependencyType {
   COORDINATION_ONLY
 }
 
+enum CommentStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  VERIFIED
+  CLOSED
+}
+
+enum CommentSeverity {
+  MINOR
+  MODERATE
+  MAJOR
+}
+
+enum ReviewSessionStatus {
+  ACTIVE
+  APPROVED
+  RETURNED_FOR_REWORK
+  CLOSED
+  SUPERSEDED
+}
+
+enum ReviewSessionOutcome {
+  PENDING
+  APPROVED
+  RETURNED
+  SUPERSEDED
+}
+
+enum ReviewTier {
+  REVIEWER
+  DISCIPLINE_LEAD
+  DEPT_CHIEF
+  INSTITUTE_CHIEF
+}
+
 enum WorkflowEventPhase {
   INTENT
   COMMITTED
@@ -1148,6 +1210,7 @@ model Project {
   tasks          Task[]
   rfis           Rfi[]
   submittals     Submittal[]
+  externalReviewTriggers ExternalReviewTrigger[]
   drawings       Drawing[]
   dailyLogs      DailyLog[]
   meetings       Meeting[]
@@ -1303,6 +1366,7 @@ model TaskDiscipline {
   chiefUser             User?                 @relation("DisciplineChief", fields: [chiefUserId], references: [id])
   engineeringDocuments  EngineeringDocument[]
   designPackages        DesignPackage[]
+  reviewSessions        ReviewSession[]
 
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
@@ -1355,6 +1419,7 @@ model EngineeringDocumentVersion {
   engineeringDocument EngineeringDocument @relation(fields: [engineeringDocumentId], references: [id])
   documentVersion     DocumentVersion     @relation(fields: [documentVersionId], references: [id])
   designPackageItems  DesignPackageItem[]
+  reviewComments      ReviewComment[]
 
   @@unique([engineeringDocumentId, revisionLabel], map: "uq_edv_document_revision_label")
   @@index([companyId], map: "idx_engineering_document_version_company_id")
@@ -1386,6 +1451,8 @@ model DesignPackage {
   items        DesignPackageItem[]
   dependencies DesignPackageDependency[] @relation("DependentPackage")
   dependedOnBy DesignPackageDependency[] @relation("PrerequisitePackage")
+  reviewSessions ReviewSession[]
+  submittalItems SubmittalItem[]
 
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
@@ -1456,6 +1523,95 @@ model WorkflowEventLog {
   @@index([correlationId], map: "idx_workflow_event_log_correlation_id")
   @@index([createdAt], map: "idx_workflow_event_log_created_at")
   @@map("workflow_event_log")
+}
+
+model ReviewSession {
+  id               String               @id @default(uuid())
+  companyId        String               @map("company_id")
+  designPackageId  String               @map("design_package_id")
+  taskDisciplineId String               @map("task_discipline_id")
+  status           ReviewSessionStatus  @default(ACTIVE)
+  outcome          ReviewSessionOutcome @default(PENDING)
+  currentTier      ReviewTier           @default(REVIEWER) @map("current_tier")
+  assignedToUserId String?              @map("assigned_to_user_id")
+  openedAt         DateTime             @default(now()) @map("opened_at")
+  closedAt         DateTime?            @map("closed_at")
+  closedReason     String?              @map("closed_reason")
+  slaDeadlineAt    DateTime?            @map("sla_deadline_at")
+  slaEscalatedAt   DateTime?            @map("sla_escalated_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  createdBy        String               @map("created_by")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  updatedBy        String               @map("updated_by")
+  deletedAt        DateTime?            @map("deleted_at")
+  deletedBy        String?              @map("deleted_by")
+
+  company         Company                @relation(fields: [companyId], references: [id])
+  designPackage   DesignPackage          @relation(fields: [designPackageId], references: [id])
+  taskDiscipline  TaskDiscipline         @relation(fields: [taskDisciplineId], references: [id])
+  assignedToUser  User?                  @relation("ReviewSessionAssignee", fields: [assignedToUserId], references: [id])
+  contextSnapshot ReviewContextSnapshot?
+  comments        ReviewComment[]
+
+  @@index([companyId], map: "idx_review_session_company_id")
+  @@index([companyId, deletedAt], map: "idx_review_session_company_deleted")
+  @@index([designPackageId], map: "idx_review_session_design_package_id")
+  @@index([taskDisciplineId], map: "idx_review_session_task_discipline_id")
+  @@index([status], map: "idx_review_session_status")
+  @@index([assignedToUserId], map: "idx_review_session_assigned_to_user_id")
+  @@index([slaDeadlineAt], map: "idx_review_session_sla_deadline_at")
+  @@map("review_session")
+}
+
+model ReviewContextSnapshot {
+  id                   String   @id @default(uuid())
+  companyId            String   @map("company_id")
+  reviewSessionId      String   @unique @map("review_session_id")
+  referencedVersionIds String[] @map("referenced_version_ids")
+  contentHash          String?  @map("content_hash")
+  capturedAt           DateTime @default(now()) @map("captured_at")
+  capturedBy           String   @map("captured_by")
+
+  company        Company       @relation(fields: [companyId], references: [id])
+  reviewSession  ReviewSession @relation(fields: [reviewSessionId], references: [id])
+  capturedByUser User          @relation("ReviewSnapshotCapturedBy", fields: [capturedBy], references: [id])
+
+  @@index([companyId], map: "idx_review_context_snapshot_company_id")
+  @@map("review_context_snapshot")
+}
+
+model ReviewComment {
+  id                           String          @id @default(uuid())
+  companyId                    String          @map("company_id")
+  reviewSessionId              String          @map("review_session_id")
+  engineeringDocumentVersionId String          @map("engineering_document_version_id")
+  body                         String
+  severity                     CommentSeverity
+  status                       CommentStatus   @default(OPEN)
+  assignedToUserId             String          @map("assigned_to_user_id")
+  createdBy                    String          @map("created_by")
+  resolvedAt                   DateTime?       @map("resolved_at")
+  verifiedAt                   DateTime?       @map("verified_at")
+  closedAt                     DateTime?       @map("closed_at")
+  createdAt                    DateTime        @default(now()) @map("created_at")
+  updatedAt                    DateTime        @updatedAt @map("updated_at")
+  updatedBy                    String          @map("updated_by")
+  deletedAt                    DateTime?       @map("deleted_at")
+  deletedBy                    String?         @map("deleted_by")
+
+  company                    Company                    @relation(fields: [companyId], references: [id])
+  reviewSession              ReviewSession              @relation(fields: [reviewSessionId], references: [id])
+  engineeringDocumentVersion EngineeringDocumentVersion @relation(fields: [engineeringDocumentVersionId], references: [id])
+  assignedToUser             User                       @relation("ReviewCommentAssignee", fields: [assignedToUserId], references: [id])
+  author                     User                       @relation("ReviewCommentAuthor", fields: [createdBy], references: [id])
+
+  @@index([companyId], map: "idx_review_comment_company_id")
+  @@index([companyId, deletedAt], map: "idx_review_comment_company_deleted")
+  @@index([reviewSessionId], map: "idx_review_comment_review_session_id")
+  @@index([engineeringDocumentVersionId], map: "idx_review_comment_edv_id")
+  @@index([assignedToUserId], map: "idx_review_comment_assigned_to_user_id")
+  @@index([status], map: "idx_review_comment_status")
+  @@map("review_comment")
 }
 
 model TaskDependency {
@@ -1538,6 +1694,7 @@ model Submittal {
   submissionDate  DateTime?       @map("submission_date") @db.Date
   dueDate         DateTime?       @map("due_date") @db.Date
   reviewDate      DateTime?       @map("review_date") @db.Date
+  issuedAt        DateTime?       @map("issued_at")
   createdAt       DateTime        @default(now()) @map("created_at")
   createdBy       String          @map("created_by")
   updatedAt       DateTime        @updatedAt @map("updated_at")
@@ -1549,6 +1706,8 @@ model Submittal {
   submitter User             @relation("SubmittalSubmittedBy", fields: [submittedBy], references: [id])
   reviewer  User?             @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
   reviews   SubmittalReview[]
+  items     SubmittalItem[]
+  externalReviewTriggers ExternalReviewTrigger[]
 
   @@index([projectId], map: "idx_submittal_project_id")
   @@index([projectId, deletedAt], map: "idx_submittal_project_deleted")
@@ -1570,6 +1729,58 @@ model SubmittalReview {
 
   @@index([submittalId], map: "idx_submittal_review_submittal_id")
   @@map("submittal_review")
+}
+
+model SubmittalItem {
+  id                String            @id @default(uuid())
+  companyId         String            @map("company_id")
+  submittalId       String            @map("submittal_id")
+  designPackageId   String            @map("design_package_id")
+  itemType          SubmittalItemType @default(DESIGN_PACKAGE) @map("item_type")
+  sortOrder         Int               @default(0) @map("sort_order")
+  snapshotCaptured  Boolean           @default(false) @map("snapshot_captured")
+  snapshotEdvIds    String[]          @map("snapshot_edv_ids")
+  snapshotPayload   Json              @default("[]") @map("snapshot_payload")
+  contentHash       String?           @map("content_hash")
+  capturedAt        DateTime?         @map("captured_at")
+  capturedBy        String?           @map("captured_by")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  createdBy         String            @map("created_by")
+
+  company       Company       @relation(fields: [companyId], references: [id])
+  submittal     Submittal     @relation(fields: [submittalId], references: [id])
+  designPackage DesignPackage @relation(fields: [designPackageId], references: [id])
+
+  @@unique([submittalId, designPackageId], map: "uq_submittal_item_submittal_package")
+  @@index([companyId], map: "idx_submittal_item_company_id")
+  @@index([submittalId], map: "idx_submittal_item_submittal_id")
+  @@index([designPackageId], map: "idx_submittal_item_design_package_id")
+  @@map("submittal_item")
+}
+
+model ExternalReviewTrigger {
+  id               String                      @id @default(uuid())
+  companyId        String                      @map("company_id")
+  projectId        String                      @map("project_id")
+  triggerType      ExternalReviewTriggerType   @map("trigger_type")
+  sourceEntityType String                      @map("source_entity_type")
+  sourceEntityId   String                      @map("source_entity_id")
+  submittalId      String?                     @map("submittal_id")
+  submittalItemIds String[]                    @map("submittal_item_ids")
+  payload          Json                        @default("{}")
+  status           ExternalReviewTriggerStatus @default(PENDING)
+  createdAt        DateTime                    @default(now()) @map("created_at")
+  createdBy        String                      @map("created_by")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  project   Project    @relation(fields: [projectId], references: [id])
+  submittal Submittal? @relation(fields: [submittalId], references: [id])
+
+  @@index([companyId], map: "idx_external_review_trigger_company_id")
+  @@index([projectId], map: "idx_external_review_trigger_project_id")
+  @@index([submittalId], map: "idx_external_review_trigger_submittal_id")
+  @@index([status], map: "idx_external_review_trigger_status")
+  @@map("external_review_trigger")
 }
 
 model Drawing {

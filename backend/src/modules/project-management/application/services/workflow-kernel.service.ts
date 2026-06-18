@@ -3,35 +3,45 @@ import {
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { EdvStatus as PrismaEdvStatus, Prisma } from '@prisma/client';
+import { EdvStatus as PrismaEdvStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import {
+  AddReviewCommentCommand,
+  ApproveReviewSessionCommand,
   BatchApproveEdvsCommand,
+  BatchReturnEdvsCommand,
+  AddSubmittalItemsCommand,
+  CreateDesignSubmittalCommand,
+  IssueSubmittalCommand,
   LockPackageEdvsCommand,
+  ReturnPackageForReworkCommand,
+  SubmitPackageForReviewCommand,
+  TransitionCommentStatusCommand,
   TransitionEdvStatusCommand,
+  TriggerRevisionCommand,
+  VerifyReviewCommentCommand,
   WorkflowCommand,
   WorkflowCommandType,
   WorkflowResultSnapshot,
 } from '../../domain/contracts/workflow-kernel.contract';
+import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
 import { ConflictGuardService } from './conflict-guard.service';
+import { DefinitionOfDoneService } from './definition-of-done.service';
+import { EdvTransitionService, PhaseATransitionResult } from './edv-transition.service';
 import { PermissionResolverService } from './permission-resolver.service';
+import { ReviewWorkflowService } from './review-workflow.service';
+import { SubmittalWorkflowService } from './submittal-workflow.service';
+import { RevisionOrchestratorService } from './revision-orchestrator.service';
 import {
   PhaseBProjectionResult,
   StateProjectionService,
 } from './state-projection.service';
 import { StatusWriteGateService } from './status-write-gate.service';
-
-interface PhaseATransitionResult {
-  readonly edvId: string;
-  readonly from: EdvStatus;
-  readonly to: EdvStatus;
-  readonly intentEventId: string;
-}
 
 interface ProjectionHints {
   readonly packageId?: string;
@@ -39,17 +49,23 @@ interface ProjectionHints {
 }
 
 /**
- * WorkflowKernel — Phase A + Phase B (Wave 3).
- * EDV transitions, INTENT events, and structural aggregate projection in one transaction.
+ * WorkflowKernel — Phase A + Phase B with review lifecycle (Wave 4).
+ * EDV transitions remain sole lifecycle authority.
  */
 @Injectable()
 export class WorkflowKernelService {
   constructor(
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
+    private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly edvTransitionService: EdvTransitionService,
     private readonly statusWriteGate: StatusWriteGateService,
     private readonly conflictGuard: ConflictGuardService,
+    private readonly definitionOfDone: DefinitionOfDoneService,
     private readonly permissionResolver: PermissionResolverService,
     private readonly stateProjection: StateProjectionService,
+    private readonly reviewWorkflow: ReviewWorkflowService,
+    private readonly submittalWorkflow: SubmittalWorkflowService,
+    private readonly revisionOrchestrator: RevisionOrchestratorService,
   ) {}
 
   /**
@@ -75,12 +91,36 @@ export class WorkflowKernelService {
         return this.executeTransitionEdvStatus(command, correlationId);
       case 'BatchApproveEdvs':
         return this.executeBatchApproveEdvs(command, correlationId);
+      case 'BatchReturnEdvs':
+        return this.reviewWorkflow.batchReturnEdvs(command, correlationId);
       case 'LockPackageEdvs':
         return this.executeLockPackageEdvs(command, correlationId);
-      default:
+      case 'SubmitPackageForReview':
+        return this.reviewWorkflow.submitPackageForReview(command, correlationId);
+      case 'AddReviewComment':
+        return this.reviewWorkflow.addReviewComment(command, correlationId);
+      case 'TransitionCommentStatus':
+        return this.reviewWorkflow.transitionCommentStatus(command, correlationId);
+      case 'VerifyReviewComment':
+        return this.reviewWorkflow.verifyReviewComment(command, correlationId);
+      case 'ApproveReviewSession':
+        return this.reviewWorkflow.approveReviewSession(command, correlationId);
+      case 'ReturnPackageForRework':
+        return this.reviewWorkflow.returnPackageForRework(command, correlationId);
+      case 'CreateDesignSubmittal':
+        return this.submittalWorkflow.createDesignSubmittal(command, correlationId);
+      case 'IssueSubmittal':
+        return this.submittalWorkflow.issueSubmittal(command, correlationId);
+      case 'AddSubmittalItems':
+        return this.submittalWorkflow.addSubmittalItems(command, correlationId);
+      case 'TriggerRevision':
+        return this.revisionOrchestrator.triggerRevision(command, correlationId);
+      default: {
+        const exhaustive: never = command;
         throw new UnprocessableEntityException(
-          `Command ${command.type} is not available in Wave 3`,
+          `Command ${(exhaustive as WorkflowCommand).type} is not available`,
         );
+      }
     }
   }
 
@@ -89,7 +129,7 @@ export class WorkflowKernelService {
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
     return this.epcWorkflowRepository.runPhaseAB(async (tx) => {
-      const results = await this.applyEdvTransitionsInTx(tx, {
+      const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
         correlationId,
@@ -142,6 +182,34 @@ export class WorkflowKernelService {
         throw new BadRequestException('Design package not found');
       }
 
+      const session = await this.epcReviewRepository.findSessionById(
+        tx,
+        command.companyId,
+        command.reviewSessionId,
+      );
+      if (!session) {
+        throw new BadRequestException('Review session not found');
+      }
+      this.conflictGuard.assertReviewSessionActiveForPackage(
+        session.status,
+        session.designPackageId,
+        command.designPackageId,
+      );
+
+      const commentStatuses =
+        await this.epcReviewRepository.listCommentStatusesForPackageEdvs(
+          tx,
+          command.companyId,
+          command.designPackageId,
+          command.reviewSessionId,
+        );
+      this.conflictGuard.assertCommentsClearForApproval(
+        commentStatuses as never,
+      );
+      this.definitionOfDone.assertPackageApprovalAllowed(
+        commentStatuses as never,
+      );
+
       const requestedIds = command.engineeringDocumentVersionIds;
       const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
         tx,
@@ -163,14 +231,14 @@ export class WorkflowKernelService {
         tx,
       );
 
-      const results = await this.applyEdvTransitionsInTx(tx, {
+      const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
         correlationId,
         projectId,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
-          targetStatus: p.to,
+          targetStatus: p.to as EdvStatus,
           reason: `BatchApproveEdvs package=${command.designPackageId}`,
         })),
       });
@@ -190,6 +258,7 @@ export class WorkflowKernelService {
           packageId: command.designPackageId,
           disciplineId: pkg.taskDisciplineId,
         },
+        session.id,
       );
     });
   }
@@ -233,14 +302,14 @@ export class WorkflowKernelService {
         tx,
       );
 
-      const results = await this.applyEdvTransitionsInTx(tx, {
+      const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
         correlationId,
         projectId,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
-          targetStatus: p.to,
+          targetStatus: p.to as EdvStatus,
           reason: `LockPackageEdvs package=${command.designPackageId}`,
         })),
       });
@@ -264,98 +333,13 @@ export class WorkflowKernelService {
     });
   }
 
-  private async applyEdvTransitionsInTx(
-    tx: PrismaTx,
-    input: {
-      companyId: string;
-      actorId: string;
-      correlationId: string;
-      projectId: string;
-      transitions: readonly {
-        engineeringDocumentVersionId: string;
-        targetStatus: EdvStatus;
-        reason?: string;
-      }[];
-    },
-  ): Promise<PhaseATransitionResult[]> {
-    const results: PhaseATransitionResult[] = [];
-
-    for (const transition of input.transitions) {
-      const edv = await this.epcWorkflowRepository.findEdvWithDiscipline(
-        tx,
-        input.companyId,
-        transition.engineeringDocumentVersionId,
-      );
-      if (!edv) {
-        throw new BadRequestException(
-          `EDV ${transition.engineeringDocumentVersionId} not found`,
-        );
-      }
-
-      const from = edv.status as EdvStatus;
-      const to = transition.targetStatus;
-
-      this.statusWriteGate.assertTransition({ from, to });
-
-      await this.permissionResolver.assertEdvTransitionAllowed({
-        companyId: input.companyId,
-        userId: input.actorId,
-        projectId: input.projectId,
-        edv,
-        targetStatus: to as PrismaEdvStatus,
-      });
-
-      const beforeState: Prisma.InputJsonValue = {
-        edvStatus: from,
-        revisionLabel: edv.revisionLabel,
-      };
-
-      await this.epcWorkflowRepository.updateEdvStatus(
-        tx,
-        edv.id,
-        to as PrismaEdvStatus,
-        input.actorId,
-      );
-
-      const afterState: Prisma.InputJsonValue = {
-        edvStatus: to,
-        revisionLabel: edv.revisionLabel,
-      };
-
-      const intentEvent = await this.epcWorkflowRepository.appendIntentEvent(tx, {
-        companyId: input.companyId,
-        actorId: input.actorId,
-        entityId: edv.id,
-        action: `TRANSITION_${from}_TO_${to}`,
-        beforeState,
-        afterState,
-        reason: transition.reason,
-        correlationId: input.correlationId,
-      });
-
-      results.push({
-        edvId: edv.id,
-        from,
-        to,
-        intentEventId: intentEvent.id,
-      });
-    }
-
-    await this.epcWorkflowRepository.markPackagesProjectionPending(
-      tx,
-      input.companyId,
-      results.map((r) => r.edvId),
-    );
-
-    return results;
-  }
-
   private buildSnapshot(
     commandType: WorkflowCommandType,
     correlationId: string,
     results: readonly PhaseATransitionResult[],
     phaseB: PhaseBProjectionResult,
     hints: ProjectionHints = {},
+    reviewSessionId?: string,
   ): WorkflowResultSnapshot {
     const edvStatuses: Record<string, EdvStatus> = {};
     for (const r of results) {
@@ -375,6 +359,7 @@ export class WorkflowKernelService {
       affectedEdvIds: results.map((r) => r.edvId),
       edvStatuses,
       intentEventIds: results.map((r) => r.intentEventId),
+      ...(reviewSessionId !== undefined && { reviewSessionId }),
       ...(packageProjectedStatus !== undefined && { packageProjectedStatus }),
       ...(disciplineProjectedStatus !== undefined && {
         disciplineProjectedStatus,

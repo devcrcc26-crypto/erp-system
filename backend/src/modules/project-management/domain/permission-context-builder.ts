@@ -24,6 +24,7 @@ const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
   EpcWorkflowAction.REVIEW_SESSION_APPROVE,
   EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+  EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
   EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
   EpcWorkflowAction.REVISION_TRIGGER,
 ]);
@@ -76,6 +77,7 @@ const REVIEW_TIER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
   EpcWorkflowAction.REVIEW_SESSION_APPROVE,
   EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+  EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
 ]);
 
 const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([

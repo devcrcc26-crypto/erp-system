@@ -7,9 +7,14 @@ import { DesignPackageProjectedStatus, WorkflowEntityType } from '@prisma/client
 import {
   AddDesignPackageItemDto,
   BatchApproveEdvsDto,
+  BatchReturnEdvsDto,
+  BatchLockPackagesDto,
   CreateDesignPackageDependencyDto,
   CreateDesignPackageDto,
   LockPackageEdvsDto,
+  SubmitPackageForReviewDto,
+  ApproveReviewSessionDto,
+  ReturnPackageForReworkDto,
   UpdateDesignPackageDto,
 } from '../dtos/engineering-document.dtos';
 import { PmContext } from '../types/pm-context.type';
@@ -28,6 +33,7 @@ import {
 } from '../../infrastructure/repositories/epc-storage.repository';
 import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
+import { DependencyGraphService } from './dependency-graph.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 
 @Injectable()
@@ -38,6 +44,7 @@ export class DesignPackagesService {
     private readonly taskDisciplineScopeRepository: TaskDisciplineScopeRepository,
     private readonly workflowEventLogService: WorkflowEventLogService,
     private readonly workflowKernel: WorkflowKernelService,
+    private readonly dependencyGraphService: DependencyGraphService,
   ) {}
 
   /**
@@ -259,6 +266,13 @@ export class DesignPackagesService {
       throw new NotFoundException('Depends-on package not found');
     }
 
+    await this.dependencyGraphService.assertNoCycleOnAdd(
+      ctx.companyId,
+      projectId,
+      packageId,
+      dto.dependsOnPackageId,
+    );
+
     const row = await this.designPackageRepository.createDependency({
       company: { connect: { id: ctx.companyId } },
       designPackage: { connect: { id: packageId } },
@@ -371,9 +385,161 @@ export class DesignPackagesService {
       actorId: ctx.userId,
       designPackageId: packageId,
       engineeringDocumentVersionIds: dto.engineeringDocumentVersionIds,
-      reviewSessionId: dto.reviewSessionId ?? packageId,
+      reviewSessionId: dto.reviewSessionId,
       idempotencyKey: dto.idempotencyKey,
     });
+  }
+
+  /**
+   * Submits design package for review — opens session and freezes snapshot.
+   */
+  async submitForReview(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    dto: SubmitPackageForReviewDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.workflowKernel.execute({
+      type: 'SubmitPackageForReview',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      designPackageId: packageId,
+      taskDisciplineId,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Approves review session at current governance tier.
+   */
+  async approveReviewSession(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    reviewSessionId: string,
+    dto: ApproveReviewSessionDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.workflowKernel.execute({
+      type: 'ApproveReviewSession',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      reviewSessionId,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Returns package for rework — closes session and reverts EDVs to DRAFT.
+   */
+  async returnForRework(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    dto: ReturnPackageForReworkDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.workflowKernel.execute({
+      type: 'ReturnPackageForRework',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      designPackageId: packageId,
+      reviewSessionId: dto.reviewSessionId,
+      reason: dto.reason,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Batch-returns selected EDVs via WorkflowKernel.
+   */
+  async batchReturnEdvs(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    dto: BatchReturnEdvsDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.workflowKernel.execute({
+      type: 'BatchReturnEdvs',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      designPackageId: packageId,
+      engineeringDocumentVersionIds: dto.engineeringDocumentVersionIds,
+      reviewSessionId: dto.reviewSessionId,
+      commentTemplate: dto.commentTemplate,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Locks all EDVs in multiple packages — one kernel tx per package.
+   */
+  async batchLockPackages(
+    ctx: PmContext,
+    projectId: string,
+    dto: BatchLockPackagesDto,
+  ): Promise<WorkflowResultSnapshot[]> {
+    const results: WorkflowResultSnapshot[] = [];
+    for (const packageId of dto.designPackageIds) {
+      const pkg = await this.designPackageRepository.findById(
+        ctx.companyId,
+        packageId,
+      );
+      if (!pkg) {
+        throw new NotFoundException(`Design package ${packageId} not found`);
+      }
+      await this.assertDisciplineScope(ctx, projectId, pkg.taskDisciplineId);
+
+      const result = await this.workflowKernel.execute({
+        type: 'LockPackageEdvs',
+        companyId: ctx.companyId,
+        actorId: ctx.userId,
+        designPackageId: packageId,
+        idempotencyKey: dto.idempotencyKey
+          ? `${dto.idempotencyKey}:${packageId}`
+          : undefined,
+      });
+      results.push(result);
+    }
+    return results;
   }
 
   private async assertDisciplineScope(

@@ -84,11 +84,24 @@ export interface CreateDesignSubmittalCommand extends WorkflowCommandBase {
   readonly type: 'CreateDesignSubmittal';
   readonly projectId: string;
   readonly designPackageIds: readonly string[];
+  readonly submittalNumber: string;
+  readonly title: string;
+  readonly category: string;
+  readonly contractor?: string;
+  readonly supplier?: string;
+  readonly specReference?: string;
 }
 
 export interface IssueSubmittalCommand extends WorkflowCommandBase {
   readonly type: 'IssueSubmittal';
   readonly submittalId: string;
+}
+
+export interface AddSubmittalItemsCommand extends WorkflowCommandBase {
+  readonly type: 'AddSubmittalItems';
+  readonly projectId: string;
+  readonly submittalId: string;
+  readonly designPackageIds: readonly string[];
 }
 
 /** External boundary trigger — creates internal revision loop. */
@@ -112,6 +125,7 @@ export type WorkflowCommand =
   | LockPackageEdvsCommand
   | CreateDesignSubmittalCommand
   | IssueSubmittalCommand
+  | AddSubmittalItemsCommand
   | TriggerRevisionCommand;
 
 export type WorkflowCommandType = WorkflowCommand['type'];
@@ -122,6 +136,9 @@ export const PHASE_AB_COMMANDS: readonly WorkflowCommandType[] = [
   'SubmitPackageForReview',
   'BatchApproveEdvs',
   'LockPackageEdvs',
+  'CreateDesignSubmittal',
+  'IssueSubmittal',
+  'TriggerRevision',
 ];
 
 export interface WorkflowResultSnapshot {
@@ -132,6 +149,8 @@ export interface WorkflowResultSnapshot {
   readonly packageProjectedStatus?: DesignPackageProjectedStatus;
   readonly disciplineProjectedStatus?: TaskDisciplineProjectedStatus;
   readonly reviewSessionId?: string;
+  readonly submittalId?: string;
+  readonly newEdvId?: string;
   readonly intentEventIds: readonly string[];
 }
 

@@ -1,0 +1,155 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { ReviewTier } from '@prisma/client';
+import { REVIEW_TIER_ORDER } from '../../domain/contracts/enums/review-tier.enum';
+import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
+import { EpcWorkflowRepository } from '../../infrastructure/repositories/epc-workflow.repository';
+
+/** Default SLA hours per review tier (v1). */
+export const DEFAULT_SLA_HOURS: Readonly<Record<ReviewTier, number>> = {
+  [ReviewTier.REVIEWER]: 48,
+  [ReviewTier.DISCIPLINE_LEAD]: 72,
+  [ReviewTier.DEPT_CHIEF]: 120,
+  [ReviewTier.INSTITUTE_CHIEF]: 168,
+};
+
+export interface SlaEscalationResult {
+  readonly reviewSessionId: string;
+  readonly fromTier: ReviewTier;
+  readonly toTier: ReviewTier;
+  readonly escalatedToUserId: string | null;
+}
+
+/**
+ * SLA escalation engine — visibility only, never blocks workflow.
+ */
+@Injectable()
+export class ReviewSlaService {
+  private readonly logger = new Logger(ReviewSlaService.name);
+
+  constructor(
+    private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly epcWorkflowRepository: EpcWorkflowRepository,
+  ) {}
+
+  /**
+   * Computes SLA deadline from tier and session open time.
+   */
+  computeDeadline(openedAt: Date, tier: ReviewTier): Date {
+    const hours = DEFAULT_SLA_HOURS[tier];
+    return new Date(openedAt.getTime() + hours * 60 * 60 * 1000);
+  }
+
+  /**
+   * Returns next tier in governance chain, or null at institute chief.
+   */
+  getNextTier(current: ReviewTier): ReviewTier | null {
+    const index = REVIEW_TIER_ORDER.indexOf(current as never);
+    if (index < 0 || index >= REVIEW_TIER_ORDER.length - 1) {
+      return null;
+    }
+    return REVIEW_TIER_ORDER[index + 1] as ReviewTier;
+  }
+
+  /**
+   * Resolves assignee user for a review tier from discipline assignments.
+   */
+  resolveAssigneeForTier(
+    tier: ReviewTier,
+    discipline: {
+      reviewerUserId: string | null;
+      disciplineLeadUserId: string | null;
+      chiefUserId: string | null;
+    },
+  ): string | null {
+    switch (tier) {
+      case ReviewTier.REVIEWER:
+        return discipline.reviewerUserId;
+      case ReviewTier.DISCIPLINE_LEAD:
+        return discipline.disciplineLeadUserId;
+      case ReviewTier.DEPT_CHIEF:
+      case ReviewTier.INSTITUTE_CHIEF:
+        return discipline.chiefUserId;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Escalates overdue active sessions — non-blocking visibility update.
+   */
+  async escalateOverdueSessions(companyId: string): Promise<SlaEscalationResult[]> {
+    const now = new Date();
+    const overdue = await this.epcReviewRepository.findOverdueActiveSessions(
+      companyId,
+      now,
+    );
+    const results: SlaEscalationResult[] = [];
+
+    for (const session of overdue) {
+      const nextTier = this.getNextTier(session.currentTier);
+      if (!nextTier) {
+        await this.epcReviewRepository.markSessionEscalated(
+          session.id,
+          now,
+          session.assignedToUserId,
+          session.currentTier,
+          session.slaDeadlineAt ?? now,
+          session.updatedBy,
+        );
+        this.logger.warn(
+          `SLA overdue at final tier for session ${session.id} — PMO alert only`,
+        );
+        continue;
+      }
+
+      const discipline = await this.epcWorkflowRepository.findTaskDisciplineContext(
+        companyId,
+        session.taskDisciplineId,
+      );
+      if (!discipline) {
+        continue;
+      }
+
+      const escalatedToUserId = this.resolveAssigneeForTier(nextTier, discipline);
+      const newDeadline = this.computeDeadline(now, nextTier);
+
+      await this.epcReviewRepository.markSessionEscalated(
+        session.id,
+        now,
+        escalatedToUserId,
+        nextTier,
+        newDeadline,
+        session.updatedBy,
+      );
+
+      results.push({
+        reviewSessionId: session.id,
+        fromTier: session.currentTier,
+        toTier: nextTier,
+        escalatedToUserId,
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Hourly cron — escalates SLA violations without blocking workflow.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async runHourlyEscalation(): Promise<void> {
+    const now = new Date();
+    const overdue = await this.epcReviewRepository.findAllOverdueActiveSessions(now);
+    const companyIds = [...new Set(overdue.map((s) => s.companyId))];
+
+    for (const companyId of companyIds) {
+      const escalations = await this.escalateOverdueSessions(companyId);
+      if (escalations.length > 0) {
+        this.logger.log(
+          `SLA escalated ${escalations.length} session(s) for company ${companyId}`,
+        );
+      }
+    }
+  }
+}

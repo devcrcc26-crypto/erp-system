@@ -1,0 +1,7 @@
+export enum ReviewSessionStatus {
+  ACTIVE = 'ACTIVE',
+  APPROVED = 'APPROVED',
+  RETURNED_FOR_REWORK = 'RETURNED_FOR_REWORK',
+  CLOSED = 'CLOSED',
+  SUPERSEDED = 'SUPERSEDED',
+}

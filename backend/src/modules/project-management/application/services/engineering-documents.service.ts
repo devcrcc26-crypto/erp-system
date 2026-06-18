@@ -28,6 +28,7 @@ import {
   TaskDisciplineScopeRepository,
 } from '../../infrastructure/repositories/epc-storage.repository';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
+import { ConflictGuardService } from './conflict-guard.service';
 import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
@@ -39,6 +40,7 @@ export class EngineeringDocumentsService {
     private readonly engineeringDocumentVersionRepository: EngineeringDocumentVersionRepository,
     private readonly taskDisciplineScopeRepository: TaskDisciplineScopeRepository,
     private readonly folderService: EngineeringDocumentFolderService,
+    private readonly conflictGuard: ConflictGuardService,
     private readonly workflowEventLogService: WorkflowEventLogService,
     private readonly workflowKernel: WorkflowKernelService,
   ) {}
@@ -181,6 +183,11 @@ export class EngineeringDocumentsService {
     if (!document || document.taskDisciplineId !== taskDisciplineId) {
       throw new NotFoundException('Engineering document not found');
     }
+
+    await this.conflictGuard.assertNoActiveSessionForEngineeringDocument(
+      ctx.companyId,
+      engineeringDocumentId,
+    );
 
     const docVersion = await this.taskDisciplineScopeRepository.findDocumentVersion(
       ctx.companyId,

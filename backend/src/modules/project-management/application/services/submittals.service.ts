@@ -8,22 +8,32 @@ import {
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
 import {
+  AddSubmittalItemsDto,
+  CreateDesignSubmittalDto,
   CreateSubmittalDto,
   CreateSubmittalReviewDto,
+  IssueSubmittalDto,
+  BatchIssueSubmittalsDto,
+  BatchAddSubmittalItemsDto,
   PmListQueryDto,
   UpdateSubmittalDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapSubmittal,
+  mapSubmittalItem,
   mapSubmittalReview,
   MappedSubmittal,
+  MappedSubmittalItem,
   MappedSubmittalReview,
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { ExternalReviewTriggerService } from './external-review-trigger.service';
 import { ProjectScopeService } from './project-scope.service';
+import { WorkflowKernelService } from './workflow-kernel.service';
+import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 
 const SUBMITTAL_SORT_FIELDS = new Set([
   'createdAt',
@@ -41,6 +51,8 @@ export class SubmittalsService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly workflowKernel: WorkflowKernelService,
+    private readonly externalReviewTrigger: ExternalReviewTriggerService,
   ) {}
 
   /**
@@ -81,13 +93,22 @@ export class SubmittalsService {
     ctx: PmContext,
     projectId: string,
     submittalId: string,
-  ): Promise<MappedSubmittal> {
-    const row = await this.getSubmittalOrThrow(projectId, submittalId);
-    return mapSubmittal(row);
+  ): Promise<MappedSubmittal & { items: MappedSubmittalItem[] }> {
+    const row = await this.prisma.submittal.findFirst({
+      where: activeOnly({ id: submittalId, projectId }),
+      include: { items: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (!row) {
+      throw new NotFoundException('Submittal not found');
+    }
+    return {
+      ...mapSubmittal(row),
+      items: row.items.map(mapSubmittalItem),
+    };
   }
 
   /**
-   * Creates a submittal with an auto-generated document number.
+   * Legacy create — metadata only without design packages.
    */
   async createSubmittal(
     ctx: PmContext,
@@ -120,6 +141,123 @@ export class SubmittalsService {
     });
 
     return mapSubmittal(row);
+  }
+
+  /**
+   * Creates design-package submittal via WorkflowKernel (validates LOCKED packages).
+   */
+  async createDesignSubmittal(
+    ctx: PmContext,
+    projectId: string,
+    dto: CreateDesignSubmittalDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const submittalNumber = await this.documentNumberService.getNextNumber(
+      ctx,
+      'SUBMITTAL',
+    );
+
+    return this.workflowKernel.execute({
+      type: 'CreateDesignSubmittal',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      projectId,
+      designPackageIds: dto.designPackageIds,
+      submittalNumber,
+      title: dto.title,
+      category: dto.category,
+      contractor: dto.contractor,
+      supplier: dto.supplier,
+      specReference: dto.specReference,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Issues submittal — captures immutable package snapshots.
+   */
+  async issueSubmittal(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: IssueSubmittalDto,
+  ): Promise<WorkflowResultSnapshot> {
+    await this.getSubmittalOrThrow(projectId, submittalId);
+
+    return this.workflowKernel.execute({
+      type: 'IssueSubmittal',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      submittalId,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Adds locked design packages to an existing DRAFT submittal.
+   */
+  async addItems(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: AddSubmittalItemsDto,
+  ): Promise<WorkflowResultSnapshot> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.issuedAt) {
+      throw new NotFoundException('Cannot add items to issued submittal');
+    }
+
+    return this.workflowKernel.execute({
+      type: 'AddSubmittalItems',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      projectId,
+      submittalId,
+      designPackageIds: dto.designPackageIds,
+      idempotencyKey: dto.idempotencyKey,
+    });
+  }
+
+  /**
+   * Issues multiple submittals — one kernel tx per submittal.
+   */
+  async batchIssue(
+    ctx: PmContext,
+    projectId: string,
+    dto: BatchIssueSubmittalsDto,
+  ): Promise<WorkflowResultSnapshot[]> {
+    const results: WorkflowResultSnapshot[] = [];
+    for (const submittalId of dto.submittalIds) {
+      await this.getSubmittalOrThrow(projectId, submittalId);
+      const result = await this.workflowKernel.execute({
+        type: 'IssueSubmittal',
+        companyId: ctx.companyId,
+        actorId: ctx.userId,
+        submittalId,
+        idempotencyKey: dto.idempotencyKey
+          ? `${dto.idempotencyKey}:${submittalId}`
+          : undefined,
+      });
+      results.push(result);
+    }
+    return results;
+  }
+
+  async batchAddItems(
+    ctx: PmContext,
+    projectId: string,
+    dto: BatchAddSubmittalItemsDto,
+  ): Promise<WorkflowResultSnapshot[]> {
+    const results: WorkflowResultSnapshot[] = [];
+    for (const submittalId of dto.submittalIds) {
+      const result = await this.addItems(ctx, projectId, submittalId, {
+        designPackageIds: dto.designPackageIds,
+        idempotencyKey: dto.idempotencyKey,
+      });
+      results.push(result);
+    }
+    return results;
   }
 
   /**
@@ -186,7 +324,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Adds a review to a submittal and updates its status.
+   * Records external submittal review — trigger only, no EDV mutation.
    */
   async addReview(
     ctx: PmContext,
@@ -199,6 +337,11 @@ export class SubmittalsService {
       dto.revisionNumber ?? submittal.revisionNumber ?? 1;
 
     const review = await this.prisma.$transaction(async (tx) => {
+      const items = await tx.submittalItem.findMany({
+        where: { submittalId },
+        select: { id: true },
+      });
+
       const created = await tx.submittalReview.create({
         data: {
           submittalId,
@@ -218,6 +361,17 @@ export class SubmittalsService {
           reviewDate: this.todayDate(),
           updatedBy: ctx.userId,
         },
+      });
+
+      await this.externalReviewTrigger.recordFromSubmittalReview(tx, {
+        companyId: ctx.companyId,
+        projectId,
+        submittalId,
+        submittalReviewId: created.id,
+        reviewStatus: dto.status,
+        comments: dto.comments,
+        submittalItemIds: items.map((i) => i.id),
+        actorId: ctx.userId,
       });
 
       return created;

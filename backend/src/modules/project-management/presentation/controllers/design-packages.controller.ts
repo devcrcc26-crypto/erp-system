@@ -16,9 +16,13 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddDesignPackageItemDto,
   BatchApproveEdvsDto,
+  BatchReturnEdvsDto,
   CreateDesignPackageDependencyDto,
   CreateDesignPackageDto,
   LockPackageEdvsDto,
+  SubmitPackageForReviewDto,
+  ApproveReviewSessionDto,
+  ReturnPackageForReworkDto,
   UpdateDesignPackageDto,
 } from '../../application/dtos/engineering-document.dtos';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
@@ -245,6 +249,84 @@ export class DesignPackagesController {
     @Body() dto: BatchApproveEdvsDto,
   ): Promise<unknown> {
     return this.designPackagesService.batchApproveEdvs(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      dto,
+    );
+  }
+
+  @Post(':packageId/batch-return')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Batch return EDVs in package via WorkflowKernel' })
+  batchReturn(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Body() dto: BatchReturnEdvsDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.batchReturnEdvs(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      dto,
+    );
+  }
+
+  @Post(':packageId/submit-for-review')
+  @RequirePermission('schedule', 'create')
+  @ApiOperation({ summary: 'Submit package for review — opens session + frozen snapshot' })
+  submitForReview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Body() dto: SubmitPackageForReviewDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.submitForReview(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      dto,
+    );
+  }
+
+  @Post(':packageId/review-sessions/:reviewSessionId/approve')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Approve review session at current tier' })
+  approveReviewSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Param('reviewSessionId') reviewSessionId: string,
+    @Body() dto: ApproveReviewSessionDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.approveReviewSession(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      reviewSessionId,
+      dto,
+    );
+  }
+
+  @Post(':packageId/return-for-rework')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Return package for rework — closes session, EDVs to DRAFT' })
+  returnForRework(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Body() dto: ReturnPackageForReworkDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.returnForRework(
       this.ctx(user),
       projectId,
       taskDisciplineId,
