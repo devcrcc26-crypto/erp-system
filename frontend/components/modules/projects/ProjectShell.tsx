@@ -2,89 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Breadcrumb, Spin, Tabs } from 'antd';
+import { useEffect, useState } from 'react';
+import { Breadcrumb, Button, Drawer, Spin } from 'antd';
+import { MenuOutlined } from '@ant-design/icons';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import ProjectWorkspaceSidebar from '@/components/modules/projects/ProjectWorkspaceSidebar';
+import PlaceholderPage from '@/components/PlaceholderPage';
 import { ApiRequestError } from '@/lib/api/errors';
+import { resolveProjectBreadcrumb } from '@/lib/navigation/project-workspace-nav';
 import {
   formatProjectBudget,
   formatProjectDate,
   formatProjectStatus,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
-import { useProject } from '@/lib/query/projects';
-import { toProjectSummary } from '@/lib/query/projects';
+import { useProject, toProjectSummary } from '@/lib/query/projects';
 import { useProjectContextStore } from '@/stores/project-context.store';
-import { useEffect } from 'react';
-import PlaceholderPage from '@/components/PlaceholderPage';
 import { Network } from 'lucide-react';
 import { layout } from '@/lib/theme/layout';
-
-const PROJECT_TABS = [
-  { key: 'dashboard', label: 'Dashboard', href: (id: string) => `/projects/${id}` },
-  { key: 'team', label: 'Team', href: (id: string) => `/projects/${id}/team` },
-  {
-    key: 'documents',
-    label: 'Documents',
-    href: (id: string) => `/projects/${id}/documents`,
-  },
-  {
-    key: 'schedule',
-    label: 'Schedule',
-    href: (id: string) => `/projects/${id}/schedule`,
-  },
-  { key: 'rfis', label: 'RFIs', href: (id: string) => `/projects/${id}/rfis` },
-  {
-    key: 'submittals',
-    label: 'Submittals',
-    href: (id: string) => `/projects/${id}/submittals`,
-  },
-  {
-    key: 'drawings',
-    label: 'Drawings',
-    href: (id: string) => `/projects/${id}/drawings`,
-  },
-  {
-    key: 'daily-logs',
-    label: 'Daily Logs',
-    href: (id: string) => `/projects/${id}/daily-logs`,
-  },
-  {
-    key: 'meetings',
-    label: 'Meetings',
-    href: (id: string) => `/projects/${id}/meetings`,
-  },
-  {
-    key: 'correspondence',
-    label: 'Correspondence',
-    href: (id: string) => `/projects/${id}/correspondence`,
-  },
-  { key: 'risks', label: 'Risks', href: (id: string) => `/projects/${id}/risks` },
-  { key: 'issues', label: 'Issues', href: (id: string) => `/projects/${id}/issues` },
-  {
-    key: 'punch-list',
-    label: 'Punch List',
-    href: (id: string) => `/projects/${id}/punch-list`,
-  },
-  {
-    key: 'closeout',
-    label: 'Closeout',
-    href: (id: string) => `/projects/${id}/closeout`,
-  },
-] as const;
-
-function resolveActiveTab(pathname: string, projectId: string): string {
-  const base = `/projects/${projectId}`;
-  if (pathname === base) {
-    return 'dashboard';
-  }
-  const match = PROJECT_TABS.find((tab) => {
-    if (tab.key === 'dashboard') {
-      return false;
-    }
-    return pathname.startsWith(`${base}/${tab.key}`);
-  });
-  return match?.key ?? 'dashboard';
-}
 
 export default function ProjectShell({
   projectId,
@@ -94,6 +29,7 @@ export default function ProjectShell({
   children: React.ReactNode;
 }): React.ReactNode {
   const pathname = usePathname();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const setActiveProject = useProjectContextStore((state) => state.setActiveProject);
   const clearProjectContext = useProjectContextStore(
     (state) => state.clearProjectContext,
@@ -138,16 +74,34 @@ export default function ProjectShell({
   }
 
   const project = projectQuery.data;
-  const activeTab = resolveActiveTab(pathname, projectId);
+  const breadcrumb = resolveProjectBreadcrumb(pathname, projectId);
+
+  const breadcrumbItems = [
+    { title: <Link href="/projects">Projects</Link> },
+    { title: <Link href={`/projects/${projectId}`}>{project.projectCode}</Link> },
+  ];
+
+  if (breadcrumb) {
+    breadcrumbItems.push(
+      { title: <span>{breadcrumb.group}</span> },
+      { title: <span>{breadcrumb.page}</span> },
+    );
+  }
 
   return (
     <div className={layout.pageStack}>
-      <Breadcrumb
-        items={[
-          { title: <Link href="/projects">Projects</Link> },
-          { title: project.projectCode },
-        ]}
-      />
+      <div className="flex items-center justify-between gap-3">
+        <Breadcrumb items={breadcrumbItems} className="min-w-0 flex-1" />
+        <Button
+          type="default"
+          icon={<MenuOutlined />}
+          className="md:!hidden"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Open project navigation"
+        >
+          Menu
+        </Button>
+      </div>
 
       <section className={`${layout.cardSurface} ${layout.cardPadding}`}>
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -192,17 +146,29 @@ export default function ProjectShell({
         </div>
       </section>
 
-      <section className={`${layout.cardSurface} px-4 py-2 md:px-6 md:py-3`}>
-        <Tabs
-          activeKey={activeTab}
-          items={PROJECT_TABS.map((tab) => ({
-            key: tab.key,
-            label: <Link href={tab.href(projectId)}>{tab.label}</Link>,
-          }))}
-        />
-      </section>
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        <aside
+          className={`hidden w-full shrink-0 md:block md:w-60 ${layout.cardSurface} py-2`}
+        >
+          <ProjectWorkspaceSidebar projectId={projectId} />
+        </aside>
 
-      <div className={layout.pageStack}>{children}</div>
+        <Drawer
+          title="Project navigation"
+          placement="left"
+          open={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+          className="md:hidden"
+          styles={{ body: { padding: 0 } }}
+        >
+          <ProjectWorkspaceSidebar
+            projectId={projectId}
+            onNavigate={() => setMobileNavOpen(false)}
+          />
+        </Drawer>
+
+        <div className={`min-w-0 flex-1 ${layout.pageStack}`}>{children}</div>
+      </div>
     </div>
   );
 }

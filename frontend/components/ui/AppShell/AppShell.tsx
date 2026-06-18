@@ -15,9 +15,12 @@ import {
   UserOutlined,
   LogoutOutlined,
   CloseOutlined,
+  InboxOutlined,
+  CommentOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import PageHeader from '@/components/ui/PageHeader/PageHeader';
+import { useCanViewEpcWorkspaces } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { useLogout } from '@/lib/query/auth';
@@ -29,6 +32,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
   '/projects': 'Projects',
   '/kanban-board': 'Kanban Board',
+  '/review-inbox': 'Review Inbox',
+  '/my-comments': 'My Comments',
   '/users': 'Users',
   '/teams': 'Teams',
   '/reports': 'Reports',
@@ -42,11 +47,26 @@ type NavItem = {
   label: string;
   href: string;
   icon: React.ReactNode;
+  requiresEpcAccess?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { key: '/', label: 'Dashboard', href: '/', icon: <DashboardOutlined /> },
   { key: '/projects', label: 'Projects', href: '/projects', icon: <ProjectOutlined /> },
+  {
+    key: '/review-inbox',
+    label: 'Review Inbox',
+    href: '/review-inbox',
+    icon: <InboxOutlined />,
+    requiresEpcAccess: true,
+  },
+  {
+    key: '/my-comments',
+    label: 'My Comments',
+    href: '/my-comments',
+    icon: <CommentOutlined />,
+    requiresEpcAccess: true,
+  },
   {
     key: '/kanban-board',
     label: 'Kanban Board',
@@ -85,16 +105,21 @@ function SidebarNav({
   const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
+  const canViewEpc = useCanViewEpcWorkspaces();
+
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !item.requiresEpcAccess || canViewEpc,
+  );
 
   const selectedKey =
     pathname === '/profile'
       ? '/profile'
-      : (NAV_ITEMS.find(
+      : (visibleNavItems.find(
           (item) => item.href !== '/' && pathname.startsWith(item.href),
         )?.key ?? '/');
 
   const menuItems: MenuProps['items'] = [
-    ...NAV_ITEMS.map((item) => ({
+    ...visibleNavItems.map((item) => ({
       key: item.key,
       icon: item.icon,
       label: (
@@ -173,7 +198,8 @@ export default function AppShell({
   const pathname = usePathname();
   const title = pathname.startsWith('/projects')
     ? 'Projects'
-    : (PAGE_TITLES[pathname] ?? 'Dashboard');
+    : (PAGE_TITLES[pathname] ??
+        (pathname.startsWith('/design-packages') ? 'Review Mode' : 'Dashboard'));
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 768px)');

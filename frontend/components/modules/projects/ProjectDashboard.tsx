@@ -18,24 +18,24 @@ import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 
 const QUICK_LINKS = [
   {
-    href: 'rfis',
-    label: 'RFIs',
-    description: 'Requests for information',
+    href: 'disciplines',
+    label: 'Disciplines & Packages',
+    description: 'Engineering design packages and documents',
   },
   {
-    href: 'issues',
-    label: 'Issues',
-    description: 'Site issues and defects',
+    href: 'overview/status',
+    label: 'Status Board',
+    description: 'EPC workflow KPIs and bottlenecks',
+  },
+  {
+    href: 'submittals',
+    label: 'Submittals',
+    description: 'Design issue and release packages',
   },
   {
     href: 'schedule',
     label: 'Schedule',
-    description: 'Milestones and Gantt',
-  },
-  {
-    href: 'daily-logs',
-    label: 'Daily Logs',
-    description: 'Site diary entries',
+    description: 'Milestones, tasks, and Gantt',
   },
 ] as const;
 
