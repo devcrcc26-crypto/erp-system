@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  ApprovalLevel,
   CloseoutStatus,
+  CompletionStatus,
   CorrespondenceStatus,
   CorrespondenceType,
   IssueSeverity,
@@ -17,7 +19,9 @@ import {
   RiskStatus,
   SubmittalStatus,
   TaskDependencyType,
+  TaskLanguage,
   TaskStatus,
+  UrgencyLevel,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
@@ -119,6 +123,53 @@ export class CreateProjectDto {
   @IsOptional()
   @IsUUID()
   projectManagerId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  client?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  commissioningMethod?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  responsibleDepartmentId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  designProperties?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  designStage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  responsiblePersonId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  overallProgressPct?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isOutsourced?: boolean;
 }
 
 export class UpdateProjectDto extends PartialType(CreateProjectDto) {
@@ -187,9 +238,10 @@ export class CreateTaskDto {
   @IsUUID()
   assignedTo?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  taskIdCode!: string;
+  taskIdCode?: string;
 
   @ApiProperty()
   @IsString()
@@ -231,9 +283,147 @@ export class CreateTaskDto {
   @IsOptional()
   @IsBoolean()
   isCritical?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  commissioningMethod?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  requiresArchiving?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  taskAttributes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  onSiteReceivingTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  assignmentToHqTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contactFormNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  designStage?: string;
+
+  @ApiPropertyOptional({ enum: UrgencyLevel })
+  @IsOptional()
+  @IsEnum(UrgencyLevel)
+  urgencyLevel?: UrgencyLevel;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  hasCustomSchedule?: boolean;
+
+  @ApiPropertyOptional({ enum: TaskLanguage })
+  @IsOptional()
+  @IsEnum(TaskLanguage)
+  language?: TaskLanguage;
+
+  @ApiPropertyOptional({ enum: ApprovalLevel })
+  @IsOptional()
+  @IsEnum(ApprovalLevel)
+  approvalLevel?: ApprovalLevel;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  chiefEngineerName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  dispatcherName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  responsiblePersonId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  actualCompletionTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  actualWorkdays?: number;
+
+  @ApiPropertyOptional({ enum: CompletionStatus })
+  @IsOptional()
+  @IsEnum(CompletionStatus)
+  completionStatus?: CompletionStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  remark?: string;
 }
 
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
+
+export class CreateTaskDisciplineDto {
+  @ApiProperty()
+  @IsString()
+  disciplineName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  designerName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  reviewerName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  disciplinaryLeader?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  deptChiefEngineer?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  instituteChiefEngineer?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  actualCompletionTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  deptReviewTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  instituteReviewTime?: string;
+}
+
+export class UpdateTaskDisciplineDto extends PartialType(CreateTaskDisciplineDto) {}
 
 export class CreateTaskDependencyDto {
   @ApiProperty()

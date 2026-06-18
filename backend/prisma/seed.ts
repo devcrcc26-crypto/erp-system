@@ -20,6 +20,21 @@ const CORE_ROLES = [
   'HR Officer',
   'Safety Officer',
   'Employee',
+  'General Manager',
+  'Project Director',
+  'Planning Engineer',
+  'Chief Engineer',
+  'Designer',
+  'Dispatcher',
+] as const;
+
+const DESIGN_WORKFLOW_ROLES = [
+  'General Manager',
+  'Project Director',
+  'Planning Engineer',
+  'Chief Engineer',
+  'Designer',
+  'Dispatcher',
 ] as const;
 
 const PERMISSION_DEFINITIONS: Array<{
@@ -261,6 +276,100 @@ function pmPermissionFlags(
   return null;
 }
 
+function designWorkflowRolePermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
+    return null;
+  }
+
+  const flag = ACTION_TO_FLAG[action];
+  if (!flag) {
+    return null;
+  }
+
+  if (roleName === 'Project Director') {
+    return fullPermissionFlags();
+  }
+
+  if (roleName === 'General Manager') {
+    const executiveModules = [
+      'projects',
+      'schedule',
+      'rfis',
+      'risks',
+      'issues',
+      'meetings',
+      'correspondence',
+    ];
+    if (executiveModules.includes(module)) {
+      if (action === 'delete') {
+        return null;
+      }
+      return {
+        canView: false,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+        [flag]: true,
+      };
+    }
+    if (action === 'view') {
+      return viewOnlyFlags();
+    }
+    return null;
+  }
+
+  const planningModules = ['projects', 'schedule'];
+  const engineeringModules = [
+    'projects',
+    'schedule',
+    'drawings',
+    'submittals',
+    'rfis',
+  ];
+  const designModules = ['projects', 'schedule', 'drawings'];
+  const dispatchModules = ['projects', 'schedule'];
+
+  let allowedModules: string[] = [];
+  if (roleName === 'Planning Engineer') {
+    allowedModules = planningModules;
+  } else if (roleName === 'Chief Engineer') {
+    allowedModules = engineeringModules;
+  } else if (roleName === 'Designer') {
+    allowedModules = designModules;
+  } else if (roleName === 'Dispatcher') {
+    allowedModules = dispatchModules;
+  } else {
+    return null;
+  }
+
+  if (allowedModules.includes(module)) {
+    if (action === 'delete') {
+      return null;
+    }
+    return {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+      [flag]: true,
+    };
+  }
+
+  if (action === 'view') {
+    return viewOnlyFlags();
+  }
+
+  return null;
+}
+
 function employeePermissionFlags(
   module: string,
   action: string,
@@ -416,6 +525,39 @@ async function main(): Promise<void> {
     }
     for (const permission of permissions) {
       const flags = pmPermissionFlags(roleName, permission.module, permission.action);
+      if (!flags) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        update: flags,
+        create: {
+          roleId,
+          permissionId: permission.id,
+          ...flags,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
+  }
+
+  for (const roleName of DESIGN_WORKFLOW_ROLES) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      continue;
+    }
+    for (const permission of permissions) {
+      const flags = designWorkflowRolePermissionFlags(
+        roleName,
+        permission.module,
+        permission.action,
+      );
       if (!flags) {
         continue;
       }

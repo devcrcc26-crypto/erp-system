@@ -97,6 +97,13 @@ export class ProjectsService {
   ): Promise<MappedProject> {
     await this.assertProjectCodeAvailable(ctx, dto.projectCode);
 
+    if (dto.responsiblePersonId) {
+      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
+    }
+    if (dto.responsibleDepartmentId) {
+      await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
+    }
+
     const project = await this.prisma.project.create({
       data: {
         companyId: ctx.companyId,
@@ -113,6 +120,15 @@ export class ProjectsService {
         budget: parseOptionalDecimal(dto.budget),
         currency: dto.currency,
         projectManagerId: dto.projectManagerId,
+        client: dto.client,
+        commissioningMethod: dto.commissioningMethod,
+        responsibleDepartmentId: dto.responsibleDepartmentId,
+        designProperties: dto.designProperties,
+        designStage: dto.designStage,
+        responsiblePersonId: dto.responsiblePersonId,
+        description: dto.description,
+        overallProgressPct: dto.overallProgressPct ?? 0,
+        isOutsourced: dto.isOutsourced ?? false,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -135,6 +151,13 @@ export class ProjectsService {
       await this.assertProjectCodeAvailable(ctx, dto.projectCode, id);
     }
 
+    if (dto.responsiblePersonId) {
+      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
+    }
+    if (dto.responsibleDepartmentId) {
+      await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
+    }
+
     const project = await this.prisma.project.update({
       where: { id },
       data: {
@@ -152,6 +175,15 @@ export class ProjectsService {
         budget: parseOptionalDecimal(dto.budget),
         currency: dto.currency,
         projectManagerId: dto.projectManagerId,
+        client: dto.client,
+        commissioningMethod: dto.commissioningMethod,
+        responsibleDepartmentId: dto.responsibleDepartmentId,
+        designProperties: dto.designProperties,
+        designStage: dto.designStage,
+        responsiblePersonId: dto.responsiblePersonId,
+        description: dto.description,
+        overallProgressPct: dto.overallProgressPct,
+        isOutsourced: dto.isOutsourced,
         updatedBy: ctx.userId,
       },
     });
@@ -350,6 +382,19 @@ export class ProjectsService {
     });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+  }
+
+  private async assertDepartmentInCompany(
+    ctx: PmContext,
+    departmentId: string,
+  ): Promise<void> {
+    const department = await this.prisma.department.findFirst({
+      where: activeOnly({ id: departmentId, companyId: ctx.companyId }),
+      select: { id: true },
+    });
+    if (!department) {
+      throw new NotFoundException('Department not found');
     }
   }
 

@@ -27,6 +27,7 @@ import {
   SubmittalReview,
   Task,
   TaskDependency,
+  TaskDiscipline,
   Warranty,
 } from '@prisma/client';
 
@@ -99,6 +100,15 @@ export interface MappedProject {
   budget: string | null;
   currency: string | null;
   projectManagerId: string | null;
+  client: string | null;
+  commissioningMethod: string | null;
+  responsibleDepartmentId: string | null;
+  designProperties: string | null;
+  designStage: string | null;
+  responsiblePersonId: string | null;
+  description: string | null;
+  overallProgressPct: number;
+  isOutsourced: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -145,6 +155,15 @@ export function mapProject(project: Project): MappedProject {
     budget: decimalToString(project.budget),
     currency: project.currency,
     projectManagerId: project.projectManagerId,
+    client: project.client,
+    commissioningMethod: project.commissioningMethod,
+    responsibleDepartmentId: project.responsibleDepartmentId,
+    designProperties: project.designProperties,
+    designStage: project.designStage,
+    responsiblePersonId: project.responsiblePersonId,
+    description: project.description,
+    overallProgressPct: project.overallProgressPct,
+    isOutsourced: project.isOutsourced,
     createdAt: toIsoString(project.createdAt)!,
     updatedAt: toIsoString(project.updatedAt)!,
   };
@@ -795,8 +814,43 @@ export interface MappedTask {
   progressPct: number;
   status: Task['status'];
   isCritical: boolean;
+  commissioningMethod: string | null;
+  requiresArchiving: boolean;
+  taskAttributes: string | null;
+  onSiteReceivingTime: string | null;
+  assignmentToHqTime: string | null;
+  contactFormNumber: string | null;
+  designStage: string | null;
+  urgencyLevel: Task['urgencyLevel'];
+  hasCustomSchedule: boolean;
+  language: Task['language'];
+  approvalLevel: Task['approvalLevel'];
+  chiefEngineerName: string | null;
+  dispatcherName: string | null;
+  responsiblePersonId: string | null;
+  actualCompletionTime: string | null;
+  actualWorkdays: number | null;
+  completionStatus: Task['completionStatus'];
+  remark: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MappedTaskDiscipline {
+  id: string;
+  taskId: string;
+  companyId: string;
+  disciplineName: string;
+  designerName: string | null;
+  reviewerName: string | null;
+  disciplinaryLeader: string | null;
+  deptChiefEngineer: string | null;
+  instituteChiefEngineer: string | null;
+  actualCompletionTime: string | null;
+  deptReviewTime: string | null;
+  instituteReviewTime: string | null;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface MappedTaskDependency {
@@ -888,8 +942,50 @@ export function mapTask(task: Task): MappedTask {
     progressPct: task.progressPct,
     status: task.status,
     isCritical: task.isCritical,
+    commissioningMethod: task.commissioningMethod,
+    requiresArchiving: task.requiresArchiving,
+    taskAttributes: task.taskAttributes,
+    onSiteReceivingTime: toIsoString(task.onSiteReceivingTime),
+    assignmentToHqTime: toIsoString(task.assignmentToHqTime),
+    contactFormNumber: task.contactFormNumber,
+    designStage: task.designStage,
+    urgencyLevel: task.urgencyLevel,
+    hasCustomSchedule: task.hasCustomSchedule,
+    language: task.language,
+    approvalLevel: task.approvalLevel,
+    chiefEngineerName: task.chiefEngineerName,
+    dispatcherName: task.dispatcherName,
+    responsiblePersonId: task.responsiblePersonId,
+    actualCompletionTime: toIsoString(task.actualCompletionTime),
+    actualWorkdays: task.actualWorkdays,
+    completionStatus: task.completionStatus,
+    remark: task.remark,
     createdAt: toIsoString(task.createdAt)!,
     updatedAt: toIsoString(task.updatedAt)!,
+  };
+}
+
+/**
+ * Maps a Prisma TaskDiscipline row to the API response shape.
+ */
+export function mapTaskDiscipline(
+  discipline: TaskDiscipline,
+): MappedTaskDiscipline {
+  return {
+    id: discipline.id,
+    taskId: discipline.taskId,
+    companyId: discipline.companyId,
+    disciplineName: discipline.disciplineName,
+    designerName: discipline.designerName,
+    reviewerName: discipline.reviewerName,
+    disciplinaryLeader: discipline.disciplinaryLeader,
+    deptChiefEngineer: discipline.deptChiefEngineer,
+    instituteChiefEngineer: discipline.instituteChiefEngineer,
+    actualCompletionTime: toIsoString(discipline.actualCompletionTime),
+    deptReviewTime: toIsoString(discipline.deptReviewTime),
+    instituteReviewTime: toIsoString(discipline.instituteReviewTime),
+    createdAt: toIsoString(discipline.createdAt)!,
+    createdBy: discipline.createdBy,
   };
 }
 

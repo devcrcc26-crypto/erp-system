@@ -18,8 +18,10 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateMilestoneDto,
   CreateTaskDependencyDto,
+  CreateTaskDisciplineDto,
   CreateTaskDto,
   UpdateMilestoneDto,
+  UpdateTaskDisciplineDto,
   UpdateTaskDto,
 } from '../../application/dtos/pm.dtos';
 import { ScheduleService } from '../../application/services/schedule.service';
@@ -130,6 +132,75 @@ export class ScheduleController {
   ): Promise<{ message: string }> {
     await this.scheduleService.deleteTask(this.ctx(user), projectId, id);
     return { message: 'Task deleted' };
+  }
+
+  @Get('tasks/:taskId/disciplines')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List task disciplines' })
+  listTaskDisciplines(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.listTaskDisciplines(
+      this.ctx(user),
+      projectId,
+      taskId,
+    );
+  }
+
+  @Post('tasks/:taskId/disciplines')
+  @RequirePermission('schedule', 'create')
+  @ApiOperation({ summary: 'Create task discipline' })
+  createTaskDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: CreateTaskDisciplineDto,
+  ): Promise<unknown> {
+    return this.scheduleService.createTaskDiscipline(
+      this.ctx(user),
+      projectId,
+      taskId,
+      dto,
+    );
+  }
+
+  @Patch('tasks/:taskId/disciplines/:disciplineId')
+  @RequirePermission('schedule', 'edit')
+  @ApiOperation({ summary: 'Update task discipline' })
+  updateTaskDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Param('disciplineId') disciplineId: string,
+    @Body() dto: UpdateTaskDisciplineDto,
+  ): Promise<unknown> {
+    return this.scheduleService.updateTaskDiscipline(
+      this.ctx(user),
+      projectId,
+      taskId,
+      disciplineId,
+      dto,
+    );
+  }
+
+  @Delete('tasks/:taskId/disciplines/:disciplineId')
+  @RequirePermission('schedule', 'delete')
+  @ApiOperation({ summary: 'Delete task discipline' })
+  async deleteTaskDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Param('disciplineId') disciplineId: string,
+  ): Promise<{ message: string }> {
+    await this.scheduleService.deleteTaskDiscipline(
+      this.ctx(user),
+      projectId,
+      taskId,
+      disciplineId,
+    );
+    return { message: 'Task discipline deleted' };
   }
 
   @Get('task-dependencies')

@@ -13,8 +13,10 @@ import {
 import {
   CreateMilestoneDto,
   CreateTaskDependencyDto,
+  CreateTaskDisciplineDto,
   CreateTaskDto,
   UpdateMilestoneDto,
+  UpdateTaskDisciplineDto,
   UpdateTaskDto,
 } from '../dtos/pm.dtos';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -23,12 +25,15 @@ import {
   mapMilestone,
   mapTask,
   mapTaskDependency,
+  mapTaskDiscipline,
   MappedMilestone,
   MappedTask,
   MappedTaskDependency,
+  MappedTaskDiscipline,
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const MILESTONE_SORT_FIELDS = new Set([
@@ -54,6 +59,7 @@ export class ScheduleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly documentNumberService: DocumentNumberService,
   ) {}
 
   /**
@@ -202,6 +208,13 @@ export class ScheduleService {
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
     }
+    if (dto.responsiblePersonId) {
+      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
+    }
+
+    const taskIdCode =
+      dto.taskIdCode?.trim() ||
+      (await this.documentNumberService.getNextNumber(ctx, 'TASK'));
 
     const task = await this.prisma.task.create({
       data: {
@@ -209,7 +222,7 @@ export class ScheduleService {
         milestoneId: dto.milestoneId,
         parentTaskId: dto.parentTaskId,
         assignedTo: dto.assignedTo,
-        taskIdCode: dto.taskIdCode,
+        taskIdCode,
         name: dto.name,
         description: dto.description,
         startDate: parseOptionalDate(dto.startDate),
@@ -218,6 +231,24 @@ export class ScheduleService {
         progressPct: dto.progressPct ?? 0,
         status: dto.status,
         isCritical: dto.isCritical ?? false,
+        commissioningMethod: dto.commissioningMethod,
+        requiresArchiving: dto.requiresArchiving ?? false,
+        taskAttributes: dto.taskAttributes,
+        onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
+        assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
+        contactFormNumber: dto.contactFormNumber,
+        designStage: dto.designStage,
+        urgencyLevel: dto.urgencyLevel,
+        hasCustomSchedule: dto.hasCustomSchedule ?? false,
+        language: dto.language,
+        approvalLevel: dto.approvalLevel,
+        chiefEngineerName: dto.chiefEngineerName,
+        dispatcherName: dto.dispatcherName,
+        responsiblePersonId: dto.responsiblePersonId,
+        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+        actualWorkdays: dto.actualWorkdays,
+        completionStatus: dto.completionStatus,
+        remark: dto.remark,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -249,6 +280,9 @@ export class ScheduleService {
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
     }
+    if (dto.responsiblePersonId) {
+      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
+    }
 
     const task = await this.prisma.task.update({
       where: { id: taskId },
@@ -265,6 +299,24 @@ export class ScheduleService {
         progressPct: dto.progressPct,
         status: dto.status,
         isCritical: dto.isCritical,
+        commissioningMethod: dto.commissioningMethod,
+        requiresArchiving: dto.requiresArchiving,
+        taskAttributes: dto.taskAttributes,
+        onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
+        assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
+        contactFormNumber: dto.contactFormNumber,
+        designStage: dto.designStage,
+        urgencyLevel: dto.urgencyLevel,
+        hasCustomSchedule: dto.hasCustomSchedule,
+        language: dto.language,
+        approvalLevel: dto.approvalLevel,
+        chiefEngineerName: dto.chiefEngineerName,
+        dispatcherName: dto.dispatcherName,
+        responsiblePersonId: dto.responsiblePersonId,
+        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+        actualWorkdays: dto.actualWorkdays,
+        completionStatus: dto.completionStatus,
+        remark: dto.remark,
         updatedBy: ctx.userId,
       },
     });
@@ -363,6 +415,98 @@ export class ScheduleService {
     await this.prisma.taskDependency.delete({ where: { id: dependencyId } });
   }
 
+  /**
+   * Returns all disciplines for a project task.
+   */
+  async listTaskDisciplines(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+  ): Promise<MappedTaskDiscipline[]> {
+    await this.getTaskOrThrow(projectId, taskId);
+
+    const disciplines = await this.prisma.taskDiscipline.findMany({
+      where: { taskId, companyId: ctx.companyId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return disciplines.map(mapTaskDiscipline);
+  }
+
+  /**
+   * Creates a discipline row for a project task.
+   */
+  async createTaskDiscipline(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+    dto: CreateTaskDisciplineDto,
+  ): Promise<MappedTaskDiscipline> {
+    await this.getTaskOrThrow(projectId, taskId);
+
+    const discipline = await this.prisma.taskDiscipline.create({
+      data: {
+        taskId,
+        companyId: ctx.companyId,
+        disciplineName: dto.disciplineName,
+        designerName: dto.designerName,
+        reviewerName: dto.reviewerName,
+        disciplinaryLeader: dto.disciplinaryLeader,
+        deptChiefEngineer: dto.deptChiefEngineer,
+        instituteChiefEngineer: dto.instituteChiefEngineer,
+        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+        deptReviewTime: parseOptionalDate(dto.deptReviewTime),
+        instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapTaskDiscipline(discipline);
+  }
+
+  /**
+   * Updates an existing task discipline.
+   */
+  async updateTaskDiscipline(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+    disciplineId: string,
+    dto: UpdateTaskDisciplineDto,
+  ): Promise<MappedTaskDiscipline> {
+    await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+
+    const discipline = await this.prisma.taskDiscipline.update({
+      where: { id: disciplineId },
+      data: {
+        disciplineName: dto.disciplineName,
+        designerName: dto.designerName,
+        reviewerName: dto.reviewerName,
+        disciplinaryLeader: dto.disciplinaryLeader,
+        deptChiefEngineer: dto.deptChiefEngineer,
+        instituteChiefEngineer: dto.instituteChiefEngineer,
+        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+        deptReviewTime: parseOptionalDate(dto.deptReviewTime),
+        instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
+      },
+    });
+
+    return mapTaskDiscipline(discipline);
+  }
+
+  /**
+   * Hard-deletes a task discipline.
+   */
+  async deleteTaskDiscipline(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+    disciplineId: string,
+  ): Promise<void> {
+    await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+    await this.prisma.taskDiscipline.delete({ where: { id: disciplineId } });
+  }
+
   private async getMilestoneOrThrow(
     projectId: string,
     milestoneId: string,
@@ -389,6 +533,24 @@ export class ScheduleService {
       throw new NotFoundException('Task not found');
     }
     return task;
+  }
+
+  private async getTaskDisciplineOrThrow(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+    disciplineId: string,
+  ): Promise<{ id: string }> {
+    await this.getTaskOrThrow(projectId, taskId);
+
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: { id: disciplineId, taskId, companyId: ctx.companyId },
+      select: { id: true },
+    });
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+    return discipline;
   }
 
   private async assertUserInCompany(
