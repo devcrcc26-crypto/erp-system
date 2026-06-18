@@ -693,6 +693,7 @@ async function main(): Promise<void> {
     'PUNCH_ITEM',
     'MEETING',
     'CORRESPONDENCE',
+    'TASK',
   ];
 
   for (const docType of documentTypes) {
