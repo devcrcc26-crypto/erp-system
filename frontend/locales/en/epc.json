@@ -1,5 +1,16 @@
 {
   "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "kanbanBoard": "Kanban Board",
+    "users": "Users",
+    "teams": "Teams",
+    "reports": "Reports",
+    "messages": "Messages",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "signingOut": "Signing out…",
     "reviewInbox": "Review Inbox",
     "myComments": "My Comments"
   },

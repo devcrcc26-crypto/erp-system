@@ -32,18 +32,18 @@ import { signOutLocally } from '@/lib/auth/sign-out-locally';
 
 const { Sider, Content } = Layout;
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/projects': 'Projects',
-  '/kanban-board': 'Kanban Board',
-  '/review-inbox': 'Review Inbox',
-  '/my-comments': 'My Comments',
-  '/users': 'Users',
-  '/teams': 'Teams',
-  '/reports': 'Reports',
-  '/messages': 'Messages',
-  '/settings': 'Settings',
-  '/profile': 'Profile',
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  '/': 'nav.dashboard',
+  '/projects': 'nav.projects',
+  '/kanban-board': 'nav.kanbanBoard',
+  '/review-inbox': 'pages.reviewInbox.title',
+  '/my-comments': 'pages.myComments.title',
+  '/users': 'nav.users',
+  '/teams': 'nav.teams',
+  '/reports': 'nav.reports',
+  '/messages': 'nav.messages',
+  '/settings': 'nav.settings',
+  '/profile': 'nav.profile',
 };
 
 type NavItem = {
@@ -59,8 +59,8 @@ function buildNavItems(
   canViewMyComments: boolean,
 ): NavItem[] {
   return [
-    { key: '/', labelKey: 'workspace.items.dashboard', href: '/', icon: <DashboardOutlined />, visible: true },
-    { key: '/projects', labelKey: 'workspace.items.dashboard', href: '/projects', icon: <ProjectOutlined />, visible: true },
+    { key: '/', labelKey: 'nav.dashboard', href: '/', icon: <DashboardOutlined />, visible: true },
+    { key: '/projects', labelKey: 'nav.projects', href: '/projects', icon: <ProjectOutlined />, visible: true },
     {
       key: '/review-inbox',
       labelKey: 'nav.reviewInbox',
@@ -77,16 +77,16 @@ function buildNavItems(
     },
     {
       key: '/kanban-board',
-      labelKey: 'workspace.items.dashboard',
+      labelKey: 'nav.kanbanBoard',
       href: '/kanban-board',
       icon: <UnorderedListOutlined />,
       visible: true,
     },
-    { key: '/users', labelKey: 'workspace.items.team', href: '/users', icon: <TeamOutlined />, visible: true },
-    { key: '/teams', labelKey: 'workspace.items.team', href: '/teams', icon: <TeamOutlined />, visible: true },
-    { key: '/reports', labelKey: 'workspace.items.dashboard', href: '/reports', icon: <BarChartOutlined />, visible: true },
-    { key: '/messages', labelKey: 'workspace.items.correspondence', href: '/messages', icon: <MailOutlined />, visible: true },
-    { key: '/settings', labelKey: 'workspace.items.dashboard', href: '/settings', icon: <SettingOutlined />, visible: true },
+    { key: '/users', labelKey: 'nav.users', href: '/users', icon: <TeamOutlined />, visible: true },
+    { key: '/teams', labelKey: 'nav.teams', href: '/teams', icon: <TeamOutlined />, visible: true },
+    { key: '/reports', labelKey: 'nav.reports', href: '/reports', icon: <BarChartOutlined />, visible: true },
+    { key: '/messages', labelKey: 'nav.messages', href: '/messages', icon: <MailOutlined />, visible: true },
+    { key: '/settings', labelKey: 'nav.settings', href: '/settings', icon: <SettingOutlined />, visible: true },
   ];
 }
 
@@ -145,14 +145,14 @@ function SidebarNav({
       icon: <UserOutlined />,
       label: (
         <Link href="/profile" onClick={onNavigate}>
-          Profile
+          {t('nav.profile')}
         </Link>
       ),
     },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: logout.isPending ? 'Signing out…' : 'Logout',
+      label: logout.isPending ? t('nav.signingOut') : t('nav.logout'),
       disabled: logout.isPending,
     },
   ];
@@ -210,14 +210,12 @@ export default function AppShell({
   const { t } = useEpcTranslation();
 
   const title = pathname.startsWith('/projects')
-    ? 'Projects'
-    : pathname === '/review-inbox'
-      ? t('pages.reviewInbox.title')
-      : pathname === '/my-comments'
-        ? t('pages.myComments.title')
-        : pathname.startsWith('/design-packages')
-          ? t('pages.reviewMode.title')
-          : (PAGE_TITLES[pathname] ?? 'Dashboard');
+    ? t('nav.projects')
+    : pathname.startsWith('/design-packages')
+      ? t('pages.reviewMode.title')
+      : (PAGE_TITLE_KEYS[pathname]
+          ? t(PAGE_TITLE_KEYS[pathname])
+          : t('nav.dashboard'));
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 768px)');

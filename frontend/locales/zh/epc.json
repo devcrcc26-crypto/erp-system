@@ -1,5 +1,16 @@
 {
   "nav": {
+    "dashboard": "仪表板",
+    "projects": "项目",
+    "kanbanBoard": "看板",
+    "users": "用户",
+    "teams": "团队",
+    "reports": "报表",
+    "messages": "消息",
+    "settings": "设置",
+    "profile": "个人资料",
+    "logout": "退出登录",
+    "signingOut": "正在退出…",
     "reviewInbox": "审阅收件箱",
     "myComments": "我的意见"
   },
