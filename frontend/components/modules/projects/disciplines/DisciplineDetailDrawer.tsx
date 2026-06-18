@@ -60,7 +60,7 @@ export default function DisciplineDetailDrawer({
       onOk={() => form.submit()}
       confirmLoading={isSubmitting}
       destroyOnHidden
-      width={720}
+      size={720}
       afterOpenChange={(visible: boolean) => {
         if (visible) {
           setDisciplineFormValues(form, discipline);

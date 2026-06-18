@@ -41,7 +41,7 @@ export default function RevisionWorkspace({
     <Drawer
       title="Revision workspace"
       open={open}
-      width={480}
+      size={480}
       onClose={onClose}
       footer={
         <Button

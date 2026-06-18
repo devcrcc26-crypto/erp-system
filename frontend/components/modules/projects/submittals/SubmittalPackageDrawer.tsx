@@ -48,7 +48,7 @@ export default function SubmittalPackageDrawer({
     <Drawer
       title="Create design submittal"
       open={open}
-      width={560}
+      size={560}
       onClose={onClose}
       footer={
         <Space>

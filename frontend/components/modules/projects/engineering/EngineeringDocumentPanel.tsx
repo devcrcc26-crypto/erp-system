@@ -238,7 +238,7 @@ export default function EngineeringDocumentPanel({
       <Drawer
         title="Register engineering document"
         open={registerOpen}
-        width={560}
+        size={560}
         onClose={() => {
           setRegisterOpen(false);
           setPendingFile(null);
