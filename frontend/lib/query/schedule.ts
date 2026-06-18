@@ -16,11 +16,14 @@ import {
 import type {
   CreateMilestoneRequest,
   CreateTaskDependencyRequest,
+  CreateTaskDisciplineRequest,
   CreateTaskRequest,
   Milestone,
   Task,
   TaskDependency,
+  TaskDiscipline,
   UpdateMilestoneRequest,
+  UpdateTaskDisciplineRequest,
   UpdateTaskRequest,
 } from '@/lib/api/project-management.types';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -60,6 +63,8 @@ export const scheduleKeys = {
   ) => [...scheduleKeys.tasks(projectId), params] as const,
   dependencies: (projectId: string) =>
     [...scheduleKeys.all, projectId, 'dependencies'] as const,
+  disciplines: (projectId: string, taskId: string) =>
+    [...scheduleKeys.all, projectId, 'tasks', taskId, 'disciplines'] as const,
 };
 
 export function useMilestones(
@@ -339,6 +344,109 @@ export function useDeleteTaskDependency() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: scheduleKeys.dependencies(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useTaskDisciplines(
+  projectId: string,
+  taskId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: scheduleKeys.disciplines(projectId, taskId),
+    queryFn: () =>
+      apiGet<TaskDiscipline[]>(
+        `${scheduleBase(projectId)}/tasks/${taskId}/disciplines`,
+      ),
+    enabled: Boolean(projectId) && Boolean(taskId) && enabled,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
+  });
+}
+
+export function useCreateTaskDiscipline() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      taskId,
+      body,
+    }: {
+      projectId: string;
+      taskId: string;
+      body: CreateTaskDisciplineRequest;
+    }) =>
+      apiPost<TaskDiscipline>(
+        `${scheduleBase(projectId)}/tasks/${taskId}/disciplines`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.disciplines(
+          variables.projectId,
+          variables.taskId,
+        ),
+      });
+    },
+  });
+}
+
+export function useUpdateTaskDiscipline() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      taskId,
+      disciplineId,
+      body,
+    }: {
+      projectId: string;
+      taskId: string;
+      disciplineId: string;
+      body: UpdateTaskDisciplineRequest;
+    }) =>
+      apiPatch<TaskDiscipline>(
+        `${scheduleBase(projectId)}/tasks/${taskId}/disciplines/${disciplineId}`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.disciplines(
+          variables.projectId,
+          variables.taskId,
+        ),
+      });
+    },
+  });
+}
+
+export function useDeleteTaskDiscipline() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      taskId,
+      disciplineId,
+    }: {
+      projectId: string;
+      taskId: string;
+      disciplineId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${scheduleBase(projectId)}/tasks/${taskId}/disciplines/${disciplineId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.disciplines(
+          variables.projectId,
+          variables.taskId,
+        ),
       });
     },
   });

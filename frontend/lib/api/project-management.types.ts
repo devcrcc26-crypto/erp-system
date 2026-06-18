@@ -26,6 +26,14 @@ export type TaskStatus =
 
 export type TaskDependencyType = 'FS' | 'SS' | 'FF' | 'SF';
 
+export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'CRITICAL';
+
+export type TaskLanguage = 'CHINESE' | 'ENGLISH';
+
+export type ApprovalLevel = 'DEPARTMENT' | 'INSTITUTE';
+
+export type CompletionStatus = 'NORMAL' | 'AHEAD' | 'BEHIND';
+
 export type RfiPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export type RfiStatus =
@@ -122,6 +130,15 @@ export interface Project {
   budget: string | null;
   currency: string | null;
   projectManagerId: string | null;
+  client: string | null;
+  commissioningMethod: string | null;
+  responsibleDepartmentId: string | null;
+  designProperties: string | null;
+  designStage: string | null;
+  responsiblePersonId: string | null;
+  description: string | null;
+  overallProgressPct: number;
+  isOutsourced: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -175,8 +192,43 @@ export interface Task {
   progressPct: number;
   status: TaskStatus;
   isCritical: boolean;
+  commissioningMethod: string | null;
+  requiresArchiving: boolean;
+  taskAttributes: string | null;
+  onSiteReceivingTime: string | null;
+  assignmentToHqTime: string | null;
+  contactFormNumber: string | null;
+  designStage: string | null;
+  urgencyLevel: UrgencyLevel;
+  hasCustomSchedule: boolean;
+  language: TaskLanguage;
+  approvalLevel: ApprovalLevel | null;
+  chiefEngineerName: string | null;
+  dispatcherName: string | null;
+  responsiblePersonId: string | null;
+  actualCompletionTime: string | null;
+  actualWorkdays: number | null;
+  completionStatus: CompletionStatus | null;
+  remark: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TaskDiscipline {
+  id: string;
+  taskId: string;
+  companyId: string;
+  disciplineName: string;
+  designerName: string | null;
+  reviewerName: string | null;
+  disciplinaryLeader: string | null;
+  deptChiefEngineer: string | null;
+  instituteChiefEngineer: string | null;
+  actualCompletionTime: string | null;
+  deptReviewTime: string | null;
+  instituteReviewTime: string | null;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface TaskDependency {
@@ -509,6 +561,15 @@ export interface CreateProjectRequest {
   budget?: number;
   currency?: string;
   projectManagerId?: string;
+  client?: string;
+  commissioningMethod?: string;
+  responsibleDepartmentId?: string;
+  designProperties?: string;
+  designStage?: string;
+  responsiblePersonId?: string;
+  description?: string;
+  overallProgressPct?: number;
+  isOutsourced?: boolean;
 }
 
 export type UpdateProjectRequest = Partial<CreateProjectRequest> & {
@@ -604,7 +665,7 @@ export interface CreateTaskRequest {
   milestoneId?: string;
   parentTaskId?: string;
   assignedTo?: string;
-  taskIdCode: string;
+  taskIdCode?: string;
   name: string;
   description?: string;
   startDate?: string;
@@ -613,9 +674,41 @@ export interface CreateTaskRequest {
   progressPct?: number;
   status?: TaskStatus;
   isCritical?: boolean;
+  commissioningMethod?: string;
+  requiresArchiving?: boolean;
+  taskAttributes?: string;
+  onSiteReceivingTime?: string;
+  assignmentToHqTime?: string;
+  contactFormNumber?: string;
+  designStage?: string;
+  urgencyLevel?: UrgencyLevel;
+  hasCustomSchedule?: boolean;
+  language?: TaskLanguage;
+  approvalLevel?: ApprovalLevel;
+  chiefEngineerName?: string;
+  dispatcherName?: string;
+  responsiblePersonId?: string;
+  actualCompletionTime?: string;
+  actualWorkdays?: number;
+  completionStatus?: CompletionStatus;
+  remark?: string;
 }
 
 export type UpdateTaskRequest = Partial<CreateTaskRequest>;
+
+export interface CreateTaskDisciplineRequest {
+  disciplineName: string;
+  designerName?: string;
+  reviewerName?: string;
+  disciplinaryLeader?: string;
+  deptChiefEngineer?: string;
+  instituteChiefEngineer?: string;
+  actualCompletionTime?: string;
+  deptReviewTime?: string;
+  instituteReviewTime?: string;
+}
+
+export type UpdateTaskDisciplineRequest = Partial<CreateTaskDisciplineRequest>;
 
 export interface CreateTaskDependencyRequest {
   predecessorTaskId: string;

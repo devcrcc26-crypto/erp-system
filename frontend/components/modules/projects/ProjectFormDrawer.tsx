@@ -4,11 +4,13 @@ import { useEffect } from 'react';
 import {
   Alert,
   DatePicker,
+  Divider,
   Drawer,
   Form,
   Input,
   InputNumber,
   Select,
+  Switch,
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -43,6 +45,15 @@ interface ProjectFormValues {
   budget?: number;
   currency?: string;
   projectManagerId?: string;
+  client?: string;
+  commissioningMethod?: string;
+  responsibleDepartmentId?: string;
+  designProperties?: string;
+  designStage?: string;
+  responsiblePersonId?: string;
+  description?: string;
+  overallProgressPct?: number;
+  isOutsourced?: boolean;
 }
 
 function toFormValues(project: Project): ProjectFormValues {
@@ -63,6 +74,15 @@ function toFormValues(project: Project): ProjectFormValues {
     budget: project.budget ? Number(project.budget) : undefined,
     currency: project.currency ?? undefined,
     projectManagerId: project.projectManagerId ?? undefined,
+    client: project.client ?? undefined,
+    commissioningMethod: project.commissioningMethod ?? undefined,
+    responsibleDepartmentId: project.responsibleDepartmentId ?? undefined,
+    designProperties: project.designProperties ?? undefined,
+    designStage: project.designStage ?? undefined,
+    responsiblePersonId: project.responsiblePersonId ?? undefined,
+    description: project.description ?? undefined,
+    overallProgressPct: project.overallProgressPct,
+    isOutsourced: project.isOutsourced,
   };
 }
 
@@ -79,6 +99,15 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     budget: values.budget,
     currency: values.currency?.trim() || undefined,
     projectManagerId: values.projectManagerId,
+    client: values.client?.trim() || undefined,
+    commissioningMethod: values.commissioningMethod?.trim() || undefined,
+    responsibleDepartmentId: values.responsibleDepartmentId?.trim() || undefined,
+    designProperties: values.designProperties?.trim() || undefined,
+    designStage: values.designStage?.trim() || undefined,
+    responsiblePersonId: values.responsiblePersonId,
+    description: values.description?.trim() || undefined,
+    overallProgressPct: values.overallProgressPct,
+    isOutsourced: values.isOutsourced,
   };
 }
 
@@ -115,7 +144,12 @@ export default function ProjectFormDrawer({
       return;
     }
     form.resetFields();
-    form.setFieldsValue({ status: 'PLANNING', currency: 'USD' });
+    form.setFieldsValue({
+      status: 'PLANNING',
+      currency: 'USD',
+      overallProgressPct: 0,
+      isOutsourced: false,
+    });
   }, [open, project, form]);
 
   async function handleSubmit(values: ProjectFormValues): Promise<void> {
@@ -228,6 +262,46 @@ export default function ProjectFormDrawer({
         <Form.Item label="Project manager" name="projectManagerId">
           <UserSelect placeholder="Assign project manager" />
         </Form.Item>
+
+        <Divider orientation="left">Project Details</Divider>
+
+        <Form.Item label="Client" name="client">
+          <Input placeholder="Client name" />
+        </Form.Item>
+        <Form.Item label="Commissioning method" name="commissioningMethod">
+          <Input />
+        </Form.Item>
+        <Form.Item
+          label="Responsible department ID"
+          name="responsibleDepartmentId"
+          extra="Enter department UUID until department picker is available."
+        >
+          <Input placeholder="Department UUID" />
+        </Form.Item>
+        <Form.Item label="Design properties" name="designProperties">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Design stage" name="designStage">
+          <Input />
+        </Form.Item>
+        <Form.Item label="Responsible person" name="responsiblePersonId">
+          <UserSelect placeholder="Assign responsible person" />
+        </Form.Item>
+        <Form.Item label="Description" name="description">
+          <Input.TextArea rows={3} />
+        </Form.Item>
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label="Overall progress %" name="overallProgressPct">
+            <InputNumber className="!w-full" min={0} max={100} />
+          </Form.Item>
+          <Form.Item
+            label="Outsourced"
+            name="isOutsourced"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        </div>
 
         {isSubmitting && (
           <Alert type="info" showIcon title="Saving project..." className="!mb-4" />
