@@ -21,7 +21,7 @@ import { EMPTY_CAPABILITIES, EMPTY_EPC_CAPABILITIES } from '@/lib/api/types';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 const PM_RESOURCE_PATHS: Record<Exclude<PmModuleKey, 'projects'>, string> = {
-  schedule: 'schedule',
+  schedule: 'schedule/tasks',
   rfis: 'rfis',
   submittals: 'submittals',
   drawings: 'drawings',

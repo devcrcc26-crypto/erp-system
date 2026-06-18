@@ -7,11 +7,12 @@ export async function loginAs(
 ): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
     timeout: 30_000,
   });
+  await page.waitForLoadState('networkidle');
 }
 
 export async function isBackendReachable(

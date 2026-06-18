@@ -1,5 +1,5 @@
 import AppShell from '@/components/ui/AppShell/AppShell';
-import EpcLocaleProvider from '@/components/providers/EpcLocaleProvider';
+import DashboardProviders from '@/components/providers/DashboardProviders';
 
 export default function DashboardLayout({
   children,
@@ -7,8 +7,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }): React.ReactNode {
   return (
-    <EpcLocaleProvider>
+    <DashboardProviders>
       <AppShell>{children}</AppShell>
-    </EpcLocaleProvider>
+    </DashboardProviders>
   );
 }

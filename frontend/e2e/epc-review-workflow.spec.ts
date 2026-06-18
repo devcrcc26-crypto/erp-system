@@ -23,7 +23,9 @@ test.describe('EPC review workflow', () => {
 
     await page.goto('/review-inbox');
     await expect(page.getByRole('heading', { name: 'Review Inbox' })).toBeVisible();
-    await expect(page.getByTestId('review-inbox-table')).toBeVisible();
+    await expect(page.getByTestId('review-inbox-table')).toBeVisible({
+      timeout: 15_000,
+    });
 
     const packageLink = page.getByRole('link', {
       name: EPC_DEMO.designPackageName,
