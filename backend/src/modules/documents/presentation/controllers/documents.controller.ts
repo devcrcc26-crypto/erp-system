@@ -43,13 +43,31 @@ export class DocumentsController {
     return { companyId: user.companyId, userId: user.userId };
   }
 
+  @Get('versions/:versionId/download-url')
+  @ApiOperation({ summary: 'Get presigned download URL for a document version' })
+  async getVersionDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('versionId') versionId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    await this.documentPermissionService.assertCanViewDocumentVersion(
+      user.userId,
+      user.companyId,
+      versionId,
+    );
+    return this.documentService.getVersionDownloadUrl(this.ctx(user), versionId);
+  }
+
   @Get(':id/download-url')
-  @RequirePermission('documents', 'view')
   @ApiOperation({ summary: 'Get presigned download URL' })
-  getDownloadUrl(
+  async getDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<{ url: string; expiresIn: number }> {
+    await this.documentPermissionService.assertCanViewDocument(
+      user.userId,
+      user.companyId,
+      id,
+    );
     return this.documentService.getDownloadUrl(this.ctx(user), id);
   }
 

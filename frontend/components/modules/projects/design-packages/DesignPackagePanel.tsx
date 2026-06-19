@@ -14,6 +14,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
+import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -454,7 +455,12 @@ export function DesignPackageItemsTable({
   const edvMap = useMemo(() => {
     const map = new Map<
       string,
-      { doc: EngineeringDocument; revisionLabel: string; status: string }
+      {
+        doc: EngineeringDocument;
+        revisionLabel: string;
+        status: string;
+        documentVersionId: string;
+      }
     >();
     for (const doc of documents) {
       for (const version of doc.versions ?? []) {
@@ -462,6 +468,7 @@ export function DesignPackageItemsTable({
           doc,
           revisionLabel: version.revisionLabel,
           status: version.status,
+          documentVersionId: version.documentVersionId,
         });
       }
     }
@@ -494,27 +501,37 @@ export function DesignPackageItemsTable({
     {
       title: '',
       key: 'actions',
-      width: 80,
-      render: (_value, record) =>
-        canEdit ? (
-          <Button
-            type="link"
-            danger
-            className="!px-0"
-            onClick={() => {
-              void removeItem
-                .mutateAsync({
-                  projectId,
-                  taskDisciplineId,
-                  packageId,
-                  itemId: record.id,
-                })
-                .then(onChanged);
-            }}
-          >
-            Remove
-          </Button>
-        ) : null,
+      width: canEdit ? 220 : 180,
+      render: (_value, record) => {
+        const info = edvMap.get(record.engineeringDocumentVersionId);
+        return (
+          <Space size={4} wrap>
+            <EdvFileActions
+              documentVersionId={info?.documentVersionId}
+              fileName={info?.doc.title}
+            />
+            {canEdit ? (
+              <Button
+                type="link"
+                danger
+                className="!px-1"
+                onClick={() => {
+                  void removeItem
+                    .mutateAsync({
+                      projectId,
+                      taskDisciplineId,
+                      packageId,
+                      itemId: record.id,
+                    })
+                    .then(onChanged);
+                }}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 

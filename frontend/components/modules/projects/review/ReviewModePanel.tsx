@@ -9,6 +9,7 @@ import ReviewCommentPanel from '@/components/modules/projects/review/ReviewComme
 import DisciplineLeadConsole from '@/components/modules/projects/review/DisciplineLeadConsole';
 import GovernanceReviewPanel from '@/components/modules/projects/review/GovernanceReviewPanel';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
+import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import {
   useDesignPackage,
@@ -72,7 +73,12 @@ export default function ReviewModePanel({
   const edvMap = useMemo(() => {
     const map = new Map<
       string,
-      { doc: EngineeringDocument; revisionLabel: string; status: string }
+      {
+        doc: EngineeringDocument;
+        revisionLabel: string;
+        status: string;
+        documentVersionId: string;
+      }
     >();
     for (const doc of documentsQuery.data?.data ?? []) {
       for (const version of doc.versions ?? []) {
@@ -80,6 +86,7 @@ export default function ReviewModePanel({
           doc,
           revisionLabel: version.revisionLabel,
           status: version.status,
+          documentVersionId: version.documentVersionId,
         });
       }
     }
@@ -208,6 +215,10 @@ export default function ReviewModePanel({
                         {info?.status && <EdvStatusBadge status={info.status} />}
                       </div>
                     </div>
+                    <EdvFileActions
+                      documentVersionId={info?.documentVersionId}
+                      fileName={info?.doc.title}
+                    />
                   </li>
                 );
               })}

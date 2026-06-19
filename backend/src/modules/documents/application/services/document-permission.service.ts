@@ -71,6 +71,28 @@ export class DocumentPermissionService {
     throw new ForbiddenException('Missing permission: documents.view');
   }
 
+  /**
+   * Asserts the user may download a specific document version file.
+   */
+  async assertCanViewDocumentVersion(
+    userId: string,
+    companyId: string,
+    documentVersionId: string,
+  ): Promise<void> {
+    const version = await this.prisma.documentVersion.findFirst({
+      where: {
+        id: documentVersionId,
+        document: activeOnly({ companyId }),
+      },
+      select: { documentId: true },
+    });
+    if (!version) {
+      throw new NotFoundException('Document version not found');
+    }
+
+    await this.assertCanViewDocument(userId, companyId, version.documentId);
+  }
+
   private async hasScheduleWriteForFolder(
     userId: string,
     companyId: string,
@@ -96,7 +118,11 @@ export class DocumentPermissionService {
       return false;
     }
 
-    return this.permissionService.hasPermission(userId, companyId, 'schedule', 'view');
+    const [canView, canApprove] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, 'schedule', 'view'),
+      this.permissionService.hasPermission(userId, companyId, 'schedule', 'approve'),
+    ]);
+    return canView || canApprove;
   }
 
   private isProjectScopedFolder(contextType: FolderContextType): boolean {

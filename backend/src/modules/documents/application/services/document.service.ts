@@ -359,10 +359,37 @@ export class DocumentService {
       throw new NotFoundException('Document not found');
     }
 
+    return this.buildPresignedDownloadUrl(document.fileKey);
+  }
+
+  /**
+   * Returns a presigned URL for a specific document version file (EDV-linked revision).
+   */
+  async getVersionDownloadUrl(
+    ctx: RequestContext,
+    documentVersionId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const version = await this.prisma.documentVersion.findFirst({
+      where: {
+        id: documentVersionId,
+        document: activeOnly({ companyId: ctx.companyId }),
+      },
+      select: { fileKey: true },
+    });
+    if (!version) {
+      throw new NotFoundException('Document version not found');
+    }
+
+    return this.buildPresignedDownloadUrl(version.fileKey);
+  }
+
+  private async buildPresignedDownloadUrl(
+    fileKey: string,
+  ): Promise<{ url: string; expiresIn: number }> {
     const expiresIn = 900;
     const url = await this.storage.getPresignedDownloadUrl(
       STORAGE_BUCKETS.DOCUMENTS,
-      document.fileKey,
+      fileKey,
       expiresIn,
     );
 
