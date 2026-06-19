@@ -10,7 +10,6 @@ import {
   Spin,
   Table,
   Upload,
-  message,
 } from 'antd';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -34,6 +33,9 @@ import {
   useRegisterEngineeringDocument,
 } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import EdvMetadataForm, {
   type EdvMetadataFormValues,
   buildMetadataFromForm,
@@ -64,6 +66,10 @@ export default function EngineeringDocumentPanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const { t } = useEpcTranslation();
+  const message = useAppMessage();
+  const canRegister =
+    lens.canCreateEngineering || lens.canEditEngineering;
   const [registerOpen, setRegisterOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [form] = Form.useForm<EdvMetadataFormValues>();
@@ -161,29 +167,33 @@ export default function EngineeringDocumentPanel({
       return;
     }
 
-    const uploaded = await uploadDocument.mutateAsync({
-      folderId: uploadFolderId,
-      file: pendingFile,
-    });
-    const documentVersionId = await resolveLatestDocumentVersionId(uploaded.id);
+    try {
+      const uploaded = await uploadDocument.mutateAsync({
+        folderId: uploadFolderId,
+        file: pendingFile,
+      });
+      const documentVersionId = await resolveLatestDocumentVersionId(uploaded.id);
 
-    await registerDocument.mutateAsync({
-      projectId,
-      taskDisciplineId,
-      body: {
-        documentVersionId,
-        documentType: values.documentType,
-        title: values.title.trim(),
-        documentNumber: values.documentNumber?.trim() || undefined,
-        metadata: buildMetadataFromForm(values.documentType, values),
-      },
-    });
+      await registerDocument.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        body: {
+          documentVersionId,
+          documentType: values.documentType,
+          title: values.title.trim(),
+          documentNumber: values.documentNumber?.trim() || undefined,
+          metadata: buildMetadataFromForm(values.documentType, values),
+        },
+      });
 
-    message.success('Engineering document registered');
-    setRegisterOpen(false);
-    setPendingFile(null);
-    form.resetFields();
-    void documentsQuery.refetch();
+      message.success('Engineering document registered');
+      setRegisterOpen(false);
+      setPendingFile(null);
+      form.resetFields();
+      void documentsQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to register engineering document', message);
+    }
   }
 
   const documentType = Form.useWatch('documentType', form) as
@@ -199,7 +209,7 @@ export default function EngineeringDocumentPanel({
       title="Engineering documents"
       description="Register uploaded files as engineering documents with type-specific metadata."
       extra={
-        lens.canCreateEngineering ? (
+        canRegister ? (
           <Button
             type="primary"
             size="small"
@@ -211,7 +221,7 @@ export default function EngineeringDocumentPanel({
               setRegisterOpen(true);
             }}
           >
-            Register document
+            {t('actions.registerDocument')}
           </Button>
         ) : undefined
       }

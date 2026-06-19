@@ -49,7 +49,8 @@ function buildRoleLens(
 
   return {
     canViewEngineering: engineeringView,
-    canCreateEngineering: engineeringView && schedule.canCreate,
+    canCreateEngineering:
+      engineeringView && (schedule.canCreate || schedule.canEdit),
     canEditEngineering: engineeringView && schedule.canEdit,
     canApproveReview: schedule.canEdit || schedule.canView,
     canViewSubmittals: submittals.canView,

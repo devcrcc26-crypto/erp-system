@@ -61,7 +61,7 @@ export class EngineeringDocumentsController {
   }
 
   @Post('register')
-  @RequirePermission('schedule', 'create')
+  @RequirePermission('schedule', 'edit')
   @ApiOperation({ summary: 'Register uploaded file as engineering document Rev 0' })
   register(
     @CurrentUser() user: AuthenticatedUser,

@@ -101,9 +101,11 @@ export class SessionCapabilitiesService {
   }
 
   private toModuleCapabilities(flags: PermissionFlags): ModuleCapabilitiesDto {
+    const canWrite = flags.canCreate || flags.canEdit || flags.canApprove;
+
     return {
       canView: flags.canView,
-      canCreate: flags.canCreate,
+      canCreate: flags.canCreate || canWrite,
       canEdit: flags.canEdit || flags.canApprove,
       canDelete: flags.canDelete,
     };
