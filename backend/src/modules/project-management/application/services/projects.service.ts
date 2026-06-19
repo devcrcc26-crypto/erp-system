@@ -97,41 +97,60 @@ export class ProjectsService {
   ): Promise<MappedProject> {
     await this.assertProjectCodeAvailable(ctx, dto.projectCode);
 
+    const projectManagerId = dto.projectManagerId ?? ctx.userId;
+
     if (dto.responsiblePersonId) {
       await this.assertUserInCompany(ctx, dto.responsiblePersonId);
     }
     if (dto.responsibleDepartmentId) {
       await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
     }
+    if (projectManagerId !== ctx.userId) {
+      await this.assertUserInCompany(ctx, projectManagerId);
+    }
 
-    const project = await this.prisma.project.create({
-      data: {
-        companyId: ctx.companyId,
-        projectCode: dto.projectCode,
-        name: dto.name,
-        clientCompanyId: dto.clientCompanyId,
-        branchId: dto.branchId,
-        location: dto.location,
-        projectType: dto.projectType,
-        contractType: dto.contractType,
-        status: dto.status,
-        startDate: parseOptionalDate(dto.startDate),
-        plannedFinishDate: parseOptionalDate(dto.plannedFinishDate),
-        budget: parseOptionalDecimal(dto.budget),
-        currency: dto.currency,
-        projectManagerId: dto.projectManagerId,
-        client: dto.client,
-        commissioningMethod: dto.commissioningMethod,
-        responsibleDepartmentId: dto.responsibleDepartmentId,
-        designProperties: dto.designProperties,
-        designStage: dto.designStage,
-        responsiblePersonId: dto.responsiblePersonId,
-        description: dto.description,
-        overallProgressPct: dto.overallProgressPct ?? 0,
-        isOutsourced: dto.isOutsourced ?? false,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    const project = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
+        data: {
+          companyId: ctx.companyId,
+          projectCode: dto.projectCode,
+          name: dto.name,
+          clientCompanyId: dto.clientCompanyId,
+          branchId: dto.branchId,
+          location: dto.location,
+          projectType: dto.projectType,
+          contractType: dto.contractType,
+          status: dto.status,
+          startDate: parseOptionalDate(dto.startDate),
+          plannedFinishDate: parseOptionalDate(dto.plannedFinishDate),
+          budget: parseOptionalDecimal(dto.budget),
+          currency: dto.currency,
+          projectManagerId,
+          client: dto.client,
+          commissioningMethod: dto.commissioningMethod,
+          responsibleDepartmentId: dto.responsibleDepartmentId,
+          designProperties: dto.designProperties,
+          designStage: dto.designStage,
+          responsiblePersonId: dto.responsiblePersonId,
+          description: dto.description,
+          overallProgressPct: dto.overallProgressPct ?? 0,
+          isOutsourced: dto.isOutsourced ?? false,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      await this.ensureActiveTeamMember(tx, created.id, ctx.userId, ctx.userId);
+      if (projectManagerId !== ctx.userId) {
+        await this.ensureActiveTeamMember(
+          tx,
+          created.id,
+          projectManagerId,
+          ctx.userId,
+        );
+      }
+
+      return created;
     });
 
     return mapProject(project);
@@ -466,6 +485,42 @@ export class ProjectsService {
     if (!department) {
       throw new NotFoundException('Department not found');
     }
+  }
+
+  private async ensureActiveTeamMember(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    userId: string,
+    actorId: string,
+  ): Promise<void> {
+    const existing = await tx.projectTeam.findFirst({
+      where: { projectId, userId },
+    });
+
+    if (existing?.deletedAt === null) {
+      return;
+    }
+
+    if (existing) {
+      await tx.projectTeam.update({
+        where: { id: existing.id },
+        data: {
+          deletedAt: null,
+          deletedBy: null,
+          updatedBy: actorId,
+        },
+      });
+      return;
+    }
+
+    await tx.projectTeam.create({
+      data: {
+        projectId,
+        userId,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
+    });
   }
 
   private computeScheduleMetrics(tasks: Task[]): {

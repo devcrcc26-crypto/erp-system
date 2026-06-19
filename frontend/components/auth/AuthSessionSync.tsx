@@ -16,14 +16,13 @@ import { fetchCapabilities } from '@/lib/permissions/capabilities';
  */
 export function AuthSessionSync(): null {
   useEffect(() => {
-    const syncFromStorage = (): void => {
+    const syncSession = (): void => {
       void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
         const { accessToken, setCapabilities } = useAuthStore.getState();
         const queryClient = getQueryClient();
 
         if (accessToken) {
           setAuthCookie();
-          queryClient?.clear();
           void fetchCapabilities()
             .then(setCapabilities)
             .catch(() => {
@@ -38,15 +37,17 @@ export function AuthSessionSync(): null {
       });
     };
 
+    syncSession();
+
     const handleStorage = (event: StorageEvent): void => {
       if (event.key === AUTH_PERSIST_KEY) {
-        syncFromStorage();
+        syncSession();
       }
     };
 
     const handleBroadcast = (event: MessageEvent<{ event: AuthSessionEvent }>): void => {
       if (event.data?.event === 'signed-out') {
-        syncFromStorage();
+        syncSession();
       }
     };
 
