@@ -52,7 +52,8 @@ function buildRoleLens(
     canCreateEngineering:
       engineeringView && (schedule.canCreate || schedule.canEdit),
     canEditEngineering: engineeringView && schedule.canEdit,
-    canApproveReview: schedule.canEdit || schedule.canView,
+    canApproveReview:
+      epc.canViewReviewInbox || schedule.canEdit,
     canViewSubmittals: submittals.canView,
     canCreateSubmittals: submittals.canCreate,
     canViewReviewInbox: epc.canViewReviewInbox && schedule.canView,

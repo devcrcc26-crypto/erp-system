@@ -229,6 +229,9 @@ export interface ReviewModeView {
   reviewSessionId: string | null;
   sessionStatus: ReviewSessionStatus | string | null;
   currentTier: ReviewTier | string | null;
+  /** EDVs in this package (documents under review). */
+  packageEdvIds: readonly string[];
+  /** Frozen locked EDVs from upstream dependency packages at session open. */
   snapshotEdvIds: readonly string[];
   contentHash: string | null;
   comments: readonly ReviewModeComment[];

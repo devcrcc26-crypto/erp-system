@@ -57,6 +57,9 @@ export interface ReviewModeView {
   readonly reviewSessionId: string | null;
   readonly sessionStatus: string | null;
   readonly currentTier: string | null;
+  /** EDVs in this package (documents under review). */
+  readonly packageEdvIds: readonly string[];
+  /** Frozen locked EDVs from upstream dependency packages at session open. */
   readonly snapshotEdvIds: readonly string[];
   readonly contentHash: string | null;
   readonly comments: readonly {
@@ -335,26 +338,36 @@ export class EpcWorkspaceService {
       throw new NotFoundException('Design package not found');
     }
 
-    const session = await this.prisma.reviewSession.findFirst({
-      where: activeOnly({
-        companyId: ctx.companyId,
-        designPackageId,
-        status: ReviewSessionStatus.ACTIVE,
-      }),
-      include: {
-        contextSnapshot: true,
-        comments: {
-          where: { deletedAt: null },
-          orderBy: { createdAt: 'asc' },
+    const [session, packageItems] = await Promise.all([
+      this.prisma.reviewSession.findFirst({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          designPackageId,
+          status: ReviewSessionStatus.ACTIVE,
+        }),
+        include: {
+          contextSnapshot: true,
+          comments: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.designPackageItem.findMany({
+        where: { companyId: ctx.companyId, designPackageId },
+        orderBy: { sortOrder: 'asc' },
+        select: { engineeringDocumentVersionId: true },
+      }),
+    ]);
 
     return {
       designPackageId,
       reviewSessionId: session?.id ?? null,
       sessionStatus: session?.status ?? null,
       currentTier: session?.currentTier ?? null,
+      packageEdvIds: packageItems.map(
+        (item) => item.engineeringDocumentVersionId,
+      ),
       snapshotEdvIds: session?.contextSnapshot?.referencedVersionIds ?? [],
       contentHash: session?.contextSnapshot?.contentHash ?? null,
       comments:

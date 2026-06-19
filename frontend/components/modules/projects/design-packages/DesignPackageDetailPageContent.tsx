@@ -56,30 +56,33 @@ export default function DesignPackageDetailPageContent({
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
 
+  const canViewPackage =
+    lens.canViewEngineering || lens.canViewReviewInbox;
+
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
     packageId,
-    lens.canViewEngineering,
+    canViewPackage,
   );
-  const reviewModeQuery = useDesignPackageReviewMode(packageId, lens.canViewEngineering);
+  const reviewModeQuery = useDesignPackageReviewMode(packageId, canViewPackage);
   const dependenciesQuery = useDesignPackageDependencies(
     projectId,
     taskDisciplineId,
     packageId,
-    lens.canViewEngineering,
+    canViewPackage,
   );
   const allPackagesQuery = useDesignPackages(
     projectId,
     taskDisciplineId,
-    lens.canViewEngineering,
+    canViewPackage,
   );
   const documentsQuery = useEngineeringDocuments(
     projectId,
     taskDisciplineId,
     { page: 1, limit: 100 },
-    lens.canViewEngineering,
+    canViewPackage,
   );
 
   const submitForReview = useSubmitPackageForReview();
