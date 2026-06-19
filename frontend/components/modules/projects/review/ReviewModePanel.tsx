@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Alert, Checkbox, message, Spin } from 'antd';
+import { Alert, Checkbox, Spin } from 'antd';
 import BulkReviewActionBar from '@/components/modules/projects/review/BulkReviewActionBar';
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
@@ -17,6 +17,7 @@ import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 export default function ReviewModePanel({
   packageId,
@@ -28,6 +29,7 @@ export default function ReviewModePanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const messageApi = useAppMessage();
   const reviewModeQuery = useDesignPackageReviewMode(packageId, Boolean(packageId));
   const packageQuery = useDesignPackage(
     projectId,
@@ -76,11 +78,11 @@ export default function ReviewModePanel({
         reviewSessionId,
         engineeringDocumentVersionIds: selectedEdvIds,
       });
-      message.success('Selected EDVs approved');
+      messageApi.success('Selected EDVs approved');
       clearEdvSelection();
       refetchAll();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 
@@ -95,11 +97,11 @@ export default function ReviewModePanel({
         engineeringDocumentVersionIds: selectedEdvIds,
         commentTemplate: 'Returned in batch review',
       });
-      message.success('Selected EDVs returned');
+      messageApi.success('Selected EDVs returned');
       clearEdvSelection();
       refetchAll();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 

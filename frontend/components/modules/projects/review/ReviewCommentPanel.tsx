@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Form, Input, Select, Space, message } from 'antd';
+import { Button, Form, Input, Select, Space } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type { CommentSeverity, ReviewModeView } from '@/lib/api/epc.types';
@@ -11,6 +11,7 @@ import {
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 interface CommentFormValues {
   engineeringDocumentVersionId: string;
@@ -30,6 +31,7 @@ export default function ReviewCommentPanel({
   const addComment = useAddReviewComment();
   const verifyComment = useVerifyReviewComment();
   const lens = useRoleLens();
+  const messageApi = useAppMessage();
 
   const edvOptions = (reviewMode?.snapshotEdvIds ?? []).map((id) => ({
     value: id,
@@ -38,7 +40,7 @@ export default function ReviewCommentPanel({
 
   async function handleSubmit(values: CommentFormValues): Promise<void> {
     if (!reviewMode?.reviewSessionId) {
-      message.error('No active review session');
+      messageApi.error('No active review session');
       return;
     }
 
@@ -50,7 +52,7 @@ export default function ReviewCommentPanel({
       assignedToUserId: values.assignedToUserId,
     });
 
-    message.success('Comment added');
+    messageApi.success('Comment added');
     form.resetFields();
     onCommentAdded();
   }
@@ -119,11 +121,11 @@ export default function ReviewCommentPanel({
                       void verifyComment
                         .mutateAsync({ commentId: comment.id })
                         .then(() => {
-                          message.success('Comment verified');
+                          messageApi.success('Comment verified');
                           onCommentAdded();
                         })
                         .catch((error: unknown) => {
-                          notifyApiError(error);
+                          notifyApiError(error, 'Request failed', messageApi);
                         });
                     }}
                   >

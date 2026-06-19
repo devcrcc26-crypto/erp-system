@@ -111,6 +111,7 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'schedule', action: 'create', description: 'Create schedule items' },
   { module: 'schedule', action: 'edit', description: 'Edit schedule items' },
   { module: 'schedule', action: 'delete', description: 'Delete schedule items' },
+  { module: 'schedule', action: 'approve', description: 'Approve design packages and EDVs' },
 
   { module: 'rfis', action: 'view', description: 'View RFIs' },
   { module: 'rfis', action: 'create', description: 'Create RFIs' },
@@ -229,11 +230,75 @@ const PM_MODULES = [
   'closeout',
 ] as const;
 
+function documentsPermissionFlags(
+  roleName: string,
+  action: string,
+): PermissionFlags | null {
+  const flag = ACTION_TO_FLAG[action];
+  if (!flag) {
+    return null;
+  }
+
+  const fullAccessRoles = new Set([
+    'Project Manager',
+    'Managing Director',
+    'Document Controller',
+    'Project Director',
+  ]);
+
+  if (fullAccessRoles.has(roleName)) {
+    if (action === 'delete' && roleName === 'Document Controller') {
+      return null;
+    }
+    return fullPermissionFlags();
+  }
+
+  const engineeringUploadRoles = new Set([
+    'Site Engineer',
+    'Planning Engineer',
+    'Chief Engineer',
+    'Designer',
+    'Dispatcher',
+    'Discipline Lead',
+    'Department Chief',
+    'Institute Chief',
+    'Deputy Chief',
+    'Reviewer',
+    'Site Coordinator',
+    'General Manager',
+    'Safety Officer',
+  ]);
+
+  if (engineeringUploadRoles.has(roleName)) {
+    if (action === 'delete') {
+      return null;
+    }
+    if (action === 'view') {
+      return viewOnlyFlags();
+    }
+    return {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+      [flag]: true,
+    };
+  }
+
+  return null;
+}
+
 function pmPermissionFlags(
   roleName: string,
   module: string,
   action: string,
 ): PermissionFlags | null {
+  if (module === 'documents') {
+    return documentsPermissionFlags(roleName, action);
+  }
+
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
     return null;
   }
@@ -296,6 +361,10 @@ function designWorkflowRolePermissionFlags(
   module: string,
   action: string,
 ): PermissionFlags | null {
+  if (module === 'documents') {
+    return documentsPermissionFlags(roleName, action);
+  }
+
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
     return null;
   }
@@ -390,6 +459,10 @@ function epcWorkflowPermissionFlags(
   module: string,
   action: string,
 ): PermissionFlags | null {
+  if (module === 'documents') {
+    return documentsPermissionFlags(roleName, action);
+  }
+
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
     return null;
   }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -198,6 +199,16 @@ export class DesignPackagesService {
     );
     if (!edv) {
       throw new NotFoundException('Engineering document version not found');
+    }
+
+    const alreadyLinked = pkg.items.some(
+      (item) =>
+        item.engineeringDocumentVersionId === dto.engineeringDocumentVersionId,
+    );
+    if (alreadyLinked) {
+      throw new ConflictException(
+        'This engineering document version is already in the design package',
+      );
     }
 
     const item = await this.designPackageRepository.addItem({

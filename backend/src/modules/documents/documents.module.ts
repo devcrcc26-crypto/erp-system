@@ -8,6 +8,7 @@ import {
   DocumentsController,
 } from './presentation/controllers/documents.controller';
 import { DocumentService } from './application/services/document.service';
+import { DocumentPermissionService } from './application/services/document-permission.service';
 
 @Module({
   controllers: [
@@ -16,7 +17,7 @@ import { DocumentService } from './application/services/document.service';
     DocumentUploadController,
     DocumentAccessController,
   ],
-  providers: [DocumentService],
+  providers: [DocumentService, DocumentPermissionService],
   exports: [DocumentService],
 })
 export class DocumentsModule {}

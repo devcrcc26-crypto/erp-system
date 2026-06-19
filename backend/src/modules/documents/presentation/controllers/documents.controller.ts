@@ -27,13 +27,17 @@ import {
   UploadDocumentVersionDto,
 } from '../../application/dtos/document.dtos';
 import { DocumentService } from '../../application/services/document.service';
+import { DocumentPermissionService } from '../../application/services/document-permission.service';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @Controller('documents')
 export class DocumentsController {
-  constructor(private readonly documentService: DocumentService) {}
+  constructor(
+    private readonly documentService: DocumentService,
+    private readonly documentPermissionService: DocumentPermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
@@ -50,11 +54,16 @@ export class DocumentsController {
   }
 
   @Get(':id/versions')
-  @RequirePermission('documents', 'view')
-  listVersions(
+  @ApiOperation({ summary: 'List document versions' })
+  async listVersions(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown[]> {
+    await this.documentPermissionService.assertCanViewDocument(
+      user.userId,
+      user.companyId,
+      id,
+    );
     return this.documentService.listVersions(this.ctx(user), id);
   }
 
@@ -82,12 +91,16 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  @RequirePermission('documents', 'view')
   @ApiOperation({ summary: 'Get document metadata' })
-  get(
+  async get(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<unknown> {
+    await this.documentPermissionService.assertCanViewDocument(
+      user.userId,
+      user.companyId,
+      id,
+    );
     return this.documentService.getDocument(this.ctx(user), id);
   }
 
@@ -117,10 +130,12 @@ export class DocumentsController {
 @UseGuards(PermissionsGuard)
 @Controller('document-folders')
 export class DocumentUploadController {
-  constructor(private readonly documentService: DocumentService) {}
+  constructor(
+    private readonly documentService: DocumentService,
+    private readonly documentPermissionService: DocumentPermissionService,
+  ) {}
 
   @Post(':folderId/documents')
-  @RequirePermission('documents', 'create')
   @ApiOperation({ summary: 'Upload a document to a folder' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -133,11 +148,16 @@ export class DocumentUploadController {
     },
   })
   @UseInterceptors(FileInterceptor('file'))
-  upload(
+  async upload(
     @CurrentUser() user: AuthenticatedUser,
     @Param('folderId') folderId: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<unknown> {
+    await this.documentPermissionService.assertCanUpload(
+      user.userId,
+      user.companyId,
+      folderId,
+    );
     return this.documentService.uploadDocument(
       { companyId: user.companyId, userId: user.userId },
       folderId,

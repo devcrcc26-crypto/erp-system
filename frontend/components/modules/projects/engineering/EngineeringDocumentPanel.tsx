@@ -64,7 +64,7 @@ export default function EngineeringDocumentPanel({
 }): React.ReactNode {
   const lens = useRoleLens();
   const { t } = useEpcTranslation();
-  const message = useAppMessage();
+  const messageApi = useAppMessage();
   const canRegister =
     lens.canCreateEngineering || lens.canEditEngineering;
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -143,7 +143,7 @@ export default function EngineeringDocumentPanel({
 
   async function handleRegister(values: EdvMetadataFormValues): Promise<void> {
     if (!pendingFile) {
-      message.error('Select a file to upload');
+      messageApi.error('Select a file to upload');
       return;
     }
 
@@ -154,7 +154,7 @@ export default function EngineeringDocumentPanel({
         folderId = folder.data?.id;
       }
       if (!folderId) {
-        message.error('Document folder could not be prepared for upload');
+        messageApi.error('Document folder could not be prepared for upload');
         return;
       }
 
@@ -176,13 +176,13 @@ export default function EngineeringDocumentPanel({
         },
       });
 
-      message.success('Engineering document registered');
+      messageApi.success('Engineering document registered');
       setRegisterOpen(false);
       setPendingFile(null);
       form.resetFields();
       void documentsQuery.refetch();
     } catch (error) {
-      notifyApiError(error, 'Failed to register engineering document', message);
+      notifyApiError(error, 'Failed to register engineering document', messageApi);
     }
   }
 

@@ -9,7 +9,6 @@ import {
   Select,
   Space,
   Table,
-  message,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -26,7 +25,6 @@ import type {
 import {
   useAddDesignPackageDependency,
   useAddDesignPackageItem,
-  useDesignPackageDependencies,
   useDesignPackages,
   useRemoveDesignPackageDependency,
   useRemoveDesignPackageItem,
@@ -35,6 +33,8 @@ import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 function groupPackagesByStatus(
   packages: DesignPackage[],
@@ -60,15 +60,12 @@ export default function DesignPackagePanel({
   compact?: boolean;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const messageApi = useAppMessage();
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
   const [addItemPackageId, setAddItemPackageId] = useState<string | null>(null);
   const [addDepPackageId, setAddDepPackageId] = useState<string | null>(null);
   const [itemForm] = Form.useForm<{ engineeringDocumentVersionId: string }>();
-  const [depForm] = Form.useForm<{
-    dependsOnPackageId: string;
-    dependencyType: 'FINISH_TO_START' | 'COORDINATION_ONLY';
-  }>();
 
   const packagesQuery = useDesignPackages(
     projectId,
@@ -84,17 +81,27 @@ export default function DesignPackagePanel({
 
   const addItem = useAddDesignPackageItem();
   const removeItem = useRemoveDesignPackageItem();
-  const addDependency = useAddDesignPackageDependency();
-  const removeDependency = useRemoveDesignPackageDependency();
 
   const packages = packagesQuery.data ?? [];
   const grouped = useMemo(() => groupPackagesByStatus(packages), [packages]);
 
+  const addItemPackage = useMemo(
+    () => packages.find((pkg) => pkg.id === addItemPackageId) ?? null,
+    [packages, addItemPackageId],
+  );
+
   const edvOptions = useMemo(() => {
+    const assignedIds = new Set(
+      addItemPackage?.items?.map((item) => item.engineeringDocumentVersionId) ??
+        [],
+    );
     const docs = documentsQuery.data?.data ?? [];
     const options: { value: string; label: string }[] = [];
     for (const doc of docs) {
       for (const version of doc.versions ?? []) {
+        if (assignedIds.has(version.id)) {
+          continue;
+        }
         options.push({
           value: version.id,
           label: `${doc.title} — Rev ${version.revisionLabel} (${version.status})`,
@@ -102,7 +109,7 @@ export default function DesignPackagePanel({
       }
     }
     return options;
-  }, [documentsQuery.data]);
+  }, [addItemPackage, documentsQuery.data]);
 
   const apiUnavailable =
     packagesQuery.isError &&
@@ -146,9 +153,9 @@ export default function DesignPackagePanel({
     {
       title: '',
       key: 'actions',
-      width: 160,
+      width: 220,
       render: (_value, record) => (
-        <Space size="small">
+        <Space size="small" wrap>
           <Button
             type="link"
             className="!px-0"
@@ -167,6 +174,14 @@ export default function DesignPackagePanel({
             disabled={!lens.canEditEngineering}
           >
             Add EDV
+          </Button>
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => setAddDepPackageId(record.id)}
+            disabled={!lens.canEditEngineering}
+          >
+            Add dependency
           </Button>
         </Space>
       ),
@@ -249,16 +264,20 @@ export default function DesignPackagePanel({
             form={itemForm}
             layout="vertical"
             onFinish={async (values: { engineeringDocumentVersionId: string }) => {
-              await addItem.mutateAsync({
-                projectId,
-                taskDisciplineId,
-                packageId: addItemPackageId,
-                body: { engineeringDocumentVersionId: values.engineeringDocumentVersionId },
-              });
-              message.success('Document version added to package');
-              itemForm.resetFields();
-              setAddItemPackageId(null);
-              void packagesQuery.refetch();
+              try {
+                await addItem.mutateAsync({
+                  projectId,
+                  taskDisciplineId,
+                  packageId: addItemPackageId,
+                  body: { engineeringDocumentVersionId: values.engineeringDocumentVersionId },
+                });
+                messageApi.success('Document version added to package');
+                itemForm.resetFields();
+                setAddItemPackageId(null);
+                void packagesQuery.refetch();
+              } catch (error) {
+                notifyApiError(error, 'Failed to add document version', messageApi);
+              }
             }}
           >
             <Form.Item
@@ -282,7 +301,134 @@ export default function DesignPackagePanel({
           </Form>
         </Modal>
       )}
+
+      {addDepPackageId && (
+        <DesignPackageAddDependencyModal
+          open
+          projectId={projectId}
+          taskDisciplineId={taskDisciplineId}
+          packageId={addDepPackageId}
+          packages={packages}
+          onClose={() => setAddDepPackageId(null)}
+          onAdded={() => void packagesQuery.refetch()}
+        />
+      )}
     </FormLayout>
+  );
+}
+
+const DEPENDENCY_TYPE_OPTIONS = [
+  { value: 'FINISH_TO_START', label: 'Finish to start' },
+  { value: 'COORDINATION_ONLY', label: 'Coordination only' },
+] as const;
+
+export function DesignPackageAddDependencyModal({
+  open,
+  projectId,
+  taskDisciplineId,
+  packageId,
+  packages,
+  existingDependencyPackageIds = [],
+  onClose,
+  onAdded,
+}: {
+  open: boolean;
+  projectId: string;
+  taskDisciplineId: string;
+  packageId: string;
+  packages: DesignPackage[];
+  existingDependencyPackageIds?: string[];
+  onClose: () => void;
+  onAdded: () => void;
+}): React.ReactNode {
+  const messageApi = useAppMessage();
+  const [form] = Form.useForm<{
+    dependsOnPackageId: string;
+    dependencyType: 'FINISH_TO_START' | 'COORDINATION_ONLY';
+  }>();
+  const addDependency = useAddDesignPackageDependency();
+
+  const packageOptions = useMemo(() => {
+    const excluded = new Set([packageId, ...existingDependencyPackageIds]);
+    return packages
+      .filter((pkg) => !excluded.has(pkg.id))
+      .map((pkg) => ({ value: pkg.id, label: pkg.name }));
+  }, [packageId, packages, existingDependencyPackageIds]);
+
+  return (
+    <Modal
+      title="Add package dependency"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+      afterOpenChange={(visible) => {
+        if (!visible) {
+          form.resetFields();
+        }
+      }}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ dependencyType: 'FINISH_TO_START' }}
+        onFinish={async (values) => {
+          try {
+            await addDependency.mutateAsync({
+              projectId,
+              taskDisciplineId,
+              packageId,
+              body: {
+                dependsOnPackageId: values.dependsOnPackageId,
+                dependencyType: values.dependencyType,
+              },
+            });
+            messageApi.success('Package dependency added');
+            form.resetFields();
+            onClose();
+            onAdded();
+          } catch (error) {
+            notifyApiError(error, 'Failed to add package dependency', messageApi);
+          }
+        }}
+      >
+        <Form.Item
+          label="Depends on package"
+          name="dependsOnPackageId"
+          rules={[{ required: true, message: 'Select a package' }]}
+        >
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={packageOptions}
+            placeholder={
+              packageOptions.length > 0
+                ? 'Select prerequisite package'
+                : 'No other packages available'
+            }
+            disabled={packageOptions.length === 0}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Dependency type"
+          name="dependencyType"
+          rules={[{ required: true, message: 'Select dependency type' }]}
+        >
+          <Select options={[...DEPENDENCY_TYPE_OPTIONS]} />
+        </Form.Item>
+        <Space>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={addDependency.isPending}
+            disabled={packageOptions.length === 0}
+          >
+            Add dependency
+          </Button>
+        </Space>
+      </Form>
+    </Modal>
   );
 }
 

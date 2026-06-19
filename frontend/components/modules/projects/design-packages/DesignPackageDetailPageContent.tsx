@@ -11,19 +11,20 @@ import {
   Modal,
   Space,
   Spin,
-  message,
 } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import {
+  DesignPackageAddDependencyModal,
   DesignPackageDependenciesTable,
   DesignPackageItemsTable,
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
   useApproveReviewSession,
+  useBatchApprovePackageEdvs,
   useDesignPackage,
   useDesignPackageDependencies,
   useDesignPackages,
@@ -35,8 +36,9 @@ import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
-import { getPackageLockEligibility } from '@/lib/utils/package-workflow';
+import { getPackageLockGuidance } from '@/lib/utils/package-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { layout } from '@/lib/theme/layout';
 
 export default function DesignPackageDetailPageContent({
@@ -49,7 +51,9 @@ export default function DesignPackageDetailPageContent({
   packageId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const messageApi = useAppMessage();
   const [returnOpen, setReturnOpen] = useState(false);
+  const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
 
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
@@ -83,6 +87,7 @@ export default function DesignPackageDetailPageContent({
   const approveSession = useApproveReviewSession();
   const returnPackage = useReturnPackageForRework();
   const batchLock = useBatchLockEngineeringDocuments();
+  const batchApproveEdvs = useBatchApprovePackageEdvs();
 
   const pkg = packageQuery.data;
   const reviewMode = reviewModeQuery.data;
@@ -104,10 +109,38 @@ export default function DesignPackageDetailPageContent({
     return <Alert type="error" showIcon title="Design package not found" />;
   }
 
-  const lockEligibility = getPackageLockEligibility(
+  const lockGuidance = getPackageLockGuidance(
     pkg.items,
     documentsQuery.data?.data ?? [],
+    Boolean(reviewSessionId),
   );
+  const canApproveAllInReview =
+    lens.canApproveReview &&
+    Boolean(reviewSessionId) &&
+    lockGuidance.inReviewEdvIds.length > 0;
+
+  async function handleApproveAllEdvs(): Promise<void> {
+    if (!reviewSessionId || lockGuidance.inReviewEdvIds.length === 0) {
+      return;
+    }
+    try {
+      await batchApproveEdvs.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        packageId,
+        body: {
+          reviewSessionId,
+          engineeringDocumentVersionIds: lockGuidance.inReviewEdvIds,
+        },
+      });
+      messageApi.success('Package EDVs approved');
+      void packageQuery.refetch();
+      void documentsQuery.refetch();
+      void reviewModeQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to approve package EDVs', messageApi);
+    }
+  }
 
   async function handleSubmitForReview(): Promise<void> {
     try {
@@ -116,11 +149,11 @@ export default function DesignPackageDetailPageContent({
         taskDisciplineId,
         packageId,
       });
-      message.success('Package submitted for review');
+      messageApi.success('Package submitted for review');
       void packageQuery.refetch();
       void reviewModeQuery.refetch();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 
@@ -131,10 +164,10 @@ export default function DesignPackageDetailPageContent({
         taskDisciplineId,
         packageId,
       });
-      message.success('Package EDVs locked');
+      messageApi.success('Package EDVs locked');
       void packageQuery.refetch();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 
@@ -149,11 +182,11 @@ export default function DesignPackageDetailPageContent({
         packageId,
         reviewSessionId,
       });
-      message.success('Review session approved');
+      messageApi.success('Review session approved');
       void packageQuery.refetch();
       void reviewModeQuery.refetch();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 
@@ -163,10 +196,10 @@ export default function DesignPackageDetailPageContent({
         projectId,
         body: { designPackageIds: [packageId] },
       });
-      message.success('Batch lock requested');
+      messageApi.success('Batch lock requested');
       void packageQuery.refetch();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 
@@ -214,10 +247,19 @@ export default function DesignPackageDetailPageContent({
                 Approve session
               </Button>
             )}
+            {canApproveAllInReview && (
+              <Button
+                type="primary"
+                loading={batchApproveEdvs.isPending}
+                onClick={() => void handleApproveAllEdvs()}
+              >
+                Approve all EDVs
+              </Button>
+            )}
             {lens.canEditEngineering && (
               <Button
                 loading={lockEdvs.isPending}
-                disabled={!lockEligibility.eligible}
+                disabled={!lockGuidance.eligible}
                 onClick={() => void handleLockEdvs()}
               >
                 Lock EDVs
@@ -226,7 +268,7 @@ export default function DesignPackageDetailPageContent({
             {lens.canApproveReview && (
               <Button
                 loading={batchLock.isPending}
-                disabled={!lockEligibility.eligible}
+                disabled={!lockGuidance.eligible}
                 onClick={() => void handleBatchLockPackage()}
               >
                 Batch lock
@@ -248,9 +290,21 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        {lens.canEditEngineering && !lockEligibility.eligible && lockEligibility.reason && (
+        {lens.canEditEngineering && !lockGuidance.eligible && lockGuidance.reason && (
           <div className="mb-4">
-            <Alert type="info" showIcon title="Lock not available" description={lockEligibility.reason} />
+            <Alert
+              type="info"
+              showIcon
+              title="Lock not available"
+              description={
+                <div className="space-y-1">
+                  <p>{lockGuidance.reason}</p>
+                  {lockGuidance.nextStep && (
+                    <p className="text-slate-600">{lockGuidance.nextStep}</p>
+                  )}
+                </div>
+              }
+            />
           </div>
         )}
 
@@ -291,7 +345,16 @@ export default function DesignPackageDetailPageContent({
         />
       </FormLayout>
 
-      <FormLayout title="Dependencies">
+      <FormLayout
+        title="Dependencies"
+        extra={
+          lens.canEditEngineering ? (
+            <Button size="small" onClick={() => setAddDependencyOpen(true)}>
+              Add dependency
+            </Button>
+          ) : undefined
+        }
+      >
         <DesignPackageDependenciesTable
           projectId={projectId}
           taskDisciplineId={taskDisciplineId}
@@ -302,6 +365,19 @@ export default function DesignPackageDetailPageContent({
           onChanged={() => void dependenciesQuery.refetch()}
         />
       </FormLayout>
+
+      <DesignPackageAddDependencyModal
+        open={addDependencyOpen}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        packageId={packageId}
+        packages={allPackagesQuery.data ?? []}
+        existingDependencyPackageIds={(dependenciesQuery.data ?? []).map(
+          (dependency) => dependency.dependsOnPackageId,
+        )}
+        onClose={() => setAddDependencyOpen(false)}
+        onAdded={() => void dependenciesQuery.refetch()}
+      />
 
       <Modal
         title="Return package for rework"
@@ -326,7 +402,7 @@ export default function DesignPackageDetailPageContent({
                 reason: values.reason.trim(),
               },
             });
-            message.success('Package returned for rework');
+            messageApi.success('Package returned for rework');
             setReturnOpen(false);
             void packageQuery.refetch();
             void reviewModeQuery.refetch();

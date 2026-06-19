@@ -1,9 +1,10 @@
 'use client';
 
-import { Drawer, Form, Input, Button, message } from 'antd';
+import { Drawer, Form, Input, Button } from 'antd';
 import type { MyCommentItem } from '@/lib/api/epc.types';
 import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
 
 export default function RevisionWorkspace({
@@ -19,13 +20,14 @@ export default function RevisionWorkspace({
 }): React.ReactNode {
   const [form] = Form.useForm<{ resolutionNote: string }>();
   const transitionComment = useTransitionReviewComment();
+  const messageApi = useAppMessage();
 
   async function handleResolve(values: { resolutionNote: string }): Promise<void> {
     if (!comment) {
       return;
     }
     if (comment.status !== 'IN_PROGRESS') {
-      message.warning('Acknowledge and start the comment before marking it resolved.');
+      messageApi.warning('Acknowledge and start the comment before marking it resolved.');
       return;
     }
 
@@ -35,7 +37,7 @@ export default function RevisionWorkspace({
         body: { targetStatus: 'RESOLVED' },
       });
 
-      message.success(
+      messageApi.success(
         values.resolutionNote.trim()
           ? 'Comment resolved — upload revision from the engineering document panel.'
           : 'Comment marked resolved',
@@ -43,7 +45,7 @@ export default function RevisionWorkspace({
       form.resetFields();
       onResolved();
     } catch (error) {
-      notifyApiError(error);
+      notifyApiError(error, 'Request failed', messageApi);
     }
   }
 

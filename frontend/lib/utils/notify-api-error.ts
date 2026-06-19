@@ -1,4 +1,3 @@
-import { message as staticMessage } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
 import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
 
@@ -13,5 +12,10 @@ export function notifyApiError(
 ): void {
   const apiError =
     error instanceof ApiRequestError ? error : toApiRequestError(error);
-  (messageApi ?? staticMessage).error(apiError.message || fallback);
+  const text = apiError.message || fallback;
+  if (messageApi) {
+    messageApi.error(text);
+    return;
+  }
+  console.error(text, error);
 }

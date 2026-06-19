@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Space, message } from 'antd';
+import { Button, Space } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import {
@@ -11,6 +11,7 @@ import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensPr
 import type { ReviewModeComment } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 export default function DisciplineLeadConsole({
   projectId,
@@ -30,6 +31,7 @@ export default function DisciplineLeadConsole({
   onAction: () => void;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const messageApi = useAppMessage();
   const approveSession = useApproveReviewSession();
   const returnPackage = useReturnPackageForRework();
 
@@ -66,11 +68,11 @@ export default function DisciplineLeadConsole({
                 reviewSessionId,
               })
               .then(() => {
-                message.success('Session approved');
+                messageApi.success('Session approved');
                 onAction();
               })
               .catch((error: unknown) => {
-                notifyApiError(error);
+                notifyApiError(error, 'Request failed', messageApi);
               });
           }}
         >
@@ -91,11 +93,11 @@ export default function DisciplineLeadConsole({
                 },
               })
               .then(() => {
-                message.success('Package returned');
+                messageApi.success('Package returned');
                 onAction();
               })
               .catch((error: unknown) => {
-                notifyApiError(error);
+                notifyApiError(error, 'Request failed', messageApi);
               });
           }}
         >

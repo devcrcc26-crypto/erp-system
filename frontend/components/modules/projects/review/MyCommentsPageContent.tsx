@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Space, Table, message } from 'antd';
+import { Button, Space, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
@@ -20,6 +20,7 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { Alert } from 'antd';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 export default function MyCommentsPageContent(): React.ReactNode {
   const commentsQuery = useMyComments();
@@ -27,6 +28,7 @@ export default function MyCommentsPageContent(): React.ReactNode {
   const verifyComment = useVerifyReviewComment();
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const canViewMyComments = useCanViewMyComments();
 
   if (!canViewMyComments) {
@@ -82,11 +84,11 @@ export default function MyCommentsPageContent(): React.ReactNode {
                     body: { targetStatus: 'ACKNOWLEDGED' },
                   })
                   .then(() => {
-                    message.success('Comment acknowledged');
+                    messageApi.success('Comment acknowledged');
                     void commentsQuery.refetch();
                   })
                   .catch((error: unknown) => {
-                    notifyApiError(error);
+                    notifyApiError(error, 'Request failed', messageApi);
                   });
               }}
             >
@@ -105,11 +107,11 @@ export default function MyCommentsPageContent(): React.ReactNode {
                     body: { targetStatus: 'IN_PROGRESS' },
                   })
                   .then(() => {
-                    message.success('Marked in progress');
+                    messageApi.success('Marked in progress');
                     void commentsQuery.refetch();
                   })
                   .catch((error: unknown) => {
-                    notifyApiError(error);
+                    notifyApiError(error, 'Request failed', messageApi);
                   });
               }}
             >
@@ -134,11 +136,11 @@ export default function MyCommentsPageContent(): React.ReactNode {
                 void verifyComment
                   .mutateAsync({ commentId: record.commentId })
                   .then(() => {
-                    message.success('Comment verified');
+                    messageApi.success('Comment verified');
                     void commentsQuery.refetch();
                   })
                   .catch((error: unknown) => {
-                    notifyApiError(error);
+                    notifyApiError(error, 'Request failed', messageApi);
                   });
               }}
             >

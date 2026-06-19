@@ -515,14 +515,65 @@ export class ReviewWorkflowService {
         correlationId,
       });
 
-      return {
-        commandType: 'ApproveReviewSession',
+      const pkg = await this.epcWorkflowRepository.findPackageWithItems(
+        tx,
+        command.companyId,
+        session.designPackageId,
+      );
+      if (!pkg) {
+        throw new NotFoundException('Design package not found');
+      }
+
+      const edvIds = pkg.items.map((item) => item.engineeringDocumentVersionId);
+      const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
+        tx,
+        command.companyId,
+        edvIds,
+      );
+      this.conflictGuard.assertBatchEdvsResolved(edvIds, loaded);
+
+      const approvalPlan = this.conflictGuard.assertBatchTransitionPlan(
+        loaded,
+        EdvStatus.APPROVED,
+        [EdvStatus.IN_REVIEW],
+      );
+
+      const projectId = await this.resolveProjectIdFromDiscipline(
+        tx,
+        session.taskDisciplineId,
+        command.companyId,
+      );
+
+      const edvResults =
+        approvalPlan.length > 0
+          ? await this.edvTransitionService.applyInTx(tx, {
+              companyId: command.companyId,
+              actorId: command.actorId,
+              correlationId,
+              projectId,
+              transitions: approvalPlan.map((plan) => ({
+                engineeringDocumentVersionId: plan.edvId,
+                targetStatus: EdvStatus.APPROVED,
+                reason: `ApproveReviewSession final tier session=${session.id}`,
+              })),
+            })
+          : [];
+
+      const phaseB = await this.stateProjection.recomputeDirtyInTx(
+        tx,
+        command.companyId,
+        command.actorId,
+      );
+
+      return this.buildReviewSnapshot(
+        'ApproveReviewSession',
         correlationId,
-        affectedEdvIds: [],
-        edvStatuses: {},
-        reviewSessionId: session.id,
-        intentEventIds: [],
-      };
+        edvResults,
+        phaseB,
+        session.id,
+        session.designPackageId,
+        session.taskDisciplineId,
+      );
     });
   }
 

@@ -1,0 +1,122 @@
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { FolderContextType } from '@prisma/client';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+
+/**
+ * Resolves document module access, including schedule-based access for EPC folders.
+ */
+@Injectable()
+export class DocumentPermissionService {
+  constructor(
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /**
+   * Asserts the user may upload into the target folder.
+   */
+  async assertCanUpload(
+    userId: string,
+    companyId: string,
+    folderId: string,
+  ): Promise<void> {
+    if (await this.permissionService.hasPermission(userId, companyId, 'documents', 'create')) {
+      return;
+    }
+
+    const folder = await this.findFolderOrThrow(folderId, companyId);
+    if (await this.hasScheduleWriteForFolder(userId, companyId, folder.contextType)) {
+      return;
+    }
+
+    throw new ForbiddenException('Missing permission: documents.create');
+  }
+
+  /**
+   * Asserts the user may read document metadata and versions.
+   */
+  async assertCanViewDocument(
+    userId: string,
+    companyId: string,
+    documentId: string,
+  ): Promise<void> {
+    if (await this.permissionService.hasPermission(userId, companyId, 'documents', 'view')) {
+      return;
+    }
+
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({ id: documentId, companyId }),
+      select: {
+        folder: {
+          select: { contextType: true },
+        },
+      },
+    });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    if (
+      await this.hasScheduleReadForFolder(
+        userId,
+        companyId,
+        document.folder.contextType,
+      )
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Missing permission: documents.view');
+  }
+
+  private async hasScheduleWriteForFolder(
+    userId: string,
+    companyId: string,
+    contextType: FolderContextType,
+  ): Promise<boolean> {
+    if (!this.isProjectScopedFolder(contextType)) {
+      return false;
+    }
+
+    const [canCreate, canEdit] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, 'schedule', 'create'),
+      this.permissionService.hasPermission(userId, companyId, 'schedule', 'edit'),
+    ]);
+    return canCreate || canEdit;
+  }
+
+  private async hasScheduleReadForFolder(
+    userId: string,
+    companyId: string,
+    contextType: FolderContextType,
+  ): Promise<boolean> {
+    if (!this.isProjectScopedFolder(contextType)) {
+      return false;
+    }
+
+    return this.permissionService.hasPermission(userId, companyId, 'schedule', 'view');
+  }
+
+  private isProjectScopedFolder(contextType: FolderContextType): boolean {
+    return (
+      contextType === FolderContextType.PROJECT ||
+      contextType === FolderContextType.TASK_DISCIPLINE
+    );
+  }
+
+  private async findFolderOrThrow(
+    folderId: string,
+    companyId: string,
+  ): Promise<{ contextType: FolderContextType }> {
+    const folder = await this.prisma.documentFolder.findFirst({
+      where: activeOnly({ id: folderId, companyId }),
+      select: { contextType: true },
+    });
+    if (!folder) {
+      throw new NotFoundException('Folder not found');
+    }
+    return folder;
+  }
+}

@@ -10,7 +10,6 @@ import {
   Select,
   Space,
   Table,
-  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -19,6 +18,7 @@ import type { DesignPackage } from '@/lib/api/epc.types';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useDesignPackages } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 interface SubmittalPackageFormValues {
   category: string;
@@ -43,6 +43,7 @@ export default function SubmittalPackageDrawer({
   const [form] = Form.useForm<SubmittalPackageFormValues>();
   const disciplinesQuery = useProjectDisciplines(projectId, open);
   const createSubmittal = useCreateDesignSubmittal();
+  const messageApi = useAppMessage();
 
   return (
     <Drawer
@@ -87,7 +88,7 @@ export default function SubmittalPackageDrawer({
               specReference: values.specReference?.trim() || undefined,
             },
           });
-          message.success('Design submittal created');
+          messageApi.success('Design submittal created');
           form.resetFields();
           onCreated();
           onClose();
