@@ -123,10 +123,8 @@
     "SUPERSEDED": "Superseded"
   },
   "projection": {
-    "lagInfoTitle": "Aggregate status is derived from document versions",
-    "lagInfoDescription": "Package and discipline status badges may take a moment to update after workflow actions complete.",
     "lagPendingTitle": "Status projection in progress",
-    "lagPendingDescription": "Workflow committed — aggregate badges refresh after the projection job runs. Document-level statuses are authoritative."
+    "lagPendingDescription": "Workflow committed — package and discipline badges refresh automatically when projection completes."
   },
   "empty": {
     "noModules": "No project modules available for your role.",

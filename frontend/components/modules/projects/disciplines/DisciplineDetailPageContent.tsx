@@ -8,7 +8,9 @@ import DesignPackagePanel from '@/components/modules/projects/design-packages/De
 import EngineeringDocumentPanel from '@/components/modules/projects/engineering/EngineeringDocumentPanel';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import { ApiRequestError } from '@/lib/api/errors';
+import { useDesignPackages } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
+import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 import { layout } from '@/lib/theme/layout';
 
@@ -19,7 +21,13 @@ export default function DisciplineDetailPageContent({
   projectId: string;
   taskDisciplineId: string;
 }): React.ReactNode {
-  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
+  const packagesQuery = useDesignPackages(projectId, taskDisciplineId);
+  const projectionPending =
+    packagesQuery.data?.some((pkg) => pkg.projectionPending) ?? false;
+
+  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId, true, {
+    refetchInterval: projectionPending ? PROJECTION_POLL_MS : false,
+  });
 
   if (disciplineQuery.isLoading) {
     return (
@@ -79,12 +87,15 @@ export default function DisciplineDetailPageContent({
         title={discipline.disciplineName}
         description={`Schedule task: ${discipline.taskName}`}
       >
-        <ProjectionLagHelper />
+        <ProjectionLagHelper pending={projectionPending} />
 
         <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="mb-6">
           <Descriptions.Item label="Projected status">
             {discipline.projectedStatus ? (
-              <ProjectedStatusBadge status={discipline.projectedStatus} />
+              <ProjectedStatusBadge
+                status={discipline.projectedStatus}
+                pending={projectionPending}
+              />
             ) : (
               '—'
             )}

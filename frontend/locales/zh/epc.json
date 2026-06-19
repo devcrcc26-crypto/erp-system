@@ -123,10 +123,8 @@
     "SUPERSEDED": "已替代"
   },
   "projection": {
-    "lagInfoTitle": "汇总状态由文档版本派生",
-    "lagInfoDescription": "工作流操作完成后，包与专业状态标识可能需要片刻才会更新。",
     "lagPendingTitle": "状态投影进行中",
-    "lagPendingDescription": "工作流已提交——汇总标识将在投影任务运行后刷新。文档级状态为准。"
+    "lagPendingDescription": "工作流已提交——包与专业标识将在投影完成后自动刷新。"
   },
   "empty": {
     "noModules": "您当前角色无可用的项目模块。",

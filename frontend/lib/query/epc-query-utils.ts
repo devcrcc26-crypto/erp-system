@@ -1,5 +1,8 @@
 import { projectPath } from '@/lib/query/pm-query-utils';
 
+/** Poll interval while package/discipline projection is in flight. */
+export const PROJECTION_POLL_MS = 2_000;
+
 /**
  * Base path for task-discipline scoped EPC resources.
  */

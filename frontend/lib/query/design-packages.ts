@@ -19,8 +19,9 @@ import type {
   WorkflowResultSnapshot,
 } from '@/lib/api/epc.types';
 import type { MessageResponse } from '@/lib/api/types';
-import { designPackagesPath } from '@/lib/query/epc-query-utils';
+import { designPackagesPath, PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { epcWorkspaceKeys } from '@/lib/query/epc-workspace';
+import { disciplineKeys } from '@/lib/query/disciplines';
 import { projectPath } from '@/lib/query/pm-query-utils';
 
 export const designPackageKeys = {
@@ -62,6 +63,10 @@ export function useDesignPackages(
       ),
     enabled: Boolean(projectId) && Boolean(taskDisciplineId) && enabled,
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.some((pkg) => pkg.projectionPending)
+        ? PROJECTION_POLL_MS
+        : false,
   });
 }
 
@@ -83,6 +88,8 @@ export function useDesignPackage(
       Boolean(packageId) &&
       enabled,
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.projectionPending ? PROJECTION_POLL_MS : false,
   });
 }
 
@@ -130,6 +137,12 @@ function invalidatePackageQueries(
   }
   void queryClient.invalidateQueries({
     queryKey: epcWorkspaceKeys.statusBoard(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: disciplineKeys.project(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: disciplineKeys.find(projectId, taskDisciplineId),
   });
 }
 

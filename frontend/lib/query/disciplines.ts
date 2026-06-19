@@ -55,6 +55,7 @@ export function useProjectDiscipline(
   projectId: string,
   disciplineId: string,
   enabled = true,
+  options?: Omit<UseQueryOptions<ProjectDisciplineRow>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery({
     queryKey: disciplineKeys.find(projectId, disciplineId),
@@ -65,5 +66,6 @@ export function useProjectDiscipline(
     enabled: Boolean(projectId) && Boolean(disciplineId) && enabled,
     staleTime: 30_000,
     retry: scheduleReadRetry,
+    ...options,
   });
 }

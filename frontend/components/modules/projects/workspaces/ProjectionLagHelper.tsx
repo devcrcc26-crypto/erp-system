@@ -4,7 +4,7 @@ import { Alert } from 'antd';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Explains that package/discipline aggregate badges may lag until projection commits.
+ * Shown only while aggregate status projection is still running.
  */
 export default function ProjectionLagHelper({
   pending,
@@ -14,15 +14,7 @@ export default function ProjectionLagHelper({
   const { t } = useEpcTranslation();
 
   if (!pending) {
-    return (
-      <Alert
-        type="info"
-        showIcon
-        className="mb-4"
-        title={t('projection.lagInfoTitle')}
-        description={t('projection.lagInfoDescription')}
-      />
-    );
+    return null;
   }
 
   return (
