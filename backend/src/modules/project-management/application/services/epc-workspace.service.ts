@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CommentStatus,
   ReviewSessionStatus,
+  ReviewTier,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
@@ -9,6 +10,7 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PmContext } from '../types/pm-context.type';
 import { ProjectScopeService } from './project-scope.service';
+import { ReviewWorkflowService } from './review-workflow.service';
 import {
   CommentEdvSnapshot,
   resolveCommentRevisionContexts,
@@ -117,18 +119,45 @@ export class EpcWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly reviewWorkflow: ReviewWorkflowService,
   ) {}
 
   /**
    * Review inbox for assignee with SLA overdue flags.
+   * Includes sessions assigned to the user or awaiting their governance tier role.
    */
   async getReviewInbox(ctx: PmContext): Promise<ReviewInboxItem[]> {
+    await this.reviewWorkflow.reconcileStuckSessionEscalations(
+      ctx.companyId,
+      ctx.userId,
+    );
+
     const now = new Date();
     const sessions = await this.prisma.reviewSession.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
         status: ReviewSessionStatus.ACTIVE,
-        assignedToUserId: ctx.userId,
+        OR: [
+          { assignedToUserId: ctx.userId },
+          {
+            currentTier: ReviewTier.REVIEWER,
+            taskDiscipline: { reviewerUserId: ctx.userId },
+          },
+          {
+            currentTier: ReviewTier.DISCIPLINE_LEAD,
+            taskDiscipline: { disciplineLeadUserId: ctx.userId },
+          },
+          {
+            currentTier: ReviewTier.DEPT_CHIEF,
+            taskDiscipline: { chiefUserId: ctx.userId },
+          },
+          {
+            currentTier: ReviewTier.INSTITUTE_CHIEF,
+            taskDiscipline: {
+              task: { instituteChiefUserId: ctx.userId },
+            },
+          },
+        ],
       }),
       include: {
         designPackage: {

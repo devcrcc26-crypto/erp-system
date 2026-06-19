@@ -39,19 +39,27 @@ export default function DisciplineLeadConsole({
     return null;
   }
 
-  const isLeadTier =
-    currentTier === 'DISCIPLINE_LEAD' || currentTier === 'DEPT_CHIEF';
+  const isGovernanceTier =
+    currentTier === 'REVIEWER' ||
+    currentTier === 'DISCIPLINE_LEAD' ||
+    currentTier === 'DEPT_CHIEF';
 
-  if (!isLeadTier) {
+  if (!isGovernanceTier) {
     return null;
   }
 
   const approvalAllowed = canApproveReviewSession(comments.map((comment) => comment.status));
+  const tierLabel =
+    currentTier === 'REVIEWER'
+      ? 'Reviewer'
+      : currentTier === 'DISCIPLINE_LEAD'
+        ? 'Discipline lead'
+        : 'Department chief';
 
   return (
     <FormLayout
-      title="Discipline lead console"
-      description="Approve or return at discipline lead tier."
+      title={`${tierLabel} console`}
+      description={`Approve or return at the ${tierLabel.toLowerCase()} tier.`}
     >
       <ReviewApprovalBlockedAlert comments={comments} />
       <Space wrap>
@@ -89,7 +97,10 @@ export default function DisciplineLeadConsole({
                 packageId,
                 body: {
                   reviewSessionId,
-                  reason: 'Returned by discipline lead',
+                  reason:
+                    currentTier === 'REVIEWER'
+                      ? 'Returned by reviewer'
+                      : 'Returned by discipline lead',
                 },
               })
               .then(() => {

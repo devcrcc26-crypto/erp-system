@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   CommentSeverity,
   CommentStatus as PrismaCommentStatus,
@@ -59,6 +61,8 @@ import {
  */
 @Injectable()
 export class ReviewWorkflowService {
+  private readonly logger = new Logger(ReviewWorkflowService.name);
+
   constructor(
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
     private readonly epcReviewRepository: EpcReviewRepository,
@@ -626,36 +630,12 @@ export class ReviewWorkflowService {
       const isFinalTier = tierIndex >= REVIEW_TIER_ORDER.length - 1;
 
       if (!isFinalTier) {
-        const nextTier = REVIEW_TIER_ORDER[tierIndex + 1] as ReviewTier;
-        const discipline = await this.epcReviewRepository.findPackageWithDiscipline(
-          tx,
-          command.companyId,
-          session.designPackageId,
-        );
-        const assignee = discipline
-          ? this.reviewSla.resolveAssigneeForTier(nextTier, discipline.taskDiscipline)
-          : null;
-        const slaDeadlineAt = this.reviewSla.computeDeadline(new Date(), nextTier);
-
-        await this.epcReviewRepository.updateReviewSession(tx, session.id, {
-          currentTier: nextTier,
-          assignedToUser: assignee
-            ? { connect: { id: assignee } }
-            : { disconnect: true },
-          slaDeadlineAt,
-          slaEscalatedAt: null,
-          updatedBy: command.actorId,
-        });
-
-        await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+        await this.advanceActiveSessionTierInTx(tx, {
           companyId: command.companyId,
           actorId: command.actorId,
-          entityType: WorkflowEntityType.ReviewSession,
-          entityId: session.id,
-          action: 'ADVANCE_REVIEW_TIER',
-          beforeState: { currentTier: session.currentTier },
-          afterState: { currentTier: nextTier },
+          sessionId: session.id,
           correlationId,
+          triggerAction: 'ADVANCE_REVIEW_TIER',
         });
 
         return {
@@ -722,6 +702,8 @@ export class ReviewWorkflowService {
               actorId: command.actorId,
               correlationId,
               projectId,
+              currentAssigneeUserId: session.assignedToUserId ?? undefined,
+              permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
               transitions: approvalPlan.map((plan) => ({
                 engineeringDocumentVersionId: plan.edvId,
                 targetStatus: EdvStatus.APPROVED,
@@ -940,6 +922,159 @@ export class ReviewWorkflowService {
         command.designPackageId,
         session.taskDisciplineId,
       );
+    });
+  }
+
+  /**
+   * When every package EDV is APPROVED, escalates the session so the next tier assignee sees the inbox.
+   */
+  async maybeAdvanceSessionAfterPackageEdvsApproved(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      actorId: string;
+      designPackageId: string;
+      reviewSessionId: string;
+      correlationId: string;
+    },
+  ): Promise<void> {
+    const pkg = await this.epcWorkflowRepository.findPackageWithItems(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+    if (!pkg || pkg.items.length === 0) {
+      return;
+    }
+
+    const edvIds = pkg.items.map((item) => item.engineeringDocumentVersionId);
+    const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
+      tx,
+      input.companyId,
+      edvIds,
+    );
+    this.conflictGuard.assertBatchEdvsResolved(edvIds, loaded);
+
+    const allApproved = loaded.every((edv) => edv.status === EdvStatus.APPROVED);
+    if (!allApproved) {
+      return;
+    }
+
+    await this.advanceActiveSessionTierInTx(tx, {
+      companyId: input.companyId,
+      actorId: input.actorId,
+      sessionId: input.reviewSessionId,
+      correlationId: input.correlationId,
+      triggerAction: 'ADVANCE_REVIEW_TIER_AFTER_EDV_APPROVAL',
+    });
+  }
+
+  /**
+   * Repairs active sessions whose package EDVs are fully approved but tier was never escalated.
+   */
+  async reconcileStuckSessionEscalations(
+    companyId: string,
+    actorId: string,
+  ): Promise<void> {
+    const correlationId = randomUUID();
+    await this.workflowTransactionRunner.runPhaseABOnly(async (tx) => {
+      const sessions = await tx.reviewSession.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: ReviewSessionStatus.ACTIVE,
+        },
+        select: { id: true, designPackageId: true },
+      });
+
+      for (const session of sessions) {
+        try {
+          await this.maybeAdvanceSessionAfterPackageEdvsApproved(tx, {
+            companyId,
+            actorId,
+            designPackageId: session.designPackageId,
+            reviewSessionId: session.id,
+            correlationId,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Skipped stuck session escalation for ${session.id}: ${message}`,
+          );
+        }
+      }
+    });
+  }
+
+  /**
+   * Escalates an active review session to the next governance tier and reassigns inbox ownership.
+   */
+  private async advanceActiveSessionTierInTx(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      actorId: string;
+      sessionId: string;
+      correlationId: string;
+      triggerAction: string;
+    },
+  ): Promise<void> {
+    const session = await this.epcReviewRepository.findSessionById(
+      tx,
+      input.companyId,
+      input.sessionId,
+    );
+    if (!session || session.status !== ReviewSessionStatus.ACTIVE) {
+      return;
+    }
+
+    const tierIndex = REVIEW_TIER_ORDER.indexOf(session.currentTier as never);
+    const isFinalTier = tierIndex >= REVIEW_TIER_ORDER.length - 1;
+    if (isFinalTier) {
+      return;
+    }
+
+    const nextTier = REVIEW_TIER_ORDER[tierIndex + 1] as ReviewTier;
+    const discipline = await this.epcReviewRepository.findPackageWithDiscipline(
+      tx,
+      input.companyId,
+      session.designPackageId,
+    );
+    const assignee = discipline
+      ? this.reviewSla.resolveAssigneeForTier(nextTier, discipline.taskDiscipline)
+      : null;
+
+    if (!assignee) {
+      throw new BadRequestException(
+        `Cannot advance review to ${nextTier.replace(/_/g, ' ').toLowerCase()}: assign the role on the discipline first`,
+      );
+    }
+
+    const slaDeadlineAt = this.reviewSla.computeDeadline(new Date(), nextTier);
+
+    await this.epcReviewRepository.updateReviewSession(tx, session.id, {
+      currentTier: nextTier,
+      assignedToUser: { connect: { id: assignee } },
+      slaDeadlineAt,
+      slaEscalatedAt: null,
+      updatedBy: input.actorId,
+    });
+
+    await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+      companyId: input.companyId,
+      actorId: input.actorId,
+      entityType: WorkflowEntityType.ReviewSession,
+      entityId: session.id,
+      action: input.triggerAction,
+      beforeState: {
+        currentTier: session.currentTier,
+        assignedToUserId: session.assignedToUserId,
+      },
+      afterState: {
+        currentTier: nextTier,
+        assignedToUserId: assignee,
+      },
+      correlationId: input.correlationId,
     });
   }
 

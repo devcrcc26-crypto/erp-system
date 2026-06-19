@@ -185,5 +185,21 @@ describe('permission-context-builder', () => {
         ),
       ).toBe(true);
     });
+
+    it('allows batch approve when user is active session assignee', () => {
+      expect(
+        canPerformFromContext(
+          baseContext({
+            action: EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+            userId: 'reviewer-1',
+            grantedActions: new Set([
+              EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+            ]),
+            disciplineReviewerUserId: undefined,
+            currentAssigneeUserId: 'reviewer-1',
+          }),
+        ),
+      ).toBe(true);
+    });
   });
 });

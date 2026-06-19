@@ -158,7 +158,7 @@ export default function ReviewModePanel({
   }, [packageEdvIds, edvMap]);
 
   const selectableEdvIds = useMemo(
-    () => packageDocumentRows.map((row) => row.displayEdvId),
+    () => packageDocumentRows.map((row) => row.packageEdvId),
     [packageDocumentRows],
   );
 
@@ -290,9 +290,9 @@ export default function ReviewModePanel({
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <Checkbox
                         className="mt-0.5 shrink-0"
-                        checked={isEdvSelected(row.displayEdvId)}
+                        checked={isEdvSelected(row.packageEdvId)}
                         disabled={!lens.canApproveReview}
-                        onChange={() => toggleEdvSelection(row.displayEdvId)}
+                        onChange={() => toggleEdvSelection(row.packageEdvId)}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium text-slate-900">

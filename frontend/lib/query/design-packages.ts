@@ -453,6 +453,9 @@ export function useBatchApprovePackageEdvs() {
         variables.taskDisciplineId,
         variables.packageId,
       );
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.reviewInbox(),
+      });
     },
   });
 }

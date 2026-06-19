@@ -41,12 +41,13 @@ export class PermissionResolverService {
    * Asserts user may perform EDV status transition — deny wins.
    */
   async assertEdvTransitionAllowed(
-    input: EdvTransitionPermissionInput,
+    input: EdvTransitionPermissionInput & {
+      actionOverride?: EpcWorkflowAction;
+    },
   ): Promise<void> {
-    const action = this.mapTransitionToAction(
-      input.edv.status,
-      input.targetStatus,
-    );
+    const action =
+      input.actionOverride ??
+      this.mapTransitionToAction(input.edv.status, input.targetStatus);
     const grantedActions = await this.resolveGrantedActions(
       input.userId,
       input.companyId,
@@ -141,9 +142,6 @@ export class PermissionResolverService {
 
     const granted = new Set<EpcWorkflowAction>();
 
-    if (schedule.canView) {
-      // view-only — no write actions
-    }
     if (schedule.canCreate) {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
       granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
@@ -158,12 +156,11 @@ export class PermissionResolverService {
     if (schedule.canApprove) {
       this.grantReviewGovernanceActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
-    } else if (
-      schedule.canView &&
-      schedule.canCreate &&
-      !schedule.canEdit
-    ) {
-      // Reviewer profile: view + create without edit (approve row may be absent).
+    }
+
+    // Review governance is enforced by discipline/session assignment layers.
+    // Anyone with schedule read access may attempt review actions; non-reviewers are denied downstream.
+    if (schedule.canView) {
       this.grantReviewGovernanceActions(granted);
     }
 

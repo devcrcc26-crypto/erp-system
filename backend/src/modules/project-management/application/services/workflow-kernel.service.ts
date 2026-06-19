@@ -27,6 +27,7 @@ import {
   WorkflowCommandType,
   WorkflowResultSnapshot,
 } from '../../domain/contracts/workflow-kernel.contract';
+import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
   EpcWorkflowRepository,
@@ -245,11 +246,20 @@ export class WorkflowKernelService {
         correlationId,
         projectId,
         currentAssigneeUserId: session.assignedToUserId ?? undefined,
+        permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: p.to as EdvStatus,
           reason: `BatchApproveEdvs package=${command.designPackageId}`,
         })),
+      });
+
+      await this.reviewWorkflow.maybeAdvanceSessionAfterPackageEdvsApproved(tx, {
+        companyId: command.companyId,
+        actorId: command.actorId,
+        designPackageId: command.designPackageId,
+        reviewSessionId: command.reviewSessionId,
+        correlationId,
       });
 
       const phaseB = await this.stateProjection.recomputeDirtyInTx(

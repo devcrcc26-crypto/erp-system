@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EdvStatus as PrismaEdvStatus, Prisma } from '@prisma/client';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
+import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
 import {
   EpcWorkflowRepository,
   PrismaTx,
@@ -37,6 +38,7 @@ export class EdvTransitionService {
       correlationId: string;
       projectId: string;
       currentAssigneeUserId?: string;
+      permissionActionOverride?: EpcWorkflowAction;
       transitions: readonly {
         engineeringDocumentVersionId: string;
         targetStatus: EdvStatus;
@@ -70,6 +72,7 @@ export class EdvTransitionService {
         edv,
         targetStatus: to as PrismaEdvStatus,
         currentAssigneeUserId: input.currentAssigneeUserId,
+        actionOverride: input.permissionActionOverride,
       });
 
       const beforeState: Prisma.InputJsonValue = {

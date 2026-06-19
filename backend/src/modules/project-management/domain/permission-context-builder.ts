@@ -188,7 +188,10 @@ export function evaluateDisciplineAssignmentLayer(
     const isReviewer = userId === input.disciplineReviewerUserId;
     const isLead = userId === input.disciplineLeadUserId;
     const isChief = userId === input.disciplineChiefUserId;
-    const match = isReviewer || isLead || isChief;
+    const isSessionAssignee =
+      input.currentAssigneeUserId !== undefined &&
+      userId === input.currentAssigneeUserId;
+    const match = isReviewer || isLead || isChief || isSessionAssignee;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
