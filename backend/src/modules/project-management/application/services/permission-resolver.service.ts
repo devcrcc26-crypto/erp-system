@@ -156,13 +156,28 @@ export class PermissionResolverService {
       granted.add(EpcWorkflowAction.REVISION_TRIGGER);
     }
     if (schedule.canApprove) {
-      granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
-      granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
-      granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
+      this.grantReviewGovernanceActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
+    } else if (
+      schedule.canView &&
+      schedule.canCreate &&
+      !schedule.canEdit
+    ) {
+      // Reviewer profile: view + create without edit (approve row may be absent).
+      this.grantReviewGovernanceActions(granted);
     }
 
     return granted;
+  }
+
+  private grantReviewGovernanceActions(
+    granted: Set<EpcWorkflowAction>,
+  ): void {
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
   }
 
   private mapTransitionToAction(

@@ -57,7 +57,8 @@ export function evaluateAssigneeOverride(
     return true;
   }
   if (currentAssigneeUserId === undefined) {
-    return false;
+    // Session assignee not set — discipline-tier layer already authorized the actor.
+    return true;
   }
   return userId === currentAssigneeUserId;
 }

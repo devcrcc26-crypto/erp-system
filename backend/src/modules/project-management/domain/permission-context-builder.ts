@@ -111,6 +111,14 @@ export function evaluateProjectTeamLayer(
     };
   }
 
+  // Review governance is authorized via discipline reviewer/lead/chief FKs.
+  if (REVIEW_TIER_ACTIONS.has(input.action)) {
+    return {
+      layer: PermissionLayerId.PROJECT_TEAM_ROLE,
+      verdict: PermissionLayerVerdict.ALLOW,
+    };
+  }
+
   if (input.projectTeamRole === undefined) {
     return {
       layer: PermissionLayerId.PROJECT_TEAM_ROLE,

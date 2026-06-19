@@ -36,6 +36,7 @@ export class EdvTransitionService {
       actorId: string;
       correlationId: string;
       projectId: string;
+      currentAssigneeUserId?: string;
       transitions: readonly {
         engineeringDocumentVersionId: string;
         targetStatus: EdvStatus;
@@ -68,6 +69,7 @@ export class EdvTransitionService {
         projectId: input.projectId,
         edv,
         targetStatus: to as PrismaEdvStatus,
+        currentAssigneeUserId: input.currentAssigneeUserId,
       });
 
       const beforeState: Prisma.InputJsonValue = {

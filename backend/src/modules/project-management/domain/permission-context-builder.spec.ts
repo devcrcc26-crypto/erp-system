@@ -146,7 +146,7 @@ describe('permission-context-builder', () => {
       ).toBe(false);
     });
 
-    it('returns false for tier action without assignee match', () => {
+    it('returns false for tier action when assignee is set but does not match', () => {
       expect(
         canPerformFromContext(
           baseContext({
@@ -166,6 +166,20 @@ describe('permission-context-builder', () => {
             action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
             userId: 'reviewer-1',
             grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+            currentAssigneeUserId: 'reviewer-1',
+          }),
+        ),
+      ).toBe(true);
+    });
+
+    it('allows review approve when user is discipline reviewer but not on project team', () => {
+      expect(
+        canPerformFromContext(
+          baseContext({
+            action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+            userId: 'reviewer-1',
+            grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+            projectTeamRole: undefined,
             currentAssigneeUserId: 'reviewer-1',
           }),
         ),

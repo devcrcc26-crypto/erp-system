@@ -244,6 +244,7 @@ export class WorkflowKernelService {
         actorId: command.actorId,
         correlationId,
         projectId,
+        currentAssigneeUserId: session.assignedToUserId ?? undefined,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: p.to as EdvStatus,

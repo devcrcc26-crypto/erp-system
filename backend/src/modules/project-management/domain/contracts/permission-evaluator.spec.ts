@@ -140,6 +140,16 @@ describe('permission-evaluator (deny-wins contract)', () => {
       ).toBe(true);
     });
 
+    it('allows tier action when session assignee is not set', () => {
+      expect(
+        evaluateAssigneeOverride(
+          EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+          'user-a',
+          undefined,
+        ),
+      ).toBe(true);
+    });
+
     it('allows non-tier action regardless of assignee', () => {
       expect(
         evaluateAssigneeOverride(

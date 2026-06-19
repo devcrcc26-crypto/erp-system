@@ -22,7 +22,7 @@ export class ReviewBatchController {
   }
 
   @Post('batch-approve')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Batch approve EDVs in a design package' })
   batchApprove(
     @CurrentUser() user: AuthenticatedUser,
@@ -32,7 +32,7 @@ export class ReviewBatchController {
   }
 
   @Post('batch-return')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Batch return EDVs with comment template' })
   batchReturn(
     @CurrentUser() user: AuthenticatedUser,

@@ -220,7 +220,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/lock-edvs')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Lock all EDVs in package via WorkflowKernel' })
   lockEdvs(
     @CurrentUser() user: AuthenticatedUser,
@@ -239,7 +239,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/batch-approve')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Batch approve EDVs in package via WorkflowKernel' })
   batchApprove(
     @CurrentUser() user: AuthenticatedUser,
@@ -258,7 +258,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/batch-return')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Batch return EDVs in package via WorkflowKernel' })
   batchReturn(
     @CurrentUser() user: AuthenticatedUser,
@@ -296,7 +296,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/review-sessions/:reviewSessionId/approve')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Approve review session at current tier' })
   approveReviewSession(
     @CurrentUser() user: AuthenticatedUser,
@@ -317,7 +317,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/return-for-rework')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Return package for rework — closes session, EDVs to DRAFT' })
   returnForRework(
     @CurrentUser() user: AuthenticatedUser,
