@@ -28,6 +28,7 @@ import {
   mapTaskDependency,
   mapTaskDiscipline,
   MappedMilestone,
+  MappedProjectTaskDiscipline,
   MappedTask,
   MappedTaskDependency,
   MappedTaskDiscipline,
@@ -458,6 +459,87 @@ export class ScheduleService {
     }
 
     await this.prisma.taskDependency.delete({ where: { id: dependencyId } });
+  }
+
+  /**
+   * Returns all disciplines across every schedule task in a project.
+   */
+  async listProjectDisciplines(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<MappedProjectTaskDiscipline[]> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const disciplines = await this.prisma.taskDiscipline.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        task: { projectId },
+      }),
+      include: {
+        task: {
+          select: {
+            name: true,
+            instituteChiefUserId: true,
+            instituteChiefUser: {
+              select: { firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ task: { name: 'asc' } }, { createdAt: 'asc' }],
+    });
+
+    return disciplines.map((discipline) => ({
+      ...mapTaskDiscipline(
+        discipline,
+        discipline.task.instituteChiefUserId,
+        this.formatUserDisplayName(discipline.task.instituteChiefUser),
+      ),
+      taskName: discipline.task.name,
+    }));
+  }
+
+  /**
+   * Resolves a discipline by id within a project schedule.
+   */
+  async getProjectDiscipline(
+    ctx: PmContext,
+    projectId: string,
+    disciplineId: string,
+  ): Promise<MappedProjectTaskDiscipline> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        id: disciplineId,
+        companyId: ctx.companyId,
+        task: { projectId },
+      }),
+      include: {
+        task: {
+          select: {
+            name: true,
+            instituteChiefUserId: true,
+            instituteChiefUser: {
+              select: { firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+
+    return {
+      ...mapTaskDiscipline(
+        discipline,
+        discipline.task.instituteChiefUserId,
+        this.formatUserDisplayName(discipline.task.instituteChiefUser),
+      ),
+      taskName: discipline.task.name,
+    };
   }
 
   /**

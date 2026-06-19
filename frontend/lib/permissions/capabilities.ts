@@ -5,7 +5,6 @@ import type {
   PmCapabilities,
   PmModuleKey,
   Project,
-  Task,
   TaskDiscipline,
 } from '@/lib/api/project-management.types';
 import {
@@ -98,32 +97,21 @@ export async function fetchEpcCapabilities(
 
 async function probeEngineeringDocuments(projectId: string): Promise<boolean> {
   try {
-    const tasks = await apiGetPaginated<Task>(
-      `${projectPath(projectId, 'schedule')}/tasks${toQueryString({
-        page: 1,
-        limit: 20,
-      })}`,
+    const disciplines = await apiGet<TaskDiscipline[]>(
+      `${projectPath(projectId, 'schedule')}/disciplines`,
     );
 
-    for (const task of tasks.data) {
-      const disciplines = await apiGet<TaskDiscipline[]>(
-        `${projectPath(projectId, 'schedule')}/tasks/${task.id}/disciplines`,
-      );
-
-      if (disciplines.length === 0) {
-        continue;
-      }
-
-      const disciplineId = disciplines[0]!.id;
-      await apiGetPaginated<unknown>(
-        `${projectPath(projectId)}/task-disciplines/${disciplineId}/engineering-documents${toQueryString(
-          { page: 1, limit: 1 },
-        )}`,
-      );
-      return true;
+    if (disciplines.length === 0) {
+      return false;
     }
 
-    return false;
+    const disciplineId = disciplines[0]!.id;
+    await apiGetPaginated<unknown>(
+      `${projectPath(projectId)}/task-disciplines/${disciplineId}/engineering-documents${toQueryString(
+        { page: 1, limit: 1 },
+      )}`,
+    );
+    return true;
   } catch (error) {
     if (error instanceof ApiRequestError) {
       if (error.status === 403 || error.status === 401) {

@@ -135,6 +135,34 @@ export class ScheduleController {
     return { message: 'Task deleted' };
   }
 
+  @Get('disciplines')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List all project schedule disciplines' })
+  listProjectDisciplines(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.listProjectDisciplines(
+      this.ctx(user),
+      projectId,
+    );
+  }
+
+  @Get('disciplines/:disciplineId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get project schedule discipline by id' })
+  getProjectDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('disciplineId') disciplineId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.getProjectDiscipline(
+      this.ctx(user),
+      projectId,
+      disciplineId,
+    );
+  }
+
   @Get('tasks/:taskId/disciplines')
   @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'List task disciplines' })

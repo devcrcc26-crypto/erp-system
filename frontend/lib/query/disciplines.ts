@@ -1,14 +1,10 @@
 'use client';
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { apiGet, apiGetPaginated } from '@/lib/api/client';
+import { apiGet } from '@/lib/api/client';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
-import type { Task } from '@/lib/api/project-management.types';
 import { ApiRequestError } from '@/lib/api/errors';
-import {
-  SCHEDULE_PAGE_SIZE,
-} from '@/lib/query/schedule';
-import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
+import { projectPath } from '@/lib/query/pm-query-utils';
 
 function scheduleBase(projectId: string): string {
   return `${projectPath(projectId)}/schedule`;
@@ -33,33 +29,8 @@ export const disciplineKeys = {
     [...disciplineKeys.project(projectId), disciplineId] as const,
 };
 
-async function fetchAllTasks(projectId: string): Promise<Task[]> {
-  const firstPage = await apiGetPaginated<Task>(
-    `${scheduleBase(projectId)}/tasks${toQueryString({
-      page: 1,
-      limit: SCHEDULE_PAGE_SIZE,
-    })}`,
-  );
-
-  if (firstPage.meta.pages <= 1) {
-    return firstPage.data;
-  }
-
-  const data: Task[] = [...firstPage.data];
-  for (let page = 2; page <= firstPage.meta.pages; page += 1) {
-    const result = await apiGetPaginated<Task>(
-      `${scheduleBase(projectId)}/tasks${toQueryString({
-        page,
-        limit: SCHEDULE_PAGE_SIZE,
-      })}`,
-    );
-    data.push(...result.data);
-  }
-  return data;
-}
-
 /**
- * Aggregates task disciplines across all schedule tasks in a project.
+ * Lists all disciplines across schedule tasks in a project (single API call).
  */
 export function useProjectDisciplines(
   projectId: string,
@@ -68,32 +39,17 @@ export function useProjectDisciplines(
 ) {
   return useQuery({
     queryKey: disciplineKeys.project(projectId),
-    queryFn: async (): Promise<ProjectDisciplineRow[]> => {
-      const tasks = await fetchAllTasks(projectId);
-      const rows = await Promise.all(
-        tasks.map(async (task) => {
-          const disciplines = await apiGet<TaskDiscipline[]>(
-            `${scheduleBase(projectId)}/tasks/${task.id}/disciplines`,
-          );
-          return disciplines.map(
-            (discipline): ProjectDisciplineRow => ({
-              ...discipline,
-              taskId: task.id,
-              taskName: task.name,
-            }),
-          );
-        }),
-      );
-      return rows.flat();
-    },
+    queryFn: () =>
+      apiGet<ProjectDisciplineRow[]>(`${scheduleBase(projectId)}/disciplines`),
     enabled: Boolean(projectId) && enabled,
+    staleTime: 30_000,
     retry: scheduleReadRetry,
     ...options,
   });
 }
 
 /**
- * Resolves a discipline by id by scanning all project disciplines.
+ * Resolves a discipline by id within a project.
  */
 export function useProjectDiscipline(
   projectId: string,
@@ -102,20 +58,12 @@ export function useProjectDiscipline(
 ) {
   return useQuery({
     queryKey: disciplineKeys.find(projectId, disciplineId),
-    queryFn: async (): Promise<ProjectDisciplineRow | null> => {
-      const tasks = await fetchAllTasks(projectId);
-      for (const task of tasks) {
-        const disciplines = await apiGet<TaskDiscipline[]>(
-          `${scheduleBase(projectId)}/tasks/${task.id}/disciplines`,
-        );
-        const match = disciplines.find((d) => d.id === disciplineId);
-        if (match) {
-          return { ...match, taskId: task.id, taskName: task.name };
-        }
-      }
-      return null;
-    },
+    queryFn: () =>
+      apiGet<ProjectDisciplineRow>(
+        `${scheduleBase(projectId)}/disciplines/${disciplineId}`,
+      ),
     enabled: Boolean(projectId) && Boolean(disciplineId) && enabled,
+    staleTime: 30_000,
     retry: scheduleReadRetry,
   });
 }

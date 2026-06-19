@@ -154,9 +154,16 @@ export default function TasksPanel({
     {
       title: '',
       key: 'actions',
-      width: 120,
+      width: 220,
       render: (_value, record) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => openAddDependency(record)}
+          >
+            Add dependency
+          </Button>
           <Button
             type="link"
             className="!px-0"
@@ -243,10 +250,14 @@ export default function TasksPanel({
     },
   ];
 
-  function openAddDependency(): void {
+  function openAddDependency(sourceTask?: Task): void {
     setEditingDependency(null);
     depForm.resetFields();
-    depForm.setFieldsValue({ dependencyType: 'FS', lagDays: 0 });
+    depForm.setFieldsValue({
+      dependencyType: 'FS',
+      lagDays: 0,
+      ...(sourceTask ? { predecessorTaskId: sourceTask.id } : {}),
+    });
     setDependencyOpen(true);
   }
 
@@ -294,7 +305,6 @@ export default function TasksPanel({
               />
               Critical only
             </label>
-            <Button onClick={openAddDependency}>Add dependency</Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -320,9 +330,6 @@ export default function TasksPanel({
         title="Task dependencies"
         description="Predecessor and successor links used by the Gantt chart."
         className="mt-6"
-        extra={
-          <Button onClick={openAddDependency}>Add dependency</Button>
-        }
       >
         <DataTable<TaskDependency>
           rowKey="id"

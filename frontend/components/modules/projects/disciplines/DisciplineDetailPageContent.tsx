@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Alert, Breadcrumb, Descriptions, Spin } from 'antd';
+import { Alert, Breadcrumb, Button, Descriptions, Spin } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import DesignPackagePanel from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import EngineeringDocumentPanel from '@/components/modules/projects/engineering/EngineeringDocumentPanel';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
+import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 import { layout } from '@/lib/theme/layout';
@@ -25,6 +26,30 @@ export default function DisciplineDetailPageContent({
       <div className="flex justify-center py-16">
         <Spin />
       </div>
+    );
+  }
+
+  if (disciplineQuery.isError) {
+    const isRateLimited =
+      disciplineQuery.error instanceof ApiRequestError &&
+      disciplineQuery.error.status === 429;
+
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title={isRateLimited ? 'Too many requests' : 'Failed to load discipline'}
+        description={
+          isRateLimited
+            ? 'The server is busy. Wait a moment and try again.'
+            : 'This discipline could not be loaded. It may have been removed.'
+        }
+        action={
+          <Button size="small" onClick={() => void disciplineQuery.refetch()}>
+            Retry
+          </Button>
+        }
+      />
     );
   }
 

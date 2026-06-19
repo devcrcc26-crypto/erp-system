@@ -26,6 +26,34 @@ function daysBetween(start: Date, end: Date): number {
   return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / MS_PER_DAY));
 }
 
+/**
+ * Inclusive calendar-day duration between task start and finish dates.
+ */
+export function calculateTaskDurationDays(
+  startDate: string | Date | null | undefined,
+  finishDate: string | Date | null | undefined,
+): number | null {
+  const start = toDate(
+    startDate instanceof Date ? startDate.toISOString() : (startDate ?? null),
+  );
+  const finish = toDate(
+    finishDate instanceof Date ? finishDate.toISOString() : (finishDate ?? null),
+  );
+  if (!start || !finish) {
+    return null;
+  }
+
+  const startDay = startOfDay(start);
+  const finishDay = startOfDay(finish);
+  if (finishDay < startDay) {
+    return null;
+  }
+
+  return (
+    Math.floor((finishDay.getTime() - startDay.getTime()) / MS_PER_DAY) + 1
+  );
+}
+
 function computePlannedProgress(task: Task, today: Date): number | null {
   const start = toDate(task.startDate);
   const finish = toDate(task.finishDate);

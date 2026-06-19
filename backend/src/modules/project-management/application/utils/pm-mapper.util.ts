@@ -884,6 +884,10 @@ export interface MappedTaskDiscipline {
   updatedBy: string;
 }
 
+export interface MappedProjectTaskDiscipline extends MappedTaskDiscipline {
+  taskName: string;
+}
+
 export interface MappedTaskDependency {
   id: string;
   predecessorTaskId: string;

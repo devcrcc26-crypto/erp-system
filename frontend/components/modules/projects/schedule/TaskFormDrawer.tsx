@@ -29,6 +29,7 @@ import {
   useMilestones,
   useUpdateTask,
 } from '@/lib/query/schedule';
+import { calculateTaskDurationDays } from '@/lib/utils/schedule-metrics';
 import { antDrawerBodyStyles } from '@/lib/theme/layout';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
@@ -186,6 +187,25 @@ function defaultFormValues(): Partial<TaskFormValues> {
   };
 }
 
+function durationFromFormDates(
+  startDate?: Dayjs,
+  finishDate?: Dayjs,
+): number | undefined {
+  const days = calculateTaskDurationDays(
+    startDate?.toDate() ?? null,
+    finishDate?.toDate() ?? null,
+  );
+  return days ?? undefined;
+}
+
+function syncDurationField(
+  form: ReturnType<typeof Form.useForm<TaskFormValues>>[0],
+  startDate?: Dayjs,
+  finishDate?: Dayjs,
+): void {
+  form.setFieldValue('durationDays', durationFromFormDates(startDate, finishDate));
+}
+
 export default function TaskFormDrawer({
   open,
   projectId,
@@ -207,13 +227,15 @@ export default function TaskFormDrawer({
   const isEditing = Boolean(task);
 
   async function handleSubmit(values: TaskFormValues): Promise<void> {
+    const durationDays = durationFromFormDates(values.startDate, values.finishDate);
+
     const base = {
       name: values.name.trim(),
       description: values.description?.trim() || undefined,
       milestoneId: values.milestoneId,
       startDate: values.startDate?.toISOString(),
       finishDate: values.finishDate?.toISOString(),
-      durationDays: values.durationDays,
+      durationDays,
       progressPct: values.progressPct,
       status: values.status,
       isCritical: values.isCritical,
@@ -250,6 +272,7 @@ export default function TaskFormDrawer({
         }
         if (task) {
           form.setFieldsValue(toFormValues(task));
+          syncDurationField(form, form.getFieldValue('startDate'), form.getFieldValue('finishDate'));
           return;
         }
         form.resetFields();
@@ -261,6 +284,14 @@ export default function TaskFormDrawer({
           form={form}
           layout="vertical"
           className="erp-drawer-form"
+          onValuesChange={(
+            changed: Partial<TaskFormValues>,
+            allValues: TaskFormValues,
+          ) => {
+            if ('startDate' in changed || 'finishDate' in changed) {
+              syncDurationField(form, allValues.startDate, allValues.finishDate);
+            }
+          }}
           onFinish={(values: TaskFormValues) => void handleSubmit(values)}
         >
         {isEditing && (
@@ -322,13 +353,33 @@ export default function TaskFormDrawer({
           <Form.Item label="Start date" name="startDate">
             <DatePicker className="w-full" />
           </Form.Item>
-          <Form.Item label="Finish date" name="finishDate">
+          <Form.Item
+            label="Finish date"
+            name="finishDate"
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_rule, value: Dayjs | undefined) {
+                  const start = getFieldValue('startDate') as Dayjs | undefined;
+                  if (!value || !start || !value.isBefore(start, 'day')) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error('Finish date cannot be before start date'),
+                  );
+                },
+              }),
+            ]}
+          >
             <DatePicker className="w-full" />
           </Form.Item>
         </div>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Duration (days)" name="durationDays">
-            <InputNumber className="!w-full" min={0} />
+          <Form.Item
+            label="Duration (days)"
+            name="durationDays"
+            tooltip="Calculated from start and finish dates (inclusive)."
+          >
+            <InputNumber className="!w-full" min={0} disabled />
           </Form.Item>
           <Form.Item label="Progress %" name="progressPct">
             <InputNumber className="!w-full" min={0} max={100} />

@@ -49,7 +49,9 @@ export default function DisciplinesPageContent({
   const apiUnavailable =
     disciplinesQuery.isError &&
     disciplinesQuery.error instanceof ApiRequestError &&
-    (disciplinesQuery.error.status === 404 || disciplinesQuery.error.status === 0);
+    (disciplinesQuery.error.status === 404 ||
+      disciplinesQuery.error.status === 0 ||
+      disciplinesQuery.error.status === 429);
 
   const filtered = useMemo(() => {
     const rows = disciplinesQuery.data ?? [];
