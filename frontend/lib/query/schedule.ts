@@ -23,6 +23,7 @@ import type {
   TaskDependency,
   TaskDiscipline,
   UpdateMilestoneRequest,
+  UpdateTaskDependencyRequest,
   UpdateTaskDisciplineRequest,
   UpdateTaskRequest,
 } from '@/lib/api/project-management.types';
@@ -317,6 +318,31 @@ export function useCreateTaskDependency() {
     }) =>
       apiPost<TaskDependency>(
         `${scheduleBase(projectId)}/task-dependencies`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.dependencies(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useUpdateTaskDependency() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dependencyId,
+      body,
+    }: {
+      projectId: string;
+      dependencyId: string;
+      body: UpdateTaskDependencyRequest;
+    }) =>
+      apiPatch<TaskDependency>(
+        `${scheduleBase(projectId)}/task-dependencies/${dependencyId}`,
         body,
       ),
     onSuccess: (_data, variables) => {

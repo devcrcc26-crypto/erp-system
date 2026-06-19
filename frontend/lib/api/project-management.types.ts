@@ -728,6 +728,8 @@ export interface CreateTaskDependencyRequest {
   lagDays?: number;
 }
 
+export type UpdateTaskDependencyRequest = Partial<CreateTaskDependencyRequest>;
+
 export interface CreateRfiRequest {
   title: string;
   description?: string;

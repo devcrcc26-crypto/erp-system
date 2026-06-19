@@ -22,6 +22,7 @@ import {
   CreateTaskDto,
   UpdateMilestoneDto,
   UpdateTaskDisciplineDto,
+  UpdateTaskDependencyDto,
   UpdateTaskDto,
 } from '../../application/dtos/pm.dtos';
 import { ScheduleService } from '../../application/services/schedule.service';
@@ -227,6 +228,23 @@ export class ScheduleController {
     return this.scheduleService.createTaskDependency(
       this.ctx(user),
       projectId,
+      dto,
+    );
+  }
+
+  @Patch('task-dependencies/:id')
+  @RequirePermission('schedule', 'edit')
+  @ApiOperation({ summary: 'Update task dependency' })
+  updateTaskDependency(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskDependencyDto,
+  ): Promise<unknown> {
+    return this.scheduleService.updateTaskDependency(
+      this.ctx(user),
+      projectId,
+      id,
       dto,
     );
   }

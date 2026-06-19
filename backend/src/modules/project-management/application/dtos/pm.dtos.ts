@@ -438,6 +438,8 @@ export class CreateTaskDependencyDto {
   lagDays?: number;
 }
 
+export class UpdateTaskDependencyDto extends PartialType(CreateTaskDependencyDto) {}
+
 export class CreateRfiDto {
   @ApiProperty()
   @IsString()

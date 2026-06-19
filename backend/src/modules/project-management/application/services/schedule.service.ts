@@ -16,6 +16,7 @@ import {
   CreateTaskDisciplineDto,
   CreateTaskDto,
   UpdateMilestoneDto,
+  UpdateTaskDependencyDto,
   UpdateTaskDisciplineDto,
   UpdateTaskDto,
 } from '../dtos/pm.dtos';
@@ -379,6 +380,56 @@ export class ScheduleService {
         dependencyType: dto.dependencyType,
         lagDays: dto.lagDays ?? 0,
         createdBy: ctx.userId,
+      },
+    });
+
+    return mapTaskDependency(dependency);
+  }
+
+  /**
+   * Updates an existing task dependency.
+   */
+  async updateTaskDependency(
+    ctx: PmContext,
+    projectId: string,
+    dependencyId: string,
+    dto: UpdateTaskDependencyDto,
+  ): Promise<MappedTaskDependency> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const existing = await this.prisma.taskDependency.findFirst({
+      where: {
+        id: dependencyId,
+        predecessorTask: activeOnly({ projectId }),
+        successorTask: activeOnly({ projectId }),
+      },
+    });
+    if (!existing) {
+      throw new NotFoundException('Task dependency not found');
+    }
+
+    const predecessorTaskId =
+      dto.predecessorTaskId ?? existing.predecessorTaskId;
+    const successorTaskId = dto.successorTaskId ?? existing.successorTaskId;
+
+    if (predecessorTaskId === successorTaskId) {
+      throw new BadRequestException(
+        'Predecessor and successor must be different tasks',
+      );
+    }
+
+    await this.getTaskOrThrow(projectId, predecessorTaskId);
+    await this.getTaskOrThrow(projectId, successorTaskId);
+
+    const dependency = await this.prisma.taskDependency.update({
+      where: { id: dependencyId },
+      data: {
+        predecessorTaskId,
+        successorTaskId,
+        ...(dto.dependencyType !== undefined
+          ? { dependencyType: dto.dependencyType }
+          : {}),
+        ...(dto.lagDays !== undefined ? { lagDays: dto.lagDays } : {}),
       },
     });
 

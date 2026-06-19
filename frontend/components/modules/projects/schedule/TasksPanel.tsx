@@ -20,11 +20,15 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
 import type {
   Task,
+  TaskDependency,
   TaskDependencyType,
 } from '@/lib/api/project-management.types';
 import {
   useCreateTaskDependency,
   useDeleteTask,
+  useDeleteTaskDependency,
+  useTaskDependencies,
+  useUpdateTaskDependency,
   scheduleKeys,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -32,12 +36,17 @@ import {
   formatTaskStatus,
   taskStatusVariant,
 } from '@/lib/utils/pm-status-display';
+
 const DEPENDENCY_TYPES: Array<{ value: TaskDependencyType; label: string }> = [
   { value: 'FS', label: 'Finish-to-Start (FS)' },
   { value: 'SS', label: 'Start-to-Start (SS)' },
   { value: 'FF', label: 'Finish-to-Finish (FF)' },
   { value: 'SF', label: 'Start-to-Finish (SF)' },
 ];
+
+const DEPENDENCY_TYPE_LABELS = Object.fromEntries(
+  DEPENDENCY_TYPES.map((item) => [item.value, item.label]),
+) as Record<TaskDependencyType, string>;
 
 interface DependencyFormValues {
   predecessorTaskId: string;
@@ -62,9 +71,18 @@ export default function TasksPanel({
   const [dependencyOpen, setDependencyOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
+  const [editingDependency, setEditingDependency] = useState<TaskDependency | null>(
+    null,
+  );
+  const [deletingDependency, setDeletingDependency] = useState<TaskDependency | null>(
+    null,
+  );
   const [depForm] = Form.useForm<DependencyFormValues>();
 
+  const dependenciesQuery = useTaskDependencies(projectId);
   const createDependency = useCreateTaskDependency();
+  const updateDependency = useUpdateTaskDependency();
+  const deleteDependency = useDeleteTaskDependency();
   const deleteTask = useDeleteTask();
 
   const tasks = useMemo(
@@ -73,10 +91,20 @@ export default function TasksPanel({
     [allTasks, criticalOnly],
   );
 
+  const taskLabelById = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const task of allTasks) {
+      labels.set(task.id, `${task.taskIdCode} — ${task.name}`);
+    }
+    return labels;
+  }, [allTasks]);
+
   const taskOptions = allTasks.map((task) => ({
     value: task.id,
-    label: `${task.taskIdCode} — ${task.name}`,
+    label: taskLabelById.get(task.id) ?? task.name,
   }));
+
+  const dependencySaving = createDependency.isPending || updateDependency.isPending;
 
   const columns: ColumnsType<Task> = [
     {
@@ -152,20 +180,103 @@ export default function TasksPanel({
     },
   ];
 
-  async function handleAddDependency(
+  const dependencyColumns: ColumnsType<TaskDependency> = [
+    {
+      title: 'Predecessor',
+      dataIndex: 'predecessorTaskId',
+      key: 'predecessorTaskId',
+      ellipsis: true,
+      render: (taskId: string) => taskLabelById.get(taskId) ?? taskId,
+    },
+    {
+      title: 'Successor',
+      dataIndex: 'successorTaskId',
+      key: 'successorTaskId',
+      ellipsis: true,
+      render: (taskId: string) => taskLabelById.get(taskId) ?? taskId,
+    },
+    {
+      title: 'Type',
+      dataIndex: 'dependencyType',
+      key: 'dependencyType',
+      width: 180,
+      render: (type: TaskDependencyType) => DEPENDENCY_TYPE_LABELS[type],
+    },
+    {
+      title: 'Lag (days)',
+      dataIndex: 'lagDays',
+      key: 'lagDays',
+      width: 100,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 120,
+      render: (_value, record) => (
+        <div className="flex gap-2">
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => {
+              setEditingDependency(record);
+              depForm.setFieldsValue({
+                predecessorTaskId: record.predecessorTaskId,
+                successorTaskId: record.successorTaskId,
+                dependencyType: record.dependencyType,
+                lagDays: record.lagDays,
+              });
+              setDependencyOpen(true);
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            type="link"
+            danger
+            className="!px-0"
+            onClick={() => setDeletingDependency(record)}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  function openAddDependency(): void {
+    setEditingDependency(null);
+    depForm.resetFields();
+    depForm.setFieldsValue({ dependencyType: 'FS', lagDays: 0 });
+    setDependencyOpen(true);
+  }
+
+  function closeDependencyModal(): void {
+    setDependencyOpen(false);
+    setEditingDependency(null);
+    depForm.resetFields();
+  }
+
+  async function handleSaveDependency(
     values: DependencyFormValues,
   ): Promise<void> {
-    await createDependency.mutateAsync({
-      projectId,
-      body: {
-        predecessorTaskId: values.predecessorTaskId,
-        successorTaskId: values.successorTaskId,
-        dependencyType: values.dependencyType,
-        lagDays: values.lagDays ?? 0,
-      },
-    });
-    depForm.resetFields();
-    setDependencyOpen(false);
+    const body = {
+      predecessorTaskId: values.predecessorTaskId,
+      successorTaskId: values.successorTaskId,
+      dependencyType: values.dependencyType,
+      lagDays: values.lagDays ?? 0,
+    };
+
+    if (editingDependency) {
+      await updateDependency.mutateAsync({
+        projectId,
+        dependencyId: editingDependency.id,
+        body,
+      });
+    } else {
+      await createDependency.mutateAsync({ projectId, body });
+    }
+
+    closeDependencyModal();
   }
 
   return (
@@ -183,7 +294,7 @@ export default function TasksPanel({
               />
               Critical only
             </label>
-            <Button onClick={() => setDependencyOpen(true)}>Add dependency</Button>
+            <Button onClick={openAddDependency}>Add dependency</Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -205,6 +316,23 @@ export default function TasksPanel({
         />
       </FormLayout>
 
+      <FormLayout
+        title="Task dependencies"
+        description="Predecessor and successor links used by the Gantt chart."
+        className="mt-6"
+        extra={
+          <Button onClick={openAddDependency}>Add dependency</Button>
+        }
+      >
+        <DataTable<TaskDependency>
+          rowKey="id"
+          columns={dependencyColumns}
+          dataSource={dependenciesQuery.data ?? []}
+          loading={dependenciesQuery.isLoading}
+          locale={{ emptyText: 'No dependencies defined' }}
+        />
+      </FormLayout>
+
       <TaskFormDrawer
         open={drawerOpen}
         projectId={projectId}
@@ -217,10 +345,11 @@ export default function TasksPanel({
 
       <Modal
         open={dependencyOpen}
-        title="Add task dependency"
-        onCancel={() => setDependencyOpen(false)}
+        title={editingDependency ? 'Edit task dependency' : 'Add task dependency'}
+        centered
+        onCancel={closeDependencyModal}
         onOk={() => depForm.submit()}
-        confirmLoading={createDependency.isPending}
+        confirmLoading={dependencySaving}
         destroyOnHidden
       >
         <Form<DependencyFormValues>
@@ -228,7 +357,7 @@ export default function TasksPanel({
           layout="vertical"
           initialValues={{ dependencyType: 'FS', lagDays: 0 }}
           onFinish={(values: DependencyFormValues) =>
-            void handleAddDependency(values)
+            void handleSaveDependency(values)
           }
         >
           <Form.Item
@@ -236,14 +365,14 @@ export default function TasksPanel({
             name="predecessorTaskId"
             rules={[{ required: true, message: 'Select predecessor' }]}
           >
-            <Select showSearch options={taskOptions} />
+            <Select showSearch options={taskOptions} optionFilterProp="label" />
           </Form.Item>
           <Form.Item
             label="Successor"
             name="successorTaskId"
             rules={[{ required: true, message: 'Select successor' }]}
           >
-            <Select showSearch options={taskOptions} />
+            <Select showSearch options={taskOptions} optionFilterProp="label" />
           </Form.Item>
           <Form.Item
             label="Dependency type"
@@ -276,9 +405,33 @@ export default function TasksPanel({
               void queryClient.invalidateQueries({
                 queryKey: scheduleKeys.tasks(projectId),
               });
+              void queryClient.invalidateQueries({
+                queryKey: scheduleKeys.dependencies(projectId),
+              });
             });
         }}
         onCancel={() => setDeleting(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deletingDependency)}
+        title="Delete dependency"
+        description="Remove this predecessor/successor link from the schedule?"
+        confirmLabel="Delete"
+        danger
+        confirmLoading={deleteDependency.isPending}
+        onConfirm={() => {
+          if (!deletingDependency) {
+            return;
+          }
+          void deleteDependency
+            .mutateAsync({
+              projectId,
+              dependencyId: deletingDependency.id,
+            })
+            .then(() => setDeletingDependency(null));
+        }}
+        onCancel={() => setDeletingDependency(null)}
       />
     </>
   );
