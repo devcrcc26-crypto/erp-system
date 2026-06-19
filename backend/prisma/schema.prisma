@@ -1637,6 +1637,7 @@ model ReviewComment {
   assignedToUserId             String          @map("assigned_to_user_id")
   createdBy                    String          @map("created_by")
   resolvedAt                   DateTime?       @map("resolved_at")
+  resolutionNote               String?         @map("resolution_note")
   verifiedAt                   DateTime?       @map("verified_at")
   closedAt                     DateTime?       @map("closed_at")
   createdAt                    DateTime        @default(now()) @map("created_at")

@@ -112,7 +112,10 @@ export default function RevisionWorkspace({
     try {
       await transitionComment.mutateAsync({
         commentId: comment.commentId,
-        body: { targetStatus: 'RESOLVED' },
+        body: {
+          targetStatus: 'RESOLVED',
+          resolutionNote: values.resolutionNote.trim() || undefined,
+        },
       });
 
       messageApi.success(

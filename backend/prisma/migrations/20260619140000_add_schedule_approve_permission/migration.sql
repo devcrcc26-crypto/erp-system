@@ -18,6 +18,8 @@ INSERT INTO "role_permission" (
   "can_delete",
   "can_approve",
   "can_export",
+  "created_at",
+  "updated_at",
   "created_by",
   "updated_by"
 )
@@ -31,6 +33,8 @@ SELECT
   false,
   true,
   false,
+  NOW(),
+  NOW(),
   rp."created_by",
   rp."updated_by"
 FROM "role_permission" rp

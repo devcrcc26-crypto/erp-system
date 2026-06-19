@@ -247,6 +247,11 @@ export class TransitionReviewCommentDto {
   @IsEnum(CommentStatus)
   targetStatus!: CommentStatus;
 
+  @ApiPropertyOptional({ description: 'Designer summary when marking RESOLVED' })
+  @IsOptional()
+  @IsString()
+  resolutionNote?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

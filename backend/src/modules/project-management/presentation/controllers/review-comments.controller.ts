@@ -78,7 +78,7 @@ export class ReviewCommentsController {
   }
 
   @Post(':commentId/verify')
-  @RequirePermission('schedule', 'approve')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Verify RESOLVED comment (RESOLVED → VERIFIED)' })
   verify(
     @CurrentUser() user: AuthenticatedUser,

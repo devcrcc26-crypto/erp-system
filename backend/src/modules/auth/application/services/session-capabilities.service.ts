@@ -94,7 +94,10 @@ export class SessionCapabilitiesService {
 
     return {
       canViewReviewInbox:
-        schedule.canView && (schedule.canApprove || schedule.canEdit),
+        schedule.canView &&
+        (schedule.canApprove ||
+          schedule.canEdit ||
+          schedule.canCreate),
       canViewMyComments: schedule.canView,
       canViewEngineering,
     };

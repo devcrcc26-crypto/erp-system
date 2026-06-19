@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum';
 import {
   AddReviewCommentDto,
@@ -8,6 +9,10 @@ import {
 } from '../dtos/engineering-document.dtos';
 import { PmContext } from '../types/pm-context.type';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
+import {
+  CommentEdvSnapshot,
+  resolveSingleCommentRevisionContext,
+} from '../utils/comment-revision-context.util';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 
@@ -25,6 +30,11 @@ export interface MappedReviewCommentDetail {
   assigneeName: string;
   createdAt: string;
   updatedAt: string;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  verifiedAt: string | null;
+  commentedOn: CommentEdvSnapshot;
+  responseRevision: CommentEdvSnapshot | null;
 }
 
 /**
@@ -35,6 +45,7 @@ export class ReviewCommentsService {
   constructor(
     private readonly workflowKernel: WorkflowKernelService,
     private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -52,7 +63,19 @@ export class ReviewCommentsService {
       throw new NotFoundException('Review comment not found');
     }
 
-    return mapReviewCommentDetail(comment);
+    const revisionContext = await resolveSingleCommentRevisionContext(
+      this.prisma,
+      ctx.companyId,
+      {
+        id: comment.id,
+        engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+        resolutionNote: comment.resolutionNote,
+        resolvedAt: comment.resolvedAt,
+        verifiedAt: comment.verifiedAt,
+      },
+    );
+
+    return mapReviewCommentDetail(comment, revisionContext);
   }
 
   /**
@@ -89,6 +112,7 @@ export class ReviewCommentsService {
       actorId: ctx.userId,
       reviewCommentId: commentId,
       targetStatus: dto.targetStatus as CommentStatus,
+      resolutionNote: dto.resolutionNote,
       idempotencyKey: dto.idempotencyKey,
     });
   }
@@ -160,7 +184,16 @@ function mapReviewCommentDetail(
   comment: NonNullable<
     Awaited<ReturnType<EpcReviewRepository['findCommentWithUsers']>>
   >,
+  revisionContext: Awaited<ReturnType<typeof resolveSingleCommentRevisionContext>>,
 ): MappedReviewCommentDetail {
+  const commentedOn = revisionContext?.commentedOn ?? {
+    engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+    engineeringDocumentId: '',
+    documentVersionId: '',
+    documentTitle: 'Document',
+    revisionLabel: '—',
+  };
+
   return {
     id: comment.id,
     reviewSessionId: comment.reviewSessionId,
@@ -175,5 +208,10 @@ function mapReviewCommentDetail(
     assigneeName: formatUserName(comment.assignedToUser),
     createdAt: comment.createdAt.toISOString(),
     updatedAt: comment.updatedAt.toISOString(),
+    resolutionNote: revisionContext?.resolutionNote ?? comment.resolutionNote,
+    resolvedAt: revisionContext?.resolvedAt ?? comment.resolvedAt?.toISOString() ?? null,
+    verifiedAt: revisionContext?.verifiedAt ?? comment.verifiedAt?.toISOString() ?? null,
+    commentedOn,
+    responseRevision: revisionContext?.responseRevision ?? null,
   };
 }

@@ -220,9 +220,30 @@ export default function ReviewCommentPanel({
                     </div>
                   </div>
                   <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
+                  {comment.responseRevision && (
+                    <p className="mb-1 text-xs text-emerald-700">
+                      {comment.status === 'RESOLVED' || comment.status === 'VERIFIED'
+                        ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
+                        : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
+                      {comment.resolutionNote?.trim()
+                        ? ` — ${comment.resolutionNote.trim()}`
+                        : ''}
+                    </p>
+                  )}
+                  {!comment.responseRevision &&
+                    (comment.status === 'RESOLVED' || comment.status === 'VERIFIED') && (
+                    <p className="mb-1 text-xs text-emerald-700">
+                      Resolved
+                      {comment.resolutionNote?.trim()
+                        ? ` — ${comment.resolutionNote.trim()}`
+                        : ''}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500">
-                    {edvLabelById.get(comment.engineeringDocumentVersionId) ??
-                      'Document'}{' '}
+                    {comment.commentedOn
+                      ? `${comment.commentedOn.documentTitle} · Rev ${comment.commentedOn.revisionLabel}`
+                      : edvLabelById.get(comment.engineeringDocumentVersionId) ??
+                        'Document'}{' '}
                     · {comment.authorName} · {formatProjectDate(comment.createdAt)}
                   </p>
                 </div>
@@ -238,7 +259,9 @@ export default function ReviewCommentPanel({
         fallbackComment={selectedComment}
         documentLabel={
           selectedComment
-            ? edvLabelById.get(selectedComment.engineeringDocumentVersionId)
+            ? selectedComment.commentedOn
+              ? `${selectedComment.commentedOn.documentTitle} · Rev ${selectedComment.commentedOn.revisionLabel}`
+              : edvLabelById.get(selectedComment.engineeringDocumentVersionId)
             : undefined
         }
         canEdit={

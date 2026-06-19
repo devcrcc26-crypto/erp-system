@@ -92,6 +92,7 @@ export default function ReviewModePanel({
         revisionLabel: string;
         status: string;
         documentVersionId: string;
+        createdAt: string;
       }
     >();
     for (const doc of documentsQuery.data?.data ?? []) {
@@ -101,11 +102,65 @@ export default function ReviewModePanel({
           revisionLabel: version.revisionLabel,
           status: version.status,
           documentVersionId: version.documentVersionId,
+          createdAt: version.createdAt,
         });
       }
     }
     return map;
   }, [documentsQuery.data?.data]);
+
+  const packageDocumentRows = useMemo(() => {
+    const seenDocumentIds = new Set<string>();
+    return packageEdvIds.flatMap((packageEdvId) => {
+      const pinned = edvMap.get(packageEdvId);
+      if (!pinned) {
+        return [
+          {
+            key: packageEdvId,
+            packageEdvId,
+            displayEdvId: packageEdvId,
+            hasNewerRevision: false,
+            info: undefined,
+          },
+        ];
+      }
+
+      if (seenDocumentIds.has(pinned.doc.id)) {
+        return [];
+      }
+      seenDocumentIds.add(pinned.doc.id);
+
+      const latestVersion = (pinned.doc.versions ?? []).reduce(
+        (best, version) => {
+          if (!best) {
+            return version;
+          }
+          return new Date(version.createdAt) > new Date(best.createdAt)
+            ? version
+            : best;
+        },
+        pinned.doc.versions?.[0],
+      );
+
+      const displayEdvId = latestVersion?.id ?? packageEdvId;
+      const displayInfo = edvMap.get(displayEdvId) ?? pinned;
+
+      return [
+        {
+          key: `${pinned.doc.id}-${displayEdvId}`,
+          packageEdvId,
+          displayEdvId,
+          hasNewerRevision: displayEdvId !== packageEdvId,
+          info: displayInfo,
+        },
+      ];
+    });
+  }, [packageEdvIds, edvMap]);
+
+  const selectableEdvIds = useMemo(
+    () => packageDocumentRows.map((row) => row.displayEdvId),
+    [packageDocumentRows],
+  );
 
   const edvCommentOptions = useMemo(
     () =>
@@ -135,6 +190,7 @@ export default function ReviewModePanel({
   function refetchAll(): void {
     void reviewModeQuery.refetch();
     void packageQuery.refetch();
+    void documentsQuery.refetch();
   }
 
   async function handleBatchApprove(): Promise<void> {
@@ -198,8 +254,8 @@ export default function ReviewModePanel({
       <ReviewApprovalBlockedAlert comments={sessionComments} />
       <BulkReviewActionBar
         selectedCount={selectedEdvIds.length}
-        totalCount={packageEdvIds.length}
-        onSelectAll={() => selectAllEdvs(packageEdvIds)}
+        totalCount={selectableEdvIds.length}
+        onSelectAll={() => selectAllEdvs(selectableEdvIds)}
         onClearSelection={clearEdvSelection}
         onApproveAll={() => void handleBatchApprove()}
         onReturnAll={() => void handleBatchReturn()}
@@ -215,7 +271,7 @@ export default function ReviewModePanel({
             Select package items for batch approve or return. Use the icons to
             view or download each file.
           </p>
-          {packageEdvIds.length === 0 ? (
+          {packageDocumentRows.length === 0 ? (
             <Alert
               type="info"
               showIcon
@@ -224,27 +280,32 @@ export default function ReviewModePanel({
             />
           ) : (
             <ul className="divide-y divide-slate-100">
-              {packageEdvIds.map((edvId) => {
-                const info = edvMap.get(edvId);
+              {packageDocumentRows.map((row) => {
+                const info = row.info;
                 return (
                   <li
-                    key={edvId}
+                    key={row.key}
                     className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <Checkbox
                         className="mt-0.5 shrink-0"
-                        checked={isEdvSelected(edvId)}
+                        checked={isEdvSelected(row.displayEdvId)}
                         disabled={!lens.canApproveReview}
-                        onChange={() => toggleEdvSelection(edvId)}
+                        onChange={() => toggleEdvSelection(row.displayEdvId)}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium text-slate-900">
-                          {info?.doc.title ?? edvId}
+                          {info?.doc.title ?? row.displayEdvId}
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           {info?.revisionLabel && (
                             <span>Rev {info.revisionLabel}</span>
+                          )}
+                          {row.hasNewerRevision && (
+                            <span className="font-medium text-emerald-700">
+                              New revision uploaded
+                            </span>
                           )}
                           {info?.doc.documentNumber && (
                             <span>{info.doc.documentNumber}</span>

@@ -9,6 +9,10 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PmContext } from '../types/pm-context.type';
 import { ProjectScopeService } from './project-scope.service';
+import {
+  CommentEdvSnapshot,
+  resolveCommentRevisionContexts,
+} from '../utils/comment-revision-context.util';
 
 export interface ReviewInboxItem {
   readonly reviewSessionId: string;
@@ -84,6 +88,11 @@ export interface ReviewModeView {
     assignedToUserId: string;
     authorName: string;
     assigneeName: string;
+    resolutionNote: string | null;
+    resolvedAt: string | null;
+    verifiedAt: string | null;
+    commentedOn: CommentEdvSnapshot;
+    responseRevision: CommentEdvSnapshot | null;
   }[];
 }
 
@@ -444,6 +453,19 @@ export class EpcWorkspaceService {
       }),
     ]);
 
+    const sessionComments = session?.comments ?? [];
+    const revisionContexts = await resolveCommentRevisionContexts(
+      this.prisma,
+      ctx.companyId,
+      sessionComments.map((comment) => ({
+        id: comment.id,
+        engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+        resolutionNote: comment.resolutionNote,
+        resolvedAt: comment.resolvedAt,
+        verifiedAt: comment.verifiedAt,
+      })),
+    );
+
     return {
       designPackageId,
       reviewSessionId: session?.id ?? null,
@@ -454,8 +476,17 @@ export class EpcWorkspaceService {
       ),
       snapshotEdvIds: session?.contextSnapshot?.referencedVersionIds ?? [],
       contentHash: session?.contextSnapshot?.contentHash ?? null,
-      comments:
-        session?.comments.map((c) => ({
+      comments: sessionComments.map((c) => {
+        const revision = revisionContexts.get(c.id);
+        const commentedOn = revision?.commentedOn ?? {
+          engineeringDocumentVersionId: c.engineeringDocumentVersionId,
+          engineeringDocumentId: '',
+          documentVersionId: '',
+          documentTitle: 'Document',
+          revisionLabel: '—',
+        };
+
+        return {
           id: c.id,
           body: c.body,
           status: c.status,
@@ -466,7 +497,13 @@ export class EpcWorkspaceService {
           assignedToUserId: c.assignedToUserId,
           authorName: formatReviewerName(c.author),
           assigneeName: formatReviewerName(c.assignedToUser),
-        })) ?? [],
+          resolutionNote: revision?.resolutionNote ?? c.resolutionNote,
+          resolvedAt: revision?.resolvedAt ?? c.resolvedAt?.toISOString() ?? null,
+          verifiedAt: revision?.verifiedAt ?? c.verifiedAt?.toISOString() ?? null,
+          commentedOn,
+          responseRevision: revision?.responseRevision ?? null,
+        };
+      }),
     };
   }
 

@@ -227,6 +227,14 @@ export interface DispatcherWorkloadItem {
   slaOverdue: number;
 }
 
+export interface CommentEdvSnapshot {
+  engineeringDocumentVersionId: string;
+  engineeringDocumentId: string;
+  documentVersionId: string;
+  documentTitle: string;
+  revisionLabel: string;
+}
+
 export interface ReviewModeComment {
   id: string;
   body: string;
@@ -238,6 +246,11 @@ export interface ReviewModeComment {
   assignedToUserId: string;
   authorName: string;
   assigneeName: string;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
+  verifiedAt?: string | null;
+  commentedOn?: CommentEdvSnapshot;
+  responseRevision?: CommentEdvSnapshot | null;
 }
 
 export interface ReviewCommentDetail {
@@ -254,6 +267,11 @@ export interface ReviewCommentDetail {
   assigneeName: string;
   createdAt: string;
   updatedAt: string;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  verifiedAt: string | null;
+  commentedOn: CommentEdvSnapshot;
+  responseRevision: CommentEdvSnapshot | null;
 }
 
 export interface ReviewModeView {
@@ -441,6 +459,7 @@ export interface AddReviewCommentRequest {
 
 export interface TransitionReviewCommentRequest {
   targetStatus: CommentStatus;
+  resolutionNote?: string;
   idempotencyKey?: string;
 }
 

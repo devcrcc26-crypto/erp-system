@@ -369,12 +369,18 @@ export class ReviewWorkflowService {
       }
 
       const timestamps = this.buildCommentTimestamps(from, to);
+      const resolutionNote =
+        to === CommentStatus.RESOLVED && command.resolutionNote?.trim()
+          ? command.resolutionNote.trim()
+          : undefined;
+
       await this.epcReviewRepository.updateReviewComment(
         tx,
         comment.id,
         {
           status: to as PrismaCommentStatus,
           updatedBy: command.actorId,
+          ...(resolutionNote !== undefined ? { resolutionNote } : {}),
           ...timestamps,
         },
       );
@@ -386,7 +392,10 @@ export class ReviewWorkflowService {
         entityId: comment.id,
         action: `COMMENT_${from}_TO_${to}`,
         beforeState: { status: from },
-        afterState: { status: to },
+        afterState: {
+          status: to,
+          ...(resolutionNote ? { resolutionNote } : {}),
+        },
         correlationId,
       });
 
@@ -985,11 +994,14 @@ export class ReviewWorkflowService {
     if (
       discipline?.reviewerUserId === userId ||
       discipline?.disciplineLeadUserId === userId ||
-      discipline?.chiefUserId === userId
+      discipline?.chiefUserId === userId ||
+      comment.createdBy === userId
     ) {
       return 'reviewer';
     }
-    return 'reviewer';
+    throw new ForbiddenException(
+      'You are not permitted to act on this review comment',
+    );
   }
 
   private buildCommentTimestamps(

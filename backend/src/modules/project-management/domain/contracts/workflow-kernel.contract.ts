@@ -39,6 +39,7 @@ export interface TransitionCommentStatusCommand extends WorkflowCommandBase {
   readonly type: 'TransitionCommentStatus';
   readonly reviewCommentId: string;
   readonly targetStatus: CommentStatus;
+  readonly resolutionNote?: string;
 }
 
 export interface VerifyReviewCommentCommand extends WorkflowCommandBase {
