@@ -112,12 +112,20 @@ export default function DisciplineDetailDrawer({
     <Modal
       open={open}
       title={discipline ? 'Edit discipline' : 'Add discipline'}
+      centered
       onCancel={onClose}
       onOk={() => form.submit()}
       confirmLoading={isSubmitting}
       destroyOnHidden
-      size={720}
-      styles={{ body: { paddingTop: 8, paddingBottom: 8 } }}
+      width={720}
+      styles={{
+        body: {
+          paddingTop: 8,
+          paddingBottom: 8,
+          maxHeight: 'calc(100vh - 220px)',
+          overflowY: 'auto',
+        },
+      }}
       afterOpenChange={(visible: boolean) => {
         if (visible) {
           setDisciplineFormValues(form, discipline);
