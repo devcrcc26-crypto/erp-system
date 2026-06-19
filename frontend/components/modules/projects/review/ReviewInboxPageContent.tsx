@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Select } from 'antd';
+import { Alert, Select, Spin } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewInboxTable from '@/components/modules/projects/review/ReviewInboxTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useCanViewReviewInbox } from '@/hooks/use-pm-capabilities';
-import { Alert } from 'antd';
+import {
+  useCanViewReviewInbox,
+  useCapabilitiesReady,
+} from '@/hooks/use-pm-capabilities';
 
 const TIER_KEYS = [
   'ALL',
@@ -19,7 +21,16 @@ const TIER_KEYS = [
 export default function ReviewInboxPageContent(): React.ReactNode {
   const [tierFilter, setTierFilter] = useState<string>('ALL');
   const { t } = useEpcTranslation();
+  const capabilitiesReady = useCapabilitiesReady();
   const canViewReviewInbox = useCanViewReviewInbox();
+
+  if (!capabilitiesReady) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (!canViewReviewInbox) {
     return (

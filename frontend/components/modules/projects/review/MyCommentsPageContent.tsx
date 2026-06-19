@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Space, Table } from 'antd';
+import { Alert, Button, Space, Spin, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
@@ -13,7 +13,10 @@ import { useMyComments } from '@/lib/query/epc-workspace';
 import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useCanViewMyComments } from '@/hooks/use-pm-capabilities';
+import {
+  useCanViewMyComments,
+  useCapabilitiesReady,
+} from '@/hooks/use-pm-capabilities';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -40,6 +43,15 @@ export default function MyCommentsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canViewMyComments = useCanViewMyComments();
+  const capabilitiesReady = useCapabilitiesReady();
+
+  if (!capabilitiesReady) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (!canViewMyComments) {
     return (

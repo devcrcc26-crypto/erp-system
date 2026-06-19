@@ -11,6 +11,7 @@ interface AuthState {
   sessionId: string | null;
   user: AuthUser | null;
   capabilities: Capabilities;
+  capabilitiesReady: boolean;
   setAuth: (tokens: AuthTokens) => void;
   updateUser: (partial: Partial<AuthUser>) => void;
   setCapabilities: (capabilities: Capabilities) => void;
@@ -30,12 +31,15 @@ export const useAuthStore = create<AuthState>()(
       sessionId: null,
       user: null,
       capabilities: initialCapabilities,
+      capabilitiesReady: false,
       setAuth: (tokens: AuthTokens) => {
         set({
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           sessionId: tokens.sessionId,
           user: tokens.user,
+          capabilities: initialCapabilities,
+          capabilitiesReady: false,
         });
       },
       updateUser: (partial: Partial<AuthUser>) => {
@@ -44,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
       setCapabilities: (capabilities: Capabilities) => {
-        set({ capabilities });
+        set({ capabilities, capabilitiesReady: true });
       },
       clearAuth: () => {
         set({
@@ -53,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
           sessionId: null,
           user: null,
           capabilities: initialCapabilities,
+          capabilitiesReady: false,
         });
       },
       isAuthenticated: () => Boolean(get().accessToken),

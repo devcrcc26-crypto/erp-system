@@ -25,6 +25,13 @@ export function useEpcCapabilities(): EpcCapabilities {
 }
 
 /**
+ * True after session capabilities have been loaded from the API.
+ */
+export function useCapabilitiesReady(): boolean {
+  return useAuthStore((state) => state.capabilitiesReady);
+}
+
+/**
  * Checks whether the user can view a project workspace nav item (PM module only).
  */
 export function useCanViewProjectNav(

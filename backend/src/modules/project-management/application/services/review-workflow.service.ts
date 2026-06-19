@@ -938,6 +938,20 @@ export class ReviewWorkflowService {
       correlationId: string;
     },
   ): Promise<void> {
+    const session = await this.epcReviewRepository.findSessionById(
+      tx,
+      input.companyId,
+      input.reviewSessionId,
+    );
+    if (!session || session.status !== ReviewSessionStatus.ACTIVE) {
+      return;
+    }
+
+    // Reviewer batch-approves EDVs without escalating — auto-forward once to discipline lead only.
+    if (session.currentTier !== ReviewTier.REVIEWER) {
+      return;
+    }
+
     const pkg = await this.epcWorkflowRepository.findPackageWithItems(
       tx,
       input.companyId,
@@ -983,6 +997,7 @@ export class ReviewWorkflowService {
           companyId,
           deletedAt: null,
           status: ReviewSessionStatus.ACTIVE,
+          currentTier: ReviewTier.REVIEWER,
         },
         select: { id: true, designPackageId: true },
       });
