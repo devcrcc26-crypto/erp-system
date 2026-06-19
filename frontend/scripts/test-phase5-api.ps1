@@ -22,7 +22,7 @@ $departments = Invoke-RestMethod -Uri "$base/departments?limit=1" -Headers $head
 Write-Host "   Tasks (departments): $($departments.meta.total)"
 
 Write-Host "5. Execute active users report..."
-$reportId = '00000000-0000-0000-0000-000000000050'
+$reportId = '00000000-0000-4000-8000-000000000050'
 $report = Invoke-RestMethod -Uri "$base/reports/$reportId/execute" -Method POST -Headers $headers
 $total = $users.meta.total
 $active = $report.data.rowCount

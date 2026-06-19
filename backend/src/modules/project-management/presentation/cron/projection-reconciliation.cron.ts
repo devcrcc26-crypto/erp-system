@@ -5,7 +5,7 @@ import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { StateProjectionService } from '../../application/services/state-projection.service';
 import { WorkflowTransactionRunner } from '../../application/services/workflow-transaction-runner.service';
 
-const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000001';
+const SYSTEM_ACTOR = '00000000-0000-4000-8000-000000000001';
 
 /**
  * Nightly projection drift reconciliation across all companies.

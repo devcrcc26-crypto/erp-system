@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class AuditLogQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
@@ -15,7 +16,7 @@ export class AuditLogQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   userId?: string;
 
   @ApiPropertyOptional()
@@ -25,7 +26,7 @@ export class AuditLogQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   recordId?: string;
 
   @ApiPropertyOptional()

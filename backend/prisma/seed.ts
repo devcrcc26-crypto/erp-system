@@ -5,7 +5,7 @@ import { seedPmDemoData } from './seed-pm-demo';
 const prisma = new PrismaClient();
 
 /** Bootstrap actor for records created before the admin user exists. */
-const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
+const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
 const CORE_ROLES = [
   'System Administrator',
@@ -731,10 +731,10 @@ async function main(): Promise<void> {
 
   // ── Organisation bootstrap ─────────────────────────────────────────────
   const branch = await prisma.branch.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000010' },
+    where: { id: '00000000-0000-4000-8000-000000000010' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000010',
+      id: '00000000-0000-4000-8000-000000000010',
       companyId: company.id,
       name: 'Head Office',
       address: '1 Main Street',
@@ -782,10 +782,10 @@ async function main(): Promise<void> {
   });
 
   const position = await prisma.position.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000020' },
+    where: { id: '00000000-0000-4000-8000-000000000020' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000020',
+      id: '00000000-0000-4000-8000-000000000020',
       companyId: company.id,
       departmentId: department.id,
       title: 'System Administrator',
@@ -901,10 +901,10 @@ async function main(): Promise<void> {
   const yearEnd = new Date('2026-12-31');
 
   const financialYear = await prisma.financialYear.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000030' },
+    where: { id: '00000000-0000-4000-8000-000000000030' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000030',
+      id: '00000000-0000-4000-8000-000000000030',
       companyId: company.id,
       name: 'FY 2026',
       startDate: yearStart,
@@ -985,10 +985,10 @@ async function main(): Promise<void> {
 
   // ── System document folder ───────────────────────────────────────────────
   await prisma.documentFolder.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000040' },
+    where: { id: '00000000-0000-4000-8000-000000000040' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000040',
+      id: '00000000-0000-4000-8000-000000000040',
       companyId: company.id,
       name: 'System Documents',
       path: '/system',
@@ -1002,10 +1002,10 @@ async function main(): Promise<void> {
 
   // ── Sample report definition ─────────────────────────────────────────────
   await prisma.reportDefinition.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000050' },
+    where: { id: '00000000-0000-4000-8000-000000000050' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000050',
+      id: '00000000-0000-4000-8000-000000000050',
       companyId: company.id,
       createdBy: adminUser.id,
       name: 'Active Users',
@@ -1028,10 +1028,10 @@ async function main(): Promise<void> {
   // ── Dashboard widget for System Administrator ────────────────────────────
   if (adminRoleId) {
     await prisma.dashboardWidget.upsert({
-      where: { id: '00000000-0000-0000-0000-000000000060' },
+      where: { id: '00000000-0000-4000-8000-000000000060' },
       update: {},
       create: {
-        id: '00000000-0000-0000-0000-000000000060',
+        id: '00000000-0000-4000-8000-000000000060',
         companyId: company.id,
         roleId: adminRoleId,
         widgetType: 'kpi_card',

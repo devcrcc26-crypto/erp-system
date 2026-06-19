@@ -34,11 +34,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Max,
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class ProjectListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: ProjectStatus })
@@ -58,7 +58,7 @@ export class ProjectListQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   projectManagerId?: string;
 }
 
@@ -73,12 +73,12 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   clientCompanyId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   branchId?: string;
 
   @ApiPropertyOptional()
@@ -123,7 +123,7 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   projectManagerId?: string;
 
   @ApiPropertyOptional()
@@ -138,7 +138,7 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   responsibleDepartmentId?: string;
 
   @ApiPropertyOptional()
@@ -153,7 +153,7 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   responsiblePersonId?: string;
 
   @ApiPropertyOptional()
@@ -183,7 +183,7 @@ export class UpdateProjectDto extends PartialType(CreateProjectDto) {
 
 export class AddProjectTeamMemberDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   userId!: string;
 
   @ApiProperty({ enum: ProjectTeamRole })
@@ -227,17 +227,17 @@ export class UpdateMilestoneDto extends PartialType(CreateMilestoneDto) {}
 export class CreateTaskDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   milestoneId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   parentTaskId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   assignedTo?: string;
 
   @ApiPropertyOptional()
@@ -353,7 +353,7 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   responsiblePersonId?: string;
 
   @ApiPropertyOptional()
@@ -426,22 +426,22 @@ export class CreateTaskDisciplineDto {
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   designerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   reviewerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   disciplineLeadUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   chiefUserId?: string;
 }
 
@@ -449,11 +449,11 @@ export class UpdateTaskDisciplineDto extends PartialType(CreateTaskDisciplineDto
 
 export class CreateTaskDependencyDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   predecessorTaskId!: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   successorTaskId!: string;
 
   @ApiProperty({ enum: TaskDependencyType })
@@ -488,7 +488,7 @@ export class CreateRfiDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   assignedTo?: string;
 
   @ApiPropertyOptional()
@@ -584,7 +584,7 @@ export class CreateDesignSubmittalDto {
 
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   designPackageIds!: string[];
 
   @ApiPropertyOptional()
@@ -618,7 +618,7 @@ export class IssueSubmittalDto {
 export class AddSubmittalItemsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   designPackageIds!: string[];
 
   @ApiPropertyOptional()
@@ -630,7 +630,7 @@ export class AddSubmittalItemsDto {
 export class BatchIssueSubmittalsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   submittalIds!: string[];
 
   @ApiPropertyOptional()
@@ -642,12 +642,12 @@ export class BatchIssueSubmittalsDto {
 export class BatchAddSubmittalItemsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   submittalIds!: string[];
 
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   designPackageIds!: string[];
 
   @ApiPropertyOptional()
@@ -659,7 +659,7 @@ export class BatchAddSubmittalItemsDto {
 export class CreateDrawingDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   folderId?: string;
 
   @ApiProperty()
@@ -698,7 +698,7 @@ export class CreateDrawingLinkDto {
   linkedEntityType!: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   linkedEntityId!: string;
 
   @ApiPropertyOptional()
@@ -853,7 +853,7 @@ export class CreateRiskDto {
   reviewDate?: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   ownerId!: string;
 }
 
@@ -884,7 +884,7 @@ export class CreateIssueDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   assignedTo?: string;
 
   @ApiPropertyOptional()
@@ -921,7 +921,7 @@ export class CreatePunchItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   assignedTo?: string;
 
   @ApiPropertyOptional()
@@ -986,7 +986,7 @@ export class UpdateCloseoutChecklistItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   verifiedBy?: string;
 }
 

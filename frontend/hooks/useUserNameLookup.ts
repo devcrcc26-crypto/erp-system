@@ -1,17 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useUsers } from '@/lib/query/users';
+import { useUsersDirectory } from '@/lib/query/users';
 import { useAuthStore } from '@/stores/auth.store';
 
-/** Resolves user IDs to display names from the users list. */
+/** Resolves user IDs to display names from the company user directory. */
 export function useUserNameLookup(): (userId: string) => string {
-  const canManageUsers = useAuthStore(
-    (state) => state.capabilities.canManageUsers,
-  );
-  const usersQuery = useUsers(
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
-    { enabled: canManageUsers },
+    { enabled: isAuthenticated },
   );
   const users = usersQuery.data?.data ?? [];
 

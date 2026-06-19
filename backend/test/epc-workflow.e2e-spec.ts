@@ -83,7 +83,7 @@ describe('EPC Workflow (e2e)', () => {
 
   it('POST /api/workflow-events/:id/correct rejects unknown event', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/workflow-events/00000000-0000-0000-0000-000000000099/correct')
+      .post('/api/workflow-events/00000000-0000-4000-8000-000000000099/correct')
       .set(authHeader(adminToken))
       .send({ reason: 'Test correction' })
       .expect(404);

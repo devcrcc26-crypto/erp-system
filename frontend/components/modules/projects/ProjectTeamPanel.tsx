@@ -5,8 +5,8 @@ import {
   Alert,
   Button,
   Form,
-  Input,
   Modal,
+  Select,
   Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -15,23 +15,30 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { ProjectTeamMember } from '@/lib/api/project-management.types';
+import type {
+  ProjectTeamMember,
+  ProjectTeamRole,
+} from '@/lib/api/project-management.types';
 import {
   useAddProjectTeamMember,
   useProjectTeam,
   useRemoveProjectTeamMember,
 } from '@/lib/query/projects';
-import { useUsers } from '@/lib/query/users';
-import { formatProjectDate } from '@/lib/utils/project-display';
+import { useUsersDirectory } from '@/lib/query/users';
+import {
+  formatProjectDate,
+  formatProjectTeamRole,
+  PROJECT_TEAM_ROLE_OPTIONS,
+} from '@/lib/utils/project-display';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 
 interface TeamMemberFormValues {
   userId: string;
-  roleOnProject: string;
+  roleOnProject: ProjectTeamRole;
 }
 
 function useUserNameLookup(): (userId: string) => string {
-  const usersQuery = useUsers({ page: 1, limit: 100 });
+  const usersQuery = useUsersDirectory({ page: 1, limit: 100 });
   const users = usersQuery.data?.data ?? [];
 
   return (userId: string) => {
@@ -68,6 +75,7 @@ export default function ProjectTeamPanel({
       title: 'Role on project',
       dataIndex: 'roleOnProject',
       key: 'roleOnProject',
+      render: (role: ProjectTeamRole) => formatProjectTeamRole(role),
     },
     {
       title: 'Assigned from',
@@ -102,7 +110,7 @@ export default function ProjectTeamPanel({
       projectId,
       body: {
         userId: values.userId,
-        roleOnProject: values.roleOnProject.trim(),
+        roleOnProject: values.roleOnProject,
       },
     });
     form.resetFields();
@@ -198,9 +206,13 @@ export default function ProjectTeamPanel({
           <Form.Item
             label="Role on project"
             name="roleOnProject"
-            rules={[{ required: true, message: 'Enter a project role' }]}
+            initialValue="PROJECT_MANAGER"
+            rules={[{ required: true, message: 'Select a project role' }]}
           >
-            <Input placeholder="e.g. Site Engineer" />
+            <Select
+              options={PROJECT_TEAM_ROLE_OPTIONS}
+              placeholder="Select project role"
+            />
           </Form.Item>
         </Form>
       </Modal>

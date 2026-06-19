@@ -1,8 +1,8 @@
 import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 
-const COMPANY_ID = '00000000-0000-0000-0000-000000000001';
-const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
+const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
+const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
 async function main(): Promise<void> {
   const email = process.argv[2];

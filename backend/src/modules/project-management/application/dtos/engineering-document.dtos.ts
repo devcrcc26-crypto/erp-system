@@ -9,7 +9,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 import {
@@ -23,10 +22,11 @@ import {
 } from '@prisma/client';
 import { CommentSeverity } from '../../domain/contracts/enums/comment-severity.enum';
 import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class RegisterEngineeringDocumentDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   documentVersionId!: string;
 
   @ApiProperty({ enum: EngineeringDocumentType })
@@ -51,7 +51,7 @@ export class RegisterEngineeringDocumentDto {
 
 export class UploadEngineeringDocumentVersionDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   documentVersionId!: string;
 
   @ApiPropertyOptional({ example: '1' })
@@ -111,11 +111,11 @@ export class LockPackageEdvsDto {
 export class BatchApproveEdvsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   engineeringDocumentVersionIds!: string[];
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   reviewSessionId!: string;
 
   @ApiPropertyOptional()
@@ -127,11 +127,11 @@ export class BatchApproveEdvsDto {
 export class BatchReturnEdvsDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   engineeringDocumentVersionIds!: string[];
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   reviewSessionId!: string;
 
   @ApiProperty()
@@ -147,20 +147,20 @@ export class BatchReturnEdvsDto {
 
 export class BatchReviewApproveDto extends BatchApproveEdvsDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   designPackageId!: string;
 }
 
 export class BatchReviewReturnDto extends BatchReturnEdvsDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   designPackageId!: string;
 }
 
 export class BatchLockPackagesDto {
   @ApiProperty({ type: [String] })
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsEntityUuid({ each: true })
   designPackageIds!: string[];
 
   @ApiPropertyOptional()
@@ -175,7 +175,7 @@ export class TriggerRevisionDto {
   triggerSource!: 'RFI' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   triggerEntityId!: string;
 
   @ApiPropertyOptional()
@@ -193,7 +193,7 @@ export class SubmitPackageForReviewDto {
 
 export class ReturnPackageForReworkDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   reviewSessionId!: string;
 
   @ApiProperty()
@@ -216,11 +216,11 @@ export class ApproveReviewSessionDto {
 
 export class AddReviewCommentDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   reviewSessionId!: string;
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   engineeringDocumentVersionId!: string;
 
   @ApiProperty()
@@ -233,7 +233,7 @@ export class AddReviewCommentDto {
   severity!: CommentSeverity;
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   assignedToUserId!: string;
 
   @ApiPropertyOptional()
@@ -276,7 +276,7 @@ export class UpdateDesignPackageDto extends PartialType(CreateDesignPackageDto) 
 
 export class AddDesignPackageItemDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   engineeringDocumentVersionId!: string;
 
   @ApiPropertyOptional({ default: 0 })
@@ -289,7 +289,7 @@ export class AddDesignPackageItemDto {
 
 export class CreateDesignPackageDependencyDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   dependsOnPackageId!: string;
 
   @ApiProperty({ enum: DesignPackageDependencyType })
@@ -303,7 +303,7 @@ export class AppendWorkflowEventLogDto {
   entityType!: WorkflowEntityType;
 
   @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @IsEntityUuid()
   entityId!: string;
 
   @ApiProperty()
@@ -337,29 +337,29 @@ export class AppendWorkflowEventLogDto {
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   correctsEventId?: string;
 }
 
 export class UpdateTaskDisciplineAssigneesDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   designerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   reviewerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   disciplineLeadUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   chiefUserId?: string;
 
   @ApiPropertyOptional({ enum: TaskDisciplineProjectedStatus })

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
-import { useUsers } from '@/lib/query/users';
+import { useUsersDirectory } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
 
 function formatUserLabel(user: User): string {
@@ -30,7 +30,7 @@ export default function UserSelect({
   excludeUserIds?: string[];
   className?: string;
 }): React.ReactNode {
-  const usersQuery = useUsers(
+  const usersQuery = useUsersDirectory(
     { page: 1, limit: 100, sortBy: 'firstName', sortOrder: 'asc' },
     { enabled: !disabled },
   );

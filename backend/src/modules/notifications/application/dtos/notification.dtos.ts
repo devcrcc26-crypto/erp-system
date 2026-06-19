@@ -4,8 +4,8 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUUID,
 } from 'class-validator';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class CreateNotificationTemplateDto {
   @ApiProperty()
@@ -57,7 +57,7 @@ export class UpsertNotificationPreferenceDto {
 
 export class SendNotificationDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   recipientId!: string;
 
   @ApiProperty()

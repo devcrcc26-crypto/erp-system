@@ -32,6 +32,8 @@ export const userKeys = {
   all: ['users'] as const,
   lists: () => [...userKeys.all, 'list'] as const,
   list: (params: PaginationParams) => [...userKeys.lists(), params] as const,
+  directories: () => [...userKeys.all, 'directory'] as const,
+  directory: (params: PaginationParams) => [...userKeys.directories(), params] as const,
   details: () => [...userKeys.all, 'detail'] as const,
   detail: (id: string) => [...userKeys.details(), id] as const,
 };
@@ -62,6 +64,26 @@ export function useUsers(
   });
 }
 
+/**
+ * Company user directory for assignment pickers — available with projects.view.
+ */
+export function useUsersDirectory(
+  params: PaginationParams = { page: 1, limit: 100 },
+  options?: Omit<
+    UseQueryOptions<{ data: User[]; meta: { total: number; page: number; limit: number; pages: number } }>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: userKeys.directory(params),
+    queryFn: () =>
+      apiGetPaginated<User>(`/users/directory${toQueryString(params)}`),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
 export function useUser(id: string, enabled = true) {
   return useQuery({
     queryKey: userKeys.detail(id),
@@ -79,6 +101,7 @@ export function useCreateUser() {
       apiPost<CreateUserResponse>('/users', body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.directories() });
     },
   });
 }
@@ -91,6 +114,7 @@ export function useResendInvitation() {
       apiPost<MessageResponse>(`/users/${userId}/resend-invitation`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.directories() });
     },
   });
 }
@@ -123,6 +147,7 @@ export function useDeleteUser() {
       apiDelete<MessageResponse>(`/users/${userId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.directories() });
     },
   });
 }
@@ -178,6 +203,7 @@ export function useImportUsers() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.directories() });
     },
   });
 }

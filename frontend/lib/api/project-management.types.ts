@@ -155,11 +155,21 @@ export interface ProjectSummary extends Pick<
   | 'currency'
 > {}
 
+export type ProjectTeamRole =
+  | 'PROJECT_MANAGER'
+  | 'DISPATCHER'
+  | 'SITE_COORDINATOR'
+  | 'DEPARTMENT_CHIEF'
+  | 'INSTITUTE_CHIEF'
+  | 'DEPUTY_CHIEF'
+  | 'DOCUMENT_CONTROLLER'
+  | 'OTHER';
+
 export interface ProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
-  roleOnProject: string;
+  roleOnProject: ProjectTeamRole;
   assignedFrom: string | null;
   assignedTo: string | null;
   createdAt: string;
@@ -658,7 +668,7 @@ export function createEmptyPmCapabilities(): PmCapabilities {
 
 export interface AddProjectTeamMemberRequest {
   userId: string;
-  roleOnProject: string;
+  roleOnProject: ProjectTeamRole;
   assignedFrom?: string;
   assignedTo?: string;
 }

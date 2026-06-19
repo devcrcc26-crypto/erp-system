@@ -5,11 +5,11 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export const FOLDER_CONTEXT_TYPES = [
   'SYSTEM',
@@ -29,7 +29,7 @@ export class CreateDocumentFolderDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   parentId?: string;
 
   @ApiProperty({ enum: FOLDER_CONTEXT_TYPES })
@@ -38,7 +38,7 @@ export class CreateDocumentFolderDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   contextId?: string;
 }
 
@@ -74,7 +74,7 @@ export class UploadDocumentVersionDto {
 
 export class UpsertDocumentAccessDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   roleId!: string;
 
   @ApiPropertyOptional({ default: true })
@@ -106,11 +106,11 @@ export class DocumentFolderListQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @ValidateIf((query: DocumentFolderListQueryDto) => query.contextType !== undefined)
-  @IsUUID()
+  @IsEntityUuid()
   contextId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   parentId?: string;
 }

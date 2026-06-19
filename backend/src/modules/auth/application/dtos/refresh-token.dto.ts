@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUUID, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class RefreshTokenDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   sessionId!: string;
 
   @ApiProperty()

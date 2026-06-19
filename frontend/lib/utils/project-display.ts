@@ -1,4 +1,8 @@
-import type { ProjectStatus, ProjectType } from '@/lib/api/project-management.types';
+import type {
+  ProjectStatus,
+  ProjectTeamRole,
+  ProjectType,
+} from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 
@@ -9,6 +13,21 @@ const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   INDUSTRIAL: 'Industrial',
 };
 
+const PROJECT_TEAM_ROLE_LABELS: Record<ProjectTeamRole, string> = {
+  PROJECT_MANAGER: 'Project manager',
+  DISPATCHER: 'Dispatcher',
+  SITE_COORDINATOR: 'Site coordinator',
+  DEPARTMENT_CHIEF: 'Department chief',
+  INSTITUTE_CHIEF: 'Institute chief',
+  DEPUTY_CHIEF: 'Deputy chief',
+  DOCUMENT_CONTROLLER: 'Document controller',
+  OTHER: 'Other',
+};
+
+export const PROJECT_TEAM_ROLE_OPTIONS = (
+  Object.entries(PROJECT_TEAM_ROLE_LABELS) as [ProjectTeamRole, string][]
+).map(([value, label]) => ({ value, label }));
+
 const PROJECT_STATUS_VARIANTS: Record<ProjectStatus, StatusBadgeVariant> = {
   PLANNING: 'info',
   TENDER: 'warning',
@@ -18,6 +37,10 @@ const PROJECT_STATUS_VARIANTS: Record<ProjectStatus, StatusBadgeVariant> = {
   COMPLETED: 'success',
   CLOSED: 'default',
 };
+
+export function formatProjectTeamRole(role: ProjectTeamRole): string {
+  return PROJECT_TEAM_ROLE_LABELS[role] ?? role;
+}
 
 export function formatProjectType(type: ProjectType | null): string {
   if (!type) {

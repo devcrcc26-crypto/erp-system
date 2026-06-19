@@ -43,6 +43,20 @@ export class UsersController {
     return this.userManagementService.listUsers(this.ctx(user), query);
   }
 
+  @Get('directory')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({
+    summary: 'List users for assignment pickers',
+    description:
+      'Returns id, name, and email for project team and task assignment UIs. Requires projects.view, not users.view.',
+  })
+  listDirectory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PaginationQueryDto,
+  ): Promise<unknown> {
+    return this.userManagementService.listUsersDirectory(this.ctx(user), query);
+  }
+
   @Get(':id')
   @RequirePermission('users', 'view')
   get(

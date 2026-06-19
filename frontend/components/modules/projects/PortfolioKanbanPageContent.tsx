@@ -22,7 +22,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { useAllProjects, useUpdateProject } from '@/lib/query/projects';
-import { useUsers } from '@/lib/query/users';
+import { useUsersDirectory } from '@/lib/query/users';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatProjectStatus } from '@/lib/utils/project-display';
@@ -33,12 +33,9 @@ import {
 } from '@/components/modules/projects/ProjectKanbanCard';
 
 function useProjectManagerNames(enabled: boolean): Record<string, string> {
-  const canManageUsers = useAuthStore(
-    (state) => state.capabilities.canManageUsers,
-  );
-  const usersQuery = useUsers(
+  const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
-    { enabled: enabled && canManageUsers },
+    { enabled },
   );
   const users = usersQuery.data?.data ?? [];
 

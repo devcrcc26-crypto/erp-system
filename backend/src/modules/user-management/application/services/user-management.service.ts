@@ -56,6 +56,29 @@ export class UserManagementService {
     return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
+  /**
+   * Minimal user list for assignment pickers (task assignee, project team, review routing).
+   * Available to anyone with project portfolio access — not full user administration.
+   */
+  async listUsersDirectory(
+    ctx: AuditContext,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const where = activeOnly({ companyId: ctx.companyId });
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+        select: this.userDirectorySelect(),
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
   async getUser(ctx: AuditContext, id: string): Promise<unknown> {
     const user = await this.prisma.user.findFirst({
       where: activeOnly({ id, companyId: ctx.companyId }),
@@ -482,6 +505,16 @@ export class UserManagementService {
     return {
       ...this.userSelect(),
       userRoles: this.userRolesListSelect(),
+    };
+  }
+
+  private userDirectorySelect(): Prisma.UserSelect {
+    return {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      isActive: true,
     };
   }
 

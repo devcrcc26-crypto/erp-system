@@ -5,12 +5,12 @@ import {
   IsEmail,
   IsOptional,
   IsString,
-  IsUUID,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -41,17 +41,17 @@ export class CreateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   branchId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   departmentId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   positionId?: string;
 
   @ApiPropertyOptional()
@@ -95,7 +95,7 @@ export class CreateRoleDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityUuid()
   parentRoleId?: string;
 
   @ApiPropertyOptional()
@@ -108,7 +108,7 @@ export class UpdateRoleDto extends PartialType(CreateRoleDto) {}
 
 export class RolePermissionItemDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   permissionId!: string;
 
   @ApiProperty()
@@ -146,7 +146,7 @@ export class UpdateRolePermissionsDto {
 
 export class AssignUserRoleDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityUuid()
   roleId!: string;
 }
 
