@@ -22,9 +22,11 @@ interface CommentFormValues {
 
 export default function ReviewCommentPanel({
   reviewMode,
+  edvOptions,
   onCommentAdded,
 }: {
   reviewMode: ReviewModeView | null | undefined;
+  edvOptions: readonly { value: string; label: string }[];
   onCommentAdded: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<CommentFormValues>();
@@ -33,10 +35,12 @@ export default function ReviewCommentPanel({
   const lens = useRoleLens();
   const messageApi = useAppMessage();
 
-  const edvOptions = (reviewMode?.snapshotEdvIds ?? []).map((id) => ({
-    value: id,
-    label: id.slice(0, 8) + '…',
-  }));
+  const edvSelectOptions = edvOptions.length > 0
+    ? [...edvOptions]
+    : (reviewMode?.packageEdvIds ?? []).map((id) => ({
+        value: id,
+        label: id.slice(0, 8) + '…',
+      }));
 
   async function handleSubmit(values: CommentFormValues): Promise<void> {
     if (!reviewMode?.reviewSessionId) {
@@ -70,7 +74,7 @@ export default function ReviewCommentPanel({
           label="Document version"
           rules={[{ required: true }]}
         >
-          <Select options={edvOptions} placeholder="Select EDV from snapshot" />
+          <Select options={edvSelectOptions} placeholder="Select document" />
         </Form.Item>
         <Form.Item name="body" label="Comment" rules={[{ required: true }]}>
           <Input.TextArea rows={3} />

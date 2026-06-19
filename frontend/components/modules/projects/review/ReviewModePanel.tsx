@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Alert, Checkbox, Spin } from 'antd';
+import { Alert, Checkbox, Spin, Tabs } from 'antd';
 import BulkReviewActionBar from '@/components/modules/projects/review/BulkReviewActionBar';
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
@@ -13,6 +13,8 @@ import EdvFileActions from '@/components/modules/projects/engineering/EdvFileAct
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import {
   useDesignPackage,
+  useDesignPackageDependencies,
+  useDesignPackages,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useBatchReviewApprove, useBatchReviewReturn } from '@/lib/query/review-batch';
@@ -45,6 +47,18 @@ export default function ReviewModePanel({
     projectId,
     taskDisciplineId,
     { page: 1, limit: 100 },
+    Boolean(projectId) && Boolean(taskDisciplineId),
+  );
+
+  const dependenciesQuery = useDesignPackageDependencies(
+    projectId,
+    taskDisciplineId,
+    packageId,
+    Boolean(projectId) && Boolean(taskDisciplineId),
+  );
+  const allPackagesQuery = useDesignPackages(
+    projectId,
+    taskDisciplineId,
     Boolean(projectId) && Boolean(taskDisciplineId),
   );
 
@@ -92,6 +106,21 @@ export default function ReviewModePanel({
     }
     return map;
   }, [documentsQuery.data?.data]);
+
+  const edvCommentOptions = useMemo(
+    () =>
+      packageEdvIds.map((edvId) => {
+        const info = edvMap.get(edvId);
+        const title = info?.doc.title;
+        const revision = info?.revisionLabel;
+        const label =
+          title && revision
+            ? `${title} · Rev ${revision}`
+            : title ?? `${edvId.slice(0, 8)}…`;
+        return { value: edvId, label };
+      }),
+    [packageEdvIds, edvMap],
+  );
 
   const reviewSessionId = reviewMode?.reviewSessionId ?? null;
   const sessionComments = reviewMode?.comments ?? [];
@@ -165,7 +194,7 @@ export default function ReviewModePanel({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4" data-testid="review-mode-panel">
+    <div className="flex flex-col gap-4 overflow-x-hidden" data-testid="review-mode-panel">
       <ReviewApprovalBlockedAlert comments={sessionComments} />
       <BulkReviewActionBar
         selectedCount={selectedEdvIds.length}
@@ -179,12 +208,12 @@ export default function ReviewModePanel({
         disabled={!lens.canApproveReview || !approvalAllowed}
       />
 
-      <div className="grid flex-1 gap-4 lg:grid-cols-4">
-        {/* LEFT 50% — package documents under review */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-2">
-          <h3 className="mb-3 text-sm font-semibold text-slate-900">Documents</h3>
-          <p className="mb-3 text-xs text-slate-500">
-            Package EDVs in this review session. Select items for batch approve or return.
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4">
+          <h3 className="mb-1 text-sm font-semibold text-slate-900">Documents</h3>
+          <p className="mb-4 text-xs text-slate-500">
+            Select package items for batch approve or return. Use the icons to
+            view or download each file.
           </p>
           {packageEdvIds.length === 0 ? (
             <Alert
@@ -198,56 +227,99 @@ export default function ReviewModePanel({
               {packageEdvIds.map((edvId) => {
                 const info = edvMap.get(edvId);
                 return (
-                  <li key={edvId} className="flex items-center gap-3 py-2">
-                    <Checkbox
-                      checked={isEdvSelected(edvId)}
-                      disabled={!lens.canApproveReview}
-                      onChange={() => toggleEdvSelection(edvId)}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">
-                        {info?.doc.title ?? edvId}
-                      </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        {info?.revisionLabel && (
-                          <span>Rev {info.revisionLabel}</span>
-                        )}
-                        {info?.status && <EdvStatusBadge status={info.status} />}
+                  <li
+                    key={edvId}
+                    className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <Checkbox
+                        className="mt-0.5 shrink-0"
+                        checked={isEdvSelected(edvId)}
+                        disabled={!lens.canApproveReview}
+                        onChange={() => toggleEdvSelection(edvId)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium text-slate-900">
+                          {info?.doc.title ?? edvId}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          {info?.revisionLabel && (
+                            <span>Rev {info.revisionLabel}</span>
+                          )}
+                          {info?.doc.documentNumber && (
+                            <span>{info.doc.documentNumber}</span>
+                          )}
+                          {info?.status && (
+                            <EdvStatusBadge status={info.status} />
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <EdvFileActions
-                      documentVersionId={info?.documentVersionId}
-                      fileName={info?.doc.title}
-                    />
+                    <div className="shrink-0 pl-8 sm:pl-0">
+                      <EdvFileActions
+                        compact
+                        documentVersionId={info?.documentVersionId}
+                        fileName={info?.doc.title}
+                      />
+                    </div>
                   </li>
                 );
               })}
             </ul>
           )}
-        </div>
+        </section>
 
-        {/* CENTER 25% — comments */}
-        <div className="lg:col-span-1">
-          <ReviewCommentPanel reviewMode={reviewMode} onCommentAdded={refetchAll} />
-        </div>
-
-        {/* RIGHT 25% — dependencies + governance */}
-        <div className="space-y-4 lg:col-span-1">
-          <DependencySnapshotPanel reviewMode={reviewMode} />
-          <DisciplineLeadConsole
-            projectId={projectId}
-            taskDisciplineId={taskDisciplineId}
-            packageId={packageId}
-            reviewSessionId={reviewSessionId}
-            currentTier={reviewMode?.currentTier ?? null}
-            comments={sessionComments}
-            onAction={refetchAll}
+        <aside className="min-w-0 space-y-4 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto xl:pr-1">
+          <Tabs
+            defaultActiveKey="comments"
+            items={[
+              {
+                key: 'comments',
+                label: `Comments (${sessionComments.length})`,
+                children: (
+                  <ReviewCommentPanel
+                    reviewMode={reviewMode}
+                    edvOptions={edvCommentOptions}
+                    onCommentAdded={refetchAll}
+                  />
+                ),
+              },
+              {
+                key: 'context',
+                label: 'Context',
+                children: (
+                  <div className="space-y-4">
+                    {(dependenciesQuery.data ?? []).length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        This package has no upstream cross-discipline dependencies.
+                      </p>
+                    ) : null}
+                    <DependencySnapshotPanel
+                      dependencies={dependenciesQuery.data ?? []}
+                      packages={allPackagesQuery.data ?? []}
+                      documents={documentsQuery.data?.data ?? []}
+                      snapshotEdvIds={reviewMode?.snapshotEdvIds ?? []}
+                      contentHash={reviewMode?.contentHash}
+                    />
+                    <GovernanceReviewPanel
+                      designPackage={packageQuery.data}
+                      reviewMode={reviewMode}
+                    />
+                    <DisciplineLeadConsole
+                      projectId={projectId}
+                      taskDisciplineId={taskDisciplineId}
+                      packageId={packageId}
+                      reviewSessionId={reviewSessionId}
+                      currentTier={reviewMode?.currentTier ?? null}
+                      comments={sessionComments}
+                      onAction={refetchAll}
+                    />
+                  </div>
+                ),
+              },
+            ]}
           />
-          <GovernanceReviewPanel
-            designPackage={packageQuery.data}
-            reviewMode={reviewMode}
-          />
-        </div>
+        </aside>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Alert } from 'antd';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { Alert, Breadcrumb, Button } from 'antd';
 import ReviewModePanel from '@/components/modules/projects/review/ReviewModePanel';
 import { useDesignPackage } from '@/lib/query/design-packages';
+import { layout } from '@/lib/theme/layout';
 
 export default function ReviewModePageContent({
   packageId,
@@ -22,21 +22,34 @@ export default function ReviewModePageContent({
     Boolean(projectId) && Boolean(taskDisciplineId),
   );
 
+  const packageName = packageQuery.data?.name ?? 'Review mode';
+
   return (
-    <div>
-      <FormLayout
-        title={packageQuery.data?.name ?? 'Review Mode'}
-        description="Three-column review workspace — documents, comments, dependencies."
-        extra={
-          projectId ? (
+    <div className={`${layout.pageStack} min-w-0 overflow-x-hidden`}>
+      <Breadcrumb
+        items={[
+          { title: <Link href="/review-inbox">Review inbox</Link> },
+          { title: packageName },
+        ]}
+      />
+
+      <div className="min-w-0">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold text-slate-900">{packageName}</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Review package documents, add comments, and run batch actions.
+            </p>
+          </div>
+          {projectId ? (
             <Link
               href={`/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${packageId}`}
             >
-              Back to package
+              <Button className="shrink-0">Back to package</Button>
             </Link>
-          ) : undefined
-        }
-      >
+          ) : null}
+        </div>
+
         {!projectId || !taskDisciplineId ? (
           <Alert
             type="warning"
@@ -45,16 +58,14 @@ export default function ReviewModePageContent({
             title="Missing project context"
             description="Open review mode from the Review Inbox to load project and discipline context."
           />
-        ) : null}
-
-        {projectId && taskDisciplineId ? (
+        ) : (
           <ReviewModePanel
             packageId={packageId}
             projectId={projectId}
             taskDisciplineId={taskDisciplineId}
           />
-        ) : null}
-      </FormLayout>
+        )}
+      </div>
     </div>
   );
 }

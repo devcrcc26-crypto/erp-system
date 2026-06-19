@@ -1,37 +1,93 @@
 'use client';
 
-import { Alert } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import type { ReviewModeView } from '@/lib/api/epc.types';
+import type {
+  DesignPackage,
+  DesignPackageDependency,
+  EngineeringDocument,
+} from '@/lib/api/epc.types';
 
+function resolveEdvLabel(
+  edvId: string,
+  documents: EngineeringDocument[],
+): string {
+  for (const doc of documents) {
+    for (const version of doc.versions ?? []) {
+      if (version.id === edvId) {
+        return `${doc.title} · Rev ${version.revisionLabel}`;
+      }
+    }
+  }
+  return edvId;
+}
+
+/**
+ * Shows upstream package dependencies and frozen locked EDVs at session open.
+ * Hidden when the package has no cross-package dependencies.
+ */
 export default function DependencySnapshotPanel({
-  reviewMode,
+  dependencies,
+  packages,
+  documents,
+  snapshotEdvIds,
+  contentHash,
 }: {
-  reviewMode: ReviewModeView | null | undefined;
+  dependencies: readonly DesignPackageDependency[];
+  packages: readonly DesignPackage[];
+  documents: readonly EngineeringDocument[];
+  snapshotEdvIds: readonly string[];
+  contentHash: string | null | undefined;
 }): React.ReactNode {
-  const snapshotIds = reviewMode?.snapshotEdvIds ?? [];
+  if (dependencies.length === 0) {
+    return null;
+  }
+
+  const packageNameById = new Map(packages.map((pkg) => [pkg.id, pkg.name]));
 
   return (
     <FormLayout
-      title="Dependency snapshot"
-      description="Frozen cross-discipline references at session open."
+      title="Upstream dependencies"
+      description="Cross-discipline packages this submission depends on."
     >
-      {reviewMode?.contentHash && (
-        <p className="mb-3 text-xs text-slate-500">
-          Content hash: <code className="text-slate-700">{reviewMode.contentHash}</code>
+      <ul className="mb-4 divide-y divide-slate-100 rounded border border-slate-200">
+        {dependencies.map((dependency) => (
+          <li key={dependency.id} className="px-3 py-2 text-sm">
+            <span className="font-medium text-slate-900">
+              {packageNameById.get(dependency.dependsOnPackageId) ??
+                dependency.dependsOnPackageId}
+            </span>
+            <span className="ml-2 text-xs text-slate-500">
+              {dependency.dependencyType.replace(/_/g, ' ')}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {contentHash && (
+        <p className="mb-3 break-all text-xs text-slate-500">
+          Snapshot hash:{' '}
+          <code className="text-slate-700">{contentHash.slice(0, 16)}…</code>
         </p>
       )}
 
-      {snapshotIds.length === 0 ? (
-        <Alert type="info" showIcon title="No snapshot EDVs" />
+      {snapshotEdvIds.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          No locked revisions from upstream packages were captured when this
+          session opened. Upstream packages may still be in progress.
+        </p>
       ) : (
-        <ul className="divide-y divide-slate-100 rounded border border-slate-200">
-          {snapshotIds.map((edvId) => (
-            <li key={edvId} className="px-3 py-2">
-              <span className="font-mono text-xs">{edvId}</span>
-            </li>
-          ))}
-        </ul>
+        <div>
+          <p className="mb-2 text-xs font-medium text-slate-600">
+            Locked upstream revisions ({snapshotEdvIds.length})
+          </p>
+          <ul className="divide-y divide-slate-100 rounded border border-slate-200">
+            {snapshotEdvIds.map((edvId) => (
+              <li key={edvId} className="px-3 py-2 text-sm text-slate-800">
+                {resolveEdvLabel(edvId, documents)}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </FormLayout>
   );

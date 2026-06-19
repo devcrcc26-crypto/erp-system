@@ -35,7 +35,10 @@ export default function GovernanceReviewPanel({
         <Descriptions.Item label="Session status">
           {reviewMode?.sessionStatus?.replace(/_/g, ' ') ?? '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Snapshot EDVs">
+        <Descriptions.Item label="Package items">
+          {reviewMode?.packageEdvIds.length ?? 0}
+        </Descriptions.Item>
+        <Descriptions.Item label="Upstream snapshot">
           {reviewMode?.snapshotEdvIds.length ?? 0}
         </Descriptions.Item>
         <Descriptions.Item label="Comments">

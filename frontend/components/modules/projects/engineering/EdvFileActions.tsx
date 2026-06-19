@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Space } from 'antd';
+import { Button, Space, Tooltip } from 'antd';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   downloadDocumentVersion,
@@ -17,10 +17,13 @@ export default function EdvFileActions({
   documentVersionId,
   fileName,
   size = 'small',
+  compact = false,
 }: {
   documentVersionId: string | undefined;
   fileName?: string;
   size?: 'small' | 'middle';
+  /** Icon-only buttons for tight layouts (e.g. review mode rows). */
+  compact?: boolean;
 }): React.ReactNode {
   const messageApi = useAppMessage();
   const [loadingAction, setLoadingAction] = useState<'view' | 'download' | null>(
@@ -53,8 +56,37 @@ export default function EdvFileActions({
     }
   }
 
+  if (compact) {
+    return (
+      <Space size={2} onClick={(event) => event.stopPropagation()}>
+        <Tooltip title="View">
+          <Button
+            type="text"
+            size={size}
+            aria-label="View document"
+            icon={<EyeOutlined />}
+            loading={loadingAction === 'view'}
+            disabled={loadingAction !== null && loadingAction !== 'view'}
+            onClick={() => void handleView()}
+          />
+        </Tooltip>
+        <Tooltip title="Download">
+          <Button
+            type="text"
+            size={size}
+            aria-label="Download document"
+            icon={<DownloadOutlined />}
+            loading={loadingAction === 'download'}
+            disabled={loadingAction !== null && loadingAction !== 'download'}
+            onClick={() => void handleDownload()}
+          />
+        </Tooltip>
+      </Space>
+    );
+  }
+
   return (
-    <Space size={4} onClick={(event) => event.stopPropagation()}>
+    <Space size={4} wrap onClick={(event) => event.stopPropagation()}>
       <Button
         type="link"
         size={size}
