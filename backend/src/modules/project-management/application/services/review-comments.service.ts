@@ -3,6 +3,7 @@ import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum'
 import {
   AddReviewCommentDto,
   TransitionReviewCommentDto,
+  UpdateReviewCommentDto,
   VerifyReviewCommentDto,
 } from '../dtos/engineering-document.dtos';
 import { PmContext } from '../types/pm-context.type';
@@ -121,6 +122,27 @@ export class ReviewCommentsService {
       companyId: ctx.companyId,
       actorId: ctx.userId,
       reviewCommentId: commentId,
+    });
+  }
+
+  /**
+   * Updates an OPEN comment authored by the current user.
+   */
+  async updateComment(
+    ctx: PmContext,
+    commentId: string,
+    dto: UpdateReviewCommentDto,
+  ): Promise<WorkflowResultSnapshot> {
+    return this.workflowKernel.execute({
+      type: 'UpdateReviewComment',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      reviewCommentId: commentId,
+      engineeringDocumentVersionId: dto.engineeringDocumentVersionId,
+      body: dto.body,
+      severity: dto.severity,
+      assignedToUserId: dto.assignedToUserId,
+      idempotencyKey: dto.idempotencyKey,
     });
   }
 }

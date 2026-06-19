@@ -16,6 +16,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddReviewCommentDto,
   TransitionReviewCommentDto,
+  UpdateReviewCommentDto,
   VerifyReviewCommentDto,
 } from '../../application/dtos/engineering-document.dtos';
 import { ReviewCommentsService } from '../../application/services/review-comments.service';
@@ -48,6 +49,17 @@ export class ReviewCommentsController {
     @Body() dto: AddReviewCommentDto,
   ): Promise<unknown> {
     return this.reviewCommentsService.addComment(this.ctx(user), dto);
+  }
+
+  @Patch(':commentId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Edit own OPEN review comment' })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('commentId') commentId: string,
+    @Body() dto: UpdateReviewCommentDto,
+  ): Promise<unknown> {
+    return this.reviewCommentsService.updateComment(this.ctx(user), commentId, dto);
   }
 
   @Patch(':commentId/status')

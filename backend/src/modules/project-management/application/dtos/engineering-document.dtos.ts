@@ -260,6 +260,30 @@ export class VerifyReviewCommentDto {
   idempotencyKey?: string;
 }
 
+export class UpdateReviewCommentDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  engineeringDocumentVersionId!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  body!: string;
+
+  @ApiProperty({ enum: CommentSeverity })
+  @IsEnum(CommentSeverity)
+  severity!: CommentSeverity;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  assignedToUserId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+}
+
 export class CreateDesignPackageDto {
   @ApiProperty()
   @IsString()

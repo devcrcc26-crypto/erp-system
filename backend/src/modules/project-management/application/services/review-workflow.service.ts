@@ -24,6 +24,7 @@ import {
   ReturnPackageForReworkCommand,
   BatchReturnEdvsCommand,
   RemoveReviewCommentCommand,
+  UpdateReviewCommentCommand,
   SubmitPackageForReviewCommand,
   TransitionCommentStatusCommand,
   VerifyReviewCommentCommand,
@@ -459,6 +460,97 @@ export class ReviewWorkflowService {
         correlationId,
         affectedEdvIds: [comment.engineeringDocumentVersionId],
         edvStatuses: {},
+        reviewSessionId: comment.reviewSessionId,
+        intentEventIds: [],
+      };
+    });
+  }
+
+  /**
+   * Updates an OPEN comment authored by the current user.
+   */
+  async updateReviewComment(
+    command: UpdateReviewCommentCommand,
+    correlationId: string,
+  ): Promise<WorkflowResultSnapshot> {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
+      const comment = await this.epcReviewRepository.findCommentById(
+        tx,
+        command.companyId,
+        command.reviewCommentId,
+      );
+      if (!comment || comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+        throw new NotFoundException('Review comment not found');
+      }
+
+      if (comment.createdBy !== command.actorId) {
+        throw new ForbiddenException('Only the comment author can edit this comment');
+      }
+
+      if (comment.status !== PrismaCommentStatus.OPEN) {
+        throw new BadRequestException('Only open comments can be edited');
+      }
+
+      const edv = await this.epcWorkflowRepository.findEdvWithDiscipline(
+        tx,
+        command.companyId,
+        command.engineeringDocumentVersionId,
+      );
+      if (!edv) {
+        throw new NotFoundException('EDV not found');
+      }
+
+      this.conflictGuard.assertEdvAllowsComments(edv.status as EdvStatus);
+
+      const beforeState = {
+        body: comment.body,
+        severity: comment.severity,
+        assignedToUserId: comment.assignedToUserId,
+        engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+      };
+
+      const updated = await this.epcReviewRepository.updateReviewComment(
+        tx,
+        comment.id,
+        {
+          body: command.body,
+          severity: command.severity as CommentSeverity,
+          engineeringDocumentVersion: {
+            connect: { id: command.engineeringDocumentVersionId },
+          },
+          assignedToUser: {
+            connect: { id: command.assignedToUserId },
+          },
+          updatedBy: command.actorId,
+        },
+      );
+
+      await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+        companyId: command.companyId,
+        actorId: command.actorId,
+        entityType: WorkflowEntityType.ReviewComment,
+        entityId: comment.id,
+        action: 'UPDATE_REVIEW_COMMENT',
+        beforeState,
+        afterState: {
+          body: updated.body,
+          severity: updated.severity,
+          assignedToUserId: updated.assignedToUserId,
+          engineeringDocumentVersionId: updated.engineeringDocumentVersionId,
+        },
+        correlationId,
+      });
+
+      return {
+        commandType: 'UpdateReviewComment',
+        correlationId,
+        affectedEdvIds: [
+          comment.engineeringDocumentVersionId,
+          command.engineeringDocumentVersionId,
+        ],
+        edvStatuses: {
+          [command.engineeringDocumentVersionId]: edv.status as EdvStatus,
+        },
         reviewSessionId: comment.reviewSessionId,
         intentEventIds: [],
       };

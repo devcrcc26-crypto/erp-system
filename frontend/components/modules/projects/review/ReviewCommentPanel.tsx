@@ -6,6 +6,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
+import ReviewCommentEditDrawer from '@/components/modules/projects/review/ReviewCommentEditDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import type { CommentSeverity, ReviewModeComment, ReviewModeView } from '@/lib/api/epc.types';
 import {
@@ -24,6 +25,13 @@ interface CommentFormValues {
   body: string;
   severity: CommentSeverity;
   assignedToUserId: string;
+}
+
+function canMutateOwnOpenComment(
+  comment: ReviewModeComment,
+  currentUserId: string | undefined,
+): boolean {
+  return comment.createdBy === currentUserId && comment.status === 'OPEN';
 }
 
 export default function ReviewCommentPanel({
@@ -45,6 +53,7 @@ export default function ReviewCommentPanel({
   const [selectedComment, setSelectedComment] = useState<ReviewModeComment | null>(
     null,
   );
+  const [editTarget, setEditTarget] = useState<ReviewModeComment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewModeComment | null>(null);
 
   const edvLabelById = new Map(edvOptions.map((option) => [option.value, option.label]));
@@ -93,11 +102,9 @@ export default function ReviewCommentPanel({
     }
   }
 
-  function canDeleteComment(comment: ReviewModeComment): boolean {
-    return (
-      comment.createdBy === currentUserId &&
-      comment.status === 'OPEN'
-    );
+  function openEdit(comment: ReviewModeComment): void {
+    setSelectedComment(null);
+    setEditTarget(comment);
   }
 
   return (
@@ -145,69 +152,82 @@ export default function ReviewCommentPanel({
           {(reviewMode?.comments ?? []).length === 0 ? (
             <p className="text-sm text-slate-500">No comments yet.</p>
           ) : (
-            reviewMode?.comments.map((comment) => (
-              <div
-                key={comment.id}
-                className="rounded border border-slate-200 bg-white p-3 text-sm"
-              >
-                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0 flex flex-wrap items-center gap-2">
-                    <CommentSeverityTag severity={comment.severity} />
-                    <span className="text-xs text-slate-500">
-                      {comment.status.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-1">
-                    <Button
-                      type="link"
-                      size="small"
-                      className="!px-1"
-                      onClick={() => setSelectedComment(comment)}
-                    >
-                      View
-                    </Button>
-                    {canDeleteComment(comment) && (
-                      <Button
-                        type="link"
-                        size="small"
-                        danger
-                        className="!px-1"
-                        onClick={() => setDeleteTarget(comment)}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                    {lens.canApproveReview && comment.status === 'RESOLVED' && (
+            reviewMode?.comments.map((comment) => {
+              const canMutate = canMutateOwnOpenComment(comment, currentUserId);
+              return (
+                <div
+                  key={comment.id}
+                  className="rounded border border-slate-200 bg-white p-3 text-sm"
+                >
+                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex flex-wrap items-center gap-2">
+                      <CommentSeverityTag severity={comment.severity} />
+                      <span className="text-xs text-slate-500">
+                        {comment.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-1">
                       <Button
                         type="link"
                         size="small"
                         className="!px-1"
-                        loading={verifyComment.isPending}
-                        onClick={() => {
-                          void verifyComment
-                            .mutateAsync({ commentId: comment.id })
-                            .then(() => {
-                              messageApi.success('Comment verified');
-                              onCommentAdded();
-                            })
-                            .catch((error: unknown) => {
-                              notifyApiError(error, 'Request failed', messageApi);
-                            });
-                        }}
+                        onClick={() => setSelectedComment(comment)}
                       >
-                        Verify
+                        View
                       </Button>
-                    )}
+                      {canMutate && (
+                        <Button
+                          type="link"
+                          size="small"
+                          className="!px-1"
+                          onClick={() => openEdit(comment)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      {canMutate && (
+                        <Button
+                          type="link"
+                          size="small"
+                          danger
+                          className="!px-1"
+                          onClick={() => setDeleteTarget(comment)}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                      {lens.canApproveReview && comment.status === 'RESOLVED' && (
+                        <Button
+                          type="link"
+                          size="small"
+                          className="!px-1"
+                          loading={verifyComment.isPending}
+                          onClick={() => {
+                            void verifyComment
+                              .mutateAsync({ commentId: comment.id })
+                              .then(() => {
+                                messageApi.success('Comment verified');
+                                onCommentAdded();
+                              })
+                              .catch((error: unknown) => {
+                                notifyApiError(error, 'Request failed', messageApi);
+                              });
+                          }}
+                        >
+                          Verify
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                  <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
+                  <p className="text-xs text-slate-500">
+                    {edvLabelById.get(comment.engineeringDocumentVersionId) ??
+                      'Document'}{' '}
+                    · {comment.authorName} · {formatProjectDate(comment.createdAt)}
+                  </p>
                 </div>
-                <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
-                <p className="text-xs text-slate-500">
-                  {edvLabelById.get(comment.engineeringDocumentVersionId) ??
-                    'Document'}{' '}
-                  · {comment.authorName} · {formatProjectDate(comment.createdAt)}
-                </p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </FormLayout>
@@ -221,14 +241,36 @@ export default function ReviewCommentPanel({
             ? edvLabelById.get(selectedComment.engineeringDocumentVersionId)
             : undefined
         }
-        canDelete={selectedComment ? canDeleteComment(selectedComment) : false}
+        canEdit={
+          selectedComment
+            ? canMutateOwnOpenComment(selectedComment, currentUserId)
+            : false
+        }
+        canDelete={
+          selectedComment
+            ? canMutateOwnOpenComment(selectedComment, currentUserId)
+            : false
+        }
         deleteLoading={deleteComment.isPending}
         onClose={() => setSelectedComment(null)}
+        onEdit={() => {
+          if (selectedComment) {
+            openEdit(selectedComment);
+          }
+        }}
         onDelete={() => {
           if (selectedComment) {
             setDeleteTarget(selectedComment);
           }
         }}
+      />
+
+      <ReviewCommentEditDrawer
+        open={Boolean(editTarget)}
+        comment={editTarget}
+        edvOptions={edvSelectOptions}
+        onClose={() => setEditTarget(null)}
+        onSaved={onCommentAdded}
       />
 
       <ConfirmDialog

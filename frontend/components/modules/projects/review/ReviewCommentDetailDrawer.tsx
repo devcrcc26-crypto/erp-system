@@ -14,18 +14,22 @@ export default function ReviewCommentDetailDrawer({
   commentId,
   fallbackComment,
   documentLabel,
+  canEdit,
   canDelete,
   deleteLoading,
   onClose,
+  onEdit,
   onDelete,
 }: {
   open: boolean;
   commentId: string | null;
   fallbackComment?: ReviewModeComment | null;
   documentLabel?: string;
+  canEdit: boolean;
   canDelete: boolean;
   deleteLoading?: boolean;
   onClose: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
 }): React.ReactNode {
   const detailQuery = useReviewComment(commentId ?? '', open && Boolean(commentId));
@@ -68,12 +72,19 @@ export default function ReviewCommentDetailDrawer({
       size={480}
       styles={antDrawerBodyStyles}
       footer={
-        canDelete && onDelete ? (
+        canEdit || (canDelete && onDelete) ? (
           <div className="flex justify-end gap-2">
             <Button onClick={onClose}>Close</Button>
-            <Button danger loading={deleteLoading} onClick={onDelete}>
-              Remove comment
-            </Button>
+            {canEdit && onEdit ? (
+              <Button type="primary" onClick={onEdit}>
+                Edit
+              </Button>
+            ) : null}
+            {canDelete && onDelete ? (
+              <Button danger loading={deleteLoading} onClick={onDelete}>
+                Remove
+              </Button>
+            ) : null}
           </div>
         ) : undefined
       }

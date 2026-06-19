@@ -6,6 +6,7 @@ import type {
   AddReviewCommentRequest,
   ReviewCommentDetail,
   TransitionReviewCommentRequest,
+  UpdateReviewCommentRequest,
   VerifyReviewCommentRequest,
   WorkflowResultSnapshot,
 } from '@/lib/api/epc.types';
@@ -107,6 +108,32 @@ export function useDeleteReviewComment() {
     onSuccess: (_data, commentId) => {
       void queryClient.invalidateQueries({
         queryKey: reviewCommentKeys.detail(commentId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.myComments(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateReviewComment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      commentId,
+      body,
+    }: {
+      commentId: string;
+      body: UpdateReviewCommentRequest;
+    }) =>
+      apiPatch<WorkflowResultSnapshot>(`/review-comments/${commentId}`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: reviewCommentKeys.detail(variables.commentId),
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.myComments(),

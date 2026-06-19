@@ -51,6 +51,15 @@ export interface RemoveReviewCommentCommand extends WorkflowCommandBase {
   readonly reviewCommentId: string;
 }
 
+export interface UpdateReviewCommentCommand extends WorkflowCommandBase {
+  readonly type: 'UpdateReviewComment';
+  readonly reviewCommentId: string;
+  readonly engineeringDocumentVersionId: string;
+  readonly body: string;
+  readonly severity: 'MINOR' | 'MODERATE' | 'MAJOR';
+  readonly assignedToUserId: string;
+}
+
 export interface ApproveReviewSessionCommand extends WorkflowCommandBase {
   readonly type: 'ApproveReviewSession';
   readonly reviewSessionId: string;
@@ -124,6 +133,7 @@ export type WorkflowCommand =
   | TransitionCommentStatusCommand
   | VerifyReviewCommentCommand
   | RemoveReviewCommentCommand
+  | UpdateReviewCommentCommand
   | ApproveReviewSessionCommand
   | ReturnPackageForReworkCommand
   | BatchApproveEdvsCommand

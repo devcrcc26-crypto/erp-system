@@ -437,6 +437,14 @@ export interface VerifyReviewCommentRequest {
   idempotencyKey?: string;
 }
 
+export interface UpdateReviewCommentRequest {
+  engineeringDocumentVersionId: string;
+  body: string;
+  severity: CommentSeverity;
+  assignedToUserId: string;
+  idempotencyKey?: string;
+}
+
 export interface TriggerRevisionRequest {
   triggerSource: 'RFI' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
   triggerEntityId: string;

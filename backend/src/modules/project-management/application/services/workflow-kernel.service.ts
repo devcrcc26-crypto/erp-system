@@ -22,6 +22,7 @@ import {
   TriggerRevisionCommand,
   VerifyReviewCommentCommand,
   RemoveReviewCommentCommand,
+  UpdateReviewCommentCommand,
   WorkflowCommand,
   WorkflowCommandType,
   WorkflowResultSnapshot,
@@ -108,6 +109,8 @@ export class WorkflowKernelService {
         return this.reviewWorkflow.verifyReviewComment(command, correlationId);
       case 'RemoveReviewComment':
         return this.reviewWorkflow.removeReviewComment(command, correlationId);
+      case 'UpdateReviewComment':
+        return this.reviewWorkflow.updateReviewComment(command, correlationId);
       case 'ApproveReviewSession':
         return this.reviewWorkflow.approveReviewSession(command, correlationId);
       case 'ReturnPackageForRework':
