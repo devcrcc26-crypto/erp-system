@@ -391,6 +391,9 @@ export function useCreateTaskDiscipline() {
           variables.taskId,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['epc', 'disciplines', variables.projectId],
+      });
     },
   });
 }
@@ -421,6 +424,9 @@ export function useUpdateTaskDiscipline() {
           variables.taskId,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['epc', 'disciplines', variables.projectId],
+      });
     },
   });
 }
@@ -447,6 +453,9 @@ export function useDeleteTaskDiscipline() {
           variables.projectId,
           variables.taskId,
         ),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['epc', 'disciplines', variables.projectId],
       });
     },
   });

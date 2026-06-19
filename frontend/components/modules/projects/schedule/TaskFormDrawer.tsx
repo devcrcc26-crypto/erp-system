@@ -12,7 +12,6 @@ import {
   Select,
   Switch,
 } from 'antd';
-import Link from 'next/link';
 import dayjs, { type Dayjs } from 'dayjs';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type {
@@ -30,9 +29,7 @@ import {
   useMilestones,
   useUpdateTask,
 } from '@/lib/query/schedule';
-import TaskDisciplinePanel from '@/components/modules/projects/schedule/TaskDisciplinePanel';
-import { projectDisciplinesHref } from '@/lib/navigation/project-workspace-nav';
-import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
+import { antDrawerBodyStyles } from '@/lib/theme/layout';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -266,7 +263,7 @@ export default function TaskFormDrawer({
         form.setFieldsValue(defaultFormValues());
       }}
     >
-      <div className={layout.drawerStack}>
+      <div className="flex flex-col gap-6">
         <Form<TaskFormValues>
           form={form}
           layout="vertical"
@@ -431,22 +428,6 @@ export default function TaskFormDrawer({
           </Button>
         </div>
         </Form>
-
-        {task?.id && (
-          <section className={layout.drawerSection}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-slate-600">
-                Manage design packages and engineering documents for this task.
-              </p>
-              <Link href={projectDisciplinesHref(projectId, task.id)}>
-                <Button type="primary" size="small">
-                  View disciplines workspace
-                </Button>
-              </Link>
-            </div>
-            <TaskDisciplinePanel projectId={projectId} taskId={task.id} embedded />
-          </section>
-        )}
       </div>
     </Drawer>
   );

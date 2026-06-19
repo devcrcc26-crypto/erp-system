@@ -239,14 +239,10 @@ export function projectNavHref(projectId: string, pathSuffix: string): string {
 }
 
 /**
- * Disciplines list, optionally filtered to a schedule task.
+ * Disciplines list for a project.
  */
-export function projectDisciplinesHref(projectId: string, taskId?: string): string {
-  const base = projectNavHref(projectId, 'disciplines');
-  if (!taskId) {
-    return base;
-  }
-  return `${base}?taskId=${encodeURIComponent(taskId)}`;
+export function projectDisciplinesHref(projectId: string): string {
+  return projectNavHref(projectId, 'disciplines');
 }
 
 /**

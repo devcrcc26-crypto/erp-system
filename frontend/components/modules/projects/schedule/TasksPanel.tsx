@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -34,8 +33,6 @@ import {
   formatTaskStatus,
   taskStatusVariant,
 } from '@/lib/utils/pm-status-display';
-import { projectDisciplinesHref } from '@/lib/navigation/project-workspace-nav';
-
 const DEPENDENCY_TYPES: Array<{ value: TaskDependencyType; label: string }> = [
   { value: 'FS', label: 'Finish-to-Start (FS)' },
   { value: 'SS', label: 'Start-to-Start (SS)' },
@@ -133,14 +130,6 @@ export default function TasksPanel({
           label={formatTaskStatus(status)}
           variant={taskStatusVariant(status)}
         />
-      ),
-    },
-    {
-      title: 'Disciplines',
-      key: 'disciplines',
-      width: 100,
-      render: (_value, record) => (
-        <Link href={projectDisciplinesHref(projectId, record.id)}>View</Link>
       ),
     },
     {

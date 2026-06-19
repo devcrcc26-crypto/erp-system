@@ -47,10 +47,7 @@
     "disciplines": {
       "title": "专业与包",
       "description": "按工作流状态分组的任务专业与设计包。",
-      "filteredTitle": "按进度任务筛选",
-      "filteredDescriptionPrefix": "显示关联至进度任务",
-      "filteredDescriptionUnknown": "显示所选进度任务的专业。",
-      "clearTaskFilter": "显示全部专业"
+      "addDiscipline": "添加专业"
     },
     "statusBoard": {
       "title": "状态看板",
@@ -133,7 +130,7 @@
   },
   "empty": {
     "noModules": "您当前角色无可用的项目模块。",
-    "noDisciplines": "未找到专业——请从进度任务详情中添加专业。",
+    "noDisciplines": "未找到专业——请使用「添加专业」将专业关联到进度任务。",
     "noReviewInbox": "收件箱中暂无审阅会话",
     "noComments": "暂无分配给您的意见",
     "noDeliverables": "未找到交付包",

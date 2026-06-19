@@ -47,10 +47,7 @@
     "disciplines": {
       "title": "Disciplines & Packages",
       "description": "Task disciplines and design packages grouped by workflow status.",
-      "filteredTitle": "Filtered by schedule task",
-      "filteredDescriptionPrefix": "Showing disciplines linked to",
-      "filteredDescriptionUnknown": "Showing disciplines for the selected schedule task.",
-      "clearTaskFilter": "Show all disciplines"
+      "addDiscipline": "Add discipline"
     },
     "statusBoard": {
       "title": "Status Board",
@@ -133,7 +130,7 @@
   },
   "empty": {
     "noModules": "No project modules available for your role.",
-    "noDisciplines": "No disciplines found — add disciplines from the schedule task detail.",
+    "noDisciplines": "No disciplines found — use Add discipline to link a discipline to a schedule task.",
     "noReviewInbox": "No review sessions in your inbox",
     "noComments": "No comments assigned to you",
     "noDeliverables": "No deliverable packages found",
