@@ -84,13 +84,6 @@ const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
 ]);
 
-const SUBMITTAL_TEAM_ROLES: ReadonlySet<ProjectTeamRole> = new Set([
-  ProjectTeamRole.DEPUTY_CHIEF,
-  ProjectTeamRole.DOCUMENT_CONTROLLER,
-  ProjectTeamRole.PROJECT_MANAGER,
-  ProjectTeamRole.INSTITUTE_CHIEF,
-]);
-
 /**
  * Layer 1 — system role action flags.
  */
@@ -130,11 +123,9 @@ export function evaluateProjectTeamLayer(
     input.action === EpcWorkflowAction.SUBMITTAL_CREATE ||
     input.action === EpcWorkflowAction.SUBMITTAL_ISSUE
   ) {
-    const allowed = SUBMITTAL_TEAM_ROLES.has(input.projectTeamRole);
     return {
       layer: PermissionLayerId.PROJECT_TEAM_ROLE,
-      verdict: allowed ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
-      reason: allowed ? undefined : 'Project team role cannot perform submittal action',
+      verdict: PermissionLayerVerdict.ALLOW,
     };
   }
 

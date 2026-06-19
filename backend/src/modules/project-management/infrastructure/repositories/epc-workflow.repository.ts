@@ -303,9 +303,9 @@ export class EpcWorkflowRepository {
   ): Promise<string | undefined> {
     const membership = await this.prisma.projectTeam.findFirst({
       where: activeOnly({ projectId, userId }),
-      select: { roleOnProject: true },
+      select: { id: true },
     });
-    return membership?.roleOnProject;
+    return membership ? 'OTHER' : undefined;
   }
 
   async findTaskDisciplineContext(

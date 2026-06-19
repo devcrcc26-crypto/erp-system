@@ -118,9 +118,6 @@ export interface MappedProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
-  roleOnProject: string;
-  assignedFrom: string | null;
-  assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -178,9 +175,6 @@ export function mapProjectTeamMember(member: ProjectTeam): MappedProjectTeamMemb
     id: member.id,
     projectId: member.projectId,
     userId: member.userId,
-    roleOnProject: member.roleOnProject,
-    assignedFrom: toDateString(member.assignedFrom),
-    assignedTo: toDateString(member.assignedTo),
     createdAt: toIsoString(member.createdAt)!,
     updatedAt: toIsoString(member.updatedAt)!,
   };
@@ -835,7 +829,8 @@ export interface MappedTask {
   projectId: string;
   milestoneId: string | null;
   parentTaskId: string | null;
-  assignedTo: string | null;
+  dispatcherUserId: string | null;
+  instituteChiefUserId: string | null;
   taskIdCode: string;
   name: string;
   description: string | null;
@@ -856,9 +851,6 @@ export interface MappedTask {
   hasCustomSchedule: boolean;
   language: Task['language'];
   approvalLevel: Task['approvalLevel'];
-  chiefEngineerName: string | null;
-  dispatcherName: string | null;
-  responsiblePersonId: string | null;
   actualCompletionTime: string | null;
   actualWorkdays: number | null;
   completionStatus: Task['completionStatus'];
@@ -878,6 +870,7 @@ export interface MappedTaskDiscipline {
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
   instituteChiefEngineer: string | null;
+  taskInstituteChiefUserId: string | null;
   designerUserId: string | null;
   reviewerUserId: string | null;
   disciplineLeadUserId: string | null;
@@ -970,7 +963,8 @@ export function mapTask(task: Task): MappedTask {
     projectId: task.projectId,
     milestoneId: task.milestoneId,
     parentTaskId: task.parentTaskId,
-    assignedTo: task.assignedTo,
+    dispatcherUserId: task.dispatcherUserId,
+    instituteChiefUserId: task.instituteChiefUserId,
     taskIdCode: task.taskIdCode,
     name: task.name,
     description: task.description,
@@ -991,9 +985,6 @@ export function mapTask(task: Task): MappedTask {
     hasCustomSchedule: task.hasCustomSchedule,
     language: task.language,
     approvalLevel: task.approvalLevel,
-    chiefEngineerName: task.chiefEngineerName,
-    dispatcherName: task.dispatcherName,
-    responsiblePersonId: task.responsiblePersonId,
     actualCompletionTime: toIsoString(task.actualCompletionTime),
     actualWorkdays: task.actualWorkdays,
     completionStatus: task.completionStatus,
@@ -1008,6 +999,8 @@ export function mapTask(task: Task): MappedTask {
  */
 export function mapTaskDiscipline(
   discipline: TaskDiscipline,
+  taskInstituteChiefUserId: string | null = null,
+  instituteChiefDisplayName: string | null = null,
 ): MappedTaskDiscipline {
   return {
     id: discipline.id,
@@ -1019,7 +1012,9 @@ export function mapTaskDiscipline(
     reviewerName: discipline.reviewerName,
     disciplinaryLeader: discipline.disciplinaryLeader,
     deptChiefEngineer: discipline.deptChiefEngineer,
-    instituteChiefEngineer: discipline.instituteChiefEngineer,
+    instituteChiefEngineer:
+      instituteChiefDisplayName ?? discipline.instituteChiefEngineer,
+    taskInstituteChiefUserId: taskInstituteChiefUserId,
     designerUserId: discipline.designerUserId,
     reviewerUserId: discipline.reviewerUserId,
     disciplineLeadUserId: discipline.disciplineLeadUserId,

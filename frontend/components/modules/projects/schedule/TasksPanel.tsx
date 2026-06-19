@@ -22,7 +22,6 @@ import type {
   Task,
   TaskDependencyType,
 } from '@/lib/api/project-management.types';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import {
   useCreateTaskDependency,
   useDeleteTask,
@@ -65,7 +64,6 @@ export default function TasksPanel({
   const [deleting, setDeleting] = useState<Task | null>(null);
   const [depForm] = Form.useForm<DependencyFormValues>();
 
-  const resolveUserName = useUserNameLookup();
   const createDependency = useCreateTaskDependency();
   const deleteTask = useDeleteTask();
 
@@ -92,13 +90,6 @@ export default function TasksPanel({
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
-    },
-    {
-      title: 'Assigned to',
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
-      render: (userId: string | null) =>
-        userId ? resolveUserName(userId) : '—',
     },
     {
       title: 'Start',

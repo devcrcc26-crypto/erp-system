@@ -181,24 +181,11 @@ export class UpdateProjectDto extends PartialType(CreateProjectDto) {
   actualFinishDate?: string;
 }
 
-export class AddProjectTeamMemberDto {
-  @ApiProperty()
-  @IsEntityUuid()
-  userId!: string;
-
-  @ApiProperty({ enum: ProjectTeamRole })
-  @IsEnum(ProjectTeamRole)
-  roleOnProject!: ProjectTeamRole;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString()
-  assignedFrom?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString()
-  assignedTo?: string;
+export class SetProjectTeamDto {
+  @ApiProperty({ type: [String], description: 'User ids that form the project team' })
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  userIds!: string[];
 }
 
 export class CreateMilestoneDto {
@@ -238,7 +225,12 @@ export class CreateTaskDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
-  assignedTo?: string;
+  dispatcherUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  instituteChiefUserId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -343,21 +335,6 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  chiefEngineerName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  dispatcherName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEntityUuid()
-  responsiblePersonId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsDateString()
   actualCompletionTime?: string;
 
@@ -403,11 +380,6 @@ export class CreateTaskDisciplineDto {
   @IsOptional()
   @IsString()
   deptChiefEngineer?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  instituteChiefEngineer?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

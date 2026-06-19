@@ -13,7 +13,7 @@ import {
   Switch,
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 import type {
   ApprovalLevel,
   CompletionStatus,
@@ -68,7 +68,8 @@ interface TaskFormValues {
   name: string;
   description?: string;
   milestoneId?: string;
-  assignedTo?: string;
+  dispatcherUserId?: string;
+  instituteChiefUserId?: string;
   startDate?: Dayjs;
   finishDate?: Dayjs;
   durationDays?: number;
@@ -83,9 +84,6 @@ interface TaskFormValues {
   onSiteReceivingTime?: Dayjs;
   assignmentToHqTime?: Dayjs;
   contactFormNumber?: string;
-  responsiblePersonId?: string;
-  dispatcherName?: string;
-  chiefEngineerName?: string;
   requiresArchiving: boolean;
   hasCustomSchedule: boolean;
   taskAttributes?: string;
@@ -110,9 +108,8 @@ function toExtendedPayload(
   | 'hasCustomSchedule'
   | 'language'
   | 'approvalLevel'
-  | 'chiefEngineerName'
-  | 'dispatcherName'
-  | 'responsiblePersonId'
+  | 'dispatcherUserId'
+  | 'instituteChiefUserId'
   | 'actualCompletionTime'
   | 'actualWorkdays'
   | 'completionStatus'
@@ -130,9 +127,8 @@ function toExtendedPayload(
     hasCustomSchedule: values.hasCustomSchedule,
     language: values.language,
     approvalLevel: values.approvalLevel,
-    chiefEngineerName: values.chiefEngineerName?.trim() || undefined,
-    dispatcherName: values.dispatcherName?.trim() || undefined,
-    responsiblePersonId: values.responsiblePersonId,
+    dispatcherUserId: values.dispatcherUserId,
+    instituteChiefUserId: values.instituteChiefUserId,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     actualWorkdays: values.actualWorkdays,
     completionStatus: values.completionStatus,
@@ -146,7 +142,8 @@ function toFormValues(task: Task): TaskFormValues {
     name: task.name,
     description: task.description ?? undefined,
     milestoneId: task.milestoneId ?? undefined,
-    assignedTo: task.assignedTo ?? undefined,
+    dispatcherUserId: task.dispatcherUserId ?? undefined,
+    instituteChiefUserId: task.instituteChiefUserId ?? undefined,
     startDate: task.startDate ? dayjs(task.startDate) : undefined,
     finishDate: task.finishDate ? dayjs(task.finishDate) : undefined,
     durationDays: task.durationDays ?? undefined,
@@ -165,9 +162,6 @@ function toFormValues(task: Task): TaskFormValues {
       ? dayjs(task.assignmentToHqTime)
       : undefined,
     contactFormNumber: task.contactFormNumber ?? undefined,
-    responsiblePersonId: task.responsiblePersonId ?? undefined,
-    dispatcherName: task.dispatcherName ?? undefined,
-    chiefEngineerName: task.chiefEngineerName ?? undefined,
     requiresArchiving: task.requiresArchiving,
     hasCustomSchedule: task.hasCustomSchedule,
     taskAttributes: task.taskAttributes ?? undefined,
@@ -217,7 +211,6 @@ export default function TaskFormDrawer({
       name: values.name.trim(),
       description: values.description?.trim() || undefined,
       milestoneId: values.milestoneId,
-      assignedTo: values.assignedTo,
       startDate: values.startDate?.toISOString(),
       finishDate: values.finishDate?.toISOString(),
       durationDays: values.durationDays,
@@ -316,8 +309,13 @@ export default function TaskFormDrawer({
               }))}
             />
           </Form.Item>
-          <Form.Item label="Assigned to" name="assignedTo">
-            <UserSelect />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label="Dispatcher" name="dispatcherUserId">
+            <ProjectTeamUserSelect projectId={projectId} />
+          </Form.Item>
+          <Form.Item label="Institute chief engineer" name="instituteChiefUserId">
+            <ProjectTeamUserSelect projectId={projectId} />
           </Form.Item>
         </div>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
@@ -370,17 +368,6 @@ export default function TaskFormDrawer({
           </Form.Item>
         </div>
         <Form.Item label="Contact form number" name="contactFormNumber">
-          <Input />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Responsible person" name="responsiblePersonId">
-            <UserSelect />
-          </Form.Item>
-          <Form.Item label="Dispatcher" name="dispatcherName">
-            <Input />
-          </Form.Item>
-        </div>
-        <Form.Item label="Chief engineer" name="chiefEngineerName">
           <Input />
         </Form.Item>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">

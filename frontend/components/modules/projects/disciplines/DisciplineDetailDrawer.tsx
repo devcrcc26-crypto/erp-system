@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Form, Modal, Select } from 'antd';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
 import DisciplineFormFields, {
@@ -14,6 +15,7 @@ import {
   useTasks,
   useUpdateTaskDiscipline,
 } from '@/lib/query/schedule';
+import { useUsersDirectory } from '@/lib/query/users';
 
 interface DisciplineDetailFormValues extends DisciplineFormValues {
   scheduleTaskId?: string;
@@ -39,32 +41,67 @@ export default function DisciplineDetailDrawer({
   const createDiscipline = useCreateTaskDiscipline();
   const updateDiscipline = useUpdateTaskDiscipline();
   const tasksQuery = useTasks(projectId, { page: 1, limit: 100 }, open);
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: open },
+  );
   const isSubmitting = createDiscipline.isPending || updateDiscipline.isPending;
   const isEditing = Boolean(discipline);
   const showTaskSelect = !isEditing && !taskId;
+  const selectedTaskId = Form.useWatch('scheduleTaskId', form);
 
   const taskOptions = (tasksQuery.data?.data ?? []).map((task) => ({
     value: task.id,
     label: `${task.taskIdCode} — ${task.name}`,
   }));
 
+  const resolvedTaskId = isEditing
+    ? taskId
+    : (taskId ?? selectedTaskId);
+
+  const instituteChiefLabel = useMemo(() => {
+    if (isEditing && discipline?.instituteChiefEngineer) {
+      return discipline.instituteChiefEngineer;
+    }
+
+    const tasks = tasksQuery.data?.data ?? [];
+    const task = tasks.find((row) => row.id === resolvedTaskId);
+    if (!task?.instituteChiefUserId) {
+      return null;
+    }
+
+    const user = (usersQuery.data?.data ?? []).find(
+      (row) => row.id === task.instituteChiefUserId,
+    );
+    if (!user) {
+      return task.instituteChiefUserId;
+    }
+    return `${user.firstName} ${user.lastName}`;
+  }, [
+    discipline?.instituteChiefEngineer,
+    isEditing,
+    resolvedTaskId,
+    tasksQuery.data?.data,
+    usersQuery.data?.data,
+  ]);
+
   async function handleSubmit(values: DisciplineDetailFormValues): Promise<void> {
     const body = toDisciplinePayload(values);
-    const resolvedTaskId = isEditing ? taskId : (taskId ?? values.scheduleTaskId);
+    const submitTaskId = isEditing ? taskId : (taskId ?? values.scheduleTaskId);
 
-    if (!resolvedTaskId) {
+    if (!submitTaskId) {
       return;
     }
 
     if (discipline) {
       await updateDiscipline.mutateAsync({
         projectId,
-        taskId: resolvedTaskId,
+        taskId: submitTaskId,
         disciplineId: discipline.id,
         body,
       });
     } else {
-      await createDiscipline.mutateAsync({ projectId, taskId: resolvedTaskId, body });
+      await createDiscipline.mutateAsync({ projectId, taskId: submitTaskId, body });
     }
 
     onSaved();
@@ -111,7 +148,10 @@ export default function DisciplineDetailDrawer({
             />
           </Form.Item>
         )}
-        <DisciplineFormFields />
+        <DisciplineFormFields
+          projectId={projectId}
+          instituteChiefLabel={instituteChiefLabel}
+        />
       </Form>
     </Modal>
   );

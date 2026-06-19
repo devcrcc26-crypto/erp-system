@@ -2,12 +2,19 @@
 
 import { DatePicker, Form, Input } from 'antd';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
+import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 import {
   type DisciplineFormValues,
   toDisciplineFormValues,
 } from '@/components/modules/projects/disciplines/discipline-form.util';
 
-export default function DisciplineFormFields(): React.ReactNode {
+export default function DisciplineFormFields({
+  projectId,
+  instituteChiefLabel,
+}: {
+  projectId: string;
+  instituteChiefLabel?: string | null;
+}): React.ReactNode {
   return (
     <>
       <Form.Item
@@ -18,23 +25,23 @@ export default function DisciplineFormFields(): React.ReactNode {
         <Input placeholder="e.g. Structural" />
       </Form.Item>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label="Designer" name="designerName">
-          <Input />
+        <Form.Item label="Designer" name="designerUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
-        <Form.Item label="Reviewer" name="reviewerName">
-          <Input />
+        <Form.Item label="Reviewer" name="reviewerUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label="Disciplinary leader" name="disciplinaryLeader">
-          <Input />
+        <Form.Item label="Disciplinary leader" name="disciplineLeadUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
-        <Form.Item label="Dept chief engineer" name="deptChiefEngineer">
-          <Input />
+        <Form.Item label="Dept chief engineer" name="chiefUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
       </div>
-      <Form.Item label="Institute chief engineer" name="instituteChiefEngineer">
-        <Input />
+      <Form.Item label="Institute chief engineer">
+        <Input value={instituteChiefLabel ?? '—'} disabled />
       </Form.Item>
       <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
         <Form.Item label="Actual completion" name="actualCompletionTime">

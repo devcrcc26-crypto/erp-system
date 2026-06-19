@@ -12,7 +12,7 @@ import {
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
 import {
-  AddProjectTeamMemberDto,
+  SetProjectTeamDto,
   CreateProjectDto,
   ProjectListQueryDto,
   UpdateProjectDto,
@@ -277,52 +277,94 @@ export class ProjectsService {
   }
 
   /**
-   * Adds a team member to a project.
+   * Replaces the project team with the given user ids.
    */
-  async addTeamMember(
+  async setTeam(
     ctx: PmContext,
     projectId: string,
-    dto: AddProjectTeamMemberDto,
-  ): Promise<MappedProjectTeamMember> {
+    dto: SetProjectTeamDto,
+  ): Promise<MappedProjectTeamMember[]> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
-    await this.assertUserInCompany(ctx, dto.userId);
 
-    const member = await this.prisma.projectTeam.create({
-      data: {
-        projectId,
-        userId: dto.userId,
-        roleOnProject: dto.roleOnProject,
-        assignedFrom: parseOptionalDate(dto.assignedFrom),
-        assignedTo: parseOptionalDate(dto.assignedTo),
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    const uniqueUserIds = [...new Set(dto.userIds)];
+    for (const userId of uniqueUserIds) {
+      await this.assertUserInCompany(ctx, userId);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.projectTeam.findMany({
+        where: { projectId },
+      });
+      const desired = new Set(uniqueUserIds);
+
+      for (const member of existing) {
+        const isActive = member.deletedAt === null;
+        const shouldBeActive = desired.has(member.userId);
+
+        if (isActive && !shouldBeActive) {
+          await tx.projectTeam.update({
+            where: { id: member.id },
+            data: { deletedAt: new Date(), deletedBy: ctx.userId },
+          });
+        } else if (!isActive && shouldBeActive) {
+          await tx.projectTeam.update({
+            where: { id: member.id },
+            data: {
+              deletedAt: null,
+              deletedBy: null,
+              updatedBy: ctx.userId,
+            },
+          });
+        }
+      }
+
+      const existingUserIds = new Set(existing.map((row) => row.userId));
+      for (const userId of uniqueUserIds) {
+        if (!existingUserIds.has(userId)) {
+          await tx.projectTeam.create({
+            data: {
+              projectId,
+              userId,
+              createdBy: ctx.userId,
+              updatedBy: ctx.userId,
+            },
+          });
+        }
+      }
     });
 
-    return mapProjectTeamMember(member);
+    return this.listTeam(ctx, projectId);
   }
 
   /**
-   * Soft-removes a team member from a project.
+   * Returns whether a user is an active member of the project team.
    */
-  async removeTeamMember(
-    ctx: PmContext,
-    projectId: string,
-    memberId: string,
-  ): Promise<void> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
-
+  async isUserOnProjectTeam(projectId: string, userId: string): Promise<boolean> {
     const member = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({ id: memberId, projectId }),
+      where: activeOnly({ projectId, userId }),
+      select: { id: true },
     });
-    if (!member) {
-      throw new NotFoundException('Team member not found');
+    return member !== null;
+  }
+
+  /**
+   * Asserts every user id belongs to the active project team.
+   */
+  async assertUsersOnProjectTeam(
+    projectId: string,
+    userIds: readonly (string | null | undefined)[],
+  ): Promise<void> {
+    const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) {
+      return;
     }
 
-    await this.prisma.projectTeam.update({
-      where: { id: memberId },
-      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    const count = await this.prisma.projectTeam.count({
+      where: activeOnly({ projectId, userId: { in: ids } }),
     });
+    if (count !== ids.length) {
+      throw new NotFoundException('One or more users are not on the project team');
+    }
   }
 
   private buildProjectListWhere(

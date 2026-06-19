@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -15,7 +16,7 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
-  AddProjectTeamMemberDto,
+  SetProjectTeamDto,
   CreateProjectDto,
   ProjectListQueryDto,
   UpdateProjectDto,
@@ -63,31 +64,15 @@ export class ProjectsController {
     return this.projectsService.listTeam(this.ctx(user), projectId);
   }
 
-  @Post(':projectId/team')
+  @Put(':projectId/team')
   @RequirePermission('projects', 'edit')
-  @ApiOperation({ summary: 'Add project team member' })
-  addTeamMember(
+  @ApiOperation({ summary: 'Set project team members' })
+  setTeam(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
-    @Body() dto: AddProjectTeamMemberDto,
+    @Body() dto: SetProjectTeamDto,
   ): Promise<unknown> {
-    return this.projectsService.addTeamMember(this.ctx(user), projectId, dto);
-  }
-
-  @Delete(':projectId/team/:memberId')
-  @RequirePermission('projects', 'edit')
-  @ApiOperation({ summary: 'Remove project team member' })
-  async removeTeamMember(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('memberId') memberId: string,
-  ): Promise<{ message: string }> {
-    await this.projectsService.removeTeamMember(
-      this.ctx(user),
-      projectId,
-      memberId,
-    );
-    return { message: 'Team member removed' };
+    return this.projectsService.setTeam(this.ctx(user), projectId, dto);
   }
 
   @Get(':id')

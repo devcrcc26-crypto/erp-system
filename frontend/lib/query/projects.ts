@@ -12,9 +12,10 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPut,
 } from '@/lib/api/client';
 import type {
-  AddProjectTeamMemberRequest,
+  SetProjectTeamRequest,
   CreateProjectRequest,
   Project,
   ProjectDashboardStats,
@@ -187,7 +188,7 @@ export function useDeleteProject() {
   });
 }
 
-export function useAddProjectTeamMember() {
+export function useSetProjectTeam() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -196,33 +197,11 @@ export function useAddProjectTeamMember() {
       body,
     }: {
       projectId: string;
-      body: AddProjectTeamMemberRequest;
+      body: SetProjectTeamRequest;
     }) =>
-      apiPost<ProjectTeamMember>(
+      apiPut<ProjectTeamMember[]>(
         `${projectPath(projectId)}/team`,
         body,
-      ),
-    onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: projectKeys.team(variables.projectId),
-      });
-    },
-  });
-}
-
-export function useRemoveProjectTeamMember() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      memberId,
-    }: {
-      projectId: string;
-      memberId: string;
-    }) =>
-      apiDelete<MessageResponse>(
-        `${projectPath(projectId)}/team/${memberId}`,
       ),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({

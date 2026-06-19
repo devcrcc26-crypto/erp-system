@@ -1,40 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Form,
-  Modal,
-  Select,
-  Spin,
-} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Select, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  ProjectTeamMember,
-  ProjectTeamRole,
-} from '@/lib/api/project-management.types';
-import {
-  useAddProjectTeamMember,
-  useProjectTeam,
-  useRemoveProjectTeamMember,
-} from '@/lib/query/projects';
+import type { ProjectTeamMember } from '@/lib/api/project-management.types';
+import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
-import {
-  formatProjectDate,
-  formatProjectTeamRole,
-  PROJECT_TEAM_ROLE_OPTIONS,
-} from '@/lib/utils/project-display';
-import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import type { User } from '@/lib/api/types';
 
-interface TeamMemberFormValues {
-  userId: string;
-  roleOnProject: ProjectTeamRole;
+function formatUserLabel(user: User): string {
+  return `${user.firstName} ${user.lastName} (${user.email})`;
 }
 
 function useUserNameLookup(): (userId: string) => string {
@@ -55,14 +33,36 @@ export default function ProjectTeamPanel({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [addOpen, setAddOpen] = useState(false);
-  const [removingMember, setRemovingMember] =
-    useState<ProjectTeamMember | null>(null);
-  const [form] = Form.useForm<TeamMemberFormValues>();
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [dirty, setDirty] = useState(false);
+
   const teamQuery = useProjectTeam(projectId);
-  const addMember = useAddProjectTeamMember();
-  const removeMember = useRemoveProjectTeamMember();
+  const usersQuery = useUsersDirectory({
+    page: 1,
+    limit: 100,
+    sortBy: 'firstName',
+    sortOrder: 'asc',
+  });
+  const setTeam = useSetProjectTeam();
   const resolveUserName = useUserNameLookup();
+
+  const members = teamQuery.data ?? [];
+
+  useEffect(() => {
+    if (!dirty) {
+      setSelectedUserIds(members.map((member) => member.userId));
+    }
+  }, [members, dirty]);
+
+  const userOptions = useMemo(() => {
+    const users = usersQuery.data?.data ?? [];
+    return users
+      .filter((user) => user.isActive)
+      .map((user) => ({
+        value: user.id,
+        label: formatUserLabel(user),
+      }));
+  }, [usersQuery.data?.data]);
 
   const columns: ColumnsType<ProjectTeamMember> = [
     {
@@ -71,61 +71,14 @@ export default function ProjectTeamPanel({
       key: 'userId',
       render: (userId: string) => resolveUserName(userId),
     },
-    {
-      title: 'Role on project',
-      dataIndex: 'roleOnProject',
-      key: 'roleOnProject',
-      render: (role: ProjectTeamRole) => formatProjectTeamRole(role),
-    },
-    {
-      title: 'Assigned from',
-      dataIndex: 'assignedFrom',
-      key: 'assignedFrom',
-      render: (value: string | null) => formatProjectDate(value),
-    },
-    {
-      title: 'Assigned to',
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
-      render: (value: string | null) => formatProjectDate(value),
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 100,
-      render: (_value, record) => (
-        <Button
-          type="link"
-          danger
-          onClick={() => setRemovingMember(record)}
-        >
-          Remove
-        </Button>
-      ),
-    },
   ];
 
-  async function handleAddMember(values: TeamMemberFormValues): Promise<void> {
-    await addMember.mutateAsync({
+  async function handleSaveTeam(): Promise<void> {
+    await setTeam.mutateAsync({
       projectId,
-      body: {
-        userId: values.userId,
-        roleOnProject: values.roleOnProject,
-      },
+      body: { userIds: selectedUserIds },
     });
-    form.resetFields();
-    setAddOpen(false);
-  }
-
-  async function handleRemoveMember(): Promise<void> {
-    if (!removingMember) {
-      return;
-    }
-    await removeMember.mutateAsync({
-      projectId,
-      memberId: removingMember.id,
-    });
-    setRemovingMember(null);
+    setDirty(false);
   }
 
   if (teamQuery.isLoading) {
@@ -141,92 +94,60 @@ export default function ProjectTeamPanel({
     teamQuery.error instanceof ApiRequestError &&
     (teamQuery.error.status === 404 || teamQuery.error.status === 0);
 
-  const members = teamQuery.data ?? [];
-
   return (
-    <>
-      <FormLayout
-        title="Project team"
-        description="Assign users and roles for this project."
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setAddOpen(true)}
-            disabled={apiUnavailable}
-          >
-            Add member
-          </Button>
-        }
-      >
-        {apiUnavailable && (
-          <Alert
-            type="info"
-            showIcon
-            className="!mb-4"
-            title="Team management will be available when the project API is connected."
-          />
-        )}
-
-        {members.length === 0 ? (
-          <Alert
-            type="info"
-            showIcon
-            title="No team members assigned yet."
-          />
-        ) : (
-          <DataTable<ProjectTeamMember>
-            rowKey="id"
-            columns={columns}
-            dataSource={members}
-          />
-        )}
-      </FormLayout>
-
-      <Modal
-        open={addOpen}
-        title="Add team member"
-        onCancel={() => setAddOpen(false)}
-        onOk={() => form.submit()}
-        confirmLoading={addMember.isPending}
-        destroyOnHidden
-      >
-        <Form<TeamMemberFormValues>
-          form={form}
-          layout="vertical"
-          onFinish={(values: TeamMemberFormValues) => void handleAddMember(values)}
+    <FormLayout
+      title="Project team"
+      description="Select users who can be assigned to tasks and disciplines on this project."
+      extra={
+        <Button
+          type="primary"
+          onClick={() => void handleSaveTeam()}
+          loading={setTeam.isPending}
+          disabled={apiUnavailable || !dirty}
         >
-          <Form.Item
-            label="User"
-            name="userId"
-            rules={[{ required: true, message: 'Select a user' }]}
-          >
-            <UserSelect />
-          </Form.Item>
-          <Form.Item
-            label="Role on project"
-            name="roleOnProject"
-            initialValue="PROJECT_MANAGER"
-            rules={[{ required: true, message: 'Select a project role' }]}
-          >
-            <Select
-              options={PROJECT_TEAM_ROLE_OPTIONS}
-              placeholder="Select project role"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+          Save team
+        </Button>
+      }
+    >
+      {apiUnavailable && (
+        <Alert
+          type="info"
+          showIcon
+          className="!mb-4"
+          title="Team management will be available when the project API is connected."
+        />
+      )}
 
-      <ConfirmDialog
-        open={Boolean(removingMember)}
-        title="Remove team member"
-        description="This user will no longer appear on the project team."
-        confirmLabel="Remove"
-        danger
-        confirmLoading={removeMember.isPending}
-        onConfirm={() => void handleRemoveMember()}
-        onCancel={() => setRemovingMember(null)}
+      <Select
+        mode="multiple"
+        allowClear
+        showSearch
+        className="mb-4 w-full max-w-2xl"
+        placeholder="Select project team members"
+        value={selectedUserIds}
+        options={userOptions}
+        loading={usersQuery.isLoading}
+        disabled={apiUnavailable}
+        onChange={(values: string[]) => {
+          setSelectedUserIds(values);
+          setDirty(true);
+        }}
+        filterOption={(input: string, option?: { label?: unknown }) =>
+          String(option?.label ?? '')
+            .toLowerCase()
+            .includes(input.toLowerCase())
+        }
       />
-    </>
+
+      {members.length === 0 ? (
+        <Alert type="info" showIcon title="No team members saved yet." />
+      ) : (
+        <DataTable<ProjectTeamMember>
+          rowKey="id"
+          columns={columns}
+          dataSource={members}
+        />
+      )}
+    </FormLayout>
   );
 }

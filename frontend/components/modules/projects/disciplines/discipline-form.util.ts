@@ -7,11 +7,10 @@ import type {
 
 export interface DisciplineFormValues {
   disciplineName: string;
-  designerName?: string;
-  reviewerName?: string;
-  disciplinaryLeader?: string;
-  deptChiefEngineer?: string;
-  instituteChiefEngineer?: string;
+  designerUserId?: string;
+  reviewerUserId?: string;
+  disciplineLeadUserId?: string;
+  chiefUserId?: string;
   actualCompletionTime?: Dayjs;
   deptReviewTime?: Dayjs;
   instituteReviewTime?: Dayjs;
@@ -29,11 +28,10 @@ export function toDisciplinePayload(
 ): CreateTaskDisciplineRequest {
   return {
     disciplineName: values.disciplineName.trim(),
-    designerName: values.designerName?.trim() || undefined,
-    reviewerName: values.reviewerName?.trim() || undefined,
-    disciplinaryLeader: values.disciplinaryLeader?.trim() || undefined,
-    deptChiefEngineer: values.deptChiefEngineer?.trim() || undefined,
-    instituteChiefEngineer: values.instituteChiefEngineer?.trim() || undefined,
+    designerUserId: values.designerUserId,
+    reviewerUserId: values.reviewerUserId,
+    disciplineLeadUserId: values.disciplineLeadUserId,
+    chiefUserId: values.chiefUserId,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     deptReviewTime: values.deptReviewTime?.toISOString(),
     instituteReviewTime: values.instituteReviewTime?.toISOString(),
@@ -45,11 +43,10 @@ export function toDisciplineFormValues(
 ): DisciplineFormValues {
   return {
     disciplineName: discipline.disciplineName,
-    designerName: discipline.designerName ?? undefined,
-    reviewerName: discipline.reviewerName ?? undefined,
-    disciplinaryLeader: discipline.disciplinaryLeader ?? undefined,
-    deptChiefEngineer: discipline.deptChiefEngineer ?? undefined,
-    instituteChiefEngineer: discipline.instituteChiefEngineer ?? undefined,
+    designerUserId: discipline.designerUserId ?? undefined,
+    reviewerUserId: discipline.reviewerUserId ?? undefined,
+    disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
+    chiefUserId: discipline.chiefUserId ?? undefined,
     actualCompletionTime: discipline.actualCompletionTime
       ? dayjs(discipline.actualCompletionTime)
       : undefined,

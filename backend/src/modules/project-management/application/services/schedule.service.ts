@@ -207,12 +207,10 @@ export class ScheduleService {
     if (dto.parentTaskId) {
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    if (dto.assignedTo) {
-      await this.assertUserInCompany(ctx, dto.assignedTo);
-    }
-    if (dto.responsiblePersonId) {
-      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
-    }
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.dispatcherUserId,
+      dto.instituteChiefUserId,
+    ]);
 
     const taskIdCode =
       dto.taskIdCode?.trim() ||
@@ -223,7 +221,8 @@ export class ScheduleService {
         projectId,
         milestoneId: dto.milestoneId,
         parentTaskId: dto.parentTaskId,
-        assignedTo: dto.assignedTo,
+        dispatcherUserId: dto.dispatcherUserId,
+        instituteChiefUserId: dto.instituteChiefUserId,
         taskIdCode,
         name: dto.name,
         description: dto.description,
@@ -244,9 +243,6 @@ export class ScheduleService {
         hasCustomSchedule: dto.hasCustomSchedule ?? false,
         language: dto.language,
         approvalLevel: dto.approvalLevel,
-        chiefEngineerName: dto.chiefEngineerName,
-        dispatcherName: dto.dispatcherName,
-        responsiblePersonId: dto.responsiblePersonId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         actualWorkdays: dto.actualWorkdays,
         completionStatus: dto.completionStatus,
@@ -279,19 +275,18 @@ export class ScheduleService {
       }
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    if (dto.assignedTo) {
-      await this.assertUserInCompany(ctx, dto.assignedTo);
-    }
-    if (dto.responsiblePersonId) {
-      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
-    }
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.dispatcherUserId,
+      dto.instituteChiefUserId,
+    ]);
 
     const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         milestoneId: dto.milestoneId,
         parentTaskId: dto.parentTaskId,
-        assignedTo: dto.assignedTo,
+        dispatcherUserId: dto.dispatcherUserId,
+        instituteChiefUserId: dto.instituteChiefUserId,
         taskIdCode: dto.taskIdCode,
         name: dto.name,
         description: dto.description,
@@ -312,9 +307,6 @@ export class ScheduleService {
         hasCustomSchedule: dto.hasCustomSchedule,
         language: dto.language,
         approvalLevel: dto.approvalLevel,
-        chiefEngineerName: dto.chiefEngineerName,
-        dispatcherName: dto.dispatcherName,
-        responsiblePersonId: dto.responsiblePersonId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         actualWorkdays: dto.actualWorkdays,
         completionStatus: dto.completionStatus,
@@ -425,14 +417,23 @@ export class ScheduleService {
     projectId: string,
     taskId: string,
   ): Promise<MappedTaskDiscipline[]> {
-    await this.getTaskOrThrow(projectId, taskId);
+    const task = await this.getTaskRowOrThrow(projectId, taskId);
+    const instituteChiefDisplayName = this.formatUserDisplayName(
+      task.instituteChiefUser,
+    );
 
     const disciplines = await this.prisma.taskDiscipline.findMany({
       where: activeOnly({ taskId, companyId: ctx.companyId }),
       orderBy: { createdAt: 'asc' },
     });
 
-    return disciplines.map(mapTaskDiscipline);
+    return disciplines.map((discipline) =>
+      mapTaskDiscipline(
+        discipline,
+        task.instituteChiefUserId,
+        instituteChiefDisplayName,
+      ),
+    );
   }
 
   /**
@@ -444,18 +445,30 @@ export class ScheduleService {
     taskId: string,
     dto: CreateTaskDisciplineDto,
   ): Promise<MappedTaskDiscipline> {
-    await this.getTaskOrThrow(projectId, taskId);
+    const task = await this.getTaskRowOrThrow(projectId, taskId);
+    const instituteChiefDisplayName = this.formatUserDisplayName(
+      task.instituteChiefUser,
+    );
+
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.designerUserId,
+      dto.reviewerUserId,
+      dto.disciplineLeadUserId,
+      dto.chiefUserId,
+    ]);
+
+    const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
 
     const discipline = await this.prisma.taskDiscipline.create({
       data: {
         taskId,
         companyId: ctx.companyId,
         disciplineName: dto.disciplineName,
-        designerName: dto.designerName,
-        reviewerName: dto.reviewerName,
-        disciplinaryLeader: dto.disciplinaryLeader,
-        deptChiefEngineer: dto.deptChiefEngineer,
-        instituteChiefEngineer: dto.instituteChiefEngineer,
+        designerName: roleNames.designerName,
+        reviewerName: roleNames.reviewerName,
+        disciplinaryLeader: roleNames.disciplinaryLeader,
+        deptChiefEngineer: roleNames.deptChiefEngineer,
+        instituteChiefEngineer: instituteChiefDisplayName,
         designerUserId: dto.designerUserId,
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
@@ -474,7 +487,11 @@ export class ScheduleService {
       discipline.disciplineName,
     );
 
-    return mapTaskDiscipline(discipline);
+    return mapTaskDiscipline(
+      discipline,
+      task.instituteChiefUserId,
+      instituteChiefDisplayName,
+    );
   }
 
   /**
@@ -488,16 +505,29 @@ export class ScheduleService {
     dto: UpdateTaskDisciplineDto,
   ): Promise<MappedTaskDiscipline> {
     await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+    const task = await this.getTaskRowOrThrow(projectId, taskId);
+    const instituteChiefDisplayName = this.formatUserDisplayName(
+      task.instituteChiefUser,
+    );
+
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.designerUserId,
+      dto.reviewerUserId,
+      dto.disciplineLeadUserId,
+      dto.chiefUserId,
+    ]);
+
+    const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
 
     const discipline = await this.prisma.taskDiscipline.update({
       where: { id: disciplineId },
       data: {
         disciplineName: dto.disciplineName,
-        designerName: dto.designerName,
-        reviewerName: dto.reviewerName,
-        disciplinaryLeader: dto.disciplinaryLeader,
-        deptChiefEngineer: dto.deptChiefEngineer,
-        instituteChiefEngineer: dto.instituteChiefEngineer,
+        designerName: roleNames.designerName,
+        reviewerName: roleNames.reviewerName,
+        disciplinaryLeader: roleNames.disciplinaryLeader,
+        deptChiefEngineer: roleNames.deptChiefEngineer,
+        instituteChiefEngineer: instituteChiefDisplayName,
         designerUserId: dto.designerUserId,
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
@@ -509,7 +539,11 @@ export class ScheduleService {
       },
     });
 
-    return mapTaskDiscipline(discipline);
+    return mapTaskDiscipline(
+      discipline,
+      task.instituteChiefUserId,
+      instituteChiefDisplayName,
+    );
   }
 
   /**
@@ -542,6 +576,30 @@ export class ScheduleService {
     return milestone;
   }
 
+  private async getTaskRowOrThrow(
+    projectId: string,
+    taskId: string,
+  ): Promise<{
+    id: string;
+    instituteChiefUserId: string | null;
+    instituteChiefUser: { firstName: string; lastName: string } | null;
+  }> {
+    const task = await this.prisma.task.findFirst({
+      where: activeOnly({ id: taskId, projectId }),
+      select: {
+        id: true,
+        instituteChiefUserId: true,
+        instituteChiefUser: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+    });
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    return task;
+  }
+
   private async getTaskOrThrow(
     projectId: string,
     taskId: string,
@@ -572,6 +630,83 @@ export class ScheduleService {
       throw new NotFoundException('Task discipline not found');
     }
     return discipline;
+  }
+
+  private async assertUsersOnProjectTeam(
+    projectId: string,
+    userIds: readonly (string | null | undefined)[],
+  ): Promise<void> {
+    const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) {
+      return;
+    }
+
+    const count = await this.prisma.projectTeam.count({
+      where: activeOnly({ projectId, userId: { in: ids } }),
+    });
+    if (count !== ids.length) {
+      throw new BadRequestException(
+        'One or more users are not on the project team',
+      );
+    }
+  }
+
+  private formatUserDisplayName(
+    user: { firstName: string; lastName: string } | null,
+  ): string | null {
+    if (!user) {
+      return null;
+    }
+    return `${user.firstName} ${user.lastName}`.trim();
+  }
+
+  private async resolveDisciplineRoleNames(
+    ctx: PmContext,
+    dto: Pick<
+      CreateTaskDisciplineDto,
+      | 'designerUserId'
+      | 'reviewerUserId'
+      | 'disciplineLeadUserId'
+      | 'chiefUserId'
+      | 'designerName'
+      | 'reviewerName'
+      | 'disciplinaryLeader'
+      | 'deptChiefEngineer'
+    >,
+  ): Promise<{
+    designerName: string | undefined;
+    reviewerName: string | undefined;
+    disciplinaryLeader: string | undefined;
+    deptChiefEngineer: string | undefined;
+  }> {
+    return {
+      designerName: dto.designerUserId
+        ? await this.resolveUserDisplayName(ctx, dto.designerUserId)
+        : dto.designerName,
+      reviewerName: dto.reviewerUserId
+        ? await this.resolveUserDisplayName(ctx, dto.reviewerUserId)
+        : dto.reviewerName,
+      disciplinaryLeader: dto.disciplineLeadUserId
+        ? await this.resolveUserDisplayName(ctx, dto.disciplineLeadUserId)
+        : dto.disciplinaryLeader,
+      deptChiefEngineer: dto.chiefUserId
+        ? await this.resolveUserDisplayName(ctx, dto.chiefUserId)
+        : dto.deptChiefEngineer,
+    };
+  }
+
+  private async resolveUserDisplayName(
+    ctx: PmContext,
+    userId: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: { firstName: true, lastName: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.formatUserDisplayName(user) ?? userId;
   }
 
   private async assertUserInCompany(

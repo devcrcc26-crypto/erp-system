@@ -413,8 +413,8 @@ model User {
   managedProjects        Project[]              @relation("ProjectManager")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
-  assignedTasks          Task[]                 @relation("TaskAssignee")
-  responsibleTasks       Task[]                 @relation("TaskResponsiblePerson")
+  dispatcherTasks        Task[]                 @relation("TaskDispatcher")
+  instituteChiefTasks    Task[]                 @relation("TaskInstituteChief")
   raisedRfis             Rfi[]                  @relation("RfiRaisedBy")
   assignedRfis           Rfi[]                  @relation("RfiAssignedTo")
   rfiResponses           RfiResponse[]
@@ -1277,24 +1277,22 @@ model Project {
 }
 
 model ProjectTeam {
-  id             String          @id @default(uuid())
-  projectId      String          @map("project_id")
-  userId         String          @map("user_id")
-  roleOnProject  ProjectTeamRole @default(OTHER) @map("role_on_project")
-  assignedFrom   DateTime? @map("assigned_from") @db.Date
-  assignedTo     DateTime? @map("assigned_to") @db.Date
-  createdAt      DateTime  @default(now()) @map("created_at")
-  createdBy      String    @map("created_by")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  updatedBy      String    @map("updated_by")
-  deletedAt      DateTime? @map("deleted_at")
-  deletedBy      String?   @map("deleted_by")
+  id        String    @id @default(uuid())
+  projectId String    @map("project_id")
+  userId    String    @map("user_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  createdBy String    @map("created_by")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  updatedBy String    @map("updated_by")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   project Project @relation(fields: [projectId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
   @@index([projectId], map: "idx_project_team_project_id")
   @@index([userId], map: "idx_project_team_user_id")
+  @@index([projectId, deletedAt], map: "idx_project_team_project_deleted")
   @@index([deletedAt], map: "idx_project_team_deleted_at")
   @@map("project_team")
 }
@@ -1325,9 +1323,10 @@ model Task {
   id           String     @id @default(uuid())
   projectId    String     @map("project_id")
   milestoneId  String?    @map("milestone_id")
-  parentTaskId String?    @map("parent_task_id")
-  assignedTo   String?    @map("assigned_to")
-  taskIdCode   String     @map("task_id_code")
+  parentTaskId         String? @map("parent_task_id")
+  dispatcherUserId     String? @map("dispatcher_user_id")
+  instituteChiefUserId String? @map("institute_chief_user_id")
+  taskIdCode           String  @map("task_id_code")
   name         String
   description  String?
   startDate    DateTime?  @map("start_date") @db.Date
@@ -1346,11 +1345,8 @@ model Task {
   urgencyLevel          UrgencyLevel      @default(NORMAL) @map("urgency_level")
   hasCustomSchedule     Boolean           @default(false) @map("has_custom_schedule")
   language              TaskLanguage      @default(CHINESE)
-  approvalLevel         ApprovalLevel?    @map("approval_level")
-  chiefEngineerName     String?           @map("chief_engineer_name")
-  dispatcherName        String?           @map("dispatcher_name")
-  responsiblePersonId   String?           @map("responsible_person_id")
-  actualCompletionTime  DateTime?         @map("actual_completion_time")
+  approvalLevel        ApprovalLevel?    @map("approval_level")
+  actualCompletionTime DateTime?         @map("actual_completion_time")
   actualWorkdays        Int?              @map("actual_workdays")
   completionStatus      CompletionStatus? @map("completion_status")
   remark                String?
@@ -1365,8 +1361,8 @@ model Task {
   milestone          Milestone?       @relation(fields: [milestoneId], references: [id])
   parentTask         Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   childTasks         Task[]           @relation("TaskHierarchy")
-  assignee           User?             @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  responsiblePerson  User?             @relation("TaskResponsiblePerson", fields: [responsiblePersonId], references: [id])
+  dispatcherUser     User?             @relation("TaskDispatcher", fields: [dispatcherUserId], references: [id])
+  instituteChiefUser User?             @relation("TaskInstituteChief", fields: [instituteChiefUserId], references: [id])
   predecessorLinks   TaskDependency[]  @relation("PredecessorTask")
   successorLinks     TaskDependency[]  @relation("SuccessorTask")
   disciplines        TaskDiscipline[]
@@ -1374,8 +1370,8 @@ model Task {
   @@index([projectId], map: "idx_task_project_id")
   @@index([projectId, deletedAt], map: "idx_task_project_deleted")
   @@index([milestoneId], map: "idx_task_milestone_id")
-  @@index([assignedTo], map: "idx_task_assigned_to")
-  @@index([responsiblePersonId], map: "idx_task_responsible_person_id")
+  @@index([dispatcherUserId], map: "idx_task_dispatcher_user_id")
+  @@index([instituteChiefUserId], map: "idx_task_institute_chief_user_id")
   @@map("task")
 }
 

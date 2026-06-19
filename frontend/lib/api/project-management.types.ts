@@ -169,9 +169,6 @@ export interface ProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
-  roleOnProject: ProjectTeamRole;
-  assignedFrom: string | null;
-  assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -192,7 +189,8 @@ export interface Task {
   projectId: string;
   milestoneId: string | null;
   parentTaskId: string | null;
-  assignedTo: string | null;
+  dispatcherUserId: string | null;
+  instituteChiefUserId: string | null;
   taskIdCode: string;
   name: string;
   description: string | null;
@@ -213,9 +211,6 @@ export interface Task {
   hasCustomSchedule: boolean;
   language: TaskLanguage;
   approvalLevel: ApprovalLevel | null;
-  chiefEngineerName: string | null;
-  dispatcherName: string | null;
-  responsiblePersonId: string | null;
   actualCompletionTime: string | null;
   actualWorkdays: number | null;
   completionStatus: CompletionStatus | null;
@@ -235,6 +230,7 @@ export interface TaskDiscipline {
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
   instituteChiefEngineer: string | null;
+  taskInstituteChiefUserId?: string | null;
   designerUserId?: string | null;
   reviewerUserId?: string | null;
   disciplineLeadUserId?: string | null;
@@ -666,11 +662,8 @@ export function createEmptyPmCapabilities(): PmCapabilities {
   }, {} as PmCapabilities);
 }
 
-export interface AddProjectTeamMemberRequest {
-  userId: string;
-  roleOnProject: ProjectTeamRole;
-  assignedFrom?: string;
-  assignedTo?: string;
+export interface SetProjectTeamRequest {
+  userIds: string[];
 }
 
 export interface CreateMilestoneRequest {
@@ -685,7 +678,8 @@ export type UpdateMilestoneRequest = Partial<CreateMilestoneRequest>;
 export interface CreateTaskRequest {
   milestoneId?: string;
   parentTaskId?: string;
-  assignedTo?: string;
+  dispatcherUserId?: string;
+  instituteChiefUserId?: string;
   taskIdCode?: string;
   name: string;
   description?: string;
@@ -706,9 +700,6 @@ export interface CreateTaskRequest {
   hasCustomSchedule?: boolean;
   language?: TaskLanguage;
   approvalLevel?: ApprovalLevel;
-  chiefEngineerName?: string;
-  dispatcherName?: string;
-  responsiblePersonId?: string;
   actualCompletionTime?: string;
   actualWorkdays?: number;
   completionStatus?: CompletionStatus;
@@ -719,11 +710,10 @@ export type UpdateTaskRequest = Partial<CreateTaskRequest>;
 
 export interface CreateTaskDisciplineRequest {
   disciplineName: string;
-  designerName?: string;
-  reviewerName?: string;
-  disciplinaryLeader?: string;
-  deptChiefEngineer?: string;
-  instituteChiefEngineer?: string;
+  designerUserId?: string;
+  reviewerUserId?: string;
+  disciplineLeadUserId?: string;
+  chiefUserId?: string;
   actualCompletionTime?: string;
   deptReviewTime?: string;
   instituteReviewTime?: string;
