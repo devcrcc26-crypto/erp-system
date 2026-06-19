@@ -194,7 +194,18 @@ export interface MyCommentItem {
   status: CommentStatus;
   severity: CommentSeverity | string;
   engineeringDocumentVersionId: string;
+  documentVersionId: string;
+  engineeringDocumentId: string;
+  documentTitle: string;
+  revisionLabel: string;
+  projectId: string;
+  projectName: string;
+  taskDisciplineId: string;
+  disciplineName: string;
+  designPackageId: string;
+  designPackageName: string;
   reviewSessionId: string;
+  authorName: string;
   createdAt: string;
 }
 

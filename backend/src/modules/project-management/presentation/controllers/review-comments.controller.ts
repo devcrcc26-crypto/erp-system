@@ -63,7 +63,7 @@ export class ReviewCommentsController {
   }
 
   @Patch(':commentId/status')
-  @RequirePermission('schedule', 'edit')
+  @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Transition review comment status' })
   transition(
     @CurrentUser() user: AuthenticatedUser,

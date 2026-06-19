@@ -30,7 +30,18 @@ export interface MyCommentItem {
   readonly status: CommentStatus;
   readonly severity: string;
   readonly engineeringDocumentVersionId: string;
+  readonly documentVersionId: string;
+  readonly engineeringDocumentId: string;
+  readonly documentTitle: string;
+  readonly revisionLabel: string;
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly taskDisciplineId: string;
+  readonly disciplineName: string;
+  readonly designPackageId: string;
+  readonly designPackageName: string;
   readonly reviewSessionId: string;
+  readonly authorName: string;
   readonly createdAt: string;
 }
 
@@ -138,27 +149,77 @@ export class EpcWorkspaceService {
   }
 
   /**
-   * Designer comment queue — OPEN / IN_PROGRESS assigned to user.
+   * Designer comment queue — assigned comments awaiting designer action.
    */
   async getMyComments(ctx: PmContext): Promise<MyCommentItem[]> {
     const rows = await this.prisma.reviewComment.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
         assignedToUserId: ctx.userId,
-        status: { in: [CommentStatus.OPEN, CommentStatus.IN_PROGRESS] },
+        status: {
+          in: [
+            CommentStatus.OPEN,
+            CommentStatus.ACKNOWLEDGED,
+            CommentStatus.IN_PROGRESS,
+            CommentStatus.RESOLVED,
+          ],
+        },
       }),
       orderBy: { createdAt: 'asc' },
+      include: {
+        author: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+        engineeringDocumentVersion: {
+          include: {
+            engineeringDocument: {
+              include: {
+                taskDiscipline: {
+                  include: {
+                    task: {
+                      include: { project: { select: { id: true, name: true } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        reviewSession: {
+          include: {
+            designPackage: { select: { id: true, name: true } },
+          },
+        },
+      },
     });
 
-    return rows.map((r) => ({
-      commentId: r.id,
-      body: r.body,
-      status: r.status,
-      severity: r.severity,
-      engineeringDocumentVersionId: r.engineeringDocumentVersionId,
-      reviewSessionId: r.reviewSessionId,
-      createdAt: r.createdAt.toISOString(),
-    }));
+    return rows.map((row) => {
+      const edv = row.engineeringDocumentVersion;
+      const doc = edv.engineeringDocument;
+      const discipline = doc.taskDiscipline;
+      const project = discipline.task.project;
+
+      return {
+        commentId: row.id,
+        body: row.body,
+        status: row.status,
+        severity: row.severity,
+        engineeringDocumentVersionId: row.engineeringDocumentVersionId,
+        documentVersionId: edv.documentVersionId,
+        engineeringDocumentId: doc.id,
+        documentTitle: doc.title,
+        revisionLabel: edv.revisionLabel,
+        projectId: project.id,
+        projectName: project.name,
+        taskDisciplineId: discipline.id,
+        disciplineName: discipline.disciplineName,
+        designPackageId: row.reviewSession.designPackageId,
+        designPackageName: row.reviewSession.designPackage.name,
+        reviewSessionId: row.reviewSessionId,
+        authorName: formatReviewerName(row.author),
+        createdAt: row.createdAt.toISOString(),
+      };
+    });
   }
 
   /**

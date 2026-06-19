@@ -1,31 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Space, Table } from 'antd';
+import { Alert, Button, Space, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { CommentSeverity, MyCommentItem } from '@/lib/api/epc.types';
-import { useMyComments } from '@/lib/query/epc-workspace';
-import {
-  useTransitionReviewComment,
-  useVerifyReviewComment,
-} from '@/lib/query/review-comments';
+import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
 import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import type { CommentSeverity, MyCommentItem, ReviewModeComment } from '@/lib/api/epc.types';
+import { useMyComments } from '@/lib/query/epc-workspace';
+import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import {
-  useCanViewMyComments,
-} from '@/hooks/use-pm-capabilities';
-import { Alert } from 'antd';
+import { useCanViewMyComments } from '@/hooks/use-pm-capabilities';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+
+function toReviewModeComment(comment: MyCommentItem): ReviewModeComment {
+  return {
+    id: comment.commentId,
+    body: comment.body,
+    status: comment.status,
+    severity: comment.severity,
+    engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+    createdBy: '',
+    createdAt: comment.createdAt,
+    assignedToUserId: '',
+    authorName: comment.authorName,
+    assigneeName: 'You',
+  };
+}
 
 export default function MyCommentsPageContent(): React.ReactNode {
   const commentsQuery = useMyComments();
   const transitionComment = useTransitionReviewComment();
-  const verifyComment = useVerifyReviewComment();
+  const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -37,7 +47,51 @@ export default function MyCommentsPageContent(): React.ReactNode {
     );
   }
 
+  async function handleTransition(
+    comment: MyCommentItem,
+    targetStatus: MyCommentItem['status'],
+    successMessage: string,
+  ): Promise<boolean> {
+    try {
+      await transitionComment.mutateAsync({
+        commentId: comment.commentId,
+        body: { targetStatus },
+      });
+      messageApi.success(successMessage);
+      void commentsQuery.refetch();
+      return true;
+    } catch (error) {
+      notifyApiError(error, 'Request failed', messageApi);
+      return false;
+    }
+  }
+
+  async function openRevisionWorkspace(comment: MyCommentItem): Promise<void> {
+    if (comment.status === 'ACKNOWLEDGED') {
+      const started = await handleTransition(comment, 'IN_PROGRESS', 'Marked in progress');
+      if (!started) {
+        return;
+      }
+      setRevisionComment({ ...comment, status: 'IN_PROGRESS' });
+      return;
+    }
+    setRevisionComment(comment);
+  }
+
   const columns: ColumnsType<MyCommentItem> = [
+    {
+      title: 'Document',
+      key: 'document',
+      ellipsis: true,
+      render: (_value, record) => (
+        <div>
+          <p className="font-medium text-slate-900">{record.documentTitle}</p>
+          <p className="text-xs text-slate-500">
+            Rev {record.revisionLabel} · {record.designPackageName}
+          </p>
+        </div>
+      ),
+    },
     {
       title: 'Comment',
       dataIndex: 'body',
@@ -48,6 +102,7 @@ export default function MyCommentsPageContent(): React.ReactNode {
       title: 'Severity',
       dataIndex: 'severity',
       key: 'severity',
+      width: 110,
       render: (severity: CommentSeverity | string) => (
         <CommentSeverityTag severity={severity as CommentSeverity} />
       ),
@@ -56,41 +111,45 @@ export default function MyCommentsPageContent(): React.ReactNode {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      width: 130,
       render: (status: string) => (
         <StatusBadge label={status.replace(/_/g, ' ')} variant="info" />
       ),
     },
     {
+      title: 'Project',
+      key: 'project',
+      ellipsis: true,
+      render: (_value, record) => record.projectName,
+    },
+    {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 120,
       render: (value: string) => formatProjectDate(value),
     },
     {
       title: '',
       key: 'actions',
-      width: 220,
+      width: 280,
       render: (_value, record) => (
         <Space size="small" wrap>
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => setSelectedComment(record)}
+          >
+            View
+          </Button>
           {record.status === 'OPEN' && (
             <Button
               type="link"
               className="!px-0"
               loading={transitionComment.isPending}
-              onClick={() => {
-                void transitionComment
-                  .mutateAsync({
-                    commentId: record.commentId,
-                    body: { targetStatus: 'ACKNOWLEDGED' },
-                  })
-                  .then(() => {
-                    messageApi.success('Comment acknowledged');
-                    void commentsQuery.refetch();
-                  })
-                  .catch((error: unknown) => {
-                    notifyApiError(error, 'Request failed', messageApi);
-                  });
-              }}
+              onClick={() =>
+                void handleTransition(record, 'ACKNOWLEDGED', 'Comment acknowledged')
+              }
             >
               Acknowledge
             </Button>
@@ -100,52 +159,24 @@ export default function MyCommentsPageContent(): React.ReactNode {
               type="link"
               className="!px-0"
               loading={transitionComment.isPending}
-              onClick={() => {
-                void transitionComment
-                  .mutateAsync({
-                    commentId: record.commentId,
-                    body: { targetStatus: 'IN_PROGRESS' },
-                  })
-                  .then(() => {
-                    messageApi.success('Marked in progress');
-                    void commentsQuery.refetch();
-                  })
-                  .catch((error: unknown) => {
-                    notifyApiError(error, 'Request failed', messageApi);
-                  });
-              }}
+              onClick={() =>
+                void handleTransition(record, 'IN_PROGRESS', 'Marked in progress')
+              }
             >
               Start
             </Button>
           )}
-          {record.status === 'IN_PROGRESS' && (
+          {(record.status === 'IN_PROGRESS' || record.status === 'ACKNOWLEDGED') && (
             <Button
               type="link"
               className="!px-0"
-              onClick={() => setRevisionComment(record)}
+              onClick={() => void openRevisionWorkspace(record)}
             >
               Revise
             </Button>
           )}
           {record.status === 'RESOLVED' && (
-            <Button
-              type="link"
-              className="!px-0"
-              loading={verifyComment.isPending}
-              onClick={() => {
-                void verifyComment
-                  .mutateAsync({ commentId: record.commentId })
-                  .then(() => {
-                    messageApi.success('Comment verified');
-                    void commentsQuery.refetch();
-                  })
-                  .catch((error: unknown) => {
-                    notifyApiError(error, 'Request failed', messageApi);
-                  });
-              }}
-            >
-              Verify
-            </Button>
+            <span className="text-xs text-slate-500">Awaiting reviewer</span>
           )}
         </Space>
       ),
@@ -153,18 +184,37 @@ export default function MyCommentsPageContent(): React.ReactNode {
   ];
 
   return (
-    <FormLayout
-      title={t('pages.myComments.title')}
-      description={t('pages.myComments.description')}
-    >
-      <Table<MyCommentItem>
-        rowKey="commentId"
-        size="middle"
-        columns={columns}
-        dataSource={commentsQuery.data ?? []}
-        loading={commentsQuery.isLoading}
-        pagination={false}
-        locale={{ emptyText: t('empty.noComments') }}
+    <>
+      <FormLayout
+        title={t('pages.myComments.title')}
+        description="Review comments assigned to you. Acknowledge, upload a revised document, then mark resolved."
+      >
+        <Table<MyCommentItem>
+          rowKey="commentId"
+          size="middle"
+          columns={columns}
+          dataSource={commentsQuery.data ?? []}
+          loading={commentsQuery.isLoading}
+          pagination={false}
+          scroll={{ x: 960 }}
+          locale={{ emptyText: t('empty.noComments') }}
+        />
+      </FormLayout>
+
+      <ReviewCommentDetailDrawer
+        open={Boolean(selectedComment)}
+        commentId={selectedComment?.commentId ?? null}
+        fallbackComment={
+          selectedComment ? toReviewModeComment(selectedComment) : null
+        }
+        documentLabel={
+          selectedComment
+            ? `${selectedComment.documentTitle} · Rev ${selectedComment.revisionLabel}`
+            : undefined
+        }
+        canEdit={false}
+        canDelete={false}
+        onClose={() => setSelectedComment(null)}
       />
 
       <RevisionWorkspace
@@ -176,6 +226,6 @@ export default function MyCommentsPageContent(): React.ReactNode {
           void commentsQuery.refetch();
         }}
       />
-    </FormLayout>
+    </>
   );
 }

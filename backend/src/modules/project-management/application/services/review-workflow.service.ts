@@ -351,6 +351,18 @@ export class ReviewWorkflowService {
 
       const from = comment.status as CommentStatus;
       const to = command.targetStatus;
+      const isAssignee = comment.assignedToUserId === command.actorId;
+      const designerTargets = new Set<CommentStatus>([
+        CommentStatus.ACKNOWLEDGED,
+        CommentStatus.IN_PROGRESS,
+        CommentStatus.RESOLVED,
+      ]);
+      if (designerTargets.has(to) && !isAssignee && actor !== 'reviewer') {
+        throw new ForbiddenException(
+          'Only the assigned designer can progress this comment',
+        );
+      }
+
       const check = canTransitionCommentStatus(from, to, actor);
       if (!check.allowed) {
         throw new BadRequestException(check.message ?? 'Invalid comment transition');
