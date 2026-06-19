@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CommentStatus } from '../../domain/contracts/enums/comment-status.enum';
 import {
   AddReviewCommentDto,
@@ -8,13 +8,51 @@ import {
 import { PmContext } from '../types/pm-context.type';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 import { WorkflowKernelService } from './workflow-kernel.service';
+import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
+
+export interface MappedReviewCommentDetail {
+  id: string;
+  reviewSessionId: string;
+  designPackageId: string;
+  engineeringDocumentVersionId: string;
+  body: string;
+  severity: string;
+  status: CommentStatus | string;
+  createdBy: string;
+  authorName: string;
+  assignedToUserId: string;
+  assigneeName: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /**
  * Thin wrapper over WorkflowKernel for review comment mutations.
  */
 @Injectable()
 export class ReviewCommentsService {
-  constructor(private readonly workflowKernel: WorkflowKernelService) {}
+  constructor(
+    private readonly workflowKernel: WorkflowKernelService,
+    private readonly epcReviewRepository: EpcReviewRepository,
+  ) {}
+
+  /**
+   * Returns a single review comment with author and assignee metadata.
+   */
+  async getComment(
+    ctx: PmContext,
+    commentId: string,
+  ): Promise<MappedReviewCommentDetail> {
+    const comment = await this.epcReviewRepository.findCommentWithUsers(
+      ctx.companyId,
+      commentId,
+    );
+    if (!comment) {
+      throw new NotFoundException('Review comment not found');
+    }
+
+    return mapReviewCommentDetail(comment);
+  }
 
   /**
    * Adds a review comment via WorkflowKernel.
@@ -70,4 +108,50 @@ export class ReviewCommentsService {
       idempotencyKey: dto.idempotencyKey,
     });
   }
+
+  /**
+   * Removes an OPEN comment authored by the current user.
+   */
+  async removeComment(
+    ctx: PmContext,
+    commentId: string,
+  ): Promise<WorkflowResultSnapshot> {
+    return this.workflowKernel.execute({
+      type: 'RemoveReviewComment',
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      reviewCommentId: commentId,
+    });
+  }
+}
+
+function formatUserName(user: {
+  firstName: string;
+  lastName: string;
+  email: string;
+}): string {
+  const name = `${user.firstName} ${user.lastName}`.trim();
+  return name || user.email;
+}
+
+function mapReviewCommentDetail(
+  comment: NonNullable<
+    Awaited<ReturnType<EpcReviewRepository['findCommentWithUsers']>>
+  >,
+): MappedReviewCommentDetail {
+  return {
+    id: comment.id,
+    reviewSessionId: comment.reviewSessionId,
+    designPackageId: comment.reviewSession.designPackageId,
+    engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+    body: comment.body,
+    severity: comment.severity,
+    status: comment.status,
+    createdBy: comment.createdBy,
+    authorName: formatUserName(comment.author),
+    assignedToUserId: comment.assignedToUserId,
+    assigneeName: formatUserName(comment.assignedToUser),
+    createdAt: comment.createdAt.toISOString(),
+    updatedAt: comment.updatedAt.toISOString(),
+  };
 }

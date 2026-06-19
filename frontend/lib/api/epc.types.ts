@@ -222,6 +222,27 @@ export interface ReviewModeComment {
   status: CommentStatus;
   severity: CommentSeverity | string;
   engineeringDocumentVersionId: string;
+  createdBy: string;
+  createdAt: string;
+  assignedToUserId: string;
+  authorName: string;
+  assigneeName: string;
+}
+
+export interface ReviewCommentDetail {
+  id: string;
+  reviewSessionId: string;
+  designPackageId: string;
+  engineeringDocumentVersionId: string;
+  body: string;
+  severity: CommentSeverity | string;
+  status: CommentStatus;
+  createdBy: string;
+  authorName: string;
+  assignedToUserId: string;
+  assigneeName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ReviewModeView {

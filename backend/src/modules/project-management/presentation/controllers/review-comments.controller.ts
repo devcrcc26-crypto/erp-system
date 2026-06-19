@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Param,
   Patch,
   Post,
@@ -29,8 +31,17 @@ export class ReviewCommentsController {
     return { companyId: user.companyId, userId: user.userId };
   }
 
+  @Get(':commentId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get review comment detail' })
+  get(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('commentId') commentId: string,
+  ): Promise<unknown> {
+    return this.reviewCommentsService.getComment(this.ctx(user), commentId);
+  }
+
   @Post()
-  @RequirePermission('schedule', 'edit')
   @ApiOperation({ summary: 'Add review comment to EDV in active session' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -67,5 +78,15 @@ export class ReviewCommentsController {
       commentId,
       dto,
     );
+  }
+
+  @Delete(':commentId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Remove own OPEN review comment' })
+  remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('commentId') commentId: string,
+  ): Promise<unknown> {
+    return this.reviewCommentsService.removeComment(this.ctx(user), commentId);
   }
 }

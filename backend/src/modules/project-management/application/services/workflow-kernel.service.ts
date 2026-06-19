@@ -21,6 +21,7 @@ import {
   TransitionEdvStatusCommand,
   TriggerRevisionCommand,
   VerifyReviewCommentCommand,
+  RemoveReviewCommentCommand,
   WorkflowCommand,
   WorkflowCommandType,
   WorkflowResultSnapshot,
@@ -105,6 +106,8 @@ export class WorkflowKernelService {
         return this.reviewWorkflow.transitionCommentStatus(command, correlationId);
       case 'VerifyReviewComment':
         return this.reviewWorkflow.verifyReviewComment(command, correlationId);
+      case 'RemoveReviewComment':
+        return this.reviewWorkflow.removeReviewComment(command, correlationId);
       case 'ApproveReviewSession':
         return this.reviewWorkflow.approveReviewSession(command, correlationId);
       case 'ReturnPackageForRework':

@@ -197,6 +197,38 @@ export class EpcReviewRepository {
     });
   }
 
+  async findCommentWithUsers(
+    companyId: string,
+    reviewCommentId: string,
+  ): Promise<
+    | (ReviewComment & {
+        author: { id: string; firstName: string; lastName: string; email: string };
+        assignedToUser: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+        reviewSession: { id: string; designPackageId: string; status: ReviewSessionStatus };
+      })
+    | null
+  > {
+    return this.prisma.reviewComment.findFirst({
+      where: activeOnly({ id: reviewCommentId, companyId }),
+      include: {
+        author: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedToUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        reviewSession: {
+          select: { id: true, designPackageId: true, status: true },
+        },
+      },
+    });
+  }
+
   async updateReviewComment(
     tx: PrismaTx,
     reviewCommentId: string,
@@ -205,6 +237,21 @@ export class EpcReviewRepository {
     return tx.reviewComment.update({
       where: { id: reviewCommentId },
       data,
+    });
+  }
+
+  async softDeleteReviewComment(
+    tx: PrismaTx,
+    reviewCommentId: string,
+    deletedBy: string,
+  ): Promise<ReviewComment> {
+    return tx.reviewComment.update({
+      where: { id: reviewCommentId },
+      data: {
+        deletedAt: new Date(),
+        deletedBy,
+        updatedBy: deletedBy,
+      },
     });
   }
 

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,6 +23,7 @@ import {
   ApproveReviewSessionCommand,
   ReturnPackageForReworkCommand,
   BatchReturnEdvsCommand,
+  RemoveReviewCommentCommand,
   SubmitPackageForReviewCommand,
   TransitionCommentStatusCommand,
   VerifyReviewCommentCommand,
@@ -405,6 +407,62 @@ export class ReviewWorkflowService {
       },
       correlationId,
     );
+  }
+
+  /**
+   * Soft-deletes an OPEN comment authored by the current user.
+   */
+  async removeReviewComment(
+    command: RemoveReviewCommentCommand,
+    correlationId: string,
+  ): Promise<WorkflowResultSnapshot> {
+    return this.runTx(command.companyId, correlationId, async (tx) => {
+      const comment = await this.epcReviewRepository.findCommentById(
+        tx,
+        command.companyId,
+        command.reviewCommentId,
+      );
+      if (!comment || comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+        throw new NotFoundException('Review comment not found');
+      }
+
+      if (comment.createdBy !== command.actorId) {
+        throw new ForbiddenException('Only the comment author can remove this comment');
+      }
+
+      if (comment.status !== PrismaCommentStatus.OPEN) {
+        throw new BadRequestException('Only open comments can be removed');
+      }
+
+      await this.epcReviewRepository.softDeleteReviewComment(
+        tx,
+        comment.id,
+        command.actorId,
+      );
+
+      await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+        companyId: command.companyId,
+        actorId: command.actorId,
+        entityType: WorkflowEntityType.ReviewComment,
+        entityId: comment.id,
+        action: 'REMOVE_REVIEW_COMMENT',
+        beforeState: {
+          status: comment.status,
+          body: comment.body,
+        },
+        afterState: { deleted: true },
+        correlationId,
+      });
+
+      return {
+        commandType: 'RemoveReviewComment',
+        correlationId,
+        affectedEdvIds: [comment.engineeringDocumentVersionId],
+        edvStatuses: {},
+        reviewSessionId: comment.reviewSessionId,
+        intentEventIds: [],
+      };
+    });
   }
 
   /**

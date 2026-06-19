@@ -68,6 +68,11 @@ export interface ReviewModeView {
     status: CommentStatus;
     severity: string;
     engineeringDocumentVersionId: string;
+    createdBy: string;
+    createdAt: string;
+    assignedToUserId: string;
+    authorName: string;
+    assigneeName: string;
   }[];
 }
 
@@ -350,6 +355,24 @@ export class EpcWorkspaceService {
           comments: {
             where: { deletedAt: null },
             orderBy: { createdAt: 'asc' },
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+              assignedToUser: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
           },
         },
       }),
@@ -377,6 +400,11 @@ export class EpcWorkspaceService {
           status: c.status,
           severity: c.severity,
           engineeringDocumentVersionId: c.engineeringDocumentVersionId,
+          createdBy: c.createdBy,
+          createdAt: c.createdAt.toISOString(),
+          assignedToUserId: c.assignedToUserId,
+          authorName: formatReviewerName(c.author),
+          assigneeName: formatReviewerName(c.assignedToUser),
         })) ?? [],
     };
   }
@@ -432,4 +460,13 @@ export class EpcWorkspaceService {
 
     return entries;
   }
+}
+
+function formatReviewerName(user: {
+  firstName: string;
+  lastName: string;
+  email: string;
+}): string {
+  const name = `${user.firstName} ${user.lastName}`.trim();
+  return name || user.email;
 }

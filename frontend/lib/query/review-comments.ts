@@ -1,9 +1,10 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiPatch, apiPost } from '@/lib/api/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
 import type {
   AddReviewCommentRequest,
+  ReviewCommentDetail,
   TransitionReviewCommentRequest,
   VerifyReviewCommentRequest,
   WorkflowResultSnapshot,
@@ -12,7 +13,18 @@ import { epcWorkspaceKeys } from '@/lib/query/epc-workspace';
 
 export const reviewCommentKeys = {
   all: ['epc', 'review-comments'] as const,
+  detail: (commentId: string) =>
+    [...reviewCommentKeys.all, 'detail', commentId] as const,
 };
+
+export function useReviewComment(commentId: string, enabled = true) {
+  return useQuery({
+    queryKey: reviewCommentKeys.detail(commentId),
+    queryFn: () => apiGet<ReviewCommentDetail>(`/review-comments/${commentId}`),
+    enabled: Boolean(commentId) && enabled,
+    retry: false,
+  });
+}
 
 export function useAddReviewComment() {
   const queryClient = useQueryClient();
@@ -76,6 +88,26 @@ export function useVerifyReviewComment() {
         body,
       ),
     onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.myComments(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteReviewComment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      apiDelete<WorkflowResultSnapshot>(`/review-comments/${commentId}`),
+    onSuccess: (_data, commentId) => {
+      void queryClient.invalidateQueries({
+        queryKey: reviewCommentKeys.detail(commentId),
+      });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.myComments(),
       });
