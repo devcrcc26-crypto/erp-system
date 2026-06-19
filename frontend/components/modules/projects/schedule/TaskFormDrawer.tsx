@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import {
   Button,
   Checkbox,
@@ -226,6 +227,25 @@ export default function TaskFormDrawer({
   const milestones = milestonesQuery.data?.data ?? [];
   const isEditing = Boolean(task);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (task) {
+      form.setFieldsValue(toFormValues(task));
+      syncDurationField(
+        form,
+        form.getFieldValue('startDate'),
+        form.getFieldValue('finishDate'),
+      );
+      return;
+    }
+
+    form.resetFields();
+    form.setFieldsValue(defaultFormValues());
+  }, [open, task, form]);
+
   async function handleSubmit(values: TaskFormValues): Promise<void> {
     const durationDays = durationFromFormDates(values.startDate, values.finishDate);
 
@@ -264,20 +284,7 @@ export default function TaskFormDrawer({
       title={isEditing ? 'Edit task' : 'Add task'}
       onClose={onClose}
       size="large"
-      destroyOnHidden
       styles={antDrawerBodyStyles}
-      afterOpenChange={(visible: boolean) => {
-        if (!visible) {
-          return;
-        }
-        if (task) {
-          form.setFieldsValue(toFormValues(task));
-          syncDurationField(form, form.getFieldValue('startDate'), form.getFieldValue('finishDate'));
-          return;
-        }
-        form.resetFields();
-        form.setFieldsValue(defaultFormValues());
-      }}
     >
       <div className="flex flex-col gap-6">
         <Form<TaskFormValues>

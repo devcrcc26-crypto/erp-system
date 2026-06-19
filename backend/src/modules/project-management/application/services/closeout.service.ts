@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -112,29 +113,39 @@ export class CloseoutService {
       throw new ConflictException('Closeout already exists for this project');
     }
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const closeout = await tx.closeout.create({
-        data: {
-          projectId,
-          createdBy: ctx.userId,
-          updatedBy: ctx.userId,
-        },
+    try {
+      const row = await this.prisma.$transaction(async (tx) => {
+        const closeout = await tx.closeout.create({
+          data: {
+            projectId,
+            createdBy: ctx.userId,
+            updatedBy: ctx.userId,
+          },
+        });
+
+        await tx.closeoutChecklistItem.createMany({
+          data: DEFAULT_CLOSEOUT_CHECKLIST.map((item) => ({
+            closeoutId: closeout.id,
+            category: item.category,
+            description: item.description,
+            createdBy: ctx.userId,
+            updatedBy: ctx.userId,
+          })),
+        });
+
+        return closeout;
       });
 
-      await tx.closeoutChecklistItem.createMany({
-        data: DEFAULT_CLOSEOUT_CHECKLIST.map((item) => ({
-          closeoutId: closeout.id,
-          category: item.category,
-          description: item.description,
-          createdBy: ctx.userId,
-          updatedBy: ctx.userId,
-        })),
-      });
-
-      return closeout;
-    });
-
-    return mapCloseout(row);
+      return mapCloseout(row);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Closeout already exists for this project');
+      }
+      throw error;
+    }
   }
 
   /**

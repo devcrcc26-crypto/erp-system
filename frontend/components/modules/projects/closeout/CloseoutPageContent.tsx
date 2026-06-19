@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert, Checkbox, Descriptions, Spin } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -21,26 +21,78 @@ export default function CloseoutPageContent({
   projectId: string;
 }): React.ReactNode {
   const closeoutQuery = useCloseout(projectId);
+  const { refetch: refetchCloseout } = closeoutQuery;
   const initializeCloseout = useInitializeCloseout();
   const updateChecklist = useUpdateCloseoutChecklistItem();
+  const initAttemptedRef = useRef(false);
 
   const closeout = closeoutQuery.data;
+  const queryError =
+    closeoutQuery.error instanceof ApiRequestError
+      ? closeoutQuery.error
+      : null;
+
+  const projectNotFound =
+    closeoutQuery.isError &&
+    queryError?.status === 404 &&
+    queryError.message === 'Project not found';
+
+  const closeoutNotFound =
+    closeoutQuery.isError &&
+    queryError?.status === 404 &&
+    queryError.message === 'Closeout not found';
+
   const apiUnavailable =
     closeoutQuery.isError &&
-    closeoutQuery.error instanceof ApiRequestError &&
-    (closeoutQuery.error.status === 404 || closeoutQuery.error.status === 0);
+    queryError !== null &&
+    (queryError.status === 404 || queryError.status === 0) &&
+    !projectNotFound &&
+    !closeoutNotFound;
+
+  useEffect(() => {
+    initAttemptedRef.current = false;
+  }, [projectId]);
 
   useEffect(() => {
     if (
-      closeoutQuery.isError &&
-      closeoutQuery.error instanceof ApiRequestError &&
-      closeoutQuery.error.status === 404
+      !closeoutNotFound ||
+      initAttemptedRef.current ||
+      initializeCloseout.isPending
     ) {
-      void initializeCloseout.mutateAsync(projectId).then(() => {
-        void closeoutQuery.refetch();
-      });
+      return;
     }
-  }, [closeoutQuery, initializeCloseout, projectId]);
+
+    initAttemptedRef.current = true;
+
+    void initializeCloseout
+      .mutateAsync(projectId)
+      .then(() => refetchCloseout())
+      .catch((error: unknown) => {
+        if (
+          error instanceof ApiRequestError &&
+          (error.status === 409 ||
+            error.message === 'Closeout already exists for this project')
+        ) {
+          void refetchCloseout();
+          return;
+        }
+
+        if (
+          error instanceof ApiRequestError &&
+          error.message === 'Project not found'
+        ) {
+          return;
+        }
+
+        initAttemptedRef.current = false;
+      });
+  }, [
+    closeoutNotFound,
+    initializeCloseout,
+    initializeCloseout.isPending,
+    projectId,
+    refetchCloseout,
+  ]);
 
   if (closeoutQuery.isLoading) {
     return (
@@ -52,6 +104,15 @@ export default function CloseoutPageContent({
 
   return (
     <div className={layout.pageStack}>
+      {projectNotFound && (
+        <Alert
+          type="warning"
+          showIcon
+          title="Project not found"
+          description="This project no longer exists. Open it from the Projects list after a database reset."
+        />
+      )}
+
       {apiUnavailable && (
         <Alert
           type="info"

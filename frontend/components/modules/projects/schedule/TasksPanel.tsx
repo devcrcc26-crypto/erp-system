@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -78,6 +78,35 @@ export default function TasksPanel({
     null,
   );
   const [depForm] = Form.useForm<DependencyFormValues>();
+  const [dependencySeed, setDependencySeed] = useState<
+    Partial<DependencyFormValues>
+  >({
+    dependencyType: 'FS',
+    lagDays: 0,
+  });
+
+  useEffect(() => {
+    if (!dependencyOpen) {
+      return;
+    }
+
+    if (editingDependency) {
+      depForm.setFieldsValue({
+        predecessorTaskId: editingDependency.predecessorTaskId,
+        successorTaskId: editingDependency.successorTaskId,
+        dependencyType: editingDependency.dependencyType,
+        lagDays: editingDependency.lagDays,
+      });
+      return;
+    }
+
+    depForm.resetFields();
+    depForm.setFieldsValue({
+      dependencyType: 'FS',
+      lagDays: 0,
+      ...dependencySeed,
+    });
+  }, [dependencyOpen, dependencySeed, depForm, editingDependency]);
 
   const dependenciesQuery = useTaskDependencies(projectId);
   const createDependency = useCreateTaskDependency();
@@ -226,12 +255,6 @@ export default function TasksPanel({
             className="!px-0"
             onClick={() => {
               setEditingDependency(record);
-              depForm.setFieldsValue({
-                predecessorTaskId: record.predecessorTaskId,
-                successorTaskId: record.successorTaskId,
-                dependencyType: record.dependencyType,
-                lagDays: record.lagDays,
-              });
               setDependencyOpen(true);
             }}
           >
@@ -252,8 +275,7 @@ export default function TasksPanel({
 
   function openAddDependency(sourceTask?: Task): void {
     setEditingDependency(null);
-    depForm.resetFields();
-    depForm.setFieldsValue({
+    setDependencySeed({
       dependencyType: 'FS',
       lagDays: 0,
       ...(sourceTask ? { predecessorTaskId: sourceTask.id } : {}),
@@ -264,7 +286,6 @@ export default function TasksPanel({
   function closeDependencyModal(): void {
     setDependencyOpen(false);
     setEditingDependency(null);
-    depForm.resetFields();
   }
 
   async function handleSaveDependency(
@@ -354,10 +375,11 @@ export default function TasksPanel({
         open={dependencyOpen}
         title={editingDependency ? 'Edit task dependency' : 'Add task dependency'}
         centered
+        forceRender
         onCancel={closeDependencyModal}
         onOk={() => depForm.submit()}
         confirmLoading={dependencySaving}
-        destroyOnHidden
+        afterClose={() => depForm.resetFields()}
       >
         <Form<DependencyFormValues>
           form={depForm}

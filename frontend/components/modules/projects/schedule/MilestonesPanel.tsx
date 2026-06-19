@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   DatePicker,
@@ -50,6 +50,28 @@ function MilestoneFormDrawer({
   const updateMilestone = useUpdateMilestone();
   const isEditing = Boolean(milestone);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (milestone) {
+      form.setFieldsValue({
+        name: milestone.name,
+        plannedDate: milestone.plannedDate
+          ? dayjs(milestone.plannedDate)
+          : undefined,
+        actualDate: milestone.actualDate
+          ? dayjs(milestone.actualDate)
+          : undefined,
+        status: milestone.status,
+      });
+      return;
+    }
+
+    form.resetFields();
+  }, [open, milestone, form]);
+
   async function handleSubmit(values: MilestoneFormValues): Promise<void> {
     const body = {
       name: values.name.trim(),
@@ -77,26 +99,6 @@ function MilestoneFormDrawer({
       open={open}
       title={isEditing ? 'Edit milestone' : 'Add milestone'}
       onClose={onClose}
-      destroyOnHidden
-      afterOpenChange={(visible: boolean) => {
-        if (!visible) {
-          return;
-        }
-        if (milestone) {
-          form.setFieldsValue({
-            name: milestone.name,
-            plannedDate: milestone.plannedDate
-              ? dayjs(milestone.plannedDate)
-              : undefined,
-            actualDate: milestone.actualDate
-              ? dayjs(milestone.actualDate)
-              : undefined,
-            status: milestone.status,
-          });
-          return;
-        }
-        form.resetFields();
-      }}
     >
       <Form<MilestoneFormValues>
         form={form}
