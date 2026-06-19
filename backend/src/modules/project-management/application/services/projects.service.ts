@@ -28,6 +28,7 @@ import {
   parseOptionalDecimal,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const PROJECT_SORT_FIELDS = new Set([
@@ -45,6 +46,7 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -85,6 +87,14 @@ export class ProjectsService {
    */
   async getProject(ctx: PmContext, id: string): Promise<MappedProject> {
     const project = await this.projectScopeService.getProjectOrThrow(ctx, id);
+
+    await this.engineeringDocumentFolderService.ensureProjectFolder(
+      ctx,
+      project.id,
+      project.projectCode,
+      project.name,
+    );
+
     return mapProject(project);
   }
 
@@ -152,6 +162,13 @@ export class ProjectsService {
 
       return created;
     });
+
+    await this.engineeringDocumentFolderService.ensureProjectFolder(
+      ctx,
+      project.id,
+      project.projectCode,
+      project.name,
+    );
 
     return mapProject(project);
   }

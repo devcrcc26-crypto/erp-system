@@ -87,7 +87,32 @@ export const engineeringDocumentKeys = {
       engineeringDocumentId,
       'decision-trace',
     ] as const,
+  uploadFolder: (projectId: string, taskDisciplineId: string) =>
+    [
+      ...engineeringDocumentKeys.lists(projectId, taskDisciplineId),
+      'upload-folder',
+    ] as const,
 };
+
+export interface DisciplineUploadFolder {
+  id: string;
+  path: string;
+}
+
+export function useDisciplineUploadFolder(
+  projectId: string,
+  taskDisciplineId: string,
+  enabled = true,
+) {
+  const base = engineeringDocumentsPath(projectId, taskDisciplineId);
+  return useQuery({
+    queryKey: engineeringDocumentKeys.uploadFolder(projectId, taskDisciplineId),
+    queryFn: () => apiGet<DisciplineUploadFolder>(`${base}/upload-folder`),
+    enabled: Boolean(projectId) && Boolean(taskDisciplineId) && enabled,
+    retry: false,
+    staleTime: 60_000,
+  });
+}
 
 export function useEngineeringDocuments(
   projectId: string,

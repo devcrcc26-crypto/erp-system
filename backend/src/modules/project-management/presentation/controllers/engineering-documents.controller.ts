@@ -60,6 +60,21 @@ export class EngineeringDocumentsController {
     );
   }
 
+  @Get('upload-folder')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Resolve discipline document upload folder' })
+  uploadFolder(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+  ): Promise<unknown> {
+    return this.engineeringDocumentsService.resolveUploadFolder(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+    );
+  }
+
   @Post('register')
   @RequirePermission('schedule', 'edit')
   @ApiOperation({ summary: 'Register uploaded file as engineering document Rev 0' })

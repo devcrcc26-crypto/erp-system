@@ -27,7 +27,7 @@ import {
   EngineeringDocumentVersionRepository,
   TaskDisciplineScopeRepository,
 } from '../../infrastructure/repositories/epc-storage.repository';
-import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
+import { EngineeringDocumentFolderService, type DocumentFolderRef } from './engineering-document-folder.service';
 import { ConflictGuardService } from './conflict-guard.service';
 import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
@@ -112,6 +112,7 @@ export class EngineeringDocumentsService {
 
     await this.folderService.ensureDisciplineFolder(
       ctx,
+      projectId,
       taskDisciplineId,
       discipline.disciplineName,
     );
@@ -400,6 +401,28 @@ export class EngineeringDocumentsService {
       throw new NotFoundException('Engineering document not found');
     }
     await this.engineeringDocumentRepository.softDelete(id, ctx.userId);
+  }
+
+  /**
+   * Ensures project + discipline folders exist and returns the discipline upload target.
+   */
+  async resolveUploadFolder(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+  ): Promise<DocumentFolderRef> {
+    const discipline = await this.assertDisciplineScope(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
+
+    return this.folderService.ensureDisciplineFolder(
+      ctx,
+      projectId,
+      discipline.id,
+      discipline.disciplineName,
+    );
   }
 
   private async assertDisciplineScope(

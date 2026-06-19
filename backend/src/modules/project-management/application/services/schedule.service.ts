@@ -616,6 +616,7 @@ export class ScheduleService {
 
     await this.engineeringDocumentFolderService.ensureDisciplineFolder(
       ctx,
+      projectId,
       discipline.id,
       discipline.disciplineName,
     );

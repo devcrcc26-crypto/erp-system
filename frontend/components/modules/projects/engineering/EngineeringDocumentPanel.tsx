@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Button,
@@ -23,12 +23,9 @@ import type {
   EngineeringDocumentType,
 } from '@/lib/api/epc.types';
 import { apiGet } from '@/lib/api/client';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import {
-  useDocumentFolders,
-  useProjectDocumentFolder,
-  useUploadDocumentToFolder,
-} from '@/lib/query/documents';
-import {
+  useDisciplineUploadFolder,
   useEngineeringDocuments,
   useRegisterEngineeringDocument,
 } from '@/lib/query/engineering-documents';
@@ -80,36 +77,23 @@ export default function EngineeringDocumentPanel({
     { page: 1, limit: 50 },
     lens.canViewEngineering,
   );
-  const disciplineFolderQuery = useDocumentFolders(
-    {
-      page: 1,
-      limit: 5,
-      contextType: 'TASK_DISCIPLINE',
-      contextId: taskDisciplineId,
-    },
-    lens.canViewEngineering,
-  );
-  const projectFolderQuery = useProjectDocumentFolder(
+  const uploadFolderQuery = useDisciplineUploadFolder(
     projectId,
-    lens.canViewEngineering && !disciplineFolderQuery.data?.data.length,
+    taskDisciplineId,
+    lens.canViewEngineering && (canRegister || registerOpen),
   );
 
   const uploadDocument = useUploadDocumentToFolder();
   const registerDocument = useRegisterEngineeringDocument();
 
-  const uploadFolderId = useMemo(() => {
-    const disciplineFolder = disciplineFolderQuery.data?.data[0];
-    if (disciplineFolder) {
-      return disciplineFolder.id;
-    }
-    return projectFolderQuery.data?.data[0]?.id;
-  }, [disciplineFolderQuery.data, projectFolderQuery.data]);
+  const uploadFolderId = uploadFolderQuery.data?.id;
+  const uploadFolderPath = uploadFolderQuery.data?.path;
 
   const documents = documentsQuery.data?.data ?? [];
   const apiUnavailable =
     documentsQuery.isError &&
     documentsQuery.error instanceof ApiRequestError &&
-  (documentsQuery.error.status === 404 || documentsQuery.error.status === 0);
+    (documentsQuery.error.status === 404 || documentsQuery.error.status === 0);
 
   const columns: ColumnsType<EngineeringDocument> = [
     {
@@ -162,14 +146,20 @@ export default function EngineeringDocumentPanel({
       message.error('Select a file to upload');
       return;
     }
-    if (!uploadFolderId) {
-      message.error('No document folder available for upload');
-      return;
-    }
 
     try {
+      let folderId = uploadFolderId;
+      if (!folderId) {
+        const folder = await uploadFolderQuery.refetch();
+        folderId = folder.data?.id;
+      }
+      if (!folderId) {
+        message.error('Document folder could not be prepared for upload');
+        return;
+      }
+
       const uploaded = await uploadDocument.mutateAsync({
-        folderId: uploadFolderId,
+        folderId,
         file: pendingFile,
       });
       const documentVersionId = await resolveLatestDocumentVersionId(uploaded.id);
@@ -219,6 +209,7 @@ export default function EngineeringDocumentPanel({
                 documentType: 'DRAWING',
               });
               setRegisterOpen(true);
+              void uploadFolderQuery.refetch();
             }}
           >
             {t('actions.registerDocument')}
@@ -261,7 +252,12 @@ export default function EngineeringDocumentPanel({
             <Button onClick={() => setRegisterOpen(false)}>Cancel</Button>
             <Button
               type="primary"
-              loading={uploadDocument.isPending || registerDocument.isPending}
+              loading={
+                uploadFolderQuery.isFetching ||
+                uploadDocument.isPending ||
+                registerDocument.isPending
+              }
+              disabled={uploadFolderQuery.isLoading && !uploadFolderId}
               onClick={() => form.submit()}
             >
               Register
@@ -281,7 +277,12 @@ export default function EngineeringDocumentPanel({
             <Button icon={<UploadOutlined />}>Select file</Button>
           </Upload>
 
-          {!uploadFolderId && <Spin />}
+          {uploadFolderQuery.isLoading && <Spin />}
+          {uploadFolderPath && (
+            <p className="text-xs text-slate-500">
+              Files upload to: <span className="font-mono">{uploadFolderPath}</span>
+            </p>
+          )}
 
           <Form<EdvMetadataFormValues>
             form={form}
