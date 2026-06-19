@@ -15,6 +15,7 @@ import { DecisionTraceService } from './application/services/decision-trace.serv
 import { DefinitionOfDoneService } from './application/services/definition-of-done.service';
 import { DependencyGraphService } from './application/services/dependency-graph.service';
 import { DesignPackagesService } from './application/services/design-packages.service';
+import { DisciplineScopeService } from './application/services/discipline-scope.service';
 import { DocumentNumberService } from './application/services/document-number.service';
 import { DrawingsService } from './application/services/drawings.service';
 import { EdvTransitionService } from './application/services/edv-transition.service';
@@ -123,6 +124,7 @@ const workflowBullProcessors = redisEnabled
   providers: [
     ProjectsService,
     ProjectScopeService,
+    DisciplineScopeService,
     DocumentNumberService,
     ScheduleService,
     RfisService,

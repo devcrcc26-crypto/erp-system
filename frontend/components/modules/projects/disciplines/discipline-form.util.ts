@@ -7,13 +7,13 @@ import type {
 
 export interface DisciplineFormValues {
   disciplineName: string;
+  ownerUserId?: string;
   designerUserId?: string;
   reviewerUserId?: string;
   disciplineLeadUserId?: string;
   chiefUserId?: string;
   actualCompletionTime?: Dayjs;
   deptReviewTime?: Dayjs;
-  instituteReviewTime?: Dayjs;
 }
 
 export function formatDisciplineDateTime(value: string | null): string {
@@ -28,13 +28,13 @@ export function toDisciplinePayload(
 ): CreateTaskDisciplineRequest {
   return {
     disciplineName: values.disciplineName.trim(),
+    ownerUserId: values.ownerUserId,
     designerUserId: values.designerUserId,
     reviewerUserId: values.reviewerUserId,
     disciplineLeadUserId: values.disciplineLeadUserId,
     chiefUserId: values.chiefUserId,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     deptReviewTime: values.deptReviewTime?.toISOString(),
-    instituteReviewTime: values.instituteReviewTime?.toISOString(),
   };
 }
 
@@ -43,6 +43,7 @@ export function toDisciplineFormValues(
 ): DisciplineFormValues {
   return {
     disciplineName: discipline.disciplineName,
+    ownerUserId: discipline.ownerUserId ?? undefined,
     designerUserId: discipline.designerUserId ?? undefined,
     reviewerUserId: discipline.reviewerUserId ?? undefined,
     disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
@@ -52,9 +53,6 @@ export function toDisciplineFormValues(
       : undefined,
     deptReviewTime: discipline.deptReviewTime
       ? dayjs(discipline.deptReviewTime)
-      : undefined,
-    instituteReviewTime: discipline.instituteReviewTime
-      ? dayjs(discipline.instituteReviewTime)
       : undefined,
   };
 }

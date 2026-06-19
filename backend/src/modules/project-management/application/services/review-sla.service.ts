@@ -6,10 +6,10 @@ import { EpcWorkflowRepository } from '../../infrastructure/repositories/epc-wor
 
 /** Default SLA hours per review tier (v1). */
 export const DEFAULT_SLA_HOURS: Readonly<Record<ReviewTier, number>> = {
+  [ReviewTier.DISCIPLINE_OWNER]: 24,
   [ReviewTier.REVIEWER]: 48,
   [ReviewTier.DISCIPLINE_LEAD]: 72,
   [ReviewTier.DEPT_CHIEF]: 120,
-  [ReviewTier.INSTITUTE_CHIEF]: 168,
 };
 
 export interface SlaEscalationResult {
@@ -40,7 +40,7 @@ export class ReviewSlaService {
   }
 
   /**
-   * Returns next tier in governance chain, or null at institute chief.
+   * Returns next tier in governance chain, or null at dept chief.
    */
   getNextTier(current: ReviewTier): ReviewTier | null {
     const index = REVIEW_TIER_ORDER.indexOf(current as never);
@@ -56,18 +56,20 @@ export class ReviewSlaService {
   resolveAssigneeForTier(
     tier: ReviewTier,
     discipline: {
+      ownerUserId: string | null;
       reviewerUserId: string | null;
       disciplineLeadUserId: string | null;
       chiefUserId: string | null;
     },
   ): string | null {
     switch (tier) {
+      case ReviewTier.DISCIPLINE_OWNER:
+        return discipline.ownerUserId;
       case ReviewTier.REVIEWER:
         return discipline.reviewerUserId;
       case ReviewTier.DISCIPLINE_LEAD:
         return discipline.disciplineLeadUserId;
       case ReviewTier.DEPT_CHIEF:
-      case ReviewTier.INSTITUTE_CHIEF:
         return discipline.chiefUserId;
       default:
         return null;

@@ -34,6 +34,8 @@ enum FolderContextType {
   DEPARTMENT
   USER
   TASK_DISCIPLINE
+  RFI
+  ISSUE
 }
 
 enum NotificationChannel {
@@ -414,7 +416,7 @@ model User {
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
-  instituteChiefTasks    Task[]                 @relation("TaskInstituteChief")
+  ownerDisciplines       TaskDiscipline[]       @relation("DisciplineOwner")
   raisedRfis             Rfi[]                  @relation("RfiRaisedBy")
   assignedRfis           Rfi[]                  @relation("RfiAssignedTo")
   rfiResponses           RfiResponse[]
@@ -795,6 +797,8 @@ model DocumentVersion {
   document                    Document                     @relation(fields: [documentId], references: [id])
   uploader                    User                         @relation(fields: [uploadedBy], references: [id])
   engineeringDocumentVersions EngineeringDocumentVersion[]
+  reviewCommentFiles          ReviewComment[]              @relation("ReviewCommentFile")
+  reviewCommentResponseFiles  ReviewComment[]              @relation("ReviewCommentResponseFile")
 
   @@unique([documentId, versionNumber], map: "uq_document_version_doc_number")
   @@index([documentId], map: "idx_document_version_document_id")
@@ -1190,10 +1194,23 @@ enum ReviewSessionOutcome {
 }
 
 enum ReviewTier {
+  DISCIPLINE_OWNER
   REVIEWER
   DISCIPLINE_LEAD
   DEPT_CHIEF
-  INSTITUTE_CHIEF
+}
+
+enum SubmittalPurpose {
+  DISCIPLINE_SITE
+  DISCIPLINE_CONSULTANT
+  DEPUTY_BID
+  DEPUTY_INTERIM
+  DEPUTY_FINAL
+}
+
+enum SubmittalPreparedByRole {
+  DISCIPLINE_LEAD
+  DEPUTY_CHIEF
 }
 
 enum WorkflowEventPhase {
@@ -1324,9 +1341,8 @@ model Task {
   projectId    String     @map("project_id")
   milestoneId  String?    @map("milestone_id")
   parentTaskId         String? @map("parent_task_id")
-  dispatcherUserId     String? @map("dispatcher_user_id")
-  instituteChiefUserId String? @map("institute_chief_user_id")
-  taskIdCode           String  @map("task_id_code")
+  dispatcherUserId String? @map("dispatcher_user_id")
+  taskIdCode       String  @map("task_id_code")
   name         String
   description  String?
   startDate    DateTime?  @map("start_date") @db.Date
@@ -1361,9 +1377,8 @@ model Task {
   milestone          Milestone?       @relation(fields: [milestoneId], references: [id])
   parentTask         Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   childTasks         Task[]           @relation("TaskHierarchy")
-  dispatcherUser     User?             @relation("TaskDispatcher", fields: [dispatcherUserId], references: [id])
-  instituteChiefUser User?             @relation("TaskInstituteChief", fields: [instituteChiefUserId], references: [id])
-  predecessorLinks   TaskDependency[]  @relation("PredecessorTask")
+  dispatcherUser   User?            @relation("TaskDispatcher", fields: [dispatcherUserId], references: [id])
+  predecessorLinks TaskDependency[] @relation("PredecessorTask")
   successorLinks     TaskDependency[]  @relation("SuccessorTask")
   disciplines        TaskDiscipline[]
 
@@ -1371,7 +1386,6 @@ model Task {
   @@index([projectId, deletedAt], map: "idx_task_project_deleted")
   @@index([milestoneId], map: "idx_task_milestone_id")
   @@index([dispatcherUserId], map: "idx_task_dispatcher_user_id")
-  @@index([instituteChiefUserId], map: "idx_task_institute_chief_user_id")
   @@map("task")
 }
 
@@ -1381,18 +1395,18 @@ model TaskDiscipline {
   companyId              String                       @map("company_id")
   disciplineName         String                       @map("discipline_name")
   projectedStatus        TaskDisciplineProjectedStatus @default(IN_PROGRESS) @map("projected_status")
-  designerName           String?                      @map("designer_name")
-  reviewerName           String?                      @map("reviewer_name")
-  disciplinaryLeader     String?                      @map("disciplinary_leader")
-  deptChiefEngineer      String?                      @map("dept_chief_engineer")
-  instituteChiefEngineer String?                      @map("institute_chief_engineer")
-  designerUserId         String?                      @map("designer_user_id")
-  reviewerUserId         String?                      @map("reviewer_user_id")
-  disciplineLeadUserId   String?                      @map("discipline_lead_user_id")
-  chiefUserId            String?                      @map("chief_user_id")
-  actualCompletionTime   DateTime?                    @map("actual_completion_time")
-  deptReviewTime         DateTime?                    @map("dept_review_time")
-  instituteReviewTime    DateTime?                    @map("institute_review_time")
+  designerName         String?                      @map("designer_name")
+  reviewerName         String?                      @map("reviewer_name")
+  disciplinaryLeader   String?                      @map("disciplinary_leader")
+  deptChiefEngineer    String?                      @map("dept_chief_engineer")
+  disciplineOwnerName  String?                      @map("discipline_owner_name")
+  designerUserId       String?                      @map("designer_user_id")
+  ownerUserId          String?                      @map("owner_user_id")
+  reviewerUserId       String?                      @map("reviewer_user_id")
+  disciplineLeadUserId String?                      @map("discipline_lead_user_id")
+  chiefUserId          String?                      @map("chief_user_id")
+  actualCompletionTime DateTime?                    @map("actual_completion_time")
+  deptReviewTime       DateTime?                    @map("dept_review_time")
   createdAt              DateTime                     @default(now()) @map("created_at")
   createdBy              String                       @map("created_by")
   updatedAt              DateTime                     @updatedAt @map("updated_at")
@@ -1403,6 +1417,7 @@ model TaskDiscipline {
   task                  Task                  @relation(fields: [taskId], references: [id])
   company               Company               @relation(fields: [companyId], references: [id])
   designerUser          User?                 @relation("DisciplineDesigner", fields: [designerUserId], references: [id])
+  ownerUser             User?                 @relation("DisciplineOwner", fields: [ownerUserId], references: [id])
   reviewerUser          User?                 @relation("DisciplineReviewer", fields: [reviewerUserId], references: [id])
   disciplineLeadUser    User?                 @relation("DisciplineLead", fields: [disciplineLeadUserId], references: [id])
   chiefUser             User?                 @relation("DisciplineChief", fields: [chiefUserId], references: [id])
@@ -1411,11 +1426,15 @@ model TaskDiscipline {
   reviewSessions        ReviewSession[]
   disciplineReviews     TaskDisciplineReview[]
   deliverables          Deliverable[]
+  rfis                  Rfi[]
+  issues                Issue[]
+  submittals            Submittal[]
 
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
   @@index([companyId, deletedAt], map: "idx_task_discipline_company_deleted")
   @@index([designerUserId], map: "idx_task_discipline_designer_user_id")
+  @@index([ownerUserId], map: "idx_task_discipline_owner_user_id")
   @@index([reviewerUserId], map: "idx_task_discipline_reviewer_user_id")
   @@map("task_discipline")
 }
@@ -1578,7 +1597,7 @@ model ReviewSession {
   taskDisciplineId String               @map("task_discipline_id")
   status           ReviewSessionStatus  @default(ACTIVE)
   outcome          ReviewSessionOutcome @default(PENDING)
-  currentTier      ReviewTier           @default(REVIEWER) @map("current_tier")
+  currentTier      ReviewTier           @default(DISCIPLINE_OWNER) @map("current_tier")
   assignedToUserId String?              @map("assigned_to_user_id")
   openedAt         DateTime             @default(now()) @map("opened_at")
   closedAt         DateTime?            @map("closed_at")
@@ -1631,7 +1650,9 @@ model ReviewComment {
   companyId                    String          @map("company_id")
   reviewSessionId              String          @map("review_session_id")
   engineeringDocumentVersionId String          @map("engineering_document_version_id")
-  body                         String
+  body                         String?
+  commentDocumentVersionId     String?         @map("comment_document_version_id")
+  responseDocumentVersionId    String?         @map("response_document_version_id")
   severity                     CommentSeverity
   status                       CommentStatus   @default(OPEN)
   assignedToUserId             String          @map("assigned_to_user_id")
@@ -1649,6 +1670,8 @@ model ReviewComment {
   company                    Company                    @relation(fields: [companyId], references: [id])
   reviewSession              ReviewSession              @relation(fields: [reviewSessionId], references: [id])
   engineeringDocumentVersion EngineeringDocumentVersion @relation(fields: [engineeringDocumentVersionId], references: [id])
+  commentDocumentVersion   DocumentVersion?           @relation("ReviewCommentFile", fields: [commentDocumentVersionId], references: [id])
+  responseDocumentVersion  DocumentVersion?           @relation("ReviewCommentResponseFile", fields: [responseDocumentVersionId], references: [id])
   assignedToUser             User                       @relation("ReviewCommentAssignee", fields: [assignedToUserId], references: [id])
   author                     User                       @relation("ReviewCommentAuthor", fields: [createdBy], references: [id])
 
@@ -1679,9 +1702,10 @@ model TaskDependency {
 }
 
 model Rfi {
-  id           String      @id @default(uuid())
-  projectId    String      @map("project_id")
-  raisedBy     String      @map("raised_by")
+  id               String      @id @default(uuid())
+  projectId        String      @map("project_id")
+  taskDisciplineId String?     @map("task_discipline_id")
+  raisedBy         String      @map("raised_by")
   assignedTo   String?     @map("assigned_to")
   rfiNumber    String      @map("rfi_number")
   title        String
@@ -1699,12 +1723,14 @@ model Rfi {
   deletedAt    DateTime?   @map("deleted_at")
   deletedBy    String?     @map("deleted_by")
 
-  project   Project       @relation(fields: [projectId], references: [id])
-  raiser    User          @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
+  project        Project        @relation(fields: [projectId], references: [id])
+  taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
+  raiser         User           @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
   assignee  User?         @relation("RfiAssignedTo", fields: [assignedTo], references: [id])
   responses RfiResponse[]
 
   @@index([projectId], map: "idx_rfi_project_id")
+  @@index([taskDisciplineId], map: "idx_rfi_task_discipline_id")
   @@index([projectId, deletedAt], map: "idx_rfi_project_deleted")
   @@index([status], map: "idx_rfi_status")
   @@map("rfi")
@@ -1726,13 +1752,16 @@ model RfiResponse {
 }
 
 model Submittal {
-  id              String          @id @default(uuid())
-  projectId       String          @map("project_id")
-  submittedBy     String          @map("submitted_by")
-  reviewedBy      String?         @map("reviewed_by")
-  submittalNumber String          @map("submittal_number")
-  category        String
-  title           String
+  id               String                   @id @default(uuid())
+  projectId        String                   @map("project_id")
+  taskDisciplineId String?                  @map("task_discipline_id")
+  submittedBy      String                   @map("submitted_by")
+  reviewedBy       String?                  @map("reviewed_by")
+  submittalNumber  String                   @map("submittal_number")
+  category         String
+  title            String
+  submittalPurpose SubmittalPurpose?        @map("submittal_purpose")
+  preparedByRole   SubmittalPreparedByRole? @map("prepared_by_role")
   contractor      String?
   supplier        String?
   specReference   String?         @map("spec_reference")
@@ -1749,14 +1778,16 @@ model Submittal {
   deletedAt       DateTime?       @map("deleted_at")
   deletedBy       String?         @map("deleted_by")
 
-  project  Project           @relation(fields: [projectId], references: [id])
-  submitter User             @relation("SubmittalSubmittedBy", fields: [submittedBy], references: [id])
+  project        Project         @relation(fields: [projectId], references: [id])
+  taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
+  submitter      User            @relation("SubmittalSubmittedBy", fields: [submittedBy], references: [id])
   reviewer  User?             @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
   reviews   SubmittalReview[]
   items     SubmittalItem[]
   externalReviewTriggers ExternalReviewTrigger[]
 
   @@index([projectId], map: "idx_submittal_project_id")
+  @@index([taskDisciplineId], map: "idx_submittal_task_discipline_id")
   @@index([projectId, deletedAt], map: "idx_submittal_project_deleted")
   @@map("submittal")
 }
@@ -2211,9 +2242,10 @@ model Risk {
 }
 
 model Issue {
-  id           String        @id @default(uuid())
-  projectId    String        @map("project_id")
-  raisedBy     String        @map("raised_by")
+  id               String        @id @default(uuid())
+  projectId        String        @map("project_id")
+  taskDisciplineId String?       @map("task_discipline_id")
+  raisedBy         String        @map("raised_by")
   assignedTo   String?       @map("assigned_to")
   issueNumber  String        @map("issue_number")
   issueType    String        @map("issue_type")
@@ -2231,11 +2263,13 @@ model Issue {
   deletedAt    DateTime?     @map("deleted_at")
   deletedBy    String?       @map("deleted_by")
 
-  project  Project @relation(fields: [projectId], references: [id])
-  raiser   User    @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
+  project        Project        @relation(fields: [projectId], references: [id])
+  taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
+  raiser         User           @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
   assignee User?   @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
 
   @@index([projectId], map: "idx_issue_project_id")
+  @@index([taskDisciplineId], map: "idx_issue_task_discipline_id")
   @@index([projectId, deletedAt], map: "idx_issue_project_deleted")
   @@map("issue")
 }

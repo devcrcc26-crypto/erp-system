@@ -97,10 +97,10 @@
   },
   "reviewTier": {
     "ALL": "全部层级",
+    "DISCIPLINE_OWNER": "专业负责人",
     "REVIEWER": "审阅人",
     "DISCIPLINE_LEAD": "专业负责人",
-    "DEPT_CHIEF": "部门主管",
-    "INSTITUTE_CHIEF": "院级主管"
+    "DEPT_CHIEF": "部门主管"
   },
   "commentSeverity": {
     "MINOR": "轻微",

@@ -55,6 +55,7 @@ const REVIEWER_USER_ID = '00000000-0000-4000-8000-000000000084';
 const ENGINEER_USER_ID = '00000000-0000-4000-8000-000000000081';
 const LEAD_USER_ID = '00000000-0000-4000-8000-000000000085';
 const DEPT_CHIEF_USER_ID = '00000000-0000-4000-8000-000000000086';
+const OWNER_USER_ID = '00000000-0000-4000-8000-000000000089';
 const DOCS_USER_ID = '00000000-0000-4000-8000-000000000083';
 const PM_USER_ID = '00000000-0000-4000-8000-000000000080';
 
@@ -268,7 +269,7 @@ async function seedTaskDisciplineReviews(
 }
 
 /**
- * DEMO-001 — Marina Tower: reviewer + lead tiers active, draft package, open comment.
+ * DEMO-001 — Marina Tower: discipline owner + reviewer tiers active, draft package, open comment.
  */
 async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   const { prisma, companyId, adminUserId } = ctx;
@@ -281,6 +282,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'Structural',
       projectedStatus: TaskDisciplineProjectedStatus.IN_PROGRESS,
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       updatedBy: adminUserId,
@@ -292,9 +295,11 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'Structural',
       projectedStatus: TaskDisciplineProjectedStatus.IN_PROGRESS,
       designerName: 'Sara Khalil',
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerName: 'Nadia Saleh',
       disciplinaryLeader: 'Khalid Nasser',
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       createdBy: adminUserId,
@@ -399,7 +404,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
     where: { id: sid(p, 220) },
     update: {
       status: ReviewSessionStatus.ACTIVE,
-      assignedToUserId: REVIEWER_USER_ID,
+      currentTier: ReviewTier.DISCIPLINE_OWNER,
+      assignedToUserId: OWNER_USER_ID,
       slaDeadlineAt: d('2026-04-15'),
       updatedBy: adminUserId,
     },
@@ -409,8 +415,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       designPackageId: sid(p, 210),
       taskDisciplineId: sid(p, 200),
       status: ReviewSessionStatus.ACTIVE,
-      currentTier: ReviewTier.REVIEWER,
-      assignedToUserId: REVIEWER_USER_ID,
+      currentTier: ReviewTier.DISCIPLINE_OWNER,
+      assignedToUserId: OWNER_USER_ID,
       openedAt: d('2026-03-02'),
       slaDeadlineAt: d('2026-04-15'),
       createdBy: adminUserId,
@@ -606,7 +612,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   });
 
   await seedTaskDisciplineReviews(prisma, companyId, adminUserId, p, sid(p, 200), [
-    { tier: ReviewTier.REVIEWER, status: TaskDisciplineReviewStatus.IN_REVIEW },
+    { tier: ReviewTier.DISCIPLINE_OWNER, status: TaskDisciplineReviewStatus.IN_REVIEW },
+    { tier: ReviewTier.REVIEWER, status: TaskDisciplineReviewStatus.PENDING },
     { tier: ReviewTier.DISCIPLINE_LEAD, status: TaskDisciplineReviewStatus.PENDING },
     { tier: ReviewTier.DEPT_CHIEF, status: TaskDisciplineReviewStatus.PENDING },
   ]);
@@ -653,6 +660,8 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'MEP',
       projectedStatus: TaskDisciplineProjectedStatus.PENDING_LEAD,
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       chiefUserId: DEPT_CHIEF_USER_ID,
@@ -666,10 +675,12 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'MEP',
       projectedStatus: TaskDisciplineProjectedStatus.PENDING_LEAD,
       designerName: 'Sara Khalil',
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerName: 'Nadia Saleh',
       disciplinaryLeader: 'Khalid Nasser',
       deptChiefEngineer: 'Rania Aziz',
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       chiefUserId: DEPT_CHIEF_USER_ID,
@@ -977,6 +988,12 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
 
   await seedTaskDisciplineReviews(prisma, companyId, adminUserId, p, sid(p, 200), [
     {
+      tier: ReviewTier.DISCIPLINE_OWNER,
+      status: TaskDisciplineReviewStatus.APPROVED,
+      reviewedBy: OWNER_USER_ID,
+      reviewedAt: '2026-01-15',
+    },
+    {
       tier: ReviewTier.REVIEWER,
       status: TaskDisciplineReviewStatus.APPROVED,
       reviewedBy: REVIEWER_USER_ID,
@@ -1026,6 +1043,8 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'Civil',
       projectedStatus: TaskDisciplineProjectedStatus.APPROVED,
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       chiefUserId: DEPT_CHIEF_USER_ID,
@@ -1039,10 +1058,12 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
       disciplineName: 'Civil',
       projectedStatus: TaskDisciplineProjectedStatus.APPROVED,
       designerName: 'Sara Khalil',
+      disciplineOwnerName: 'Hassan Al-Rashid',
       reviewerName: 'Nadia Saleh',
       disciplinaryLeader: 'Khalid Nasser',
       deptChiefEngineer: 'Rania Aziz',
       designerUserId: ENGINEER_USER_ID,
+      ownerUserId: OWNER_USER_ID,
       reviewerUserId: REVIEWER_USER_ID,
       disciplineLeadUserId: LEAD_USER_ID,
       chiefUserId: DEPT_CHIEF_USER_ID,
@@ -1295,6 +1316,12 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
 
   await seedTaskDisciplineReviews(prisma, companyId, adminUserId, p, sid(p, 200), [
     {
+      tier: ReviewTier.DISCIPLINE_OWNER,
+      status: TaskDisciplineReviewStatus.APPROVED,
+      reviewedBy: OWNER_USER_ID,
+      reviewedAt: '2026-03-02',
+    },
+    {
       tier: ReviewTier.REVIEWER,
       status: TaskDisciplineReviewStatus.APPROVED,
       reviewedBy: REVIEWER_USER_ID,
@@ -1374,7 +1401,7 @@ export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
   await seedEpcProject003(ctx);
 
   console.log('  EPC workflow demo seeded on 3 projects:');
-  console.log('    DEMO-001 Marina Tower — reviewer + lead review active');
+  console.log('    DEMO-001 Marina Tower — discipline owner + lead review active');
   console.log('    DEMO-002 Airport Expansion — dept chief governance review');
   console.log('    DEMO-003 Riverside Residential — issued design submittal');
 }

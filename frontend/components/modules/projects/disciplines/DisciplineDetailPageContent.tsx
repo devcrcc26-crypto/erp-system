@@ -106,11 +106,11 @@ export default function DisciplineDetailPageContent({
           <Descriptions.Item label="Reviewer">
             {discipline.reviewerName ?? '—'}
           </Descriptions.Item>
+          <Descriptions.Item label="Discipline owner">
+            {discipline.disciplineOwnerName ?? '—'}
+          </Descriptions.Item>
           <Descriptions.Item label="Dept review">
             {formatDisciplineDateTime(discipline.deptReviewTime)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Institute review">
-            {formatDisciplineDateTime(discipline.instituteReviewTime)}
           </Descriptions.Item>
         </Descriptions>
       </FormLayout>

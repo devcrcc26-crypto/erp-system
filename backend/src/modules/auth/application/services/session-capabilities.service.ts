@@ -25,6 +25,12 @@ const PM_MODULE_BINDINGS = [
   { key: 'closeout', module: 'closeout' },
 ] as const;
 
+const BYPASS_ROLE_NAMES = new Set([
+  'System Administrator',
+  'Managing Director',
+  'Project Manager',
+]);
+
 @Injectable()
 export class SessionCapabilitiesService {
   constructor(private readonly permissionService: PermissionService) {}
@@ -56,7 +62,7 @@ export class SessionCapabilitiesService {
       canEditRoles: roles.canEdit,
       canViewNotifications: notifications.canView,
       pm,
-      epc: this.resolveEpcCapabilities(schedule),
+      epc: await this.resolveEpcCapabilities(userId, companyId, schedule),
     };
   }
 
@@ -82,9 +88,19 @@ export class SessionCapabilitiesService {
     return pm;
   }
 
-  private resolveEpcCapabilities(
+  private async resolveEpcCapabilities(
+    userId: string,
+    companyId: string,
     schedule: PermissionFlags,
-  ): EpcCapabilitiesDto {
+  ): Promise<EpcCapabilitiesDto> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      userId,
+      companyId,
+    );
+    const disciplineScopeBypass = roleNames.some((name) =>
+      BYPASS_ROLE_NAMES.has(name),
+    );
+
     const canViewEngineering =
       schedule.canView &&
       (schedule.canCreate ||
@@ -100,6 +116,7 @@ export class SessionCapabilitiesService {
           schedule.canCreate),
       canViewMyComments: schedule.canView,
       canViewEngineering,
+      disciplineScopeBypass,
     };
   }
 

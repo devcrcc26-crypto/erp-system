@@ -71,7 +71,6 @@ interface TaskFormValues {
   description?: string;
   milestoneId?: string;
   dispatcherUserId?: string;
-  instituteChiefUserId?: string;
   startDate?: Dayjs;
   finishDate?: Dayjs;
   durationDays?: number;
@@ -111,7 +110,6 @@ function toExtendedPayload(
   | 'language'
   | 'approvalLevel'
   | 'dispatcherUserId'
-  | 'instituteChiefUserId'
   | 'actualCompletionTime'
   | 'actualWorkdays'
   | 'completionStatus'
@@ -130,7 +128,6 @@ function toExtendedPayload(
     language: values.language,
     approvalLevel: values.approvalLevel,
     dispatcherUserId: values.dispatcherUserId,
-    instituteChiefUserId: values.instituteChiefUserId,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     actualWorkdays: values.actualWorkdays,
     completionStatus: values.completionStatus,
@@ -145,7 +142,6 @@ function toFormValues(task: Task): TaskFormValues {
     description: task.description ?? undefined,
     milestoneId: task.milestoneId ?? undefined,
     dispatcherUserId: task.dispatcherUserId ?? undefined,
-    instituteChiefUserId: task.instituteChiefUserId ?? undefined,
     startDate: task.startDate ? dayjs(task.startDate) : undefined,
     finishDate: task.finishDate ? dayjs(task.finishDate) : undefined,
     durationDays: task.durationDays ?? undefined,
@@ -350,9 +346,6 @@ export default function TaskFormDrawer({
         </div>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Dispatcher" name="dispatcherUserId">
-            <ProjectTeamUserSelect projectId={projectId} />
-          </Form.Item>
-          <Form.Item label="Institute chief engineer" name="instituteChiefUserId">
             <ProjectTeamUserSelect projectId={projectId} />
           </Form.Item>
         </div>

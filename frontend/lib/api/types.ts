@@ -326,12 +326,14 @@ export interface EpcCapabilities {
   canViewReviewInbox: boolean;
   canViewMyComments: boolean;
   canViewEngineering: boolean;
+  disciplineScopeBypass: boolean;
 }
 
 export const EMPTY_EPC_CAPABILITIES: EpcCapabilities = {
   canViewReviewInbox: false,
   canViewMyComments: false,
   canViewEngineering: false,
+  disciplineScopeBypass: false,
 };
 
 export interface Capabilities extends AuthCapabilities {

@@ -18,6 +18,8 @@ import {
   RfiStatus,
   RiskCategory,
   RiskStatus,
+  SubmittalPreparedByRole,
+  SubmittalPurpose,
   SubmittalStatus,
   TaskDependencyType,
   TaskLanguage,
@@ -229,11 +231,6 @@ export class CreateTaskDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsEntityUuid()
-  instituteChiefUserId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsString()
   taskIdCode?: string;
 
@@ -391,15 +388,15 @@ export class CreateTaskDisciplineDto {
   @IsDateString()
   deptReviewTime?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString()
-  instituteReviewTime?: string;
-
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
   designerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  ownerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
@@ -467,6 +464,11 @@ export class CreateRfiDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   dueDate?: string;
 }
@@ -492,6 +494,21 @@ export class CreateSubmittalDto {
   @ApiProperty()
   @IsString()
   title!: string;
+
+  @ApiPropertyOptional({ enum: SubmittalPurpose })
+  @IsOptional()
+  @IsEnum(SubmittalPurpose)
+  submittalPurpose?: SubmittalPurpose;
+
+  @ApiPropertyOptional({ enum: SubmittalPreparedByRole })
+  @IsOptional()
+  @IsEnum(SubmittalPreparedByRole)
+  preparedByRole?: SubmittalPreparedByRole;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -580,6 +597,21 @@ export class CreateDesignSubmittalDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({ enum: SubmittalPurpose })
+  @IsOptional()
+  @IsEnum(SubmittalPurpose)
+  submittalPurpose?: SubmittalPurpose;
+
+  @ApiPropertyOptional({ enum: SubmittalPreparedByRole })
+  @IsOptional()
+  @IsEnum(SubmittalPreparedByRole)
+  preparedByRole?: SubmittalPreparedByRole;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
 }
 
 export class IssueSubmittalDto {
@@ -860,6 +892,11 @@ export class CreateIssueDto {
   @IsOptional()
   @IsEntityUuid()
   assignedTo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

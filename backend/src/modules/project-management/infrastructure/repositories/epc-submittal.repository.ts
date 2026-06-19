@@ -5,6 +5,8 @@ import {
   Prisma,
   Submittal,
   SubmittalItem,
+  SubmittalPreparedByRole,
+  SubmittalPurpose,
   SubmittalStatus,
   WorkflowEntityType,
   WorkflowEventPhase,
@@ -43,6 +45,9 @@ export class EpcSubmittalRepository {
       contractor?: string;
       supplier?: string;
       specReference?: string;
+      submittalPurpose?: SubmittalPurpose;
+      preparedByRole?: SubmittalPreparedByRole;
+      taskDisciplineId?: string;
       createdBy: string;
     },
   ): Promise<Submittal> {
@@ -56,6 +61,9 @@ export class EpcSubmittalRepository {
         contractor: input.contractor,
         supplier: input.supplier,
         specReference: input.specReference,
+        submittalPurpose: input.submittalPurpose,
+        preparedByRole: input.preparedByRole,
+        taskDisciplineId: input.taskDisciplineId,
         status: SubmittalStatus.DRAFT,
         createdBy: input.createdBy,
         updatedBy: input.createdBy,

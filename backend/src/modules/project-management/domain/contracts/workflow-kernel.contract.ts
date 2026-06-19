@@ -30,7 +30,8 @@ export interface AddReviewCommentCommand extends WorkflowCommandBase {
   readonly type: 'AddReviewComment';
   readonly reviewSessionId: string;
   readonly engineeringDocumentVersionId: string;
-  readonly body: string;
+  readonly body?: string;
+  readonly commentDocumentVersionId?: string;
   readonly severity: 'MINOR' | 'MODERATE' | 'MAJOR';
   readonly assignedToUserId: string;
 }
@@ -40,6 +41,7 @@ export interface TransitionCommentStatusCommand extends WorkflowCommandBase {
   readonly reviewCommentId: string;
   readonly targetStatus: CommentStatus;
   readonly resolutionNote?: string;
+  readonly responseDocumentVersionId?: string;
 }
 
 export interface VerifyReviewCommentCommand extends WorkflowCommandBase {
@@ -56,7 +58,8 @@ export interface UpdateReviewCommentCommand extends WorkflowCommandBase {
   readonly type: 'UpdateReviewComment';
   readonly reviewCommentId: string;
   readonly engineeringDocumentVersionId: string;
-  readonly body: string;
+  readonly body?: string;
+  readonly commentDocumentVersionId?: string;
   readonly severity: 'MINOR' | 'MODERATE' | 'MAJOR';
   readonly assignedToUserId: string;
 }
@@ -105,6 +108,9 @@ export interface CreateDesignSubmittalCommand extends WorkflowCommandBase {
   readonly contractor?: string;
   readonly supplier?: string;
   readonly specReference?: string;
+  readonly submittalPurpose?: string;
+  readonly preparedByRole?: string;
+  readonly taskDisciplineId?: string;
 }
 
 export interface IssueSubmittalCommand extends WorkflowCommandBase {

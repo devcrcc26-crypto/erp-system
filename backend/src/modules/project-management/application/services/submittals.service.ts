@@ -129,6 +129,9 @@ export class SubmittalsService {
         submittalNumber,
         category: dto.category,
         title: dto.title,
+        submittalPurpose: dto.submittalPurpose,
+        preparedByRole: dto.preparedByRole,
+        taskDisciplineId: dto.taskDisciplineId,
         contractor: dto.contractor,
         supplier: dto.supplier,
         specReference: dto.specReference,
@@ -170,6 +173,9 @@ export class SubmittalsService {
       contractor: dto.contractor,
       supplier: dto.supplier,
       specReference: dto.specReference,
+      submittalPurpose: dto.submittalPurpose,
+      preparedByRole: dto.preparedByRole,
+      taskDisciplineId: dto.taskDisciplineId,
       idempotencyKey: dto.idempotencyKey,
     });
   }

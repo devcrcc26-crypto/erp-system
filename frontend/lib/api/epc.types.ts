@@ -44,10 +44,10 @@ export type CommentStatus =
   | 'CLOSED';
 
 export type ReviewTier =
+  | 'DISCIPLINE_OWNER'
   | 'REVIEWER'
   | 'DISCIPLINE_LEAD'
-  | 'DEPT_CHIEF'
-  | 'INSTITUTE_CHIEF';
+  | 'DEPT_CHIEF';
 
 export type ReviewSessionStatus =
   | 'ACTIVE'
@@ -451,7 +451,8 @@ export interface BatchLockPackagesRequest {
 export interface AddReviewCommentRequest {
   reviewSessionId: string;
   engineeringDocumentVersionId: string;
-  body: string;
+  body?: string;
+  commentDocumentVersionId?: string;
   severity: CommentSeverity;
   assignedToUserId: string;
   idempotencyKey?: string;
@@ -460,6 +461,7 @@ export interface AddReviewCommentRequest {
 export interface TransitionReviewCommentRequest {
   targetStatus: CommentStatus;
   resolutionNote?: string;
+  responseDocumentVersionId?: string;
   idempotencyKey?: string;
 }
 

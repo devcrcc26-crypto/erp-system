@@ -52,6 +52,15 @@ export type SubmittalStatus =
   | 'REVISE_AND_RESUBMIT'
   | 'REJECTED';
 
+export type SubmittalPurpose =
+  | 'DISCIPLINE_SITE'
+  | 'DISCIPLINE_CONSULTANT'
+  | 'DEPUTY_BID'
+  | 'DEPUTY_INTERIM'
+  | 'DEPUTY_FINAL';
+
+export type SubmittalPreparedByRole = 'DISCIPLINE_LEAD' | 'DEPUTY_CHIEF';
+
 export type IssueSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type IssueStatus =
@@ -190,7 +199,6 @@ export interface Task {
   milestoneId: string | null;
   parentTaskId: string | null;
   dispatcherUserId: string | null;
-  instituteChiefUserId: string | null;
   taskIdCode: string;
   name: string;
   description: string | null;
@@ -229,15 +237,14 @@ export interface TaskDiscipline {
   reviewerName: string | null;
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
-  instituteChiefEngineer: string | null;
-  taskInstituteChiefUserId?: string | null;
+  disciplineOwnerName: string | null;
   designerUserId?: string | null;
+  ownerUserId?: string | null;
   reviewerUserId?: string | null;
   disciplineLeadUserId?: string | null;
   chiefUserId?: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
-  instituteReviewTime: string | null;
   createdAt: string;
   createdBy: string;
 }
@@ -260,6 +267,7 @@ export interface TaskDependency {
 export interface Rfi {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   raisedBy: string;
   assignedTo: string | null;
   rfiNumber: string;
@@ -273,6 +281,7 @@ export interface Rfi {
   dateAnswered: string | null;
   createdAt: string;
   updatedAt: string;
+  attachmentFolderId?: string | null;
 }
 
 export interface RfiResponse {
@@ -287,11 +296,14 @@ export interface RfiResponse {
 export interface Submittal {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   submittedBy: string;
   reviewedBy: string | null;
   submittalNumber: string;
   category: string;
   title: string;
+  submittalPurpose: SubmittalPurpose | null;
+  preparedByRole: SubmittalPreparedByRole | null;
   contractor: string | null;
   supplier: string | null;
   specReference: string | null;
@@ -300,6 +312,7 @@ export interface Submittal {
   submissionDate: string | null;
   dueDate: string | null;
   reviewDate: string | null;
+  issuedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -492,6 +505,7 @@ export interface Risk {
 export interface Issue {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   raisedBy: string;
   assignedTo: string | null;
   issueNumber: string;
@@ -505,6 +519,7 @@ export interface Issue {
   verifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  attachmentFolderId?: string | null;
 }
 
 export interface PunchItem {
@@ -679,7 +694,6 @@ export interface CreateTaskRequest {
   milestoneId?: string;
   parentTaskId?: string;
   dispatcherUserId?: string;
-  instituteChiefUserId?: string;
   taskIdCode?: string;
   name: string;
   description?: string;
@@ -711,12 +725,12 @@ export type UpdateTaskRequest = Partial<CreateTaskRequest>;
 export interface CreateTaskDisciplineRequest {
   disciplineName: string;
   designerUserId?: string;
+  ownerUserId?: string;
   reviewerUserId?: string;
   disciplineLeadUserId?: string;
   chiefUserId?: string;
   actualCompletionTime?: string;
   deptReviewTime?: string;
-  instituteReviewTime?: string;
 }
 
 export type UpdateTaskDisciplineRequest = Partial<CreateTaskDisciplineRequest>;
@@ -736,6 +750,7 @@ export interface CreateRfiRequest {
   discipline?: string;
   priority?: RfiPriority;
   assignedTo?: string;
+  taskDisciplineId?: string;
   dueDate?: string;
 }
 
@@ -846,6 +861,7 @@ export interface CreateIssueRequest {
   location?: string;
   severity: IssueSeverity;
   assignedTo?: string;
+  taskDisciplineId?: string;
   dueDate?: string;
 }
 

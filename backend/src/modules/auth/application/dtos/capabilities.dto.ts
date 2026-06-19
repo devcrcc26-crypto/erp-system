@@ -61,6 +61,12 @@ export class EpcCapabilitiesDto {
 
   @ApiProperty()
   canViewEngineering!: boolean;
+
+  @ApiProperty({
+    description:
+      'When true, user sees all project disciplines (PM / admin bypass).',
+  })
+  disciplineScopeBypass!: boolean;
 }
 
 export class CapabilitiesDto {

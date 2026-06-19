@@ -42,6 +42,7 @@ import {
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
 
 const PAGE_SIZE = 20;
 
@@ -56,6 +57,7 @@ interface RfiFormValues {
   title: string;
   description?: string;
   discipline?: string;
+  taskDisciplineId?: string;
   priority: RfiPriority;
   assignedTo?: string;
   dueDate?: Dayjs;
@@ -74,12 +76,23 @@ function RfiFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<RfiFormValues>();
   const createRfi = useCreateRfi();
+  const disciplinesQuery = useProjectDisciplines(projectId, open);
+
+  const disciplineOptions = useMemo(
+    () =>
+      (disciplinesQuery.data ?? []).map((row) => ({
+        value: row.id,
+        label: `${row.taskName} — ${row.disciplineName}`,
+      })),
+    [disciplinesQuery.data],
+  );
 
   async function handleSubmit(values: RfiFormValues): Promise<void> {
     const body: CreateRfiRequest = {
       title: values.title.trim(),
       description: values.description?.trim() || undefined,
       discipline: values.discipline?.trim() || undefined,
+      taskDisciplineId: values.taskDisciplineId,
       priority: values.priority,
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
@@ -115,9 +128,19 @@ function RfiFormDrawer({
           <Input.TextArea rows={4} placeholder="Detailed question or clarification" />
         </Form.Item>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Discipline" name="discipline">
-            <Input placeholder="e.g. Structural" />
+          <Form.Item label="Linked discipline" name="taskDisciplineId">
+            <Select
+              allowClear
+              placeholder="Select engineering discipline"
+              loading={disciplinesQuery.isLoading}
+              options={disciplineOptions}
+            />
           </Form.Item>
+          <Form.Item label="Discipline label" name="discipline">
+            <Input placeholder="e.g. Structural (optional display)" />
+          </Form.Item>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Priority"
             name="priority"
@@ -125,15 +148,13 @@ function RfiFormDrawer({
           >
             <Select options={PRIORITY_OPTIONS} />
           </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Assigned to" name="assignedTo">
             <UserSelect placeholder="Select reviewer" />
           </Form.Item>
-          <Form.Item label="Due date" name="dueDate">
-            <DatePicker className="w-full" />
-          </Form.Item>
         </div>
+        <Form.Item label="Due date" name="dueDate">
+          <DatePicker className="w-full" />
+        </Form.Item>
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button type="primary" htmlType="submit" loading={createRfi.isPending}>

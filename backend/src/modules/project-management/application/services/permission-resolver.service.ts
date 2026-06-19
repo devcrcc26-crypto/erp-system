@@ -75,6 +75,7 @@ export class PermissionResolverService {
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
+      disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -119,6 +120,7 @@ export class PermissionResolverService {
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
+      disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 

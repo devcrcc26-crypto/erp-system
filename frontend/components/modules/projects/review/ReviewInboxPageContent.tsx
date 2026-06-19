@@ -12,10 +12,10 @@ import {
 
 const TIER_KEYS = [
   'ALL',
+  'DISCIPLINE_OWNER',
   'REVIEWER',
   'DISCIPLINE_LEAD',
   'DEPT_CHIEF',
-  'INSTITUTE_CHIEF',
 ] as const;
 
 export default function ReviewInboxPageContent(): React.ReactNode {

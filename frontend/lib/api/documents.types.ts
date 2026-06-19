@@ -20,7 +20,9 @@ export type FolderContextType =
   | 'PROJECT'
   | 'DEPARTMENT'
   | 'USER'
-  | 'TASK_DISCIPLINE';
+  | 'TASK_DISCIPLINE'
+  | 'RFI'
+  | 'ISSUE';
 
 export interface DocumentFolder {
   id: string;
@@ -45,6 +47,7 @@ export interface DocumentRecord {
   fileSizeBytes: number;
   version: number;
   isCurrent: boolean;
+  currentVersionId?: string;
   createdAt: string;
   updatedAt: string;
 }

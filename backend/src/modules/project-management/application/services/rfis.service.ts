@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RfiStatus } from '@prisma/client';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { FolderContextType, Prisma, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -22,7 +22,9 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const RFI_SORT_FIELDS = new Set([
@@ -41,6 +43,8 @@ export class RfisService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly disciplineScopeService: DisciplineScopeService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -53,7 +57,7 @@ export class RfisService {
   ): Promise<PaginatedResult<MappedRfi>> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const where = this.buildRfiListWhere(projectId, query);
+    const where = await this.buildRfiListWhere(ctx, projectId, query);
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const orderBy = buildPmOrderBy(
       query.sortBy,
@@ -66,12 +70,11 @@ export class RfisService {
       this.prisma.rfi.count({ where }),
     ]);
 
-    return buildPaginatedResult(
-      rows.map(mapRfi),
-      total,
-      query.page,
-      query.limit,
+    const data = await Promise.all(
+      rows.map((row) => this.enrichRfi(ctx, row)),
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -83,7 +86,8 @@ export class RfisService {
     rfiId: string,
   ): Promise<MappedRfi> {
     const rfi = await this.getRfiOrThrow(projectId, rfiId);
-    return mapRfi(rfi);
+    await this.assertRfiVisible(ctx, projectId, rfi);
+    return this.enrichRfi(ctx, rfi);
   }
 
   /**
@@ -100,6 +104,14 @@ export class RfisService {
       await this.assertUserInCompany(ctx, dto.assignedTo);
     }
 
+    if (dto.taskDisciplineId) {
+      await this.disciplineScopeService.assertDisciplineAccess(
+        ctx,
+        projectId,
+        dto.taskDisciplineId,
+      );
+    }
+
     const rfiNumber = await this.documentNumberService.getNextNumber(
       ctx,
       'RFI',
@@ -110,6 +122,7 @@ export class RfisService {
         projectId,
         raisedBy: ctx.userId,
         assignedTo: dto.assignedTo,
+        taskDisciplineId: dto.taskDisciplineId,
         rfiNumber,
         title: dto.title,
         description: dto.description,
@@ -122,7 +135,14 @@ export class RfisService {
       },
     });
 
-    return mapRfi(rfi);
+    const folder = await this.engineeringDocumentFolderService.ensureRfiFolder(
+      ctx,
+      projectId,
+      rfi.id,
+      rfi.rfiNumber,
+    );
+
+    return { ...mapRfi(rfi), attachmentFolderId: folder.id };
   }
 
   /**
@@ -134,10 +154,19 @@ export class RfisService {
     rfiId: string,
     dto: UpdateRfiDto,
   ): Promise<MappedRfi> {
-    await this.getRfiOrThrow(projectId, rfiId);
+    const existing = await this.getRfiOrThrow(projectId, rfiId);
+    await this.assertRfiVisible(ctx, projectId, existing);
 
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
+    }
+
+    if (dto.taskDisciplineId) {
+      await this.disciplineScopeService.assertDisciplineAccess(
+        ctx,
+        projectId,
+        dto.taskDisciplineId,
+      );
     }
 
     const rfi = await this.prisma.rfi.update({
@@ -148,13 +177,14 @@ export class RfisService {
         discipline: dto.discipline,
         priority: dto.priority,
         assignedTo: dto.assignedTo,
+        taskDisciplineId: dto.taskDisciplineId,
         dueDate: parseOptionalDate(dto.dueDate),
         status: dto.status,
         updatedBy: ctx.userId,
       },
     });
 
-    return mapRfi(rfi);
+    return this.enrichRfi(ctx, rfi);
   }
 
   /**
@@ -165,7 +195,8 @@ export class RfisService {
     projectId: string,
     rfiId: string,
   ): Promise<void> {
-    await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    await this.assertRfiVisible(ctx, projectId, rfi);
     await this.prisma.rfi.update({
       where: { id: rfiId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
@@ -180,7 +211,8 @@ export class RfisService {
     projectId: string,
     rfiId: string,
   ): Promise<MappedRfiResponse[]> {
-    await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    await this.assertRfiVisible(ctx, projectId, rfi);
 
     const responses = await this.prisma.rfiResponse.findMany({
       where: { rfiId },
@@ -200,6 +232,7 @@ export class RfisService {
     dto: CreateRfiResponseDto,
   ): Promise<MappedRfiResponse> {
     const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    await this.assertRfiVisible(ctx, projectId, rfi);
 
     const response = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rfiResponse.create({
@@ -227,11 +260,29 @@ export class RfisService {
     return mapRfiResponse(response);
   }
 
-  private buildRfiListWhere(
+  private async buildRfiListWhere(
+    ctx: PmContext,
     projectId: string,
     query: PmListQueryDto,
-  ): Prisma.RfiWhereInput {
+  ): Promise<Prisma.RfiWhereInput> {
     const where: Prisma.RfiWhereInput = activeOnly({ projectId });
+
+    const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
+      ctx,
+      projectId,
+    );
+    if (!bypass) {
+      const assignedIds =
+        await this.disciplineScopeService.getAssignedDisciplineIds(
+          ctx,
+          projectId,
+        );
+      where.OR = [
+        { taskDisciplineId: null },
+        { taskDisciplineId: { in: assignedIds } },
+        { raisedBy: ctx.userId },
+      ];
+    }
 
     if (query.status) {
       where.status = query.status as RfiStatus;
@@ -239,15 +290,60 @@ export class RfisService {
 
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
-        { rfiNumber: { contains: term, mode: 'insensitive' } },
-        { title: { contains: term, mode: 'insensitive' } },
-        { description: { contains: term, mode: 'insensitive' } },
-        { discipline: { contains: term, mode: 'insensitive' } },
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        {
+          OR: [
+            { rfiNumber: { contains: term, mode: 'insensitive' } },
+            { title: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+            { discipline: { contains: term, mode: 'insensitive' } },
+          ],
+        },
       ];
     }
 
     return where;
+  }
+
+  private async enrichRfi(
+    ctx: PmContext,
+    rfi: Parameters<typeof mapRfi>[0],
+  ): Promise<MappedRfi> {
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.RFI,
+      rfi.id,
+    );
+    return {
+      ...mapRfi(rfi),
+      attachmentFolderId: folder?.id ?? null,
+    };
+  }
+
+  private async assertRfiVisible(
+    ctx: PmContext,
+    projectId: string,
+    rfi: { taskDisciplineId: string | null; raisedBy: string },
+  ): Promise<void> {
+    const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
+      ctx,
+      projectId,
+    );
+    if (bypass || rfi.raisedBy === ctx.userId || rfi.taskDisciplineId === null) {
+      return;
+    }
+
+    const assignedIds =
+      await this.disciplineScopeService.getAssignedDisciplineIds(ctx, projectId);
+    if (
+      rfi.taskDisciplineId !== null &&
+      assignedIds.includes(rfi.taskDisciplineId)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('You do not have access to this RFI');
   }
 
   private async getRfiOrThrow(projectId: string, rfiId: string) {

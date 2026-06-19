@@ -341,6 +341,8 @@ export default function ReviewModePanel({
                   <ReviewCommentPanel
                     reviewMode={reviewMode}
                     edvOptions={edvCommentOptions}
+                    projectId={projectId}
+                    taskDisciplineId={taskDisciplineId}
                     onCommentAdded={refetchAll}
                   />
                 ),

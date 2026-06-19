@@ -78,6 +78,21 @@ export class PermissionService {
   }
 
   /**
+   * Returns active role names assigned to a user within a company.
+   */
+  async getUserRoleNames(userId: string, companyId: string): Promise<string[]> {
+    const userRoles = await this.prisma.userRole.findMany({
+      where: activeOnly({ userId }),
+      include: { role: true },
+    });
+    return userRoles
+      .filter(
+        (ur) => ur.role.companyId === companyId && ur.role.isActive,
+      )
+      .map((ur) => ur.role.name);
+  }
+
+  /**
    * Walks the role inheritance chain from child to ancestors.
    */
   private async collectRoleChainIds(

@@ -17,6 +17,7 @@ export interface RoleLens {
   canViewMyComments: boolean;
   isReviewerWorkspace: boolean;
   isDesignerWorkspace: boolean;
+  disciplineScopeBypass: boolean;
 }
 
 const RoleLensContext = createContext<RoleLens | null>(null);
@@ -38,6 +39,7 @@ function buildRoleLens(
     canViewReviewInbox: boolean;
     canViewMyComments: boolean;
     canViewEngineering: boolean;
+    disciplineScopeBypass: boolean;
   },
 ): RoleLens {
   const engineeringView =
@@ -62,6 +64,7 @@ function buildRoleLens(
     isReviewerWorkspace:
       epc.canViewReviewInbox || schedule.canView || schedule.canEdit,
     isDesignerWorkspace: engineeringView && schedule.canEdit,
+    disciplineScopeBypass: epc.disciplineScopeBypass,
   };
 }
 

@@ -240,7 +240,7 @@ export class DocumentService {
         },
       });
 
-      await tx.documentVersion.create({
+      const version = await tx.documentVersion.create({
         data: {
           documentId: document.id,
           uploadedBy: ctx.userId,
@@ -250,7 +250,7 @@ export class DocumentService {
         },
       });
 
-      return document;
+      return { ...document, currentVersionId: version.id };
     });
   }
 

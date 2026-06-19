@@ -32,7 +32,7 @@ export interface ReviewInboxItem {
 
 export interface MyCommentItem {
   readonly commentId: string;
-  readonly body: string;
+  readonly body: string | null;
   readonly status: CommentStatus;
   readonly severity: string;
   readonly engineeringDocumentVersionId: string;
@@ -81,7 +81,7 @@ export interface ReviewModeView {
   readonly contentHash: string | null;
   readonly comments: readonly {
     id: string;
-    body: string;
+    body: string | null;
     status: CommentStatus;
     severity: string;
     engineeringDocumentVersionId: string;
@@ -140,6 +140,10 @@ export class EpcWorkspaceService {
         OR: [
           { assignedToUserId: ctx.userId },
           {
+            currentTier: ReviewTier.DISCIPLINE_OWNER,
+            taskDiscipline: { ownerUserId: ctx.userId },
+          },
+          {
             currentTier: ReviewTier.REVIEWER,
             taskDiscipline: { reviewerUserId: ctx.userId },
           },
@@ -150,12 +154,6 @@ export class EpcWorkspaceService {
           {
             currentTier: ReviewTier.DEPT_CHIEF,
             taskDiscipline: { chiefUserId: ctx.userId },
-          },
-          {
-            currentTier: ReviewTier.INSTITUTE_CHIEF,
-            taskDiscipline: {
-              task: { instituteChiefUserId: ctx.userId },
-            },
           },
         ],
       }),

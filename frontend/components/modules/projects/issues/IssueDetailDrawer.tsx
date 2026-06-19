@@ -131,9 +131,9 @@ export default function IssueDetailDrawer({
           </div>
 
           <DocumentAttachmentPanel
-            readOnly
+            folderId={issue.attachmentFolderId ?? undefined}
             title="Photos & drawings"
-            description="Photo evidence and drawing references will be enabled when document folders are linked."
+            description="Upload site photos, sketches, or drawing references for this issue."
           />
 
           <Alert

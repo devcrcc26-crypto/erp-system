@@ -115,6 +115,20 @@ const DEMO_USERS: DemoUser[] = [
     lastName: 'Fahad',
     roleName: 'Site Coordinator',
   },
+  {
+    id: '00000000-0000-4000-8000-000000000089',
+    email: 'owner@company.local',
+    firstName: 'Hassan',
+    lastName: 'Al-Rashid',
+    roleName: 'Discipline Owner',
+  },
+  {
+    id: '00000000-0000-4000-8000-00000000008a',
+    email: 'consultant@company.local',
+    firstName: 'Elena',
+    lastName: 'Petrova',
+    roleName: 'Client Consultant',
+  },
 ];
 
 function mapProjectTeamRole(label: string): ProjectTeamRole {
@@ -305,12 +319,17 @@ async function seedProjectBundle(
   const projectId = project.id;
 
   // ── Team ─────────────────────────────────────────────────────────────────
+  const siteCoordUserId = '00000000-0000-4000-8000-000000000088';
+  const consultantUserId = '00000000-0000-4000-8000-00000000008a';
+
   const teamMembers = [
     { entity: 2, userId: users.pmUserId, role: 'Project Manager' },
     { entity: 3, userId: users.engineerUserId, role: 'Site Engineer' },
     { entity: 4, userId: users.safetyUserId, role: 'Safety Officer' },
     { entity: 5, userId: users.docsUserId, role: 'Document Controller' },
     { entity: 6, userId: adminUserId, role: 'Client Representative' },
+    { entity: 7, userId: siteCoordUserId, role: 'Site Coordinator' },
+    { entity: 8, userId: consultantUserId, role: 'Client Consultant' },
   ];
 
   for (const member of teamMembers) {
@@ -412,7 +431,6 @@ async function seedProjectBundle(
       projectId,
       milestoneId: milestone1Id,
       dispatcherUserId: users.pmUserId,
-      instituteChiefUserId: adminUserId,
       taskIdCode: `${prefix}-T100`,
       name: 'Foundation and piling',
       description: 'Pile caps, ground beams, and blinding concrete.',
@@ -436,7 +454,6 @@ async function seedProjectBundle(
       projectId,
       milestoneId: milestone2Id,
       dispatcherUserId: users.pmUserId,
-      instituteChiefUserId: adminUserId,
       taskIdCode: `${prefix}-T200`,
       name: 'Superstructure and envelope',
       description: 'Structural frame, cladding, and MEP rough-in.',

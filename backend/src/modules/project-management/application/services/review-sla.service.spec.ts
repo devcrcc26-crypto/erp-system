@@ -20,7 +20,7 @@ describe('ReviewSlaService', () => {
     );
   });
 
-  it('returns null next tier at INSTITUTE_CHIEF', () => {
-    expect(service.getNextTier(ReviewTier.INSTITUTE_CHIEF)).toBeNull();
+  it('returns null next tier at DEPT_CHIEF', () => {
+    expect(service.getNextTier(ReviewTier.DEPT_CHIEF)).toBeNull();
   });
 });

@@ -40,6 +40,7 @@ export default function DisciplineLeadConsole({
   }
 
   const isGovernanceTier =
+    currentTier === 'DISCIPLINE_OWNER' ||
     currentTier === 'REVIEWER' ||
     currentTier === 'DISCIPLINE_LEAD' ||
     currentTier === 'DEPT_CHIEF';
@@ -49,12 +50,15 @@ export default function DisciplineLeadConsole({
   }
 
   const approvalAllowed = canApproveReviewSession(comments.map((comment) => comment.status));
+  const isFinalTier = currentTier === 'DEPT_CHIEF';
   const tierLabel =
-    currentTier === 'REVIEWER'
-      ? 'Reviewer'
-      : currentTier === 'DISCIPLINE_LEAD'
-        ? 'Discipline lead'
-        : 'Department chief';
+    currentTier === 'DISCIPLINE_OWNER'
+      ? 'Discipline owner'
+      : currentTier === 'REVIEWER'
+        ? 'Reviewer'
+        : currentTier === 'DISCIPLINE_LEAD'
+          ? 'Discipline lead'
+          : 'Department chief';
 
   return (
     <FormLayout
@@ -84,7 +88,7 @@ export default function DisciplineLeadConsole({
               });
           }}
         >
-          Approve & escalate
+          {isFinalTier ? 'Approve' : 'Approve & escalate'}
         </Button>
         <Button
           danger
@@ -98,9 +102,13 @@ export default function DisciplineLeadConsole({
                 body: {
                   reviewSessionId,
                   reason:
-                    currentTier === 'REVIEWER'
-                      ? 'Returned by reviewer'
-                      : 'Returned by discipline lead',
+                    currentTier === 'DISCIPLINE_OWNER'
+                      ? 'Returned by discipline owner'
+                      : currentTier === 'REVIEWER'
+                        ? 'Returned by reviewer'
+                        : currentTier === 'DISCIPLINE_LEAD'
+                          ? 'Returned by discipline lead'
+                          : 'Returned by department chief',
                 },
               })
               .then(() => {

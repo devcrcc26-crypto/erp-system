@@ -183,11 +183,14 @@ export function mapProjectTeamMember(member: ProjectTeam): MappedProjectTeamMemb
 export interface MappedSubmittal {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   submittedBy: string;
   reviewedBy: string | null;
   submittalNumber: string;
   category: string;
   title: string;
+  submittalPurpose: Submittal['submittalPurpose'];
+  preparedByRole: Submittal['preparedByRole'];
   contractor: string | null;
   supplier: string | null;
   specReference: string | null;
@@ -460,11 +463,14 @@ export function mapSubmittal(row: Submittal): MappedSubmittal {
   return {
     id: row.id,
     projectId: row.projectId,
+    taskDisciplineId: row.taskDisciplineId,
     submittedBy: row.submittedBy,
     reviewedBy: row.reviewedBy,
     submittalNumber: row.submittalNumber,
     category: row.category,
     title: row.title,
+    submittalPurpose: row.submittalPurpose,
+    preparedByRole: row.preparedByRole,
     contractor: row.contractor,
     supplier: row.supplier,
     specReference: row.specReference,
@@ -830,7 +836,6 @@ export interface MappedTask {
   milestoneId: string | null;
   parentTaskId: string | null;
   dispatcherUserId: string | null;
-  instituteChiefUserId: string | null;
   taskIdCode: string;
   name: string;
   description: string | null;
@@ -869,15 +874,14 @@ export interface MappedTaskDiscipline {
   reviewerName: string | null;
   disciplinaryLeader: string | null;
   deptChiefEngineer: string | null;
-  instituteChiefEngineer: string | null;
-  taskInstituteChiefUserId: string | null;
+  disciplineOwnerName: string | null;
   designerUserId: string | null;
+  ownerUserId: string | null;
   reviewerUserId: string | null;
   disciplineLeadUserId: string | null;
   chiefUserId: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
-  instituteReviewTime: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -900,6 +904,7 @@ export interface MappedTaskDependency {
 export interface MappedRfi {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   raisedBy: string;
   assignedTo: string | null;
   rfiNumber: string;
@@ -913,6 +918,7 @@ export interface MappedRfi {
   dateAnswered: string | null;
   createdAt: string;
   updatedAt: string;
+  attachmentFolderId?: string | null;
 }
 
 export interface MappedRfiResponse {
@@ -927,6 +933,7 @@ export interface MappedRfiResponse {
 export interface MappedIssue {
   id: string;
   projectId: string;
+  taskDisciplineId: string | null;
   raisedBy: string;
   assignedTo: string | null;
   issueNumber: string;
@@ -940,6 +947,7 @@ export interface MappedIssue {
   verifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  attachmentFolderId?: string | null;
 }
 
 /**
@@ -968,7 +976,6 @@ export function mapTask(task: Task): MappedTask {
     milestoneId: task.milestoneId,
     parentTaskId: task.parentTaskId,
     dispatcherUserId: task.dispatcherUserId,
-    instituteChiefUserId: task.instituteChiefUserId,
     taskIdCode: task.taskIdCode,
     name: task.name,
     description: task.description,
@@ -1001,11 +1008,7 @@ export function mapTask(task: Task): MappedTask {
 /**
  * Maps a Prisma TaskDiscipline row to the API response shape.
  */
-export function mapTaskDiscipline(
-  discipline: TaskDiscipline,
-  taskInstituteChiefUserId: string | null = null,
-  instituteChiefDisplayName: string | null = null,
-): MappedTaskDiscipline {
+export function mapTaskDiscipline(discipline: TaskDiscipline): MappedTaskDiscipline {
   return {
     id: discipline.id,
     taskId: discipline.taskId,
@@ -1016,16 +1019,14 @@ export function mapTaskDiscipline(
     reviewerName: discipline.reviewerName,
     disciplinaryLeader: discipline.disciplinaryLeader,
     deptChiefEngineer: discipline.deptChiefEngineer,
-    instituteChiefEngineer:
-      instituteChiefDisplayName ?? discipline.instituteChiefEngineer,
-    taskInstituteChiefUserId: taskInstituteChiefUserId,
+    disciplineOwnerName: discipline.disciplineOwnerName,
     designerUserId: discipline.designerUserId,
+    ownerUserId: discipline.ownerUserId,
     reviewerUserId: discipline.reviewerUserId,
     disciplineLeadUserId: discipline.disciplineLeadUserId,
     chiefUserId: discipline.chiefUserId,
     actualCompletionTime: toIsoString(discipline.actualCompletionTime),
     deptReviewTime: toIsoString(discipline.deptReviewTime),
-    instituteReviewTime: toIsoString(discipline.instituteReviewTime),
     createdAt: toIsoString(discipline.createdAt)!,
     createdBy: discipline.createdBy,
     updatedAt: toIsoString(discipline.updatedAt)!,
@@ -1056,6 +1057,7 @@ export function mapRfi(rfi: Rfi): MappedRfi {
   return {
     id: rfi.id,
     projectId: rfi.projectId,
+    taskDisciplineId: rfi.taskDisciplineId,
     raisedBy: rfi.raisedBy,
     assignedTo: rfi.assignedTo,
     rfiNumber: rfi.rfiNumber,
@@ -1093,6 +1095,7 @@ export function mapIssue(issue: Issue): MappedIssue {
   return {
     id: issue.id,
     projectId: issue.projectId,
+    taskDisciplineId: issue.taskDisciplineId,
     raisedBy: issue.raisedBy,
     assignedTo: issue.assignedTo,
     issueNumber: issue.issueNumber,

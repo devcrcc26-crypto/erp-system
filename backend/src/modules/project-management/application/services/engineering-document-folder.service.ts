@@ -148,6 +148,107 @@ export class EngineeringDocumentFolderService {
     return folder;
   }
 
+  /**
+   * Returns or creates the attachment folder for an RFI under the project folder.
+   */
+  async ensureRfiFolder(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+    rfiNumber: string,
+  ): Promise<DocumentFolderRef> {
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.RFI,
+      rfiId,
+      `rfis/${this.toFolderSegment(rfiNumber)}`,
+      this.toFolderSegment(rfiNumber),
+    );
+  }
+
+  /**
+   * Returns or creates the attachment folder for an issue under the project folder.
+   */
+  async ensureIssueFolder(
+    ctx: PmContext,
+    projectId: string,
+    issueId: string,
+    issueNumber: string,
+  ): Promise<DocumentFolderRef> {
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.ISSUE,
+      issueId,
+      `issues/${this.toFolderSegment(issueNumber)}`,
+      this.toFolderSegment(issueNumber),
+    );
+  }
+
+  /**
+   * Resolves an entity attachment folder by context, if it exists.
+   */
+  async findEntityFolder(
+    ctx: PmContext,
+    contextType: FolderContextType,
+    contextId: string,
+  ): Promise<DocumentFolderRef | null> {
+    return this.prisma.documentFolder.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        contextType,
+        contextId,
+      }),
+      select: { id: true, path: true },
+    });
+  }
+
+  private async ensureEntityFolder(
+    ctx: PmContext,
+    projectId: string,
+    contextType: FolderContextType,
+    contextId: string,
+    relativePath: string,
+    folderName: string,
+  ): Promise<DocumentFolderRef> {
+    const existing = await this.findEntityFolder(ctx, contextType, contextId);
+    if (existing) {
+      return existing;
+    }
+
+    const project = await this.prisma.project.findFirst({
+      where: activeOnly({ id: projectId, companyId: ctx.companyId }),
+      select: { id: true, projectCode: true, name: true },
+    });
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const projectFolder = await this.ensureProjectFolder(
+      ctx,
+      project.id,
+      project.projectCode,
+      project.name,
+    );
+    const path = `${projectFolder.path}/${relativePath}`;
+
+    return this.prisma.documentFolder.create({
+      data: {
+        companyId: ctx.companyId,
+        parentId: projectFolder.id,
+        name: folderName,
+        path,
+        contextType,
+        contextId,
+        isSystem: true,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      select: { id: true, path: true },
+    });
+  }
+
   private toFolderSegment(value: string): string {
     const trimmed = value.trim();
     if (!trimmed) {

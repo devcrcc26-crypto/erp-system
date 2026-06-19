@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, SubmittalPreparedByRole, SubmittalPurpose } from '@prisma/client';
 import { DesignPackageProjectedStatus } from '../../domain/contracts/enums/design-package-projected-status.enum';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
@@ -17,6 +12,7 @@ import {
 import {
   validateSubmittalPackages,
 } from '../../domain/submittal-package-validator';
+import { validateSubmittalPurposeRole } from '../../domain/submittal-purpose-validator';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import {
   EpcWorkflowRepository,
@@ -87,6 +83,21 @@ export class SubmittalWorkflowService {
         throw new ConflictException(validation.message ?? 'Package not submittal-eligible');
       }
 
+      const packageDisciplineIds = await this.loadPackageDisciplineIds(
+        tx,
+        command.companyId,
+        command.designPackageIds,
+      );
+      const purposeValidation = validateSubmittalPurposeRole({
+        submittalPurpose: command.submittalPurpose as SubmittalPurpose | undefined,
+        preparedByRole: command.preparedByRole as SubmittalPreparedByRole | undefined,
+        taskDisciplineId: command.taskDisciplineId,
+        packageDisciplineIds,
+      });
+      if (!purposeValidation.valid) {
+        throw new BadRequestException(purposeValidation.message);
+      }
+
       const submittal = await this.epcSubmittalRepository.createSubmittal(tx, {
         projectId: command.projectId,
         submittedBy: command.actorId,
@@ -96,6 +107,9 @@ export class SubmittalWorkflowService {
         contractor: command.contractor,
         supplier: command.supplier,
         specReference: command.specReference,
+        submittalPurpose: command.submittalPurpose as SubmittalPurpose | undefined,
+        preparedByRole: command.preparedByRole as SubmittalPreparedByRole | undefined,
+        taskDisciplineId: command.taskDisciplineId,
         createdBy: command.actorId,
       });
 
@@ -336,6 +350,22 @@ export class SubmittalWorkflowService {
       });
     }
     return inputs;
+  }
+
+  private async loadPackageDisciplineIds(
+    tx: PrismaTx,
+    companyId: string,
+    designPackageIds: readonly string[],
+  ): Promise<string[]> {
+    const rows = await tx.designPackage.findMany({
+      where: {
+        id: { in: [...designPackageIds] },
+        companyId,
+        deletedAt: null,
+      },
+      select: { taskDisciplineId: true },
+    });
+    return rows.map((row) => row.taskDisciplineId);
   }
 
   private async resolveAnyDisciplineId(

@@ -21,7 +21,7 @@ export interface MappedReviewCommentDetail {
   reviewSessionId: string;
   designPackageId: string;
   engineeringDocumentVersionId: string;
-  body: string;
+  body: string | null;
   severity: string;
   status: CommentStatus | string;
   createdBy: string;
@@ -92,6 +92,7 @@ export class ReviewCommentsService {
       reviewSessionId: dto.reviewSessionId,
       engineeringDocumentVersionId: dto.engineeringDocumentVersionId,
       body: dto.body,
+      commentDocumentVersionId: dto.commentDocumentVersionId,
       severity: dto.severity,
       assignedToUserId: dto.assignedToUserId,
       idempotencyKey: dto.idempotencyKey,
@@ -113,6 +114,7 @@ export class ReviewCommentsService {
       reviewCommentId: commentId,
       targetStatus: dto.targetStatus as CommentStatus,
       resolutionNote: dto.resolutionNote,
+      responseDocumentVersionId: dto.responseDocumentVersionId,
       idempotencyKey: dto.idempotencyKey,
     });
   }
@@ -164,6 +166,7 @@ export class ReviewCommentsService {
       reviewCommentId: commentId,
       engineeringDocumentVersionId: dto.engineeringDocumentVersionId,
       body: dto.body,
+      commentDocumentVersionId: dto.commentDocumentVersionId,
       severity: dto.severity,
       assignedToUserId: dto.assignedToUserId,
       idempotencyKey: dto.idempotencyKey,

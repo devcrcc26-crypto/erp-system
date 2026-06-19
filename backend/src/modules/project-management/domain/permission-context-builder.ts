@@ -185,13 +185,15 @@ export function evaluateDisciplineAssignmentLayer(
   }
 
   if (REVIEW_TIER_ACTIONS.has(action)) {
+    const isOwner = userId === input.disciplineOwnerUserId;
     const isReviewer = userId === input.disciplineReviewerUserId;
     const isLead = userId === input.disciplineLeadUserId;
     const isChief = userId === input.disciplineChiefUserId;
     const isSessionAssignee =
       input.currentAssigneeUserId !== undefined &&
       userId === input.currentAssigneeUserId;
-    const match = isReviewer || isLead || isChief || isSessionAssignee;
+    const match =
+      isOwner || isReviewer || isLead || isChief || isSessionAssignee;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,

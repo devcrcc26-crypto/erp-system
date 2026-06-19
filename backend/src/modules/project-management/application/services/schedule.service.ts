@@ -36,6 +36,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { DisciplineScopeService } from './discipline-scope.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
@@ -62,6 +63,7 @@ export class ScheduleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly disciplineScopeService: DisciplineScopeService,
     private readonly documentNumberService: DocumentNumberService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
@@ -209,10 +211,7 @@ export class ScheduleService {
     if (dto.parentTaskId) {
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.dispatcherUserId,
-      dto.instituteChiefUserId,
-    ]);
+    await this.assertUsersOnProjectTeam(projectId, [dto.dispatcherUserId]);
 
     const taskIdCode =
       dto.taskIdCode?.trim() ||
@@ -224,7 +223,6 @@ export class ScheduleService {
         milestoneId: dto.milestoneId,
         parentTaskId: dto.parentTaskId,
         dispatcherUserId: dto.dispatcherUserId,
-        instituteChiefUserId: dto.instituteChiefUserId,
         taskIdCode,
         name: dto.name,
         description: dto.description,
@@ -277,10 +275,7 @@ export class ScheduleService {
       }
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.dispatcherUserId,
-      dto.instituteChiefUserId,
-    ]);
+    await this.assertUsersOnProjectTeam(projectId, [dto.dispatcherUserId]);
 
     const task = await this.prisma.task.update({
       where: { id: taskId },
@@ -288,7 +283,6 @@ export class ScheduleService {
         milestoneId: dto.milestoneId,
         parentTaskId: dto.parentTaskId,
         dispatcherUserId: dto.dispatcherUserId,
-        instituteChiefUserId: dto.instituteChiefUserId,
         taskIdCode: dto.taskIdCode,
         name: dto.name,
         description: dto.description,
@@ -469,32 +463,27 @@ export class ScheduleService {
     projectId: string,
   ): Promise<MappedProjectTaskDiscipline[]> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const scopeFilter = await this.disciplineScopeService.disciplineWhereForUser(
+      ctx,
+      projectId,
+    );
 
     const disciplines = await this.prisma.taskDiscipline.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
         task: { projectId },
+        ...scopeFilter,
       }),
       include: {
         task: {
-          select: {
-            name: true,
-            instituteChiefUserId: true,
-            instituteChiefUser: {
-              select: { firstName: true, lastName: true },
-            },
-          },
+          select: { name: true },
         },
       },
       orderBy: [{ task: { name: 'asc' } }, { createdAt: 'asc' }],
     });
 
     return disciplines.map((discipline) => ({
-      ...mapTaskDiscipline(
-        discipline,
-        discipline.task.instituteChiefUserId,
-        this.formatUserDisplayName(discipline.task.instituteChiefUser),
-      ),
+      ...mapTaskDiscipline(discipline),
       taskName: discipline.task.name,
     }));
   }
@@ -508,6 +497,11 @@ export class ScheduleService {
     disciplineId: string,
   ): Promise<MappedProjectTaskDiscipline> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    await this.disciplineScopeService.assertDisciplineAccess(
+      ctx,
+      projectId,
+      disciplineId,
+    );
 
     const discipline = await this.prisma.taskDiscipline.findFirst({
       where: activeOnly({
@@ -517,13 +511,7 @@ export class ScheduleService {
       }),
       include: {
         task: {
-          select: {
-            name: true,
-            instituteChiefUserId: true,
-            instituteChiefUser: {
-              select: { firstName: true, lastName: true },
-            },
-          },
+          select: { name: true },
         },
       },
     });
@@ -533,11 +521,7 @@ export class ScheduleService {
     }
 
     return {
-      ...mapTaskDiscipline(
-        discipline,
-        discipline.task.instituteChiefUserId,
-        this.formatUserDisplayName(discipline.task.instituteChiefUser),
-      ),
+      ...mapTaskDiscipline(discipline),
       taskName: discipline.task.name,
     };
   }
@@ -550,23 +534,18 @@ export class ScheduleService {
     projectId: string,
     taskId: string,
   ): Promise<MappedTaskDiscipline[]> {
-    const task = await this.getTaskRowOrThrow(projectId, taskId);
-    const instituteChiefDisplayName = this.formatUserDisplayName(
-      task.instituteChiefUser,
+    await this.getTaskOrThrow(projectId, taskId);
+    const scopeFilter = await this.disciplineScopeService.disciplineWhereForUser(
+      ctx,
+      projectId,
     );
 
     const disciplines = await this.prisma.taskDiscipline.findMany({
-      where: activeOnly({ taskId, companyId: ctx.companyId }),
+      where: activeOnly({ taskId, companyId: ctx.companyId, ...scopeFilter }),
       orderBy: { createdAt: 'asc' },
     });
 
-    return disciplines.map((discipline) =>
-      mapTaskDiscipline(
-        discipline,
-        task.instituteChiefUserId,
-        instituteChiefDisplayName,
-      ),
-    );
+    return disciplines.map(mapTaskDiscipline);
   }
 
   /**
@@ -578,13 +557,11 @@ export class ScheduleService {
     taskId: string,
     dto: CreateTaskDisciplineDto,
   ): Promise<MappedTaskDiscipline> {
-    const task = await this.getTaskRowOrThrow(projectId, taskId);
-    const instituteChiefDisplayName = this.formatUserDisplayName(
-      task.instituteChiefUser,
-    );
+    await this.getTaskOrThrow(projectId, taskId);
 
     await this.assertUsersOnProjectTeam(projectId, [
       dto.designerUserId,
+      dto.ownerUserId,
       dto.reviewerUserId,
       dto.disciplineLeadUserId,
       dto.chiefUserId,
@@ -601,14 +578,14 @@ export class ScheduleService {
         reviewerName: roleNames.reviewerName,
         disciplinaryLeader: roleNames.disciplinaryLeader,
         deptChiefEngineer: roleNames.deptChiefEngineer,
-        instituteChiefEngineer: instituteChiefDisplayName,
+        disciplineOwnerName: roleNames.disciplineOwnerName,
         designerUserId: dto.designerUserId,
+        ownerUserId: dto.ownerUserId,
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
         chiefUserId: dto.chiefUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
-        instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -621,11 +598,7 @@ export class ScheduleService {
       discipline.disciplineName,
     );
 
-    return mapTaskDiscipline(
-      discipline,
-      task.instituteChiefUserId,
-      instituteChiefDisplayName,
-    );
+    return mapTaskDiscipline(discipline);
   }
 
   /**
@@ -639,13 +612,10 @@ export class ScheduleService {
     dto: UpdateTaskDisciplineDto,
   ): Promise<MappedTaskDiscipline> {
     await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
-    const task = await this.getTaskRowOrThrow(projectId, taskId);
-    const instituteChiefDisplayName = this.formatUserDisplayName(
-      task.instituteChiefUser,
-    );
 
     await this.assertUsersOnProjectTeam(projectId, [
       dto.designerUserId,
+      dto.ownerUserId,
       dto.reviewerUserId,
       dto.disciplineLeadUserId,
       dto.chiefUserId,
@@ -661,23 +631,19 @@ export class ScheduleService {
         reviewerName: roleNames.reviewerName,
         disciplinaryLeader: roleNames.disciplinaryLeader,
         deptChiefEngineer: roleNames.deptChiefEngineer,
-        instituteChiefEngineer: instituteChiefDisplayName,
+        disciplineOwnerName: roleNames.disciplineOwnerName,
         designerUserId: dto.designerUserId,
+        ownerUserId: dto.ownerUserId,
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
         chiefUserId: dto.chiefUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
-        instituteReviewTime: parseOptionalDate(dto.instituteReviewTime),
         updatedBy: ctx.userId,
       },
     });
 
-    return mapTaskDiscipline(
-      discipline,
-      task.instituteChiefUserId,
-      instituteChiefDisplayName,
-    );
+    return mapTaskDiscipline(discipline);
   }
 
   /**
@@ -708,30 +674,6 @@ export class ScheduleService {
       throw new NotFoundException('Milestone not found');
     }
     return milestone;
-  }
-
-  private async getTaskRowOrThrow(
-    projectId: string,
-    taskId: string,
-  ): Promise<{
-    id: string;
-    instituteChiefUserId: string | null;
-    instituteChiefUser: { firstName: string; lastName: string } | null;
-  }> {
-    const task = await this.prisma.task.findFirst({
-      where: activeOnly({ id: taskId, projectId }),
-      select: {
-        id: true,
-        instituteChiefUserId: true,
-        instituteChiefUser: {
-          select: { firstName: true, lastName: true },
-        },
-      },
-    });
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
-    return task;
   }
 
   private async getTaskOrThrow(
@@ -799,6 +741,7 @@ export class ScheduleService {
     dto: Pick<
       CreateTaskDisciplineDto,
       | 'designerUserId'
+      | 'ownerUserId'
       | 'reviewerUserId'
       | 'disciplineLeadUserId'
       | 'chiefUserId'
@@ -812,6 +755,7 @@ export class ScheduleService {
     reviewerName: string | undefined;
     disciplinaryLeader: string | undefined;
     deptChiefEngineer: string | undefined;
+    disciplineOwnerName: string | undefined;
   }> {
     return {
       designerName: dto.designerUserId
@@ -826,6 +770,9 @@ export class ScheduleService {
       deptChiefEngineer: dto.chiefUserId
         ? await this.resolveUserDisplayName(ctx, dto.chiefUserId)
         : dto.deptChiefEngineer,
+      disciplineOwnerName: dto.ownerUserId
+        ? await this.resolveUserDisplayName(ctx, dto.ownerUserId)
+        : undefined,
     };
   }
 

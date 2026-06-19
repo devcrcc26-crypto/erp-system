@@ -210,9 +210,9 @@ export default function RfiDetailDrawer({
           </div>
 
           <DocumentAttachmentPanel
-            readOnly
+            folderId={rfi.attachmentFolderId ?? undefined}
             title="Attachments"
-            description="Drawing and photo attachments will be enabled when document folders are linked to this RFI."
+            description="Upload drawings, photos, or markup files related to this RFI."
           />
 
           <Alert

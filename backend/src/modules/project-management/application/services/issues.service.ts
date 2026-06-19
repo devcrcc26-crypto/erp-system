@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { IssueStatus, Prisma } from '@prisma/client';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { FolderContextType, IssueStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -19,7 +19,9 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const ISSUE_SORT_FIELDS = new Set([
@@ -37,6 +39,8 @@ export class IssuesService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly disciplineScopeService: DisciplineScopeService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -49,7 +53,7 @@ export class IssuesService {
   ): Promise<PaginatedResult<MappedIssue>> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const where = this.buildIssueListWhere(projectId, query);
+    const where = await this.buildIssueListWhere(ctx, projectId, query);
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const orderBy = buildPmOrderBy(
       query.sortBy,
@@ -62,12 +66,11 @@ export class IssuesService {
       this.prisma.issue.count({ where }),
     ]);
 
-    return buildPaginatedResult(
-      rows.map(mapIssue),
-      total,
-      query.page,
-      query.limit,
+    const data = await Promise.all(
+      rows.map((row) => this.enrichIssue(ctx, row)),
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -79,7 +82,8 @@ export class IssuesService {
     issueId: string,
   ): Promise<MappedIssue> {
     const issue = await this.getIssueOrThrow(projectId, issueId);
-    return mapIssue(issue);
+    await this.assertIssueVisible(ctx, projectId, issue);
+    return this.enrichIssue(ctx, issue);
   }
 
   /**
@@ -96,6 +100,14 @@ export class IssuesService {
       await this.assertUserInCompany(ctx, dto.assignedTo);
     }
 
+    if (dto.taskDisciplineId) {
+      await this.disciplineScopeService.assertDisciplineAccess(
+        ctx,
+        projectId,
+        dto.taskDisciplineId,
+      );
+    }
+
     const issueNumber = await this.documentNumberService.getNextNumber(
       ctx,
       'ISSUE',
@@ -106,6 +118,7 @@ export class IssuesService {
         projectId,
         raisedBy: ctx.userId,
         assignedTo: dto.assignedTo,
+        taskDisciplineId: dto.taskDisciplineId,
         issueNumber,
         issueType: dto.issueType,
         description: dto.description,
@@ -117,7 +130,14 @@ export class IssuesService {
       },
     });
 
-    return mapIssue(issue);
+    const folder = await this.engineeringDocumentFolderService.ensureIssueFolder(
+      ctx,
+      projectId,
+      issue.id,
+      issue.issueNumber,
+    );
+
+    return { ...mapIssue(issue), attachmentFolderId: folder.id };
   }
 
   /**
@@ -129,10 +149,19 @@ export class IssuesService {
     issueId: string,
     dto: UpdateIssueDto,
   ): Promise<MappedIssue> {
-    await this.getIssueOrThrow(projectId, issueId);
+    const existing = await this.getIssueOrThrow(projectId, issueId);
+    await this.assertIssueVisible(ctx, projectId, existing);
 
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
+    }
+
+    if (dto.taskDisciplineId) {
+      await this.disciplineScopeService.assertDisciplineAccess(
+        ctx,
+        projectId,
+        dto.taskDisciplineId,
+      );
     }
 
     const issue = await this.prisma.issue.update({
@@ -143,13 +172,14 @@ export class IssuesService {
         location: dto.location,
         severity: dto.severity,
         assignedTo: dto.assignedTo,
+        taskDisciplineId: dto.taskDisciplineId,
         dueDate: parseOptionalDate(dto.dueDate),
         status: dto.status,
         updatedBy: ctx.userId,
       },
     });
 
-    return mapIssue(issue);
+    return this.enrichIssue(ctx, issue);
   }
 
   /**
@@ -160,18 +190,37 @@ export class IssuesService {
     projectId: string,
     issueId: string,
   ): Promise<void> {
-    await this.getIssueOrThrow(projectId, issueId);
+    const issue = await this.getIssueOrThrow(projectId, issueId);
+    await this.assertIssueVisible(ctx, projectId, issue);
     await this.prisma.issue.update({
       where: { id: issueId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
   }
 
-  private buildIssueListWhere(
+  private async buildIssueListWhere(
+    ctx: PmContext,
     projectId: string,
     query: PmListQueryDto,
-  ): Prisma.IssueWhereInput {
+  ): Promise<Prisma.IssueWhereInput> {
     const where: Prisma.IssueWhereInput = activeOnly({ projectId });
+
+    const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
+      ctx,
+      projectId,
+    );
+    if (!bypass) {
+      const assignedIds =
+        await this.disciplineScopeService.getAssignedDisciplineIds(
+          ctx,
+          projectId,
+        );
+      where.OR = [
+        { taskDisciplineId: null },
+        { taskDisciplineId: { in: assignedIds } },
+        { raisedBy: ctx.userId },
+      ];
+    }
 
     if (query.status) {
       where.status = query.status as IssueStatus;
@@ -179,15 +228,60 @@ export class IssuesService {
 
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
-        { issueNumber: { contains: term, mode: 'insensitive' } },
-        { issueType: { contains: term, mode: 'insensitive' } },
-        { description: { contains: term, mode: 'insensitive' } },
-        { location: { contains: term, mode: 'insensitive' } },
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        {
+          OR: [
+            { issueNumber: { contains: term, mode: 'insensitive' } },
+            { issueType: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+            { location: { contains: term, mode: 'insensitive' } },
+          ],
+        },
       ];
     }
 
     return where;
+  }
+
+  private async enrichIssue(
+    ctx: PmContext,
+    issue: Parameters<typeof mapIssue>[0],
+  ): Promise<MappedIssue> {
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.ISSUE,
+      issue.id,
+    );
+    return {
+      ...mapIssue(issue),
+      attachmentFolderId: folder?.id ?? null,
+    };
+  }
+
+  private async assertIssueVisible(
+    ctx: PmContext,
+    projectId: string,
+    issue: { taskDisciplineId: string | null; raisedBy: string },
+  ): Promise<void> {
+    const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
+      ctx,
+      projectId,
+    );
+    if (bypass || issue.raisedBy === ctx.userId || issue.taskDisciplineId === null) {
+      return;
+    }
+
+    const assignedIds =
+      await this.disciplineScopeService.getAssignedDisciplineIds(ctx, projectId);
+    if (
+      issue.taskDisciplineId !== null &&
+      assignedIds.includes(issue.taskDisciplineId)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('You do not have access to this issue');
   }
 
   private async getIssueOrThrow(projectId: string, issueId: string) {

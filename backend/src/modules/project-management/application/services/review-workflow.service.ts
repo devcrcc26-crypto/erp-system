@@ -149,14 +149,14 @@ export class ReviewWorkflowService {
       const taskDiscipline = discipline?.taskDiscipline;
       const assignedToUserId = taskDiscipline
         ? this.reviewSla.resolveAssigneeForTier(
-            ReviewTier.REVIEWER,
+            ReviewTier.DISCIPLINE_OWNER,
             taskDiscipline,
           )
         : null;
       const openedAt = new Date();
       const slaDeadlineAt = this.reviewSla.computeDeadline(
         openedAt,
-        ReviewTier.REVIEWER,
+        ReviewTier.DISCIPLINE_OWNER,
       );
 
       const session = await this.epcReviewRepository.createReviewSession(tx, {
@@ -164,7 +164,7 @@ export class ReviewWorkflowService {
         designPackageId: command.designPackageId,
         taskDisciplineId: command.taskDisciplineId,
         assignedToUserId,
-        currentTier: ReviewTier.REVIEWER,
+        currentTier: ReviewTier.DISCIPLINE_OWNER,
         slaDeadlineAt,
         createdBy: command.actorId,
       });
@@ -267,6 +267,13 @@ export class ReviewWorkflowService {
 
       this.conflictGuard.assertEdvAllowsComments(edv.status as EdvStatus);
 
+      const body = command.body?.trim();
+      if (!body && !command.commentDocumentVersionId) {
+        throw new BadRequestException(
+          'Review comment requires text or an attached file',
+        );
+      }
+
       await this.permissionResolver.assertActionAllowed({
         companyId: command.companyId,
         userId: command.actorId,
@@ -288,7 +295,8 @@ export class ReviewWorkflowService {
         companyId: command.companyId,
         reviewSessionId: command.reviewSessionId,
         engineeringDocumentVersionId: command.engineeringDocumentVersionId,
-        body: command.body,
+        body: body,
+        commentDocumentVersionId: command.commentDocumentVersionId,
         severity: command.severity as CommentSeverity,
         assignedToUserId: command.assignedToUserId,
         createdBy: command.actorId,
@@ -385,6 +393,9 @@ export class ReviewWorkflowService {
           status: to as PrismaCommentStatus,
           updatedBy: command.actorId,
           ...(resolutionNote !== undefined ? { resolutionNote } : {}),
+          ...(to === CommentStatus.RESOLVED && command.responseDocumentVersionId
+            ? { responseDocumentVersionId: command.responseDocumentVersionId }
+            : {}),
           ...timestamps,
         },
       );
@@ -527,6 +538,13 @@ export class ReviewWorkflowService {
 
       this.conflictGuard.assertEdvAllowsComments(edv.status as EdvStatus);
 
+      const body = command.body?.trim();
+      if (!body && !command.commentDocumentVersionId) {
+        throw new BadRequestException(
+          'Review comment requires text or an attached file',
+        );
+      }
+
       const beforeState = {
         body: comment.body,
         severity: comment.severity,
@@ -538,7 +556,10 @@ export class ReviewWorkflowService {
         tx,
         comment.id,
         {
-          body: command.body,
+          body: body || null,
+          ...(command.commentDocumentVersionId
+            ? { commentDocumentVersionId: command.commentDocumentVersionId }
+            : {}),
           severity: command.severity as CommentSeverity,
           engineeringDocumentVersion: {
             connect: { id: command.engineeringDocumentVersionId },
@@ -947,8 +968,11 @@ export class ReviewWorkflowService {
       return;
     }
 
-    // Reviewer batch-approves EDVs without escalating — auto-forward once to discipline lead only.
-    if (session.currentTier !== ReviewTier.REVIEWER) {
+    // Batch-approve at discipline owner or reviewer tier auto-forwards once when all EDVs approved.
+    if (
+      session.currentTier !== ReviewTier.DISCIPLINE_OWNER &&
+      session.currentTier !== ReviewTier.REVIEWER
+    ) {
       return;
     }
 
@@ -1130,6 +1154,7 @@ export class ReviewWorkflowService {
     comment: { assignedToUserId: string; createdBy: string },
     discipline?: {
       designerUserId: string | null;
+      ownerUserId: string | null;
       reviewerUserId: string | null;
       disciplineLeadUserId: string | null;
       chiefUserId: string | null;
@@ -1142,6 +1167,7 @@ export class ReviewWorkflowService {
       return 'designer';
     }
     if (
+      discipline?.ownerUserId === userId ||
       discipline?.reviewerUserId === userId ||
       discipline?.disciplineLeadUserId === userId ||
       discipline?.chiefUserId === userId ||

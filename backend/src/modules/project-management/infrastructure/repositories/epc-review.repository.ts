@@ -166,7 +166,8 @@ export class EpcReviewRepository {
       companyId: string;
       reviewSessionId: string;
       engineeringDocumentVersionId: string;
-      body: string;
+      body?: string;
+      commentDocumentVersionId?: string;
       severity: CommentSeverity;
       assignedToUserId: string;
       createdBy: string;
@@ -177,7 +178,8 @@ export class EpcReviewRepository {
         companyId: input.companyId,
         reviewSessionId: input.reviewSessionId,
         engineeringDocumentVersionId: input.engineeringDocumentVersionId,
-        body: input.body,
+        body: input.body?.trim() || null,
+        commentDocumentVersionId: input.commentDocumentVersionId,
         severity: input.severity,
         assignedToUserId: input.assignedToUserId,
         createdBy: input.createdBy,

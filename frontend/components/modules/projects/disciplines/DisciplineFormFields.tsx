@@ -10,10 +10,8 @@ import {
 
 export default function DisciplineFormFields({
   projectId,
-  instituteChiefLabel,
 }: {
   projectId: string;
-  instituteChiefLabel?: string | null;
 }): React.ReactNode {
   return (
     <>
@@ -25,32 +23,29 @@ export default function DisciplineFormFields({
         <Input placeholder="e.g. Structural" />
       </Form.Item>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label="Designer" name="designerUserId">
+        <Form.Item label="Discipline owner" name="ownerUserId">
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
-        <Form.Item label="Reviewer" name="reviewerUserId">
+        <Form.Item label="Designer" name="designerUserId">
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+        <Form.Item label="Reviewer" name="reviewerUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
+        </Form.Item>
         <Form.Item label="Disciplinary leader" name="disciplineLeadUserId">
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
-        <Form.Item label="Dept chief engineer" name="chiefUserId">
-          <ProjectTeamUserSelect projectId={projectId} />
-        </Form.Item>
       </div>
-      <Form.Item label="Institute chief engineer">
-        <Input value={instituteChiefLabel ?? '—'} disabled />
+      <Form.Item label="Dept chief engineer" name="chiefUserId">
+        <ProjectTeamUserSelect projectId={projectId} />
       </Form.Item>
-      <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
         <Form.Item label="Actual completion" name="actualCompletionTime">
           <DatePicker className="w-full" showTime />
         </Form.Item>
         <Form.Item label="Dept review time" name="deptReviewTime">
-          <DatePicker className="w-full" showTime />
-        </Form.Item>
-        <Form.Item label="Institute review time" name="instituteReviewTime">
           <DatePicker className="w-full" showTime />
         </Form.Item>
       </div>

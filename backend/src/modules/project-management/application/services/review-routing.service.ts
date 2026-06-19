@@ -34,10 +34,10 @@ export class ReviewRoutingService {
 
     if (severity === CommentSeverity.MODERATE) {
       return {
-        escalate: currentTier === ReviewTier.REVIEWER,
+        escalate: currentTier === ReviewTier.DISCIPLINE_OWNER,
         nextTier:
-          currentTier === ReviewTier.REVIEWER
-            ? ReviewTier.DISCIPLINE_LEAD
+          currentTier === ReviewTier.DISCIPLINE_OWNER
+            ? ReviewTier.REVIEWER
             : currentTier,
         requiresLeadApproval: currentTier === ReviewTier.REVIEWER,
       };
@@ -45,10 +45,10 @@ export class ReviewRoutingService {
 
     // MAJOR — escalate to next governance tier when possible
     const tierOrder: ReviewTier[] = [
+      ReviewTier.DISCIPLINE_OWNER,
       ReviewTier.REVIEWER,
       ReviewTier.DISCIPLINE_LEAD,
       ReviewTier.DEPT_CHIEF,
-      ReviewTier.INSTITUTE_CHIEF,
     ];
     const index = tierOrder.indexOf(currentTier);
     const nextTier =

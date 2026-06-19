@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Form, Input, Select } from 'antd';
+import { Button, Form, Input, Select, Upload } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
@@ -14,6 +15,8 @@ import {
   useDeleteReviewComment,
   useVerifyReviewComment,
 } from '@/lib/query/review-comments';
+import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -22,7 +25,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface CommentFormValues {
   engineeringDocumentVersionId: string;
-  body: string;
+  body?: string;
   severity: CommentSeverity;
   assignedToUserId: string;
 }
@@ -37,16 +40,26 @@ function canMutateOwnOpenComment(
 export default function ReviewCommentPanel({
   reviewMode,
   edvOptions,
+  projectId,
+  taskDisciplineId,
   onCommentAdded,
 }: {
   reviewMode: ReviewModeView | null | undefined;
   edvOptions: readonly { value: string; label: string }[];
+  projectId: string;
+  taskDisciplineId: string;
   onCommentAdded: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<CommentFormValues>();
   const addComment = useAddReviewComment();
   const verifyComment = useVerifyReviewComment();
   const deleteComment = useDeleteReviewComment();
+  const uploadDocument = useUploadDocumentToFolder();
+  const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
+  const [commentFileVersionId, setCommentFileVersionId] = useState<string | null>(
+    null,
+  );
+  const [commentFileName, setCommentFileName] = useState<string | null>(null);
   const lens = useRoleLens();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -72,15 +85,24 @@ export default function ReviewCommentPanel({
     }
 
     try {
+      const body = values.body?.trim();
+      if (!body && !commentFileVersionId) {
+        messageApi.error('Add comment text or attach a markup file');
+        return;
+      }
+
       await addComment.mutateAsync({
         reviewSessionId: reviewMode.reviewSessionId,
         engineeringDocumentVersionId: values.engineeringDocumentVersionId,
-        body: values.body.trim(),
+        body: body || undefined,
+        commentDocumentVersionId: commentFileVersionId ?? undefined,
         severity: values.severity,
         assignedToUserId: values.assignedToUserId,
       });
       messageApi.success('Comment added');
       form.resetFields();
+      setCommentFileVersionId(null);
+      setCommentFileName(null);
       onCommentAdded();
     } catch (error) {
       notifyApiError(error, 'Failed to add comment', messageApi);
@@ -123,8 +145,44 @@ export default function ReviewCommentPanel({
           >
             <Select options={edvSelectOptions} placeholder="Select document" />
           </Form.Item>
-          <Form.Item name="body" label="Comment" rules={[{ required: true }]}>
-            <Input.TextArea rows={3} />
+          <Form.Item name="body" label="Comment summary">
+            <Input.TextArea rows={3} placeholder="Optional when a markup file is attached" />
+          </Form.Item>
+          <Form.Item label="Comment file">
+            <Upload
+              maxCount={1}
+              showUploadList={false}
+              disabled={!uploadFolderQuery.data?.id || uploadDocument.isPending}
+              beforeUpload={(file) => {
+                const folderId = uploadFolderQuery.data?.id;
+                if (!folderId) {
+                  messageApi.error('Upload folder is not ready');
+                  return Upload.LIST_IGNORE;
+                }
+                void uploadDocument
+                  .mutateAsync({ folderId, file })
+                  .then((record) => {
+                    if (record.currentVersionId) {
+                      setCommentFileVersionId(record.currentVersionId);
+                      setCommentFileName(file.name);
+                      messageApi.success('Comment file attached');
+                    } else {
+                      messageApi.error('Upload did not return a file version');
+                    }
+                  })
+                  .catch((error) => {
+                    notifyApiError(error, 'Failed to upload comment file', messageApi);
+                  });
+                return false;
+              }}
+            >
+              <Button icon={<UploadOutlined />} loading={uploadDocument.isPending}>
+                Attach markup file
+              </Button>
+            </Upload>
+            {commentFileName ? (
+              <p className="mt-2 text-sm text-slate-600">Attached: {commentFileName}</p>
+            ) : null}
           </Form.Item>
           <Form.Item name="severity" label="Severity" rules={[{ required: true }]}>
             <Select

@@ -42,6 +42,7 @@ import {
   isOverdue,
 } from '@/lib/utils/pm-status-display';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
 
 const PAGE_SIZE = 20;
 
@@ -56,6 +57,7 @@ interface IssueFormValues {
   issueType: string;
   description: string;
   location?: string;
+  taskDisciplineId?: string;
   severity: IssueSeverity;
   assignedTo?: string;
   dueDate?: Dayjs;
@@ -74,12 +76,23 @@ function IssueFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<IssueFormValues>();
   const createIssue = useCreateIssue();
+  const disciplinesQuery = useProjectDisciplines(projectId, open);
+
+  const disciplineOptions = useMemo(
+    () =>
+      (disciplinesQuery.data ?? []).map((row) => ({
+        value: row.id,
+        label: `${row.taskName} — ${row.disciplineName}`,
+      })),
+    [disciplinesQuery.data],
+  );
 
   async function handleSubmit(values: IssueFormValues): Promise<void> {
     const body: CreateIssueRequest = {
       issueType: values.issueType.trim(),
       description: values.description.trim(),
       location: values.location?.trim() || undefined,
+      taskDisciplineId: values.taskDisciplineId,
       severity: values.severity,
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
@@ -120,6 +133,14 @@ function IssueFormDrawer({
         </Form.Item>
         <Form.Item label="Location" name="location">
           <Input placeholder="Room, level, or grid reference" />
+        </Form.Item>
+        <Form.Item label="Linked discipline" name="taskDisciplineId">
+          <Select
+            allowClear
+            placeholder="Select engineering discipline"
+            loading={disciplinesQuery.isLoading}
+            options={disciplineOptions}
+          />
         </Form.Item>
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item

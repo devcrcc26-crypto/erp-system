@@ -18,6 +18,15 @@ describe('review-routing.service', () => {
     });
   });
 
+  it('escalates MODERATE from discipline owner to reviewer', () => {
+    const result = service.route({
+      severity: CommentSeverity.MODERATE,
+      currentTier: ReviewTier.DISCIPLINE_OWNER,
+    });
+    expect(result.escalate).toBe(true);
+    expect(result.nextTier).toBe(ReviewTier.REVIEWER);
+  });
+
   it('escalates MODERATE from reviewer to lead', () => {
     const result = service.route({
       severity: CommentSeverity.MODERATE,

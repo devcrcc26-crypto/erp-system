@@ -97,10 +97,10 @@
   },
   "reviewTier": {
     "ALL": "All tiers",
+    "DISCIPLINE_OWNER": "Discipline owner",
     "REVIEWER": "Reviewer",
     "DISCIPLINE_LEAD": "Discipline lead",
-    "DEPT_CHIEF": "Dept chief",
-    "INSTITUTE_CHIEF": "Institute chief"
+    "DEPT_CHIEF": "Dept chief"
   },
   "commentSeverity": {
     "MINOR": "Minor",

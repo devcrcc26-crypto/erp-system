@@ -27,11 +27,13 @@ const CORE_ROLES = [
   'Designer',
   'Dispatcher',
   'Reviewer',
+  'Discipline Owner',
   'Discipline Lead',
   'Department Chief',
   'Institute Chief',
   'Deputy Chief',
   'Site Coordinator',
+  'Client Consultant',
 ] as const;
 
 const DESIGN_WORKFLOW_ROLES = [
@@ -44,12 +46,13 @@ const DESIGN_WORKFLOW_ROLES = [
 ] as const;
 
 const EPC_WORKFLOW_ROLES = [
+  'Discipline Owner',
   'Reviewer',
   'Discipline Lead',
   'Department Chief',
-  'Institute Chief',
   'Deputy Chief',
   'Site Coordinator',
+  'Client Consultant',
 ] as const;
 
 const PERMISSION_DEFINITIONS: Array<{
@@ -259,12 +262,13 @@ function documentsPermissionFlags(
     'Chief Engineer',
     'Designer',
     'Dispatcher',
+    'Discipline Owner',
     'Discipline Lead',
     'Department Chief',
-    'Institute Chief',
     'Deputy Chief',
     'Reviewer',
     'Site Coordinator',
+    'Client Consultant',
     'General Manager',
     'Safety Officer',
   ]);
@@ -474,21 +478,41 @@ function epcWorkflowPermissionFlags(
 
   const engineeringModules = ['projects', 'schedule', 'drawings', 'submittals'];
   const reviewModules = ['projects', 'schedule', 'drawings'];
-  const coordinationModules = ['projects', 'schedule'];
+  const coordinationModules = ['projects', 'schedule', 'rfis', 'issues'];
+
+  if (roleName === 'Client Consultant') {
+    const consultantModules: Record<string, readonly string[]> = {
+      projects: ['view'],
+      rfis: ['view', 'create', 'edit'],
+      issues: ['view', 'create'],
+    };
+    const allowedActions = consultantModules[module];
+    if (!allowedActions?.includes(action)) {
+      return null;
+    }
+    if (action === 'delete' || action === 'approve') {
+      return null;
+    }
+    return {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+      [flag]: true,
+    };
+  }
 
   let allowedModules: string[] = [];
   let canApprove = false;
 
-  if (roleName === 'Reviewer') {
+  if (roleName === 'Discipline Owner' || roleName === 'Reviewer') {
     allowedModules = reviewModules;
   } else if (roleName === 'Discipline Lead') {
     allowedModules = engineeringModules;
     canApprove = action === 'approve';
-  } else if (
-    roleName === 'Department Chief' ||
-    roleName === 'Institute Chief' ||
-    roleName === 'Deputy Chief'
-  ) {
+  } else if (roleName === 'Department Chief' || roleName === 'Deputy Chief') {
     allowedModules = engineeringModules;
     canApprove = action === 'approve' || action === 'edit';
   } else if (roleName === 'Site Coordinator') {
@@ -501,10 +525,18 @@ function epcWorkflowPermissionFlags(
     if (action === 'delete') {
       return null;
     }
-    if (action === 'approve' && !canApprove && roleName !== 'Reviewer') {
+    if (
+      action === 'approve' &&
+      !canApprove &&
+      roleName !== 'Reviewer' &&
+      roleName !== 'Discipline Owner'
+    ) {
       return null;
     }
-    if (action === 'approve' && roleName === 'Reviewer') {
+    if (
+      action === 'approve' &&
+      (roleName === 'Reviewer' || roleName === 'Discipline Owner')
+    ) {
       return {
         canView: false,
         canCreate: false,

@@ -29,6 +29,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
+import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const PROJECT_SORT_FIELDS = new Set([
@@ -46,6 +47,7 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
@@ -56,7 +58,7 @@ export class ProjectsService {
     ctx: PmContext,
     query: ProjectListQueryDto,
   ): Promise<PaginatedResult<MappedProject>> {
-    const where = this.buildProjectListWhere(ctx, query);
+    const where = await this.buildProjectListWhere(ctx, query);
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const orderBy = buildPmOrderBy(
       query.sortBy,
@@ -431,13 +433,19 @@ export class ProjectsService {
     }
   }
 
-  private buildProjectListWhere(
+  private async buildProjectListWhere(
     ctx: PmContext,
     query: ProjectListQueryDto,
-  ): Prisma.ProjectWhereInput {
+  ): Promise<Prisma.ProjectWhereInput> {
     const where: Prisma.ProjectWhereInput = activeOnly({
       companyId: ctx.companyId,
     });
+
+    if (!(await this.disciplineScopeService.hasDisciplineScopeBypass(ctx))) {
+      const projectIds =
+        await this.disciplineScopeService.getAssignedProjectIds(ctx);
+      where.id = { in: projectIds.length > 0 ? projectIds : ['__none__'] };
+    }
 
     if (query.status) {
       where.status = query.status;

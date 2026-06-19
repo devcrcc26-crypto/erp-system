@@ -223,10 +223,15 @@ export class AddReviewCommentDto {
   @IsEntityUuid()
   engineeringDocumentVersionId!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Text summary when no comment file is attached' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  body!: string;
+  body?: string;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Uploaded comment/markup file version' })
+  @IsOptional()
+  @IsEntityUuid()
+  commentDocumentVersionId?: string;
 
   @ApiProperty({ enum: CommentSeverity })
   @IsEnum(CommentSeverity)
@@ -252,6 +257,11 @@ export class TransitionReviewCommentDto {
   @IsString()
   resolutionNote?: string;
 
+  @ApiPropertyOptional({ format: 'uuid', description: 'Designer response file version' })
+  @IsOptional()
+  @IsEntityUuid()
+  responseDocumentVersionId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -270,10 +280,15 @@ export class UpdateReviewCommentDto {
   @IsEntityUuid()
   engineeringDocumentVersionId!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  body!: string;
+  body?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  commentDocumentVersionId?: string;
 
   @ApiProperty({ enum: CommentSeverity })
   @IsEnum(CommentSeverity)
