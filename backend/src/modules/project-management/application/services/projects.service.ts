@@ -273,7 +273,16 @@ export class ProjectsService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return members.map(mapProjectTeamMember);
+    const seenUserIds = new Set<string>();
+    const uniqueMembers = members.filter((member) => {
+      if (seenUserIds.has(member.userId)) {
+        return false;
+      }
+      seenUserIds.add(member.userId);
+      return true;
+    });
+
+    return uniqueMembers.map(mapProjectTeamMember);
   }
 
   /**
@@ -296,31 +305,50 @@ export class ProjectsService {
         where: { projectId },
       });
       const desired = new Set(uniqueUserIds);
+      const rowsByUserId = new Map<string, typeof existing>();
 
-      for (const member of existing) {
-        const isActive = member.deletedAt === null;
-        const shouldBeActive = desired.has(member.userId);
+      for (const row of existing) {
+        const rows = rowsByUserId.get(row.userId) ?? [];
+        rows.push(row);
+        rowsByUserId.set(row.userId, rows);
+      }
 
-        if (isActive && !shouldBeActive) {
+      for (const [userId, rows] of rowsByUserId) {
+        const activeRows = rows.filter((row) => row.deletedAt === null);
+        const inactiveRows = rows.filter((row) => row.deletedAt !== null);
+        const shouldBeActive = desired.has(userId);
+
+        if (shouldBeActive) {
+          if (activeRows.length > 0) {
+            for (let index = 1; index < activeRows.length; index += 1) {
+              await tx.projectTeam.update({
+                where: { id: activeRows[index].id },
+                data: { deletedAt: new Date(), deletedBy: ctx.userId },
+              });
+            }
+          } else if (inactiveRows.length > 0) {
+            await tx.projectTeam.update({
+              where: { id: inactiveRows[0].id },
+              data: {
+                deletedAt: null,
+                deletedBy: null,
+                updatedBy: ctx.userId,
+              },
+            });
+          }
+          continue;
+        }
+
+        for (const row of activeRows) {
           await tx.projectTeam.update({
-            where: { id: member.id },
+            where: { id: row.id },
             data: { deletedAt: new Date(), deletedBy: ctx.userId },
-          });
-        } else if (!isActive && shouldBeActive) {
-          await tx.projectTeam.update({
-            where: { id: member.id },
-            data: {
-              deletedAt: null,
-              deletedBy: null,
-              updatedBy: ctx.userId,
-            },
           });
         }
       }
 
-      const existingUserIds = new Set(existing.map((row) => row.userId));
       for (const userId of uniqueUserIds) {
-        if (!existingUserIds.has(userId)) {
+        if (!rowsByUserId.has(userId)) {
           await tx.projectTeam.create({
             data: {
               projectId,

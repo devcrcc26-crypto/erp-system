@@ -50,14 +50,22 @@ export default function ProjectTeamPanel({
 
   useEffect(() => {
     if (!dirty) {
-      setSelectedUserIds(members.map((member) => member.userId));
+      setSelectedUserIds([...new Set(members.map((member) => member.userId))]);
     }
   }, [members, dirty]);
 
   const userOptions = useMemo(() => {
     const users = usersQuery.data?.data ?? [];
+    const seen = new Set<string>();
     return users
       .filter((user) => user.isActive)
+      .filter((user) => {
+        if (seen.has(user.id)) {
+          return false;
+        }
+        seen.add(user.id);
+        return true;
+      })
       .map((user) => ({
         value: user.id,
         label: formatUserLabel(user),
@@ -74,9 +82,10 @@ export default function ProjectTeamPanel({
   ];
 
   async function handleSaveTeam(): Promise<void> {
+    const uniqueUserIds = [...new Set(selectedUserIds)];
     await setTeam.mutateAsync({
       projectId,
-      body: { userIds: selectedUserIds },
+      body: { userIds: uniqueUserIds },
     });
     setDirty(false);
   }
@@ -124,12 +133,12 @@ export default function ProjectTeamPanel({
         showSearch
         className="mb-4 w-full max-w-2xl"
         placeholder="Select project team members"
-        value={selectedUserIds}
+        value={[...new Set(selectedUserIds)]}
         options={userOptions}
         loading={usersQuery.isLoading}
         disabled={apiUnavailable}
         onChange={(values: string[]) => {
-          setSelectedUserIds(values);
+          setSelectedUserIds([...new Set(values)]);
           setDirty(true);
         }}
         filterOption={(input: string, option?: { label?: unknown }) =>
