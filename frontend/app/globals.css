@@ -183,7 +183,7 @@ body::-webkit-scrollbar {
 
 .shell-context-scroll:hover,
 .shell-context-scroll:focus-within {
-  scrollbar-color: #475569 transparent;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .shell-context-scroll::-webkit-scrollbar {
@@ -201,9 +201,53 @@ body::-webkit-scrollbar {
 
 .shell-context-scroll:hover::-webkit-scrollbar-thumb,
 .shell-context-scroll:focus-within::-webkit-scrollbar-thumb {
-  background-color: #475569;
+  background-color: #cbd5e1;
 }
 
 .shell-context-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #64748b;
+  background-color: #94a3b8;
+}
+
+/* Shell breadcrumb — Ant Design trail in main header */
+.shell-breadcrumb.ant-breadcrumb {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.shell-breadcrumb.ant-breadcrumb ol {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.shell-breadcrumb.ant-breadcrumb li,
+.shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-link {
+  color: #64748b;
+}
+
+.shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-separator {
+  margin-inline: 6px;
+  color: #cbd5e1;
+}
+
+.shell-breadcrumb-link {
+  color: #64748b !important;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.shell-breadcrumb-link:hover {
+  color: #1e293b !important;
+}
+
+/* Shell nav links — override Ant Design / browser default blue */
+.shell-context-sidebar a {
+  text-decoration: none;
+}
+
+.shell-context-sidebar a:not([aria-current='page']) {
+  color: #475569;
+}
+
+.shell-context-sidebar a:not([aria-current='page']):hover {
+  color: #0f172a;
 }

@@ -38,7 +38,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useOptionalRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
-import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -163,36 +162,41 @@ export default function ContextSidebar({
 
   return (
     <aside
-      className={`relative flex h-full w-[260px] shrink-0 flex-col border-r border-slate-700 ${className}`}
-      style={{ background: tokens.colorSidebarBg }}
+      className={`shell-context-sidebar relative flex h-full w-[260px] shrink-0 flex-col border-r border-slate-200 bg-white ${className}`}
       aria-label="Project navigation"
     >
       <header className="shrink-0 px-4 pb-4 pt-5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <p
+          className="text-[11px] font-semibold uppercase tracking-wider"
+          style={{ color: tokens.colorTextSecondary }}
+        >
           Project
         </p>
-        <h2 className="mt-1 truncate text-lg font-bold text-white">
+        <h2
+          className="mt-1 truncate text-lg font-bold"
+          style={{ color: tokens.colorTextPrimary }}
+        >
           {projectName}
         </h2>
       </header>
 
-      <hr className="mx-4 border-slate-700" />
+      <hr className="mx-4 border-slate-200" />
 
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
           onScroll={updateScrollHint}
-          className={`${layout.projectSidebarMenu} shell-context-scroll h-full overflow-y-auto px-2 py-4`}
+          className="shell-context-scroll h-full overflow-y-auto px-2 py-4"
         >
           {visibleSections.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-400">{t('empty.noModules')}</p>
+            <p className="px-3 py-2 text-sm text-slate-500">{t('empty.noModules')}</p>
           ) : (
             visibleSections.map((group) => (
               <section key={group.key} className="mb-5">
                 <h3 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   {t(group.labelKey)}
                 </h3>
-                <ul className="flex flex-col gap-0.5">
+                <ul className="flex flex-col gap-1">
                   {group.items.map((item) => {
                     const href = projectNavHref(projectId, item.pathSuffix);
                     const isActive = selectedKey === item.key;
@@ -205,18 +209,18 @@ export default function ContextSidebar({
                           onClick={onNavigate}
                           aria-current={isActive ? 'page' : undefined}
                           className={[
-                            'flex items-center gap-2.5 border-l-4 py-2.5 pl-3 pr-3 text-sm transition-colors',
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm no-underline transition-colors',
                             isActive
-                              ? 'font-semibold text-white'
-                              : 'border-transparent font-normal text-slate-400 hover:text-white',
+                              ? 'font-semibold'
+                              : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                           ].join(' ')}
                           style={
                             isActive
                               ? {
-                                  backgroundColor: tokens.colorSidebarActive,
-                                  borderLeftColor: tokens.colorSidebarAccent,
+                                  backgroundColor: tokens.colorPrimaryLight,
+                                  color: tokens.colorPrimaryHover,
                                 }
-                              : { borderLeftColor: 'transparent' }
+                              : undefined
                           }
                         >
                           <span className="flex shrink-0 text-base leading-none">
@@ -235,8 +239,7 @@ export default function ContextSidebar({
 
         {showScrollHint && (
           <div
-            className="pointer-events-none absolute bottom-3 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full text-slate-400 shadow-md"
-            style={{ backgroundColor: tokens.colorSidebarActive }}
+            className="pointer-events-none absolute bottom-3 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-md"
             aria-hidden
           >
             <DownOutlined className="text-xs" />

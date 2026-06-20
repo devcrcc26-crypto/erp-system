@@ -89,7 +89,7 @@ export default function NotificationPanel(): React.ReactNode {
   const markAllRead = useMarkAllNotificationsRead();
 
   useEffect(() => {
-    if (!unreadQuery.isError) {
+    if (!unreadQuery.isError || !allowed) {
       return;
     }
 
@@ -101,24 +101,10 @@ export default function NotificationPanel(): React.ReactNode {
     if (status === 403 || status === 401) {
       setAllowed(false);
     }
-  }, [unreadQuery.isError, unreadQuery.error]);
+  }, [allowed, unreadQuery.isError, unreadQuery.error]);
 
-  if (!canViewNotifications) {
-    return null;
-  }
-
-  if (unreadQuery.isError) {
-    const status =
-      unreadQuery.error instanceof ApiRequestError
-        ? unreadQuery.error.status
-        : 0;
-    if (status === 403 || status === 401) {
-      return null;
-    }
-  }
-
-  const unreadCount = unreadQuery.data?.count ?? 0;
-  const notifications = notificationsQuery.data?.data ?? [];
+  const unreadCount = allowed ? (unreadQuery.data?.count ?? 0) : 0;
+  const notifications = allowed ? (notificationsQuery.data?.data ?? []) : [];
 
   const dropdownContent = (
     <div
@@ -127,7 +113,7 @@ export default function NotificationPanel(): React.ReactNode {
     >
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-        {unreadCount > 0 && (
+        {allowed && unreadCount > 0 && (
           <Button
             type="link"
             size="small"
@@ -139,7 +125,13 @@ export default function NotificationPanel(): React.ReactNode {
         )}
       </div>
 
-      {notificationsQuery.isLoading ? (
+      {!allowed ? (
+        <Empty
+          className="py-8"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Notifications are not available for your account"
+        />
+      ) : notificationsQuery.isLoading ? (
         <div className="flex justify-center py-8">
           <Spin />
         </div>

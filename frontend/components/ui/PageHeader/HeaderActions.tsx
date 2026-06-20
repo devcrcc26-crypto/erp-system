@@ -27,7 +27,7 @@ export default function HeaderActions(): React.ReactNode {
   const roleName = userDetail?.userRoles?.[0]?.role?.name ?? 'User';
 
   return (
-    <div className="flex shrink-0 items-center gap-2 md:gap-3">
+    <div className="flex shrink-0 items-center gap-2 self-start pt-1 md:gap-3">
       <NotificationPanel />
       <Link
         href="/profile"

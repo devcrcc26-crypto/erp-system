@@ -93,13 +93,6 @@ export function buildIconRailItems(
       visible: true,
     },
     {
-      key: '/teams',
-      labelKey: 'nav.teams',
-      href: '/teams',
-      iconKey: 'teams',
-      visible: true,
-    },
-    {
       key: '/reports',
       labelKey: 'nav.reports',
       href: '/reports',

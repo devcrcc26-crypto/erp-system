@@ -74,11 +74,13 @@ export default function AppShell({
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
-      <IconRail />
+      <IconRail
+        coverContextSidebar={showContextSidebar && Boolean(projectId)}
+      />
 
       {showContextSidebar && projectId && (
         <>
-          <div className="hidden h-full shrink-0 lg:block">
+          <div className="relative z-10 hidden h-full shrink-0 lg:block">
             <ContextSidebar
               projectId={projectId}
               projectName={projectName}
@@ -94,7 +96,7 @@ export default function AppShell({
             title={null}
             className="lg:hidden"
             styles={{
-              body: { padding: 0, background: tokens.colorSidebarBg },
+              body: { padding: 0, background: tokens.colorCardBg },
               header: { display: 'none' },
             }}
           >
@@ -113,15 +115,12 @@ export default function AppShell({
       >
         <MainContentHeader
           breadcrumbs={routeMeta.breadcrumbs}
+          pageTitle={pageTitle}
           showContextNavToggle={showContextSidebar && Boolean(projectId)}
           onOpenContextNav={() => setContextDrawerOpen(true)}
         />
 
         <div className="flex flex-col px-6 py-6 md:px-8 md:py-6">
-          <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            {pageTitle}
-          </h1>
-
           <div className="min-w-0 flex-1">{children}</div>
         </div>
       </main>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   DashboardOutlined,
   ProjectOutlined,
@@ -31,6 +32,13 @@ import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { tokens } from '@/lib/theme/tokens';
+import {
+  RAIL_COLLAPSED_WIDTH,
+  RAIL_EXPANDED_WIDTH,
+  RAIL_PEEK_OVERLAY_WITH_CONTEXT,
+} from '@/components/ui/shell/shell-layout';
+
+const LG_BREAKPOINT_PX = 1024;
 
 const RAIL_ICONS: Record<string, React.ReactNode> = {
   dashboard: <DashboardOutlined />,
@@ -164,7 +172,12 @@ function RailActionButton({
 /**
  * Collapsible icon rail with pin + hover-peek behaviour.
  */
-export default function IconRail(): React.ReactNode {
+export default function IconRail({
+  coverContextSidebar = false,
+}: {
+  /** When true, hover-peek overlays the adjacent context sidebar on desktop. */
+  coverContextSidebar?: boolean;
+}): React.ReactNode {
   const pathname = usePathname();
   const router = useRouter();
   const logout = useLogout();
@@ -185,6 +198,15 @@ export default function IconRail(): React.ReactNode {
   const visibleNavItems = navItems.filter((item) => item.visible);
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${LG_BREAKPOINT_PX}px)`);
+    const sync = (): void => setIsDesktop(mql.matches);
+    sync();
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
+  }, []);
 
   async function handleLogout(): Promise<void> {
     try {
@@ -202,24 +224,39 @@ export default function IconRail(): React.ReactNode {
     }
   }
 
-  const panelWidth = isExpanded ? 256 : 64;
   const isOverlayPeek = isExpanded && !pinned;
+  const shouldCoverContext =
+    isOverlayPeek && coverContextSidebar && isDesktop;
+
+  const panelWidth = (() => {
+    if (!isExpanded) {
+      return RAIL_COLLAPSED_WIDTH;
+    }
+    if (shouldCoverContext) {
+      return RAIL_PEEK_OVERLAY_WITH_CONTEXT;
+    }
+    return RAIL_EXPANDED_WIDTH;
+  })();
 
   return (
     <div
-      className="relative z-30 h-full shrink-0"
+      className="relative z-40 h-full shrink-0"
       style={{ width: layoutWidth }}
-      onMouseEnter={onPeekEnter}
-      onMouseLeave={onPeekLeave}
     >
       <aside
+        onMouseEnter={onPeekEnter}
+        onMouseLeave={onPeekLeave}
         className={[
           'flex h-full flex-col transition-[width] duration-200 ease-in-out',
-          isOverlayPeek ? 'absolute left-0 top-0 z-40 shadow-xl' : 'relative',
+          isOverlayPeek ? 'absolute left-0 top-0 z-50 shadow-xl' : 'relative',
         ].join(' ')}
         style={{ width: panelWidth, background: tokens.colorSidebarBg }}
         aria-label="Main navigation"
       >
+        <div
+          className="flex h-full flex-col"
+          style={{ maxWidth: RAIL_EXPANDED_WIDTH, width: '100%' }}
+        >
         <div
           className={[
             'shrink-0 pb-5 pt-8',
@@ -310,6 +347,7 @@ export default function IconRail(): React.ReactNode {
               <RightOutlined className="text-xs" />
             )}
           </button>
+        </div>
         </div>
       </aside>
     </div>
