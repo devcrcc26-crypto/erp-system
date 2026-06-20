@@ -8,7 +8,9 @@ export default function DashboardLayout({
 }): React.ReactNode {
   return (
     <DashboardProviders>
-      <AppShell>{children}</AppShell>
+      <div className="flex h-screen min-h-0 flex-col overflow-hidden">
+        <AppShell>{children}</AppShell>
+      </div>
     </DashboardProviders>
   );
 }
