@@ -838,6 +838,21 @@ export class ReviewWorkflowService {
         updatedBy: command.actorId,
       });
 
+      await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+        companyId: command.companyId,
+        actorId: command.actorId,
+        entityType: WorkflowEntityType.ReviewSession,
+        entityId: session.id,
+        action: 'RETURN_FOR_REWORK',
+        beforeState: { status: session.status },
+        afterState: {
+          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+          designPackageId: command.designPackageId,
+          triggerAction: 'RETURN_FOR_REWORK',
+        },
+        correlationId,
+      });
+
       const projectId = await this.resolveProjectIdFromDiscipline(
         tx,
         session.taskDisciplineId,
