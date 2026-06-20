@@ -254,14 +254,6 @@ export class WorkflowKernelService {
         })),
       });
 
-      await this.reviewWorkflow.maybeAdvanceSessionAfterPackageEdvsApproved(tx, {
-        companyId: command.companyId,
-        actorId: command.actorId,
-        designPackageId: command.designPackageId,
-        reviewSessionId: command.reviewSessionId,
-        correlationId,
-      });
-
       const phaseB = await this.stateProjection.recomputeDirtyInTx(
         tx,
         command.companyId,

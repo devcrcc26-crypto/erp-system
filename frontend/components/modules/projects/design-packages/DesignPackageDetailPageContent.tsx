@@ -11,6 +11,7 @@ import {
   Modal,
   Space,
   Spin,
+  Tooltip,
 } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
@@ -21,6 +22,7 @@ import {
   DesignPackageDependenciesTable,
   DesignPackageItemsTable,
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
+import DesignPackageCommentsSection from '@/components/modules/projects/design-packages/DesignPackageCommentsSection';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
   useApproveReviewSession,
@@ -36,7 +38,7 @@ import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
-import { getPackageLockGuidance } from '@/lib/utils/package-workflow';
+import { getPackageLockGuidance, isPackageSubmittable } from '@/lib/utils/package-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { layout } from '@/lib/theme/layout';
@@ -98,6 +100,9 @@ export default function DesignPackageDetailPageContent({
   const sessionComments = reviewMode?.comments ?? [];
   const approvalAllowed = canApproveReviewSession(
     sessionComments.map((comment) => comment.status),
+  );
+  const hasUnacknowledgedComments = sessionComments.some(
+    (comment) => comment.status === 'OPEN' || comment.status === 'IN_PROGRESS',
   );
 
   if (packageQuery.isLoading || disciplineQuery.isLoading) {
@@ -227,18 +232,28 @@ export default function DesignPackageDetailPageContent({
         description="Package items, dependencies, and workflow actions."
         extra={
           <Space wrap>
-            {reviewSessionId && (
+            {reviewSessionId && lens.canAccessReviewMode && (
               <Link href={`/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`}>
                 <Button type="primary">Open review mode</Button>
               </Link>
             )}
-            {lens.canEditEngineering && (
-              <Button
-                loading={submitForReview.isPending}
-                onClick={() => void handleSubmitForReview()}
+            {lens.canSubmitDesignPackage && isPackageSubmittable(pkg) && (
+              <Tooltip
+                title={
+                  hasUnacknowledgedComments
+                    ? 'Acknowledge all comments before resubmitting'
+                    : undefined
+                }
               >
-                Submit for review
-              </Button>
+                <Button
+                  type="primary"
+                  loading={submitForReview.isPending}
+                  disabled={hasUnacknowledgedComments}
+                  onClick={() => void handleSubmitForReview()}
+                >
+                  Submit for review
+                </Button>
+              </Tooltip>
             )}
             {lens.canApproveReview && reviewSessionId && (
               <Button
@@ -368,6 +383,21 @@ export default function DesignPackageDetailPageContent({
           onChanged={() => void dependenciesQuery.refetch()}
         />
       </FormLayout>
+
+      {reviewSessionId && (
+        <DesignPackageCommentsSection
+          projectId={projectId}
+          taskDisciplineId={taskDisciplineId}
+          packageId={packageId}
+          packageName={pkg.name}
+          reviewSessionId={reviewSessionId}
+          comments={sessionComments}
+          onChanged={() => {
+            void reviewModeQuery.refetch();
+            void packageQuery.refetch();
+          }}
+        />
+      )}
 
       <DesignPackageAddDependencyModal
         open={addDependencyOpen}

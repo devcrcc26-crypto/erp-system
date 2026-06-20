@@ -51,6 +51,7 @@ export interface PermissionContext {
  */
 export const TIER_ACTIONS_REQUIRING_ASSIGNEE: readonly EpcWorkflowAction[] = [
   EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+  EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
 ];
 

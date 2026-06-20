@@ -10,7 +10,6 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PmContext } from '../types/pm-context.type';
 import { ProjectScopeService } from './project-scope.service';
-import { ReviewWorkflowService } from './review-workflow.service';
 import {
   CommentEdvSnapshot,
   resolveCommentRevisionContexts,
@@ -119,26 +118,19 @@ export class EpcWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
-    private readonly reviewWorkflow: ReviewWorkflowService,
   ) {}
 
   /**
-   * Review inbox for assignee with SLA overdue flags.
-   * Includes sessions assigned to the user or awaiting their governance tier role.
+   * Review inbox for the active governance tier holder only.
+   * A session is visible when its currentTier matches the user's discipline role.
    */
   async getReviewInbox(ctx: PmContext): Promise<ReviewInboxItem[]> {
-    await this.reviewWorkflow.reconcileStuckSessionEscalations(
-      ctx.companyId,
-      ctx.userId,
-    );
-
     const now = new Date();
     const sessions = await this.prisma.reviewSession.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
         status: ReviewSessionStatus.ACTIVE,
         OR: [
-          { assignedToUserId: ctx.userId },
           {
             currentTier: ReviewTier.DISCIPLINE_OWNER,
             taskDiscipline: { ownerUserId: ctx.userId },
@@ -198,6 +190,7 @@ export class EpcWorkspaceService {
             CommentStatus.ACKNOWLEDGED,
             CommentStatus.IN_PROGRESS,
             CommentStatus.RESOLVED,
+            CommentStatus.VERIFIED,
           ],
         },
       }),
