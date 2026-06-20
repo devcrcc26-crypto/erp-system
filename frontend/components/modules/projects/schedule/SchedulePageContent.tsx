@@ -75,6 +75,7 @@ export default function SchedulePageContent({
         activeKey={activeTab}
         onChange={setActiveTab}
         destroyOnHidden
+        className="erp-schedule-tabs min-w-0"
         items={[
           {
             key: 'gantt',

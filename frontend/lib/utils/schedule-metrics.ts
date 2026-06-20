@@ -163,10 +163,12 @@ export interface GanttBarLayout {
   widthPct: number;
 }
 
-export const GANTT_DAY_WIDTH_PX = 32;
-export const GANTT_TASK_COLUMN_PX = 300;
-export const GANTT_HEADER_HEIGHT_PX = 72;
-export const GANTT_ROW_HEIGHT_PX = 64;
+export const GANTT_DAY_WIDTH_PX = 40;
+export const GANTT_TASK_COLUMN_PX = 280;
+export const GANTT_HEADER_HEIGHT_PX = 80;
+export const GANTT_ROW_HEIGHT_PX = 72;
+export const GANTT_BAR_MIN_WIDTH_PX = 28;
+export const GANTT_BAR_HEIGHT_PX = 36;
 
 export interface GanttTimelineMonth {
   key: string;
@@ -287,7 +289,7 @@ export function getGanttBarLayoutPx(
     leftPx: (layout.leftPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
     widthPx: Math.max(
       (layout.widthPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
-      16,
+      GANTT_BAR_MIN_WIDTH_PX,
     ),
   };
 }
