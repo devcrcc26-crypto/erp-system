@@ -46,9 +46,12 @@ export const EPC_DEMO = {
   reviewSessionLeadId: sid(DEMO_PROJECT_INDEX, 226),
   reviewContextSnapshotId: sid(DEMO_PROJECT_INDEX, 221),
   reviewContextSnapshotLeadId: sid(DEMO_PROJECT_INDEX, 227),
-  reviewCommentId: sid(DEMO_PROJECT_INDEX, 222),
+  reviewCommentId: sid(DEMO_PROJECT_INDEX, 223),
   designPackageName: 'Foundation Drawings — Review Package',
   designPackageLeadName: 'Structural Calculations — Lead Review',
+  designPackageReviewerId: sid(DEMO_PROJECT_INDEX, 216),
+  reviewSessionReviewerId: sid(DEMO_PROJECT_INDEX, 228),
+  designPackageReviewerName: 'Steel Connection Details — Reviewer Package',
 } as const;
 
 const REVIEWER_USER_ID = '00000000-0000-4000-8000-000000000084';
@@ -61,6 +64,13 @@ const PM_USER_ID = '00000000-0000-4000-8000-000000000080';
 
 function d(iso: string): Date {
   return new Date(iso);
+}
+
+/** SLA deadlines relative to seed run so demo sessions are not immediately overdue. */
+function slaDaysFromNow(days: number): Date {
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + days);
+  return deadline;
 }
 
 /**
@@ -103,7 +113,10 @@ export async function cleanupEpcDemoData(
   }
 
   const packageRows = await prisma.designPackage.findMany({
-    where: { companyId, taskDisciplineId: { in: disciplineIds } },
+    where: {
+      companyId,
+      taskDiscipline: { task: { projectId: { in: projectIds } } },
+    },
     select: { id: true },
   });
   const packageIds = packageRows.map((row) => row.id);
@@ -269,7 +282,7 @@ async function seedTaskDisciplineReviews(
 }
 
 /**
- * DEMO-001 — Marina Tower: discipline owner + reviewer tiers active, draft package, open comment.
+ * DEMO-001 — Marina Tower: owner, reviewer, and lead tiers each have an approvable inbox package.
  */
 async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   const { prisma, companyId, adminUserId } = ctx;
@@ -406,7 +419,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       status: ReviewSessionStatus.ACTIVE,
       currentTier: ReviewTier.DISCIPLINE_OWNER,
       assignedToUserId: OWNER_USER_ID,
-      slaDeadlineAt: d('2026-04-15'),
+      slaDeadlineAt: slaDaysFromNow(14),
+      slaEscalatedAt: null,
       updatedBy: adminUserId,
     },
     create: {
@@ -418,7 +432,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       currentTier: ReviewTier.DISCIPLINE_OWNER,
       assignedToUserId: OWNER_USER_ID,
       openedAt: d('2026-03-02'),
-      slaDeadlineAt: d('2026-04-15'),
+      slaDeadlineAt: slaDaysFromNow(14),
       createdBy: adminUserId,
       updatedBy: adminUserId,
     },
@@ -437,27 +451,6 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       referencedVersionIds: [sid(p, 202)],
       contentHash: 'epc-demo-snapshot-v1',
       capturedBy: adminUserId,
-    },
-  });
-
-  await prisma.reviewComment.upsert({
-    where: { id: sid(p, 222) },
-    update: {
-      body: 'Clarify pile cap reinforcement detail at grid A4.',
-      status: CommentStatus.OPEN,
-      updatedBy: adminUserId,
-    },
-    create: {
-      id: sid(p, 222),
-      companyId,
-      reviewSessionId: sid(p, 220),
-      engineeringDocumentVersionId: sid(p, 202),
-      body: 'Clarify pile cap reinforcement detail at grid A4.',
-      severity: CommentSeverity.MODERATE,
-      status: CommentStatus.OPEN,
-      assignedToUserId: ENGINEER_USER_ID,
-      createdBy: REVIEWER_USER_ID,
-      updatedBy: REVIEWER_USER_ID,
     },
   });
 
@@ -500,7 +493,8 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       status: ReviewSessionStatus.ACTIVE,
       assignedToUserId: LEAD_USER_ID,
       currentTier: ReviewTier.DISCIPLINE_LEAD,
-      slaDeadlineAt: d('2026-04-20'),
+      slaDeadlineAt: slaDaysFromNow(21),
+      slaEscalatedAt: null,
       updatedBy: adminUserId,
     },
     create: {
@@ -512,7 +506,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       currentTier: ReviewTier.DISCIPLINE_LEAD,
       assignedToUserId: LEAD_USER_ID,
       openedAt: d('2026-03-06'),
-      slaDeadlineAt: d('2026-04-20'),
+      slaDeadlineAt: slaDaysFromNow(21),
       createdBy: adminUserId,
       updatedBy: adminUserId,
     },
@@ -611,9 +605,111 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
     },
   });
 
+  await prisma.designPackage.upsert({
+    where: { id: sid(p, 216) },
+    update: {
+      name: EPC_DEMO.designPackageReviewerName,
+      projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
+      submittedAt: d('2026-03-10'),
+      updatedBy: adminUserId,
+    },
+    create: {
+      id: sid(p, 216),
+      companyId,
+      taskDisciplineId: sid(p, 200),
+      name: EPC_DEMO.designPackageReviewerName,
+      projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
+      submittedAt: d('2026-03-10'),
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.designPackageItem.upsert({
+    where: { id: sid(p, 217) },
+    update: {},
+    create: {
+      id: sid(p, 217),
+      companyId,
+      designPackageId: sid(p, 216),
+      engineeringDocumentVersionId: sid(p, 202),
+      sortOrder: 0,
+      createdBy: adminUserId,
+    },
+  });
+
+  await prisma.reviewSession.upsert({
+    where: { id: sid(p, 228) },
+    update: {
+      status: ReviewSessionStatus.ACTIVE,
+      currentTier: ReviewTier.REVIEWER,
+      assignedToUserId: REVIEWER_USER_ID,
+      slaDeadlineAt: slaDaysFromNow(18),
+      slaEscalatedAt: null,
+      updatedBy: adminUserId,
+    },
+    create: {
+      id: sid(p, 228),
+      companyId,
+      designPackageId: sid(p, 216),
+      taskDisciplineId: sid(p, 200),
+      status: ReviewSessionStatus.ACTIVE,
+      currentTier: ReviewTier.REVIEWER,
+      assignedToUserId: REVIEWER_USER_ID,
+      openedAt: d('2026-03-11'),
+      slaDeadlineAt: slaDaysFromNow(18),
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    },
+  });
+
+  await prisma.reviewContextSnapshot.upsert({
+    where: { id: sid(p, 229) },
+    update: {
+      referencedVersionIds: [sid(p, 202)],
+      contentHash: 'epc-demo-reviewer-snapshot-v1',
+    },
+    create: {
+      id: sid(p, 229),
+      companyId,
+      reviewSessionId: sid(p, 228),
+      referencedVersionIds: [sid(p, 202)],
+      contentHash: 'epc-demo-reviewer-snapshot-v1',
+      capturedBy: adminUserId,
+    },
+  });
+
+  await prisma.reviewComment.upsert({
+    where: { id: sid(p, 223) },
+    update: {
+      body: 'Verify anchor bolt projection matches structural grid.',
+      status: CommentStatus.VERIFIED,
+      resolutionNote: 'Anchor bolt projection aligned to structural grid in Rev B.',
+      resolvedAt: d('2026-03-10'),
+      verifiedAt: d('2026-03-11'),
+      closedAt: null,
+      updatedBy: REVIEWER_USER_ID,
+    },
+    create: {
+      id: sid(p, 223),
+      companyId,
+      reviewSessionId: sid(p, 228),
+      engineeringDocumentVersionId: sid(p, 202),
+      body: 'Verify anchor bolt projection matches structural grid.',
+      severity: CommentSeverity.MINOR,
+      status: CommentStatus.VERIFIED,
+      resolutionNote: 'Anchor bolt projection aligned to structural grid in Rev B.',
+      resolvedAt: d('2026-03-10'),
+      verifiedAt: d('2026-03-11'),
+      assignedToUserId: ENGINEER_USER_ID,
+      createdBy: OWNER_USER_ID,
+      updatedBy: REVIEWER_USER_ID,
+    },
+  });
+
   await seedTaskDisciplineReviews(prisma, companyId, adminUserId, p, sid(p, 200), [
     { tier: ReviewTier.DISCIPLINE_OWNER, status: TaskDisciplineReviewStatus.IN_REVIEW },
-    { tier: ReviewTier.REVIEWER, status: TaskDisciplineReviewStatus.PENDING },
+    { tier: ReviewTier.REVIEWER, status: TaskDisciplineReviewStatus.IN_REVIEW },
     { tier: ReviewTier.DISCIPLINE_LEAD, status: TaskDisciplineReviewStatus.PENDING },
     { tier: ReviewTier.DEPT_CHIEF, status: TaskDisciplineReviewStatus.PENDING },
   ]);
@@ -818,7 +914,8 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       status: ReviewSessionStatus.ACTIVE,
       currentTier: ReviewTier.DEPT_CHIEF,
       assignedToUserId: DEPT_CHIEF_USER_ID,
-      slaDeadlineAt: d('2026-04-01'),
+      slaDeadlineAt: slaDaysFromNow(30),
+      slaEscalatedAt: null,
       updatedBy: adminUserId,
     },
     create: {
@@ -830,7 +927,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       currentTier: ReviewTier.DEPT_CHIEF,
       assignedToUserId: DEPT_CHIEF_USER_ID,
       openedAt: d('2026-02-20'),
-      slaDeadlineAt: d('2026-04-01'),
+      slaDeadlineAt: slaDaysFromNow(30),
       createdBy: adminUserId,
       updatedBy: adminUserId,
     },
@@ -856,8 +953,12 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
     where: { id: sid(p, 232) },
     update: {
       body: 'Confirm chilled water pipe sizing for concourse zone B.',
-      status: CommentStatus.RESOLVED,
-      updatedBy: ENGINEER_USER_ID,
+      status: CommentStatus.VERIFIED,
+      resolutionNote: 'Pipe sizing confirmed against approved equipment schedule.',
+      resolvedAt: d('2026-02-20'),
+      verifiedAt: d('2026-02-21'),
+      closedAt: null,
+      updatedBy: DEPT_CHIEF_USER_ID,
     },
     create: {
       id: sid(p, 232),
@@ -866,7 +967,10 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       engineeringDocumentVersionId: sid(p, 204),
       body: 'Confirm chilled water pipe sizing for concourse zone B.',
       severity: CommentSeverity.MAJOR,
-      status: CommentStatus.RESOLVED,
+      status: CommentStatus.VERIFIED,
+      resolutionNote: 'Pipe sizing confirmed against approved equipment schedule.',
+      resolvedAt: d('2026-02-20'),
+      verifiedAt: d('2026-02-21'),
       assignedToUserId: ENGINEER_USER_ID,
       createdBy: DEPT_CHIEF_USER_ID,
       updatedBy: DEPT_CHIEF_USER_ID,
@@ -955,6 +1059,10 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
     update: {
       body: 'Load schedule matches approved equipment list.',
       status: CommentStatus.VERIFIED,
+      resolutionNote: 'Equipment list cross-check complete.',
+      resolvedAt: d('2026-01-28'),
+      verifiedAt: d('2026-01-29'),
+      closedAt: d('2026-02-01'),
       updatedBy: LEAD_USER_ID,
     },
     create: {
@@ -965,6 +1073,10 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       body: 'Load schedule matches approved equipment list.',
       severity: CommentSeverity.MINOR,
       status: CommentStatus.VERIFIED,
+      resolutionNote: 'Equipment list cross-check complete.',
+      resolvedAt: d('2026-01-28'),
+      verifiedAt: d('2026-01-29'),
+      closedAt: d('2026-02-01'),
       assignedToUserId: ENGINEER_USER_ID,
       createdBy: LEAD_USER_ID,
       updatedBy: LEAD_USER_ID,
@@ -1401,7 +1513,7 @@ export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
   await seedEpcProject003(ctx);
 
   console.log('  EPC workflow demo seeded on 3 projects:');
-  console.log('    DEMO-001 Marina Tower — discipline owner + lead review active');
+  console.log('    DEMO-001 Marina Tower — discipline owner + reviewer + lead review active');
   console.log('    DEMO-002 Airport Expansion — dept chief governance review');
   console.log('    DEMO-003 Riverside Residential — issued design submittal');
 }

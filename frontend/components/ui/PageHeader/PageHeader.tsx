@@ -7,11 +7,13 @@ import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 export default function PageHeader({
   title,
   onMenuClick,
+  showMenuOnDesktop = false,
   searchPlaceholder = 'Search projects...',
   showSearch = true,
 }: {
   title: string;
   onMenuClick?: () => void;
+  showMenuOnDesktop?: boolean;
   searchPlaceholder?: string;
   showSearch?: boolean;
 }): React.ReactNode {
@@ -25,7 +27,7 @@ export default function PageHeader({
           <button
             type="button"
             onClick={onMenuClick}
-            className="mt-1 shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+            className={`mt-1 shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 ${showMenuOnDesktop ? '' : 'md:hidden'}`}
             aria-label="Open menu"
           >
             <MenuOutlined style={{ fontSize: 22 }} />
@@ -33,7 +35,7 @@ export default function PageHeader({
         )}
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{title}</h1>
+          <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
           {showSearch && (
             <div className="mt-2 w-full sm:w-[50%] md:w-[40%] lg:w-[30%]">
               <Input

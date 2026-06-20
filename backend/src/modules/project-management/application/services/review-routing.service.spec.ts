@@ -27,13 +27,14 @@ describe('review-routing.service', () => {
     expect(result.nextTier).toBe(ReviewTier.REVIEWER);
   });
 
-  it('escalates MODERATE from reviewer to lead', () => {
+  it('flags MODERATE at reviewer for lead approval without tier jump', () => {
     const result = service.route({
       severity: CommentSeverity.MODERATE,
       currentTier: ReviewTier.REVIEWER,
     });
-    expect(result.escalate).toBe(true);
-    expect(result.nextTier).toBe(ReviewTier.DISCIPLINE_LEAD);
+    expect(result.escalate).toBe(false);
+    expect(result.nextTier).toBe(ReviewTier.REVIEWER);
+    expect(result.requiresLeadApproval).toBe(true);
   });
 
   it('escalates MAJOR to next tier', () => {

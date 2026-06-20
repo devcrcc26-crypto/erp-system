@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Alert, Breadcrumb, Button, Descriptions, Spin } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
@@ -13,6 +15,8 @@ import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 import { layout } from '@/lib/theme/layout';
+import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { useAppMessage } from '@/hooks/use-app-message';
 
 export default function DisciplineDetailPageContent({
   projectId,
@@ -21,6 +25,9 @@ export default function DisciplineDetailPageContent({
   projectId: string;
   taskDisciplineId: string;
 }): React.ReactNode {
+  const router = useRouter();
+  const messageApi = useAppMessage();
+  const lens = useRoleLens();
   const packagesQuery = useDesignPackages(projectId, taskDisciplineId);
   const projectionPending =
     packagesQuery.data?.some((pkg) => pkg.projectionPending) ?? false;
@@ -28,6 +35,25 @@ export default function DisciplineDetailPageContent({
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId, true, {
     refetchInterval: projectionPending ? PROJECTION_POLL_MS : false,
   });
+
+  useEffect(() => {
+    if (
+      disciplineQuery.isError &&
+      disciplineQuery.error instanceof ApiRequestError &&
+      disciplineQuery.error.status === 403 &&
+      !lens.disciplineScopeBypass
+    ) {
+      messageApi.warning('You do not have access to this discipline');
+      router.replace(`/projects/${projectId}/disciplines`);
+    }
+  }, [
+    disciplineQuery.error,
+    disciplineQuery.isError,
+    lens.disciplineScopeBypass,
+    messageApi,
+    projectId,
+    router,
+  ]);
 
   if (disciplineQuery.isLoading) {
     return (
@@ -38,9 +64,20 @@ export default function DisciplineDetailPageContent({
   }
 
   if (disciplineQuery.isError) {
+    const isForbidden =
+      disciplineQuery.error instanceof ApiRequestError &&
+      disciplineQuery.error.status === 403;
     const isRateLimited =
       disciplineQuery.error instanceof ApiRequestError &&
       disciplineQuery.error.status === 429;
+
+    if (isForbidden && !lens.disciplineScopeBypass) {
+      return (
+        <div className="flex justify-center py-16">
+          <Spin />
+        </div>
+      );
+    }
 
     return (
       <Alert

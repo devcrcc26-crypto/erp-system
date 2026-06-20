@@ -22,7 +22,7 @@ export default function PlaceholderPage({
         }
         description={
           <div className="text-center">
-            <h2 className="mb-2 text-2xl font-bold text-slate-800">{title}</h2>
+            <h2 className="mb-2 text-xl font-semibold text-slate-800">{title}</h2>
             <p className="mx-auto max-w-sm text-sm text-slate-500">
               {description ??
                 "This page is currently under construction. Check back soon, it's being built!"}

@@ -5,6 +5,8 @@
   --color-sidebar-active: #334155;
   --color-sidebar-accent: #f97316;
   --color-page-bg: #f1f5f9;
+  --color-fill-quaternary: #f1f5f9;
+  --color-border-secondary: #e2e8f0;
 }
 
 *,
@@ -57,7 +59,7 @@ body {
 .erp-project-sidebar-menu .ant-menu-item-group-title {
   padding: 10px 12px 8px;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -101,7 +103,7 @@ body {
 
 /* Drawer / modal form spacing */
 .erp-drawer-form.ant-form-vertical .ant-form-item {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .erp-drawer-form.ant-form-vertical .ant-form-item:last-child {
@@ -123,11 +125,52 @@ body {
   margin-top: 4px;
 }
 
-/* Hide scrollbars globally while keeping scroll functionality */
-* {
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* IE / Edge */
+/* Page shell — hide scrollbars on root scrolling surface */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-*::-webkit-scrollbar {
-  display: none;                /* Chrome / Safari / Opera */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scrollable panels — show thin scrollbars for discoverability */
+.ant-drawer-body,
+.ant-drawer-wrapper-body,
+.ant-modal-body,
+.ant-table-body,
+.ant-table-content,
+.erp-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  -ms-overflow-style: auto;
+}
+.ant-drawer-body::-webkit-scrollbar,
+.ant-drawer-wrapper-body::-webkit-scrollbar,
+.ant-modal-body::-webkit-scrollbar,
+.ant-table-body::-webkit-scrollbar,
+.ant-table-content::-webkit-scrollbar,
+.erp-scrollable::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+.ant-drawer-body::-webkit-scrollbar-thumb,
+.ant-drawer-wrapper-body::-webkit-scrollbar-thumb,
+.ant-modal-body::-webkit-scrollbar-thumb,
+.ant-table-body::-webkit-scrollbar-thumb,
+.ant-table-content::-webkit-scrollbar-thumb,
+.erp-scrollable::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+.ant-drawer-body::-webkit-scrollbar-thumb:hover,
+.ant-drawer-wrapper-body::-webkit-scrollbar-thumb:hover,
+.ant-modal-body::-webkit-scrollbar-thumb:hover,
+.ant-table-body::-webkit-scrollbar-thumb:hover,
+.ant-table-content::-webkit-scrollbar-thumb:hover,
+.erp-scrollable::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
 }

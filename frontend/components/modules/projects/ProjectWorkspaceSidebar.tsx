@@ -37,6 +37,8 @@ import {
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -64,6 +66,8 @@ function canViewNavItem(
   item: ProjectWorkspaceNavItem,
   pm: ReturnType<typeof usePmCapabilities>,
   epc: ReturnType<typeof useEpcCapabilities>,
+  hasAssignedDisciplines: boolean,
+  disciplineScopeBypass: boolean,
 ): boolean {
   const cap = pm[item.capability as PmModuleKey];
   if (!cap?.canView) {
@@ -71,6 +75,14 @@ function canViewNavItem(
   }
 
   if (item.epcSurface === 'engineering' && !epc.canViewEngineering) {
+    return false;
+  }
+
+  if (
+    item.epcSurface === 'engineering' &&
+    !disciplineScopeBypass &&
+    !hasAssignedDisciplines
+  ) {
     return false;
   }
 
@@ -87,6 +99,12 @@ export default function ProjectWorkspaceSidebar({
   const pathname = usePathname();
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
+  const lens = useRoleLens();
+  const disciplinesQuery = useProjectDisciplines(
+    projectId,
+    !lens.disciplineScopeBypass,
+  );
+  const hasAssignedDisciplines = (disciplinesQuery.data?.length ?? 0) > 0;
   const { t } = useEpcTranslation();
   const selectedKey = resolveProjectNavKey(pathname, projectId);
 
@@ -95,7 +113,13 @@ export default function ProjectWorkspaceSidebar({
 
     for (const group of PROJECT_WORKSPACE_NAV) {
       const visibleItems = group.items.filter((item) =>
-        canViewNavItem(item, pm, epc),
+        canViewNavItem(
+          item,
+          pm,
+          epc,
+          hasAssignedDisciplines,
+          lens.disciplineScopeBypass,
+        ),
       );
       if (visibleItems.length === 0) {
         continue;
@@ -118,7 +142,15 @@ export default function ProjectWorkspaceSidebar({
     }
 
     return groups;
-  }, [epc, pm, projectId, onNavigate, t]);
+  }, [
+    epc,
+    hasAssignedDisciplines,
+    lens.disciplineScopeBypass,
+    onNavigate,
+    pm,
+    projectId,
+    t,
+  ]);
 
   if (!menuItems || menuItems.length === 0) {
     return (

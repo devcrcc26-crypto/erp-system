@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button, Drawer, Spin } from 'antd';
-import { MenuOutlined } from '@ant-design/icons';
+import { MenuFoldOutlined, MenuOutlined } from '@ant-design/icons';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 import ProjectWorkspaceSidebar from '@/components/modules/projects/ProjectWorkspaceSidebar';
@@ -27,6 +27,7 @@ export default function ProjectShell({
   children: React.ReactNode;
 }): React.ReactNode {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [desktopNavOpen, setDesktopNavOpen] = useState(true);
   const setActiveProject = useProjectContextStore((state) => state.setActiveProject);
   const clearProjectContext = useProjectContextStore(
     (state) => state.clearProjectContext,
@@ -100,6 +101,17 @@ export default function ProjectShell({
               >
                 Menu
               </Button>
+              {!desktopNavOpen && (
+                <Button
+                  type="default"
+                  icon={<MenuOutlined />}
+                  className="!hidden md:!inline-flex"
+                  onClick={() => setDesktopNavOpen(true)}
+                  aria-label="Open project navigation"
+                >
+                  Menu
+                </Button>
+              )}
             </div>
           </div>
 
@@ -133,11 +145,23 @@ export default function ProjectShell({
       </section>
 
       <div className="flex flex-col gap-8 md:flex-row md:items-start">
-        <aside
-          className={`hidden w-full shrink-0 md:block md:w-64 ${layout.cardSurface} px-3 py-5`}
-        >
-          <ProjectWorkspaceSidebar projectId={projectId} />
-        </aside>
+        {desktopNavOpen && (
+          <aside
+            className={`hidden w-full shrink-0 md:block md:w-64 ${layout.cardSurface} px-3 py-5`}
+          >
+            <div className="mb-2 flex justify-end">
+              <Button
+                type="text"
+                size="small"
+                icon={<MenuFoldOutlined />}
+                onClick={() => setDesktopNavOpen(false)}
+                className="!text-slate-500 hover:!text-slate-700"
+                aria-label="Close project navigation"
+              />
+            </div>
+            <ProjectWorkspaceSidebar projectId={projectId} />
+          </aside>
+        )}
 
         <Drawer
           title="Project navigation"

@@ -43,6 +43,7 @@ export class ReviewCommentsController {
   }
 
   @Post()
+  @RequirePermission('schedule', 'approve')
   @ApiOperation({ summary: 'Add review comment to EDV in active session' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -78,7 +79,7 @@ export class ReviewCommentsController {
   }
 
   @Post(':commentId/verify')
-  @RequirePermission('schedule', 'view')
+  @RequirePermission('schedule', 'approve')
   @ApiOperation({ summary: 'Verify RESOLVED comment (RESOLVED → VERIFIED)' })
   verify(
     @CurrentUser() user: AuthenticatedUser,

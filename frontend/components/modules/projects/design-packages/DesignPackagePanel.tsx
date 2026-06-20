@@ -11,11 +11,13 @@ import {
   Table,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { Package } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   DesignPackage,
@@ -29,6 +31,7 @@ import {
   useDesignPackages,
   useRemoveDesignPackageDependency,
   useRemoveDesignPackageItem,
+  useSubmitPackageForReview,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
@@ -36,6 +39,7 @@ import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatus
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { isPackageSubmittable } from '@/lib/utils/package-workflow';
 
 function groupPackagesByStatus(
   packages: DesignPackage[],
@@ -66,6 +70,9 @@ export default function DesignPackagePanel({
   const [editing, setEditing] = useState<DesignPackage | null>(null);
   const [addItemPackageId, setAddItemPackageId] = useState<string | null>(null);
   const [addDepPackageId, setAddDepPackageId] = useState<string | null>(null);
+  const [submittingPackageId, setSubmittingPackageId] = useState<string | null>(
+    null,
+  );
   const [itemForm] = Form.useForm<{ engineeringDocumentVersionId: string }>();
 
   const packagesQuery = useDesignPackages(
@@ -82,6 +89,7 @@ export default function DesignPackagePanel({
 
   const addItem = useAddDesignPackageItem();
   const removeItem = useRemoveDesignPackageItem();
+  const submitForReview = useSubmitPackageForReview();
 
   const packages = packagesQuery.data ?? [];
   const grouped = useMemo(() => groupPackagesByStatus(packages), [packages]);
@@ -154,9 +162,37 @@ export default function DesignPackagePanel({
     {
       title: '',
       key: 'actions',
-      width: 220,
+      width: 320,
       render: (_value, record) => (
         <Space size="small" wrap>
+          {lens.canSubmitDesignPackage && isPackageSubmittable(record) ? (
+            <Button
+              type="link"
+              className="!px-0"
+              loading={submittingPackageId === record.id}
+              onClick={() => {
+                setSubmittingPackageId(record.id);
+                void submitForReview
+                  .mutateAsync({
+                    projectId,
+                    taskDisciplineId,
+                    packageId: record.id,
+                  })
+                  .then(() => {
+                    messageApi.success('Package submitted for review');
+                    void packagesQuery.refetch();
+                  })
+                  .catch((error) => {
+                    notifyApiError(error, 'Failed to submit package', messageApi);
+                  })
+                  .finally(() => {
+                    setSubmittingPackageId(null);
+                  });
+              }}
+            >
+              Submit for review
+            </Button>
+          ) : null}
           <Button
             type="link"
             className="!px-0"
@@ -229,7 +265,7 @@ export default function DesignPackagePanel({
           </h4>
           <Table<DesignPackage>
             rowKey="id"
-            size="small"
+            size="middle"
             columns={packageColumns}
             dataSource={statusPackages}
             pagination={false}
@@ -238,7 +274,22 @@ export default function DesignPackagePanel({
       ))}
 
       {packages.length === 0 && !packagesQuery.isLoading && (
-        <p className="text-sm text-slate-500">No design packages yet.</p>
+        <TableEmptyState
+          icon={<Package />}
+          title="No design packages"
+          description="Create a package to begin the review workflow"
+          action={
+            lens.canCreateEngineering
+              ? {
+                  label: 'New package',
+                  onClick: () => {
+                    setEditing(null);
+                    setBuilderOpen(true);
+                  },
+                }
+              : undefined
+          }
+        />
       )}
 
       <DesignPackageBuilder
@@ -363,7 +414,7 @@ export function DesignPackageAddDependencyModal({
       onCancel={onClose}
       footer={null}
       destroyOnHidden
-      afterOpenChange={(visible) => {
+      afterOpenChange={(visible: boolean) => {
         if (!visible) {
           form.resetFields();
         }
@@ -373,7 +424,10 @@ export function DesignPackageAddDependencyModal({
         form={form}
         layout="vertical"
         initialValues={{ dependencyType: 'FINISH_TO_START' }}
-        onFinish={async (values) => {
+        onFinish={async (values: {
+          dependsOnPackageId: string;
+          dependencyType: 'FINISH_TO_START' | 'COORDINATION_ONLY';
+        }) => {
           try {
             await addDependency.mutateAsync({
               projectId,
@@ -487,6 +541,7 @@ export function DesignPackageItemsTable({
     {
       title: 'Revision',
       key: 'revision',
+      align: 'right',
       render: (_value, record) =>
         edvMap.get(record.engineeringDocumentVersionId)?.revisionLabel ?? '—',
     },
@@ -538,7 +593,7 @@ export function DesignPackageItemsTable({
   return (
     <Table<DesignPackageItem>
       rowKey="id"
-      size="small"
+      size="middle"
       columns={columns}
       dataSource={items}
       pagination={false}
@@ -612,7 +667,7 @@ export function DesignPackageDependenciesTable({
   return (
     <Table<DesignPackageDependency>
       rowKey="id"
-      size="small"
+      size="middle"
       columns={columns}
       dataSource={dependencies}
       pagination={false}

@@ -77,6 +77,7 @@ export default function DisciplineDetailDrawer({
       centered
       onCancel={onClose}
       onOk={() => form.submit()}
+      okText={isEditing ? 'Save discipline' : 'Add discipline'}
       confirmLoading={isSubmitting}
       destroyOnHidden
       width={720}

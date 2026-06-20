@@ -1,4 +1,5 @@
 import type {
+  DesignPackage,
   DesignPackageItem,
   EdvStatus,
   EngineeringDocument,
@@ -125,6 +126,18 @@ function resolveNextStep(
 }
 
 /**
+ * True when the package can be submitted for review (draft or returned for rework).
+ */
+export function isPackageSubmittable(
+  pkg: Pick<DesignPackage, 'projectedStatus'>,
+): boolean {
+  return (
+    pkg.projectedStatus === 'IN_PROGRESS' ||
+    pkg.projectedStatus === 'REWORK_REQUIRED'
+  );
+}
+
+/**
  * Mirrors backend `assertPackageLockEligible` for UI gating.
  */
 export function getPackageLockEligibility(
@@ -188,7 +201,9 @@ export function getPackageLockGuidance(
 
   const blockingStatuses = [
     ...new Set(
-      statuses.filter((status) => status !== 'APPROVED').map(formatEdvStatus),
+      statuses
+        .filter((status): status is EdvStatus => status !== undefined && status !== 'APPROVED')
+        .map(formatEdvStatus),
     ),
   ];
 

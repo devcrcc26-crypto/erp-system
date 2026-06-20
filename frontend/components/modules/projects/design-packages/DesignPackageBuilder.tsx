@@ -6,6 +6,8 @@ import {
   useCreateDesignPackage,
   useUpdateDesignPackage,
 } from '@/lib/query/design-packages';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PackageFormValues {
   name: string;
@@ -29,28 +31,39 @@ export default function DesignPackageBuilder({
   const [form] = Form.useForm<PackageFormValues>();
   const createPackage = useCreateDesignPackage();
   const updatePackage = useUpdateDesignPackage();
+  const messageApi = useAppMessage();
   const isSubmitting = createPackage.isPending || updatePackage.isPending;
 
   async function handleSubmit(values: PackageFormValues): Promise<void> {
     const name = values.name.trim();
 
-    if (editing) {
-      await updatePackage.mutateAsync({
-        projectId,
-        taskDisciplineId,
-        packageId: editing.id,
-        body: { name },
-      });
-    } else {
-      await createPackage.mutateAsync({
-        projectId,
-        taskDisciplineId,
-        body: { name },
-      });
-    }
+    try {
+      if (editing) {
+        await updatePackage.mutateAsync({
+          projectId,
+          taskDisciplineId,
+          packageId: editing.id,
+          body: { name },
+        });
+        messageApi.success('Design package updated successfully');
+      } else {
+        await createPackage.mutateAsync({
+          projectId,
+          taskDisciplineId,
+          body: { name },
+        });
+        messageApi.success('Design package created successfully');
+      }
 
-    onSaved();
-    onClose();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(
+        error,
+        editing ? 'Failed to update design package' : 'Failed to create design package',
+        messageApi,
+      );
+    }
   }
 
   return (
@@ -59,6 +72,7 @@ export default function DesignPackageBuilder({
       title={editing ? 'Edit design package' : 'New design package'}
       onCancel={onClose}
       onOk={() => form.submit()}
+      okText={editing ? 'Save changes' : 'Create package'}
       confirmLoading={isSubmitting}
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {

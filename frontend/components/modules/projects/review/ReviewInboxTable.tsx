@@ -2,13 +2,14 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { Inbox } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import type { ReviewInboxItem } from '@/lib/api/epc.types';
 import { useReviewInbox } from '@/lib/query/epc-workspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function ReviewInboxTable({
   tierFilter = 'ALL',
@@ -16,7 +17,6 @@ export default function ReviewInboxTable({
   tierFilter?: string;
 }): React.ReactNode {
   const inboxQuery = useReviewInbox();
-  const { t } = useEpcTranslation();
 
   const filtered = useMemo(() => {
     const items = inboxQuery.data ?? [];
@@ -31,6 +31,7 @@ export default function ReviewInboxTable({
       title: 'Package',
       dataIndex: 'designPackageName',
       key: 'designPackageName',
+      ellipsis: { showTitle: true },
       render: (name: string, record) => (
         <Link
           href={`/design-packages/${record.designPackageId}/review?projectId=${record.projectId}&disciplineId=${record.taskDisciplineId}`}
@@ -39,8 +40,18 @@ export default function ReviewInboxTable({
         </Link>
       ),
     },
-    { title: 'Project', dataIndex: 'projectName', key: 'projectName' },
-    { title: 'Discipline', dataIndex: 'disciplineName', key: 'disciplineName' },
+    {
+      title: 'Project',
+      dataIndex: 'projectName',
+      key: 'projectName',
+      ellipsis: { showTitle: true },
+    },
+    {
+      title: 'Discipline',
+      dataIndex: 'disciplineName',
+      key: 'disciplineName',
+      ellipsis: { showTitle: true },
+    },
     {
       title: 'Tier',
       dataIndex: 'currentTier',
@@ -87,7 +98,15 @@ export default function ReviewInboxTable({
       columns={columns}
       dataSource={filtered}
       loading={inboxQuery.isLoading}
-      locale={{ emptyText: t('empty.noReviewInbox') }}
+      locale={{
+        emptyText: (
+          <TableEmptyState
+            icon={<Inbox />}
+            title="Nothing to review"
+            description="Packages assigned to you will appear here"
+          />
+        ),
+      }}
     />
     </div>
   );

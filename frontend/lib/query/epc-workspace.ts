@@ -2,6 +2,10 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client';
+import {
+  useCanViewReviewInbox,
+  useCapabilitiesReady,
+} from '@/hooks/use-pm-capabilities';
 import type {
   DispatcherWorkloadItem,
   MyCommentItem,
@@ -30,10 +34,13 @@ export function useReviewInbox(
   enabled = true,
   options?: Omit<UseQueryOptions<ReviewInboxItem[]>, 'queryKey' | 'queryFn'>,
 ) {
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewReviewInbox = useCanViewReviewInbox();
+
   return useQuery({
     queryKey: epcWorkspaceKeys.reviewInbox(),
     queryFn: () => apiGet<ReviewInboxItem[]>('/review-inbox'),
-    enabled,
+    enabled: enabled && capabilitiesReady && canViewReviewInbox,
     retry: false,
     ...options,
   });

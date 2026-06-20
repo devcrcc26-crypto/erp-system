@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AUTH_SESSION_CHANNEL,
   type AuthSessionEvent,
@@ -8,28 +8,56 @@ import {
 import { AUTH_PERSIST_KEY } from '@/stores/auth.store';
 import { getQueryClient } from '@/lib/query/query-client-ref';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session';
+import { useSessionCapabilities } from '@/lib/query/auth';
 import { useAuthStore } from '@/stores/auth.store';
-import { fetchCapabilities } from '@/lib/permissions/capabilities';
+
+/**
+ * Loads session capabilities via TanStack Query (deduped + 60s staleTime).
+ */
+function SessionCapabilitiesSync({
+  enabled,
+}: {
+  enabled: boolean;
+}): null {
+  const query = useSessionCapabilities(enabled);
+
+  useEffect(() => {
+    if (!enabled || !query.isError) {
+      return;
+    }
+    useAuthStore.getState().clearAuth();
+    clearAuthCookie();
+    getQueryClient()?.clear();
+  }, [enabled, query.isError]);
+
+  return null;
+}
 
 /**
  * Keeps auth state and query cache aligned when another tab signs in or out.
  */
-export function AuthSessionSync(): null {
+export function AuthSessionSync(): React.ReactNode {
+  const [hydrated, setHydrated] = useState(false);
+  const accessToken = useAuthStore((state) => state.accessToken);
+
   useEffect(() => {
+    void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
+      setHydrated(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     const syncSession = (): void => {
       void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
-        const { accessToken, setCapabilities } = useAuthStore.getState();
+        const token = useAuthStore.getState().accessToken;
         const queryClient = getQueryClient();
 
-        if (accessToken) {
+        if (token) {
           setAuthCookie();
-          void fetchCapabilities()
-            .then(setCapabilities)
-            .catch(() => {
-              useAuthStore.getState().clearAuth();
-              clearAuthCookie();
-              queryClient?.clear();
-            });
         } else {
           clearAuthCookie();
           queryClient?.clear();
@@ -64,7 +92,9 @@ export function AuthSessionSync(): null {
       window.removeEventListener('storage', handleStorage);
       channel?.close();
     };
-  }, []);
+  }, [hydrated]);
 
-  return null;
+  return (
+    <SessionCapabilitiesSync enabled={hydrated && Boolean(accessToken)} />
+  );
 }

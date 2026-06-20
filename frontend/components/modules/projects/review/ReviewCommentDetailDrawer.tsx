@@ -84,6 +84,11 @@ export default function ReviewCommentDetailDrawer({
         ? `${comment.engineeringDocumentVersionId.slice(0, 8)}…`
         : '—');
 
+  const drawerTitle =
+    resolvedDocumentLabel !== '—'
+      ? `Comment — ${resolvedDocumentLabel}`
+      : 'Comment detail';
+
   const showResponse =
     comment &&
     (Boolean(comment.responseRevision) ||
@@ -95,7 +100,7 @@ export default function ReviewCommentDetailDrawer({
 
   return (
     <Drawer
-      title="Comment detail"
+      title={drawerTitle}
       open={open}
       onClose={onClose}
       size={520}

@@ -26,6 +26,8 @@ import { useUsersDirectory } from '@/lib/query/users';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatProjectStatus } from '@/lib/utils/project-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { groupProjectsByStatus } from '@/lib/utils/portfolio-kanban';
 import KanbanColumn from '@/components/modules/projects/KanbanColumn';
 import {
@@ -63,6 +65,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   const updateProject = useUpdateProject();
+  const messageApi = useAppMessage();
   const canFetchProjects = authHydrated && isAuthenticated;
   const projectManagerNames = useProjectManagerNames(canFetchProjects);
 
@@ -123,12 +126,17 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
       return;
     }
 
-    await updateProject.mutateAsync({
-      projectId: pendingMove.project.id,
-      body: { status: pendingMove.nextStatus },
-    });
-    setPendingMove(null);
-    void projectsQuery.refetch();
+    try {
+      await updateProject.mutateAsync({
+        projectId: pendingMove.project.id,
+        body: { status: pendingMove.nextStatus },
+      });
+      messageApi.success('Status updated');
+      setPendingMove(null);
+      void projectsQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to update project status', messageApi);
+    }
   }
 
   if (!authHydrated) {

@@ -125,6 +125,7 @@ export default function ScheduleGantt({
       title: 'Lag (days)',
       dataIndex: 'lagDays',
       key: 'lagDays',
+      align: 'right',
       width: 100,
     },
   ];

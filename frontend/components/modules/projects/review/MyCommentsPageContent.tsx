@@ -190,6 +190,9 @@ export default function MyCommentsPageContent(): React.ReactNode {
           {record.status === 'RESOLVED' && (
             <span className="text-xs text-slate-500">Awaiting reviewer</span>
           )}
+          {record.status === 'VERIFIED' && (
+            <span className="text-xs text-emerald-700">Verified by reviewer</span>
+          )}
         </Space>
       ),
     },

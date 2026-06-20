@@ -14,9 +14,8 @@ export const DEFAULT_SLA_HOURS: Readonly<Record<ReviewTier, number>> = {
 
 export interface SlaEscalationResult {
   readonly reviewSessionId: string;
-  readonly fromTier: ReviewTier;
-  readonly toTier: ReviewTier;
-  readonly escalatedToUserId: string | null;
+  readonly currentTier: ReviewTier;
+  readonly assignedToUserId: string | null;
 }
 
 /**
@@ -77,7 +76,7 @@ export class ReviewSlaService {
   }
 
   /**
-   * Escalates overdue active sessions — non-blocking visibility update.
+   * Flags overdue active sessions for visibility — never changes governance tier or assignee.
    */
   async escalateOverdueSessions(companyId: string): Promise<SlaEscalationResult[]> {
     const now = new Date();
@@ -88,47 +87,22 @@ export class ReviewSlaService {
     const results: SlaEscalationResult[] = [];
 
     for (const session of overdue) {
-      const nextTier = this.getNextTier(session.currentTier);
-      if (!nextTier) {
-        await this.epcReviewRepository.markSessionEscalated(
-          session.id,
-          now,
-          session.assignedToUserId,
-          session.currentTier,
-          session.slaDeadlineAt ?? now,
-          session.updatedBy,
-        );
-        this.logger.warn(
-          `SLA overdue at final tier for session ${session.id} — PMO alert only`,
-        );
-        continue;
-      }
-
-      const discipline = await this.epcWorkflowRepository.findTaskDisciplineContext(
-        companyId,
-        session.taskDisciplineId,
-      );
-      if (!discipline) {
-        continue;
-      }
-
-      const escalatedToUserId = this.resolveAssigneeForTier(nextTier, discipline);
-      const newDeadline = this.computeDeadline(now, nextTier);
-
-      await this.epcReviewRepository.markSessionEscalated(
+      await this.epcReviewRepository.markSessionSlaOverdue(
         session.id,
         now,
-        escalatedToUserId,
-        nextTier,
-        newDeadline,
         session.updatedBy,
       );
 
+      if (this.getNextTier(session.currentTier) === null) {
+        this.logger.warn(
+          `SLA overdue at final tier for session ${session.id} — PMO alert only`,
+        );
+      }
+
       results.push({
         reviewSessionId: session.id,
-        fromTier: session.currentTier,
-        toTier: nextTier,
-        escalatedToUserId,
+        currentTier: session.currentTier,
+        assignedToUserId: session.assignedToUserId,
       });
     }
 

@@ -110,8 +110,23 @@ export default function ReviewModePanel({
   }, [documentsQuery.data?.data]);
 
   const packageDocumentRows = useMemo(() => {
+    type EdvInfo = {
+      doc: EngineeringDocument;
+      revisionLabel: string;
+      status: string;
+      documentVersionId: string;
+      createdAt: string;
+    };
+    type PackageDocumentRow = {
+      key: string;
+      packageEdvId: string;
+      displayEdvId: string;
+      hasNewerRevision: boolean;
+      info?: EdvInfo;
+    };
+
     const seenDocumentIds = new Set<string>();
-    return packageEdvIds.flatMap((packageEdvId) => {
+    return packageEdvIds.flatMap((packageEdvId): PackageDocumentRow[] => {
       const pinned = edvMap.get(packageEdvId);
       if (!pinned) {
         return [

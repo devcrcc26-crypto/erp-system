@@ -17,14 +17,24 @@
 
 ## Role layers
 
-- **Production:** Designer, Reviewer, Discipline Lead — create, check, discipline sign-off
-- **Control:** Department Chief Engineer, Institute Chief Engineer — governance, risk acceptance, lock authorization
-- **Execution:** Project Manager, Dispatcher, Planning Engineer, Site Coordinator — WBS, assignment, milestones
+- **Production:** Designer, **Discipline Owner**, Reviewer, Discipline Lead — create, check, discipline sign-off
+- **Control:** Department Chief Engineer — governance, risk acceptance, lock authorization
+- **Execution:** Project Manager, Dispatcher, Planning Engineer, Site Coordinator, Client Consultant — WBS, assignment, milestones, site/consultant RFIs
 - **Logistics:** Document Controller, Deputy Chief Engineer — file hygiene, submittal packaging
+
+## Review tier chain
+
+`DISCIPLINE_OWNER → REVIEWER → DISCIPLINE_LEAD → DEPT_CHIEF`
+
+Review sessions open at **Discipline Owner**. Institute Chief is removed from the internal chain; dept chief is the final governance tier before submittal lock.
+
+## Discipline scoping
+
+Users assigned on a `TaskDiscipline` (designer, owner, reviewer, lead, or chief) see only their disciplines unless they hold **Project Manager**, **Managing Director**, or **System Administrator** bypass roles.
 
 ## Information flow
 
-- **Forward:** Designer → Reviewer → Discipline Lead → Chief → Submittal → Client/Authority
+- **Forward:** Designer → Discipline Owner → Reviewer → Discipline Lead → Chief → Submittal → Client/Authority
 - **Feedback:** Chief → Designer (controlled revision only); Client/Authority → RFI/CR → revision-orchestrator → internal loop
 - **Forbidden:** Chief direct file edit (comment/markup only); external actor mutating internal EDV status; submittal referencing non-LOCKED EDVs
 
@@ -33,7 +43,7 @@
 - **Designer:** package EDVs uploaded + registered; submitted for review; no open assigned comments
 - **Reviewer:** comments recorded; resolutions VERIFIED; no open MAJOR; session approved or rework
 - **Discipline Lead:** cross-drawing consistency; package `APPROVED`; all EDVs `APPROVED`
-- **Dept/Institute Chief:** governance comments VERIFIED; all package EDVs `LOCKED`
+- **Dept Chief:** governance comments VERIFIED; all package EDVs `LOCKED`
 - **Submittal:** packages locked; issued; external response recorded
 - **TaskDiscipline:** all packages `APPROVED`; all EDVs `LOCKED` or waived
 

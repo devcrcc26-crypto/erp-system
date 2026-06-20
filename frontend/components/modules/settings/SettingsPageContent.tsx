@@ -229,6 +229,7 @@ export default function SettingsPageContent(): React.ReactNode {
             {
               title: 'Description',
               key: 'description',
+              ellipsis: { showTitle: true },
               render: (_, record) => record.description ?? '-',
             },
             {

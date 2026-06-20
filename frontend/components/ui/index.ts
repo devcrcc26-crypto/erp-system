@@ -9,5 +9,6 @@ export { default as KPICard } from './KPICard/KPICard';
 export { default as NotificationPanel } from './NotificationPanel/NotificationPanel';
 export { default as PageHeader } from './PageHeader/PageHeader';
 export { default as StatusBadge } from './StatusBadge/StatusBadge';
+export { default as TableEmptyState } from './TableEmptyState';
 export { default as UserSelect } from './UserSelect/UserSelect';
 export { default as WorkflowStepper } from './WorkflowStepper/WorkflowStepper';

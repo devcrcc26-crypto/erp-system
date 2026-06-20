@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Button, Space, Tooltip } from 'antd';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import {
@@ -58,7 +58,7 @@ export default function EdvFileActions({
 
   if (compact) {
     return (
-      <Space size={2} onClick={(event) => event.stopPropagation()}>
+      <Space size={2} onClick={(event: MouseEvent) => event.stopPropagation()}>
         <Tooltip title="View">
           <Button
             type="text"
@@ -86,7 +86,7 @@ export default function EdvFileActions({
   }
 
   return (
-    <Space size={4} wrap onClick={(event) => event.stopPropagation()}>
+    <Space size={4} wrap onClick={(event: MouseEvent) => event.stopPropagation()}>
       <Button
         type="link"
         size={size}

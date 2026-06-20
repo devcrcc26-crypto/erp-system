@@ -28,8 +28,9 @@ export const antdTheme: ThemeConfig = {
       paddingLG: tokens.cardPadding,
     },
     Table: {
-      headerBg: tokens.colorCardBg,
+      headerBg: 'var(--color-fill-quaternary)',
       headerColor: tokens.colorTextSecondary,
+      headerSplitColor: 'var(--color-border-secondary)',
       rowHoverBg: '#f8fafc',
     },
     Input: {

@@ -10,6 +10,8 @@ import type { ProjectTeamMember } from '@/lib/api/project-management.types';
 import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 function formatUserLabel(user: User): string {
   return `${user.firstName} ${user.lastName} (${user.email})`;
@@ -44,6 +46,7 @@ export default function ProjectTeamPanel({
     sortOrder: 'asc',
   });
   const setTeam = useSetProjectTeam();
+  const messageApi = useAppMessage();
   const resolveUserName = useUserNameLookup();
 
   const members = teamQuery.data ?? [];
@@ -83,11 +86,16 @@ export default function ProjectTeamPanel({
 
   async function handleSaveTeam(): Promise<void> {
     const uniqueUserIds = [...new Set(selectedUserIds)];
-    await setTeam.mutateAsync({
-      projectId,
-      body: { userIds: uniqueUserIds },
-    });
-    setDirty(false);
+    try {
+      await setTeam.mutateAsync({
+        projectId,
+        body: { userIds: uniqueUserIds },
+      });
+      messageApi.success('Team updated successfully');
+      setDirty(false);
+    } catch (error) {
+      notifyApiError(error, 'Failed to update team', messageApi);
+    }
   }
 
   if (teamQuery.isLoading) {

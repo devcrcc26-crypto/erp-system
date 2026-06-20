@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import {
   Alert,
   Button,
@@ -12,11 +12,17 @@ import {
   Table,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useQueries } from '@tanstack/react-query';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import type { DesignPackage } from '@/lib/api/epc.types';
+import type {
+  SubmittalPreparedByRole,
+  SubmittalPurpose,
+} from '@/lib/api/project-management.types';
+import { apiGet } from '@/lib/api/client';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
-import { useDesignPackages } from '@/lib/query/design-packages';
+import { designPackageKeys } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -26,7 +32,33 @@ interface SubmittalPackageFormValues {
   contractor?: string;
   supplier?: string;
   specReference?: string;
+  submittalPurpose: SubmittalPurpose;
+  taskDisciplineId?: string;
   designPackageIds: string[];
+}
+
+const DISCIPLINE_LEAD_PURPOSES: SubmittalPurpose[] = [
+  'DISCIPLINE_SITE',
+  'DISCIPLINE_CONSULTANT',
+];
+
+const DEPUTY_PURPOSES: SubmittalPurpose[] = [
+  'DEPUTY_BID',
+  'DEPUTY_INTERIM',
+  'DEPUTY_FINAL',
+];
+
+function purposeToRole(purpose: SubmittalPurpose): SubmittalPreparedByRole {
+  return DISCIPLINE_LEAD_PURPOSES.includes(purpose)
+    ? 'DISCIPLINE_LEAD'
+    : 'DEPUTY_CHIEF';
+}
+
+function designPackagesPath(
+  projectId: string,
+  taskDisciplineId: string,
+): string {
+  return `/projects/${projectId}/task-disciplines/${taskDisciplineId}/design-packages`;
 }
 
 export default function SubmittalPackageDrawer({
@@ -44,6 +76,11 @@ export default function SubmittalPackageDrawer({
   const disciplinesQuery = useProjectDisciplines(projectId, open);
   const createSubmittal = useCreateDesignSubmittal();
   const messageApi = useAppMessage();
+  const purpose = Form.useWatch('submittalPurpose', form) as
+    | SubmittalPurpose
+    | undefined;
+  const preparedByRole = purpose ? purposeToRole(purpose) : undefined;
+  const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
 
   return (
     <Drawer
@@ -68,8 +105,12 @@ export default function SubmittalPackageDrawer({
         type="info"
         showIcon
         className="mb-4"
-        title="Select locked design packages"
-        description="Only approved (locked-ready) packages can be issued. Validation runs on submit."
+        title="Select approved design packages"
+        description={
+          isDeputy
+            ? 'Deputy chief submittals may bundle locked-ready packages across disciplines.'
+            : 'Discipline lead submittals must use packages from a single assigned discipline.'
+        }
       />
 
       <SubmittalPackageForm
@@ -86,6 +127,9 @@ export default function SubmittalPackageDrawer({
               contractor: values.contractor?.trim() || undefined,
               supplier: values.supplier?.trim() || undefined,
               specReference: values.specReference?.trim() || undefined,
+              submittalPurpose: values.submittalPurpose,
+              preparedByRole: purposeToRole(values.submittalPurpose),
+              taskDisciplineId: values.taskDisciplineId,
             },
           });
           messageApi.success('Design submittal created');
@@ -109,16 +153,70 @@ function SubmittalPackageForm({
   disciplines: { id: string; disciplineName: string }[];
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
-  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string | null>(null);
-  const packagesQuery = useDesignPackages(
-    projectId,
-    selectedDisciplineId ?? '',
-    Boolean(selectedDisciplineId),
-  );
+  const purpose = Form.useWatch('submittalPurpose', form) as
+    | SubmittalPurpose
+    | undefined;
+  const taskDisciplineId = Form.useWatch('taskDisciplineId', form) as
+    | string
+    | undefined;
+  const preparedByRole = purpose ? purposeToRole(purpose) : undefined;
+  const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
 
-  const lockablePackages = (packagesQuery.data ?? []).filter(
-    (pkg) => pkg.projectedStatus === 'APPROVED',
-  );
+  const packageQueries = useQueries({
+    queries: disciplines.map((discipline) => ({
+      queryKey: designPackageKeys.lists(projectId, discipline.id),
+      queryFn: () =>
+        apiGet<DesignPackage[]>(designPackagesPath(projectId, discipline.id)),
+      enabled: Boolean(projectId) && isDeputy,
+      staleTime: 30_000,
+    })),
+  });
+
+  const singleDisciplinePackagesQuery = useQueries({
+    queries: [
+      {
+        queryKey: designPackageKeys.lists(
+          projectId,
+          taskDisciplineId ?? '__none__',
+        ),
+        queryFn: () =>
+          apiGet<DesignPackage[]>(
+            designPackagesPath(projectId, taskDisciplineId!),
+          ),
+        enabled: Boolean(projectId) && Boolean(taskDisciplineId) && !isDeputy,
+        staleTime: 30_000,
+      },
+    ],
+  });
+
+  const lockablePackages = useMemo(() => {
+    const source = isDeputy
+      ? packageQueries.flatMap((query) => query.data ?? [])
+      : (singleDisciplinePackagesQuery[0]?.data ?? []);
+    return source.filter((pkg) => pkg.projectedStatus === 'APPROVED');
+  }, [isDeputy, packageQueries, singleDisciplinePackagesQuery]);
+
+  const purposeOptions = useMemo(() => {
+    const options = [
+      ...DISCIPLINE_LEAD_PURPOSES.map((value) => ({
+        value,
+        label:
+          value === 'DISCIPLINE_SITE'
+            ? 'Discipline — site issue'
+            : 'Discipline — consultant issue',
+      })),
+      ...DEPUTY_PURPOSES.map((value) => ({
+        value,
+        label:
+          value === 'DEPUTY_BID'
+            ? 'Deputy — bid package'
+            : value === 'DEPUTY_INTERIM'
+              ? 'Deputy — interim package'
+              : 'Deputy — final package',
+      })),
+    ];
+    return options;
+  }, []);
 
   const packageColumns: ColumnsType<DesignPackage> = [
     { title: 'Package', dataIndex: 'name', key: 'name' },
@@ -138,8 +236,33 @@ function SubmittalPackageForm({
     <Form<SubmittalPackageFormValues>
       form={form}
       layout="vertical"
+      initialValues={{ submittalPurpose: 'DISCIPLINE_SITE' as SubmittalPurpose }}
       onFinish={(values: SubmittalPackageFormValues) => void onSubmit(values)}
     >
+      <Form.Item
+        name="submittalPurpose"
+        label="Submittal purpose"
+        rules={[{ required: true }]}
+      >
+        <Select options={purposeOptions} />
+      </Form.Item>
+
+      {!isDeputy && (
+        <Form.Item
+          name="taskDisciplineId"
+          label="Discipline"
+          rules={[{ required: true, message: 'Select a discipline' }]}
+        >
+          <Select
+            placeholder="Select discipline"
+            options={disciplines.map((d) => ({
+              value: d.id,
+              label: d.disciplineName,
+            }))}
+          />
+        </Form.Item>
+      )}
+
       <Form.Item
         name="category"
         label="Category"
@@ -162,19 +285,7 @@ function SubmittalPackageForm({
         <Input />
       </Form.Item>
 
-      <Form.Item label="Filter packages by discipline">
-        <Select
-          allowClear
-          placeholder="Select discipline"
-          options={disciplines.map((d) => ({
-            value: d.id,
-            label: d.disciplineName,
-          }))}
-          onChange={(value: string | undefined) => setSelectedDisciplineId(value ?? null)}
-        />
-      </Form.Item>
-
-      {selectedDisciplineId && (
+      {(isDeputy || taskDisciplineId) && (
         <FormLayout title="Approved packages" className="mb-4">
           <Table<DesignPackage>
             rowKey="id"
@@ -182,7 +293,7 @@ function SubmittalPackageForm({
             columns={packageColumns}
             dataSource={lockablePackages}
             pagination={false}
-            locale={{ emptyText: 'No approved packages in this discipline' }}
+            locale={{ emptyText: 'No approved packages available' }}
           />
         </FormLayout>
       )}

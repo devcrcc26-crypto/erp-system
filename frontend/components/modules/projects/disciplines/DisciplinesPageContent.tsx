@@ -4,10 +4,12 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Alert, Button, Input } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import DisciplineDetailDrawer from '@/components/modules/projects/disciplines/DisciplineDetailDrawer';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -103,6 +105,7 @@ export default function DisciplinesPageContent({
       title: 'Packages',
       key: 'packages',
       width: 90,
+      align: 'right',
       render: (_value, record) => (
         <DisciplinePackageCount projectId={projectId} disciplineId={record.id} />
       ),
@@ -186,7 +189,26 @@ export default function DisciplinesPageContent({
         columns={columns}
         dataSource={filtered}
         loading={disciplinesQuery.isLoading}
-        locale={{ emptyText: t('empty.noDisciplines') }}
+        locale={{
+          emptyText: (
+            <TableEmptyState
+              icon={<GitBranch />}
+              title="No disciplines"
+              description="Add a discipline to begin assigning packages"
+              action={
+                lens.canCreateEngineering
+                  ? {
+                      label: 'Add discipline',
+                      onClick: () => {
+                        setEditing(null);
+                        setDrawerOpen(true);
+                      },
+                    }
+                  : undefined
+              }
+            />
+          ),
+        }}
       />
 
       <DisciplineDetailDrawer

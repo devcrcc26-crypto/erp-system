@@ -31,18 +31,21 @@ export default function DispatcherWorkloadTable({
       title: 'Assigned sessions',
       dataIndex: 'assignedReviewSessions',
       key: 'assignedReviewSessions',
+      align: 'right',
       sorter: (a, b) => a.assignedReviewSessions - b.assignedReviewSessions,
     },
     {
       title: 'Open comments',
       dataIndex: 'openComments',
       key: 'openComments',
+      align: 'right',
       sorter: (a, b) => a.openComments - b.openComments,
     },
     {
       title: 'SLA overdue',
       dataIndex: 'slaOverdue',
       key: 'slaOverdue',
+      align: 'right',
       render: (value: number) =>
         value > 0 ? (
           <StatusBadge label={String(value)} variant="error" />

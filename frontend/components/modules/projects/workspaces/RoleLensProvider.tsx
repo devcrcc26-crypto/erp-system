@@ -10,11 +10,17 @@ export interface RoleLens {
   canViewEngineering: boolean;
   canCreateEngineering: boolean;
   canEditEngineering: boolean;
+  /** Matches schedule create permission used by submit-for-review API. */
+  canSubmitDesignPackage: boolean;
   canApproveReview: boolean;
+  /** Designer queue — acknowledge, revise, and resolve assigned comments. */
+  canResolveAssignedComments: boolean;
   canViewSubmittals: boolean;
   canCreateSubmittals: boolean;
   canViewReviewInbox: boolean;
   canViewMyComments: boolean;
+  /** Full review mode (batch approve, add comments, verify). */
+  canAccessReviewMode: boolean;
   isReviewerWorkspace: boolean;
   isDesignerWorkspace: boolean;
   disciplineScopeBypass: boolean;
@@ -48,22 +54,26 @@ function buildRoleLens(
       epc.canViewReviewInbox ||
       epc.canViewMyComments ||
       schedule.canView);
+  const canSubmitDesignPackage =
+    engineeringView && (schedule.canCreate || schedule.canEdit);
+  const canViewReviewInbox = epc.canViewReviewInbox && schedule.canView;
+  const canViewMyComments = epc.canViewMyComments && schedule.canView;
 
   return {
     canViewEngineering: engineeringView,
     canCreateEngineering:
       engineeringView && (schedule.canCreate || schedule.canEdit),
     canEditEngineering: engineeringView && schedule.canEdit,
-    canApproveReview:
-      epc.canViewReviewInbox || schedule.canEdit,
+    canSubmitDesignPackage,
+    canApproveReview: canViewReviewInbox,
+    canResolveAssignedComments: canViewMyComments,
     canViewSubmittals: submittals.canView,
     canCreateSubmittals: submittals.canCreate,
-    canViewReviewInbox: epc.canViewReviewInbox && schedule.canView,
-    canViewMyComments:
-      epc.canViewMyComments && (schedule.canEdit || schedule.canView),
-    isReviewerWorkspace:
-      epc.canViewReviewInbox || schedule.canView || schedule.canEdit,
-    isDesignerWorkspace: engineeringView && schedule.canEdit,
+    canViewReviewInbox,
+    canViewMyComments,
+    canAccessReviewMode: canViewReviewInbox,
+    isReviewerWorkspace: canViewReviewInbox,
+    isDesignerWorkspace: canSubmitDesignPackage && !canViewReviewInbox,
     disciplineScopeBypass: epc.disciplineScopeBypass,
   };
 }

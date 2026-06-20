@@ -12,7 +12,7 @@ export default function AntDesignProvider({
   return (
     <AntdRegistry>
       <ConfigProvider theme={antdTheme}>
-        <App>{children}</App>
+        <App className="flex min-h-screen flex-1 flex-col">{children}</App>
       </ConfigProvider>
     </AntdRegistry>
   );

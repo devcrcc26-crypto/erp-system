@@ -1,6 +1,12 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { apiPost } from '@/lib/api/client';
 import {
   completeLocalSignIn,
@@ -11,6 +17,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import type {
   ActivateAccountRequest,
   AuthTokens,
+  Capabilities,
   ConfirmEmailChangeRequest,
   ForgotPasswordRequest,
   LoginRequest,
@@ -19,7 +26,42 @@ import type {
   ResetPasswordRequest,
 } from '@/lib/api/types';
 
+/** TanStack Query key for session capabilities — shared across login and session sync. */
+export const sessionCapabilitiesQueryKey = ['auth', 'capabilities'] as const;
+
+/** Capabilities rarely change mid-session; cache 60s to avoid duplicate /auth/capabilities calls. */
+export const SESSION_CAPABILITIES_STALE_MS = 60_000;
+
+async function loadSessionCapabilities(): Promise<Capabilities> {
+  return fetchCapabilities();
+}
+
+/**
+ * Loads session capabilities once per cache window and mirrors them into Zustand.
+ */
+export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabilities> {
+  const setCapabilities = useAuthStore((state) => state.setCapabilities);
+
+  const query = useQuery({
+    queryKey: sessionCapabilitiesQueryKey,
+    queryFn: loadSessionCapabilities,
+    enabled,
+    staleTime: SESSION_CAPABILITIES_STALE_MS,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (query.data) {
+      setCapabilities(query.data);
+    }
+  }, [query.data, setCapabilities]);
+
+  return query;
+}
+
 export function useLogin() {
+  const queryClient = useQueryClient();
   const setAuth = useAuthStore((state) => state.setAuth);
   const setCapabilities = useAuthStore((state) => state.setCapabilities);
 
@@ -37,7 +79,11 @@ export function useLogin() {
     onSuccess: async (tokens) => {
       setAuth(tokens);
       completeLocalSignIn();
-      const capabilities = await fetchCapabilities();
+      const capabilities = await queryClient.fetchQuery({
+        queryKey: sessionCapabilitiesQueryKey,
+        queryFn: loadSessionCapabilities,
+        staleTime: SESSION_CAPABILITIES_STALE_MS,
+      });
       setCapabilities(capabilities);
     },
   });

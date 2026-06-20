@@ -16,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
+    "prisma:clear-pm": "ts-node --transpile-only prisma/clear-pm-data.ts",
     "prisma:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

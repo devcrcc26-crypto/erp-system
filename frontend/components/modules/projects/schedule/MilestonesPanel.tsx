@@ -24,6 +24,8 @@ import {
   useUpdateMilestone,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface MilestoneFormValues {
   name: string;
@@ -48,6 +50,7 @@ function MilestoneFormDrawer({
   const [form] = Form.useForm<MilestoneFormValues>();
   const createMilestone = useCreateMilestone();
   const updateMilestone = useUpdateMilestone();
+  const messageApi = useAppMessage();
   const isEditing = Boolean(milestone);
 
   useEffect(() => {
@@ -80,18 +83,28 @@ function MilestoneFormDrawer({
       status: values.status?.trim() || undefined,
     };
 
-    if (milestone) {
-      await updateMilestone.mutateAsync({
-        projectId,
-        milestoneId: milestone.id,
-        body,
-      });
-    } else {
-      await createMilestone.mutateAsync({ projectId, body });
+    try {
+      if (milestone) {
+        await updateMilestone.mutateAsync({
+          projectId,
+          milestoneId: milestone.id,
+          body,
+        });
+        messageApi.success('Milestone updated successfully');
+      } else {
+        await createMilestone.mutateAsync({ projectId, body });
+        messageApi.success('Milestone created successfully');
+      }
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(
+        error,
+        milestone ? 'Failed to update milestone' : 'Failed to create milestone',
+        messageApi,
+      );
     }
-    form.resetFields();
-    onSaved();
-    onClose();
   }
 
   return (
@@ -147,6 +160,7 @@ export default function MilestonesPanel({
 
   const milestonesQuery = useMilestones(projectId);
   const deleteMilestone = useDeleteMilestone();
+  const messageApi = useAppMessage();
   const milestones = milestonesQuery.data?.data ?? [];
 
   const columns: ColumnsType<Milestone> = [
@@ -269,8 +283,12 @@ export default function MilestonesPanel({
           void deleteMilestone
             .mutateAsync({ projectId, milestoneId: deleting.id })
             .then(() => {
+              messageApi.success('Milestone deleted successfully');
               setDeleting(null);
               void milestonesQuery.refetch();
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to delete milestone', messageApi);
             });
         }}
         onCancel={() => setDeleting(null)}

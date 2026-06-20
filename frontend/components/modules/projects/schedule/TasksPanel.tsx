@@ -32,6 +32,8 @@ import {
   scheduleKeys,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
   formatTaskStatus,
   taskStatusVariant,
@@ -67,6 +69,7 @@ export default function TasksPanel({
   onCriticalOnlyChange: (value: boolean) => void;
 }): React.ReactNode {
   const queryClient = useQueryClient();
+  const messageApi = useAppMessage();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dependencyOpen, setDependencyOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -165,6 +168,7 @@ export default function TasksPanel({
       dataIndex: 'progressPct',
       key: 'progressPct',
       width: 140,
+      align: 'right',
       render: (value: number) => (
         <Progress percent={value} size="small" strokeColor="#f97316" />
       ),
@@ -242,6 +246,7 @@ export default function TasksPanel({
       title: 'Lag (days)',
       dataIndex: 'lagDays',
       key: 'lagDays',
+      align: 'right',
       width: 100,
     },
     {
@@ -298,17 +303,29 @@ export default function TasksPanel({
       lagDays: values.lagDays ?? 0,
     };
 
-    if (editingDependency) {
-      await updateDependency.mutateAsync({
-        projectId,
-        dependencyId: editingDependency.id,
-        body,
-      });
-    } else {
-      await createDependency.mutateAsync({ projectId, body });
-    }
+    try {
+      if (editingDependency) {
+        await updateDependency.mutateAsync({
+          projectId,
+          dependencyId: editingDependency.id,
+          body,
+        });
+        messageApi.success('Dependency updated successfully');
+      } else {
+        await createDependency.mutateAsync({ projectId, body });
+        messageApi.success('Dependency added successfully');
+      }
 
-    closeDependencyModal();
+      closeDependencyModal();
+    } catch (error) {
+      notifyApiError(
+        error,
+        editingDependency
+          ? 'Failed to update task dependency'
+          : 'Failed to add task dependency',
+        messageApi,
+      );
+    }
   }
 
   return (
@@ -378,6 +395,7 @@ export default function TasksPanel({
         forceRender
         onCancel={closeDependencyModal}
         onOk={() => depForm.submit()}
+        okText={editingDependency ? 'Save dependency' : 'Add dependency'}
         confirmLoading={dependencySaving}
         afterClose={() => depForm.resetFields()}
       >
@@ -430,6 +448,7 @@ export default function TasksPanel({
           void deleteTask
             .mutateAsync({ projectId, taskId: deleting.id })
             .then(() => {
+              messageApi.success('Task deleted successfully');
               setDeleting(null);
               void queryClient.invalidateQueries({
                 queryKey: scheduleKeys.tasks(projectId),
@@ -437,6 +456,9 @@ export default function TasksPanel({
               void queryClient.invalidateQueries({
                 queryKey: scheduleKeys.dependencies(projectId),
               });
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to delete task', messageApi);
             });
         }}
         onCancel={() => setDeleting(null)}
@@ -458,7 +480,13 @@ export default function TasksPanel({
               projectId,
               dependencyId: deletingDependency.id,
             })
-            .then(() => setDeletingDependency(null));
+            .then(() => {
+              messageApi.success('Dependency deleted successfully');
+              setDeletingDependency(null);
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to delete dependency', messageApi);
+            });
         }}
         onCancel={() => setDeletingDependency(null)}
       />

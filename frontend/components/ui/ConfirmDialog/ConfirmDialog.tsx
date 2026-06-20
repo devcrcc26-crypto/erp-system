@@ -7,7 +7,7 @@ export default function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   cancelLabel = 'Cancel',
   confirmLoading = false,
   danger = false,
@@ -18,7 +18,7 @@ export default function ConfirmDialog({
   open: boolean;
   title: string;
   description?: ReactNode;
-  confirmLabel?: string;
+  confirmLabel: string;
   cancelLabel?: string;
   confirmLoading?: boolean;
   danger?: boolean;

@@ -124,6 +124,7 @@ export default function EngineeringDocumentPanel({
     {
       title: 'Revision',
       key: 'revision',
+      align: 'right',
       render: (_value, record) => {
         const latest = record.versions?.[record.versions.length - 1];
         return latest?.revisionLabel ?? '—';
@@ -229,7 +230,7 @@ export default function EngineeringDocumentPanel({
 
       <Table<EngineeringDocument>
         rowKey="id"
-        size="small"
+        size="middle"
         columns={columns}
         dataSource={documents}
         loading={documentsQuery.isLoading}

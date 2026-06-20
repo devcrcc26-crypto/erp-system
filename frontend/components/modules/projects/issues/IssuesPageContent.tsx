@@ -14,11 +14,13 @@ import {
   Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { AlertCircle } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -43,6 +45,8 @@ import {
 } from '@/lib/utils/pm-status-display';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_SIZE = 20;
 
@@ -76,6 +80,7 @@ function IssueFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<IssueFormValues>();
   const createIssue = useCreateIssue();
+  const messageApi = useAppMessage();
   const disciplinesQuery = useProjectDisciplines(projectId, open);
 
   const disciplineOptions = useMemo(
@@ -97,10 +102,15 @@ function IssueFormDrawer({
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
     };
-    await createIssue.mutateAsync({ projectId, body });
-    form.resetFields();
-    onSaved();
-    onClose();
+    try {
+      await createIssue.mutateAsync({ projectId, body });
+      messageApi.success('Issue created successfully');
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(error, 'Failed to create issue', messageApi);
+    }
   }
 
   return (
@@ -360,7 +370,20 @@ export default function IssuesPageContent({
           rowKey="id"
           columns={columns}
           dataSource={issues}
-          locale={{ emptyText: 'No issues found' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<AlertCircle />}
+                title="No issues logged"
+                description="Log an issue to track site problems"
+                action={
+                  !apiUnavailable
+                    ? { label: 'Log issue', onClick: () => setCreateOpen(true) }
+                    : undefined
+                }
+              />
+            ),
+          }}
         />
 
         {meta && meta.pages > 1 && (

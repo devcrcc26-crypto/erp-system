@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Button, Drawer, Form, Input, Select } from 'antd';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type { CommentSeverity, ReviewModeComment } from '@/lib/api/epc.types';
@@ -45,6 +45,23 @@ export default function ReviewCommentEditDrawer({
     });
   }, [comment, form, open]);
 
+  const documentContext = useMemo((): string | null => {
+    if (!comment) {
+      return null;
+    }
+    if (comment.commentedOn) {
+      return `${comment.commentedOn.documentTitle} · Rev ${comment.commentedOn.revisionLabel}`;
+    }
+    const option = edvOptions.find(
+      (item) => item.value === comment.engineeringDocumentVersionId,
+    );
+    return option?.label ?? null;
+  }, [comment, edvOptions]);
+
+  const drawerTitle = documentContext
+    ? `Edit comment — ${documentContext}`
+    : 'Edit comment';
+
   async function handleSubmit(values: EditCommentFormValues): Promise<void> {
     if (!comment) {
       return;
@@ -69,7 +86,7 @@ export default function ReviewCommentEditDrawer({
 
   return (
     <Drawer
-      title="Edit comment"
+      title={drawerTitle}
       open={open}
       onClose={onClose}
       size={480}

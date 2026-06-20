@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Alert,
+  Button,
   DatePicker,
   Divider,
   Drawer,
@@ -305,25 +305,11 @@ export default function ProjectFormDrawer({
           </Form.Item>
         </div>
 
-        {isSubmitting && (
-          <Alert type="info" showIcon title="Saving project..." className="!mb-4" />
-        )}
-
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60"
-          >
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="primary" htmlType="submit" loading={isSubmitting}>
             {isEditing ? 'Save changes' : 'Create project'}
-          </button>
+          </Button>
         </div>
       </Form>
     </Drawer>

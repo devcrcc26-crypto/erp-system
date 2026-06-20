@@ -15,11 +15,13 @@ import {
   Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateSubmittalRequest,
@@ -38,6 +40,8 @@ import SubmittalDetailDrawer from '@/components/modules/projects/submittals/Subm
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_SIZE = 20;
 
@@ -64,6 +68,7 @@ function SubmittalFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<SubmittalFormValues>();
   const createSubmittal = useCreateSubmittal();
+  const messageApi = useAppMessage();
 
   async function handleSubmit(values: SubmittalFormValues): Promise<void> {
     const body: CreateSubmittalRequest = {
@@ -75,10 +80,15 @@ function SubmittalFormDrawer({
       revisionNumber: values.revisionNumber,
       dueDate: values.dueDate?.toISOString(),
     };
-    await createSubmittal.mutateAsync({ projectId, body });
-    form.resetFields();
-    onSaved();
-    onClose();
+    try {
+      await createSubmittal.mutateAsync({ projectId, body });
+      messageApi.success('Submittal created successfully');
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(error, 'Failed to create submittal', messageApi);
+    }
   }
 
   return (
@@ -197,6 +207,7 @@ export default function SubmittalsPageContent({
         title: 'Rev',
         dataIndex: 'revisionNumber',
         key: 'revisionNumber',
+        align: 'right',
         width: 64,
       },
       {
@@ -317,7 +328,20 @@ export default function SubmittalsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={submittals}
-          locale={{ emptyText: 'No submittals found' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<Send />}
+                title="No submittals"
+                description="Create a submittal to send packages for review"
+                action={
+                  lens.canCreateSubmittals && !apiUnavailable
+                    ? { label: 'New submittal', onClick: () => setCreateOpen(true) }
+                    : undefined
+                }
+              />
+            ),
+          }}
         />
 
         {meta && meta.pages > 1 && (

@@ -18,7 +18,7 @@ export class EpcWorkspaceController {
   }
 
   @Get('review-inbox')
-  @RequirePermission('schedule', 'view')
+  @RequirePermission('schedule', 'approve')
   @ApiOperation({ summary: 'Review inbox for current user' })
   reviewInbox(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
     return this.epcWorkspaceService.getReviewInbox(this.ctx(user));

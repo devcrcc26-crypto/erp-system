@@ -100,7 +100,7 @@ function SidebarBrand({ onClose }: { onClose?: () => void }): React.ReactNode {
           type="text"
           icon={<CloseOutlined />}
           onClick={onClose}
-          className="!text-slate-400 hover:!text-white md:!hidden"
+          className="!text-slate-400 hover:!text-white"
           aria-label="Close menu"
         />
       )}
@@ -207,10 +207,19 @@ export default function AppShell({
   children: React.ReactNode;
 }): React.ReactNode {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const pathname = usePathname();
   const { t } = useEpcTranslation();
 
   const isProjectDetailPage = /^\/projects\/[^/]+/.test(pathname);
+
+  function openSidebar(): void {
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      setDesktopSidebarOpen(true);
+      return;
+    }
+    setMobileOpen(true);
+  }
 
   const title = pathname.startsWith('/projects')
     ? t('nav.projects')
@@ -235,16 +244,21 @@ export default function AppShell({
     <Layout className="!min-h-full !h-full">
       <Sider
         width={tokens.sidebarWidth}
+        collapsedWidth={0}
+        collapsible
+        collapsed={!desktopSidebarOpen}
+        trigger={null}
+        onCollapse={(collapsed) => setDesktopSidebarOpen(!collapsed)}
         className="!hidden md:!block"
         style={{
           background: tokens.colorSidebarBg,
           height: '100vh',
           position: 'sticky',
           top: 0,
-          overflow: 'auto',
+          overflow: desktopSidebarOpen ? 'auto' : 'hidden',
         }}
       >
-        <SidebarPanel />
+        <SidebarPanel onClose={() => setDesktopSidebarOpen(false)} />
       </Sider>
 
       <Drawer
@@ -266,18 +280,31 @@ export default function AppShell({
           <div className="flex-1 p-6 md:p-8">
             <div className={layout.pageStack}>
               {isProjectDetailPage ? (
-                <button
-                  type="button"
-                  onClick={() => setMobileOpen(true)}
-                  className="shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
-                  aria-label="Open menu"
-                >
-                  <MenuOutlined style={{ fontSize: 22 }} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(true)}
+                    className="shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+                    aria-label="Open menu"
+                  >
+                    <MenuOutlined style={{ fontSize: 22 }} />
+                  </button>
+                  {!desktopSidebarOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setDesktopSidebarOpen(true)}
+                      className="hidden shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 md:block"
+                      aria-label="Open menu"
+                    >
+                      <MenuOutlined style={{ fontSize: 22 }} />
+                    </button>
+                  )}
+                </>
               ) : (
                 <PageHeader
                   title={title}
-                  onMenuClick={() => setMobileOpen(true)}
+                  onMenuClick={openSidebar}
+                  showMenuOnDesktop={!desktopSidebarOpen}
                 />
               )}
               {children}

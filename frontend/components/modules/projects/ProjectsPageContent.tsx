@@ -105,6 +105,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       {
         title: 'Budget',
         key: 'budget',
+        align: 'right',
         render: (_value, record) =>
           formatProjectBudget(record.budget, record.currency),
       },

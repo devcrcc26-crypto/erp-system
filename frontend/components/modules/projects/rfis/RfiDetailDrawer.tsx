@@ -11,7 +11,9 @@ import {
   Select,
   Spin,
 } from 'antd';
+import { MessageSquare } from 'lucide-react';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -30,6 +32,8 @@ import {
   rfiPriorityVariant,
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ResponseFormValues {
   responseText: string;
@@ -54,6 +58,7 @@ export default function RfiDetailDrawer({
   const responsesQuery = useRfiResponses(projectId, rfiId ?? '', open);
   const updateRfi = useUpdateRfi();
   const addResponse = useAddRfiResponse();
+  const messageApi = useAppMessage();
 
   const rfi = rfiQuery.data;
   const responses = responsesQuery.data ?? [];
@@ -62,28 +67,38 @@ export default function RfiDetailDrawer({
     if (!rfiId || !rfi) {
       return;
     }
-    await updateRfi.mutateAsync({
-      projectId,
-      rfiId,
-      body: { status },
-    });
-    onUpdated();
-    void rfiQuery.refetch();
+    try {
+      await updateRfi.mutateAsync({
+        projectId,
+        rfiId,
+        body: { status },
+      });
+      messageApi.success('RFI status updated');
+      onUpdated();
+      void rfiQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to update RFI status', messageApi);
+    }
   }
 
   async function handleAddResponse(values: ResponseFormValues): Promise<void> {
     if (!rfiId) {
       return;
     }
-    await addResponse.mutateAsync({
-      projectId,
-      rfiId,
-      body: { responseText: values.responseText.trim() },
-    });
-    form.resetFields();
-    onUpdated();
-    void responsesQuery.refetch();
-    void rfiQuery.refetch();
+    try {
+      await addResponse.mutateAsync({
+        projectId,
+        rfiId,
+        body: { responseText: values.responseText.trim() },
+      });
+      messageApi.success('Response posted successfully');
+      form.resetFields();
+      onUpdated();
+      void responsesQuery.refetch();
+      void rfiQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to post RFI response', messageApi);
+    }
   }
 
   return (
@@ -163,7 +178,11 @@ export default function RfiDetailDrawer({
               Responses
             </h3>
             {responses.length === 0 ? (
-              <p className="text-sm text-slate-500">No responses yet</p>
+              <TableEmptyState
+                icon={<MessageSquare />}
+                title="No responses yet"
+                description="Official responses will appear here once posted"
+              />
             ) : (
               <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
                 {responses.map((item) => (

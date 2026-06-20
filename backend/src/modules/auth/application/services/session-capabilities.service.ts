@@ -109,12 +109,13 @@ export class SessionCapabilitiesService {
         schedule.canView);
 
     return {
-      canViewReviewInbox:
+      // Review inbox and approve/return actions require explicit approve permission.
+      canViewReviewInbox: schedule.canView && schedule.canApprove,
+      // Designer queue — edit/create on schedule without approve (pure designers).
+      canViewMyComments:
         schedule.canView &&
-        (schedule.canApprove ||
-          schedule.canEdit ||
-          schedule.canCreate),
-      canViewMyComments: schedule.canView,
+        (schedule.canCreate || schedule.canEdit) &&
+        !schedule.canApprove,
       canViewEngineering,
       disciplineScopeBypass,
     };

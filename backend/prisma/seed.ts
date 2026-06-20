@@ -218,6 +218,38 @@ function viewOnlyFlags(): PermissionFlags {
   };
 }
 
+/** Grants exactly one permission flag; never elevates approve/export/delete implicitly. */
+function singleActionFlags(action: string): PermissionFlags | null {
+  const flag = ACTION_TO_FLAG[action];
+  if (!flag) {
+    return null;
+  }
+  return {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canApprove: false,
+    canExport: false,
+    [flag]: true,
+  };
+}
+
+function isElevatedPermissionAction(action: string): boolean {
+  return action === 'approve' || action === 'export' || action === 'delete';
+}
+
+function denyAllFlags(): PermissionFlags {
+  return {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canApprove: false,
+    canExport: false,
+  };
+}
+
 const PM_MODULES = [
   'projects',
   'schedule',
@@ -274,21 +306,13 @@ function documentsPermissionFlags(
   ]);
 
   if (engineeringUploadRoles.has(roleName)) {
-    if (action === 'delete') {
-      return null;
+    if (isElevatedPermissionAction(action)) {
+      return denyAllFlags();
     }
     if (action === 'view') {
       return viewOnlyFlags();
     }
-    return {
-      canView: false,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-      canApprove: false,
-      canExport: false,
-      [flag]: true,
-    };
+    return singleActionFlags(action);
   }
 
   return null;
@@ -335,22 +359,10 @@ function pmPermissionFlags(
   }
 
   if (allowedModules.includes(module)) {
-    if (action === 'delete') {
-      return null;
+    if (isElevatedPermissionAction(action)) {
+      return denyAllFlags();
     }
-    const flag = ACTION_TO_FLAG[action];
-    if (!flag) {
-      return null;
-    }
-    return {
-      canView: false,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-      canApprove: false,
-      canExport: false,
-      [flag]: true,
-    };
+    return singleActionFlags(action);
   }
 
   if (action === 'view') {
@@ -393,18 +405,10 @@ function designWorkflowRolePermissionFlags(
       'correspondence',
     ];
     if (executiveModules.includes(module)) {
-      if (action === 'delete') {
-        return null;
+      if (isElevatedPermissionAction(action)) {
+        return denyAllFlags();
       }
-      return {
-        canView: false,
-        canCreate: false,
-        canEdit: false,
-        canDelete: false,
-        canApprove: false,
-        canExport: false,
-        [flag]: true,
-      };
+      return singleActionFlags(action);
     }
     if (action === 'view') {
       return viewOnlyFlags();
@@ -437,18 +441,10 @@ function designWorkflowRolePermissionFlags(
   }
 
   if (allowedModules.includes(module)) {
-    if (action === 'delete') {
-      return null;
+    if (isElevatedPermissionAction(action)) {
+      return denyAllFlags();
     }
-    return {
-      canView: false,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-      canApprove: false,
-      canExport: false,
-      [flag]: true,
-    };
+    return singleActionFlags(action);
   }
 
   if (action === 'view') {
@@ -1181,16 +1177,20 @@ async function main(): Promise<void> {
   console.log(`  Roles seeded: ${CORE_ROLES.length}`);
   console.log(`  Permissions seeded: ${permissions.length}`);
 
-  await seedPmDemoData({
-    prisma,
-    companyId: company.id,
-    branchId: branch.id,
-    departmentId: department.id,
-    positionId: position.id,
-    adminUserId: adminUser.id,
-    roleMap,
-    defaultPassword: adminPassword,
-  });
+  if (process.env.SEED_PM_DEMO === 'false') {
+    console.log('  PM demo skipped (SEED_PM_DEMO=false)');
+  } else {
+    await seedPmDemoData({
+      prisma,
+      companyId: company.id,
+      branchId: branch.id,
+      departmentId: department.id,
+      positionId: position.id,
+      adminUserId: adminUser.id,
+      roleMap,
+      defaultPassword: adminPassword,
+    });
+  }
 }
 
 main()

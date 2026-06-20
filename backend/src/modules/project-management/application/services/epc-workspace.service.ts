@@ -95,6 +95,8 @@ export interface ReviewModeView {
     commentedOn: CommentEdvSnapshot;
     responseRevision: CommentEdvSnapshot | null;
   }[];
+  /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
+  readonly lastReturnedSessionComments: readonly { status: CommentStatus }[];
 }
 
 export interface VersionHistoryEntry {
@@ -473,6 +475,26 @@ export class EpcWorkspaceService {
       }),
     ]);
 
+    let lastReturnedSessionComments: { status: CommentStatus }[] = [];
+    if (!session) {
+      const lastReturned = await this.prisma.reviewSession.findFirst({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          designPackageId,
+          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+        }),
+        orderBy: { closedAt: 'desc' },
+        select: {
+          id: true,
+          comments: {
+            where: { deletedAt: null },
+            select: { status: true },
+          },
+        },
+      });
+      lastReturnedSessionComments = lastReturned?.comments ?? [];
+    }
+
     const sessionComments = session?.comments ?? [];
     const revisionContexts = await resolveCommentRevisionContexts(
       this.prisma,
@@ -524,6 +546,7 @@ export class EpcWorkspaceService {
           responseRevision: revision?.responseRevision ?? null,
         };
       }),
+      lastReturnedSessionComments,
     };
   }
 

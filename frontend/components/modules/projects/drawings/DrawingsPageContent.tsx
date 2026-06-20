@@ -14,10 +14,12 @@ import {
   Tag,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { FileStack } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateDrawingRequest,
@@ -26,6 +28,8 @@ import type {
 import { useCreateDrawing, useDrawings } from '@/lib/query/drawings';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import DrawingDetailDrawer from '@/components/modules/projects/drawings/DrawingDetailDrawer';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_SIZE = 20;
 
@@ -50,6 +54,7 @@ function DrawingFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<DrawingFormValues>();
   const createDrawing = useCreateDrawing();
+  const messageApi = useAppMessage();
 
   async function handleSubmit(values: DrawingFormValues): Promise<void> {
     const body: CreateDrawingRequest = {
@@ -59,10 +64,15 @@ function DrawingFormDrawer({
       revision: values.revision.trim(),
       status: values.status?.trim() || undefined,
     };
-    await createDrawing.mutateAsync({ projectId, body });
-    form.resetFields();
-    onSaved();
-    onClose();
+    try {
+      await createDrawing.mutateAsync({ projectId, body });
+      messageApi.success('Drawing registered successfully');
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(error, 'Failed to register drawing', messageApi);
+    }
   }
 
   return (
@@ -177,6 +187,7 @@ export default function DrawingsPageContent({
         title: 'Revision',
         dataIndex: 'revision',
         key: 'revision',
+        align: 'right',
         width: 80,
       },
       {
@@ -286,7 +297,20 @@ export default function DrawingsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={drawings}
-          locale={{ emptyText: 'No drawings found' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<FileStack />}
+                title="No drawings"
+                description="Add drawing register entries"
+                action={
+                  !apiUnavailable
+                    ? { label: 'Add drawing', onClick: () => setCreateOpen(true) }
+                    : undefined
+                }
+              />
+            ),
+          }}
         />
 
         {meta && meta.pages > 1 && (

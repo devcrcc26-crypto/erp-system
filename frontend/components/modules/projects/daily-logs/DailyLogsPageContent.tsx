@@ -15,11 +15,13 @@ import {
   Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { Calendar } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DailyLog } from '@/lib/api/project-management.types';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
@@ -29,6 +31,8 @@ import {
 } from '@/lib/query/daily-logs';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_SIZE = 20;
 
@@ -59,22 +63,28 @@ function DailyLogFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<DailyLogFormValues>();
   const createDailyLog = useCreateDailyLog();
+  const messageApi = useAppMessage();
 
   async function handleSubmit(values: DailyLogFormValues): Promise<void> {
-    await createDailyLog.mutateAsync({
-      projectId,
-      body: {
-        logDate: values.logDate.format('YYYY-MM-DD'),
-        shift: values.shift,
-        weatherCondition: values.weatherCondition?.trim() || undefined,
-        temperatureC: values.temperatureC,
-        rainfallMm: values.rainfallMm,
-        workSummary: values.workSummary?.trim() || undefined,
-      },
-    });
-    form.resetFields();
-    onSaved();
-    onClose();
+    try {
+      await createDailyLog.mutateAsync({
+        projectId,
+        body: {
+          logDate: values.logDate.format('YYYY-MM-DD'),
+          shift: values.shift,
+          weatherCondition: values.weatherCondition?.trim() || undefined,
+          temperatureC: values.temperatureC,
+          rainfallMm: values.rainfallMm,
+          workSummary: values.workSummary?.trim() || undefined,
+        },
+      });
+      messageApi.success('Daily log created successfully');
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(error, 'Failed to create daily log', messageApi);
+    }
   }
 
   return (
@@ -280,7 +290,20 @@ export default function DailyLogsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={logs}
-          locale={{ emptyText: 'No daily logs found' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<Calendar />}
+                title="No daily logs"
+                description="Daily logs will appear here once created"
+                action={
+                  !apiUnavailable
+                    ? { label: 'New log', onClick: () => setCreateOpen(true) }
+                    : undefined
+                }
+              />
+            ),
+          }}
         />
 
         {meta && meta.pages > 1 && (

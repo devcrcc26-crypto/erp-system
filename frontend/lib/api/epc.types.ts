@@ -285,6 +285,8 @@ export interface ReviewModeView {
   snapshotEdvIds: readonly string[];
   contentHash: string | null;
   comments: readonly ReviewModeComment[];
+  /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
+  lastReturnedSessionComments: readonly { status: CommentStatus | string }[];
 }
 
 export interface VersionHistoryEvent {
@@ -490,6 +492,9 @@ export interface CreateDesignSubmittalRequest {
   contractor?: string;
   supplier?: string;
   specReference?: string;
+  submittalPurpose?: import('@/lib/api/project-management.types').SubmittalPurpose;
+  preparedByRole?: import('@/lib/api/project-management.types').SubmittalPreparedByRole;
+  taskDisciplineId?: string;
   idempotencyKey?: string;
 }
 

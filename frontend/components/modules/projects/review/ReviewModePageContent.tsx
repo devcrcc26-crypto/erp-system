@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Alert, Breadcrumb, Button } from 'antd';
 import ReviewModePanel from '@/components/modules/projects/review/ReviewModePanel';
 import { useDesignPackage } from '@/lib/query/design-packages';
+import { useCanViewReviewInbox, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 
 export default function ReviewModePageContent({
@@ -15,6 +16,8 @@ export default function ReviewModePageContent({
   projectId: string;
   taskDisciplineId: string;
 }): React.ReactNode {
+  const canViewReviewInbox = useCanViewReviewInbox();
+  const capabilitiesReady = useCapabilitiesReady();
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
@@ -23,6 +26,36 @@ export default function ReviewModePageContent({
   );
 
   const packageName = packageQuery.data?.name ?? 'Review mode';
+
+  if (!capabilitiesReady) {
+    return null;
+  }
+
+  if (!canViewReviewInbox) {
+    return (
+      <div className={`${layout.pageStack} min-w-0 overflow-x-hidden`}>
+        <Alert
+          type="warning"
+          showIcon
+          title="Review mode is for reviewers only"
+          description="Designers should resolve assigned comments from My Comments or on the design package page."
+          action={
+            projectId && taskDisciplineId ? (
+              <Link
+                href={`/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${packageId}`}
+              >
+                <Button size="small">Back to package</Button>
+              </Link>
+            ) : (
+              <Link href="/my-comments">
+                <Button size="small">My Comments</Button>
+              </Link>
+            )
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`${layout.pageStack} min-w-0 overflow-x-hidden`}>

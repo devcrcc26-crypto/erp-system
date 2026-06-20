@@ -1,7 +1,9 @@
 'use client';
 
 import { Col, Row, Spin } from 'antd';
+import { BarChart3 } from 'lucide-react';
 import Card from '@/components/ui/Card/Card';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -124,7 +126,11 @@ function StatusBreakdownCard({
   return (
     <Card size="small" title={title}>
       {entries.length === 0 ? (
-        <p className="text-sm text-slate-500">No data</p>
+        <TableEmptyState
+          icon={<BarChart3 />}
+          title="No data"
+          description="Status counts will appear when packages or disciplines are active"
+        />
       ) : (
         <ul className="space-y-2">
           {entries.map(([status, count]) => (

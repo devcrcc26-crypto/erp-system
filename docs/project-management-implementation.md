@@ -894,10 +894,20 @@ Actions: `view`, `create`, `edit`, `delete` per PM module key.
 
 Wraps the project layout. Derives engineering/review/submittal permissions from PM + EPC capabilities. Used by:
 
-- `ProjectWorkspaceSidebar` — hides nav items
+- `ProjectWorkspaceSidebar` — hides nav items (including engineering surfaces when the user has no assigned disciplines and lacks bypass)
 - `EngineeringDocumentPanel` — gates register/upload actions
 - `DesignPackagePanel` — gates review workflow buttons
 - `SubmittalsPageContent` — gates design package submittal creation
+
+**Discipline scoping (EPC responsibility workflow):**
+
+- Review tier chain: `DISCIPLINE_OWNER → REVIEWER → DISCIPLINE_LEAD → DEPT_CHIEF` (Institute Chief removed)
+- `TaskDiscipline.ownerUserId` assigns the Discipline Owner per discipline
+- Non-bypass users only see projects/disciplines where they are assigned (designer, owner, reviewer, lead, or chief)
+- Bypass roles: System Administrator, Managing Director, Project Manager
+- `disciplineScopeBypass` is exposed on EPC capabilities and consumed by `RoleLensProvider`
+- RFIs/Issues support optional `taskDisciplineId` with auto-created attachment folders (`FolderContextType.RFI` / `ISSUE`)
+- Submittals support `submittalPurpose` + `preparedByRole` (Discipline Lead single-discipline vs Deputy Chief multi-discipline)
 
 ### 11.4 PM Module Keys
 

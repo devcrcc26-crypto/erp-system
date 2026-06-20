@@ -405,21 +405,18 @@ export class EpcReviewRepository {
     });
   }
 
-  async markSessionEscalated(
+  /**
+   * Marks a session SLA as escalated without changing tier or assignee.
+   */
+  async markSessionSlaOverdue(
     reviewSessionId: string,
     escalatedAt: Date,
-    assignedToUserId: string | null,
-    currentTier: ReviewTier,
-    slaDeadlineAt: Date,
     updatedBy: string,
   ): Promise<ReviewSession> {
     return this.prisma.reviewSession.update({
       where: { id: reviewSessionId },
       data: {
         slaEscalatedAt: escalatedAt,
-        assignedToUserId,
-        currentTier,
-        slaDeadlineAt,
         updatedBy,
       },
     });

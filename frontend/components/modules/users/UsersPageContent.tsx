@@ -16,11 +16,13 @@ import {
   type MenuProps,
 } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
+import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useRoles } from '@/lib/query/roles';
@@ -457,13 +459,14 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
-      <FormLayout
-        title="Invite employee"
-        description="An activation email will be sent so they can verify their email and set their password. You never need to choose or share a password."
-        extra={
-          <Button onClick={() => setImportOpen(true)}>Import from Excel</Button>
-        }
-      >
+      <div id="invite-employee-section">
+        <FormLayout
+          title="Invite employee"
+          description="An activation email will be sent so they can verify their email and set their password. You never need to choose or share a password."
+          extra={
+            <Button onClick={() => setImportOpen(true)}>Import from Excel</Button>
+          }
+        >
         <Form<InviteFormValues>
           form={form}
           layout="vertical"
@@ -521,7 +524,8 @@ export default function UsersPageContent(): React.ReactNode {
             {isSubmitting ? 'Sending invitation...' : 'Send invitation'}
           </Button>
         </Form>
-      </FormLayout>
+        </FormLayout>
+      </div>
 
       <FormLayout
         title="All users"
@@ -530,7 +534,23 @@ export default function UsersPageContent(): React.ReactNode {
         <DataTable<User>
           rowKey="id"
           dataSource={users}
-          locale={{ emptyText: 'No users found.' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<Users />}
+                title="No team members"
+                description="Invite users to give them access to projects"
+                action={{
+                  label: 'Invite user',
+                  onClick: () => {
+                    document
+                      .getElementById('invite-employee-section')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  },
+                }}
+              />
+            ),
+          }}
           columns={[
             {
               title: 'Name',
@@ -541,7 +561,12 @@ export default function UsersPageContent(): React.ReactNode {
                 </span>
               ),
             },
-            { title: 'Email', dataIndex: 'email', key: 'email' },
+            {
+              title: 'Email',
+              dataIndex: 'email',
+              key: 'email',
+              ellipsis: { showTitle: true },
+            },
             {
               title: 'Status',
               key: 'status',
@@ -555,6 +580,7 @@ export default function UsersPageContent(): React.ReactNode {
             {
               title: 'Roles',
               key: 'roles',
+              ellipsis: { showTitle: true },
               render: (_, record) => formatUserRoleNames(record),
             },
             {

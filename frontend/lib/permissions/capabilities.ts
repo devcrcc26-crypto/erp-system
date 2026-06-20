@@ -36,10 +36,6 @@ function normalizeCapabilities(data: Partial<Capabilities> | null | undefined): 
  * Loads UI capability flags for the authenticated session from the backend RBAC resolver.
  */
 export async function fetchCapabilities(): Promise<Capabilities> {
-  try {
-    const data = await apiGet<Capabilities>('/auth/capabilities');
-    return normalizeCapabilities(data);
-  } catch {
-    return { ...EMPTY_CAPABILITIES };
-  }
+  const data = await apiGet<Capabilities>('/auth/capabilities');
+  return normalizeCapabilities(data);
 }

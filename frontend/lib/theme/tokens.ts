@@ -30,5 +30,5 @@ export const tokens = {
   sectionGap: 24,
   sectionGapMd: 32,
   /** Default Ant Design Card body padding. */
-  cardPadding: 28,
+  cardPadding: 32,
 } as const;

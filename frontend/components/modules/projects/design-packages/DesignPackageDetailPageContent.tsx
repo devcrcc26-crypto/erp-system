@@ -98,10 +98,12 @@ export default function DesignPackageDetailPageContent({
   const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId;
   const sessionComments = reviewMode?.comments ?? [];
+  const lastReturnedComments = reviewMode?.lastReturnedSessionComments ?? [];
+  const commentsToCheck = reviewSessionId ? sessionComments : lastReturnedComments;
   const approvalAllowed = canApproveReviewSession(
     sessionComments.map((comment) => comment.status),
   );
-  const hasUnacknowledgedComments = sessionComments.some(
+  const hasUnacknowledgedComments = commentsToCheck.some(
     (comment) => comment.status === 'OPEN' || comment.status === 'IN_PROGRESS',
   );
 
@@ -417,6 +419,7 @@ export default function DesignPackageDetailPageContent({
         open={returnOpen}
         onCancel={() => setReturnOpen(false)}
         onOk={() => returnForm.submit()}
+        okText="Return for rework"
         confirmLoading={returnPackage.isPending}
       >
         <Form
@@ -426,19 +429,23 @@ export default function DesignPackageDetailPageContent({
             if (!reviewSessionId) {
               return;
             }
-            await returnPackage.mutateAsync({
-              projectId,
-              taskDisciplineId,
-              packageId,
-              body: {
-                reviewSessionId,
-                reason: values.reason.trim(),
-              },
-            });
-            messageApi.success('Package returned for rework');
-            setReturnOpen(false);
-            void packageQuery.refetch();
-            void reviewModeQuery.refetch();
+            try {
+              await returnPackage.mutateAsync({
+                projectId,
+                taskDisciplineId,
+                packageId,
+                body: {
+                  reviewSessionId,
+                  reason: values.reason.trim(),
+                },
+              });
+              messageApi.success('Package returned for rework');
+              setReturnOpen(false);
+              void packageQuery.refetch();
+              void reviewModeQuery.refetch();
+            } catch (error) {
+              notifyApiError(error, 'Failed to return package for rework', messageApi);
+            }
           }}
         >
           <Form.Item

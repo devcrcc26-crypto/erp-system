@@ -14,11 +14,13 @@ import {
   Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -43,6 +45,8 @@ import {
 } from '@/lib/utils/pm-status-display';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_SIZE = 20;
 
@@ -76,6 +80,7 @@ function RfiFormDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<RfiFormValues>();
   const createRfi = useCreateRfi();
+  const messageApi = useAppMessage();
   const disciplinesQuery = useProjectDisciplines(projectId, open);
 
   const disciplineOptions = useMemo(
@@ -97,10 +102,15 @@ function RfiFormDrawer({
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
     };
-    await createRfi.mutateAsync({ projectId, body });
-    form.resetFields();
-    onSaved();
-    onClose();
+    try {
+      await createRfi.mutateAsync({ projectId, body });
+      messageApi.success('RFI created successfully');
+      form.resetFields();
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(error, 'Failed to create RFI', messageApi);
+    }
   }
 
   return (
@@ -338,7 +348,20 @@ export default function RfisPageContent({
           rowKey="id"
           columns={columns}
           dataSource={rfis}
-          locale={{ emptyText: 'No RFIs found' }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<FileText />}
+                title="No RFIs yet"
+                description="Raise an RFI to track requests for information"
+                action={
+                  !apiUnavailable
+                    ? { label: 'Raise RFI', onClick: () => setCreateOpen(true) }
+                    : undefined
+                }
+              />
+            ),
+          }}
         />
 
         {meta && meta.pages > 1 && (

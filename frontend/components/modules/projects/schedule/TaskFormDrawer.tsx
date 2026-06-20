@@ -32,6 +32,8 @@ import {
 } from '@/lib/query/schedule';
 import { calculateTaskDurationDays } from '@/lib/utils/schedule-metrics';
 import { antDrawerBodyStyles } from '@/lib/theme/layout';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -219,6 +221,7 @@ export default function TaskFormDrawer({
   const [form] = Form.useForm<TaskFormValues>();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const messageApi = useAppMessage();
   const milestonesQuery = useMilestones(projectId, { page: 1, limit: 50 }, open);
   const milestones = milestonesQuery.data?.data ?? [];
   const isEditing = Boolean(task);
@@ -258,20 +261,30 @@ export default function TaskFormDrawer({
       ...toExtendedPayload(values),
     };
 
-    if (task) {
-      const body: UpdateTaskRequest = {
-        ...base,
-        taskIdCode: values.taskIdCode?.trim(),
-      };
-      await updateTask.mutateAsync({ projectId, taskId: task.id, body });
-    } else {
-      const body: CreateTaskRequest = base;
-      await createTask.mutateAsync({ projectId, body });
-    }
+    try {
+      if (task) {
+        const body: UpdateTaskRequest = {
+          ...base,
+          taskIdCode: values.taskIdCode?.trim(),
+        };
+        await updateTask.mutateAsync({ projectId, taskId: task.id, body });
+        messageApi.success('Task updated successfully');
+      } else {
+        const body: CreateTaskRequest = base;
+        await createTask.mutateAsync({ projectId, body });
+        messageApi.success('Task created successfully');
+      }
 
-    form.resetFields();
-    onSaved?.();
-    onClose();
+      form.resetFields();
+      onSaved?.();
+      onClose();
+    } catch (error) {
+      notifyApiError(
+        error,
+        task ? 'Failed to update task' : 'Failed to create task',
+        messageApi,
+      );
+    }
   }
 
   return (

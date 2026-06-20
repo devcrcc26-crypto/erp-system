@@ -9,7 +9,7 @@ import type {
 
 function resolveEdvLabel(
   edvId: string,
-  documents: EngineeringDocument[],
+  documents: readonly EngineeringDocument[],
 ): string {
   for (const doc of documents) {
     for (const version of doc.versions ?? []) {
