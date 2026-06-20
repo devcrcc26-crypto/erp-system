@@ -18,6 +18,7 @@ import { FileStack } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -274,7 +275,7 @@ export default function DrawingsPageContent({
           <Input.Search
             allowClear
             placeholder="Search drawings"
-            style={{ width: 220 }}
+            className={layout.filterControl}
             onSearch={(value: string) => {
               setPage(1);
               setSearch(value);
@@ -283,7 +284,7 @@ export default function DrawingsPageContent({
           <Select
             allowClear
             placeholder="Discipline"
-            style={{ width: 180 }}
+            className={layout.filterControlSm}
             value={disciplineFilter}
             onChange={(value: string | undefined) => {
               setPage(1);

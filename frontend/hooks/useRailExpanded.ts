@@ -1,18 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useIsLgUp } from '@/hooks/useMediaQuery';
 
 const STORAGE_KEY = 'rail:expanded';
 const PEEK_LEAVE_DELAY_MS = 200;
 
 export interface UseRailExpandedResult {
-  /** Rail is pinned open (220px, persisted). */
   pinned: boolean;
-  /** Temporary hover expansion while collapsed and unpinned. */
   isPeeking: boolean;
-  /** Visual expanded state (pinned or peeking). */
   isExpanded: boolean;
-  /** Width consumed in the layout row (64 or 256 when pinned). */
   layoutWidth: 64 | 256;
   togglePinned: () => void;
   onPeekEnter: () => void;
@@ -21,8 +18,10 @@ export interface UseRailExpandedResult {
 
 /**
  * localStorage-backed icon rail pin state with hover-to-peek when collapsed.
+ * Pinning is disabled below the lg breakpoint so mobile layout stays full-width.
  */
 export function useRailExpanded(): UseRailExpandedResult {
+  const isLgUp = useIsLgUp();
   const [pinned, setPinned] = useState(false);
   const [isPeeking, setIsPeeking] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -37,6 +36,12 @@ export function useRailExpanded(): UseRailExpandedResult {
     setHydrated(true);
   }, []);
 
+  useEffect(() => {
+    if (!isLgUp) {
+      setIsPeeking(false);
+    }
+  }, [isLgUp]);
+
   const clearLeaveTimer = useCallback((): void => {
     if (leaveTimerRef.current) {
       clearTimeout(leaveTimerRef.current);
@@ -46,7 +51,12 @@ export function useRailExpanded(): UseRailExpandedResult {
 
   useEffect(() => clearLeaveTimer, [clearLeaveTimer]);
 
+  const effectivePinned = hydrated && pinned && isLgUp;
+
   const togglePinned = useCallback((): void => {
+    if (!isLgUp) {
+      return;
+    }
     setPinned((prev) => {
       const next = !prev;
       try {
@@ -59,18 +69,18 @@ export function useRailExpanded(): UseRailExpandedResult {
       }
       return next;
     });
-  }, []);
+  }, [isLgUp]);
 
   const onPeekEnter = useCallback((): void => {
-    if (pinned) {
+    if (effectivePinned || !isLgUp) {
       return;
     }
     clearLeaveTimer();
     setIsPeeking(true);
-  }, [pinned, clearLeaveTimer]);
+  }, [effectivePinned, isLgUp, clearLeaveTimer]);
 
   const onPeekLeave = useCallback((): void => {
-    if (pinned) {
+    if (effectivePinned || !isLgUp) {
       return;
     }
     clearLeaveTimer();
@@ -78,13 +88,13 @@ export function useRailExpanded(): UseRailExpandedResult {
       setIsPeeking(false);
       leaveTimerRef.current = null;
     }, PEEK_LEAVE_DELAY_MS);
-  }, [pinned, clearLeaveTimer]);
+  }, [effectivePinned, isLgUp, clearLeaveTimer]);
 
-  const isExpanded = pinned || isPeeking;
-  const layoutWidth = pinned ? 256 : 64;
+  const isExpanded = effectivePinned || isPeeking;
+  const layoutWidth = effectivePinned ? 256 : 64;
 
   return {
-    pinned: hydrated ? pinned : false,
+    pinned: effectivePinned,
     isPeeking,
     isExpanded,
     layoutWidth,

@@ -81,6 +81,7 @@ export default function DisciplineDetailDrawer({
       confirmLoading={isSubmitting}
       destroyOnHidden
       width={720}
+      className="erp-responsive-drawer"
       styles={{
         body: {
           paddingTop: 8,

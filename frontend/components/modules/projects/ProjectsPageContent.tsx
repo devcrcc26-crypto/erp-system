@@ -17,6 +17,7 @@ import type { ColumnsType } from 'antd/es/table';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
@@ -215,7 +216,7 @@ export default function ProjectsPageContent(): React.ReactNode {
           <Input.Search
             allowClear
             placeholder="Search by code or name"
-            style={{ width: 280 }}
+            className={layout.filterControlLg}
             onSearch={(value: string) => {
               setPage(1);
               setSearch(value);
@@ -224,7 +225,7 @@ export default function ProjectsPageContent(): React.ReactNode {
           <Select
             allowClear
             placeholder="Filter by status"
-            style={{ width: 200 }}
+            className={layout.filterControlMd}
             value={statusFilter}
             onChange={(value: ProjectStatus | undefined) => {
               setPage(1);

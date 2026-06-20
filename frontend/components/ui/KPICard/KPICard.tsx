@@ -33,7 +33,7 @@ export default function KPICard({
     <Card
       variant="borderless"
       styles={cardStyles}
-      className="h-full border border-slate-200 shadow-sm"
+      className="h-full border border-slate-200 erp-responsive-card shadow-sm"
       style={{ borderRadius: 8, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
     >
       <div className="flex items-center gap-4">

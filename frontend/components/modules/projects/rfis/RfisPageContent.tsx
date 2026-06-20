@@ -22,6 +22,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import { layout } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateRfiRequest,
@@ -311,7 +312,7 @@ export default function RfisPageContent({
           <Input.Search
             allowClear
             placeholder="Search RFIs"
-            style={{ width: 220 }}
+            className={layout.filterControl}
             onSearch={(value: string) => {
               setPage(1);
               setSearch(value);
@@ -320,7 +321,7 @@ export default function RfisPageContent({
           <Select
             allowClear
             placeholder="Status"
-            style={{ width: 160 }}
+            className={layout.filterControlNav}
             value={statusFilter}
             onChange={(value: RfiStatus | undefined) => {
               setPage(1);
@@ -334,7 +335,7 @@ export default function RfisPageContent({
           <Select
             allowClear
             placeholder="Priority"
-            style={{ width: 140 }}
+            className={layout.filterControlXs}
             value={priorityFilter}
             onChange={(value: RfiPriority | undefined) => {
               setPage(1);

@@ -189,6 +189,7 @@ export default function UserImportModal({
       onCancel={onClose}
       footer={footer}
       width={800}
+      className="erp-responsive-modal"
       destroyOnHidden
     >
       <p className="mb-4 text-sm text-slate-500">

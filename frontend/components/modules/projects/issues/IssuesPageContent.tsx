@@ -19,6 +19,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -333,7 +334,7 @@ export default function IssuesPageContent({
           <Input.Search
             allowClear
             placeholder="Search issues"
-            style={{ width: 220 }}
+            className={layout.filterControl}
             onSearch={(value: string) => {
               setPage(1);
               setSearch(value);
@@ -342,7 +343,7 @@ export default function IssuesPageContent({
           <Select
             allowClear
             placeholder="Status"
-            style={{ width: 180 }}
+            className={layout.filterControlSm}
             value={statusFilter}
             onChange={(value: IssueStatus | undefined) => {
               setPage(1);
@@ -356,7 +357,7 @@ export default function IssuesPageContent({
           <Select
             allowClear
             placeholder="Severity"
-            style={{ width: 140 }}
+            className={layout.filterControlXs}
             value={severityFilter}
             onChange={(value: IssueSeverity | undefined) => {
               setPage(1);

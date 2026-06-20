@@ -13,7 +13,7 @@ const filters = [
 export default function FilterSection() {
     return (
         <section className={`${layout.cardSurface} ${layout.cardPadding}`}>
-            <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <h2 className="text-lg font-semibold text-slate-900">Filters & Search</h2>
                 <button
                     type="button"

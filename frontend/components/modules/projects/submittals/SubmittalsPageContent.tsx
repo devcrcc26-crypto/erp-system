@@ -20,6 +20,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -302,7 +303,7 @@ export default function SubmittalsPageContent({
           <Input.Search
             allowClear
             placeholder="Search submittals"
-            style={{ width: 220 }}
+            className={layout.filterControl}
             onSearch={(value: string) => {
               setPage(1);
               setSearch(value);
@@ -311,7 +312,7 @@ export default function SubmittalsPageContent({
           <Select
             allowClear
             placeholder="Status"
-            style={{ width: 220 }}
+            className={layout.filterControl}
             value={statusFilter}
             onChange={(value: SubmittalStatus | undefined) => {
               setPage(1);

@@ -210,7 +210,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
             allowClear
             prefix={<SearchOutlined className="text-slate-400" />}
             placeholder="Search projects"
-            style={{ width: 260 }}
+            className={layout.filterControlXl}
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               setSearch(event.target.value)
             }
