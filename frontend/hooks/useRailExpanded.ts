@@ -12,8 +12,8 @@ export interface UseRailExpandedResult {
   isPeeking: boolean;
   /** Visual expanded state (pinned or peeking). */
   isExpanded: boolean;
-  /** Width consumed in the layout row (64 or 220 when pinned). */
-  layoutWidth: 64 | 220;
+  /** Width consumed in the layout row (64 or 256 when pinned). */
+  layoutWidth: 64 | 256;
   togglePinned: () => void;
   onPeekEnter: () => void;
   onPeekLeave: () => void;
@@ -81,7 +81,7 @@ export function useRailExpanded(): UseRailExpandedResult {
   }, [pinned, clearLeaveTimer]);
 
   const isExpanded = pinned || isPeeking;
-  const layoutWidth = pinned ? 220 : 64;
+  const layoutWidth = pinned ? 256 : 64;
 
   return {
     pinned: hydrated ? pinned : false,

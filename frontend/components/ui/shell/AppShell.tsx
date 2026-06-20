@@ -94,7 +94,7 @@ export default function AppShell({
             title={null}
             className="lg:hidden"
             styles={{
-              body: { padding: 0, background: tokens.colorCardBg },
+              body: { padding: 0, background: tokens.colorSidebarBg },
               header: { display: 'none' },
             }}
           >

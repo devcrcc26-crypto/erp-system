@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar-bg: #1e293b;
-  --color-sidebar-active: #334155;
+  --color-sidebar-bg: #1e2533;
+  --color-sidebar-active: #2d3748;
   --color-sidebar-accent: #f97316;
   --color-page-bg: #f1f5f9;
   --color-fill-quaternary: #f1f5f9;
@@ -33,7 +33,7 @@ body {
 }
 
 .erp-sidebar-menu.ant-menu-dark .ant-menu-item-selected {
-  background-color: #334155 !important;
+  background-color: #2d3748 !important;
   border-left-color: #f97316 !important;
   font-weight: 600;
 }
@@ -183,7 +183,7 @@ body::-webkit-scrollbar {
 
 .shell-context-scroll:hover,
 .shell-context-scroll:focus-within {
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #475569 transparent;
 }
 
 .shell-context-scroll::-webkit-scrollbar {
@@ -201,9 +201,9 @@ body::-webkit-scrollbar {
 
 .shell-context-scroll:hover::-webkit-scrollbar-thumb,
 .shell-context-scroll:focus-within::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: #475569;
 }
 
 .shell-context-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  background-color: #64748b;
 }

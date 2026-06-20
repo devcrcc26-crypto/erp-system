@@ -7,9 +7,9 @@ export const tokens = {
   colorPrimaryHover: '#ea580c',
   colorPrimaryLight: '#fff7ed',
 
-  colorNavy: '#1e293b',
-  colorSidebarBg: '#1e293b',
-  colorSidebarActive: '#334155',
+  colorNavy: '#1e2533',
+  colorSidebarBg: '#1e2533',
+  colorSidebarActive: '#2d3748',
   colorSidebarText: '#94a3b8',
   colorSidebarTextActive: '#ffffff',
   colorSidebarAccent: '#f97316',

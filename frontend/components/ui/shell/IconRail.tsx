@@ -45,6 +45,36 @@ const RAIL_ICONS: Record<string, React.ReactNode> = {
   settings: <SettingOutlined />,
 };
 
+function railItemClass(isActive: boolean, isExpanded: boolean): string {
+  const base = 'flex shrink-0 items-center transition-colors duration-150';
+  if (isExpanded) {
+    return [
+      base,
+      'w-full gap-4 border-l-4 py-4 pl-6 pr-6 text-sm',
+      isActive ? 'font-semibold text-white' : 'font-normal hover:text-white',
+    ].join(' ');
+  }
+  return [
+    base,
+    'mx-auto h-10 w-10 justify-center text-base',
+    isActive ? 'text-white' : 'hover:text-white',
+  ].join(' ');
+}
+
+function railItemStyle(isActive: boolean, isExpanded: boolean): React.CSSProperties {
+  if (isActive) {
+    return {
+      backgroundColor: tokens.colorSidebarActive,
+      borderLeftColor: isExpanded ? tokens.colorSidebarAccent : 'transparent',
+      color: tokens.colorSidebarTextActive,
+    };
+  }
+  return {
+    borderLeftColor: 'transparent',
+    color: tokens.colorSidebarText,
+  };
+}
+
 function RailNavButton({
   item,
   label,
@@ -65,21 +95,20 @@ function RailNavButton({
       title={label}
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
-      className={[
-        'group flex h-10 shrink-0 items-center rounded-md transition-colors duration-150',
-        isExpanded ? 'w-full gap-3 px-3' : 'mx-auto w-10 justify-center',
-        isActive
-          ? 'bg-slate-700 font-semibold text-white'
-          : 'text-slate-400 hover:bg-slate-700 hover:text-white',
-      ].join(' ')}
-      style={isActive ? { borderLeft: `3px solid ${tokens.colorSidebarAccent}` } : undefined}
+      className={railItemClass(isActive, isExpanded)}
+      style={{
+        ...railItemStyle(isActive, isExpanded),
+        ...(isActive && !isExpanded
+          ? { backgroundColor: tokens.colorSidebarActive, borderRadius: 6 }
+          : {}),
+      }}
     >
-      <span className="flex shrink-0 items-center justify-center text-base leading-none">
+      <span className="flex shrink-0 items-center justify-center leading-none">
         {RAIL_ICONS[item.iconKey] ?? <ProjectOutlined />}
       </span>
       <span
         className={[
-          'truncate text-sm font-medium transition-all duration-200 ease-in-out',
+          'truncate transition-all duration-200 ease-in-out',
           isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
         ].join(' ')}
       >
@@ -110,17 +139,19 @@ function RailActionButton({
       title={label}
       aria-label={label}
       className={[
-        'flex h-10 shrink-0 items-center rounded-md transition-colors duration-150 disabled:opacity-60',
-        isExpanded ? 'w-full gap-3 px-3' : 'mx-auto w-10 justify-center',
-        'text-slate-400 hover:bg-slate-700 hover:text-white',
+        'flex shrink-0 items-center transition-colors duration-150 disabled:opacity-60',
+        isExpanded
+          ? 'w-full gap-4 border-l-4 border-transparent py-4 pl-6 pr-6 text-sm font-normal hover:text-white'
+          : 'mx-auto h-10 w-10 justify-center text-base hover:text-white',
       ].join(' ')}
+      style={{ color: tokens.colorSidebarText }}
     >
-      <span className="flex shrink-0 items-center justify-center text-base leading-none">
+      <span className="flex shrink-0 items-center justify-center leading-none">
         {icon}
       </span>
       <span
         className={[
-          'truncate text-sm font-medium transition-all duration-200 ease-in-out',
+          'truncate transition-all duration-200 ease-in-out',
           isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
         ].join(' ')}
       >
@@ -171,7 +202,7 @@ export default function IconRail(): React.ReactNode {
     }
   }
 
-  const panelWidth = isExpanded ? 220 : 64;
+  const panelWidth = isExpanded ? 256 : 64;
   const isOverlayPeek = isExpanded && !pinned;
 
   return (
@@ -189,20 +220,31 @@ export default function IconRail(): React.ReactNode {
         style={{ width: panelWidth, background: tokens.colorSidebarBg }}
         aria-label="Main navigation"
       >
-        <div className="flex flex-col items-center px-3 pb-3 pt-4">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold text-white"
-            style={{ backgroundColor: tokens.colorPrimary }}
-            title="CCECC PWF"
-            aria-label="CCECC PWF workspace"
-          >
-            CP
-          </div>
+        <div
+          className={[
+            'shrink-0 pb-5 pt-8',
+            isExpanded ? 'px-7' : 'flex justify-center px-3',
+          ].join(' ')}
+        >
+          {isExpanded ? (
+            <h1 className="truncate text-xl font-bold tracking-wide text-white">
+              CCECC PWF
+            </h1>
+          ) : (
+            <div
+              className="flex h-8 w-8 items-center justify-center text-xs font-bold text-white"
+              style={{ backgroundColor: tokens.colorSidebarAccent, borderRadius: 6 }}
+              title="CCECC PWF"
+              aria-label="CCECC PWF workspace"
+            >
+              CP
+            </div>
+          )}
         </div>
 
-        <hr className="mx-3 border-slate-700" />
+        <hr className="border-slate-700" />
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-hidden px-2 py-3">
+        <nav className="flex flex-1 flex-col overflow-hidden py-1">
           {visibleNavItems.map((item) => (
             <RailNavButton
               key={item.key}
@@ -214,29 +256,26 @@ export default function IconRail(): React.ReactNode {
           ))}
         </nav>
 
-        <div className="flex flex-col gap-1 px-2 pb-2">
+        <div className="flex flex-col pb-2">
           <Link
             href="/profile"
             title={t('nav.profile')}
             aria-label={t('nav.profile')}
             aria-current={profileActive ? 'page' : undefined}
-            className={[
-              'flex h-10 shrink-0 items-center rounded-md transition-colors duration-150 hover:bg-slate-700 hover:text-white',
-              isExpanded ? 'w-full gap-3 px-3' : 'mx-auto w-10 justify-center',
-              profileActive ? 'bg-slate-700 font-semibold text-white' : 'text-slate-400',
-            ].join(' ')}
-            style={
-              profileActive
-                ? { borderLeft: `3px solid ${tokens.colorSidebarAccent}` }
-                : undefined
-            }
+            className={railItemClass(profileActive, isExpanded)}
+            style={{
+              ...railItemStyle(profileActive, isExpanded),
+              ...(profileActive && !isExpanded
+                ? { backgroundColor: tokens.colorSidebarActive, borderRadius: 6 }
+                : {}),
+            }}
           >
-            <span className="flex shrink-0 items-center justify-center text-base leading-none">
+            <span className="flex shrink-0 items-center justify-center leading-none">
               <UserOutlined />
             </span>
             <span
               className={[
-                'truncate text-sm font-medium transition-all duration-200 ease-in-out',
+                'truncate transition-all duration-200 ease-in-out',
                 isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
               ].join(' ')}
             >
@@ -260,9 +299,10 @@ export default function IconRail(): React.ReactNode {
             aria-label={pinned ? 'Collapse navigation' : 'Expand navigation'}
             aria-pressed={pinned}
             className={[
-              'mt-1 flex h-8 shrink-0 items-center rounded-md text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-300',
-              isExpanded ? 'w-full justify-end px-3' : 'mx-auto w-8 justify-center',
+              'mt-1 flex h-8 shrink-0 items-center transition-colors hover:text-white',
+              isExpanded ? 'w-full justify-end px-6' : 'mx-auto w-8 justify-center',
             ].join(' ')}
+            style={{ color: tokens.colorSidebarText }}
           >
             {pinned ? (
               <LeftOutlined className="text-xs" />

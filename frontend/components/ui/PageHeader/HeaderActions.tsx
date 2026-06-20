@@ -5,6 +5,7 @@ import { Avatar } from 'antd';
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUser } from '@/lib/query/users';
+import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Notifications bell and signed-in user profile link — shared by page and project headers.
@@ -35,7 +36,7 @@ export default function HeaderActions(): React.ReactNode {
       >
         <Avatar
           size={{ xs: 36, md: 40 }}
-          style={{ backgroundColor: '#1e293b', fontWeight: 600 }}
+          style={{ backgroundColor: tokens.colorSidebarBg, fontWeight: 600 }}
         >
           {avatarInitial}
         </Avatar>
