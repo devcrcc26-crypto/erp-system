@@ -187,6 +187,25 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
+   * Returns or creates the attachment folder for a submittal under the project folder.
+   */
+  async ensureSubmittalFolder(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+  ): Promise<DocumentFolderRef> {
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.SUBMITTAL,
+      submittalId,
+      `submittals/${this.toFolderSegment(submittalNumber)}`,
+      this.toFolderSegment(submittalNumber),
+    );
+  }
+
+  /**
    * Resolves an entity attachment folder by context, if it exists.
    */
   async findEntityFolder(

@@ -53,13 +53,17 @@ export type SubmittalStatus =
   | 'REJECTED';
 
 export type SubmittalPurpose =
+  | 'IN_CONSTRUCTION'
   | 'DISCIPLINE_SITE'
   | 'DISCIPLINE_CONSULTANT'
   | 'DEPUTY_BID'
   | 'DEPUTY_INTERIM'
   | 'DEPUTY_FINAL';
 
-export type SubmittalPreparedByRole = 'DISCIPLINE_LEAD' | 'DEPUTY_CHIEF';
+export type SubmittalPreparedByRole =
+  | 'SITE_TEAM'
+  | 'DISCIPLINE_LEAD'
+  | 'DEPUTY_CHIEF';
 
 export type IssueSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -298,6 +302,7 @@ export interface Submittal {
   projectId: string;
   taskDisciplineId: string | null;
   submittedBy: string;
+  assignedTo: string | null;
   reviewedBy: string | null;
   submittalNumber: string;
   category: string;
@@ -315,6 +320,24 @@ export interface Submittal {
   issuedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubmittalItem {
+  id: string;
+  submittalId: string;
+  designPackageId: string;
+  itemType: 'DESIGN_PACKAGE';
+  sortOrder: number;
+  snapshotCaptured: boolean;
+  snapshotEdvIds: string[];
+  contentHash: string | null;
+  capturedAt: string | null;
+  createdAt: string;
+}
+
+export interface SubmittalDetail extends Submittal {
+  items: SubmittalItem[];
+  attachmentFolderId: string | null;
 }
 
 export interface SubmittalReview {
@@ -772,6 +795,18 @@ export interface CreateSubmittalRequest {
   dueDate?: string;
 }
 
+export interface CreateConstructionSubmittalRequest {
+  category: string;
+  title: string;
+  taskDisciplineId: string;
+  designPackageIds?: string[];
+  contractor?: string;
+  supplier?: string;
+  specReference?: string;
+  revisionNumber?: number;
+  dueDate?: string;
+}
+
 export type UpdateSubmittalRequest = Partial<CreateSubmittalRequest> & {
   status?: SubmittalStatus;
   reviewDate?: string;
@@ -901,4 +936,5 @@ export interface UpdateCloseoutChecklistItemRequest {
 export interface PmListFilters {
   search?: string;
   status?: string;
+  submittalPurpose?: SubmittalPurpose;
 }

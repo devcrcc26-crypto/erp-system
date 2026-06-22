@@ -42,6 +42,8 @@ export function useReviewInbox(
     queryFn: () => apiGet<ReviewInboxItem[]>('/review-inbox'),
     enabled: enabled && capabilitiesReady && canViewReviewInbox,
     retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     ...options,
   });
 }

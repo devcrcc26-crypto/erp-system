@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { EdvStatus as PrismaEdvStatus } from '@prisma/client';
+import { EdvStatus as PrismaEdvStatus, ReviewTier } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import {
@@ -204,6 +205,12 @@ export class WorkflowKernelService {
         session.designPackageId,
         command.designPackageId,
       );
+
+      if (session.currentTier !== ReviewTier.DEPT_CHIEF) {
+        throw new ConflictException(
+          'EDV batch approval is only allowed at the department chief tier. Use Approve & escalate to advance governance.',
+        );
+      }
 
       const commentStatuses =
         await this.epcReviewRepository.listCommentStatusesForPackageEdvs(

@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CommentStatus,
   ReviewSessionStatus,
-  ReviewTier,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
@@ -132,24 +131,7 @@ export class EpcWorkspaceService {
       where: activeOnly({
         companyId: ctx.companyId,
         status: ReviewSessionStatus.ACTIVE,
-        OR: [
-          {
-            currentTier: ReviewTier.DISCIPLINE_OWNER,
-            taskDiscipline: { ownerUserId: ctx.userId },
-          },
-          {
-            currentTier: ReviewTier.REVIEWER,
-            taskDiscipline: { reviewerUserId: ctx.userId },
-          },
-          {
-            currentTier: ReviewTier.DISCIPLINE_LEAD,
-            taskDiscipline: { disciplineLeadUserId: ctx.userId },
-          },
-          {
-            currentTier: ReviewTier.DEPT_CHIEF,
-            taskDiscipline: { chiefUserId: ctx.userId },
-          },
-        ],
+        assignedToUserId: ctx.userId,
       }),
       include: {
         designPackage: {

@@ -17,6 +17,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateSubmittalDto,
   CreateSubmittalReviewDto,
+  CreateConstructionSubmittalDto,
   CreateDesignSubmittalDto,
   IssueSubmittalDto,
   AddSubmittalItemsDto,
@@ -72,6 +73,41 @@ export class SubmittalsController {
       this.ctx(user),
       projectId,
       dto,
+    );
+  }
+
+  @Post('construction')
+  @RequirePermission('submittals', 'create')
+  @ApiOperation({
+    summary:
+      'Create in-construction submittal with design packages and document folder',
+  })
+  createConstruction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateConstructionSubmittalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.createConstructionSubmittal(
+      this.ctx(user),
+      projectId,
+      dto,
+    );
+  }
+
+  @Post(':id/submit-to-lead')
+  @RequirePermission('submittals', 'create')
+  @ApiOperation({
+    summary: 'Submit in-construction submittal to discipline leader',
+  })
+  submitToLead(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.submittalsService.submitToDisciplineLead(
+      this.ctx(user),
+      projectId,
+      id,
     );
   }
 

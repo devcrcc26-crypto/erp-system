@@ -111,6 +111,16 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Review & Release',
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
       },
+      {
+        key: 'external-release',
+        label: 'External Release',
+        labelKey: 'workspace.items.externalRelease',
+        pathSuffix: 'submittals/external-release',
+        capability: 'submittals',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
+        epcSurface: 'engineering',
+      },
     ],
   },
   {

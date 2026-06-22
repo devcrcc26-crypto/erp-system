@@ -126,15 +126,104 @@ function resolveNextStep(
 }
 
 /**
- * True when the package can be submitted for review (draft or returned for rework).
+ * True when the package projected status allows a submit action.
  */
-export function isPackageSubmittable(
+export function isPackageProjectedStatusSubmittable(
   pkg: Pick<DesignPackage, 'projectedStatus'>,
 ): boolean {
   return (
     pkg.projectedStatus === 'IN_PROGRESS' ||
     pkg.projectedStatus === 'REWORK_REQUIRED'
   );
+}
+
+export interface PackageSubmitEligibility {
+  submittable: boolean;
+  reason: string | null;
+}
+
+/**
+ * Explains whether the package can be submitted and why not.
+ */
+export function getPackageSubmitEligibility(
+  pkg: Pick<DesignPackage, 'projectedStatus'>,
+  items: readonly DesignPackageItem[] | undefined,
+  documents: readonly EngineeringDocument[],
+  hasActiveReviewSession = false,
+): PackageSubmitEligibility {
+  if (!isPackageProjectedStatusSubmittable(pkg)) {
+    return { submittable: false, reason: null };
+  }
+
+  if (hasActiveReviewSession) {
+    return {
+      submittable: false,
+      reason: 'This package already has an active review session.',
+    };
+  }
+
+  const packageItems = items ?? [];
+  if (packageItems.length === 0) {
+    return {
+      submittable: false,
+      reason: 'Add at least one engineering document version before submitting.',
+    };
+  }
+
+  const statusByEdvId = buildEdvStatusMap(documents);
+  const blockingStatuses = [
+    ...new Set(
+      packageItems
+        .map((item) => statusByEdvId.get(item.engineeringDocumentVersionId))
+        .filter(
+          (status): status is EdvStatus =>
+            status !== undefined &&
+            status !== 'DRAFT' &&
+            status !== 'IN_REVIEW',
+        ),
+    ),
+  ];
+
+  if (blockingStatuses.length > 0) {
+    return {
+      submittable: false,
+      reason: `All package EDVs must be Draft before submitting. Found: ${blockingStatuses.map(formatEdvStatus).join(', ')}.`,
+    };
+  }
+
+  if (
+    packageItems.some(
+      (item) => !statusByEdvId.has(item.engineeringDocumentVersionId),
+    )
+  ) {
+    return {
+      submittable: false,
+      reason: 'Package references EDVs that could not be resolved. Refresh and try again.',
+    };
+  }
+
+  return { submittable: true, reason: null };
+}
+
+/**
+ * True when the package can be submitted for review (draft EDVs and eligible status).
+ */
+export function isPackageSubmittable(
+  pkg: Pick<DesignPackage, 'projectedStatus'>,
+  items?: readonly DesignPackageItem[],
+  documents?: readonly EngineeringDocument[],
+  hasActiveReviewSession = false,
+): boolean {
+  if (!items || !documents) {
+    return isPackageProjectedStatusSubmittable(pkg) && !hasActiveReviewSession;
+  }
+
+  return getPackageSubmitEligibility(
+    pkg,
+    items,
+    documents,
+    hasActiveReviewSession,
+  ).submittable;
 }
 
 /**

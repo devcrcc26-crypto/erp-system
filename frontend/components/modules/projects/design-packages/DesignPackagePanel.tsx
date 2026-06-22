@@ -39,7 +39,7 @@ import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatus
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { isPackageSubmittable } from '@/lib/utils/package-workflow';
+import { getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
 
 function groupPackagesByStatus(
   packages: DesignPackage[],
@@ -108,7 +108,7 @@ export default function DesignPackagePanel({
     const options: { value: string; label: string }[] = [];
     for (const doc of docs) {
       for (const version of doc.versions ?? []) {
-        if (assignedIds.has(version.id)) {
+        if (assignedIds.has(version.id) || version.status !== 'DRAFT') {
           continue;
         }
         options.push({
@@ -163,9 +163,16 @@ export default function DesignPackagePanel({
       title: '',
       key: 'actions',
       width: 320,
-      render: (_value, record) => (
+      render: (_value, record) => {
+        const submitEligibility = getPackageSubmitEligibility(
+          record,
+          record.items,
+          documentsQuery.data?.data ?? [],
+        );
+
+        return (
         <Space size="small" wrap>
-          {lens.canSubmitDesignPackage && isPackageSubmittable(record) ? (
+          {lens.canSubmitDesignPackage && submitEligibility.submittable ? (
             <Button
               type="link"
               className="!px-0"
@@ -221,7 +228,8 @@ export default function DesignPackagePanel({
             Add dependency
           </Button>
         </Space>
-      ),
+        );
+      },
     },
   ];
 

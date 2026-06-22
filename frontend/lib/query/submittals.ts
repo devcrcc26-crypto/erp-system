@@ -14,10 +14,12 @@ import {
   apiPost,
 } from '@/lib/api/client';
 import type {
+  CreateConstructionSubmittalRequest,
   CreateSubmittalRequest,
   CreateSubmittalReviewRequest,
   PmListFilters,
   Submittal,
+  SubmittalDetail,
   SubmittalReview,
   SubmittalStatus,
   UpdateSubmittalRequest,
@@ -81,7 +83,7 @@ export function useSubmittal(
   return useQuery({
     queryKey: submittalKeys.detail(projectId, submittalId),
     queryFn: () =>
-      apiGet<Submittal>(`${submittalsPath(projectId)}/${submittalId}`),
+      apiGet<SubmittalDetail>(`${submittalsPath(projectId)}/${submittalId}`),
     enabled: Boolean(projectId) && Boolean(submittalId) && enabled,
     retry: false,
   });
@@ -117,6 +119,52 @@ export function useCreateSubmittal() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: submittalKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useCreateConstructionSubmittal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      body,
+    }: {
+      projectId: string;
+      body: CreateConstructionSubmittalRequest;
+    }) =>
+      apiPost<SubmittalDetail>(`${submittalsPath(projectId)}/construction`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+export function useSubmitSubmittalToLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+    }: {
+      projectId: string;
+      submittalId: string;
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsPath(projectId)}/${submittalId}/submit-to-lead`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.detail(variables.projectId, variables.submittalId),
       });
     },
   });

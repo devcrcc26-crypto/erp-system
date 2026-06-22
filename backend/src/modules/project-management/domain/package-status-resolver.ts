@@ -4,6 +4,8 @@ import { DesignPackageProjectedStatus } from './contracts/enums/design-package-p
 export interface PackageStatusInput {
   readonly edvStatuses: readonly EdvStatus[];
   readonly reworkRequired?: boolean;
+  /** Active governance session — EDV APPROVED does not mean package is lead-ready yet. */
+  readonly activeGovernanceSession?: boolean;
 }
 
 /**
@@ -27,11 +29,18 @@ export const PACKAGE_STATUS_PRIORITY: readonly DesignPackageProjectedStatus[] =
  * 3. all EDV = APPROVED                         → PENDING_LEAD
  * 4. all EDV = LOCKED                           → APPROVED
  * 5. empty package                              → IN_PROGRESS
+ *
+ * When activeGovernanceSession is true, premature EDV APPROVED stays IN_PROGRESS
+ * until the review session closes at the final tier.
  */
 export function resolvePackageProjectedStatus(
   input: PackageStatusInput,
 ): DesignPackageProjectedStatus {
-  const { edvStatuses, reworkRequired = false } = input;
+  const {
+    edvStatuses,
+    reworkRequired = false,
+    activeGovernanceSession = false,
+  } = input;
 
   if (reworkRequired) {
     return DesignPackageProjectedStatus.REWORK_REQUIRED;
@@ -50,6 +59,9 @@ export function resolvePackageProjectedStatus(
   }
 
   if (edvStatuses.every((s) => s === EdvStatus.APPROVED)) {
+    if (activeGovernanceSession) {
+      return DesignPackageProjectedStatus.IN_PROGRESS;
+    }
     return DesignPackageProjectedStatus.PENDING_LEAD;
   }
 

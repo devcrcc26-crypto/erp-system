@@ -21,6 +21,10 @@ import { useBatchReviewApprove, useBatchReviewReturn } from '@/lib/query/review-
 import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import {
+  canBatchApprovePackageEdvs,
+  isFinalReviewTier,
+} from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import type { EngineeringDocument } from '@/lib/api/epc.types';
@@ -196,6 +200,13 @@ export default function ReviewModePanel({
   const sessionComments = reviewMode?.comments ?? [];
   const commentStatuses = sessionComments.map((comment) => comment.status);
   const approvalAllowed = canApproveReviewSession(commentStatuses);
+  const inReviewEdvCount = packageDocumentRows.filter(
+    (row) => row.info?.status === 'IN_REVIEW',
+  ).length;
+  const canBatchApproveEdvs = canBatchApprovePackageEdvs(
+    reviewMode?.currentTier,
+    inReviewEdvCount,
+  );
 
   useEffect(() => {
     setActiveDesignPackage(packageId);
@@ -267,6 +278,14 @@ export default function ReviewModePanel({
   return (
     <div className="flex flex-col gap-4 overflow-x-hidden" data-testid="review-mode-panel">
       <ReviewApprovalBlockedAlert comments={sessionComments} />
+      {!isFinalReviewTier(reviewMode?.currentTier) && (
+        <Alert
+          type="info"
+          showIcon
+          title="Governance review in progress"
+          description="Use Approve & escalate in the governance console to advance to the next tier. EDV approval happens at the department chief tier."
+        />
+      )}
       <BulkReviewActionBar
         selectedCount={selectedEdvIds.length}
         totalCount={selectableEdvIds.length}
@@ -277,6 +296,7 @@ export default function ReviewModePanel({
         approveLoading={batchApprove.isPending}
         returnLoading={batchReturn.isPending}
         disabled={!lens.canApproveReview || !approvalAllowed}
+        showApproveAll={canBatchApproveEdvs}
       />
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">

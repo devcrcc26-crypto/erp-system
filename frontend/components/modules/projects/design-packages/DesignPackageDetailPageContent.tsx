@@ -38,7 +38,12 @@ import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
-import { getPackageLockGuidance, isPackageSubmittable } from '@/lib/utils/package-workflow';
+import { getPackageLockGuidance, getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
+import {
+  canBatchApprovePackageEdvs,
+  getSessionApproveLabel,
+  isFinalReviewTier,
+} from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { layout } from '@/lib/theme/layout';
@@ -124,10 +129,19 @@ export default function DesignPackageDetailPageContent({
     documentsQuery.data?.data ?? [],
     Boolean(reviewSessionId),
   );
+  const submitEligibility = getPackageSubmitEligibility(
+    pkg,
+    pkg.items,
+    documentsQuery.data?.data ?? [],
+    Boolean(reviewSessionId),
+  );
   const canApproveAllInReview =
     lens.canApproveReview &&
     Boolean(reviewSessionId) &&
-    lockGuidance.inReviewEdvIds.length > 0;
+    canBatchApprovePackageEdvs(
+      reviewMode?.currentTier,
+      lockGuidance.inReviewEdvIds.length,
+    );
 
   async function handleApproveAllEdvs(): Promise<void> {
     if (!reviewSessionId || lockGuidance.inReviewEdvIds.length === 0) {
@@ -239,12 +253,12 @@ export default function DesignPackageDetailPageContent({
                 <Button type="primary">Open review mode</Button>
               </Link>
             )}
-            {lens.canSubmitDesignPackage && isPackageSubmittable(pkg) && (
+            {lens.canSubmitDesignPackage && submitEligibility.submittable && (
               <Tooltip
                 title={
                   hasUnacknowledgedComments
                     ? 'Acknowledge all comments before resubmitting'
-                    : undefined
+                    : submitEligibility.reason ?? undefined
                 }
               >
                 <Button
@@ -264,7 +278,7 @@ export default function DesignPackageDetailPageContent({
                 loading={approveSession.isPending}
                 onClick={() => void handleApproveSession()}
               >
-                Approve session
+                {getSessionApproveLabel(reviewMode?.currentTier)}
               </Button>
             )}
             {canApproveAllInReview && (
@@ -303,6 +317,17 @@ export default function DesignPackageDetailPageContent({
         }
       >
         <ProjectionLagHelper pending={pkg.projectionPending} />
+
+        {reviewSessionId && !isFinalReviewTier(reviewMode?.currentTier) && (
+          <div className="mb-4">
+            <Alert
+              type="info"
+              showIcon
+              title="Advance governance tier"
+              description="Use Approve & escalate to send this package to the next reviewer. Do not use Approve all EDVs until the department chief tier."
+            />
+          </div>
+        )}
 
         {reviewSessionId && (
           <div className="mb-4">

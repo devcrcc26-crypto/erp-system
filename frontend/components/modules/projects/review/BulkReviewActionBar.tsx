@@ -13,6 +13,7 @@ export interface BulkReviewActionBarProps {
   approveLoading?: boolean;
   returnLoading?: boolean;
   disabled?: boolean;
+  showApproveAll?: boolean;
 }
 
 /**
@@ -28,6 +29,7 @@ export default function BulkReviewActionBar({
   approveLoading = false,
   returnLoading = false,
   disabled = false,
+  showApproveAll = true,
 }: BulkReviewActionBarProps): React.ReactNode {
   const allSelected = totalCount > 0 && selectedCount === totalCount;
   const indeterminate = selectedCount > 0 && selectedCount < totalCount;
@@ -62,14 +64,16 @@ export default function BulkReviewActionBar({
       </Space>
 
       <Space wrap>
-        <Button
-          type="primary"
-          disabled={disabled || selectedCount === 0}
-          loading={approveLoading}
-          onClick={onApproveAll}
-        >
-          Approve All
-        </Button>
+        {showApproveAll ? (
+          <Button
+            type="primary"
+            disabled={disabled || selectedCount === 0}
+            loading={approveLoading}
+            onClick={onApproveAll}
+          >
+            Approve All
+          </Button>
+        ) : null}
         <Button
           danger
           disabled={disabled || selectedCount === 0}

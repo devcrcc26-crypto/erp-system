@@ -1,22 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Spin,
-} from 'antd';
+import { Alert, Button, Input, Select, Space, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
@@ -24,133 +12,23 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
-  CreateSubmittalRequest,
   Submittal,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
-import { useCreateSubmittal, useSubmittals } from '@/lib/query/submittals';
+import { useSubmittals } from '@/lib/query/submittals';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
   isOverdue,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
-import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { useAppMessage } from '@/hooks/use-app-message';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-interface SubmittalFormValues {
-  category: string;
-  title: string;
-  contractor?: string;
-  supplier?: string;
-  specReference?: string;
-  revisionNumber?: number;
-  dueDate?: Dayjs;
-}
-
-function SubmittalFormDrawer({
-  open,
-  projectId,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  projectId: string;
-  onClose: () => void;
-  onSaved: () => void;
-}): React.ReactNode {
-  const [form] = Form.useForm<SubmittalFormValues>();
-  const createSubmittal = useCreateSubmittal();
-  const messageApi = useAppMessage();
-
-  async function handleSubmit(values: SubmittalFormValues): Promise<void> {
-    const body: CreateSubmittalRequest = {
-      category: values.category.trim(),
-      title: values.title.trim(),
-      contractor: values.contractor?.trim() || undefined,
-      supplier: values.supplier?.trim() || undefined,
-      specReference: values.specReference?.trim() || undefined,
-      revisionNumber: values.revisionNumber,
-      dueDate: values.dueDate?.toISOString(),
-    };
-    try {
-      await createSubmittal.mutateAsync({ projectId, body });
-      messageApi.success('Submittal created successfully');
-      form.resetFields();
-      onSaved();
-      onClose();
-    } catch (error) {
-      notifyApiError(error, 'Failed to create submittal', messageApi);
-    }
-  }
-
-  return (
-    <Drawer
-      open={open}
-      title="New submittal"
-      onClose={onClose}
-      size="large"
-      destroyOnHidden
-    >
-      <Form<SubmittalFormValues>
-        form={form}
-        layout="vertical"
-        initialValues={{ revisionNumber: 1 }}
-        onFinish={(values: SubmittalFormValues) => void handleSubmit(values)}
-      >
-        <Form.Item
-          label="Category"
-          name="category"
-          rules={[{ required: true, message: 'Category is required' }]}
-        >
-          <Input placeholder="e.g. Shop drawings, Product data" />
-        </Form.Item>
-        <Form.Item
-          label="Title"
-          name="title"
-          rules={[{ required: true, message: 'Title is required' }]}
-        >
-          <Input placeholder="Submittal title" />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Contractor" name="contractor">
-            <Input />
-          </Form.Item>
-          <Form.Item label="Supplier" name="supplier">
-            <Input />
-          </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Spec reference" name="specReference">
-            <Input placeholder="e.g. Section 03 30 00" />
-          </Form.Item>
-          <Form.Item label="Revision" name="revisionNumber">
-            <InputNumber className="!w-full" min={1} />
-          </Form.Item>
-        </div>
-        <Form.Item label="Due date" name="dueDate">
-          <DatePicker className="w-full" />
-        </Form.Item>
-        <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={createSubmittal.isPending}
-          >
-            Create submittal
-          </Button>
-        </div>
-      </Form>
-    </Drawer>
-  );
-}
+import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import Link from 'next/link';
 
 export default function SubmittalsPageContent({
   projectId,
@@ -161,17 +39,17 @@ export default function SubmittalsPageContent({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
-  const [designSubmittalOpen, setDesignSubmittalOpen] = useState(false);
   const [selectedSubmittalId, setSelectedSubmittalId] = useState<string | null>(
     null,
   );
-  const { t } = useEpcTranslation();
   const lens = useRoleLens();
+  const resolveUserName = useUserNameLookup();
 
   const submittalsQuery = useSubmittals(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
+    submittalPurpose: 'IN_CONSTRUCTION',
   });
 
   const columns: ColumnsType<Submittal> = useMemo(
@@ -220,6 +98,13 @@ export default function SubmittalsPageContent({
         ),
       },
       {
+        title: 'Assigned to',
+        dataIndex: 'assignedTo',
+        key: 'assignedTo',
+        render: (value: string | null) =>
+          value ? resolveUserName(value) : '—',
+      },
+      {
         title: 'Due',
         dataIndex: 'dueDate',
         key: 'dueDate',
@@ -241,10 +126,10 @@ export default function SubmittalsPageContent({
         title: 'Contractor',
         dataIndex: 'contractor',
         key: 'contractor',
-        render: (value: string | null) => value ?? '-',
+        render: (value: string | null) => value ?? '—',
       },
     ],
-    [],
+    [resolveUserName],
   );
 
   if (submittalsQuery.isLoading) {
@@ -266,23 +151,23 @@ export default function SubmittalsPageContent({
   return (
     <>
       <FormLayout
-        title="Submittals"
-        description="Material approvals, shop drawings, and product data submittals."
+        title="Construction submittals"
+        description="Material approvals, shop drawings, and product data submitted to discipline leaders before purchase or installation."
         extra={
           <Space>
+            <Link href={`/projects/${projectId}/submittals/external-release`}>
+              <Button>External release</Button>
+            </Link>
             {lens.canCreateSubmittals && (
-              <Button onClick={() => setDesignSubmittalOpen(true)} disabled={apiUnavailable}>
-                {t('actions.designPackageSubmittal')}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreateOpen(true)}
+                disabled={apiUnavailable}
+              >
+                New submittal
               </Button>
             )}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateOpen(true)}
-              disabled={apiUnavailable}
-            >
-              New submittal
-            </Button>
           </Space>
         }
       >
@@ -292,7 +177,7 @@ export default function SubmittalsPageContent({
             showIcon
             className="!mb-4"
             title="Submittal APIs are not connected yet."
-            description="This page is ready - data will appear when the project management backend module is available."
+            description="This page is ready — data will appear when the project management backend module is available."
           />
         )}
 
@@ -331,11 +216,14 @@ export default function SubmittalsPageContent({
             emptyText: (
               <TableEmptyState
                 icon={<Send />}
-                title="No submittals"
-                description="Create a submittal to send packages for review"
+                title="No construction submittals"
+                description="Create a submittal with design packages and documents for discipline leader approval"
                 action={
                   lens.canCreateSubmittals && !apiUnavailable
-                    ? { label: 'New submittal', onClick: () => setCreateOpen(true) }
+                    ? {
+                        label: 'New submittal',
+                        onClick: () => setCreateOpen(true),
+                      }
                     : undefined
                 }
               />
@@ -344,11 +232,14 @@ export default function SubmittalsPageContent({
         />
       </FormLayout>
 
-      <SubmittalFormDrawer
+      <ConstructionSubmittalDrawer
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void submittalsQuery.refetch()}
+        onCreated={(submittalId) => {
+          void submittalsQuery.refetch();
+          setSelectedSubmittalId(submittalId);
+        }}
       />
 
       <SubmittalDetailDrawer
@@ -356,13 +247,6 @@ export default function SubmittalsPageContent({
         submittalId={selectedSubmittalId}
         onClose={() => setSelectedSubmittalId(null)}
         onUpdated={() => void submittalsQuery.refetch()}
-      />
-
-      <SubmittalPackageDrawer
-        open={designSubmittalOpen}
-        projectId={projectId}
-        onClose={() => setDesignSubmittalOpen(false)}
-        onCreated={() => void submittalsQuery.refetch()}
       />
     </>
   );

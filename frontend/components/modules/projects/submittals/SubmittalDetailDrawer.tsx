@@ -7,6 +7,7 @@ import {
   Drawer,
   Form,
   Input,
+  List,
   Select,
   Spin,
   Timeline,
@@ -22,6 +23,7 @@ import {
   useAddSubmittalReview,
   useSubmittal,
   useSubmittalReviews,
+  useSubmitSubmittalToLead,
   useUpdateSubmittal,
 } from '@/lib/query/submittals';
 import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
@@ -31,6 +33,8 @@ import {
   formatSubmittalStatus,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ReviewFormValues {
   status: SubmittalStatus;
@@ -51,15 +55,21 @@ export default function SubmittalDetailDrawer({
   const [form] = Form.useForm<ReviewFormValues>();
   const open = Boolean(submittalId);
   const resolveUserName = useUserNameLookup();
+  const messageApi = useAppMessage();
 
   const submittalQuery = useSubmittal(projectId, submittalId ?? '', open);
   const reviewsQuery = useSubmittalReviews(projectId, submittalId ?? '', open);
   const updateSubmittal = useUpdateSubmittal();
   const addReview = useAddSubmittalReview();
   const issueSubmittal = useIssueSubmittal();
+  const submitToLead = useSubmitSubmittalToLead();
 
   const submittal = submittalQuery.data;
   const reviews = reviewsQuery.data ?? [];
+  const isConstruction = submittal?.submittalPurpose === 'IN_CONSTRUCTION';
+  const isExternalRelease =
+    submittal?.submittalPurpose === 'DISCIPLINE_SITE' ||
+    submittal?.submittalPurpose === 'DISCIPLINE_CONSULTANT';
 
   async function handleStatusChange(status: SubmittalStatus): Promise<void> {
     if (!submittalId || !submittal) {
@@ -93,13 +103,27 @@ export default function SubmittalDetailDrawer({
     void submittalQuery.refetch();
   }
 
+  async function handleSubmitToLead(): Promise<void> {
+    if (!submittalId) {
+      return;
+    }
+    try {
+      await submitToLead.mutateAsync({ projectId, submittalId });
+      messageApi.success('Submittal submitted to discipline leader');
+      onUpdated();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to submit submittal', messageApi);
+    }
+  }
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title={
         submittal
-          ? `${submittal.submittalNumber} —${submittal.title}`
+          ? `${submittal.submittalNumber} — ${submittal.title}`
           : 'Submittal detail'
       }
       size="large"
@@ -151,6 +175,11 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Submitted by">
               {resolveUserName(submittal.submittedBy)}
             </Descriptions.Item>
+            <Descriptions.Item label="Assigned to">
+              {submittal.assignedTo
+                ? resolveUserName(submittal.assignedTo)
+                : '—'}
+            </Descriptions.Item>
             <Descriptions.Item label="Reviewed by">
               {submittal.reviewedBy
                 ? resolveUserName(submittal.reviewedBy)
@@ -165,23 +194,78 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Review date">
               {formatProjectDate(submittal.reviewDate)}
             </Descriptions.Item>
+            {submittal.issuedAt && (
+              <Descriptions.Item label="Issued at">
+                {formatProjectDate(submittal.issuedAt)}
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">
-              Update status
-            </p>
-            <Select
-              className="w-full max-w-sm"
-              value={submittal.status}
-              onChange={(value: SubmittalStatus) => void handleStatusChange(value)}
-              loading={updateSubmittal.isPending}
-              options={SUBMITTAL_WORKFLOW.map((step) => ({
-                value: step.key,
-                label: step.label,
-              }))}
+          {submittal.items.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-slate-900">
+                Linked design packages
+              </h3>
+              <List
+                size="small"
+                bordered
+                dataSource={submittal.items}
+                renderItem={(item) => (
+                  <List.Item>
+                    <span className="text-sm text-slate-700">
+                      Package {item.sortOrder + 1}
+                      {item.snapshotCaptured ? ' (snapshot captured)' : ''}
+                    </span>
+                  </List.Item>
+                )}
+              />
+            </div>
+          )}
+
+          <DocumentAttachmentPanel
+            folderId={submittal.attachmentFolderId ?? undefined}
+            readOnly={submittal.status !== 'DRAFT'}
+            title="Supporting documents"
+            description="Upload shop drawings, product data sheets, samples photos, and other approval documents."
+          />
+
+          {isConstruction && submittal.status === 'DRAFT' && submittalId && (
+            <Alert
+              type="warning"
+              showIcon
+              title="Ready to submit?"
+              description="Attach design packages and upload your document package, then submit directly to the discipline leader for approval."
+              action={
+                <Button
+                  type="primary"
+                  loading={submitToLead.isPending}
+                  onClick={() => void handleSubmitToLead()}
+                >
+                  Submit to discipline leader
+                </Button>
+              }
             />
-          </div>
+          )}
+
+          {(isConstruction || isExternalRelease) && (
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">
+                Update status
+              </p>
+              <Select
+                className="w-full max-w-sm"
+                value={submittal.status}
+                onChange={(value: SubmittalStatus) =>
+                  void handleStatusChange(value)
+                }
+                loading={updateSubmittal.isPending}
+                options={SUBMITTAL_WORKFLOW.map((step) => ({
+                  value: step.key,
+                  label: step.label,
+                }))}
+              />
+            </div>
+          )}
 
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-900">
@@ -263,37 +347,33 @@ export default function SubmittalDetailDrawer({
             </Form>
           </div>
 
-          <Alert
-            type="info"
-            showIcon
-            title="PDF markup viewer"
-            description="Inline PDF review with stamps and markups is planned for v2. Upload submittal files via document attachments when folders are linked."
-          />
-
-          {submittalId && (
+          {isExternalRelease && submittalId && (
             <SubmittalExternalReviewPanel submittalId={submittalId} />
           )}
 
-          {submittal?.status === 'APPROVED' && submittalId && (
-            <Button
-              type="primary"
-              className="mb-4"
-              loading={issueSubmittal.isPending}
-              onClick={() => {
-                void issueSubmittal
-                  .mutateAsync({ projectId, submittalId })
-                  .then(() => onUpdated());
-              }}
-            >
-              Issue submittal (EPC)
-            </Button>
-          )}
-
-          <DocumentAttachmentPanel
-            readOnly
-            title="Submittal documents"
-            description="Attach shop drawings and product data when document folders are provisioned."
-          />
+          {isExternalRelease &&
+            submittal.status === 'DRAFT' &&
+            submittal.items.length > 0 &&
+            submittalId && (
+              <Button
+                type="primary"
+                loading={issueSubmittal.isPending}
+                onClick={() => {
+                  void issueSubmittal
+                    .mutateAsync({ projectId, submittalId })
+                    .then(() => {
+                      messageApi.success('Submittal issued to external reviewers');
+                      onUpdated();
+                      void submittalQuery.refetch();
+                    })
+                    .catch((error: unknown) => {
+                      notifyApiError(error, 'Failed to issue submittal', messageApi);
+                    });
+                }}
+              >
+                Issue to site / consultant
+              </Button>
+            )}
         </div>
       )}
     </Drawer>

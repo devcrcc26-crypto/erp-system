@@ -614,6 +614,51 @@ export class CreateDesignSubmittalDto {
   taskDisciplineId?: string;
 }
 
+export class CreateConstructionSubmittalDto {
+  @ApiProperty()
+  @IsString()
+  category!: string;
+
+  @ApiProperty()
+  @IsString()
+  title!: string;
+
+  @ApiProperty()
+  @IsEntityUuid()
+  taskDisciplineId!: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  designPackageIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contractor?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  supplier?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  specReference?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  revisionNumber?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+}
+
 export class IssueSubmittalDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -1011,4 +1056,9 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ enum: SubmittalPurpose })
+  @IsOptional()
+  @IsEnum(SubmittalPurpose)
+  submittalPurpose?: SubmittalPurpose;
 }

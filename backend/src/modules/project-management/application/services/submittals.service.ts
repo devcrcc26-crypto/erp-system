@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, SubmittalStatus } from '@prisma/client';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   AddSubmittalItemsDto,
+  CreateConstructionSubmittalDto,
   CreateDesignSubmittalDto,
   CreateSubmittalDto,
   CreateSubmittalReviewDto,
@@ -30,6 +31,8 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { DisciplineScopeService } from './discipline-scope.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ExternalReviewTriggerService } from './external-review-trigger.service';
 import { ProjectScopeService } from './project-scope.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
@@ -53,6 +56,8 @@ export class SubmittalsService {
     private readonly documentNumberService: DocumentNumberService,
     private readonly workflowKernel: WorkflowKernelService,
     private readonly externalReviewTrigger: ExternalReviewTriggerService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
+    private readonly disciplineScopeService: DisciplineScopeService,
   ) {}
 
   /**
@@ -93,7 +98,12 @@ export class SubmittalsService {
     ctx: PmContext,
     projectId: string,
     submittalId: string,
-  ): Promise<MappedSubmittal & { items: MappedSubmittalItem[] }> {
+  ): Promise<
+    MappedSubmittal & {
+      items: MappedSubmittalItem[];
+      attachmentFolderId: string | null;
+    }
+  > {
     const row = await this.prisma.submittal.findFirst({
       where: activeOnly({ id: submittalId, projectId }),
       include: { items: { orderBy: { sortOrder: 'asc' } } },
@@ -101,9 +111,17 @@ export class SubmittalsService {
     if (!row) {
       throw new NotFoundException('Submittal not found');
     }
+
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.SUBMITTAL,
+      submittalId,
+    );
+
     return {
       ...mapSubmittal(row),
       items: row.items.map(mapSubmittalItem),
+      attachmentFolderId: folder?.id ?? null,
     };
   }
 
@@ -114,7 +132,7 @@ export class SubmittalsService {
     ctx: PmContext,
     projectId: string,
     dto: CreateSubmittalDto,
-  ): Promise<MappedSubmittal> {
+  ): Promise<MappedSubmittal & { attachmentFolderId: string }> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
     const submittalNumber = await this.documentNumberService.getNextNumber(
@@ -139,6 +157,172 @@ export class SubmittalsService {
         dueDate: parseOptionalDate(dto.dueDate),
         submissionDate: this.todayDate(),
         createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      row.id,
+      row.submittalNumber,
+    );
+
+    return { ...mapSubmittal(row), attachmentFolderId: folder.id };
+  }
+
+  /**
+   * Creates an in-construction submittal with optional design packages and document folder.
+   */
+  async createConstructionSubmittal(
+    ctx: PmContext,
+    projectId: string,
+    dto: CreateConstructionSubmittalDto,
+  ): Promise<
+    MappedSubmittal & {
+      items: MappedSubmittalItem[];
+      attachmentFolderId: string;
+    }
+  > {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    await this.disciplineScopeService.assertDisciplineAccess(
+      ctx,
+      projectId,
+      dto.taskDisciplineId,
+    );
+
+    const designPackageIds = dto.designPackageIds ?? [];
+    if (designPackageIds.length > 0) {
+      await this.assertPackagesBelongToDiscipline(
+        ctx.companyId,
+        projectId,
+        dto.taskDisciplineId,
+        designPackageIds,
+      );
+    }
+
+    const submittalNumber = await this.documentNumberService.getNextNumber(
+      ctx,
+      'SUBMITTAL',
+    );
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const submittal = await tx.submittal.create({
+        data: {
+          projectId,
+          submittedBy: ctx.userId,
+          submittalNumber,
+          category: dto.category,
+          title: dto.title,
+          submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+          preparedByRole: SubmittalPreparedByRole.SITE_TEAM,
+          taskDisciplineId: dto.taskDisciplineId,
+          contractor: dto.contractor,
+          supplier: dto.supplier,
+          specReference: dto.specReference,
+          revisionNumber: dto.revisionNumber ?? 1,
+          dueDate: parseOptionalDate(dto.dueDate),
+          status: SubmittalStatus.DRAFT,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      const items: MappedSubmittalItem[] = [];
+      for (let i = 0; i < designPackageIds.length; i++) {
+        const item = await tx.submittalItem.create({
+          data: {
+            companyId: ctx.companyId,
+            submittalId: submittal.id,
+            designPackageId: designPackageIds[i]!,
+            sortOrder: i,
+            createdBy: ctx.userId,
+          },
+        });
+        items.push(mapSubmittalItem(item));
+      }
+
+      return { submittal, items };
+    });
+
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      row.submittal.id,
+      row.submittal.submittalNumber,
+    );
+
+    return {
+      ...mapSubmittal(row.submittal),
+      items: row.items,
+      attachmentFolderId: folder.id,
+    };
+  }
+
+  /**
+   * Submits an in-construction submittal to the discipline leader for approval.
+   */
+  async submitToDisciplineLead(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+  ): Promise<MappedSubmittal> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+
+    if (submittal.submittalPurpose !== SubmittalPurpose.IN_CONSTRUCTION) {
+      throw new BadRequestException(
+        'Only in-construction submittals can be submitted to a discipline leader',
+      );
+    }
+    if (submittal.status !== SubmittalStatus.DRAFT) {
+      throw new ConflictException('Submittal has already been submitted');
+    }
+    if (!submittal.taskDisciplineId) {
+      throw new BadRequestException('Submittal discipline is required');
+    }
+
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        id: submittal.taskDisciplineId,
+        companyId: ctx.companyId,
+      }),
+      select: { disciplineLeadUserId: true },
+    });
+    if (!discipline?.disciplineLeadUserId) {
+      throw new BadRequestException(
+        'No discipline leader is assigned for this discipline',
+      );
+    }
+
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.SUBMITTAL,
+      submittalId,
+    );
+    const itemCount = await this.prisma.submittalItem.count({
+      where: { submittalId },
+    });
+    const attachmentCount = folder
+      ? await this.prisma.document.count({
+          where: activeOnly({
+            companyId: ctx.companyId,
+            folderId: folder.id,
+          }),
+        })
+      : 0;
+
+    if (itemCount === 0 && attachmentCount === 0) {
+      throw new BadRequestException(
+        'Attach at least one design package or upload supporting documents before submitting',
+      );
+    }
+
+    const row = await this.prisma.submittal.update({
+      where: { id: submittalId },
+      data: {
+        assignedTo: discipline.disciplineLeadUserId,
+        status: SubmittalStatus.SUBMITTED,
+        submissionDate: this.todayDate(),
         updatedBy: ctx.userId,
       },
     });
@@ -396,6 +580,10 @@ export class SubmittalsService {
       where.status = query.status as SubmittalStatus;
     }
 
+    if (query.submittalPurpose) {
+      where.submittalPurpose = query.submittalPurpose;
+    }
+
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [
@@ -417,6 +605,32 @@ export class SubmittalsService {
       throw new NotFoundException('Submittal not found');
     }
     return row;
+  }
+
+  private async assertPackagesBelongToDiscipline(
+    companyId: string,
+    projectId: string,
+    taskDisciplineId: string,
+    designPackageIds: readonly string[],
+  ): Promise<void> {
+    const packages = await this.prisma.designPackage.findMany({
+      where: {
+        id: { in: [...designPackageIds] },
+        companyId,
+        taskDisciplineId,
+        deletedAt: null,
+        taskDiscipline: {
+          task: { projectId, deletedAt: null },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (packages.length !== designPackageIds.length) {
+      throw new BadRequestException(
+        'One or more design packages are invalid for the selected discipline',
+      );
+    }
   }
 
   private todayDate(): Date {

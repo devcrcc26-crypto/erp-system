@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -38,6 +39,7 @@ import {
 } from '../../domain/comment-state-machine';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
+  EdvWithDiscipline,
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
@@ -157,12 +159,27 @@ export class ReviewWorkflowService {
       }
 
       const edvIds = pkg.items.map((i) => i.engineeringDocumentVersionId);
-      const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
+      let loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
         tx,
         command.companyId,
         edvIds,
       );
       this.conflictGuard.assertBatchEdvsResolved(edvIds, loaded);
+
+      const projectId = await this.resolveProjectIdFromDiscipline(
+        tx,
+        command.taskDisciplineId,
+        command.companyId,
+      );
+
+      loaded = await this.repairOrphanedInReviewEdvs(
+        tx,
+        command,
+        correlationId,
+        projectId,
+        loaded,
+      );
+
       this.conflictGuard.assertPackageSubmitEdvStates(
         loaded.map((e) => e.status as EdvStatus),
       );
@@ -224,12 +241,6 @@ export class ReviewWorkflowService {
         },
         correlationId,
       });
-
-      const projectId = await this.resolveProjectIdFromDiscipline(
-        tx,
-        command.taskDisciplineId,
-        command.companyId,
-      );
 
       const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
@@ -690,6 +701,18 @@ export class ReviewWorkflowService {
       const isFinalTier = tierIndex >= REVIEW_TIER_ORDER.length - 1;
 
       if (!isFinalTier) {
+        await this.revertPrematureEdvApprovalsInTx(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          correlationId,
+          designPackageId: session.designPackageId,
+          projectId: await this.resolveProjectIdFromDiscipline(
+            tx,
+            session.taskDisciplineId,
+            command.companyId,
+          ),
+        });
+
         await this.advanceActiveSessionTierInTx(tx, {
           companyId: command.companyId,
           actorId: command.actorId,
@@ -698,6 +721,17 @@ export class ReviewWorkflowService {
           triggerAction: 'ADVANCE_REVIEW_TIER',
         });
 
+        await this.epcWorkflowRepository.markPackageProjectionPendingById(
+          tx,
+          session.designPackageId,
+        );
+
+        const phaseB = await this.stateProjection.recomputeDirtyInTx(
+          tx,
+          command.companyId,
+          command.actorId,
+        );
+
         return {
           commandType: 'ApproveReviewSession',
           correlationId,
@@ -705,6 +739,10 @@ export class ReviewWorkflowService {
           edvStatuses: {},
           reviewSessionId: session.id,
           intentEventIds: [],
+          packageProjectedStatus:
+            phaseB.packageStatuses[session.designPackageId],
+          disciplineProjectedStatus:
+            phaseB.disciplineStatuses[session.taskDisciplineId],
         };
       }
 
@@ -1014,6 +1052,104 @@ export class ReviewWorkflowService {
   /**
    * Escalates an active review session to the next governance tier and reassigns inbox ownership.
    */
+  /**
+   * Reverts EDVs prematurely batch-approved before the final governance tier.
+   */
+  private async revertPrematureEdvApprovalsInTx(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      actorId: string;
+      correlationId: string;
+      designPackageId: string;
+      projectId: string;
+    },
+  ): Promise<void> {
+    const pkg = await this.epcWorkflowRepository.findPackageWithItems(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+    if (!pkg) {
+      return;
+    }
+
+    const edvIds = pkg.items.map((item) => item.engineeringDocumentVersionId);
+    const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
+      tx,
+      input.companyId,
+      edvIds,
+    );
+
+    const premature = loaded.filter(
+      (edv) => (edv.status as EdvStatus) === EdvStatus.APPROVED,
+    );
+    if (premature.length === 0) {
+      return;
+    }
+
+    await this.edvTransitionService.applyInTx(tx, {
+      companyId: input.companyId,
+      actorId: input.actorId,
+      correlationId: input.correlationId,
+      projectId: input.projectId,
+      transitions: premature.map((edv) => ({
+        engineeringDocumentVersionId: edv.id,
+        targetStatus: EdvStatus.IN_REVIEW,
+        reason: 'Reverted premature EDV approval during governance escalation',
+      })),
+    });
+  }
+
+  /**
+   * Reverts IN_REVIEW EDVs with no active review session (e.g. after session data loss).
+   */
+  private async repairOrphanedInReviewEdvs(
+    tx: PrismaTx,
+    command: SubmitPackageForReviewCommand,
+    correlationId: string,
+    projectId: string,
+    loaded: readonly EdvWithDiscipline[],
+  ): Promise<EdvWithDiscipline[]> {
+    const orphans = loaded.filter(
+      (edv) => (edv.status as EdvStatus) === EdvStatus.IN_REVIEW,
+    );
+    if (orphans.length === 0) {
+      return [...loaded];
+    }
+
+    for (const edv of orphans) {
+      const activeSession = await this.epcReviewRepository.findActiveSessionForEdv(
+        tx,
+        command.companyId,
+        edv.id,
+      );
+      if (activeSession) {
+        throw new ConflictException(
+          `EDV ${edv.id} is already in an active review session on another package`,
+        );
+      }
+    }
+
+    await this.edvTransitionService.applyInTx(tx, {
+      companyId: command.companyId,
+      actorId: command.actorId,
+      correlationId,
+      projectId,
+      transitions: orphans.map((edv) => ({
+        engineeringDocumentVersionId: edv.id,
+        targetStatus: EdvStatus.DRAFT,
+        reason: 'Orphaned IN_REVIEW state repaired before package submit',
+      })),
+    });
+
+    return this.epcWorkflowRepository.findEdvsWithDiscipline(
+      tx,
+      command.companyId,
+      loaded.map((edv) => edv.id),
+    );
+  }
+
   private async advanceActiveSessionTierInTx(
     tx: PrismaTx,
     input: {

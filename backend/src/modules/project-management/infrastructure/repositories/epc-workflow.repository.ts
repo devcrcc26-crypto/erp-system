@@ -5,6 +5,7 @@ import {
   EngineeringDocument,
   EngineeringDocumentVersion,
   Prisma,
+  ReviewSessionStatus,
   TaskDiscipline,
   WorkflowEventLog,
   WorkflowEventPhase,
@@ -166,6 +167,16 @@ export class EpcWorkflowRepository {
     });
   }
 
+  async markPackageProjectionPendingById(
+    tx: PrismaTx,
+    designPackageId: string,
+  ): Promise<void> {
+    await tx.designPackage.update({
+      where: { id: designPackageId },
+      data: { projectionPending: true },
+    });
+  }
+
   async findDirtyPackages(
     tx: PrismaTx,
     companyId: string,
@@ -184,6 +195,22 @@ export class EpcWorkflowRepository {
       where: activeOnly({ companyId }),
       orderBy: { createdAt: 'asc' },
     });
+  }
+
+  async hasActiveReviewSessionForPackage(
+    tx: PrismaTx,
+    companyId: string,
+    designPackageId: string,
+  ): Promise<boolean> {
+    const session = await tx.reviewSession.findFirst({
+      where: activeOnly({
+        companyId,
+        designPackageId,
+        status: ReviewSessionStatus.ACTIVE,
+      }),
+      select: { id: true },
+    });
+    return session !== null;
   }
 
   async findPackageEdvStatuses(

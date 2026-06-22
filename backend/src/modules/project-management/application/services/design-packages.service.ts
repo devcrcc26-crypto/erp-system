@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DesignPackageProjectedStatus, WorkflowEntityType } from '@prisma/client';
+import {
+  DesignPackageProjectedStatus,
+  EdvStatus,
+  WorkflowEntityType,
+} from '@prisma/client';
 import {
   AddDesignPackageItemDto,
   BatchApproveEdvsDto,
@@ -199,6 +203,12 @@ export class DesignPackagesService {
     );
     if (!edv) {
       throw new NotFoundException('Engineering document version not found');
+    }
+
+    if (edv.status !== EdvStatus.DRAFT) {
+      throw new ConflictException(
+        `Only DRAFT engineering document versions can be added to a package; found ${edv.status}`,
+      );
     }
 
     const alreadyLinked = pkg.items.some(

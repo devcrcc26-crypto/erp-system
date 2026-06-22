@@ -16,6 +16,7 @@ describe('StateProjectionService', () => {
   const epcWorkflowRepository = {
     findDirtyPackages: jest.fn(),
     findPackageEdvStatuses: jest.fn(),
+    hasActiveReviewSessionForPackage: jest.fn(),
     updatePackageProjection: jest.fn(),
     findPackagesByDiscipline: jest.fn(),
     updateDisciplineProjection: jest.fn(),
@@ -44,6 +45,7 @@ describe('StateProjectionService', () => {
       EdvStatus.APPROVED,
       EdvStatus.APPROVED,
     ]);
+    epcWorkflowRepository.hasActiveReviewSessionForPackage.mockResolvedValue(false);
     epcWorkflowRepository.updatePackageProjection.mockResolvedValue(dirtyPkg);
     epcWorkflowRepository.findPackagesByDiscipline.mockResolvedValue([
       { id: 'pkg-1', projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD },
@@ -90,6 +92,7 @@ describe('StateProjectionService', () => {
     epcWorkflowRepository.findPackageEdvStatuses.mockResolvedValue([
       EdvStatus.LOCKED,
     ]);
+    epcWorkflowRepository.hasActiveReviewSessionForPackage.mockResolvedValue(false);
     epcWorkflowRepository.updatePackageProjection.mockResolvedValue(dirtyPkg);
     epcWorkflowRepository.findPackagesByDiscipline.mockResolvedValue([
       { id: 'pkg-2', projectedStatus: DesignPackageProjectedStatus.APPROVED },

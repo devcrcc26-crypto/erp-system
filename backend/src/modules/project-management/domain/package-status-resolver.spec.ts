@@ -28,6 +28,15 @@ describe('package-status-resolver', () => {
     ).toBe(DesignPackageProjectedStatus.PENDING_LEAD);
   });
 
+  it('keeps IN_PROGRESS when all EDV are APPROVED but governance session is active', () => {
+    expect(
+      resolvePackageProjectedStatus({
+        edvStatuses: [EdvStatus.APPROVED, EdvStatus.APPROVED],
+        activeGovernanceSession: true,
+      }),
+    ).toBe(DesignPackageProjectedStatus.IN_PROGRESS);
+  });
+
   it('returns APPROVED when all EDV are LOCKED', () => {
     expect(
       resolvePackageProjectedStatus({

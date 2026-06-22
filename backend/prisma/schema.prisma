@@ -36,6 +36,7 @@ enum FolderContextType {
   TASK_DISCIPLINE
   RFI
   ISSUE
+  SUBMITTAL
 }
 
 enum NotificationChannel {
@@ -422,6 +423,7 @@ model User {
   rfiResponses           RfiResponse[]
   submittedSubmittals    Submittal[]            @relation("SubmittalSubmittedBy")
   reviewedSubmittals     Submittal[]            @relation("SubmittalReviewedBy")
+  assignedSubmittals     Submittal[]            @relation("SubmittalAssignedTo")
   submittalReviews       SubmittalReview[]
   drawingVersions        DrawingVersion[]
   dailyLogsAsEngineer    DailyLog[]
@@ -1201,6 +1203,7 @@ enum ReviewTier {
 }
 
 enum SubmittalPurpose {
+  IN_CONSTRUCTION
   DISCIPLINE_SITE
   DISCIPLINE_CONSULTANT
   DEPUTY_BID
@@ -1209,6 +1212,7 @@ enum SubmittalPurpose {
 }
 
 enum SubmittalPreparedByRole {
+  SITE_TEAM
   DISCIPLINE_LEAD
   DEPUTY_CHIEF
 }
@@ -1756,6 +1760,7 @@ model Submittal {
   projectId        String                   @map("project_id")
   taskDisciplineId String?                  @map("task_discipline_id")
   submittedBy      String                   @map("submitted_by")
+  assignedTo       String?                  @map("assigned_to")
   reviewedBy       String?                  @map("reviewed_by")
   submittalNumber  String                   @map("submittal_number")
   category         String
@@ -1781,13 +1786,15 @@ model Submittal {
   project        Project         @relation(fields: [projectId], references: [id])
   taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
   submitter      User            @relation("SubmittalSubmittedBy", fields: [submittedBy], references: [id])
-  reviewer  User?             @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
+  assignee       User?           @relation("SubmittalAssignedTo", fields: [assignedTo], references: [id])
+  reviewer       User?           @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
   reviews   SubmittalReview[]
   items     SubmittalItem[]
   externalReviewTriggers ExternalReviewTrigger[]
 
   @@index([projectId], map: "idx_submittal_project_id")
   @@index([taskDisciplineId], map: "idx_submittal_task_discipline_id")
+  @@index([assignedTo], map: "idx_submittal_assigned_to")
   @@index([projectId, deletedAt], map: "idx_submittal_project_deleted")
   @@map("submittal")
 }

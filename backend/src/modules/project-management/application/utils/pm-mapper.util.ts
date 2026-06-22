@@ -185,6 +185,7 @@ export interface MappedSubmittal {
   projectId: string;
   taskDisciplineId: string | null;
   submittedBy: string;
+  assignedTo: string | null;
   reviewedBy: string | null;
   submittalNumber: string;
   category: string;
@@ -465,6 +466,7 @@ export function mapSubmittal(row: Submittal): MappedSubmittal {
     projectId: row.projectId,
     taskDisciplineId: row.taskDisciplineId,
     submittedBy: row.submittedBy,
+    assignedTo: row.assignedTo,
     reviewedBy: row.reviewedBy,
     submittalNumber: row.submittalNumber,
     category: row.category,

@@ -156,9 +156,16 @@ export class StateProjectionService {
       companyId,
       pkg.id,
     );
+    const activeGovernanceSession =
+      await this.epcWorkflowRepository.hasActiveReviewSessionForPackage(
+        tx,
+        companyId,
+        pkg.id,
+      );
 
     const projected = resolvePackageProjectedStatus({
       edvStatuses: edvStatuses.map((s) => s as EdvStatus),
+      activeGovernanceSession,
     });
 
     await this.epcWorkflowRepository.updatePackageProjection(
