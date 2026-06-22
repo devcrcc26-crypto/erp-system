@@ -15,8 +15,14 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  CreateActionItemDto,
+  CreateMeetingAgendaItemDto,
+  CreateMeetingAttendeeDto,
   CreateMeetingDto,
   PmListQueryDto,
+  UpdateActionItemDto,
+  UpdateMeetingAgendaItemDto,
+  UpdateMeetingAttendeeDto,
   UpdateMeetingDto,
 } from '../../application/dtos/pm.dtos';
 import { MeetingsService } from '../../application/services/meetings.service';
@@ -52,6 +58,168 @@ export class MeetingsController {
     @Body() dto: CreateMeetingDto,
   ): Promise<unknown> {
     return this.meetingsService.createMeeting(this.ctx(user), projectId, dto);
+  }
+
+  @Post(':id/agenda')
+  @RequirePermission('meetings', 'create')
+  @ApiOperation({ summary: 'Add agenda item' })
+  addAgendaItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateMeetingAgendaItemDto,
+  ): Promise<unknown> {
+    return this.meetingsService.addAgendaItem(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/agenda/:agendaItemId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Update agenda item' })
+  updateAgendaItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('agendaItemId') agendaItemId: string,
+    @Body() dto: UpdateMeetingAgendaItemDto,
+  ): Promise<unknown> {
+    return this.meetingsService.updateAgendaItem(
+      this.ctx(user),
+      projectId,
+      id,
+      agendaItemId,
+      dto,
+    );
+  }
+
+  @Delete(':id/agenda/:agendaItemId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Remove agenda item' })
+  async removeAgendaItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('agendaItemId') agendaItemId: string,
+  ): Promise<{ message: string }> {
+    await this.meetingsService.removeAgendaItem(
+      this.ctx(user),
+      projectId,
+      id,
+      agendaItemId,
+    );
+    return { message: 'Agenda item removed' };
+  }
+
+  @Post(':id/attendees')
+  @RequirePermission('meetings', 'create')
+  @ApiOperation({ summary: 'Add attendee' })
+  addAttendee(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateMeetingAttendeeDto,
+  ): Promise<unknown> {
+    return this.meetingsService.addAttendee(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/attendees/:attendeeId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Update attendee' })
+  updateAttendee(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('attendeeId') attendeeId: string,
+    @Body() dto: UpdateMeetingAttendeeDto,
+  ): Promise<unknown> {
+    return this.meetingsService.updateAttendee(
+      this.ctx(user),
+      projectId,
+      id,
+      attendeeId,
+      dto,
+    );
+  }
+
+  @Delete(':id/attendees/:attendeeId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Remove attendee' })
+  async removeAttendee(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('attendeeId') attendeeId: string,
+  ): Promise<{ message: string }> {
+    await this.meetingsService.removeAttendee(
+      this.ctx(user),
+      projectId,
+      id,
+      attendeeId,
+    );
+    return { message: 'Attendee removed' };
+  }
+
+  @Post(':id/action-items')
+  @RequirePermission('meetings', 'create')
+  @ApiOperation({ summary: 'Add action item' })
+  addActionItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateActionItemDto,
+  ): Promise<unknown> {
+    return this.meetingsService.addActionItem(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/action-items/:actionItemId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Update action item' })
+  updateActionItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('actionItemId') actionItemId: string,
+    @Body() dto: UpdateActionItemDto,
+  ): Promise<unknown> {
+    return this.meetingsService.updateActionItem(
+      this.ctx(user),
+      projectId,
+      id,
+      actionItemId,
+      dto,
+    );
+  }
+
+  @Delete(':id/action-items/:actionItemId')
+  @RequirePermission('meetings', 'edit')
+  @ApiOperation({ summary: 'Remove action item' })
+  async removeActionItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('actionItemId') actionItemId: string,
+  ): Promise<{ message: string }> {
+    await this.meetingsService.removeActionItem(
+      this.ctx(user),
+      projectId,
+      id,
+      actionItemId,
+    );
+    return { message: 'Action item removed' };
   }
 
   @Get(':id')

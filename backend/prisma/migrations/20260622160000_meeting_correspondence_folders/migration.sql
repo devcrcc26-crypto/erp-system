@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "FolderContextType" ADD VALUE 'MEETING';
+ALTER TYPE "FolderContextType" ADD VALUE 'CORRESPONDENCE';

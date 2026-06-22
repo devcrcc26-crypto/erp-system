@@ -227,6 +227,46 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
+   * Returns or creates the attachment folder for a meeting under the project folder.
+   */
+  async ensureMeetingFolder(
+    ctx: PmContext,
+    projectId: string,
+    meetingId: string,
+    meetingNumber: string,
+  ): Promise<DocumentFolderRef> {
+    const segment = this.toFolderSegment(meetingNumber);
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.MEETING,
+      meetingId,
+      `meetings/${segment}`,
+      segment,
+    );
+  }
+
+  /**
+   * Returns or creates the attachment folder for correspondence under the project folder.
+   */
+  async ensureCorrespondenceFolder(
+    ctx: PmContext,
+    projectId: string,
+    correspondenceId: string,
+    referenceNumber: string,
+  ): Promise<DocumentFolderRef> {
+    const segment = this.toFolderSegment(referenceNumber);
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.CORRESPONDENCE,
+      correspondenceId,
+      `correspondence/${segment}`,
+      segment,
+    );
+  }
+
+  /**
    * Resolves an entity attachment folder by context, if it exists.
    */
   async findEntityFolder(

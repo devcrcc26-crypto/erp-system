@@ -366,6 +366,7 @@ export interface MappedActionItem {
 }
 
 export interface MappedMeetingDetail extends MappedMeeting {
+  attachmentFolderId: string | null;
   agendaItems: MappedMeetingAgendaItem[];
   attendees: MappedMeetingAttendee[];
   actionItems: MappedActionItem[];
@@ -382,6 +383,7 @@ export interface MappedCorrespondence {
   recipientName: string;
   correspondenceDate: string;
   status: Correspondence['status'];
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -709,16 +711,21 @@ export function mapMeetingDetail(
     attendees: MeetingAttendee[];
     actionItems: ActionItem[];
   },
+  attachmentFolderId: string | null = null,
 ): MappedMeetingDetail {
   return {
     ...mapMeeting(row),
+    attachmentFolderId,
     agendaItems: row.agendaItems.map(mapMeetingAgendaItem),
     attendees: row.attendees.map(mapMeetingAttendee),
     actionItems: row.actionItems.map(mapActionItem),
   };
 }
 
-export function mapCorrespondence(row: Correspondence): MappedCorrespondence {
+export function mapCorrespondence(
+  row: Correspondence,
+  attachmentFolderId: string | null = null,
+): MappedCorrespondence {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -730,6 +737,7 @@ export function mapCorrespondence(row: Correspondence): MappedCorrespondence {
     recipientName: row.recipientName,
     correspondenceDate: toDateString(row.correspondenceDate)!,
     status: row.status,
+    attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };

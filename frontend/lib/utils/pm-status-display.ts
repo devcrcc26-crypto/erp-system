@@ -1,6 +1,8 @@
 import type {
   IssueSeverity,
   IssueStatus,
+  MeetingStatus,
+  CorrespondenceStatus,
   RfiPriority,
   RfiStatus,
   SubmittalStatus,
@@ -8,7 +10,9 @@ import type {
 } from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import {
+  CORRESPONDENCE_WORKFLOW,
   ISSUE_WORKFLOW,
+  MEETING_WORKFLOW,
   RFI_WORKFLOW,
   SUBMITTAL_WORKFLOW,
   DAILY_LOG_WORKFLOW,
@@ -120,6 +124,40 @@ export function dailyLogStatusVariant(status: string): StatusBadgeVariant {
     APPROVED: 'success',
   };
   return variants[status] ?? 'default';
+}
+
+export function formatMeetingStatus(status: MeetingStatus): string {
+  return MEETING_WORKFLOW.find((step) => step.key === status)?.label ?? status;
+}
+
+export function meetingStatusVariant(status: MeetingStatus): StatusBadgeVariant {
+  const variants: Record<MeetingStatus, StatusBadgeVariant> = {
+    SCHEDULED: 'info',
+    CONDUCTED: 'warning',
+    MINUTES_ISSUED: 'success',
+    CLOSED: 'default',
+  };
+  return variants[status];
+}
+
+export function formatCorrespondenceStatus(
+  status: CorrespondenceStatus,
+): string {
+  return (
+    CORRESPONDENCE_WORKFLOW.find((step) => step.key === status)?.label ?? status
+  );
+}
+
+export function correspondenceStatusVariant(
+  status: CorrespondenceStatus,
+): StatusBadgeVariant {
+  const variants: Record<CorrespondenceStatus, StatusBadgeVariant> = {
+    DRAFT: 'default',
+    SENT: 'info',
+    ACKNOWLEDGED: 'success',
+    CLOSED: 'default',
+  };
+  return variants[status];
 }
 
 export function isOverdue(dueDate: string | null): boolean {

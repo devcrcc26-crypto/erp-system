@@ -45,6 +45,8 @@ enum FolderContextType {
   ISSUE
   SUBMITTAL
   DAILY_LOG
+  MEETING
+  CORRESPONDENCE
 }
 
 enum NotificationChannel {

@@ -891,6 +891,142 @@ export class UpdateMeetingDto extends PartialType(CreateMeetingDto) {
   status?: MeetingStatus;
 }
 
+export class CreateMeetingAgendaItemDto {
+  @ApiProperty()
+  @IsString()
+  topic!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  presenterId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  itemOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  discussionNotes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  decisionsMade?: string;
+}
+
+export class UpdateMeetingAgendaItemDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  topic?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  presenterId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  itemOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  discussionNotes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  decisionsMade?: string;
+}
+
+export class CreateMeetingAttendeeDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  userId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  externalName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  organization?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  roleAtMeeting?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  attended?: boolean;
+}
+
+export class UpdateMeetingAttendeeDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  externalName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  organization?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  roleAtMeeting?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  attended?: boolean;
+}
+
+export class CreateActionItemDto {
+  @ApiProperty()
+  @IsEntityUuid()
+  ownerId!: string;
+
+  @ApiProperty()
+  @IsString()
+  description!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+}
+
+export class UpdateActionItemDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
 export class CreateCorrespondenceDto {
   @ApiProperty({ enum: CorrespondenceType })
   @IsEnum(CorrespondenceType)

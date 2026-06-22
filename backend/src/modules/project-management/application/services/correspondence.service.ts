@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CorrespondenceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -19,6 +19,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const CORRESPONDENCE_SORT_FIELDS = new Set([
@@ -32,10 +33,13 @@ const CORRESPONDENCE_SORT_FIELDS = new Set([
 
 @Injectable()
 export class CorrespondenceService {
+  private readonly logger = new Logger(CorrespondenceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -62,7 +66,7 @@ export class CorrespondenceService {
     ]);
 
     return buildPaginatedResult(
-      rows.map(mapCorrespondence),
+      rows.map((row) => mapCorrespondence(row, null)),
       total,
       query.page,
       query.limit,
@@ -78,7 +82,7 @@ export class CorrespondenceService {
     correspondenceId: string,
   ): Promise<MappedCorrespondence> {
     const row = await this.getCorrespondenceOrThrow(projectId, correspondenceId);
-    return mapCorrespondence(row);
+    return this.enrichCorrespondence(ctx, projectId, row);
   }
 
   /**
@@ -110,7 +114,15 @@ export class CorrespondenceService {
       },
     });
 
-    return mapCorrespondence(row);
+    const folder =
+      await this.engineeringDocumentFolderService.ensureCorrespondenceFolder(
+        ctx,
+        projectId,
+        row.id,
+        row.referenceNumber,
+      );
+
+    return mapCorrespondence(row, folder.id);
   }
 
   /**
@@ -140,7 +152,7 @@ export class CorrespondenceService {
       },
     });
 
-    return mapCorrespondence(row);
+    return this.enrichCorrespondence(ctx, projectId, row);
   }
 
   /**
@@ -179,6 +191,32 @@ export class CorrespondenceService {
     }
 
     return where;
+  }
+
+  private async enrichCorrespondence(
+    ctx: PmContext,
+    projectId: string,
+    row: Prisma.CorrespondenceGetPayload<object>,
+  ): Promise<MappedCorrespondence> {
+    let attachmentFolderId: string | null = null;
+
+    try {
+      const folder =
+        await this.engineeringDocumentFolderService.ensureCorrespondenceFolder(
+          ctx,
+          projectId,
+          row.id,
+          row.referenceNumber,
+        );
+      attachmentFolderId = folder.id;
+    } catch (error) {
+      this.logger.warn(
+        `Correspondence ${row.id} attachment folder could not be ensured`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return mapCorrespondence(row, attachmentFolderId);
   }
 
   private async getCorrespondenceOrThrow(

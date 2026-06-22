@@ -488,6 +488,7 @@ export interface ActionItem {
 }
 
 export interface MeetingDetail extends Meeting {
+  attachmentFolderId: string | null;
   agendaItems: MeetingAgendaItem[];
   attendees: MeetingAttendee[];
   actionItems: ActionItem[];
@@ -504,6 +505,7 @@ export interface Correspondence {
   recipientName: string;
   correspondenceDate: string;
   status: CorrespondenceStatus;
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -886,6 +888,41 @@ export interface CreateMeetingRequest {
 export type UpdateMeetingRequest = Partial<CreateMeetingRequest> & {
   status?: MeetingStatus;
 };
+
+export interface CreateMeetingAgendaItemRequest {
+  topic: string;
+  presenterId?: string;
+  itemOrder?: number;
+  discussionNotes?: string;
+  decisionsMade?: string;
+}
+
+export type UpdateMeetingAgendaItemRequest =
+  Partial<CreateMeetingAgendaItemRequest>;
+
+export interface CreateMeetingAttendeeRequest {
+  userId?: string;
+  externalName?: string;
+  organization?: string;
+  roleAtMeeting?: string;
+  attended?: boolean;
+}
+
+export type UpdateMeetingAttendeeRequest = Partial<
+  Omit<CreateMeetingAttendeeRequest, 'userId'>
+>;
+
+export interface CreateActionItemRequest {
+  ownerId: string;
+  description: string;
+  dueDate?: string;
+}
+
+export interface UpdateActionItemRequest {
+  description?: string;
+  dueDate?: string;
+  status?: string;
+}
 
 export interface CreateCorrespondenceRequest {
   correspondenceType: CorrespondenceType;
