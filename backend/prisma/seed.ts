@@ -339,6 +339,7 @@ function pmPermissionFlags(
     'projects',
     'schedule',
     'rfis',
+    'submittals',
     'daily_logs',
     'issues',
     'punch_items',
@@ -512,7 +513,7 @@ function epcWorkflowPermissionFlags(
     allowedModules = engineeringModules;
     canApprove = action === 'approve' || action === 'edit';
   } else if (roleName === 'Site Coordinator') {
-    allowedModules = coordinationModules;
+    allowedModules = [...coordinationModules, 'submittals'];
   } else {
     return null;
   }
