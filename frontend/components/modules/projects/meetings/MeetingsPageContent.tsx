@@ -1,8 +1,10 @@
 'use client';
 
-import { Alert, Table } from 'antd';
+import { Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useMeetings } from '@/lib/query/meetings';
 import type { Meeting } from '@/lib/api/project-management.types';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -13,7 +15,8 @@ export default function MeetingsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const meetingsQuery = useMeetings(projectId, { page: 1, limit: 50 });
+  const { params, bindMeta } = useTablePagination();
+  const meetingsQuery = useMeetings(projectId, params);
   const meetings = meetingsQuery.data?.data ?? [];
 
   const columns: ColumnsType<Meeting> = [
@@ -47,11 +50,11 @@ export default function MeetingsPageContent({
           title="Meeting APIs are not connected yet."
         />
       )}
-      <Table<Meeting>
+      <DataTable<Meeting>
         rowKey="id"
         columns={columns}
         dataSource={meetings}
-        pagination={false}
+        pagination={bindMeta(meetingsQuery.data?.meta)}
         locale={{ emptyText: 'No meetings found' }}
       />
     </FormLayout>

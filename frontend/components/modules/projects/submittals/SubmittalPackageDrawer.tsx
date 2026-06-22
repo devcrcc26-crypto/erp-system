@@ -9,10 +9,10 @@ import {
   Input,
   Select,
   Space,
-  Table,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueries } from '@tanstack/react-query';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import type { DesignPackage } from '@/lib/api/epc.types';
@@ -287,12 +287,11 @@ function SubmittalPackageForm({
 
       {(isDeputy || taskDisciplineId) && (
         <FormLayout title="Approved packages" className="mb-4">
-          <Table<DesignPackage>
+          <DataTable<DesignPackage>
             rowKey="id"
             size="small"
             columns={packageColumns}
             dataSource={lockablePackages}
-            pagination={false}
             locale={{ emptyText: 'No approved packages available' }}
           />
         </FormLayout>

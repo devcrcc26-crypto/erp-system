@@ -4,13 +4,13 @@ import { useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   normalizeEpcLocale,
-  translateEpc,
+  translateEpcWithVars,
   type EpcLocale,
 } from '@/lib/i18n/epc-messages';
 
 export interface EpcTranslation {
   locale: EpcLocale;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
 /**
@@ -27,7 +27,8 @@ export function useEpcTranslation(): EpcTranslation {
   );
 
   const t = useCallback(
-    (key: string): string => translateEpc(locale, key),
+    (key: string, vars?: Record<string, string | number>): string =>
+      translateEpcWithVars(locale, key, vars),
     [locale],
   );
 

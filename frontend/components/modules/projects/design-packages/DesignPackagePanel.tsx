@@ -8,12 +8,12 @@ import {
   Modal,
   Select,
   Space,
-  Table,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Package } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -263,12 +263,11 @@ export default function DesignPackagePanel({
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             {status.replace(/_/g, ' ')}
           </h4>
-          <Table<DesignPackage>
+          <DataTable<DesignPackage>
             rowKey="id"
             size="middle"
             columns={packageColumns}
             dataSource={statusPackages}
-            pagination={false}
           />
         </div>
       ))}
@@ -591,12 +590,11 @@ export function DesignPackageItemsTable({
   ];
 
   return (
-    <Table<DesignPackageItem>
+    <DataTable<DesignPackageItem>
       rowKey="id"
       size="middle"
       columns={columns}
       dataSource={items}
-      pagination={false}
       locale={{ emptyText: 'No items in package' }}
     />
   );
@@ -665,12 +663,11 @@ export function DesignPackageDependenciesTable({
   ];
 
   return (
-    <Table<DesignPackageDependency>
+    <DataTable<DesignPackageDependency>
       rowKey="id"
       size="middle"
       columns={columns}
       dataSource={dependencies}
-      pagination={false}
       locale={{ emptyText: 'No dependencies' }}
     />
   );

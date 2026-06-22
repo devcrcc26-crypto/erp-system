@@ -1,8 +1,10 @@
 'use client';
 
-import { Alert, Table } from 'antd';
+import { Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRisks } from '@/lib/query/risks';
 import type { Risk } from '@/lib/api/project-management.types';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -13,7 +15,8 @@ export default function RisksPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const query = useRisks(projectId, { page: 1, limit: 50 });
+  const { params, bindMeta } = useTablePagination();
+  const query = useRisks(projectId, params);
   const rows = query.data?.data ?? [];
 
   const columns: ColumnsType<Risk> = [
@@ -50,11 +53,11 @@ export default function RisksPageContent({
           title="Risk APIs are not connected yet."
         />
       )}
-      <Table<Risk>
+      <DataTable<Risk>
         rowKey="id"
         columns={columns}
         dataSource={rows}
-        pagination={false}
+        pagination={bindMeta(query.data?.meta)}
         locale={{ emptyText: 'No risks found' }}
       />
     </FormLayout>

@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   Modal,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -24,6 +23,8 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useRoles } from '@/lib/query/roles';
 import UserImportModal from '@/components/modules/users/UserImportModal';
@@ -38,8 +39,6 @@ import {
   useUsers,
 } from '@/lib/query/users';
 import type { Role, User } from '@/lib/api/types';
-
-const PAGE_SIZE = 20;
 
 interface InviteFormValues {
   firstName: string;
@@ -72,14 +71,145 @@ function userStatusVariant(user: User): 'default' | 'warning' | 'success' {
   return 'success';
 }
 
-function userStatusLabel(user: User): string {
+function userStatusLabel(
+  user: User,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
   if (!user.isActive) {
-    return 'Inactive';
+    return t('users.statusInactive');
   }
   if (!user.emailVerifiedAt) {
-    return 'Pending activation';
+    return t('users.statusPending');
   }
-  return 'Active';
+  return t('users.statusActive');
+}
+
+function InviteEmployeeModal({
+  open,
+  onClose,
+  roles,
+  rolesLoading,
+  employeeRoleId,
+  onInvited,
+}: {
+  open: boolean;
+  onClose: () => void;
+  roles: Role[];
+  rolesLoading: boolean;
+  employeeRoleId?: string;
+  onInvited: (email: string) => void;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const [form] = Form.useForm<InviteFormValues>();
+  const [error, setError] = useState<string | null>(null);
+  const createUser = useCreateUser();
+  const assignRole = useAssignRole();
+
+  const isSubmitting = createUser.isPending || assignRole.isPending;
+
+  function resetForm(): void {
+    form.resetFields();
+    if (employeeRoleId) {
+      form.setFieldsValue({ roleId: employeeRoleId });
+    }
+    setError(null);
+  }
+
+  async function handleSubmit(values: InviteFormValues): Promise<void> {
+    setError(null);
+    const invitedAddress = values.email.trim().toLowerCase();
+
+    try {
+      const user = await createUser.mutateAsync({
+        email: invitedAddress,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        isActive: true,
+      });
+
+      await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
+
+      resetForm();
+      onInvited(invitedAddress);
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError ? err.message : t('users.createError'),
+      );
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title={t('users.addEmployee')}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      okText={
+        isSubmitting ? t('users.sendingInvitation') : t('users.sendInvitation')
+      }
+      confirmLoading={isSubmitting}
+      okButtonProps={{ disabled: roles.length === 0 }}
+      className="erp-responsive-modal"
+      destroyOnHidden
+      afterOpenChange={(visible: boolean) => {
+        if (visible) {
+          resetForm();
+        }
+      }}
+    >
+      <p className="mb-4 text-sm text-slate-500">{t('users.inviteHelp')}</p>
+      <Form<InviteFormValues>
+        form={form}
+        layout="vertical"
+        initialValues={{ roleId: employeeRoleId }}
+        onFinish={(values: InviteFormValues) => void handleSubmit(values)}
+      >
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item
+            label={t('common.firstName')}
+            name="firstName"
+            rules={[{ required: true, message: t('common.requiredFirstName') }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label={t('common.lastName')}
+            name="lastName"
+            rules={[{ required: true, message: t('common.requiredLastName') }]}
+          >
+            <Input />
+          </Form.Item>
+        </div>
+        <Form.Item
+          label={t('common.email')}
+          name="email"
+          rules={[
+            { required: true, message: t('common.requiredEmail') },
+            { type: 'email', message: t('common.invalidEmail') },
+          ]}
+        >
+          <Input type="email" />
+        </Form.Item>
+        <Form.Item
+          label={t('common.role')}
+          name="roleId"
+          rules={[{ required: true, message: t('common.requiredRole') }]}
+        >
+          <Select
+            loading={rolesLoading}
+            options={roles.map((role) => ({ value: role.id, label: role.name }))}
+            placeholder={
+              roles.length === 0
+                ? t('common.noRolesAvailable')
+                : t('common.selectRole')
+            }
+          />
+        </Form.Item>
+        {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
+      </Form>
+    </Modal>
+  );
 }
 
 function EditEmployeeModal({
@@ -95,6 +225,7 @@ function EditEmployeeModal({
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const [form] = Form.useForm<EditFormValues>();
   const userQuery = useUser(user.id);
   const updateUser = useUpdateUser();
@@ -151,9 +282,7 @@ function EditEmployeeModal({
       onClose();
     } catch (err) {
       setError(
-        err instanceof ApiRequestError
-          ? err.message
-          : 'Failed to update employee.',
+        err instanceof ApiRequestError ? err.message : t('users.updateError'),
       );
     }
   }
@@ -164,10 +293,10 @@ function EditEmployeeModal({
   return (
     <Modal
       open={open}
-      title="Update employee"
+      title={t('users.updateEmployee')}
       onCancel={onClose}
       onOk={() => form.submit()}
-      okText="Save changes"
+      okText={t('common.saveChanges')}
       confirmLoading={isSubmitting}
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {
@@ -185,36 +314,40 @@ function EditEmployeeModal({
       >
         <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
           <Form.Item
-            label="First name"
+            label={t('common.firstName')}
             name="firstName"
-            rules={[{ required: true, message: 'First name is required' }]}
+            rules={[{ required: true, message: t('common.requiredFirstName') }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Last name"
+            label={t('common.lastName')}
             name="lastName"
-            rules={[{ required: true, message: 'Last name is required' }]}
+            rules={[{ required: true, message: t('common.requiredLastName') }]}
           >
             <Input />
           </Form.Item>
         </div>
-        <Form.Item label="Phone" name="phone">
+        <Form.Item label={t('common.phone')} name="phone">
           <Input type="tel" />
         </Form.Item>
         <Form.Item
-          label="Role"
+          label={t('common.role')}
           name="roleId"
-          rules={[{ required: true, message: 'Please select a role' }]}
+          rules={[{ required: true, message: t('common.requiredRole') }]}
         >
           <Select
             loading={userQuery.isLoading}
             options={roles.map((role) => ({ value: role.id, label: role.name }))}
-            placeholder={userQuery.isLoading ? 'Loading roles...' : 'Select a role'}
+            placeholder={
+              userQuery.isLoading
+                ? t('common.loadingRoles')
+                : t('common.selectRole')
+            }
           />
         </Form.Item>
         <Form.Item name="isActive" valuePropName="checked">
-          <Checkbox>Active account</Checkbox>
+          <Checkbox>{t('common.activeAccount')}</Checkbox>
         </Form.Item>
         {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
       </Form>
@@ -223,10 +356,10 @@ function EditEmployeeModal({
 }
 
 export default function UsersPageContent(): React.ReactNode {
-  const [page, setPage] = useState(1);
-  const [form] = Form.useForm<InviteFormValues>();
-  const [formError, setFormError] = useState<string | null>(null);
+  const { t } = useEpcTranslation();
+  const { params, bindMeta } = useTablePagination();
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -235,13 +368,11 @@ export default function UsersPageContent(): React.ReactNode {
   } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const usersQuery = useUsers({ page, limit: PAGE_SIZE });
+  const usersQuery = useUsers(params);
   const rolesQuery = useRoles(
     { page: 1, limit: 100 },
     { enabled: usersQuery.isSuccess },
   );
-  const createUser = useCreateUser();
-  const assignRole = useAssignRole();
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
 
@@ -266,8 +397,8 @@ export default function UsersPageContent(): React.ReactNode {
       return (
         <PlaceholderPage
           icon={ThreePeopleIcon}
-          title="Users"
-          description="You do not have permission to manage users."
+          title={t('users.title')}
+          description={t('users.noPermission')}
         />
       );
     }
@@ -275,42 +406,14 @@ export default function UsersPageContent(): React.ReactNode {
     return (
       <PlaceholderPage
         icon={ThreePeopleIcon}
-        title="Users"
-        description="Unable to load users. Please try again later."
+        title={t('users.title')}
+        description={t('users.loadError')}
       />
     );
   }
 
   const users = usersQuery.data?.data ?? [];
   const meta = usersQuery.data?.meta;
-
-  async function handleCreateUser(values: InviteFormValues): Promise<void> {
-    setFormError(null);
-    const invitedAddress = values.email.trim().toLowerCase();
-
-    try {
-      const user = await createUser.mutateAsync({
-        email: invitedAddress,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        isActive: true,
-      });
-
-      await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
-
-      form.resetFields();
-      if (employeeRole) {
-        form.setFieldsValue({ roleId: employeeRole.id });
-      }
-      setInvitedEmail(invitedAddress);
-    } catch (error) {
-      if (error instanceof ApiRequestError) {
-        setFormError(error.message);
-      } else {
-        setFormError('Failed to create user. Please try again.');
-      }
-    }
-  }
 
   async function handleResendVerification(user: User): Promise<void> {
     setActionMessage(null);
@@ -324,7 +427,7 @@ export default function UsersPageContent(): React.ReactNode {
         text:
           error instanceof ApiRequestError
             ? error.message
-            : 'Failed to resend verification email.',
+            : t('users.resendError'),
       });
     }
   }
@@ -338,7 +441,9 @@ export default function UsersPageContent(): React.ReactNode {
       await deleteUser.mutateAsync(deletingUser.id);
       setActionMessage({
         type: 'success',
-        text: `${deletingUser.firstName} ${deletingUser.lastName} has been deactivated.`,
+        text: t('users.deactivated', {
+          name: `${deletingUser.firstName} ${deletingUser.lastName}`,
+        }),
       });
       setDeletingUser(null);
     } catch (error) {
@@ -347,7 +452,7 @@ export default function UsersPageContent(): React.ReactNode {
         text:
           error instanceof ApiRequestError
             ? error.message
-            : 'Failed to delete employee.',
+            : t('users.deleteError'),
       });
     }
   }
@@ -357,7 +462,7 @@ export default function UsersPageContent(): React.ReactNode {
     const items: MenuProps['items'] = [
       {
         key: 'update',
-        label: 'Update',
+        label: t('common.update'),
         onClick: () => setEditingUser(user),
       },
     ];
@@ -365,14 +470,14 @@ export default function UsersPageContent(): React.ReactNode {
     if (showResend) {
       items.push({
         key: 'resend',
-        label: 'Resend verification',
+        label: t('users.resendVerification'),
         onClick: () => void handleResendVerification(user),
       });
     }
 
     items.push({
       key: 'delete',
-      label: 'Delete',
+      label: t('common.delete'),
       danger: true,
       onClick: () => setDeletingUser(user),
     });
@@ -380,26 +485,21 @@ export default function UsersPageContent(): React.ReactNode {
     return items;
   }
 
-  const isSubmitting = createUser.isPending || assignRole.isPending;
-
   return (
     <div className="space-y-6">
       <Modal
         open={Boolean(invitedEmail)}
-        title="Invitation sent"
+        title={t('users.invitationSent')}
         onCancel={() => setInvitedEmail(null)}
         onOk={() => setInvitedEmail(null)}
-        okText="Done"
+        okText={t('common.done')}
         cancelButtonProps={{ style: { display: 'none' } }}
       >
         <p className="text-sm text-slate-600">
-          Invitation sent to <span className="font-medium">{invitedEmail}</span>.
-          The employee must verify their email and set a password before they can
-          sign in.
+          {t('users.invitationSentBody', { email: invitedEmail ?? '' })}
         </p>
         <p className="mt-2 text-xs text-slate-500">
-          In development, check Mailpit at http://localhost:8025 for the
-          activation email.
+          {t('users.invitationDevHint')}
         </p>
       </Modal>
 
@@ -412,6 +512,15 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
+      <InviteEmployeeModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        roles={roles}
+        rolesLoading={rolesQuery.isLoading}
+        employeeRoleId={employeeRole?.id}
+        onInvited={setInvitedEmail}
+      />
+
       {editingUser && (
         <EditEmployeeModal
           key={editingUser.id}
@@ -422,7 +531,9 @@ export default function UsersPageContent(): React.ReactNode {
           onSaved={() =>
             setActionMessage({
               type: 'success',
-              text: `${editingUser.firstName} ${editingUser.lastName} updated successfully.`,
+              text: t('users.updated', {
+                name: `${editingUser.firstName} ${editingUser.lastName}`,
+              }),
             })
           }
         />
@@ -430,19 +541,16 @@ export default function UsersPageContent(): React.ReactNode {
 
       <ConfirmDialog
         open={Boolean(deletingUser)}
-        title="Delete employee"
+        title={t('users.deleteEmployee')}
         description={
-          deletingUser ? (
-            <>
-              Deactivate{' '}
-              <span className="font-medium">
-                {deletingUser.firstName} {deletingUser.lastName}
-              </span>{' '}
-              ({deletingUser.email})? They will no longer be able to sign in.
-            </>
-          ) : undefined
+          deletingUser
+            ? t('users.deleteDescription', {
+                name: `${deletingUser.firstName} ${deletingUser.lastName}`,
+                email: deletingUser.email,
+              })
+            : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         danger
         confirmLoading={deleteUser.isPending}
         onConfirm={() => void handleDeleteUser()}
@@ -459,101 +567,44 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
-      <div id="invite-employee-section">
-        <FormLayout
-          title="Invite employee"
-          description="An activation email will be sent so they can verify their email and set their password. You never need to choose or share a password."
-          extra={
-            <Button onClick={() => setImportOpen(true)}>Import from Excel</Button>
-          }
-        >
-        <Form<InviteFormValues>
-          form={form}
-          layout="vertical"
-          key={employeeRole?.id ?? 'invite'}
-          initialValues={{ roleId: employeeRole?.id }}
-          onFinish={(values: InviteFormValues) => void handleCreateUser(values)}
-          className="max-w-3xl"
-        >
-          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-            <Form.Item
-              label="First name"
-              name="firstName"
-              rules={[{ required: true, message: 'First name is required' }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              label="Last name"
-              name="lastName"
-              rules={[{ required: true, message: 'Last name is required' }]}
-            >
-              <Input />
-            </Form.Item>
-          </div>
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Email is required' },
-              { type: 'email', message: 'Enter a valid email' },
-            ]}
-          >
-            <Input type="email" />
-          </Form.Item>
-          <Form.Item
-            label="Role"
-            name="roleId"
-            rules={[{ required: true, message: 'Please select a role' }]}
-          >
-            <Select
-              loading={rolesQuery.isLoading}
-              options={roles.map((role) => ({ value: role.id, label: role.name }))}
-              placeholder={roles.length === 0 ? 'No roles available' : 'Select a role'}
-            />
-          </Form.Item>
-          {formError && (
-            <Alert type="error" showIcon title={formError} className="!mb-4" />
-          )}
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isSubmitting}
-            disabled={roles.length === 0}
-          >
-            {isSubmitting ? 'Sending invitation...' : 'Send invitation'}
-          </Button>
-        </Form>
-        </FormLayout>
-      </div>
-
       <FormLayout
-        title="All users"
-        description={`${meta?.total ?? 0} user${meta?.total === 1 ? '' : 's'} total`}
+        title={t('users.allUsers')}
+        description={
+          meta?.total === 1
+            ? t('users.userCountOne')
+            : t('users.userCount', { count: meta?.total ?? 0 })
+        }
+        extra={
+          <Space wrap>
+            <Button onClick={() => setImportOpen(true)}>
+              {t('common.importFromExcel')}
+            </Button>
+            <Button type="primary" onClick={() => setInviteOpen(true)}>
+              {t('users.addEmployee')}
+            </Button>
+          </Space>
+        }
       >
         <DataTable<User>
           rowKey="id"
           dataSource={users}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
                 icon={<Users />}
-                title="No team members"
-                description="Invite users to give them access to projects"
+                title={t('users.noTeamMembers')}
+                description={t('users.noTeamMembersDescription')}
                 action={{
-                  label: 'Invite user',
-                  onClick: () => {
-                    document
-                      .getElementById('invite-employee-section')
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  },
+                  label: t('users.addEmployee'),
+                  onClick: () => setInviteOpen(true),
                 }}
               />
             ),
           }}
           columns={[
             {
-              title: 'Name',
+              title: t('common.name'),
               key: 'name',
               render: (_, record) => (
                 <span className="font-medium text-slate-900">
@@ -562,59 +613,49 @@ export default function UsersPageContent(): React.ReactNode {
               ),
             },
             {
-              title: 'Email',
+              title: t('common.email'),
               dataIndex: 'email',
               key: 'email',
               ellipsis: { showTitle: true },
             },
             {
-              title: 'Status',
+              title: t('common.status'),
               key: 'status',
               render: (_, record) => (
                 <StatusBadge
-                  label={userStatusLabel(record)}
+                  label={userStatusLabel(record, t)}
                   variant={userStatusVariant(record)}
                 />
               ),
             },
             {
-              title: 'Roles',
+              title: t('common.roles'),
               key: 'roles',
               ellipsis: { showTitle: true },
               render: (_, record) => formatUserRoleNames(record),
             },
             {
-              title: 'Actions',
+              title: t('common.actions'),
               key: 'actions',
               width: 80,
               render: (_, record) => (
                 <Dropdown
                   menu={{ items: buildActionMenu(record) }}
                   trigger={['click']}
-                  disabled={isSubmitting || resendInvitation.isPending}
+                  disabled={resendInvitation.isPending}
                 >
                   <Button
                     type="text"
                     icon={<MoreOutlined />}
-                    aria-label={`Actions for ${record.firstName} ${record.lastName}`}
+                    aria-label={t('users.actionsFor', {
+                      name: `${record.firstName} ${record.lastName}`,
+                    })}
                   />
                 </Dropdown>
               ),
             },
           ]}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination
-              current={meta.page}
-              total={meta.total}
-              pageSize={meta.limit}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
     </div>
   );

@@ -8,7 +8,6 @@ import {
   Drawer,
   Form,
   Input,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -32,6 +31,7 @@ import type {
 } from '@/lib/api/project-management.types';
 import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateIssue,
   useIssues,
@@ -48,8 +48,6 @@ import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailD
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const PAGE_SIZE = 20;
 
 const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'LOW', label: 'Low' },
@@ -188,7 +186,7 @@ export default function IssuesPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>();
   const [severityFilter, setSeverityFilter] = useState<
@@ -199,8 +197,7 @@ export default function IssuesPageContent({
 
   const resolveUserName = useUserNameLookup();
   const issuesQuery = useIssues(projectId, {
-    page,
-    limit: PAGE_SIZE,
+    ...params,
     search: search.trim() || undefined,
     status: statusFilter,
     severity: severityFilter,
@@ -336,7 +333,7 @@ export default function IssuesPageContent({
             placeholder="Search issues"
             className={layout.filterControl}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -346,7 +343,7 @@ export default function IssuesPageContent({
             className={layout.filterControlSm}
             value={statusFilter}
             onChange={(value: IssueStatus | undefined) => {
-              setPage(1);
+              resetPage();
               setStatusFilter(value);
             }}
             options={ISSUE_WORKFLOW.map((step) => ({
@@ -360,7 +357,7 @@ export default function IssuesPageContent({
             className={layout.filterControlXs}
             value={severityFilter}
             onChange={(value: IssueSeverity | undefined) => {
-              setPage(1);
+              resetPage();
               setSeverityFilter(value);
             }}
             options={SEVERITY_OPTIONS}
@@ -371,6 +368,7 @@ export default function IssuesPageContent({
           rowKey="id"
           columns={columns}
           dataSource={issues}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -386,18 +384,6 @@ export default function IssuesPageContent({
             ),
           }}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
 
       <IssueFormDrawer

@@ -8,7 +8,6 @@ import {
   Drawer,
   Form,
   Input,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -32,6 +31,7 @@ import type {
 } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateRfi,
   useRfis,
@@ -48,8 +48,6 @@ import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer'
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const PAGE_SIZE = 20;
 
 const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'LOW', label: 'Low' },
@@ -182,7 +180,7 @@ export default function RfisPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<RfiStatus | undefined>();
   const [priorityFilter, setPriorityFilter] = useState<RfiPriority | undefined>();
@@ -191,8 +189,7 @@ export default function RfisPageContent({
 
   const resolveUserName = useUserNameLookup();
   const rfisQuery = useRfis(projectId, {
-    page,
-    limit: PAGE_SIZE,
+    ...params,
     search: search.trim() || undefined,
     status: statusFilter,
     priority: priorityFilter,
@@ -314,7 +311,7 @@ export default function RfisPageContent({
             placeholder="Search RFIs"
             className={layout.filterControl}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -324,7 +321,7 @@ export default function RfisPageContent({
             className={layout.filterControlNav}
             value={statusFilter}
             onChange={(value: RfiStatus | undefined) => {
-              setPage(1);
+              resetPage();
               setStatusFilter(value);
             }}
             options={RFI_WORKFLOW.map((step) => ({
@@ -338,7 +335,7 @@ export default function RfisPageContent({
             className={layout.filterControlXs}
             value={priorityFilter}
             onChange={(value: RfiPriority | undefined) => {
-              setPage(1);
+              resetPage();
               setPriorityFilter(value);
             }}
             options={PRIORITY_OPTIONS}
@@ -349,6 +346,7 @@ export default function RfisPageContent({
           rowKey="id"
           columns={columns}
           dataSource={rfis}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -364,18 +362,6 @@ export default function RfisPageContent({
             ),
           }}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
 
       <RfiFormDrawer

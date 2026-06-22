@@ -163,14 +163,14 @@ export default function ContextSidebar({
   return (
     <aside
       className={`shell-context-sidebar relative flex h-full w-[260px] shrink-0 flex-col border-r border-slate-200 bg-white ${className}`}
-      aria-label="Project navigation"
+      aria-label={t('shell.projectNavigation')}
     >
       <header className="shrink-0 px-4 pb-4 pt-5">
         <p
           className="text-[11px] font-semibold uppercase tracking-wider"
           style={{ color: tokens.colorTextSecondary }}
         >
-          Project
+          {t('shell.projectSection')}
         </p>
         <h2
           className="mt-1 truncate text-lg font-bold"

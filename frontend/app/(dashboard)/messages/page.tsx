@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { Mail } from "lucide-react";
+import MessagesPageContent from '@/components/modules/messages/MessagesPageContent';
 
-export default function MessagesPage() {
-  return <PlaceholderPage icon={Mail} title="Messages" />;
+export default function MessagesPage(): React.ReactNode {
+  return <MessagesPageContent />;
 }

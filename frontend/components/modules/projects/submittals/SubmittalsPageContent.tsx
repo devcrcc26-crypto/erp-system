@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -40,11 +39,10 @@ import {
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const PAGE_SIZE = 20;
 
 interface SubmittalFormValues {
   category: string;
@@ -159,7 +157,7 @@ export default function SubmittalsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -171,8 +169,7 @@ export default function SubmittalsPageContent({
   const lens = useRoleLens();
 
   const submittalsQuery = useSubmittals(projectId, {
-    page,
-    limit: PAGE_SIZE,
+    ...params,
     search: search.trim() || undefined,
     status: statusFilter,
   });
@@ -305,7 +302,7 @@ export default function SubmittalsPageContent({
             placeholder="Search submittals"
             className={layout.filterControl}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -315,7 +312,7 @@ export default function SubmittalsPageContent({
             className={layout.filterControl}
             value={statusFilter}
             onChange={(value: SubmittalStatus | undefined) => {
-              setPage(1);
+              resetPage();
               setStatusFilter(value);
             }}
             options={SUBMITTAL_WORKFLOW.map((step) => ({
@@ -329,6 +326,7 @@ export default function SubmittalsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={submittals}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -344,18 +342,6 @@ export default function SubmittalsPageContent({
             ),
           }}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
 
       <SubmittalFormDrawer

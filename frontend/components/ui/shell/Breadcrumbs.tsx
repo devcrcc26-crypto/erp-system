@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Breadcrumb } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
 
 /**
@@ -32,6 +33,7 @@ export default function Breadcrumbs({
 }: {
   segments: readonly BreadcrumbSegment[];
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const { parents } = splitBreadcrumbTrail(segments);
 
   if (parents.length === 0) {
@@ -62,7 +64,7 @@ export default function Breadcrumbs({
   });
 
   return (
-    <nav aria-label="Breadcrumb" className="shell-breadcrumbs min-w-0">
+    <nav aria-label={t('shell.breadcrumb')} className="shell-breadcrumbs min-w-0">
       <Breadcrumb items={items} className="shell-breadcrumb" />
     </nav>
   );

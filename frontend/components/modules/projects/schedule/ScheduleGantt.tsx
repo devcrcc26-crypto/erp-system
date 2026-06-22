@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Empty, Switch, Table, Tooltip } from 'antd';
+import { Empty, Switch, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { Task, TaskDependency } from '@/lib/api/project-management.types';
@@ -442,10 +443,9 @@ export default function ScheduleGantt({
         title="Task dependencies"
         description="Predecessor links (FS / SS / FF / SF) with lag days."
       >
-        <Table<TaskDependency>
+        <DataTable<TaskDependency>
           size="small"
           rowKey="id"
-          pagination={false}
           columns={dependencyColumns}
           dataSource={dependencies}
           locale={{ emptyText: 'No dependencies defined' }}

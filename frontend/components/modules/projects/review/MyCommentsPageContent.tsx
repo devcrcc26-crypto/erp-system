@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Space, Spin, Table } from 'antd';
+import { Alert, Button, Space, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
@@ -204,13 +205,12 @@ export default function MyCommentsPageContent(): React.ReactNode {
         title={t('pages.myComments.title')}
         description="Review comments assigned to you. Acknowledge, upload a revised document, then mark resolved."
       >
-        <Table<MyCommentItem>
+        <DataTable<MyCommentItem>
           rowKey="commentId"
           size="middle"
           columns={columns}
           dataSource={commentsQuery.data ?? []}
           loading={commentsQuery.isLoading}
-          pagination={false}
           scroll={{ x: 960 }}
           locale={{ emptyText: t('empty.noComments') }}
         />

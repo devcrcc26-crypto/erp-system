@@ -1,6 +1,5 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { BarChart3 } from "lucide-react";
+import ReportsPageContent from '@/components/modules/reports/ReportsPageContent';
 
-export default function ReportsPage() {
-  return <PlaceholderPage icon={BarChart3} title="Reports" />;
+export default function ReportsPage(): React.ReactNode {
+  return <ReportsPageContent />;
 }

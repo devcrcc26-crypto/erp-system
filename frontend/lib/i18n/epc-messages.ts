@@ -48,6 +48,32 @@ export function translateEpc(locale: EpcLocale, key: string): string {
   );
 }
 
+/**
+ * Replaces `{{var}}` placeholders in a translated string.
+ */
+export function interpolateEpcMessage(
+  template: string,
+  vars: Record<string, string | number>,
+): string {
+  return Object.entries(vars).reduce(
+    (result, [name, value]) =>
+      result.replace(new RegExp(`\\{\\{${name}\\}\\}`, 'g'), String(value)),
+    template,
+  );
+}
+
+/**
+ * Returns translated EPC string with optional variable interpolation.
+ */
+export function translateEpcWithVars(
+  locale: EpcLocale,
+  key: string,
+  vars?: Record<string, string | number>,
+): string {
+  const message = translateEpc(locale, key);
+  return vars ? interpolateEpcMessage(message, vars) : message;
+}
+
 export function normalizeEpcLocale(value: string | null | undefined): EpcLocale {
   if (value === 'zh' || value === 'zh-CN' || value === 'zh-Hans') {
     return 'zh';

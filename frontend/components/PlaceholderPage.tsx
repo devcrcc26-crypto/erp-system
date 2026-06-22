@@ -1,5 +1,8 @@
+'use client';
+
 import type { ComponentType } from 'react';
 import { Empty, Tag } from 'antd';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 type IconProps = { size?: number; className?: string; strokeWidth?: number };
 
@@ -11,7 +14,9 @@ export default function PlaceholderPage({
   icon: ComponentType<IconProps>;
   title: string;
   description?: string;
-}) {
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center py-24">
       <Empty
@@ -24,14 +29,13 @@ export default function PlaceholderPage({
           <div className="text-center">
             <h2 className="mb-2 text-xl font-semibold text-slate-800">{title}</h2>
             <p className="mx-auto max-w-sm text-sm text-slate-500">
-              {description ??
-                "This page is currently under construction. Check back soon, it's being built!"}
+              {description ?? t('placeholder.defaultDescription')}
             </p>
             <Tag
               color="orange"
               className="!mt-6 !rounded-full !border-orange-200 !bg-orange-100 !px-4 !py-1 !text-orange-600"
             >
-              Coming soon
+              {t('placeholder.comingSoon')}
             </Tag>
           </div>
         }

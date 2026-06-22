@@ -2,9 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Drawer } from 'antd';
 import IconRail from '@/components/ui/shell/IconRail';
-import MainNavPanel from '@/components/ui/shell/MainNavPanel';
+import MobileNavDrawer from '@/components/ui/shell/MobileNavDrawer';
 import ContextSidebar from '@/components/ui/shell/ContextSidebar';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
 import {
@@ -12,7 +11,6 @@ import {
   resolveRouteMeta,
   shouldShowContextSidebar,
 } from '@/config/navConfig';
-import { RAIL_EXPANDED_WIDTH } from '@/components/ui/shell/shell-layout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProject, toProjectSummary } from '@/lib/query/projects';
 import { useProjectContextStore } from '@/stores/project-context.store';
@@ -30,8 +28,7 @@ export default function AppShell({
 }): React.ReactNode {
   const pathname = usePathname();
   const { t } = useEpcTranslation();
-  const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
-  const [mainNavDrawerOpen, setMainNavDrawerOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const projectId = extractProjectId(pathname);
   const showContextSidebar =
@@ -64,8 +61,7 @@ export default function AppShell({
   ]);
 
   useEffect(() => {
-    setContextDrawerOpen(false);
-    setMainNavDrawerOpen(false);
+    setMobileNavOpen(false);
   }, [pathname]);
 
   const projectName =
@@ -80,54 +76,18 @@ export default function AppShell({
     <div className="flex h-full min-h-0 w-full overflow-hidden">
       <IconRail coverContextSidebar={showContextSidebar && Boolean(projectId)} />
 
-      <Drawer
-        placement="left"
-        open={mainNavDrawerOpen}
-        onClose={() => setMainNavDrawerOpen(false)}
-        size={RAIL_EXPANDED_WIDTH}
-        closable
-        title={null}
-        className="lg:hidden"
-        styles={{
-          body: { padding: 0, background: tokens.colorSidebarBg },
-          header: { display: 'none' },
-        }}
-      >
-        <MainNavPanel
-          isExpanded
-          onNavigate={() => setMainNavDrawerOpen(false)}
-        />
-      </Drawer>
+      <MobileNavDrawer
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        showProjectNav={showContextSidebar && Boolean(projectId)}
+        projectId={projectId}
+        projectName={projectName}
+      />
 
       {showContextSidebar && projectId && (
-        <>
-          <div className="relative z-10 hidden h-full shrink-0 lg:block">
-            <ContextSidebar
-              projectId={projectId}
-              projectName={projectName}
-            />
-          </div>
-
-          <Drawer
-            placement="left"
-            open={contextDrawerOpen}
-            onClose={() => setContextDrawerOpen(false)}
-            size={260}
-            closable
-            title={null}
-            className="lg:hidden"
-            styles={{
-              body: { padding: 0, background: tokens.colorCardBg },
-              header: { display: 'none' },
-            }}
-          >
-            <ContextSidebar
-              projectId={projectId}
-              projectName={projectName}
-              onNavigate={() => setContextDrawerOpen(false)}
-            />
-          </Drawer>
-        </>
+        <div className="relative z-10 hidden h-full shrink-0 lg:block">
+          <ContextSidebar projectId={projectId} projectName={projectName} />
+        </div>
       )}
 
       <main
@@ -137,9 +97,7 @@ export default function AppShell({
         <MainContentHeader
           breadcrumbs={routeMeta.breadcrumbs}
           pageTitle={pageTitle}
-          onOpenMainNav={() => setMainNavDrawerOpen(true)}
-          showContextNavToggle={showContextSidebar && Boolean(projectId)}
-          onOpenContextNav={() => setContextDrawerOpen(true)}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 
         <div className="flex flex-col px-4 py-4 sm:px-6 sm:py-6 md:px-8">

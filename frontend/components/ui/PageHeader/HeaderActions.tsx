@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Avatar } from 'antd';
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUser } from '@/lib/query/users';
 import { tokens } from '@/lib/theme/tokens';
@@ -10,7 +11,12 @@ import { tokens } from '@/lib/theme/tokens';
 /**
  * Notifications bell and signed-in user profile link — shared by page and project headers.
  */
-export default function HeaderActions(): React.ReactNode {
+export default function HeaderActions({
+  compact = false,
+}: {
+  compact?: boolean;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
   const canManageUsers = useAuthStore(
     (state) => state.capabilities.canManageUsers,
@@ -22,20 +28,28 @@ export default function HeaderActions(): React.ReactNode {
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
-    : 'User';
+    : t('common.defaultUser');
   const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
-  const roleName = userDetail?.userRoles?.[0]?.role?.name ?? 'User';
+  const roleName = userDetail?.userRoles?.[0]?.role?.name ?? t('common.defaultUser');
 
   return (
-    <div className="flex shrink-0 items-center gap-2 self-start pt-1 md:gap-3">
+    <div
+      className={[
+        'flex shrink-0 items-center self-center',
+        compact ? 'gap-1' : 'gap-2 self-start pt-1 md:gap-3',
+      ].join(' ')}
+    >
       <NotificationPanel />
       <Link
         href="/profile"
-        className="flex shrink-0 items-center gap-2 rounded-md transition-colors hover:bg-slate-50 md:gap-3 md:px-2 md:py-1"
-        aria-label="Open profile"
+        className={[
+          'flex shrink-0 items-center rounded-md transition-colors hover:bg-slate-50',
+          compact ? 'gap-0 p-0' : 'gap-2 md:gap-3 md:px-2 md:py-1',
+        ].join(' ')}
+        aria-label={t('common.openProfile')}
       >
         <Avatar
-          size={{ xs: 36, md: 40 }}
+          size={compact ? 32 : { xs: 36, md: 40 }}
           style={{ backgroundColor: tokens.colorSidebarBg, fontWeight: 600 }}
         >
           {avatarInitial}

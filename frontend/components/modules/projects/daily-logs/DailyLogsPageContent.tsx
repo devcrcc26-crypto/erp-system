@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -26,6 +25,7 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DailyLog } from '@/lib/api/project-management.types';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateDailyLog,
   useDailyLogs,
@@ -34,8 +34,6 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const PAGE_SIZE = 20;
 
 const SHIFT_OPTIONS = [
   { value: 'DAY', label: 'Day' },
@@ -148,7 +146,7 @@ export default function DailyLogsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState<Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<Dayjs | null>(null);
@@ -157,8 +155,7 @@ export default function DailyLogsPageContent({
 
   const resolveUserName = useUserNameLookup();
   const logsQuery = useDailyLogs(projectId, {
-    page,
-    limit: PAGE_SIZE,
+    ...params,
     search: search.trim() || undefined,
     logDateFrom: dateFrom?.format('YYYY-MM-DD'),
     logDateTo: dateTo?.format('YYYY-MM-DD'),
@@ -265,7 +262,7 @@ export default function DailyLogsPageContent({
             placeholder="Search logs"
             className={layout.filterControl}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -273,7 +270,7 @@ export default function DailyLogsPageContent({
             placeholder="From date"
             value={dateFrom}
             onChange={(value: Dayjs | null) => {
-              setPage(1);
+              resetPage();
               setDateFrom(value);
             }}
           />
@@ -281,7 +278,7 @@ export default function DailyLogsPageContent({
             placeholder="To date"
             value={dateTo}
             onChange={(value: Dayjs | null) => {
-              setPage(1);
+              resetPage();
               setDateTo(value);
             }}
           />
@@ -291,6 +288,7 @@ export default function DailyLogsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={logs}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -306,18 +304,6 @@ export default function DailyLogsPageContent({
             ),
           }}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
 
       <DailyLogFormDrawer

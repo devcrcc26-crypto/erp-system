@@ -7,8 +7,8 @@ import {
   Input,
   InputNumber,
   Spin,
-  Table,
 } from 'antd';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -142,9 +142,8 @@ export default function DailyLogDetailDrawer({
           </FormLayout>
 
           <FormLayout title="Workforce on site">
-            <Table
+            <DataTable
               size="small"
-              pagination={false}
               rowKey="id"
               dataSource={log.workforce}
               locale={{ emptyText: 'No workforce recorded' }}
@@ -166,9 +165,8 @@ export default function DailyLogDetailDrawer({
           </FormLayout>
 
           <FormLayout title="Equipment">
-            <Table
+            <DataTable
               size="small"
-              pagination={false}
               rowKey="id"
               dataSource={log.equipment}
               locale={{ emptyText: 'No equipment recorded' }}
@@ -190,9 +188,8 @@ export default function DailyLogDetailDrawer({
           </FormLayout>
 
           <FormLayout title="Visitors">
-            <Table
+            <DataTable
               size="small"
-              pagination={false}
               rowKey="id"
               dataSource={log.visitors}
               locale={{ emptyText: 'No visitors recorded' }}
@@ -219,9 +216,8 @@ export default function DailyLogDetailDrawer({
           </FormLayout>
 
           <FormLayout title="Incidents">
-            <Table
+            <DataTable
               size="small"
-              pagination={false}
               rowKey="id"
               dataSource={log.incidents}
               locale={{ emptyText: 'No incidents recorded' }}

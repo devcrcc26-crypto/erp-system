@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import MainNavPanel from '@/components/ui/shell/MainNavPanel';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -28,6 +29,7 @@ export default function IconRail({
     onPeekEnter,
     onPeekLeave,
   } = useRailExpanded();
+  const { t } = useEpcTranslation();
 
   const [isDesktop, setIsDesktop] = useState(false);
 
@@ -66,7 +68,7 @@ export default function IconRail({
           isOverlayPeek ? 'absolute left-0 top-0 z-50 shadow-xl' : 'relative',
         ].join(' ')}
         style={{ width: panelWidth, background: tokens.colorSidebarBg }}
-        aria-label="Main navigation"
+        aria-label={t('shell.mainNavigation')}
       >
         <div
           className="flex h-full flex-col"

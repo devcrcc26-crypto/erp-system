@@ -7,7 +7,6 @@ import {
   Drawer,
   Form,
   Input,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -29,10 +28,9 @@ import type {
 import { useCreateDrawing, useDrawings } from '@/lib/query/drawings';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import DrawingDetailDrawer from '@/components/modules/projects/drawings/DrawingDetailDrawer';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const PAGE_SIZE = 20;
 
 interface DrawingFormValues {
   drawingNumber: string;
@@ -141,7 +139,7 @@ export default function DrawingsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -150,8 +148,7 @@ export default function DrawingsPageContent({
   );
 
   const drawingsQuery = useDrawings(projectId, {
-    page,
-    limit: PAGE_SIZE,
+    ...params,
     search: search.trim() || undefined,
     discipline: disciplineFilter,
   });
@@ -277,7 +274,7 @@ export default function DrawingsPageContent({
             placeholder="Search drawings"
             className={layout.filterControl}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -287,7 +284,7 @@ export default function DrawingsPageContent({
             className={layout.filterControlSm}
             value={disciplineFilter}
             onChange={(value: string | undefined) => {
-              setPage(1);
+              resetPage();
               setDisciplineFilter(value);
             }}
             options={disciplineOptions}
@@ -298,6 +295,7 @@ export default function DrawingsPageContent({
           rowKey="id"
           columns={columns}
           dataSource={drawings}
+          pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -313,18 +311,6 @@ export default function DrawingsPageContent({
             ),
           }}
         />
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
-        )}
       </FormLayout>
 
       <DrawingFormDrawer

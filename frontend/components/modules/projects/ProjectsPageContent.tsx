@@ -6,7 +6,6 @@ import {
   Alert,
   Button,
   Input,
-  Pagination,
   Select,
   Space,
   Spin,
@@ -24,6 +23,7 @@ import type { Project, ProjectStatus } from '@/lib/api/project-management.types'
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   formatProjectBudget,
@@ -34,10 +34,8 @@ import {
 } from '@/lib/utils/project-display';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
-const PAGE_SIZE = 20;
-
 export default function ProjectsPageContent(): React.ReactNode {
-  const [page, setPage] = useState(1);
+  const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | undefined>();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -49,8 +47,7 @@ export default function ProjectsPageContent(): React.ReactNode {
 
   const projectsQuery = useProjects(
     {
-      page,
-      limit: PAGE_SIZE,
+      ...params,
       search: search.trim() || undefined,
       status: statusFilter,
       sortBy: 'createdAt',
@@ -218,7 +215,7 @@ export default function ProjectsPageContent(): React.ReactNode {
             placeholder="Search by code or name"
             className={layout.filterControlLg}
             onSearch={(value: string) => {
-              setPage(1);
+              resetPage();
               setSearch(value);
             }}
           />
@@ -228,7 +225,7 @@ export default function ProjectsPageContent(): React.ReactNode {
             className={layout.filterControlMd}
             value={statusFilter}
             onChange={(value: ProjectStatus | undefined) => {
-              setPage(1);
+              resetPage();
               setStatusFilter(value);
             }}
             options={PROJECT_STATUS_WORKFLOW.map((step) => ({
@@ -250,19 +247,8 @@ export default function ProjectsPageContent(): React.ReactNode {
             rowKey="id"
             columns={columns}
             dataSource={projects}
+            pagination={bindMeta(meta)}
           />
-        )}
-
-        {meta && meta.pages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={meta.page}
-              pageSize={meta.limit}
-              total={meta.total}
-              showSizeChanger={false}
-              onChange={(nextPage: number) => setPage(nextPage)}
-            />
-          </div>
         )}
       </FormLayout>
 

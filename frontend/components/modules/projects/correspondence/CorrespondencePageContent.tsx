@@ -1,8 +1,10 @@
 'use client';
 
-import { Alert, Table } from 'antd';
+import { Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useCorrespondence } from '@/lib/query/correspondence';
 import type { Correspondence } from '@/lib/api/project-management.types';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -13,7 +15,8 @@ export default function CorrespondencePageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const query = useCorrespondence(projectId, { page: 1, limit: 50 });
+  const { params, bindMeta } = useTablePagination();
+  const query = useCorrespondence(projectId, params);
   const rows = query.data?.data ?? [];
 
   const columns: ColumnsType<Correspondence> = [
@@ -49,11 +52,11 @@ export default function CorrespondencePageContent({
           title="Correspondence APIs are not connected yet."
         />
       )}
-      <Table<Correspondence>
+      <DataTable<Correspondence>
         rowKey="id"
         columns={columns}
         dataSource={rows}
-        pagination={false}
+        pagination={bindMeta(query.data?.meta)}
         locale={{ emptyText: 'No correspondence found' }}
       />
     </FormLayout>

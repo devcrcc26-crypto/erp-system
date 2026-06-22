@@ -218,16 +218,16 @@ export default function MainNavPanel({
       >
         {isExpanded ? (
           <h1 className="truncate text-xl font-bold tracking-wide text-white">
-            CCECC PWF
+            {t('shell.brandTitle')}
           </h1>
         ) : (
           <div
             className="flex h-8 w-8 items-center justify-center text-xs font-bold text-white"
             style={{ backgroundColor: tokens.colorSidebarAccent, borderRadius: 6 }}
-            title="CCECC PWF"
-            aria-label="CCECC PWF workspace"
+            title={t('shell.brandTitle')}
+            aria-label={t('shell.brandWorkspace')}
           >
-            CP
+            {t('shell.brandShort')}
           </div>
         )}
       </div>
@@ -288,8 +288,8 @@ export default function MainNavPanel({
             type="button"
             onClick={onTogglePin}
             onKeyDown={handleToggleKeyDown}
-            title={pinned ? 'Collapse navigation' : 'Expand navigation'}
-            aria-label={pinned ? 'Collapse navigation' : 'Expand navigation'}
+            title={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
+            aria-label={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
             aria-pressed={pinned}
             className={[
               'mt-1 flex h-8 shrink-0 items-center transition-colors hover:text-white',

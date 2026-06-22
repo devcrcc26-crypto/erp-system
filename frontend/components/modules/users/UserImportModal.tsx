@@ -15,6 +15,7 @@ import { UploadOutlined } from '@ant-design/icons';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ImportCommitResult, ImportPreviewResult, ImportRowStatus } from '@/lib/api/types';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   downloadUserImportTemplate,
   useImportPreview,
@@ -23,16 +24,21 @@ import {
 
 type ImportStep = 'upload' | 'preview' | 'result';
 
-function statusLabel(status: ImportRowStatus): string {
+type TranslateFn = (
+  key: string,
+  vars?: Record<string, string | number>,
+) => string;
+
+function statusLabel(status: ImportRowStatus, t: TranslateFn): string {
   switch (status) {
     case 'ok':
-      return 'Ready';
+      return t('users.import.ready');
     case 'error':
-      return 'Invalid';
+      return t('users.import.invalid');
     case 'duplicate':
-      return 'Duplicate';
+      return t('users.import.duplicate');
     case 'duplicate_in_file':
-      return 'Duplicate in file';
+      return t('users.import.duplicateInFile');
     default:
       return status;
   }
@@ -52,6 +58,14 @@ function statusColor(status: ImportRowStatus): string {
   }
 }
 
+function pluralKey(
+  count: number,
+  singularKey: string,
+  pluralKeyName: string,
+): string {
+  return count === 1 ? singularKey : pluralKeyName;
+}
+
 export default function UserImportModal({
   onClose,
   onImported,
@@ -59,6 +73,7 @@ export default function UserImportModal({
   onClose: () => void;
   onImported: (summary: string) => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importPreview = useImportPreview();
   const importUsers = useImportUsers();
@@ -80,7 +95,7 @@ export default function UserImportModal({
       setErrorMessage(
         error instanceof ApiRequestError
           ? error.message
-          : 'Could not download template.',
+          : t('users.import.downloadError'),
       );
     } finally {
       setIsDownloadingTemplate(false);
@@ -105,7 +120,7 @@ export default function UserImportModal({
       setErrorMessage(
         error instanceof ApiRequestError
           ? error.message
-          : 'Could not read the import file.',
+          : t('users.import.readError'),
       );
     }
   }
@@ -125,17 +140,25 @@ export default function UserImportModal({
       setResult(commitResult);
       setStep('result');
 
-      const summary =
-        `${commitResult.created} user${commitResult.created === 1 ? '' : 's'} imported` +
-        (sendInvitations
-          ? `, ${commitResult.invitationsSent} activation email${commitResult.invitationsSent === 1 ? '' : 's'} sent`
-          : '');
+      const summary = sendInvitations
+        ? t('users.import.summary', {
+            created: commitResult.created,
+            sent: commitResult.invitationsSent,
+          })
+        : t(
+            pluralKey(
+              commitResult.created,
+              'users.import.created',
+              'users.import.createdPlural',
+            ),
+            { count: commitResult.created },
+          );
       onImported(summary);
     } catch (error) {
       setErrorMessage(
         error instanceof ApiRequestError
           ? error.message
-          : 'Import failed. Please try again.',
+          : t('users.import.importError'),
       );
     }
   }
@@ -152,22 +175,23 @@ export default function UserImportModal({
   }
 
   const isBusy = importPreview.isPending || importUsers.isPending;
+  const validCount = preview?.valid ?? 0;
 
   const footer =
     step === 'result'
       ? [
           <Button key="done" type="primary" onClick={onClose}>
-            Done
+            {t('common.done')}
           </Button>,
         ]
       : [
           step === 'preview' && (
             <Button key="reset" onClick={handleReset} disabled={isBusy}>
-              Choose another file
+              {t('users.import.chooseAnotherFile')}
             </Button>
           ),
           <Button key="cancel" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>,
           step === 'preview' && (
             <Button
@@ -177,7 +201,14 @@ export default function UserImportModal({
               loading={importUsers.isPending}
               disabled={!preview || preview.valid === 0}
             >
-              {`Import ${preview?.valid ?? 0} user${preview?.valid === 1 ? '' : 's'}`}
+              {t(
+                pluralKey(
+                  validCount,
+                  'users.import.importUsers',
+                  'users.import.importUsersPlural',
+                ),
+                { count: validCount },
+              )}
             </Button>
           ),
         ].filter(Boolean);
@@ -185,7 +216,7 @@ export default function UserImportModal({
   return (
     <Modal
       open
-      title="Import users from Excel"
+      title={t('users.import.title')}
       onCancel={onClose}
       footer={footer}
       width={800}
@@ -193,8 +224,7 @@ export default function UserImportModal({
       destroyOnHidden
     >
       <p className="mb-4 text-sm text-slate-500">
-        Upload a spreadsheet to invite multiple employees. Each user receives an
-        activation email to verify their address and set a password.
+        {t('users.import.description')}
       </p>
 
       {step === 'upload' && (
@@ -203,7 +233,7 @@ export default function UserImportModal({
             onClick={() => void handleDownloadTemplate()}
             loading={isDownloadingTemplate}
           >
-            Download template
+            {t('users.import.downloadTemplate')}
           </Button>
 
           <Upload
@@ -220,11 +250,11 @@ export default function UserImportModal({
               icon={<UploadOutlined />}
               loading={importPreview.isPending}
             >
-              Choose .xlsx file
+              {t('users.import.chooseFile')}
             </Button>
           </Upload>
           <p className="text-xs text-slate-500">
-            Required columns: email, firstName, lastName, role. Optional: phone.
+            {t('users.import.requiredColumns')}
           </p>
         </Space>
       )}
@@ -232,9 +262,15 @@ export default function UserImportModal({
       {step === 'preview' && preview && (
         <div className="space-y-4">
           <Space wrap>
-            <Tag color="green">{preview.valid} ready</Tag>
-            <Tag color="red">{preview.invalid} invalid</Tag>
-            <Tag color="gold">{preview.duplicate} duplicate</Tag>
+            <Tag color="green">
+              {t('users.import.readyCount', { count: preview.valid })}
+            </Tag>
+            <Tag color="red">
+              {t('users.import.invalidCount', { count: preview.invalid })}
+            </Tag>
+            <Tag color="gold">
+              {t('users.import.duplicateCount', { count: preview.duplicate })}
+            </Tag>
           </Space>
 
           <DataTable
@@ -242,20 +278,20 @@ export default function UserImportModal({
             dataSource={preview.rows}
             scroll={{ x: true }}
             columns={[
-              { title: 'Line', dataIndex: 'line', width: 70 },
-              { title: 'Email', dataIndex: 'email' },
+              { title: t('users.import.line'), dataIndex: 'line', width: 70 },
+              { title: t('common.email'), dataIndex: 'email' },
               {
-                title: 'Name',
+                title: t('users.import.name'),
                 key: 'name',
                 render: (_, row) => `${row.firstName} ${row.lastName}`,
               },
-              { title: 'Role', dataIndex: 'role' },
+              { title: t('common.role'), dataIndex: 'role' },
               {
-                title: 'Status',
+                title: t('common.status'),
                 key: 'status',
                 render: (_, row) => (
                   <Tag color={statusColor(row.status)} title={row.message}>
-                    {statusLabel(row.status)}
+                    {statusLabel(row.status, t)}
                   </Tag>
                 ),
               },
@@ -268,13 +304,12 @@ export default function UserImportModal({
               setSendInvitations(event.target.checked)
             }
           >
-            Send activation emails immediately
+            {t('users.import.sendInvitationsNow')}
           </Checkbox>
 
           {sendInvitations && (
             <p className="text-xs text-slate-500">
-              In local development, check Mailpit at http://localhost:8025 or the
-              backend terminal for [DEV Activation] links.
+              {t('users.import.devMailpitHint')}
             </p>
           )}
         </div>
@@ -283,24 +318,49 @@ export default function UserImportModal({
       {step === 'result' && result && (
         <div className="space-y-3 text-sm text-slate-700">
           <p>
-            <span className="font-semibold">{result.created}</span> user
-            {result.created === 1 ? '' : 's'} created.
+            {t(
+              pluralKey(
+                result.created,
+                'users.import.created',
+                'users.import.createdPlural',
+              ),
+              { count: result.created },
+            )}
           </p>
           <p>
-            <span className="font-semibold">{result.skipped}</span> row
-            {result.skipped === 1 ? '' : 's'} skipped.
+            {t(
+              pluralKey(
+                result.skipped,
+                'users.import.skipped',
+                'users.import.skippedPlural',
+              ),
+              { count: result.skipped },
+            )}
           </p>
           {sendInvitations && (
             <>
               <p>
-                <span className="font-semibold">{result.invitationsSent}</span>{' '}
-                activation email{result.invitationsSent === 1 ? '' : 's'} sent.
+                {t(
+                  pluralKey(
+                    result.invitationsSent,
+                    'users.import.invitationsSent',
+                    'users.import.invitationsSentPlural',
+                  ),
+                  { count: result.invitationsSent },
+                )}
               </p>
               {result.invitationsFailed > 0 && (
                 <Alert
                   type="warning"
                   showIcon
-                  title={`${result.invitationsFailed} invitation${result.invitationsFailed === 1 ? '' : 's'} failed to send. Use Resend verification on the Users page.`}
+                  title={t(
+                    pluralKey(
+                      result.invitationsFailed,
+                      'users.import.invitationsFailed',
+                      'users.import.invitationsFailedPlural',
+                    ),
+                    { count: result.invitationsFailed },
+                  )}
                 />
               )}
             </>
@@ -309,12 +369,16 @@ export default function UserImportModal({
             <Alert
               type="error"
               showIcon
-              title="Errors during import"
+              title={t('users.import.errorsTitle')}
               description={
                 <ul className="mt-1 list-disc pl-5">
                   {result.errors.map((error) => (
                     <li key={`${error.line}-${error.email}`}>
-                      Line {error.line} ({error.email}): {error.message}
+                      {t('users.import.errorLine', {
+                        line: error.line,
+                        email: error.email,
+                        message: error.message,
+                      })}
                     </li>
                   ))}
                 </ul>

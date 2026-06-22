@@ -8,13 +8,13 @@ import {
   Form,
   Space,
   Spin,
-  Table,
   Upload,
 } from 'antd';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { RcFile } from 'antd/es/upload';
 import Link from 'next/link';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -31,6 +31,7 @@ import {
 } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import EdvMetadataForm, {
@@ -71,10 +72,11 @@ export default function EngineeringDocumentPanel({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [form] = Form.useForm<EdvMetadataFormValues>();
 
+  const { params, bindMeta } = useTablePagination();
   const documentsQuery = useEngineeringDocuments(
     projectId,
     taskDisciplineId,
-    { page: 1, limit: 50 },
+    params,
     lens.canViewEngineering,
   );
   const uploadFolderQuery = useDisciplineUploadFolder(
@@ -228,13 +230,13 @@ export default function EngineeringDocumentPanel({
         />
       )}
 
-      <Table<EngineeringDocument>
+      <DataTable<EngineeringDocument>
         rowKey="id"
         size="middle"
         columns={columns}
         dataSource={documents}
         loading={documentsQuery.isLoading}
-        pagination={false}
+        pagination={bindMeta(documentsQuery.data?.meta)}
         locale={{ emptyText: 'No engineering documents registered' }}
       />
 
