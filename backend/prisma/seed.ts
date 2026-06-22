@@ -513,7 +513,7 @@ function epcWorkflowPermissionFlags(
     allowedModules = engineeringModules;
     canApprove = action === 'approve' || action === 'edit';
   } else if (roleName === 'Site Coordinator') {
-    allowedModules = [...coordinationModules, 'submittals'];
+    allowedModules = [...coordinationModules, 'submittals', 'daily_logs'];
   } else {
     return null;
   }

@@ -1,26 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  Badge,
   Button,
-  Descriptions,
+  Collapse,
+  Divider,
   Drawer,
   Form,
   Input,
   InputNumber,
   Select,
   Spin,
+  Tabs,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { ReactNode } from 'react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
+  DailyLogDetail,
   DailyLogEquipment,
   DailyLogIncident,
   DailyLogVisitor,
@@ -42,6 +46,7 @@ import {
   useRemoveDailyLogWorkforce,
   useUpdateDailyLog,
 } from '@/lib/query/daily-logs';
+import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   dailyLogStatusVariant,
@@ -87,6 +92,60 @@ const INCIDENT_SEVERITY_OPTIONS = [
   { value: 'HIGH', label: 'High' },
 ];
 
+function DrawerSection({
+  title,
+  description,
+  children,
+  bordered = true,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  bordered?: boolean;
+}): React.ReactNode {
+  return (
+    <section
+      className={
+        bordered
+          ? layout.drawerSection
+          : 'flex flex-col gap-4 sm:gap-5'
+      }
+    >
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        {description && (
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function AddEntryCollapse({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}): React.ReactNode {
+  return (
+    <Collapse
+      ghost
+      className="!mt-2"
+      items={[
+        {
+          key: 'add',
+          label: (
+            <span className="text-sm font-medium text-orange-600">{label}</span>
+          ),
+          children: <div className="pt-1">{children}</div>,
+        },
+      ]}
+    />
+  );
+}
+
 export default function DailyLogDetailDrawer({
   projectId,
   dailyLogId,
@@ -99,6 +158,7 @@ export default function DailyLogDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const [editForm] = Form.useForm<DailyLogEditValues>();
   const [workforceForm] = Form.useForm<WorkforceFormValues>();
   const [equipmentForm] = Form.useForm<EquipmentFormValues>();
@@ -269,197 +329,570 @@ export default function DailyLogDetailDrawer({
     }
   }
 
-  const workforceColumns: ColumnsType<DailyLogWorkforce> = [
-    { title: 'Trade', dataIndex: 'trade', key: 'trade' },
-    {
-      title: 'Contractor',
-      dataIndex: 'contractor',
-      key: 'contractor',
-      render: (value: string | null) => value ?? '—',
-    },
-    { title: 'Workers', dataIndex: 'workerCount', key: 'workerCount' },
-    ...(isEditable
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: DailyLogWorkforce) => (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={removeWorkforce.isPending}
-                onClick={() =>
-                  void removeWorkforce
-                    .mutateAsync({
+  function deleteAction(
+    onDelete: () => Promise<unknown>,
+    errorMessage: string,
+  ): React.ReactNode {
+    return (
+      <Button
+        type="text"
+        danger
+        size="small"
+        icon={<DeleteOutlined />}
+        onClick={() =>
+          void onDelete()
+            .then(() => void logQuery.refetch())
+            .catch((error: unknown) =>
+              notifyApiError(error, errorMessage, messageApi),
+            )
+        }
+      />
+    );
+  }
+
+  const workforceColumns = useMemo((): ColumnsType<DailyLogWorkforce> => {
+    if (!log || !dailyLogId) {
+      return [];
+    }
+
+    return [
+      { title: 'Trade', dataIndex: 'trade', key: 'trade' },
+      {
+        title: 'Contractor',
+        dataIndex: 'contractor',
+        key: 'contractor',
+        render: (value: string | null) => value ?? '—',
+      },
+      { title: 'Workers', dataIndex: 'workerCount', key: 'workerCount', width: 90 },
+      ...(isEditable
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 48,
+              render: (_: unknown, record: DailyLogWorkforce) =>
+                deleteAction(
+                  () =>
+                    removeWorkforce.mutateAsync({
                       projectId,
-                      dailyLogId: dailyLogId!,
+                      dailyLogId,
                       workforceId: record.id,
-                    })
-                    .then(() => void logQuery.refetch())
-                    .catch((error: unknown) =>
-                      notifyApiError(
-                        error,
-                        'Failed to remove workforce entry',
-                        messageApi,
-                      ),
-                    )
-                }
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+                    }),
+                  'Failed to remove workforce entry',
+                ),
+            },
+          ]
+        : []),
+    ];
+  }, [dailyLogId, isEditable, log, projectId, removeWorkforce]);
 
-  const equipmentColumns: ColumnsType<DailyLogEquipment> = [
-    { title: 'Type', dataIndex: 'equipmentType', key: 'equipmentType' },
-    { title: 'Qty', dataIndex: 'quantity', key: 'quantity' },
-    {
-      title: 'Hours used',
-      dataIndex: 'hoursUsed',
-      key: 'hoursUsed',
-      render: (value: string | null) => value ?? '—',
-    },
-    {
-      title: 'Downtime',
-      dataIndex: 'hoursDowntime',
-      key: 'hoursDowntime',
-      render: (value: string | null) => value ?? '—',
-    },
-    ...(isEditable
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: DailyLogEquipment) => (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={removeEquipment.isPending}
-                onClick={() =>
-                  void removeEquipment
-                    .mutateAsync({
+  const equipmentColumns = useMemo((): ColumnsType<DailyLogEquipment> => {
+    if (!log || !dailyLogId) {
+      return [];
+    }
+
+    return [
+      { title: 'Type', dataIndex: 'equipmentType', key: 'equipmentType' },
+      { title: 'Qty', dataIndex: 'quantity', key: 'quantity', width: 70 },
+      {
+        title: 'Hours used',
+        dataIndex: 'hoursUsed',
+        key: 'hoursUsed',
+        width: 100,
+        render: (value: string | null) => value ?? '—',
+      },
+      {
+        title: 'Downtime',
+        dataIndex: 'hoursDowntime',
+        key: 'hoursDowntime',
+        width: 100,
+        render: (value: string | null) => value ?? '—',
+      },
+      ...(isEditable
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 48,
+              render: (_: unknown, record: DailyLogEquipment) =>
+                deleteAction(
+                  () =>
+                    removeEquipment.mutateAsync({
                       projectId,
-                      dailyLogId: dailyLogId!,
+                      dailyLogId,
                       equipmentId: record.id,
-                    })
-                    .then(() => void logQuery.refetch())
-                    .catch((error: unknown) =>
-                      notifyApiError(
-                        error,
-                        'Failed to remove equipment entry',
-                        messageApi,
-                      ),
-                    )
-                }
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+                    }),
+                  'Failed to remove equipment entry',
+                ),
+            },
+          ]
+        : []),
+    ];
+  }, [dailyLogId, isEditable, log, projectId, removeEquipment]);
 
-  const visitorColumns: ColumnsType<DailyLogVisitor> = [
-    { title: 'Name', dataIndex: 'visitorName', key: 'visitorName' },
-    {
-      title: 'Company',
-      dataIndex: 'company',
-      key: 'company',
-      render: (value: string | null) => value ?? '—',
-    },
-    {
-      title: 'Purpose',
-      dataIndex: 'purpose',
-      key: 'purpose',
-      render: (value: string | null) => value ?? '—',
-    },
-    ...(isEditable
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: DailyLogVisitor) => (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={removeVisitor.isPending}
-                onClick={() =>
-                  void removeVisitor
-                    .mutateAsync({
+  const visitorColumns = useMemo((): ColumnsType<DailyLogVisitor> => {
+    if (!log || !dailyLogId) {
+      return [];
+    }
+
+    return [
+      { title: 'Name', dataIndex: 'visitorName', key: 'visitorName' },
+      {
+        title: 'Company',
+        dataIndex: 'company',
+        key: 'company',
+        render: (value: string | null) => value ?? '—',
+      },
+      {
+        title: 'Purpose',
+        dataIndex: 'purpose',
+        key: 'purpose',
+        render: (value: string | null) => value ?? '—',
+      },
+      ...(isEditable
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 48,
+              render: (_: unknown, record: DailyLogVisitor) =>
+                deleteAction(
+                  () =>
+                    removeVisitor.mutateAsync({
                       projectId,
-                      dailyLogId: dailyLogId!,
+                      dailyLogId,
                       visitorId: record.id,
-                    })
-                    .then(() => void logQuery.refetch())
-                    .catch((error: unknown) =>
-                      notifyApiError(error, 'Failed to remove visitor', messageApi),
-                    )
-                }
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+                    }),
+                  'Failed to remove visitor',
+                ),
+            },
+          ]
+        : []),
+    ];
+  }, [dailyLogId, isEditable, log, projectId, removeVisitor]);
 
-  const incidentColumns: ColumnsType<DailyLogIncident> = [
-    { title: 'Type', dataIndex: 'incidentType', key: 'incidentType' },
-    {
-      title: 'Severity',
-      dataIndex: 'severity',
-      key: 'severity',
-      render: (value: string | null) => value ?? '—',
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-    },
-    ...(isEditable
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: DailyLogIncident) => (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                loading={removeIncident.isPending}
-                onClick={() =>
-                  void removeIncident
-                    .mutateAsync({
+  const incidentColumns = useMemo((): ColumnsType<DailyLogIncident> => {
+    if (!log || !dailyLogId) {
+      return [];
+    }
+
+    return [
+      { title: 'Type', dataIndex: 'incidentType', key: 'incidentType', width: 140 },
+      {
+        title: 'Severity',
+        dataIndex: 'severity',
+        key: 'severity',
+        width: 100,
+        render: (value: string | null) => value ?? '—',
+      },
+      {
+        title: 'Description',
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      },
+      ...(isEditable
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 48,
+              render: (_: unknown, record: DailyLogIncident) =>
+                deleteAction(
+                  () =>
+                    removeIncident.mutateAsync({
                       projectId,
-                      dailyLogId: dailyLogId!,
+                      dailyLogId,
                       incidentId: record.id,
-                    })
-                    .then(() => void logQuery.refetch())
-                    .catch((error: unknown) =>
-                      notifyApiError(
-                        error,
-                        'Failed to remove incident',
-                        messageApi,
-                      ),
-                    )
-                }
+                    }),
+                  'Failed to remove incident',
+                ),
+            },
+          ]
+        : []),
+    ];
+  }, [dailyLogId, isEditable, log, projectId, removeIncident]);
+
+  function renderSummaryHeader(currentLog: DailyLogDetail): React.ReactNode {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <dl className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Date
+              </dt>
+              <dd className="mt-1 text-sm font-medium text-slate-900">
+                {formatProjectDate(currentLog.logDate)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Shift
+              </dt>
+              <dd className="mt-1 text-sm text-slate-900">
+                {currentLog.shift ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Site engineer
+              </dt>
+              <dd className="mt-1 text-sm text-slate-900">
+                {resolveUserName(currentLog.siteEngineerId)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Workers on site
+              </dt>
+              <dd className="mt-1 text-sm text-slate-900">
+                {currentLog.totalWorkers}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="flex w-full flex-col gap-2 lg:w-56">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Status
+            </span>
+            <StatusBadge
+              label={formatDailyLogStatus(currentLog.status)}
+              variant={dailyLogStatusVariant(currentLog.status)}
+            />
+            <Select
+              className="w-full"
+              value={currentLog.status}
+              onChange={(value: string) => void handleStatusChange(value)}
+              loading={updateDailyLog.isPending}
+              options={DAILY_LOG_WORKFLOW.map((step) => ({
+                value: step.key,
+                label: step.label,
+              }))}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderOverviewTab(currentLog: DailyLogDetail): React.ReactNode {
+    return (
+      <div className="flex flex-col gap-6 sm:gap-8">
+        <DrawerSection
+          title="Weather & conditions"
+          description="Record site weather and environmental conditions for the day."
+          bordered={false}
+        >
+          <Form<DailyLogEditValues>
+            form={editForm}
+            key={currentLog.id}
+            layout="vertical"
+            className="erp-drawer-form"
+            initialValues={{
+              weatherCondition: currentLog.weatherCondition ?? undefined,
+              temperatureC: currentLog.temperatureC
+                ? Number(currentLog.temperatureC)
+                : undefined,
+              rainfallMm: currentLog.rainfallMm
+                ? Number(currentLog.rainfallMm)
+                : undefined,
+              workSummary: currentLog.workSummary ?? undefined,
+            }}
+            onFinish={(values: DailyLogEditValues) => void handleSave(values)}
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Form.Item
+                className="sm:col-span-3"
+                label="Weather"
+                name="weatherCondition"
+              >
+                <Input
+                  disabled={!isEditable}
+                  placeholder="e.g. Clear, overcast, windy"
+                />
+              </Form.Item>
+              <Form.Item label="Temperature (°C)" name="temperatureC">
+                <InputNumber className="!w-full" disabled={!isEditable} />
+              </Form.Item>
+              <Form.Item label="Rainfall (mm)" name="rainfallMm">
+                <InputNumber
+                  className="!w-full"
+                  min={0}
+                  disabled={!isEditable}
+                />
+              </Form.Item>
+            </div>
+            <Form.Item label="Work summary" name="workSummary">
+              <Input.TextArea
+                rows={5}
+                disabled={!isEditable}
+                placeholder="Describe work completed on site today"
               />
-            ),
-          },
-        ]
-      : []),
-  ];
+            </Form.Item>
+            {isEditable && (
+              <div className="flex justify-end">
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={updateDailyLog.isPending}
+                >
+                  Save changes
+                </Button>
+              </div>
+            )}
+          </Form>
+        </DrawerSection>
+      </div>
+    );
+  }
+
+  function renderSiteActivityTab(currentLog: DailyLogDetail): React.ReactNode {
+    return (
+      <div className="flex flex-col gap-8 sm:gap-10">
+        <DrawerSection
+          title="Workforce on site"
+          description="Trades and headcount recorded for this log."
+          bordered={false}
+        >
+          <DataTable
+            size="small"
+            rowKey="id"
+            pagination={false}
+            dataSource={currentLog.workforce}
+            locale={{ emptyText: 'No workforce recorded' }}
+            columns={workforceColumns}
+          />
+          {isEditable && (
+            <AddEntryCollapse label="Add workforce entry">
+              <Form<WorkforceFormValues>
+                form={workforceForm}
+                layout="vertical"
+                className="erp-drawer-form"
+                onFinish={(values: WorkforceFormValues) =>
+                  void handleAddWorkforce(values)
+                }
+              >
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Form.Item
+                    label="Trade"
+                    name="trade"
+                    rules={[{ required: true, message: 'Trade is required' }]}
+                  >
+                    <Input placeholder="e.g. Carpenter" />
+                  </Form.Item>
+                  <Form.Item label="Contractor" name="contractor">
+                    <Input placeholder="Subcontractor name" />
+                  </Form.Item>
+                  <Form.Item
+                    label="Workers"
+                    name="workerCount"
+                    rules={[{ required: true, message: 'Count is required' }]}
+                    initialValue={1}
+                  >
+                    <InputNumber className="!w-full" min={1} />
+                  </Form.Item>
+                </div>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<PlusOutlined />}
+                  loading={addWorkforce.isPending}
+                >
+                  Add workforce
+                </Button>
+              </Form>
+            </AddEntryCollapse>
+          )}
+        </DrawerSection>
+
+        <Divider className="!my-0" />
+
+        <DrawerSection
+          title="Equipment"
+          description="Plant and equipment used on site."
+          bordered={false}
+        >
+          <DataTable
+            size="small"
+            rowKey="id"
+            pagination={false}
+            dataSource={currentLog.equipment}
+            locale={{ emptyText: 'No equipment recorded' }}
+            columns={equipmentColumns}
+          />
+          {isEditable && (
+            <AddEntryCollapse label="Add equipment entry">
+              <Form<EquipmentFormValues>
+                form={equipmentForm}
+                layout="vertical"
+                className="erp-drawer-form"
+                onFinish={(values: EquipmentFormValues) =>
+                  void handleAddEquipment(values)
+                }
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Form.Item
+                    label="Equipment type"
+                    name="equipmentType"
+                    rules={[{ required: true, message: 'Type is required' }]}
+                  >
+                    <Input placeholder="e.g. Excavator" />
+                  </Form.Item>
+                  <Form.Item label="Quantity" name="quantity" initialValue={1}>
+                    <InputNumber className="!w-full" min={1} />
+                  </Form.Item>
+                  <Form.Item label="Hours used" name="hoursUsed">
+                    <InputNumber className="!w-full" min={0} />
+                  </Form.Item>
+                  <Form.Item label="Downtime (hrs)" name="hoursDowntime">
+                    <InputNumber className="!w-full" min={0} />
+                  </Form.Item>
+                </div>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<PlusOutlined />}
+                  loading={addEquipment.isPending}
+                >
+                  Add equipment
+                </Button>
+              </Form>
+            </AddEntryCollapse>
+          )}
+        </DrawerSection>
+      </div>
+    );
+  }
+
+  function renderVisitorsSafetyTab(currentLog: DailyLogDetail): React.ReactNode {
+    return (
+      <div className="flex flex-col gap-8 sm:gap-10">
+        <DrawerSection
+          title="Visitors"
+          description="People who visited the site today."
+          bordered={false}
+        >
+          <DataTable
+            size="small"
+            rowKey="id"
+            pagination={false}
+            dataSource={currentLog.visitors}
+            locale={{ emptyText: 'No visitors recorded' }}
+            columns={visitorColumns}
+          />
+          {isEditable && (
+            <AddEntryCollapse label="Add visitor">
+              <Form<VisitorFormValues>
+                form={visitorForm}
+                layout="vertical"
+                className="erp-drawer-form"
+                onFinish={(values: VisitorFormValues) =>
+                  void handleAddVisitor(values)
+                }
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Form.Item
+                    label="Visitor name"
+                    name="visitorName"
+                    rules={[{ required: true, message: 'Name is required' }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label="Company" name="company">
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    className="sm:col-span-2"
+                    label="Purpose"
+                    name="purpose"
+                  >
+                    <Input />
+                  </Form.Item>
+                </div>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<PlusOutlined />}
+                  loading={addVisitor.isPending}
+                >
+                  Add visitor
+                </Button>
+              </Form>
+            </AddEntryCollapse>
+          )}
+        </DrawerSection>
+
+        <Divider className="!my-0" />
+
+        <DrawerSection
+          title="Incidents"
+          description="Safety incidents, near misses, or notable events."
+          bordered={false}
+        >
+          <DataTable
+            size="small"
+            rowKey="id"
+            pagination={false}
+            dataSource={currentLog.incidents}
+            locale={{ emptyText: 'No incidents recorded' }}
+            columns={incidentColumns}
+          />
+          {isEditable && (
+            <AddEntryCollapse label="Record incident">
+              <Form<IncidentFormValues>
+                form={incidentForm}
+                layout="vertical"
+                className="erp-drawer-form"
+                onFinish={(values: IncidentFormValues) =>
+                  void handleAddIncident(values)
+                }
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Form.Item
+                    label="Incident type"
+                    name="incidentType"
+                    rules={[{ required: true, message: 'Type is required' }]}
+                  >
+                    <Input placeholder="e.g. Near miss, injury" />
+                  </Form.Item>
+                  <Form.Item label="Severity" name="severity">
+                    <Select
+                      allowClear
+                      options={INCIDENT_SEVERITY_OPTIONS}
+                      placeholder="Select severity"
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    className="sm:col-span-2"
+                    label="Description"
+                    name="description"
+                    rules={[
+                      { required: true, message: 'Description is required' },
+                    ]}
+                  >
+                    <Input.TextArea rows={3} />
+                  </Form.Item>
+                </div>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  icon={<PlusOutlined />}
+                  loading={addIncident.isPending}
+                >
+                  Record incident
+                </Button>
+              </Form>
+            </AddEntryCollapse>
+          )}
+        </DrawerSection>
+      </div>
+    );
+  }
+
+  const siteActivityCount = (log?.workforce.length ?? 0) + (log?.equipment.length ?? 0);
+  const visitorsSafetyCount =
+    (log?.visitors.length ?? 0) + (log?.incidents.length ?? 0);
 
   return (
     <>
@@ -472,6 +905,8 @@ export default function DailyLogDetailDrawer({
             : 'Daily log detail'
         }
         size="large"
+        className="erp-responsive-drawer"
+        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           log && isEditable ? (
@@ -482,7 +917,7 @@ export default function DailyLogDetailDrawer({
         }
       >
         {logQuery.isLoading && (
-          <div className="flex justify-center py-12">
+          <div className="flex justify-center py-16">
             <Spin />
           </div>
         )}
@@ -496,293 +931,75 @@ export default function DailyLogDetailDrawer({
         )}
 
         {log && (
-          <div className="space-y-6">
+          <div className={layout.drawerStack}>
+            {renderSummaryHeader(log)}
+
             <WorkflowStepper
               steps={DAILY_LOG_WORKFLOW}
               currentStatus={log.status}
             />
 
-            <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="Date">
-                {formatProjectDate(log.logDate)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Shift">
-                {log.shift ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Site engineer" span={2}>
-                {resolveUserName(log.siteEngineerId)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <StatusBadge
-                  label={formatDailyLogStatus(log.status)}
-                  variant={dailyLogStatusVariant(log.status)}
-                />
-              </Descriptions.Item>
-              <Descriptions.Item label="Total workers">
-                {log.totalWorkers}
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-slate-700">
-                Update status
-              </p>
-              <Select
-                className="w-full max-w-xs"
-                value={log.status}
-                onChange={(value: string) => void handleStatusChange(value)}
-                loading={updateDailyLog.isPending}
-                options={DAILY_LOG_WORKFLOW.map((step) => ({
-                  value: step.key,
-                  label: step.label,
-                }))}
-              />
-            </div>
-
-            <FormLayout title="Weather & work summary">
-              <Form<DailyLogEditValues>
-                form={editForm}
-                key={log.id}
-                layout="vertical"
-                initialValues={{
-                  weatherCondition: log.weatherCondition ?? undefined,
-                  temperatureC: log.temperatureC
-                    ? Number(log.temperatureC)
-                    : undefined,
-                  rainfallMm: log.rainfallMm ? Number(log.rainfallMm) : undefined,
-                  workSummary: log.workSummary ?? undefined,
-                }}
-                onFinish={(values: DailyLogEditValues) => void handleSave(values)}
-              >
-                <Form.Item label="Weather" name="weatherCondition">
-                  <Input disabled={!isEditable} />
-                </Form.Item>
-                <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-                  <Form.Item label="Temperature (°C)" name="temperatureC">
-                    <InputNumber className="!w-full" disabled={!isEditable} />
-                  </Form.Item>
-                  <Form.Item label="Rainfall (mm)" name="rainfallMm">
-                    <InputNumber
-                      className="!w-full"
-                      min={0}
-                      disabled={!isEditable}
+            <Tabs
+              activeKey={activeTab}
+              onChange={(key: string) => {
+                setActiveTab(key);
+                if (key === 'photos' && log && !log.attachmentFolderId) {
+                  void logQuery.refetch();
+                }
+              }}
+              destroyOnHidden
+              className="erp-daily-log-tabs min-w-0"
+              items={[
+                {
+                  key: 'overview',
+                  label: 'Overview',
+                  children: renderOverviewTab(log),
+                },
+                {
+                  key: 'site-activity',
+                  label: (
+                    <span className="inline-flex items-center gap-2">
+                      Site activity
+                      {siteActivityCount > 0 && (
+                        <Badge
+                          count={siteActivityCount}
+                          size="small"
+                          color="#F47B20"
+                        />
+                      )}
+                    </span>
+                  ),
+                  children: renderSiteActivityTab(log),
+                },
+                {
+                  key: 'visitors-safety',
+                  label: (
+                    <span className="inline-flex items-center gap-2">
+                      Visitors & safety
+                      {visitorsSafetyCount > 0 && (
+                        <Badge
+                          count={visitorsSafetyCount}
+                          size="small"
+                          color="#F47B20"
+                        />
+                      )}
+                    </span>
+                  ),
+                  children: renderVisitorsSafetyTab(log),
+                },
+                {
+                  key: 'photos',
+                  label: 'Photos',
+                  children: (
+                    <DocumentAttachmentPanel
+                      folderId={log.attachmentFolderId ?? undefined}
+                      readOnly={!isEditable}
+                      title="Site photos"
+                      description="Upload site photos and videos for this daily log."
                     />
-                  </Form.Item>
-                </div>
-                <Form.Item label="Work summary" name="workSummary">
-                  <Input.TextArea rows={4} disabled={!isEditable} />
-                </Form.Item>
-                {isEditable && (
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={updateDailyLog.isPending}
-                  >
-                    Save changes
-                  </Button>
-                )}
-              </Form>
-            </FormLayout>
-
-            <FormLayout title="Workforce on site">
-              <DataTable
-                size="small"
-                rowKey="id"
-                dataSource={log.workforce}
-                locale={{ emptyText: 'No workforce recorded' }}
-                columns={workforceColumns}
-              />
-              {isEditable && (
-                <Form<WorkforceFormValues>
-                  form={workforceForm}
-                  layout="vertical"
-                  className="mt-4"
-                  onFinish={(values: WorkforceFormValues) =>
-                    void handleAddWorkforce(values)
-                  }
-                >
-                  <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
-                    <Form.Item
-                      label="Trade"
-                      name="trade"
-                      rules={[{ required: true, message: 'Trade is required' }]}
-                    >
-                      <Input placeholder="e.g. Carpenter" />
-                    </Form.Item>
-                    <Form.Item label="Contractor" name="contractor">
-                      <Input placeholder="Subcontractor name" />
-                    </Form.Item>
-                    <Form.Item
-                      label="Workers"
-                      name="workerCount"
-                      rules={[{ required: true, message: 'Count is required' }]}
-                      initialValue={1}
-                    >
-                      <InputNumber className="!w-full" min={1} />
-                    </Form.Item>
-                  </div>
-                  <Button
-                    type="dashed"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addWorkforce.isPending}
-                  >
-                    Add workforce
-                  </Button>
-                </Form>
-              )}
-            </FormLayout>
-
-            <FormLayout title="Equipment">
-              <DataTable
-                size="small"
-                rowKey="id"
-                dataSource={log.equipment}
-                locale={{ emptyText: 'No equipment recorded' }}
-                columns={equipmentColumns}
-              />
-              {isEditable && (
-                <Form<EquipmentFormValues>
-                  form={equipmentForm}
-                  layout="vertical"
-                  className="mt-4"
-                  onFinish={(values: EquipmentFormValues) =>
-                    void handleAddEquipment(values)
-                  }
-                >
-                  <div className="grid gap-4 md:grid-cols-4 md:gap-x-4">
-                    <Form.Item
-                      label="Equipment type"
-                      name="equipmentType"
-                      rules={[{ required: true, message: 'Type is required' }]}
-                    >
-                      <Input placeholder="e.g. Excavator" />
-                    </Form.Item>
-                    <Form.Item label="Quantity" name="quantity" initialValue={1}>
-                      <InputNumber className="!w-full" min={1} />
-                    </Form.Item>
-                    <Form.Item label="Hours used" name="hoursUsed">
-                      <InputNumber className="!w-full" min={0} />
-                    </Form.Item>
-                    <Form.Item label="Downtime (hrs)" name="hoursDowntime">
-                      <InputNumber className="!w-full" min={0} />
-                    </Form.Item>
-                  </div>
-                  <Button
-                    type="dashed"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addEquipment.isPending}
-                  >
-                    Add equipment
-                  </Button>
-                </Form>
-              )}
-            </FormLayout>
-
-            <FormLayout title="Visitors">
-              <DataTable
-                size="small"
-                rowKey="id"
-                dataSource={log.visitors}
-                locale={{ emptyText: 'No visitors recorded' }}
-                columns={visitorColumns}
-              />
-              {isEditable && (
-                <Form<VisitorFormValues>
-                  form={visitorForm}
-                  layout="vertical"
-                  className="mt-4"
-                  onFinish={(values: VisitorFormValues) =>
-                    void handleAddVisitor(values)
-                  }
-                >
-                  <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
-                    <Form.Item
-                      label="Visitor name"
-                      name="visitorName"
-                      rules={[{ required: true, message: 'Name is required' }]}
-                    >
-                      <Input />
-                    </Form.Item>
-                    <Form.Item label="Company" name="company">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item label="Purpose" name="purpose">
-                      <Input />
-                    </Form.Item>
-                  </div>
-                  <Button
-                    type="dashed"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addVisitor.isPending}
-                  >
-                    Add visitor
-                  </Button>
-                </Form>
-              )}
-            </FormLayout>
-
-            <FormLayout title="Incidents">
-              <DataTable
-                size="small"
-                rowKey="id"
-                dataSource={log.incidents}
-                locale={{ emptyText: 'No incidents recorded' }}
-                columns={incidentColumns}
-              />
-              {isEditable && (
-                <Form<IncidentFormValues>
-                  form={incidentForm}
-                  layout="vertical"
-                  className="mt-4"
-                  onFinish={(values: IncidentFormValues) =>
-                    void handleAddIncident(values)
-                  }
-                >
-                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-                    <Form.Item
-                      label="Incident type"
-                      name="incidentType"
-                      rules={[{ required: true, message: 'Type is required' }]}
-                    >
-                      <Input placeholder="e.g. Near miss, injury" />
-                    </Form.Item>
-                    <Form.Item label="Severity" name="severity">
-                      <Select
-                        allowClear
-                        options={INCIDENT_SEVERITY_OPTIONS}
-                        placeholder="Select severity"
-                      />
-                    </Form.Item>
-                  </div>
-                  <Form.Item
-                    label="Description"
-                    name="description"
-                    rules={[
-                      { required: true, message: 'Description is required' },
-                    ]}
-                  >
-                    <Input.TextArea rows={2} />
-                  </Form.Item>
-                  <Button
-                    type="dashed"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addIncident.isPending}
-                  >
-                    Record incident
-                  </Button>
-                </Form>
-              )}
-            </FormLayout>
-
-            <DocumentAttachmentPanel
-              folderId={log.attachmentFolderId ?? undefined}
-              readOnly={!isEditable}
-              title="Site photos"
-              description="Upload site photos and videos for this daily log."
+                  ),
+                },
+              ]}
             />
           </div>
         )}

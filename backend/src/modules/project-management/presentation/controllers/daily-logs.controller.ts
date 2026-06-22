@@ -58,6 +58,147 @@ export class DailyLogsController {
     return this.dailyLogsService.createDailyLog(this.ctx(user), projectId, dto);
   }
 
+  // Child routes must be registered before the generic :id routes.
+  @Post(':id/workforce')
+  @RequirePermission('daily_logs', 'create')
+  @ApiOperation({ summary: 'Add workforce entry to daily log' })
+  addWorkforce(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDailyLogWorkforceDto,
+  ): Promise<unknown> {
+    return this.dailyLogsService.addWorkforce(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id/workforce/:workforceId')
+  @RequirePermission('daily_logs', 'edit')
+  @ApiOperation({ summary: 'Remove workforce entry from daily log' })
+  async removeWorkforce(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('workforceId') workforceId: string,
+  ): Promise<{ message: string }> {
+    await this.dailyLogsService.removeWorkforce(
+      this.ctx(user),
+      projectId,
+      id,
+      workforceId,
+    );
+    return { message: 'Workforce entry removed' };
+  }
+
+  @Post(':id/equipment')
+  @RequirePermission('daily_logs', 'create')
+  @ApiOperation({ summary: 'Add equipment entry to daily log' })
+  addEquipment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDailyLogEquipmentDto,
+  ): Promise<unknown> {
+    return this.dailyLogsService.addEquipment(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id/equipment/:equipmentId')
+  @RequirePermission('daily_logs', 'edit')
+  @ApiOperation({ summary: 'Remove equipment entry from daily log' })
+  async removeEquipment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('equipmentId') equipmentId: string,
+  ): Promise<{ message: string }> {
+    await this.dailyLogsService.removeEquipment(
+      this.ctx(user),
+      projectId,
+      id,
+      equipmentId,
+    );
+    return { message: 'Equipment entry removed' };
+  }
+
+  @Post(':id/visitors')
+  @RequirePermission('daily_logs', 'create')
+  @ApiOperation({ summary: 'Add visitor entry to daily log' })
+  addVisitor(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDailyLogVisitorDto,
+  ): Promise<unknown> {
+    return this.dailyLogsService.addVisitor(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id/visitors/:visitorId')
+  @RequirePermission('daily_logs', 'edit')
+  @ApiOperation({ summary: 'Remove visitor entry from daily log' })
+  async removeVisitor(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('visitorId') visitorId: string,
+  ): Promise<{ message: string }> {
+    await this.dailyLogsService.removeVisitor(
+      this.ctx(user),
+      projectId,
+      id,
+      visitorId,
+    );
+    return { message: 'Visitor entry removed' };
+  }
+
+  @Post(':id/incidents')
+  @RequirePermission('daily_logs', 'create')
+  @ApiOperation({ summary: 'Add incident entry to daily log' })
+  addIncident(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDailyLogIncidentDto,
+  ): Promise<unknown> {
+    return this.dailyLogsService.addIncident(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id/incidents/:incidentId')
+  @RequirePermission('daily_logs', 'edit')
+  @ApiOperation({ summary: 'Remove incident entry from daily log' })
+  async removeIncident(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('incidentId') incidentId: string,
+  ): Promise<{ message: string }> {
+    await this.dailyLogsService.removeIncident(
+      this.ctx(user),
+      projectId,
+      id,
+      incidentId,
+    );
+    return { message: 'Incident entry removed' };
+  }
+
   @Get(':id')
   @RequirePermission('daily_logs', 'view')
   @ApiOperation({ summary: 'Get daily log by id' })
@@ -96,145 +237,5 @@ export class DailyLogsController {
   ): Promise<{ message: string }> {
     await this.dailyLogsService.deleteDailyLog(this.ctx(user), projectId, id);
     return { message: 'Daily log deleted' };
-  }
-
-  @Post(':id/workforce')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Add workforce entry to daily log' })
-  addWorkforce(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Body() dto: CreateDailyLogWorkforceDto,
-  ): Promise<unknown> {
-    return this.dailyLogsService.addWorkforce(
-      this.ctx(user),
-      projectId,
-      id,
-      dto,
-    );
-  }
-
-  @Delete(':id/workforce/:workforceId')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Remove workforce entry from daily log' })
-  async removeWorkforce(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Param('workforceId') workforceId: string,
-  ): Promise<{ message: string }> {
-    await this.dailyLogsService.removeWorkforce(
-      this.ctx(user),
-      projectId,
-      id,
-      workforceId,
-    );
-    return { message: 'Workforce entry removed' };
-  }
-
-  @Post(':id/equipment')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Add equipment entry to daily log' })
-  addEquipment(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Body() dto: CreateDailyLogEquipmentDto,
-  ): Promise<unknown> {
-    return this.dailyLogsService.addEquipment(
-      this.ctx(user),
-      projectId,
-      id,
-      dto,
-    );
-  }
-
-  @Delete(':id/equipment/:equipmentId')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Remove equipment entry from daily log' })
-  async removeEquipment(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Param('equipmentId') equipmentId: string,
-  ): Promise<{ message: string }> {
-    await this.dailyLogsService.removeEquipment(
-      this.ctx(user),
-      projectId,
-      id,
-      equipmentId,
-    );
-    return { message: 'Equipment entry removed' };
-  }
-
-  @Post(':id/visitors')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Add visitor entry to daily log' })
-  addVisitor(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Body() dto: CreateDailyLogVisitorDto,
-  ): Promise<unknown> {
-    return this.dailyLogsService.addVisitor(
-      this.ctx(user),
-      projectId,
-      id,
-      dto,
-    );
-  }
-
-  @Delete(':id/visitors/:visitorId')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Remove visitor entry from daily log' })
-  async removeVisitor(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Param('visitorId') visitorId: string,
-  ): Promise<{ message: string }> {
-    await this.dailyLogsService.removeVisitor(
-      this.ctx(user),
-      projectId,
-      id,
-      visitorId,
-    );
-    return { message: 'Visitor entry removed' };
-  }
-
-  @Post(':id/incidents')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Add incident entry to daily log' })
-  addIncident(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Body() dto: CreateDailyLogIncidentDto,
-  ): Promise<unknown> {
-    return this.dailyLogsService.addIncident(
-      this.ctx(user),
-      projectId,
-      id,
-      dto,
-    );
-  }
-
-  @Delete(':id/incidents/:incidentId')
-  @RequirePermission('daily_logs', 'edit')
-  @ApiOperation({ summary: 'Remove incident entry from daily log' })
-  async removeIncident(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('id') id: string,
-    @Param('incidentId') incidentId: string,
-  ): Promise<{ message: string }> {
-    await this.dailyLogsService.removeIncident(
-      this.ctx(user),
-      projectId,
-      id,
-      incidentId,
-    );
-    return { message: 'Incident entry removed' };
   }
 }

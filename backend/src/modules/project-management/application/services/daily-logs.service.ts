@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { FolderContextType, Prisma } from '@prisma/client';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -57,6 +57,8 @@ const DAILY_LOG_LIST_INCLUDE = {
 
 @Injectable()
 export class DailyLogsService {
+  private readonly logger = new Logger(DailyLogsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
@@ -109,7 +111,7 @@ export class DailyLogsService {
     dailyLogId: string,
   ): Promise<MappedDailyLogDetail> {
     const row = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    return this.enrichDailyLogDetail(ctx, row);
+    return this.enrichDailyLogDetail(ctx, projectId, row);
   }
 
   /**
@@ -175,7 +177,7 @@ export class DailyLogsService {
       include: DAILY_LOG_DETAIL_INCLUDE,
     });
 
-    return this.enrichDailyLogDetail(ctx, row);
+    return this.enrichDailyLogDetail(ctx, projectId, row);
   }
 
   /**
@@ -396,14 +398,28 @@ export class DailyLogsService {
 
   private async enrichDailyLogDetail(
     ctx: PmContext,
+    projectId: string,
     row: Prisma.DailyLogGetPayload<{ include: typeof DAILY_LOG_DETAIL_INCLUDE }>,
   ): Promise<MappedDailyLogDetail> {
-    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
-      ctx,
-      FolderContextType.DAILY_LOG,
-      row.id,
-    );
-    return mapDailyLogDetail(row, folder?.id ?? null);
+    let attachmentFolderId: string | null = null;
+
+    try {
+      const folder =
+        await this.engineeringDocumentFolderService.ensureDailyLogFolder(
+          ctx,
+          projectId,
+          row.id,
+          toDateString(row.logDate)!,
+        );
+      attachmentFolderId = folder.id;
+    } catch (error) {
+      this.logger.warn(
+        `Daily log ${row.id} attachment folder could not be ensured`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return mapDailyLogDetail(row, attachmentFolderId);
   }
 
   private async getDailyLogDetailOrThrow(projectId: string, dailyLogId: string) {

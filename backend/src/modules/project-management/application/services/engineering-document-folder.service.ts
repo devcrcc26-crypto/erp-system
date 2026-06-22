@@ -214,13 +214,15 @@ export class EngineeringDocumentFolderService {
     dailyLogId: string,
     logDate: string,
   ): Promise<DocumentFolderRef> {
+    const dateSegment = this.toFolderSegment(logDate);
+    const uniqueSegment = `${dateSegment}-${dailyLogId.slice(0, 8)}`;
     return this.ensureEntityFolder(
       ctx,
       projectId,
       FolderContextType.DAILY_LOG,
       dailyLogId,
-      `daily-logs/${this.toFolderSegment(logDate)}`,
-      this.toFolderSegment(logDate),
+      `daily-logs/${uniqueSegment}`,
+      dateSegment,
     );
   }
 
