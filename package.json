@@ -23,6 +23,7 @@
     "test:frontend:e2e": "npm run test:e2e --workspace=frontend"
   },
   "devDependencies": {
+    "prisma-markdown": "^4.0.0",
     "turbo": "^2.5.4"
   },
   "engines": {

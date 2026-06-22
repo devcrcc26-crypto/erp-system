@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+generator markdown {
+  provider = "prisma-markdown"
+  title    = "Shopping Mall"
+  output   = "./ERD.md"
+}
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum AuditLogSource {
