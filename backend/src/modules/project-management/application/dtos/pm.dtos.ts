@@ -796,6 +796,75 @@ export class UpdateDailyLogDto extends PartialType(CreateDailyLogDto) {
   status?: string;
 }
 
+export class CreateDailyLogWorkforceDto {
+  @ApiProperty()
+  @IsString()
+  trade!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contractor?: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  workerCount!: number;
+}
+
+export class CreateDailyLogEquipmentDto {
+  @ApiProperty()
+  @IsString()
+  equipmentType!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  hoursUsed?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  hoursDowntime?: number;
+}
+
+export class CreateDailyLogVisitorDto {
+  @ApiProperty()
+  @IsString()
+  visitorName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  purpose?: string;
+}
+
+export class CreateDailyLogIncidentDto {
+  @ApiProperty()
+  @IsString()
+  incidentType!: string;
+
+  @ApiProperty()
+  @IsString()
+  description!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  severity?: string;
+}
+
 export class CreateMeetingDto {
   @ApiProperty({ enum: MeetingType })
   @IsEnum(MeetingType)
@@ -1061,4 +1130,16 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(SubmittalPurpose)
   submittalPurpose?: SubmittalPurpose;
+}
+
+export class DailyLogListQueryDto extends PmListQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  logDateFrom?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  logDateTo?: string;
 }

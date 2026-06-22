@@ -11,6 +11,7 @@ import {
   ISSUE_WORKFLOW,
   RFI_WORKFLOW,
   SUBMITTAL_WORKFLOW,
+  DAILY_LOG_WORKFLOW,
 } from '@/lib/api/workflow';
 
 export function formatRfiStatus(status: RfiStatus): string {
@@ -106,6 +107,19 @@ export function issueSeverityVariant(
     CRITICAL: 'error',
   };
   return variants[severity];
+}
+
+export function formatDailyLogStatus(status: string): string {
+  return DAILY_LOG_WORKFLOW.find((step) => step.key === status)?.label ?? status;
+}
+
+export function dailyLogStatusVariant(status: string): StatusBadgeVariant {
+  const variants: Record<string, StatusBadgeVariant> = {
+    DRAFT: 'default',
+    SUBMITTED: 'info',
+    APPROVED: 'success',
+  };
+  return variants[status] ?? 'default';
 }
 
 export function isOverdue(dueDate: string | null): boolean {

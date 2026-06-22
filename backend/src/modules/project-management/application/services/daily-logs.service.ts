@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { FolderContextType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -9,19 +9,32 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   CreateDailyLogDto,
-  PmListQueryDto,
+  CreateDailyLogEquipmentDto,
+  CreateDailyLogIncidentDto,
+  CreateDailyLogVisitorDto,
+  CreateDailyLogWorkforceDto,
+  DailyLogListQueryDto,
   UpdateDailyLogDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapDailyLog,
   mapDailyLogDetail,
+  mapDailyLogEquipment,
+  mapDailyLogIncident,
+  mapDailyLogVisitor,
+  mapDailyLogWorkforce,
   MappedDailyLog,
   MappedDailyLogDetail,
-  parseOptionalDate,
+  MappedDailyLogEquipment,
+  MappedDailyLogIncident,
+  MappedDailyLogVisitor,
+  MappedDailyLogWorkforce,
   parseOptionalDecimal,
+  toDateString,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const DAILY_LOG_SORT_FIELDS = new Set([
@@ -38,11 +51,16 @@ const DAILY_LOG_DETAIL_INCLUDE = {
   incidents: { orderBy: { createdAt: 'asc' as const } },
 };
 
+const DAILY_LOG_LIST_INCLUDE = {
+  workforce: { select: { workerCount: true } },
+};
+
 @Injectable()
 export class DailyLogsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -51,7 +69,7 @@ export class DailyLogsService {
   async listDailyLogs(
     ctx: PmContext,
     projectId: string,
-    query: PmListQueryDto,
+    query: DailyLogListQueryDto,
   ): Promise<PaginatedResult<MappedDailyLog>> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
@@ -64,7 +82,13 @@ export class DailyLogsService {
     );
 
     const [rows, total] = await Promise.all([
-      this.prisma.dailyLog.findMany({ where, skip, take, orderBy }),
+      this.prisma.dailyLog.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: DAILY_LOG_LIST_INCLUDE,
+      }),
       this.prisma.dailyLog.count({ where }),
     ]);
 
@@ -85,7 +109,7 @@ export class DailyLogsService {
     dailyLogId: string,
   ): Promise<MappedDailyLogDetail> {
     const row = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    return mapDailyLogDetail(row);
+    return this.enrichDailyLogDetail(ctx, row);
   }
 
   /**
@@ -114,7 +138,15 @@ export class DailyLogsService {
       include: DAILY_LOG_DETAIL_INCLUDE,
     });
 
-    return mapDailyLogDetail(row);
+    const folder =
+      await this.engineeringDocumentFolderService.ensureDailyLogFolder(
+        ctx,
+        projectId,
+        row.id,
+        toDateString(row.logDate)!,
+      );
+
+    return mapDailyLogDetail(row, folder.id);
   }
 
   /**
@@ -143,7 +175,7 @@ export class DailyLogsService {
       include: DAILY_LOG_DETAIL_INCLUDE,
     });
 
-    return mapDailyLogDetail(row);
+    return this.enrichDailyLogDetail(ctx, row);
   }
 
   /**
@@ -161,14 +193,193 @@ export class DailyLogsService {
     });
   }
 
+  /**
+   * Adds a workforce entry to a daily log.
+   */
+  async addWorkforce(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    dto: CreateDailyLogWorkforceDto,
+  ): Promise<MappedDailyLogWorkforce> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+
+    const row = await this.prisma.dailyLogWorkforce.create({
+      data: {
+        dailyLogId,
+        trade: dto.trade,
+        contractor: dto.contractor,
+        workerCount: dto.workerCount,
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapDailyLogWorkforce(row);
+  }
+
+  /**
+   * Removes a workforce entry from a daily log.
+   */
+  async removeWorkforce(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    workforceId: string,
+  ): Promise<void> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.deleteChildOrThrow(
+      this.prisma.dailyLogWorkforce,
+      workforceId,
+      dailyLogId,
+      'Workforce entry not found',
+    );
+  }
+
+  /**
+   * Adds an equipment entry to a daily log.
+   */
+  async addEquipment(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    dto: CreateDailyLogEquipmentDto,
+  ): Promise<MappedDailyLogEquipment> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+
+    const row = await this.prisma.dailyLogEquipment.create({
+      data: {
+        dailyLogId,
+        equipmentType: dto.equipmentType,
+        quantity: dto.quantity ?? 1,
+        hoursUsed: parseOptionalDecimal(dto.hoursUsed),
+        hoursDowntime: parseOptionalDecimal(dto.hoursDowntime),
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapDailyLogEquipment(row);
+  }
+
+  /**
+   * Removes an equipment entry from a daily log.
+   */
+  async removeEquipment(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    equipmentId: string,
+  ): Promise<void> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.deleteChildOrThrow(
+      this.prisma.dailyLogEquipment,
+      equipmentId,
+      dailyLogId,
+      'Equipment entry not found',
+    );
+  }
+
+  /**
+   * Adds a visitor entry to a daily log.
+   */
+  async addVisitor(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    dto: CreateDailyLogVisitorDto,
+  ): Promise<MappedDailyLogVisitor> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+
+    const row = await this.prisma.dailyLogVisitor.create({
+      data: {
+        dailyLogId,
+        visitorName: dto.visitorName,
+        company: dto.company,
+        purpose: dto.purpose,
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapDailyLogVisitor(row);
+  }
+
+  /**
+   * Removes a visitor entry from a daily log.
+   */
+  async removeVisitor(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    visitorId: string,
+  ): Promise<void> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.deleteChildOrThrow(
+      this.prisma.dailyLogVisitor,
+      visitorId,
+      dailyLogId,
+      'Visitor entry not found',
+    );
+  }
+
+  /**
+   * Adds an incident entry to a daily log.
+   */
+  async addIncident(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    dto: CreateDailyLogIncidentDto,
+  ): Promise<MappedDailyLogIncident> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+
+    const row = await this.prisma.dailyLogIncident.create({
+      data: {
+        dailyLogId,
+        incidentType: dto.incidentType,
+        description: dto.description,
+        severity: dto.severity,
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapDailyLogIncident(row);
+  }
+
+  /**
+   * Removes an incident entry from a daily log.
+   */
+  async removeIncident(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    incidentId: string,
+  ): Promise<void> {
+    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.deleteChildOrThrow(
+      this.prisma.dailyLogIncident,
+      incidentId,
+      dailyLogId,
+      'Incident entry not found',
+    );
+  }
+
   private buildListWhere(
     projectId: string,
-    query: PmListQueryDto,
+    query: DailyLogListQueryDto,
   ): Prisma.DailyLogWhereInput {
     const where: Prisma.DailyLogWhereInput = activeOnly({ projectId });
 
     if (query.status) {
       where.status = query.status;
+    }
+
+    if (query.logDateFrom || query.logDateTo) {
+      where.logDate = {};
+      if (query.logDateFrom) {
+        where.logDate.gte = new Date(query.logDateFrom);
+      }
+      if (query.logDateTo) {
+        where.logDate.lte = new Date(query.logDateTo);
+      }
     }
 
     if (query.search?.trim()) {
@@ -183,6 +394,18 @@ export class DailyLogsService {
     return where;
   }
 
+  private async enrichDailyLogDetail(
+    ctx: PmContext,
+    row: Prisma.DailyLogGetPayload<{ include: typeof DAILY_LOG_DETAIL_INCLUDE }>,
+  ): Promise<MappedDailyLogDetail> {
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.DAILY_LOG,
+      row.id,
+    );
+    return mapDailyLogDetail(row, folder?.id ?? null);
+  }
+
   private async getDailyLogDetailOrThrow(projectId: string, dailyLogId: string) {
     const row = await this.prisma.dailyLog.findFirst({
       where: activeOnly({ id: dailyLogId, projectId }),
@@ -192,5 +415,25 @@ export class DailyLogsService {
       throw new NotFoundException('Daily log not found');
     }
     return row;
+  }
+
+  private async deleteChildOrThrow(
+    delegate: {
+      findFirst: (args: {
+        where: { id: string; dailyLogId: string };
+      }) => Promise<{ id: string } | null>;
+      delete: (args: { where: { id: string } }) => Promise<unknown>;
+    },
+    childId: string,
+    dailyLogId: string,
+    notFoundMessage: string,
+  ): Promise<void> {
+    const existing = await delegate.findFirst({
+      where: { id: childId, dailyLogId },
+    });
+    if (!existing) {
+      throw new NotFoundException(notFoundMessage);
+    }
+    await delegate.delete({ where: { id: childId } });
   }
 }

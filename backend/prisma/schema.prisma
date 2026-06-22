@@ -44,6 +44,7 @@ enum FolderContextType {
   RFI
   ISSUE
   SUBMITTAL
+  DAILY_LOG
 }
 
 enum NotificationChannel {

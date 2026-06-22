@@ -206,6 +206,25 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
+   * Returns or creates the attachment folder for a daily log under the project folder.
+   */
+  async ensureDailyLogFolder(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    logDate: string,
+  ): Promise<DocumentFolderRef> {
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.DAILY_LOG,
+      dailyLogId,
+      `daily-logs/${this.toFolderSegment(logDate)}`,
+      this.toFolderSegment(logDate),
+    );
+  }
+
+  /**
    * Resolves an entity attachment folder by context, if it exists.
    */
   async findEntityFolder(

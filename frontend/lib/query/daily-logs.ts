@@ -14,9 +14,17 @@ import {
   apiPost,
 } from '@/lib/api/client';
 import type {
+  CreateDailyLogEquipmentRequest,
+  CreateDailyLogIncidentRequest,
   CreateDailyLogRequest,
+  CreateDailyLogVisitorRequest,
+  CreateDailyLogWorkforceRequest,
   DailyLog,
   DailyLogDetail,
+  DailyLogEquipment,
+  DailyLogIncident,
+  DailyLogVisitor,
+  DailyLogWorkforce,
   PmListFilters,
   UpdateDailyLogRequest,
 } from '@/lib/api/project-management.types';
@@ -25,6 +33,11 @@ import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
+export interface DailyLogListParams extends PaginationParams, PmListFilters {
+  logDateFrom?: string;
+  logDateTo?: string;
+}
+
 const dailyLogsPath = (projectId: string): string =>
   projectPath(projectId, 'daily-logs');
 
@@ -32,13 +45,8 @@ export const dailyLogKeys = {
   all: ['pm', 'daily-logs'] as const,
   lists: (projectId: string) =>
     [...dailyLogKeys.all, projectId, 'list'] as const,
-  list: (
-    projectId: string,
-    params: PaginationParams & PmListFilters & { logDateFrom?: string; logDateTo?: string } = {
-      page: 1,
-      limit: 20,
-    },
-  ) => [...dailyLogKeys.lists(projectId), params] as const,
+  list: (projectId: string, params: DailyLogListParams = { page: 1, limit: 20 }) =>
+    [...dailyLogKeys.lists(projectId), params] as const,
   details: (projectId: string) =>
     [...dailyLogKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, dailyLogId: string) =>
@@ -47,11 +55,7 @@ export const dailyLogKeys = {
 
 export function useDailyLogs(
   projectId: string,
-  params: PaginationParams &
-    PmListFilters & { logDateFrom?: string; logDateTo?: string } = {
-    page: 1,
-    limit: 20,
-  },
+  params: DailyLogListParams = { page: 1, limit: 20 },
   enabled = true,
   options?: Omit<
     UseQueryOptions<PaginatedResult<DailyLog>>,
@@ -65,7 +69,6 @@ export function useDailyLogs(
         `${dailyLogsPath(projectId)}${toQueryString(params)}`,
       ),
     enabled: Boolean(projectId) && enabled,
-    retry: false,
     ...options,
   });
 }
@@ -80,7 +83,6 @@ export function useDailyLog(
     queryFn: () =>
       apiGet<DailyLogDetail>(`${dailyLogsPath(projectId)}/${dailyLogId}`),
     enabled: Boolean(projectId) && Boolean(dailyLogId) && enabled,
-    retry: false,
   });
 }
 
@@ -94,7 +96,7 @@ export function useCreateDailyLog() {
     }: {
       projectId: string;
       body: CreateDailyLogRequest;
-    }) => apiPost<DailyLog>(dailyLogsPath(projectId), body),
+    }) => apiPost<DailyLogDetail>(dailyLogsPath(projectId), body),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: dailyLogKeys.lists(variables.projectId),
@@ -153,5 +155,197 @@ export function useDeleteDailyLog() {
         queryKey: dailyLogKeys.lists(variables.projectId),
       });
     },
+  });
+}
+
+export function useAddDailyLogWorkforce() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      body,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      body: CreateDailyLogWorkforceRequest;
+    }) =>
+      apiPost<DailyLogWorkforce>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/workforce`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useRemoveDailyLogWorkforce() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      workforceId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      workforceId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/workforce/${workforceId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useAddDailyLogEquipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      body,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      body: CreateDailyLogEquipmentRequest;
+    }) =>
+      apiPost<DailyLogEquipment>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/equipment`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useRemoveDailyLogEquipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      equipmentId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      equipmentId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/equipment/${equipmentId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useAddDailyLogVisitor() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      body,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      body: CreateDailyLogVisitorRequest;
+    }) =>
+      apiPost<DailyLogVisitor>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/visitors`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useRemoveDailyLogVisitor() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      visitorId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      visitorId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/visitors/${visitorId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useAddDailyLogIncident() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      body,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      body: CreateDailyLogIncidentRequest;
+    }) =>
+      apiPost<DailyLogIncident>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/incidents`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useRemoveDailyLogIncident() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      incidentId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      incidentId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/incidents/${incidentId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+function invalidateDailyLogDetail(
+  queryClient: ReturnType<typeof useQueryClient>,
+  variables: { projectId: string; dailyLogId: string },
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: dailyLogKeys.lists(variables.projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: dailyLogKeys.detail(variables.projectId, variables.dailyLogId),
   });
 }

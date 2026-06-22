@@ -396,6 +396,7 @@ export interface DailyLog {
   rainfallMm: string | null;
   workSummary: string | null;
   status: string;
+  totalWorkers: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -434,6 +435,7 @@ export interface DailyLogIncident {
 }
 
 export interface DailyLogDetail extends DailyLog {
+  attachmentFolderId: string | null;
   workforce: DailyLogWorkforce[];
   equipment: DailyLogEquipment[];
   visitors: DailyLogVisitor[];
@@ -848,6 +850,31 @@ export interface CreateDailyLogRequest {
 export type UpdateDailyLogRequest = Partial<CreateDailyLogRequest> & {
   status?: string;
 };
+
+export interface CreateDailyLogWorkforceRequest {
+  trade: string;
+  contractor?: string;
+  workerCount: number;
+}
+
+export interface CreateDailyLogEquipmentRequest {
+  equipmentType: string;
+  quantity?: number;
+  hoursUsed?: number;
+  hoursDowntime?: number;
+}
+
+export interface CreateDailyLogVisitorRequest {
+  visitorName: string;
+  company?: string;
+  purpose?: string;
+}
+
+export interface CreateDailyLogIncidentRequest {
+  incidentType: string;
+  description: string;
+  severity?: string;
+}
 
 export interface CreateMeetingRequest {
   meetingType: MeetingType;

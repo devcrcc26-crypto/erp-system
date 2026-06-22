@@ -70,6 +70,12 @@ export const CLOSEOUT_WORKFLOW: WorkflowStep[] = [
   { key: 'ARCHIVE', label: 'Archive' },
 ];
 
+export const DAILY_LOG_WORKFLOW: WorkflowStep[] = [
+  { key: 'DRAFT', label: 'Draft' },
+  { key: 'SUBMITTED', label: 'Submitted' },
+  { key: 'APPROVED', label: 'Approved' },
+];
+
 /**
  * Resolves the active step index for a workflow, matching by key (case-insensitive).
  */

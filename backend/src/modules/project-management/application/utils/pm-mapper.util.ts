@@ -274,6 +274,7 @@ export interface MappedDailyLog {
   rainfallMm: string | null;
   workSummary: string | null;
   status: string;
+  totalWorkers: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -312,6 +313,7 @@ export interface MappedDailyLogIncident {
 }
 
 export interface MappedDailyLogDetail extends MappedDailyLog {
+  attachmentFolderId: string | null;
   workforce: MappedDailyLogWorkforce[];
   equipment: MappedDailyLogEquipment[];
   visitors: MappedDailyLogVisitor[];
@@ -555,7 +557,14 @@ export function mapDrawingLink(row: DrawingLink): MappedDrawingLink {
   };
 }
 
-export function mapDailyLog(row: DailyLog): MappedDailyLog {
+export function mapDailyLog(
+  row: DailyLog & { workforce?: { workerCount: number }[] },
+): MappedDailyLog {
+  const totalWorkers = (row.workforce ?? []).reduce(
+    (sum, entry) => sum + entry.workerCount,
+    0,
+  );
+
   return {
     id: row.id,
     projectId: row.projectId,
@@ -567,6 +576,7 @@ export function mapDailyLog(row: DailyLog): MappedDailyLog {
     rainfallMm: decimalToString(row.rainfallMm),
     workSummary: row.workSummary,
     status: row.status,
+    totalWorkers,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };
@@ -626,9 +636,11 @@ export function mapDailyLogDetail(
     visitors: DailyLogVisitor[];
     incidents: DailyLogIncident[];
   },
+  attachmentFolderId: string | null = null,
 ): MappedDailyLogDetail {
   return {
     ...mapDailyLog(row),
+    attachmentFolderId,
     workforce: row.workforce.map(mapDailyLogWorkforce),
     equipment: row.equipment.map(mapDailyLogEquipment),
     visitors: row.visitors.map(mapDailyLogVisitor),

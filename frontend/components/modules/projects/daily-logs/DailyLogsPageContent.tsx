@@ -31,6 +31,10 @@ import {
   useDailyLogs,
 } from '@/lib/query/daily-logs';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import {
+  dailyLogStatusVariant,
+  formatDailyLogStatus,
+} from '@/lib/utils/pm-status-display';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -38,6 +42,12 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const SHIFT_OPTIONS = [
   { value: 'DAY', label: 'Day' },
   { value: 'NIGHT', label: 'Night' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'APPROVED', label: 'Approved' },
 ];
 
 interface DailyLogFormValues {
@@ -148,6 +158,7 @@ export default function DailyLogsPageContent({
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState<Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<Dayjs | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -157,6 +168,7 @@ export default function DailyLogsPageContent({
   const logsQuery = useDailyLogs(projectId, {
     ...params,
     search: search.trim() || undefined,
+    status: statusFilter,
     logDateFrom: dateFrom?.format('YYYY-MM-DD'),
     logDateTo: dateTo?.format('YYYY-MM-DD'),
   });
@@ -196,11 +208,20 @@ export default function DailyLogsPageContent({
         render: (value: string | null) => value ?? '—',
       },
       {
+        title: 'Workers',
+        dataIndex: 'totalWorkers',
+        key: 'totalWorkers',
+        render: (value: number) => value || '—',
+      },
+      {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
         render: (status: string) => (
-          <StatusBadge label={status} variant="default" />
+          <StatusBadge
+            label={formatDailyLogStatus(status)}
+            variant={dailyLogStatusVariant(status)}
+          />
         ),
       },
       {
@@ -222,11 +243,6 @@ export default function DailyLogsPageContent({
     );
   }
 
-  const apiUnavailable =
-    logsQuery.isError &&
-    logsQuery.error instanceof ApiRequestError &&
-    (logsQuery.error.status === 404 || logsQuery.error.status === 0);
-
   const logs = logsQuery.data?.data ?? [];
   const meta = logsQuery.data?.meta;
 
@@ -240,19 +256,22 @@ export default function DailyLogsPageContent({
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setCreateOpen(true)}
-            disabled={apiUnavailable}
           >
             New daily log
           </Button>
         }
       >
-        {apiUnavailable && (
+        {logsQuery.isError && (
           <Alert
-            type="info"
+            type="error"
             showIcon
             className="!mb-4"
-            title="Daily log APIs are not connected yet."
-            description="This page is ready —data will appear when the project management backend module is available."
+            title="Unable to load daily logs"
+            description={
+              logsQuery.error instanceof ApiRequestError
+                ? logsQuery.error.message
+                : 'Please try again.'
+            }
           />
         )}
 
@@ -264,6 +283,17 @@ export default function DailyLogsPageContent({
             onSearch={(value: string) => {
               resetPage();
               setSearch(value);
+            }}
+          />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControl}
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(value: string | undefined) => {
+              resetPage();
+              setStatusFilter(value);
             }}
           />
           <DatePicker
@@ -295,11 +325,7 @@ export default function DailyLogsPageContent({
                 icon={<Calendar />}
                 title="No daily logs"
                 description="Daily logs will appear here once created"
-                action={
-                  !apiUnavailable
-                    ? { label: 'New log', onClick: () => setCreateOpen(true) }
-                    : undefined
-                }
+                action={{ label: 'New log', onClick: () => setCreateOpen(true) }}
               />
             ),
           }}
