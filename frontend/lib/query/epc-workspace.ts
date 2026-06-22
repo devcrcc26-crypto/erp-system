@@ -18,8 +18,10 @@ import { projectPath } from '@/lib/query/pm-query-utils';
 
 export const epcWorkspaceKeys = {
   all: ['epc', 'workspace'] as const,
-  reviewInbox: () => [...epcWorkspaceKeys.all, 'review-inbox'] as const,
-  myComments: () => [...epcWorkspaceKeys.all, 'my-comments'] as const,
+  reviewInbox: (projectId?: string) =>
+    [...epcWorkspaceKeys.all, 'review-inbox', projectId ?? 'global'] as const,
+  myComments: (projectId?: string) =>
+    [...epcWorkspaceKeys.all, 'my-comments', projectId ?? 'global'] as const,
   statusBoard: (projectId: string) =>
     [...epcWorkspaceKeys.all, 'status-board', projectId] as const,
   workload: (projectId: string) =>
@@ -31,6 +33,7 @@ export const epcWorkspaceKeys = {
 };
 
 export function useReviewInbox(
+  projectId?: string,
   enabled = true,
   options?: Omit<UseQueryOptions<ReviewInboxItem[]>, 'queryKey' | 'queryFn'>,
 ) {
@@ -38,8 +41,13 @@ export function useReviewInbox(
   const canViewReviewInbox = useCanViewReviewInbox();
 
   return useQuery({
-    queryKey: epcWorkspaceKeys.reviewInbox(),
-    queryFn: () => apiGet<ReviewInboxItem[]>('/review-inbox'),
+    queryKey: epcWorkspaceKeys.reviewInbox(projectId),
+    queryFn: () =>
+      projectId
+        ? apiGet<ReviewInboxItem[]>(
+            `${projectPath(projectId)}/review-inbox`,
+          )
+        : apiGet<ReviewInboxItem[]>('/review-inbox'),
     enabled: enabled && capabilitiesReady && canViewReviewInbox,
     retry: false,
     refetchOnWindowFocus: true,
@@ -49,12 +57,16 @@ export function useReviewInbox(
 }
 
 export function useMyComments(
+  projectId?: string,
   enabled = true,
   options?: Omit<UseQueryOptions<MyCommentItem[]>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery({
-    queryKey: epcWorkspaceKeys.myComments(),
-    queryFn: () => apiGet<MyCommentItem[]>('/my-comments'),
+    queryKey: epcWorkspaceKeys.myComments(projectId),
+    queryFn: () =>
+      projectId
+        ? apiGet<MyCommentItem[]>(`${projectPath(projectId)}/my-comments`)
+        : apiGet<MyCommentItem[]>('/my-comments'),
     enabled,
     retry: false,
     ...options,

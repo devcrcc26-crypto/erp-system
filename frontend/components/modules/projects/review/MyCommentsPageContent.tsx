@@ -36,8 +36,12 @@ function toReviewModeComment(comment: MyCommentItem): ReviewModeComment {
   };
 }
 
-export default function MyCommentsPageContent(): React.ReactNode {
-  const commentsQuery = useMyComments();
+export default function MyCommentsPageContent({
+  projectId,
+}: {
+  projectId?: string;
+} = {}): React.ReactNode {
+  const commentsQuery = useMyComments(projectId);
   const transitionComment = useTransitionReviewComment();
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
@@ -129,12 +133,16 @@ export default function MyCommentsPageContent(): React.ReactNode {
         <StatusBadge label={status.replace(/_/g, ' ')} variant="info" />
       ),
     },
-    {
-      title: 'Project',
-      key: 'project',
-      ellipsis: true,
-      render: (_value, record) => record.projectName,
-    },
+    ...(projectId
+      ? []
+      : [
+          {
+            title: 'Project',
+            key: 'project',
+            ellipsis: true,
+            render: (_value: unknown, record: MyCommentItem) => record.projectName,
+          } as const,
+        ]),
     {
       title: 'Created',
       dataIndex: 'createdAt',

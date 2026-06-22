@@ -125,13 +125,27 @@ export class EpcWorkspaceService {
    * Review inbox for the active governance tier holder only.
    * A session is visible when its currentTier matches the user's discipline role.
    */
-  async getReviewInbox(ctx: PmContext): Promise<ReviewInboxItem[]> {
+  async getReviewInbox(
+    ctx: PmContext,
+    projectId?: string,
+  ): Promise<ReviewInboxItem[]> {
+    if (projectId) {
+      await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    }
+
     const now = new Date();
     const sessions = await this.prisma.reviewSession.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
         status: ReviewSessionStatus.ACTIVE,
         assignedToUserId: ctx.userId,
+        ...(projectId
+          ? {
+              designPackage: {
+                taskDiscipline: { task: { projectId, deletedAt: null } },
+              },
+            }
+          : {}),
       }),
       include: {
         designPackage: {
@@ -163,7 +177,14 @@ export class EpcWorkspaceService {
   /**
    * Designer comment queue — assigned comments awaiting designer action.
    */
-  async getMyComments(ctx: PmContext): Promise<MyCommentItem[]> {
+  async getMyComments(
+    ctx: PmContext,
+    projectId?: string,
+  ): Promise<MyCommentItem[]> {
+    if (projectId) {
+      await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    }
+
     const rows = await this.prisma.reviewComment.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
@@ -177,6 +198,15 @@ export class EpcWorkspaceService {
             CommentStatus.VERIFIED,
           ],
         },
+        ...(projectId
+          ? {
+              reviewSession: {
+                designPackage: {
+                  taskDiscipline: { task: { projectId, deletedAt: null } },
+                },
+              },
+            }
+          : {}),
       }),
       orderBy: { createdAt: 'asc' },
       include: {

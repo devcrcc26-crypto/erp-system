@@ -28,7 +28,7 @@ export function useBatchReviewApprove() {
         queryKey: epcWorkspaceKeys.reviewMode(variables.designPackageId),
       });
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.reviewInbox(),
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
     },
   });
@@ -48,7 +48,7 @@ export function useBatchReviewReturn() {
         queryKey: epcWorkspaceKeys.reviewMode(variables.designPackageId),
       });
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
     },
   });

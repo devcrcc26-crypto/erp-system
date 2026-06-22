@@ -35,10 +35,10 @@ export function useAddReviewComment() {
       apiPost<WorkflowResultSnapshot>('/review-comments', body),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.reviewInbox(),
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
@@ -64,7 +64,7 @@ export function useTransitionReviewComment() {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
@@ -90,7 +90,7 @@ export function useVerifyReviewComment() {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
@@ -110,7 +110,7 @@ export function useDeleteReviewComment() {
         queryKey: reviewCommentKeys.detail(commentId),
       });
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
@@ -136,7 +136,7 @@ export function useUpdateReviewComment() {
         queryKey: reviewCommentKeys.detail(variables.commentId),
       });
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,

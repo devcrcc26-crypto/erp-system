@@ -391,7 +391,7 @@ export function useSubmitPackageForReview() {
         variables.packageId,
       );
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.reviewInbox(),
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
     },
   });
@@ -454,7 +454,7 @@ export function useBatchApprovePackageEdvs() {
         variables.packageId,
       );
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.reviewInbox(),
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
     },
   });
@@ -487,7 +487,7 @@ export function useBatchReturnPackageEdvs() {
         variables.packageId,
       );
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.myComments(),
+        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
     },
   });
@@ -527,7 +527,7 @@ export function useApproveReviewSession() {
         variables.packageId,
       );
       void queryClient.invalidateQueries({
-        queryKey: epcWorkspaceKeys.reviewInbox(),
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
     },
   });

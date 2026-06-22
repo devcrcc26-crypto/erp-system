@@ -18,7 +18,11 @@ const TIER_KEYS = [
   'DEPT_CHIEF',
 ] as const;
 
-export default function ReviewInboxPageContent(): React.ReactNode {
+export default function ReviewInboxPageContent({
+  projectId,
+}: {
+  projectId?: string;
+} = {}): React.ReactNode {
   const [tierFilter, setTierFilter] = useState<string>('ALL');
   const { t } = useEpcTranslation();
   const capabilitiesReady = useCapabilitiesReady();
@@ -54,7 +58,7 @@ export default function ReviewInboxPageContent(): React.ReactNode {
         />
       }
     >
-      <ReviewInboxTable tierFilter={tierFilter} />
+      <ReviewInboxTable projectId={projectId} tierFilter={tierFilter} />
     </FormLayout>
   );
 }

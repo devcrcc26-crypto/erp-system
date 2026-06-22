@@ -24,6 +24,7 @@ import {
   SendOutlined,
   TeamOutlined,
   WarningOutlined,
+  CommentOutlined,
 } from '@ant-design/icons';
 import {
   PROJECT_WORKSPACE_NAV,
@@ -49,6 +50,9 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   disciplines: <ClusterOutlined />,
   deliverables: <CheckSquareOutlined />,
   submittals: <SendOutlined />,
+  'external-release': <SendOutlined />,
+  'review-inbox': <InboxOutlined />,
+  'my-comments': <CommentOutlined />,
   rfis: <InboxOutlined />,
   issues: <IssuesCloseOutlined />,
   'daily-logs': <ProfileOutlined />,
@@ -75,6 +79,14 @@ function canViewNavItem(
   }
 
   if (item.epcSurface === 'engineering' && !epc.canViewEngineering) {
+    return false;
+  }
+
+  if (item.epcCapability === 'reviewInbox' && !epc.canViewReviewInbox) {
+    return false;
+  }
+
+  if (item.epcCapability === 'myComments' && !epc.canViewMyComments) {
     return false;
   }
 

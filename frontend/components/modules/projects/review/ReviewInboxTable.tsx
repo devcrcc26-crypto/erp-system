@@ -12,11 +12,13 @@ import { useReviewInbox } from '@/lib/query/epc-workspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function ReviewInboxTable({
+  projectId,
   tierFilter = 'ALL',
 }: {
+  projectId?: string;
   tierFilter?: string;
 }): React.ReactNode {
-  const inboxQuery = useReviewInbox();
+  const inboxQuery = useReviewInbox(projectId);
 
   const filtered = useMemo(() => {
     const items = inboxQuery.data ?? [];
@@ -40,12 +42,16 @@ export default function ReviewInboxTable({
         </Link>
       ),
     },
-    {
-      title: 'Project',
-      dataIndex: 'projectName',
-      key: 'projectName',
-      ellipsis: { showTitle: true },
-    },
+    ...(projectId
+      ? []
+      : [
+          {
+            title: 'Project',
+            dataIndex: 'projectName',
+            key: 'projectName',
+            ellipsis: { showTitle: true },
+          } as const,
+        ]),
     {
       title: 'Discipline',
       dataIndex: 'disciplineName',

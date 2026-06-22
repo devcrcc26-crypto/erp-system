@@ -47,7 +47,7 @@ export default function ReviewModePageContent({
                 <Button size="small">Back to package</Button>
               </Link>
             ) : (
-              <Link href="/my-comments">
+              <Link href={`/projects/${projectId}/my-comments`}>
                 <Button size="small">My Comments</Button>
               </Link>
             )
@@ -61,7 +61,7 @@ export default function ReviewModePageContent({
     <div className={`${layout.pageStack} min-w-0 overflow-x-hidden`}>
       <Breadcrumb
         items={[
-          { title: <Link href="/review-inbox">Review inbox</Link> },
+          { title: <Link href={`/projects/${projectId}/review-inbox`}>Review inbox</Link> },
           { title: packageName },
         ]}
       />

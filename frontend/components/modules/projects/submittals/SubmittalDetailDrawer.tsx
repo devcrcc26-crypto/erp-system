@@ -7,7 +7,6 @@ import {
   Drawer,
   Form,
   Input,
-  List,
   Select,
   Spin,
   Timeline,
@@ -206,19 +205,21 @@ export default function SubmittalDetailDrawer({
               <h3 className="mb-2 text-sm font-semibold text-slate-900">
                 Linked design packages
               </h3>
-              <List
-                size="small"
-                bordered
-                dataSource={submittal.items}
-                renderItem={(item) => (
-                  <List.Item>
-                    <span className="text-sm text-slate-700">
-                      Package {item.sortOrder + 1}
-                      {item.snapshotCaptured ? ' (snapshot captured)' : ''}
-                    </span>
-                  </List.Item>
-                )}
-              />
+              <div className="overflow-hidden rounded-md border border-slate-200">
+                {submittal.items.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className={`px-4 py-3 text-sm text-slate-700 ${
+                      index < submittal.items.length - 1
+                        ? 'border-b border-slate-200'
+                        : ''
+                    }`}
+                  >
+                    Package {item.sortOrder + 1}
+                    {item.snapshotCaptured ? ' (snapshot captured)' : ''}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

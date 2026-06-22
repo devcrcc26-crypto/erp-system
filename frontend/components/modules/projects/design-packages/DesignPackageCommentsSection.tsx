@@ -157,7 +157,7 @@ export default function DesignPackageCommentsSection({
         }
         extra={
           lens.canResolveAssignedComments ? (
-            <Link href="/my-comments">
+            <Link href={`/projects/${projectId}/my-comments`}>
               <Button size="small">Open My Comments</Button>
             </Link>
           ) : lens.canAccessReviewMode ? (

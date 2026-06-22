@@ -15,6 +15,8 @@ export interface ProjectWorkspaceNavItem {
   readonly breadcrumbGroupKey: string;
   /** When set, item also requires the matching EPC probe. */
   readonly epcSurface?: 'engineering';
+  /** When set, item also requires the matching EPC workspace capability. */
+  readonly epcCapability?: 'reviewInbox' | 'myComments';
 }
 
 export interface ProjectWorkspaceNavGroup {
@@ -120,6 +122,26 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Review & Release',
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
         epcSurface: 'engineering',
+      },
+      {
+        key: 'review-inbox',
+        label: 'Review Inbox',
+        labelKey: 'workspace.items.reviewInbox',
+        pathSuffix: 'review-inbox',
+        capability: 'schedule',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
+        epcCapability: 'reviewInbox',
+      },
+      {
+        key: 'my-comments',
+        label: 'My Comments',
+        labelKey: 'workspace.items.myComments',
+        pathSuffix: 'my-comments',
+        capability: 'schedule',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
+        epcCapability: 'myComments',
       },
     ],
   },

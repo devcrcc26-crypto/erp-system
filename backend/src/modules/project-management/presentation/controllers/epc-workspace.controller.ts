@@ -31,6 +31,26 @@ export class EpcWorkspaceController {
     return this.epcWorkspaceService.getMyComments(this.ctx(user));
   }
 
+  @Get('projects/:projectId/review-inbox')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Review inbox for current user scoped to a project' })
+  projectReviewInbox(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.epcWorkspaceService.getReviewInbox(this.ctx(user), projectId);
+  }
+
+  @Get('projects/:projectId/my-comments')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Open comments assigned to current user scoped to a project' })
+  projectMyComments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.epcWorkspaceService.getMyComments(this.ctx(user), projectId);
+  }
+
   @Get('projects/:projectId/status-board')
   @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Project EPC status board KPIs' })
