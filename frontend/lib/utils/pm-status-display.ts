@@ -7,6 +7,7 @@ import type {
   PunchItemStatus,
   RiskCategory,
   RiskStatus,
+  CloseoutStatus,
   RfiPriority,
   RfiStatus,
   SubmittalStatus,
@@ -20,6 +21,7 @@ import {
   PUNCH_ITEM_WORKFLOW,
   RFI_WORKFLOW,
   RISK_WORKFLOW,
+  CLOSEOUT_WORKFLOW,
   SUBMITTAL_WORKFLOW,
   DAILY_LOG_WORKFLOW,
 } from '@/lib/api/workflow';
@@ -219,6 +221,25 @@ export function punchItemSeverityVariant(
     CRITICAL: 'error',
   };
   return variants[severity];
+}
+
+export function formatCloseoutStatus(status: CloseoutStatus): string {
+  return (
+    CLOSEOUT_WORKFLOW.find((step) => step.key === status)?.label ?? status
+  );
+}
+
+export function closeoutStatusVariant(
+  status: CloseoutStatus,
+): StatusBadgeVariant {
+  const variants: Record<CloseoutStatus, StatusBadgeVariant> = {
+    PRACTICAL_COMPLETION: 'info',
+    DEFECTS_LIABILITY_PERIOD: 'warning',
+    FINAL_COMPLETION: 'success',
+    FINANCIAL_CLOSEOUT: 'orange',
+    ARCHIVE: 'default',
+  };
+  return variants[status];
 }
 
 export function isOverdue(dueDate: string | null): boolean {

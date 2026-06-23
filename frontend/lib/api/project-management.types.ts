@@ -999,6 +999,15 @@ export interface UpdateCloseoutChecklistItemRequest {
   verifiedBy?: string;
 }
 
+export interface CreateWarrantyRequest {
+  itemDescription: string;
+  supplier?: string;
+  startDate?: string;
+  expiryDate?: string;
+}
+
+export type UpdateWarrantyRequest = Partial<CreateWarrantyRequest>;
+
 export interface PmListFilters {
   search?: string;
   status?: string;

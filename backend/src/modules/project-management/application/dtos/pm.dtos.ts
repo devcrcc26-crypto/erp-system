@@ -1251,6 +1251,29 @@ export class UpdateCloseoutChecklistItemDto {
   verifiedBy?: string;
 }
 
+export class CreateWarrantyDto {
+  @ApiProperty()
+  @IsString()
+  itemDescription!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  supplier?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
+}
+
+export class UpdateWarrantyDto extends PartialType(CreateWarrantyDto) {}
+
 export class PmListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()

@@ -7,17 +7,21 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
+  CreateWarrantyDto,
   UpdateCloseoutChecklistItemDto,
   UpdateCloseoutDto,
+  UpdateWarrantyDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapCloseout,
   mapCloseoutChecklistItem,
   mapCloseoutDetail,
+  mapWarranty,
   MappedCloseout,
   MappedCloseoutChecklistItem,
   MappedCloseoutDetail,
+  MappedWarranty,
   parseOptionalDate,
   parseOptionalDecimal,
 } from '../utils/pm-mapper.util';
@@ -216,12 +220,90 @@ export class CloseoutService {
     return mapCloseoutChecklistItem(row);
   }
 
+  /**
+   * Adds a warranty record to project closeout.
+   */
+  async addWarranty(
+    ctx: PmContext,
+    projectId: string,
+    dto: CreateWarrantyDto,
+  ): Promise<MappedWarranty> {
+    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+
+    const row = await this.prisma.warranty.create({
+      data: {
+        closeoutId: closeout.id,
+        itemDescription: dto.itemDescription,
+        supplier: dto.supplier,
+        startDate: parseOptionalDate(dto.startDate),
+        expiryDate: parseOptionalDate(dto.expiryDate),
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return mapWarranty(row);
+  }
+
+  /**
+   * Updates a warranty record on project closeout.
+   */
+  async updateWarranty(
+    ctx: PmContext,
+    projectId: string,
+    warrantyId: string,
+    dto: UpdateWarrantyDto,
+  ): Promise<MappedWarranty> {
+    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    await this.getWarrantyOrThrow(closeout.id, warrantyId);
+
+    const row = await this.prisma.warranty.update({
+      where: { id: warrantyId },
+      data: {
+        itemDescription: dto.itemDescription,
+        supplier: dto.supplier,
+        startDate: parseOptionalDate(dto.startDate),
+        expiryDate: parseOptionalDate(dto.expiryDate),
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return mapWarranty(row);
+  }
+
+  /**
+   * Soft-deletes a warranty record from project closeout.
+   */
+  async removeWarranty(
+    ctx: PmContext,
+    projectId: string,
+    warrantyId: string,
+  ): Promise<void> {
+    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    await this.getWarrantyOrThrow(closeout.id, warrantyId);
+
+    await this.prisma.warranty.update({
+      where: { id: warrantyId },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
   private async getCloseoutRecordOrThrow(projectId: string) {
     const row = await this.prisma.closeout.findFirst({
       where: { projectId },
     });
     if (!row) {
       throw new NotFoundException('Closeout not found');
+    }
+    return row;
+  }
+
+  private async getWarrantyOrThrow(closeoutId: string, warrantyId: string) {
+    const row = await this.prisma.warranty.findFirst({
+      where: activeOnly({ id: warrantyId, closeoutId }),
+    });
+    if (!row) {
+      throw new NotFoundException('Warranty not found');
     }
     return row;
   }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -13,8 +14,10 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  CreateWarrantyDto,
   UpdateCloseoutChecklistItemDto,
   UpdateCloseoutDto,
+  UpdateWarrantyDto,
 } from '../../application/dtos/pm.dtos';
 import { CloseoutService } from '../../application/services/closeout.service';
 
@@ -75,5 +78,49 @@ export class CloseoutController {
       itemId,
       dto,
     );
+  }
+
+  @Post('warranties')
+  @RequirePermission('closeout', 'create')
+  @ApiOperation({ summary: 'Add warranty record' })
+  addWarranty(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateWarrantyDto,
+  ): Promise<unknown> {
+    return this.closeoutService.addWarranty(this.ctx(user), projectId, dto);
+  }
+
+  @Patch('warranties/:warrantyId')
+  @RequirePermission('closeout', 'edit')
+  @ApiOperation({ summary: 'Update warranty record' })
+  updateWarranty(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('warrantyId') warrantyId: string,
+    @Body() dto: UpdateWarrantyDto,
+  ): Promise<unknown> {
+    return this.closeoutService.updateWarranty(
+      this.ctx(user),
+      projectId,
+      warrantyId,
+      dto,
+    );
+  }
+
+  @Delete('warranties/:warrantyId')
+  @RequirePermission('closeout', 'delete')
+  @ApiOperation({ summary: 'Remove warranty record' })
+  async removeWarranty(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('warrantyId') warrantyId: string,
+  ): Promise<{ message: string }> {
+    await this.closeoutService.removeWarranty(
+      this.ctx(user),
+      projectId,
+      warrantyId,
+    );
+    return { message: 'Warranty removed' };
   }
 }
