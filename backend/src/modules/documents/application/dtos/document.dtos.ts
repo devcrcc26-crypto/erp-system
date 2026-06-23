@@ -114,3 +114,10 @@ export class DocumentFolderListQueryDto extends PaginationQueryDto {
   @IsEntityUuid()
   parentId?: string;
 }
+
+export class ProjectDocumentListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+}

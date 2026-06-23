@@ -16,6 +16,7 @@ import type {
   DocumentFolder,
   DocumentRecord,
   FolderContextType,
+  ProjectDocumentRecord,
 } from '@/lib/api/documents.types';
 import type { PaginationMeta, PaginationParams } from '@/lib/api/types';
 
@@ -39,6 +40,12 @@ export const documentKeys = {
     [...documentKeys.folderDocuments(), folderId, params] as const,
   downloadUrl: (documentId: string) =>
     [...documentKeys.all, 'download-url', documentId] as const,
+  projectDocuments: (projectId: string) =>
+    [...documentKeys.all, 'project', projectId] as const,
+  projectDocumentList: (
+    projectId: string,
+    params: PaginationParams & { search?: string },
+  ) => [...documentKeys.projectDocuments(projectId), params] as const,
 };
 
 function toQueryString(params: FolderListParams): string {
@@ -94,6 +101,35 @@ export function useProjectDocumentFolder(
     Boolean(projectId) && enabled,
     options,
   );
+}
+
+export function useProjectDocuments(
+  projectId: string,
+  params: PaginationParams & { search?: string } = { page: 1, limit: 20 },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<ProjectDocumentRecord>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: documentKeys.projectDocumentList(projectId, params),
+    queryFn: () => {
+      const search = new URLSearchParams();
+      if (params.page !== undefined) search.set('page', String(params.page));
+      if (params.limit !== undefined) search.set('limit', String(params.limit));
+      if (params.sortBy) search.set('sortBy', params.sortBy);
+      if (params.sortOrder) search.set('sortOrder', params.sortOrder);
+      if (params.search?.trim()) search.set('search', params.search.trim());
+      const query = search.toString();
+      return apiGetPaginated<ProjectDocumentRecord>(
+        `/document-folders/project/${projectId}/documents${query ? `?${query}` : ''}`,
+      );
+    },
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+    ...options,
+  });
 }
 
 export function useFolderDocuments(
@@ -160,6 +196,9 @@ export function useUploadDocumentToFolder() {
           page: 1,
           limit: 20,
         }),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: documentKeys.all,
       });
     },
   });

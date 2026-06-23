@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { FolderContextType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -24,6 +25,7 @@ import {
 import {
   CreateDocumentFolderDto,
   DocumentFolderListQueryDto,
+  ProjectDocumentListQueryDto,
   UpdateDocumentDto,
   UpdateDocumentFolderDto,
   UploadDocumentVersionDto,
@@ -181,6 +183,97 @@ export class DocumentService {
       }),
       this.prisma.document.count({ where }),
     ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Lists all current documents stored under a project's document folder tree.
+   */
+  async listProjectDocuments(
+    ctx: RequestContext,
+    projectId: string,
+    query: ProjectDocumentListQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    const project = await this.prisma.project.findFirst({
+      where: activeOnly({ id: projectId, companyId: ctx.companyId }),
+      select: { id: true },
+    });
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const projectFolder = await this.prisma.documentFolder.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        contextType: FolderContextType.PROJECT,
+        contextId: projectId,
+      }),
+      select: { id: true, path: true },
+    });
+
+    if (!projectFolder) {
+      return buildPaginatedResult([], 0, query.page, query.limit);
+    }
+
+    const folders = await this.prisma.documentFolder.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        OR: [
+          { id: projectFolder.id },
+          { path: { startsWith: `${projectFolder.path}/` } },
+        ],
+      }),
+      select: { id: true, name: true, path: true, contextType: true },
+    });
+
+    const folderIds = folders.map((folder) => folder.id);
+    if (folderIds.length === 0) {
+      return buildPaginatedResult([], 0, query.page, query.limit);
+    }
+
+    const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+
+    const where = activeOnly({
+      companyId: ctx.companyId,
+      folderId: { in: folderIds },
+      isCurrent: true,
+      ...(query.search?.trim()
+        ? {
+            name: { contains: query.search.trim(), mode: 'insensitive' as const },
+          }
+        : {}),
+    });
+
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildOrderBy(
+      query.sortBy ?? 'createdAt',
+      query.sortOrder ?? 'desc',
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.document.findMany({ where, skip, take, orderBy }),
+      this.prisma.document.count({ where }),
+    ]);
+
+    const data = rows.map((document) => {
+      const folder = folderById.get(document.folderId);
+      return {
+        id: document.id,
+        folderId: document.folderId,
+        companyId: document.companyId,
+        name: document.name,
+        fileType: document.fileType,
+        fileSizeBytes: document.fileSizeBytes,
+        version: document.version,
+        isCurrent: document.isCurrent,
+        createdAt: document.createdAt.toISOString(),
+        updatedAt: document.updatedAt.toISOString(),
+        folderName: folder?.name ?? '',
+        folderPath: folder?.path ?? '',
+        folderContextType: folder?.contextType ?? '',
+      };
+    });
+
     return buildPaginatedResult(data, total, query.page, query.limit);
   }
 

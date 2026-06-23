@@ -18,6 +18,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateDocumentFolderDto,
   DocumentFolderListQueryDto,
+  ProjectDocumentListQueryDto,
   UpdateDocumentFolderDto,
 } from '../../application/dtos/document.dtos';
 import { DocumentService } from '../../application/services/document.service';
@@ -41,6 +42,21 @@ export class DocumentFoldersController {
     @Query() query: DocumentFolderListQueryDto,
   ): Promise<unknown> {
     return this.documentService.listFolders(this.ctx(user), query);
+  }
+
+  @Get('project/:projectId/documents')
+  @RequirePermission('documents', 'view')
+  @ApiOperation({ summary: 'List all documents in a project folder tree' })
+  listProjectDocuments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Query() query: ProjectDocumentListQueryDto,
+  ): Promise<unknown> {
+    return this.documentService.listProjectDocuments(
+      this.ctx(user),
+      projectId,
+      query,
+    );
   }
 
   @Get(':id')

@@ -52,6 +52,12 @@ export interface DocumentRecord {
   updatedAt: string;
 }
 
+export interface ProjectDocumentRecord extends DocumentRecord {
+  folderName: string;
+  folderPath: string;
+  folderContextType: string;
+}
+
 export interface DocumentDownloadUrl {
   url: string;
   expiresIn: number;
