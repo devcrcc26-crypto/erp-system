@@ -11,7 +11,6 @@ import {
   ClusterOutlined,
   DashboardOutlined,
   DownOutlined,
-  FileOutlined,
   FolderOpenOutlined,
   InboxOutlined,
   IssuesCloseOutlined,
@@ -60,7 +59,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   risks: <WarningOutlined />,
   'punch-list': <SafetyOutlined />,
   documents: <FolderOpenOutlined />,
-  drawings: <FileOutlined />,
   team: <TeamOutlined />,
   closeout: <AuditOutlined />,
 };

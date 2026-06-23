@@ -230,15 +230,6 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroupKey: 'workspace.groups.records',
       },
       {
-        key: 'drawings',
-        label: 'Drawings',
-        labelKey: 'workspace.items.drawings',
-        pathSuffix: 'drawings',
-        capability: 'drawings',
-        breadcrumbGroup: 'Project Records',
-        breadcrumbGroupKey: 'workspace.groups.records',
-      },
-      {
         key: 'team',
         label: 'Team',
         labelKey: 'workspace.items.team',
