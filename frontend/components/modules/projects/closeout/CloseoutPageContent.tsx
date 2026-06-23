@@ -365,9 +365,11 @@ export default function CloseoutPageContent({
                 <StatusBadge
                   label={formatCloseoutStatus(closeout.status)}
                   variant={closeoutStatusVariant(closeout.status)}
+                  
                 />
+                
                 <Select
-                  className="mt-2 w-full"
+                  className="mt-4 w-full"
                   value={closeout.status}
                   onChange={(v: CloseoutStatus) => void handleStatusChange(v)}
                   options={CLOSEOUT_WORKFLOW.map((s) => ({

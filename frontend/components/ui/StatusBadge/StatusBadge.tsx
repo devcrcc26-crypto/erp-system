@@ -35,7 +35,7 @@ export default function StatusBadge({
     <Tag
       bordered
       style={{
-        margin: 0,
+        margin: 4,
         borderRadius: 9999,
         color: colors.color,
         backgroundColor: colors.bg,
@@ -44,6 +44,7 @@ export default function StatusBadge({
         fontSize: 12,
         lineHeight: '20px',
         padding: '2px 10px',
+
       }}
     >
       {label}
