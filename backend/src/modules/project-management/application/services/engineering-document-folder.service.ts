@@ -267,6 +267,47 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
+   * Returns or creates the attachment folder for a risk under the project folder.
+   */
+  async ensureRiskFolder(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    riskIdCode: string,
+  ): Promise<DocumentFolderRef> {
+    const segment = this.toFolderSegment(riskIdCode);
+    const uniqueSegment = `${segment}-${riskId.slice(0, 8)}`;
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.RISK,
+      riskId,
+      `risks/${uniqueSegment}`,
+      segment,
+    );
+  }
+
+  /**
+   * Returns or creates the attachment folder for a punch item under the project folder.
+   */
+  async ensurePunchItemFolder(
+    ctx: PmContext,
+    projectId: string,
+    punchItemId: string,
+    punchNumber: string,
+  ): Promise<DocumentFolderRef> {
+    const segment = this.toFolderSegment(punchNumber);
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.PUNCH_ITEM,
+      punchItemId,
+      `punch-items/${segment}`,
+      segment,
+    );
+  }
+
+  /**
    * Resolves an entity attachment folder by context, if it exists.
    */
   async findEntityFolder(

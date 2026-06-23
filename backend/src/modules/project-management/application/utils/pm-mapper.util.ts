@@ -403,6 +403,7 @@ export interface MappedRisk {
   contingencyPlan: string | null;
   reviewDate: string | null;
   status: Risk['status'];
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -421,6 +422,7 @@ export interface MappedPunchItem {
   dueDate: string | null;
   correctedAt: string | null;
   verifiedAt: string | null;
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -743,7 +745,10 @@ export function mapCorrespondence(
   };
 }
 
-export function mapRisk(row: Risk): MappedRisk {
+export function mapRisk(
+  row: Risk,
+  attachmentFolderId: string | null = null,
+): MappedRisk {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -759,12 +764,16 @@ export function mapRisk(row: Risk): MappedRisk {
     contingencyPlan: row.contingencyPlan,
     reviewDate: toDateString(row.reviewDate),
     status: row.status,
+    attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };
 }
 
-export function mapPunchItem(row: PunchItem): MappedPunchItem {
+export function mapPunchItem(
+  row: PunchItem,
+  attachmentFolderId: string | null = null,
+): MappedPunchItem {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -779,6 +788,7 @@ export function mapPunchItem(row: PunchItem): MappedPunchItem {
     dueDate: toDateString(row.dueDate),
     correctedAt: toIsoString(row.correctedAt),
     verifiedAt: toIsoString(row.verifiedAt),
+    attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };

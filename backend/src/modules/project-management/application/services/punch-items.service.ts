@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, PunchItemStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -20,6 +20,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const PUNCH_ITEM_SORT_FIELDS = new Set([
@@ -34,10 +35,13 @@ const PUNCH_ITEM_SORT_FIELDS = new Set([
 
 @Injectable()
 export class PunchItemsService {
+  private readonly logger = new Logger(PunchItemsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -64,7 +68,7 @@ export class PunchItemsService {
     ]);
 
     return buildPaginatedResult(
-      rows.map(mapPunchItem),
+      rows.map((row) => mapPunchItem(row)),
       total,
       query.page,
       query.limit,
@@ -80,7 +84,7 @@ export class PunchItemsService {
     punchItemId: string,
   ): Promise<MappedPunchItem> {
     const row = await this.getPunchItemOrThrow(projectId, punchItemId);
-    return mapPunchItem(row);
+    return this.enrichPunchItem(ctx, projectId, row);
   }
 
   /**
@@ -118,7 +122,7 @@ export class PunchItemsService {
       },
     });
 
-    return mapPunchItem(row);
+    return this.enrichPunchItem(ctx, projectId, row);
   }
 
   /**
@@ -146,11 +150,15 @@ export class PunchItemsService {
         severity: dto.severity,
         dueDate: parseOptionalDate(dto.dueDate),
         status: dto.status,
+        correctedAt:
+          dto.status === PunchItemStatus.CORRECTED ? new Date() : undefined,
+        verifiedAt:
+          dto.status === PunchItemStatus.VERIFIED ? new Date() : undefined,
         updatedBy: ctx.userId,
       },
     });
 
-    return mapPunchItem(row);
+    return this.enrichPunchItem(ctx, projectId, row);
   }
 
   /**
@@ -166,6 +174,31 @@ export class PunchItemsService {
       where: { id: punchItemId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
+  }
+
+  private async enrichPunchItem(
+    ctx: PmContext,
+    projectId: string,
+    row: Parameters<typeof mapPunchItem>[0],
+  ): Promise<MappedPunchItem> {
+    let attachmentFolderId: string | null = null;
+
+    try {
+      const folder =
+        await this.engineeringDocumentFolderService.ensurePunchItemFolder(
+          ctx,
+          projectId,
+          row.id,
+          row.punchNumber,
+        );
+      attachmentFolderId = folder.id;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to ensure punch item folder for ${row.id}: ${String(error)}`,
+      );
+    }
+
+    return mapPunchItem(row, attachmentFolderId);
   }
 
   private buildListWhere(

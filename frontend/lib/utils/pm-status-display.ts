@@ -3,6 +3,10 @@ import type {
   IssueStatus,
   MeetingStatus,
   CorrespondenceStatus,
+  PunchItemSeverity,
+  PunchItemStatus,
+  RiskCategory,
+  RiskStatus,
   RfiPriority,
   RfiStatus,
   SubmittalStatus,
@@ -13,7 +17,9 @@ import {
   CORRESPONDENCE_WORKFLOW,
   ISSUE_WORKFLOW,
   MEETING_WORKFLOW,
+  PUNCH_ITEM_WORKFLOW,
   RFI_WORKFLOW,
+  RISK_WORKFLOW,
   SUBMITTAL_WORKFLOW,
   DAILY_LOG_WORKFLOW,
 } from '@/lib/api/workflow';
@@ -158,6 +164,61 @@ export function correspondenceStatusVariant(
     CLOSED: 'default',
   };
   return variants[status];
+}
+
+export function formatRiskStatus(status: RiskStatus): string {
+  return RISK_WORKFLOW.find((step) => step.key === status)?.label ?? status;
+}
+
+export function riskStatusVariant(status: RiskStatus): StatusBadgeVariant {
+  const variants: Record<RiskStatus, StatusBadgeVariant> = {
+    OPEN: 'error',
+    MONITORING: 'warning',
+    MITIGATED: 'success',
+    CLOSED: 'default',
+  };
+  return variants[status];
+}
+
+export function formatRiskCategory(category: RiskCategory): string {
+  return category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function riskScoreVariant(score: number): StatusBadgeVariant {
+  if (score >= 15) return 'error';
+  if (score >= 8) return 'warning';
+  if (score >= 4) return 'orange';
+  return 'default';
+}
+
+export function formatPunchItemStatus(status: PunchItemStatus): string {
+  return (
+    PUNCH_ITEM_WORKFLOW.find((step) => step.key === status)?.label ?? status
+  );
+}
+
+export function punchItemStatusVariant(
+  status: PunchItemStatus,
+): StatusBadgeVariant {
+  const variants: Record<PunchItemStatus, StatusBadgeVariant> = {
+    RAISED: 'error',
+    ASSIGNED: 'warning',
+    CORRECTED: 'info',
+    VERIFIED: 'success',
+    CLOSED: 'default',
+  };
+  return variants[status];
+}
+
+export function punchItemSeverityVariant(
+  severity: PunchItemSeverity,
+): StatusBadgeVariant {
+  const variants: Record<PunchItemSeverity, StatusBadgeVariant> = {
+    MINOR: 'default',
+    MAJOR: 'warning',
+    CRITICAL: 'error',
+  };
+  return variants[severity];
 }
 
 export function isOverdue(dueDate: string | null): boolean {

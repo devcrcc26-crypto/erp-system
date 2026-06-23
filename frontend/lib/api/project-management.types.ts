@@ -525,6 +525,7 @@ export interface Risk {
   contingencyPlan: string | null;
   reviewDate: string | null;
   status: RiskStatus;
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -563,6 +564,7 @@ export interface PunchItem {
   dueDate: string | null;
   correctedAt: string | null;
   verifiedAt: string | null;
+  attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
 }

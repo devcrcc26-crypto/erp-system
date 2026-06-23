@@ -62,6 +62,13 @@ export const PUNCH_ITEM_WORKFLOW: WorkflowStep[] = [
   { key: 'CLOSED', label: 'Closed' },
 ];
 
+export const RISK_WORKFLOW: WorkflowStep[] = [
+  { key: 'OPEN', label: 'Open' },
+  { key: 'MONITORING', label: 'Monitoring' },
+  { key: 'MITIGATED', label: 'Mitigated' },
+  { key: 'CLOSED', label: 'Closed' },
+];
+
 export const CLOSEOUT_WORKFLOW: WorkflowStep[] = [
   { key: 'PRACTICAL_COMPLETION', label: 'Practical Completion' },
   { key: 'DEFECTS_LIABILITY_PERIOD', label: 'Defects Liability Period' },

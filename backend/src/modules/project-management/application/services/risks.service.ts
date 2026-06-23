@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, RiskStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -19,6 +19,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const RISK_SORT_FIELDS = new Set([
@@ -33,9 +34,12 @@ const RISK_SORT_FIELDS = new Set([
 
 @Injectable()
 export class RisksService {
+  private readonly logger = new Logger(RisksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
   /**
@@ -62,7 +66,7 @@ export class RisksService {
     ]);
 
     return buildPaginatedResult(
-      rows.map(mapRisk),
+      rows.map((row) => mapRisk(row)),
       total,
       query.page,
       query.limit,
@@ -78,7 +82,7 @@ export class RisksService {
     riskId: string,
   ): Promise<MappedRisk> {
     const row = await this.getRiskOrThrow(projectId, riskId);
-    return mapRisk(row);
+    return this.enrichRisk(ctx, projectId, row);
   }
 
   /**
@@ -111,7 +115,7 @@ export class RisksService {
       },
     });
 
-    return mapRisk(row);
+    return this.enrichRisk(ctx, projectId, row);
   }
 
   /**
@@ -151,7 +155,7 @@ export class RisksService {
       },
     });
 
-    return mapRisk(row);
+    return this.enrichRisk(ctx, projectId, row);
   }
 
   /**
@@ -167,6 +171,31 @@ export class RisksService {
       where: { id: riskId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
+  }
+
+  private async enrichRisk(
+    ctx: PmContext,
+    projectId: string,
+    row: Parameters<typeof mapRisk>[0],
+  ): Promise<MappedRisk> {
+    let attachmentFolderId: string | null = null;
+
+    try {
+      const folder =
+        await this.engineeringDocumentFolderService.ensureRiskFolder(
+          ctx,
+          projectId,
+          row.id,
+          row.riskIdCode,
+        );
+      attachmentFolderId = folder.id;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to ensure risk folder for ${row.id}: ${String(error)}`,
+      );
+    }
+
+    return mapRisk(row, attachmentFolderId);
   }
 
   private buildListWhere(

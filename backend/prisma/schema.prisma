@@ -47,6 +47,8 @@ enum FolderContextType {
   DAILY_LOG
   MEETING
   CORRESPONDENCE
+  RISK
+  PUNCH_ITEM
 }
 
 enum NotificationChannel {
