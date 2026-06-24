@@ -23,6 +23,8 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { tokens } from '@/lib/theme/tokens';
 import { layout } from '@/lib/theme/layout';
+import type { ScheduleMetrics } from '@/lib/utils/schedule-metrics';
+import { formatScheduleVariance } from '@/lib/utils/schedule-metrics';
 
 function formatMonthDay(date: Date): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -152,10 +154,12 @@ function TaskTimelineBar({
 
 export default function ScheduleGantt({
   tasks,
+  metrics,
   criticalOnly,
   onCriticalOnlyChange,
 }: {
   tasks: Task[];
+  metrics: ScheduleMetrics;
   criticalOnly: boolean;
   onCriticalOnlyChange: (value: boolean) => void;
 }): React.ReactNode {
@@ -175,54 +179,71 @@ export default function ScheduleGantt({
   );
 
   return (
-    <div className={layout.pageStack}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-800">Programme timeline</p>
-          <p className="text-sm text-slate-500">
-            {dateRange
-              ? `${formatMonthDay(dateRange.start)} – ${formatMonthDay(dateRange.end)}`
-              : 'Add task start and finish dates to render the Gantt chart.'}
-          </p>
+    <div className={`${layout.cardSurface} flex min-h-[min(520px,70vh)] flex-col gap-2 p-3 sm:p-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200 pb-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm font-semibold text-slate-800">Programme timeline</p>
+          {dateRange && (
+            <span className="text-xs text-slate-500">
+              {formatMonthDay(dateRange.start)} – {formatMonthDay(dateRange.end)}
+            </span>
+          )}
+          <span className="hidden h-3 w-px bg-slate-200 sm:inline-block" aria-hidden />
+          <span className="text-xs text-slate-600">
+            Actual{' '}
+            <strong className="font-semibold text-slate-800">
+              {metrics.actualProgressPct !== null
+                ? `${metrics.actualProgressPct}%`
+                : '—'}
+            </strong>
+          </span>
+          <span className="text-xs text-slate-600">
+            Variance{' '}
+            <strong className="font-semibold text-slate-800">
+              {formatScheduleVariance(metrics.scheduleVariancePct)}
+            </strong>
+          </span>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <Switch
-            size="small"
-            checked={criticalOnly}
-            onChange={onCriticalOnlyChange}
-          />
-          Critical path only
-        </label>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="hidden items-center gap-3 text-[11px] text-slate-500 md:flex">
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block h-2 w-4 rounded-sm"
+                style={{ backgroundColor: tokens.colorPrimary }}
+              />
+              Active
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-4 rounded-sm bg-red-600" />
+              Critical
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-4 rounded-sm bg-green-600" />
+              Done
+            </span>
+          </div>
+          <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
+            <Switch
+              size="small"
+              checked={criticalOnly}
+              onChange={onCriticalOnlyChange}
+            />
+            Critical only
+          </label>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-        <span className="flex items-center gap-2">
-          <span
-            className="inline-block h-3 w-8 rounded"
-            style={{ backgroundColor: tokens.colorPrimary }}
+      <div className="min-h-0 flex-1">
+        {!dateRange || !timeline || visibleTasks.length === 0 ? (
+          <Empty
+            className="py-8"
+            description="No schedulable tasks to display on the Gantt chart."
           />
-          In progress
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-8 rounded bg-red-600" />
-          Critical
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-8 rounded bg-green-600" />
-          Completed
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-0.5 w-8 bg-orange-500" />
-          Today
-        </span>
-      </div>
-
-      {!dateRange || !timeline || visibleTasks.length === 0 ? (
-        <Empty description="No schedulable tasks to display on the Gantt chart." />
-      ) : (
+        ) : (
         <>
           {/* Mobile: stacked cards with full-width timeline bars (no horizontal scroll). */}
-          <div className={`${layout.cardSurface} lg:hidden`}>
+          <div className="lg:hidden">
             <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
               <div className="flex justify-between text-[11px] font-medium text-slate-500">
                 <span>{formatMonthDay(dateRange.start)}</span>
@@ -278,7 +299,7 @@ export default function ScheduleGantt({
           </div>
 
           {/* Desktop: traditional grid with sticky task column and horizontal scroll. */}
-          <div className={`${layout.cardSurface} hidden overflow-hidden lg:block`}>
+          <div className="hidden overflow-hidden lg:block">
             <div className="erp-gantt-scroll overflow-x-auto">
               <div
                 style={{
@@ -396,7 +417,8 @@ export default function ScheduleGantt({
             </div>
           </div>
         </>
-      )}
+        )}
+      </div>
 
     </div>
   );

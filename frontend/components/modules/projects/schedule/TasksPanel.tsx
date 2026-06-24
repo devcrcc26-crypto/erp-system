@@ -14,7 +14,6 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
@@ -324,29 +323,25 @@ export default function TasksPanel({
 
   return (
     <>
-      <FormLayout
-        title="Tasks"
-        description="Programme tasks linked to milestones and the Gantt chart."
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditing(null);
-              setDrawerOpen(true);
-            }}
-          >
-            Add task
-          </Button>
-        }
-      >
-        <DataTable<Task>
-          rowKey="id"
-          columns={columns}
-          dataSource={tasks}
-          locale={{ emptyText: 'No tasks defined' }}
-        />
-      </FormLayout>
+      <div className="mb-3 flex justify-end">
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditing(null);
+            setDrawerOpen(true);
+          }}
+        >
+          Add task
+        </Button>
+      </div>
+      <DataTable<Task>
+        rowKey="id"
+        columns={columns}
+        dataSource={tasks}
+        locale={{ emptyText: 'No tasks defined' }}
+      />
 
       <Collapse
         bordered={false}
