@@ -292,7 +292,10 @@ export default function CloseoutPageContent({
       render: (v: string | null) => {
         const expired = isOverdue(v);
         return (
-          <span className={expired ? 'text-red-600' : undefined}>
+          <span
+            className={expired ? 'font-medium' : undefined}
+            style={expired ? { color: tokens.colorRed600 } : undefined}
+          >
             {formatProjectDate(v)}
           </span>
         );
@@ -329,11 +332,7 @@ export default function CloseoutPageContent({
   ];
 
   if (closeoutQuery.isLoading || initializeCloseout.isPending) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (
@@ -357,13 +356,19 @@ export default function CloseoutPageContent({
 
       {closeout && (
         <>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className={`${layout.cardSurface} p-4 sm:p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-lg font-semibold text-slate-900">
+                <p
+                  className="text-[13px] font-medium"
+                  style={{ color: tokens.colorTextPrimary }}
+                >
                   Project closeout
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p
+                  className="mt-1 text-[12px]"
+                  style={{ color: tokens.colorTextSecondary }}
+                >
                   Handover checklist, warranties, and final account tracking
                 </p>
               </div>
@@ -512,14 +517,17 @@ export default function CloseoutPageContent({
                     <div className="space-y-6">
                       {checklistByCategory.map(([category, items]) => (
                         <div key={category}>
-                          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                          <h3
+                            className="mb-3 text-[13px] font-medium uppercase tracking-wide"
+                            style={{ color: tokens.colorTextSecondary }}
+                          >
                             {category}
                           </h3>
                           <div className="space-y-2">
                             {items.map((item) => (
                               <label
                                 key={item.id}
-                                className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3"
+                                className={`flex items-start gap-3 p-3 ${layout.cardSurface}`}
                               >
                                 <Checkbox
                                   checked={item.isComplete}
