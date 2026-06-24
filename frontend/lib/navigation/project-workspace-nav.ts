@@ -8,6 +8,8 @@ export interface ProjectWorkspaceNavItem {
   readonly label: string;
   /** i18n key under `epc.json` (e.g. `workspace.items.disciplines`). */
   readonly labelKey: string;
+  /** Icon registry key — defaults to `key` when omitted. */
+  readonly iconKey?: string;
   /** Path after `/projects/{projectId}/`; empty string = dashboard root. */
   readonly pathSuffix: string;
   readonly capability: ProjectNavCapability;
@@ -36,6 +38,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         key: 'dashboard',
         label: 'Dashboard',
         labelKey: 'workspace.items.dashboard',
+        iconKey: 'dashboard',
         pathSuffix: '',
         capability: 'projects',
         breadcrumbGroup: 'Overview',
@@ -127,6 +130,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         key: 'review-inbox',
         label: 'Review Inbox',
         labelKey: 'workspace.items.reviewInbox',
+        iconKey: 'review-inbox',
         pathSuffix: 'review-inbox',
         capability: 'schedule',
         breadcrumbGroup: 'Review & Release',
@@ -137,6 +141,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         key: 'my-comments',
         label: 'My Comments',
         labelKey: 'workspace.items.myComments',
+        iconKey: 'my-comments',
         pathSuffix: 'my-comments',
         capability: 'schedule',
         breadcrumbGroup: 'Review & Release',

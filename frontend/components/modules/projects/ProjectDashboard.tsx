@@ -6,10 +6,8 @@ import Link from 'next/link';
 import { Alert } from 'antd';
 import {
   CalendarOutlined,
-  FileTextOutlined,
-  IssuesCloseOutlined,
-  TeamOutlined,
 } from '@ant-design/icons';
+import { getNavIcon, getNavIconComponent, navIconClassName } from '@/lib/navigation/nav-icons';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import { layout } from '@/lib/theme/layout';
@@ -24,21 +22,25 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 const QUICK_LINKS = [
   {
     href: 'disciplines',
+    navIconKey: 'disciplines',
     label: 'Disciplines & Packages',
     description: 'Engineering design packages and documents',
   },
   {
     href: 'overview/status',
+    navIconKey: 'status-board',
     label: 'Status Board',
     description: 'EPC workflow KPIs and bottlenecks',
   },
   {
     href: 'submittals',
+    navIconKey: 'submittals',
     label: 'Submittals',
     description: 'Design issue and release packages',
   },
   {
     href: 'schedule',
+    navIconKey: 'schedule',
     label: 'Schedule',
     description: 'Milestones, tasks, and Gantt',
   },
@@ -105,7 +107,7 @@ export default function ProjectDashboard({
         <KPICard
           label="Open RFIs"
           value={formatCount(stats?.openRfis, hasStats)}
-          icon={FileTextOutlined}
+          icon={getNavIconComponent('rfis')}
           iconBg={tokens.colorTeal50}
           iconColor={tokens.colorTeal600}
         />
@@ -119,14 +121,14 @@ export default function ProjectDashboard({
         <KPICard
           label="Open issues"
           value={formatCount(stats?.openIssues, hasStats)}
-          icon={IssuesCloseOutlined}
+          icon={getNavIconComponent('issues')}
           iconBg={tokens.colorRed50}
           iconColor={tokens.colorRed600}
         />
         <KPICard
           label="Open punch items"
           value={formatCount(stats?.openPunchItems, hasStats)}
-          icon={TeamOutlined}
+          icon={getNavIconComponent('team')}
           iconBg={tokens.colorBlue50}
           iconColor={tokens.colorBlue400}
         />
@@ -197,21 +199,29 @@ export default function ProjectDashboard({
               <li key={link.href}>
                 <Link
                   href={`/projects/${projectId}/${link.href}`}
-                  className="block rounded-lg px-4 py-3 no-underline transition-colors hover:bg-[var(--color-surface-secondary)]"
+                  className="flex items-start gap-3 rounded-lg px-4 py-3 no-underline transition-colors hover:bg-[var(--color-surface-secondary)]"
                   style={{ border: `0.5px solid ${tokens.colorBorder}` }}
                 >
-                  <p
-                    className="text-[12px] font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
+                  <span
+                    className={navIconClassName}
+                    style={{ color: tokens.colorTextSecondary }}
                   >
-                    {link.label}
-                  </p>
-                  <p
-                    className="text-[10px] font-normal"
-                    style={{ color: tokens.colorTextTertiary }}
-                  >
-                    {link.description}
-                  </p>
+                    {getNavIcon(link.navIconKey)}
+                  </span>
+                  <div className="min-w-0">
+                    <p
+                      className="text-[12px] font-medium"
+                      style={{ color: tokens.colorTextPrimary }}
+                    >
+                      {link.label}
+                    </p>
+                    <p
+                      className="text-[10px] font-normal"
+                      style={{ color: tokens.colorTextTertiary }}
+                    >
+                      {link.description}
+                    </p>
+                  </div>
                 </Link>
               </li>
             ))}

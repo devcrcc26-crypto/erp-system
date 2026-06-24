@@ -86,7 +86,14 @@ function RailNavButton({
       ].join(' ')}
       style={railItemStyle(isActive)}
     >
-      <span className={navIconClassName}>
+      <span
+        className={navIconClassName}
+        style={
+          isActive
+            ? { color: tokens.colorPrimaryHover }
+            : { color: tokens.colorTextSecondary }
+        }
+      >
         {getNavIcon(item.iconKey)}
       </span>
       <span

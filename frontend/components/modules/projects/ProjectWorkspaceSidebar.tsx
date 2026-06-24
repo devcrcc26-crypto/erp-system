@@ -11,7 +11,7 @@ import {
   resolveProjectNavKey,
   type ProjectWorkspaceNavItem,
 } from '@/lib/navigation/project-workspace-nav';
-import { getNavIcon } from '@/lib/navigation/nav-icons';
+import { getNavIcon, resolveNavIconKey } from '@/lib/navigation/nav-icons';
 import { layout } from '@/lib/theme/layout';
 import {
   useEpcCapabilities,
@@ -99,7 +99,7 @@ export default function ProjectWorkspaceSidebar({
         label: t(group.labelKey),
         children: visibleItems.map((item) => ({
           key: item.key,
-          icon: getNavIcon(item.key),
+          icon: getNavIcon(resolveNavIconKey(item.key, item.iconKey)),
           label: (
             <Link href={projectNavHref(projectId, item.pathSuffix)} onClick={onNavigate}>
               {t(item.labelKey)}

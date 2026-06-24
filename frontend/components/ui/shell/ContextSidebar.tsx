@@ -11,7 +11,7 @@ import {
   projectNavHref,
   resolveProjectNavKey,
 } from '@/config/navConfig';
-import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
+import { getNavIcon, navIconClassName, resolveNavIconKey } from '@/lib/navigation/nav-icons';
 import type { ProjectWorkspaceNavItem } from '@/lib/navigation/project-workspace-nav';
 import {
   useEpcCapabilities,
@@ -214,7 +214,7 @@ export default function ContextSidebar({
                                 : { color: tokens.colorTextSecondary }
                             }
                           >
-                            {getNavIcon(item.key)}
+                            {getNavIcon(resolveNavIconKey(item.key, item.iconKey))}
                           </span>
                           <span className="truncate">{label}</span>
                         </Link>
