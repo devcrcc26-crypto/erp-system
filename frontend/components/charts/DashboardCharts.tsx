@@ -1,7 +1,9 @@
+// UI polish pass — styles only, no logic changes
+
 "use client";
 
 import { useState } from "react";
-import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import {
   Bar,
   BarChart,
@@ -15,19 +17,19 @@ import {
 } from "recharts";
 
 const taskStatusData = [
-  { name: "Current Week",   value: 72, color: "#f97316" },
-  { name: "Planned (Future)", value: 28, color: "#3b82f6" },
+  { name: "Current Week", value: 72, color: tokens.colorTeal400 },
+  { name: "Planned (Future)", value: 28, color: tokens.colorBlue400 },
 ];
 
 const disciplineData = [
   { name: "Architecture", value: 42 },
-  { name: "Management",   value: 0  },
+  { name: "Management", value: 0 },
 ];
 
 const priorityData = [
-  { name: "High",   value: 57, color: "#ef4444" },
-  { name: "Medium", value: 34, color: "#f97316" },
-  { name: "Low",    value: 12, color: "#22c55e" },
+  { name: "High", value: 57, color: tokens.colorRed400 },
+  { name: "Medium", value: 34, color: tokens.colorAmber400 },
+  { name: "Low", value: 12, color: tokens.colorGreen400 },
 ];
 
 const CHART_HEIGHT = 200;
@@ -42,70 +44,92 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <p className="mb-4 text-sm text-slate-500">{subtitle}</p>
-      {/* Fixed pixel height so ResponsiveContainer can measure it */}
-      <div style={{ width: "100%", height: CHART_HEIGHT }}>{children}</div>
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      style={{
+        borderRadius: tokens.borderRadiusCard,
+        border: `0.5px solid ${tokens.colorBorder}`,
+        background: tokens.colorCardBg,
+      }}
+    >
+      <div
+        className="shrink-0 px-[18px] py-[14px]"
+        style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
+      >
+        <h3
+          className="text-[13px] font-medium leading-[1.5]"
+          style={{ color: tokens.colorTextPrimary }}
+        >
+          {title}
+        </h3>
+        <p
+          className="mt-0.5 text-[10px] font-normal leading-[1.4]"
+          style={{ color: tokens.colorTextTertiary }}
+        >
+          {subtitle}
+        </p>
+      </div>
+      <div className="flex flex-1 flex-col px-[18px] py-4">
+        <div style={{ width: "100%", height: CHART_HEIGHT }}>{children}</div>
+      </div>
     </div>
   );
 }
 
 function CompletionGauge({ value }: { value: number }) {
-  const r         = 90;
-  const cx        = 110;
-  const cy        = 125;
+  const r = 90;
+  const cx = 110;
+  const cy = 125;
   const arcLength = Math.PI * r;
-  const filled    = (value / 100) * arcLength;
+  const filled = (value / 100) * arcLength;
 
   return (
     <div className="flex h-full items-center justify-center">
       <svg width="220" height="150" viewBox="0 0 220 150">
-        {/* Background arc */}
         <path
           d={`M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy}`}
           fill="none"
-          stroke="#e2e8f0"
-          strokeWidth="18"
-          strokeLinecap="butt"
+          stroke={tokens.colorGray100}
+          strokeWidth="4"
+          strokeLinecap="round"
         />
-        {/* Filled arc */}
         <path
           d={`M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy}`}
           fill="none"
-          stroke="#22c55e"
-          strokeWidth="18"
-          strokeLinecap="butt"
+          stroke={tokens.colorGreen400}
+          strokeWidth="4"
+          strokeLinecap="round"
           strokeDasharray={`${filled} ${arcLength}`}
         />
-        {/* 63/100 - small label above percentage */}
         <text
-          x={cx} y={cy - 62}
+          x={cx}
+          y={cy - 62}
           textAnchor="middle"
-          fontSize="12"
-          fill="#94a3b8"
-          fontFamily="sans-serif"
+          fontSize="10"
+          fill={tokens.colorTextTertiary}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
         >
           {value} / 100
         </text>
-        {/* Percentage - large bold */}
         <text
-          x={cx} y={cy - 16}
+          x={cx}
+          y={cy - 16}
           textAnchor="middle"
-          fontSize="34"
-          fontWeight="700"
-          fill="#0f172a"
-          fontFamily="sans-serif"
+          fontSize="24"
+          fontWeight="500"
+          fill={tokens.colorTextPrimary}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+          letterSpacing="-0.02em"
         >
           {value}%
         </text>
-        {/* Progress label */}
         <text
-          x={cx} y={cy + 12}
+          x={cx}
+          y={cy + 12}
           textAnchor="middle"
-          fontSize="12"
-          fill="#64748b"
-          fontFamily="sans-serif"
+          fontSize="11"
+          fill={tokens.colorTextSecondary}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
         >
           Progress
         </text>
@@ -117,21 +141,21 @@ function CompletionGauge({ value }: { value: number }) {
 function DisciplineDumbbell() {
   const [tip, setTip] = useState<{ label: string; value: number; y: number } | null>(null);
 
-  const W   = 120;
-  const cx  = W / 2;
+  const W = 120;
+  const cx = W / 2;
   const GAP = 8;
-  const R   = 5;
-  const L   = 62;
+  const R = 5;
+  const L = 62;
 
   const archLabelY = 13;
-  const archDotY   = archLabelY + 14;
-  const blueTopY   = archDotY + R + GAP;
-  const blueBotY   = blueTopY + L;
-  const mgmtDotY   = blueBotY + GAP + R;
-  const grayTopY   = mgmtDotY + R + GAP;
-  const grayBotY   = grayTopY + L;
+  const archDotY = archLabelY + 14;
+  const blueTopY = archDotY + R + GAP;
+  const blueBotY = blueTopY + L;
+  const mgmtDotY = blueBotY + GAP + R;
+  const grayTopY = mgmtDotY + R + GAP;
+  const grayBotY = grayTopY + L;
   const mgmtLabelY = grayBotY + GAP + 10;
-  const H          = mgmtLabelY + 4;
+  const H = mgmtLabelY + 4;
 
   const tipW = 48;
   const tipH = 20;
@@ -139,58 +163,110 @@ function DisciplineDumbbell() {
   return (
     <div style={{ height: CHART_HEIGHT }} className="flex items-center justify-center">
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} overflow="visible">
-
-        {/* Architecture label */}
-        <text x={cx} y={archLabelY} textAnchor="middle" fontSize="11" fontWeight="600" fill="#0f172a" fontFamily="sans-serif">
+        <text
+          x={cx}
+          y={archLabelY}
+          textAnchor="middle"
+          fontSize="11"
+          fontWeight="500"
+          fill={tokens.colorTextPrimary}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        >
           {disciplineData[0].name}
         </text>
 
-        {/* Architecture circle */}
         <circle
-          cx={cx} cy={archDotY} r={R + 4} fill="transparent"
+          cx={cx}
+          cy={archDotY}
+          r={R + 4}
+          fill="transparent"
           style={{ cursor: "pointer" }}
-          onMouseEnter={() => setTip({ label: disciplineData[0].name, value: disciplineData[0].value, y: archDotY })}
+          onMouseEnter={() =>
+            setTip({ label: disciplineData[0].name, value: disciplineData[0].value, y: archDotY })
+          }
           onMouseLeave={() => setTip(null)}
         />
-        <circle cx={cx} cy={archDotY} r={R} fill="#3b82f6" style={{ pointerEvents: "none" }} />
-
-        {/* Blue line */}
-        <line x1={cx} y1={blueTopY} x2={cx} y2={blueBotY} stroke="#3b82f6" strokeWidth={2} strokeLinecap="round" />
-
-        {/* Management circle */}
         <circle
-          cx={cx} cy={mgmtDotY} r={R + 4} fill="transparent"
+          cx={cx}
+          cy={archDotY}
+          r={R}
+          fill={tokens.colorBlue400}
+          style={{ pointerEvents: "none" }}
+        />
+
+        <line
+          x1={cx}
+          y1={blueTopY}
+          x2={cx}
+          y2={blueBotY}
+          stroke={tokens.colorBlue400}
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
+
+        <circle
+          cx={cx}
+          cy={mgmtDotY}
+          r={R + 4}
+          fill="transparent"
           style={{ cursor: "pointer" }}
-          onMouseEnter={() => setTip({ label: disciplineData[1].name, value: disciplineData[1].value, y: mgmtDotY })}
+          onMouseEnter={() =>
+            setTip({ label: disciplineData[1].name, value: disciplineData[1].value, y: mgmtDotY })
+          }
           onMouseLeave={() => setTip(null)}
         />
-        <circle cx={cx} cy={mgmtDotY} r={R} fill="#3b82f6" style={{ pointerEvents: "none" }} />
+        <circle
+          cx={cx}
+          cy={mgmtDotY}
+          r={R}
+          fill={tokens.colorBlue400}
+          style={{ pointerEvents: "none" }}
+        />
 
-        {/* Gray line */}
-        <line x1={cx} y1={grayTopY} x2={cx} y2={grayBotY} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        <line
+          x1={cx}
+          y1={grayTopY}
+          x2={cx}
+          y2={grayBotY}
+          stroke={tokens.colorGray100}
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
 
-        {/* Management label */}
-        <text x={cx} y={mgmtLabelY} textAnchor="middle" fontSize="11" fontWeight="600" fill="#0f172a" fontFamily="sans-serif">
+        <text
+          x={cx}
+          y={mgmtLabelY}
+          textAnchor="middle"
+          fontSize="11"
+          fontWeight="500"
+          fill={tokens.colorTextPrimary}
+          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        >
           {disciplineData[1].name}
         </text>
 
-        {/* Tooltip */}
         {tip && (
           <g>
             <rect
-              x={cx + R + 6} y={tip.y - tipH / 2}
-              width={tipW} height={tipH} rx={4}
-              fill="#1e293b"
+              x={cx + R + 6}
+              y={tip.y - tipH / 2}
+              width={tipW}
+              height={tipH}
+              rx={8}
+              fill={tokens.colorTextPrimary}
             />
             <text
-              x={cx + R + 6 + tipW / 2} y={tip.y + 4}
-              textAnchor="middle" fontSize="10" fill="white" fontFamily="sans-serif"
+              x={cx + R + 6 + tipW / 2}
+              y={tip.y + 4}
+              textAnchor="middle"
+              fontSize="10"
+              fill={tokens.colorCardBg}
+              fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
             >
               {tip.label}: {tip.value}
             </text>
           </g>
         )}
-
       </svg>
     </div>
   );
@@ -198,8 +274,7 @@ function DisciplineDumbbell() {
 
 export default function DashboardCharts() {
   return (
-    <section className={`${layout.cardGrid} sm:grid-cols-2 xl:grid-cols-4`}>
-      {/* Task Status , donut */}
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <ChartCard title="Task Status" subtitle="Current vs Planned">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT - 30}>
           <PieChart>
@@ -219,11 +294,14 @@ export default function DashboardCharts() {
             <Tooltip formatter={(v) => `${v}%`} />
           </PieChart>
         </ResponsiveContainer>
-        <div className="mt-1 flex justify-center gap-4 text-xs text-slate-600">
+        <div
+          className="mt-1 flex justify-center gap-4 text-[11px] font-normal"
+          style={{ color: tokens.colorTextSecondary }}
+        >
           {taskStatusData.map((item) => (
             <div key={item.name} className="flex items-center gap-1.5">
               <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
+                className="inline-block h-2 w-2 rounded-full"
                 style={{ backgroundColor: item.color }}
               />
               {item.name}
@@ -232,22 +310,29 @@ export default function DashboardCharts() {
         </div>
       </ChartCard>
 
-      {/* Discipline Workload - vertical dumbbell */}
       <ChartCard title="Discipline Workload" subtitle="Active tasks by discipline">
         <DisciplineDumbbell />
       </ChartCard>
 
-      {/* Priority Breakdown , vertical bars */}
       <ChartCard title="Priority Breakdown" subtitle="Tasks by priority level">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart
             data={priorityData}
             margin={{ left: -16, right: 8, top: 4, bottom: 4 }}
           >
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: tokens.colorTextSecondary }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: tokens.colorTextTertiary }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={36}>
+            <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={36}>
               {priorityData.map((entry) => (
                 <Cell key={entry.name} fill={entry.color} />
               ))}
@@ -256,7 +341,6 @@ export default function DashboardCharts() {
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Overall Completion , semicircle gauge */}
       <ChartCard title="Overall Completion" subtitle="% of tasks completed">
         <CompletionGauge value={63} />
       </ChartCard>

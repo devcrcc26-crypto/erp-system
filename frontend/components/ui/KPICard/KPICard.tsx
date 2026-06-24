@@ -1,6 +1,8 @@
+// UI polish pass — styles only, no logic changes
+
 import type { ComponentType, ReactNode } from 'react';
 import Card from '@/components/ui/Card/Card';
-import { cardStyles } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 type IconProps = {
   size?: number;
@@ -19,35 +21,52 @@ type KPICardProps = {
 };
 
 /**
- * KPI metric card — same layout as the original StatCard, using Ant Design Card.
+ * KPI metric card — design-system stat surface.
  */
 export default function KPICard({
   label,
   value,
   icon: Icon,
-  iconBg = '#f1f5f9',
-  iconColor = '#64748b',
+  iconBg = tokens.colorSurfaceSecondary,
+  iconColor = tokens.colorTextSecondary,
   extra,
 }: KPICardProps): React.ReactNode {
   return (
     <Card
       variant="borderless"
-      styles={cardStyles}
-      className="h-full border border-slate-200 erp-responsive-card shadow-sm"
-      style={{ borderRadius: 8, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
+      styles={{
+        body: { padding: '16px 18px' },
+      }}
+      className="h-full erp-responsive-card"
+      style={{
+        borderRadius: tokens.borderRadiusCard,
+        border: `0.5px solid ${tokens.colorBorder}`,
+        boxShadow: 'none',
+        background: tokens.colorCardBg,
+      }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-3">
         {Icon && (
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md md:h-12 md:w-12"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
             style={{ backgroundColor: iconBg, color: iconColor }}
           >
-            <Icon size={20} />
+            <Icon style={{ fontSize: 16 }} />
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-2xl font-bold text-slate-900 md:text-3xl">{value}</p>
-          <p className="text-xs text-slate-500 md:text-sm">{label}</p>
+          <p
+            className="text-[24px] font-medium leading-none tracking-[-0.02em]"
+            style={{ color: tokens.colorTextPrimary }}
+          >
+            {value}
+          </p>
+          <p
+            className="mt-1 text-[11px] font-normal leading-[1.4]"
+            style={{ color: tokens.colorTextTertiary }}
+          >
+            {label}
+          </p>
         </div>
         {extra}
       </div>

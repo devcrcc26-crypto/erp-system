@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
@@ -9,7 +11,7 @@ import {
   RiseOutlined,
 } from '@ant-design/icons';
 import KPICard from '@/components/ui/KPICard/KPICard';
-import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { useDashboardStats } from '@/lib/query/stats';
 
 function formatCount(value: number | null | undefined, loading: boolean): string {
@@ -48,34 +50,34 @@ function StatsSection({
       label: 'Projects',
       value: projects,
       icon: ProjectOutlined,
-      iconBg: '#ffedd5',
-      iconColor: '#c2410c',
+      iconBg: tokens.colorTeal50,
+      iconColor: tokens.colorTeal600,
     },
     {
       label: 'Active Projects',
       value: activeProjects,
       icon: CheckSquareOutlined,
-      iconBg: '#dbeafe',
-      iconColor: '#2563eb',
+      iconBg: tokens.colorBlue50,
+      iconColor: tokens.colorBlue400,
     },
     {
       label: 'Team Members',
       value: teamMembers,
       icon: TeamOutlined,
-      iconBg: '#dcfce7',
-      iconColor: '#16a34a',
+      iconBg: tokens.colorGreen50,
+      iconColor: tokens.colorGreen600,
     },
     {
       label: 'Completion Rate',
       value: completionRate,
       icon: RiseOutlined,
-      iconBg: '#f3e8ff',
-      iconColor: '#9333ea',
+      iconBg: tokens.colorAmber50,
+      iconColor: tokens.colorAmber400,
     },
   ];
 
   return (
-    <div className={`${layout.cardGrid} sm:grid-cols-2 lg:grid-cols-4`}>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <KPICard
           key={card.label}
