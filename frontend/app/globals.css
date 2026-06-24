@@ -117,6 +117,10 @@ body {
   font-size: 16px;
 }
 
+.erp-nav-icon .anticon {
+  font-size: 16px;
+}
+
 /* Drawer / modal form spacing */
 .erp-drawer-form.ant-form-vertical .ant-form-item {
   margin-bottom: 16px;

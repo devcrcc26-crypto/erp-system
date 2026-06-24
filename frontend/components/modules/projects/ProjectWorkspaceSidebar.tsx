@@ -6,31 +6,12 @@ import { useMemo } from 'react';
 import { Menu } from 'antd';
 import type { MenuProps } from 'antd';
 import {
-  AuditOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
-  CheckSquareOutlined,
-  ClusterOutlined,
-  DashboardOutlined,
-  FolderOpenOutlined,
-  InboxOutlined,
-  IssuesCloseOutlined,
-  MailOutlined,
-  ProfileOutlined,
-  ProjectOutlined,
-  SafetyOutlined,
-  ScheduleOutlined,
-  SendOutlined,
-  TeamOutlined,
-  WarningOutlined,
-  CommentOutlined,
-} from '@ant-design/icons';
-import {
   PROJECT_WORKSPACE_NAV,
   projectNavHref,
   resolveProjectNavKey,
   type ProjectWorkspaceNavItem,
 } from '@/lib/navigation/project-workspace-nav';
+import { getNavIcon } from '@/lib/navigation/nav-icons';
 import { layout } from '@/lib/theme/layout';
 import {
   useEpcCapabilities,
@@ -40,29 +21,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
-
-const NAV_ICONS: Record<string, React.ReactNode> = {
-  dashboard: <DashboardOutlined />,
-  'status-board': <BarChartOutlined />,
-  workload: <TeamOutlined />,
-  schedule: <ScheduleOutlined />,
-  disciplines: <ClusterOutlined />,
-  deliverables: <CheckSquareOutlined />,
-  submittals: <SendOutlined />,
-  'external-release': <SendOutlined />,
-  'review-inbox': <InboxOutlined />,
-  'my-comments': <CommentOutlined />,
-  rfis: <InboxOutlined />,
-  issues: <IssuesCloseOutlined />,
-  'daily-logs': <ProfileOutlined />,
-  meetings: <CalendarOutlined />,
-  correspondence: <MailOutlined />,
-  risks: <WarningOutlined />,
-  'punch-list': <SafetyOutlined />,
-  documents: <FolderOpenOutlined />,
-  team: <TeamOutlined />,
-  closeout: <AuditOutlined />,
-};
 
 function canViewNavItem(
   item: ProjectWorkspaceNavItem,
@@ -141,7 +99,7 @@ export default function ProjectWorkspaceSidebar({
         label: t(group.labelKey),
         children: visibleItems.map((item) => ({
           key: item.key,
-          icon: NAV_ICONS[item.key] ?? <ProjectOutlined />,
+          icon: getNavIcon(item.key),
           label: (
             <Link href={projectNavHref(projectId, item.pathSuffix)} onClick={onNavigate}>
               {t(item.labelKey)}

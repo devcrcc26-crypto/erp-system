@@ -5,18 +5,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  AuditOutlined,
-  DashboardOutlined,
-  ProjectOutlined,
-  UnorderedListOutlined,
-  TeamOutlined,
-  BarChartOutlined,
-  MailOutlined,
-  SettingOutlined,
-  UserOutlined,
   LogoutOutlined,
-  InboxOutlined,
-  CommentOutlined,
+  UserOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
@@ -25,6 +15,7 @@ import {
   resolveIconRailKey,
   type IconRailItem,
 } from '@/config/navConfig';
+import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
 import {
   useCanViewMyComments,
   useCanViewReviewInbox,
@@ -34,20 +25,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { tokens } from '@/lib/theme/tokens';
-
-const RAIL_ICONS: Record<string, React.ReactNode> = {
-  dashboard: <DashboardOutlined />,
-  projects: <ProjectOutlined />,
-  'review-inbox': <InboxOutlined />,
-  'my-comments': <CommentOutlined />,
-  kanban: <UnorderedListOutlined />,
-  users: <TeamOutlined />,
-  'audit-logs': <AuditOutlined />,
-  teams: <TeamOutlined />,
-  reports: <BarChartOutlined />,
-  messages: <MailOutlined />,
-  settings: <SettingOutlined />,
-};
 
 function railItemClass(isActive: boolean, isExpanded: boolean): string {
   const base =
@@ -109,8 +86,8 @@ function RailNavButton({
       ].join(' ')}
       style={railItemStyle(isActive)}
     >
-      <span className="flex shrink-0 items-center justify-center leading-none">
-        {RAIL_ICONS[item.iconKey] ?? <ProjectOutlined />}
+      <span className={navIconClassName}>
+        {getNavIcon(item.iconKey)}
       </span>
       <span
         className={[

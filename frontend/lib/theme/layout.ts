@@ -63,7 +63,7 @@ export const detailDrawerStyles: NonNullable<DrawerProps['styles']> = {
     padding: '16px 20px',
     borderTop: `0.5px solid ${tokens.colorBorder}`,
   },
-  content: {
+  section: {
     borderLeft: `0.5px solid ${tokens.colorBorder}`,
   },
 };

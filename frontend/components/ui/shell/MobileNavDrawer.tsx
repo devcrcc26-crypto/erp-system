@@ -59,7 +59,7 @@ export default function MobileNavDrawer({
           background: tokens.colorCardBg,
         },
         header: { display: 'none' },
-        content: {
+        section: {
           borderRight: `0.5px solid ${tokens.colorBorder}`,
         },
       }}

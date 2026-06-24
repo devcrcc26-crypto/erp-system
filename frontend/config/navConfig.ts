@@ -229,5 +229,5 @@ export function resolveRouteMeta(
   };
 }
 
-/** Placeholder type for icon render props in config consumers. */
+/** @deprecated Import `getNavIcon` from `@/lib/navigation/nav-icons` instead. */
 export type NavIconRenderer = (iconKey: string) => ReactNode;

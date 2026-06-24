@@ -5,32 +5,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AuditOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
-  CheckSquareOutlined,
-  ClusterOutlined,
-  DashboardOutlined,
-  DownOutlined,
-  FolderOpenOutlined,
-  InboxOutlined,
-  IssuesCloseOutlined,
-  MailOutlined,
-  ProfileOutlined,
-  ProjectOutlined,
-  SafetyOutlined,
-  ScheduleOutlined,
-  SendOutlined,
-  TeamOutlined,
-  WarningOutlined,
-  CommentOutlined,
-} from '@ant-design/icons';
+import { DownOutlined } from '@ant-design/icons';
 import {
   contextNavSections,
   projectNavHref,
   resolveProjectNavKey,
 } from '@/config/navConfig';
+import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
 import type { ProjectWorkspaceNavItem } from '@/lib/navigation/project-workspace-nav';
 import {
   useEpcCapabilities,
@@ -42,29 +23,6 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
 import { tokens } from '@/lib/theme/tokens';
 import { CONTEXT_SIDEBAR_WIDTH } from '@/components/ui/shell/shell-layout';
-
-const NAV_ICONS: Record<string, React.ReactNode> = {
-  dashboard: <DashboardOutlined />,
-  'status-board': <BarChartOutlined />,
-  workload: <TeamOutlined />,
-  schedule: <ScheduleOutlined />,
-  disciplines: <ClusterOutlined />,
-  deliverables: <CheckSquareOutlined />,
-  submittals: <SendOutlined />,
-  'external-release': <SendOutlined />,
-  'review-inbox': <InboxOutlined />,
-  'my-comments': <CommentOutlined />,
-  rfis: <InboxOutlined />,
-  issues: <IssuesCloseOutlined />,
-  'daily-logs': <ProfileOutlined />,
-  meetings: <CalendarOutlined />,
-  correspondence: <MailOutlined />,
-  risks: <WarningOutlined />,
-  'punch-list': <SafetyOutlined />,
-  documents: <FolderOpenOutlined />,
-  team: <TeamOutlined />,
-  closeout: <AuditOutlined />,
-};
 
 function canViewNavItem(
   item: ProjectWorkspaceNavItem,
@@ -249,14 +207,14 @@ export default function ContextSidebar({
                           }
                         >
                           <span
-                            className="flex shrink-0 text-[16px] leading-none"
+                            className={navIconClassName}
                             style={
                               isActive
                                 ? { color: tokens.colorPrimaryHover }
                                 : { color: tokens.colorTextSecondary }
                             }
                           >
-                            {NAV_ICONS[item.key] ?? <ProjectOutlined />}
+                            {getNavIcon(item.key)}
                           </span>
                           <span className="truncate">{label}</span>
                         </Link>
