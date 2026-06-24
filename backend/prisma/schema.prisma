@@ -2051,6 +2051,7 @@ model DailyLog {
 
   @@index([projectId], map: "idx_daily_log_project_id")
   @@index([projectId, deletedAt], map: "idx_daily_log_project_deleted")
+  @@unique([projectId, logDate, shift], map: "daily_log_project_date_shift_unique")
   @@map("daily_log")
 }
 

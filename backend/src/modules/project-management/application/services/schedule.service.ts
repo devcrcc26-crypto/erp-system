@@ -277,6 +277,25 @@ export class ScheduleService {
     }
     await this.assertUsersOnProjectTeam(projectId, [dto.dispatcherUserId]);
 
+    if (dto.status !== undefined) {
+      const current = await this.prisma.task.findFirst({
+        where: activeOnly({ id: taskId, projectId }),
+        select: { status: true },
+      });
+      const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
+        NOT_STARTED: ['IN_PROGRESS', 'ON_HOLD'],
+        IN_PROGRESS: ['COMPLETED', 'ON_HOLD', 'NOT_STARTED'],
+        ON_HOLD: ['IN_PROGRESS', 'NOT_STARTED'],
+        COMPLETED: ['IN_PROGRESS'],
+      };
+      const allowed = TASK_STATUS_TRANSITIONS[current!.status];
+      if (!allowed?.includes(dto.status)) {
+        throw new BadRequestException(
+          `Invalid task status transition from ${current!.status} to ${dto.status}.`,
+        );
+      }
+    }
+
     const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {

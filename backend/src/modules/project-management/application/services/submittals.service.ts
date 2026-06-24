@@ -48,6 +48,13 @@ const SUBMITTAL_SORT_FIELDS = new Set([
   'submissionDate',
 ]);
 
+const VERDICT_SUBMITTAL_STATUSES = new Set<SubmittalStatus>([
+  SubmittalStatus.APPROVED,
+  SubmittalStatus.APPROVED_WITH_COMMENTS,
+  SubmittalStatus.REVISE_AND_RESUBMIT,
+  SubmittalStatus.REJECTED,
+]);
+
 @Injectable()
 export class SubmittalsService {
   constructor(
@@ -459,6 +466,12 @@ export class SubmittalsService {
     submittalId: string,
     dto: UpdateSubmittalDto,
   ): Promise<MappedSubmittal> {
+    if (dto.status !== undefined && VERDICT_SUBMITTAL_STATUSES.has(dto.status)) {
+      throw new BadRequestException(
+        'Submittal verdict must be set through the review endpoint, not direct update.',
+      );
+    }
+
     await this.getSubmittalOrThrow(projectId, submittalId);
 
     const row = await this.prisma.submittal.update({

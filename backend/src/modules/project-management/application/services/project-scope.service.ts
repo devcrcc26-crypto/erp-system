@@ -18,6 +18,15 @@ export class ProjectScopeService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
+
+    const teamMembership = await this.prisma.projectTeam.findFirst({
+      where: activeOnly({ projectId, userId: ctx.userId }),
+      select: { id: true },
+    });
+    if (!teamMembership) {
+      throw new NotFoundException('Project not found');
+    }
+
     return project;
   }
 

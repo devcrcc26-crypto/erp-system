@@ -111,6 +111,52 @@ export function useTasks(
 /**
  * Loads all schedule tasks for Gantt/list views by walking paginated endpoints.
  */
+export async function fetchAllScheduleTasks(
+  projectId: string,
+): Promise<PaginatedResult<Task>> {
+  const firstPage = await apiGetPaginated<Task>(
+    `${scheduleBase(projectId)}/tasks${toQueryString({
+      page: 1,
+      limit: SCHEDULE_PAGE_SIZE,
+    })}`,
+  );
+
+  if (firstPage.meta.pages <= 1) {
+    return firstPage;
+  }
+
+  const remainingPages = Array.from(
+    { length: firstPage.meta.pages - 1 },
+    (_, index) => index + 2,
+  );
+
+  const pageResults = await Promise.all(
+    remainingPages.map((page) =>
+      apiGetPaginated<Task>(
+        `${scheduleBase(projectId)}/tasks${toQueryString({
+          page,
+          limit: SCHEDULE_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  const data: Task[] = [...firstPage.data];
+  for (const result of pageResults) {
+    data.push(...result.data);
+  }
+
+  return {
+    data,
+    meta: {
+      total: firstPage.meta.total,
+      page: 1,
+      limit: firstPage.meta.total,
+      pages: 1,
+    },
+  };
+}
+
 export function useAllTasks(
   projectId: string,
   enabled = true,
@@ -118,40 +164,7 @@ export function useAllTasks(
 ) {
   return useQuery({
     queryKey: [...scheduleKeys.tasks(projectId), 'all'] as const,
-    queryFn: async (): Promise<PaginatedResult<Task>> => {
-      const firstPage = await apiGetPaginated<Task>(
-        `${scheduleBase(projectId)}/tasks${toQueryString({
-          page: 1,
-          limit: SCHEDULE_PAGE_SIZE,
-        })}`,
-      );
-
-      if (firstPage.meta.pages <= 1) {
-        return firstPage;
-      }
-
-      const data: Task[] = [...firstPage.data];
-
-      for (let page = 2; page <= firstPage.meta.pages; page += 1) {
-        const result = await apiGetPaginated<Task>(
-          `${scheduleBase(projectId)}/tasks${toQueryString({
-            page,
-            limit: SCHEDULE_PAGE_SIZE,
-          })}`,
-        );
-        data.push(...result.data);
-      }
-
-      return {
-        data,
-        meta: {
-          total: firstPage.meta.total,
-          page: 1,
-          limit: firstPage.meta.total,
-          pages: 1,
-        },
-      };
-    },
+    queryFn: () => fetchAllScheduleTasks(projectId),
     enabled: Boolean(projectId) && enabled,
     staleTime: SCHEDULE_STALE_MS,
     refetchOnMount: false,

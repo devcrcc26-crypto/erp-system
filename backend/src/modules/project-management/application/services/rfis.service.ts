@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { FolderContextType, Prisma, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -167,6 +172,26 @@ export class RfisService {
         projectId,
         dto.taskDisciplineId,
       );
+    }
+
+    if (dto.status !== undefined) {
+      const current = await this.prisma.rfi.findFirst({
+        where: activeOnly({ id: rfiId, projectId }),
+        select: { status: true },
+      });
+      const RFI_STATUS_TRANSITIONS: Record<string, string[]> = {
+        DRAFT: ['OPEN', 'CANCELLED'],
+        OPEN: ['ANSWERED', 'CANCELLED'],
+        ANSWERED: ['CLOSED', 'OPEN'],
+        CLOSED: [],
+        CANCELLED: [],
+      };
+      const allowed = RFI_STATUS_TRANSITIONS[current!.status];
+      if (!allowed?.includes(dto.status)) {
+        throw new BadRequestException(
+          `Invalid RFI status transition from ${current!.status} to ${dto.status}.`,
+        );
+      }
     }
 
     const rfi = await this.prisma.rfi.update({

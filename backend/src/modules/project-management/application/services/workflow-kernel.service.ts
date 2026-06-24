@@ -1,11 +1,22 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { EdvStatus as PrismaEdvStatus, ReviewTier } from '@prisma/client';
+import {
+  EdvStatus as PrismaEdvStatus,
+  ReviewSessionStatus,
+  ReviewTier,
+  WorkflowEntityType,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PmContext } from '../types/pm-context.type';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import {
   AddReviewCommentCommand,
@@ -53,6 +64,17 @@ interface ProjectionHints {
   readonly disciplineId?: string;
 }
 
+export interface ReassignReviewSessionCommand {
+  readonly reviewSessionId: string;
+  readonly newAssigneeUserId: string;
+  readonly reason: string;
+}
+
+const REASSIGNMENT_ADMIN_ROLES = new Set([
+  'System Administrator',
+  'Managing Director',
+]);
+
 /**
  * WorkflowKernel — Phase A + Phase B with review lifecycle (Wave 4).
  * EDV transitions remain sole lifecycle authority.
@@ -72,6 +94,7 @@ export class WorkflowKernelService {
     private readonly submittalWorkflow: SubmittalWorkflowService,
     private readonly revisionOrchestrator: RevisionOrchestratorService,
     private readonly workflowTransactionRunner: WorkflowTransactionRunner,
+    @Optional() private readonly permissionService?: PermissionService,
   ) {}
 
   /**
@@ -131,6 +154,88 @@ export class WorkflowKernelService {
           `Command ${(exhaustive as WorkflowCommand).type} is not available`,
         );
       }
+    }
+  }
+
+  /**
+   * Admin-only reassignment of an active review session assignee.
+   */
+  async reassignReviewSession(
+    ctx: PmContext,
+    command: ReassignReviewSessionCommand,
+  ): Promise<{ correlationId: string }> {
+    if (command.reason.trim().length < 10) {
+      throw new BadRequestException(
+        'Reassignment reason must be at least 10 characters',
+      );
+    }
+
+    await this.assertAdminReassignmentAllowed(ctx);
+
+    const correlationId = randomUUID();
+
+    await this.workflowTransactionRunner.runPhaseAB(async (tx) => {
+      const session = await this.epcReviewRepository.findSessionById(
+        tx,
+        ctx.companyId,
+        command.reviewSessionId,
+      );
+      if (!session) {
+        throw new NotFoundException('Review session not found');
+      }
+      if (session.status !== ReviewSessionStatus.ACTIVE) {
+        throw new BadRequestException('Review session must be ACTIVE to reassign');
+      }
+
+      const assignee = await tx.user.findFirst({
+        where: activeOnly({
+          id: command.newAssigneeUserId,
+          companyId: ctx.companyId,
+        }),
+        select: { id: true },
+      });
+      if (!assignee) {
+        throw new NotFoundException('User not found');
+      }
+
+      const previousAssigneeUserId = session.assignedToUserId;
+
+      await this.epcReviewRepository.updateReviewSession(tx, session.id, {
+        assignedToUser: { connect: { id: command.newAssigneeUserId } },
+        updatedBy: ctx.userId,
+      });
+
+      await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+        companyId: ctx.companyId,
+        actorId: ctx.userId,
+        entityType: WorkflowEntityType.ReviewSession,
+        entityId: session.id,
+        action: 'SESSION_REASSIGNED',
+        beforeState: { currentAssigneeUserId: previousAssigneeUserId },
+        afterState: { currentAssigneeUserId: command.newAssigneeUserId },
+        reason: command.reason,
+        correlationId,
+      });
+    }, { companyId: ctx.companyId, correlationId });
+
+    return { correlationId };
+  }
+
+  private async assertAdminReassignmentAllowed(ctx: PmContext): Promise<void> {
+    if (!this.permissionService) {
+      throw new ForbiddenException(
+        'Only System Administrator or Managing Director can reassign review sessions',
+      );
+    }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    if (!roleNames.some((name) => REASSIGNMENT_ADMIN_ROLES.has(name))) {
+      throw new ForbiddenException(
+        'Only System Administrator or Managing Director can reassign review sessions',
+      );
     }
   }
 

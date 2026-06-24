@@ -346,7 +346,14 @@ function pmPermissionFlags(
     'risks',
   ];
   const docModules = ['projects', 'submittals', 'drawings', 'correspondence'];
-  const safetyModules = ['projects', 'risks', 'issues', 'daily_logs'];
+  const safetyModules = [
+    'projects',
+    'risks',
+    'issues',
+    'daily_logs',
+    'meetings',
+    'punch_items',
+  ];
 
   let allowedModules: string[] = [];
   if (roleName === 'Site Engineer') {
@@ -426,7 +433,7 @@ function designWorkflowRolePermissionFlags(
     'rfis',
   ];
   const designModules = ['projects', 'schedule', 'drawings'];
-  const dispatchModules = ['projects', 'schedule'];
+  const dispatchModules = ['projects', 'schedule', 'issues'];
 
   let allowedModules: string[] = [];
   if (roleName === 'Planning Engineer') {

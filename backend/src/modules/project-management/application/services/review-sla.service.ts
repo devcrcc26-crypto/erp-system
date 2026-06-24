@@ -1,5 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ReviewTier } from '@prisma/client';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  NotificationChannel,
+  NotificationStatus,
+  ReviewSession,
+  ReviewTier,
+} from '@prisma/client';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { REVIEW_TIER_ORDER } from '../../domain/contracts/enums/review-tier.enum';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import { EpcWorkflowRepository } from '../../infrastructure/repositories/epc-workflow.repository';
@@ -16,6 +24,7 @@ export interface SlaEscalationResult {
   readonly reviewSessionId: string;
   readonly currentTier: ReviewTier;
   readonly assignedToUserId: string | null;
+  readonly hoursOverdue: number;
 }
 
 /**
@@ -28,6 +37,8 @@ export class ReviewSlaService {
   constructor(
     private readonly epcReviewRepository: EpcReviewRepository,
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
+    @Optional() private readonly prisma?: PrismaService,
+    @Optional() private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -93,6 +104,14 @@ export class ReviewSlaService {
         session.updatedBy,
       );
 
+      const hoursOverdue = this.computeHoursOverdue(session.slaDeadlineAt, now);
+
+      await this.dispatchSlaOverdueNotification(companyId, session, hoursOverdue);
+
+      this.logger.warn(
+        `SLA overdue for session ${session.id} tier=${session.currentTier} assignee=${session.assignedToUserId} hoursOverdue=${hoursOverdue}`,
+      );
+
       if (this.getNextTier(session.currentTier) === null) {
         this.logger.warn(
           `SLA overdue at final tier for session ${session.id} — PMO alert only`,
@@ -103,6 +122,7 @@ export class ReviewSlaService {
         reviewSessionId: session.id,
         currentTier: session.currentTier,
         assignedToUserId: session.assignedToUserId,
+        hoursOverdue,
       });
     }
 
@@ -125,5 +145,111 @@ export class ReviewSlaService {
         );
       }
     }
+  }
+
+  private computeHoursOverdue(
+    slaDeadlineAt: Date | null,
+    asOf: Date,
+  ): number {
+    if (!slaDeadlineAt) {
+      return 0;
+    }
+    return Math.max(
+      0,
+      Math.round((asOf.getTime() - slaDeadlineAt.getTime()) / (1000 * 60 * 60)),
+    );
+  }
+
+  private async dispatchSlaOverdueNotification(
+    companyId: string,
+    session: ReviewSession,
+    hoursOverdue: number,
+  ): Promise<void> {
+    const projectManagerId = await this.resolveProjectManagerId(
+      companyId,
+      session.id,
+    );
+    if (!projectManagerId) {
+      this.logger.warn(
+        `No project manager found for SLA overdue session ${session.id}`,
+      );
+      return;
+    }
+
+    const payload = {
+      reviewSessionId: session.id,
+      currentTier: session.currentTier,
+      currentAssigneeUserId: session.assignedToUserId,
+      hoursOverdue,
+    };
+
+    if (this.notificationService) {
+      await this.notificationService.send(
+        { companyId, userId: session.updatedBy },
+        {
+          recipientId: projectManagerId,
+          eventType: 'review.sla_overdue',
+          subject: 'Review session SLA overdue',
+          body: JSON.stringify(payload),
+          variables: {
+            reviewSessionId: session.id,
+            currentTier: session.currentTier,
+            currentAssigneeUserId: session.assignedToUserId ?? '',
+            hoursOverdue: String(hoursOverdue),
+          },
+        },
+      );
+      return;
+    }
+
+    if (!this.prisma) {
+      return;
+    }
+
+    await this.prisma.notification.create({
+      data: {
+        companyId,
+        recipientId: projectManagerId,
+        channel: NotificationChannel.IN_APP,
+        subject: 'Review session SLA overdue',
+        body: JSON.stringify(payload),
+        status: NotificationStatus.SENT,
+        sentAt: new Date(),
+      },
+    });
+  }
+
+  private async resolveProjectManagerId(
+    companyId: string,
+    reviewSessionId: string,
+  ): Promise<string | null> {
+    if (!this.prisma) {
+      return null;
+    }
+
+    const row = await this.prisma.reviewSession.findFirst({
+      where: activeOnly({ id: reviewSessionId, companyId }),
+      select: {
+        designPackage: {
+          select: {
+            taskDiscipline: {
+              select: {
+                task: {
+                  select: {
+                    project: {
+                      select: { projectManagerId: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return (
+      row?.designPackage.taskDiscipline.task.project.projectManagerId ?? null
+    );
   }
 }

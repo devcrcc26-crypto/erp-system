@@ -18,12 +18,13 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { SubmittalStatus } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   useAddSubmittalReview,
   useSubmittal,
   useSubmittalReviews,
   useSubmitSubmittalToLead,
-  useUpdateSubmittal,
 } from '@/lib/query/submittals';
 import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
 import { useIssueSubmittal } from '@/lib/query/epc-submittals';
@@ -40,6 +41,19 @@ interface ReviewFormValues {
   comments?: string;
 }
 
+const SUBMITTAL_REVIEW_STATUS_OPTIONS: SubmittalStatus[] = [
+  'UNDER_REVIEW',
+  'APPROVED',
+  'APPROVED_WITH_COMMENTS',
+  'REVISE_AND_RESUBMIT',
+  'REJECTED',
+];
+
+const REVIEWABLE_SUBMITTAL_STATUSES: SubmittalStatus[] = [
+  'SUBMITTED',
+  'UNDER_REVIEW',
+];
+
 export default function SubmittalDetailDrawer({
   projectId,
   submittalId,
@@ -55,10 +69,11 @@ export default function SubmittalDetailDrawer({
   const open = Boolean(submittalId);
   const resolveUserName = useUserNameLookup();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const { submittals: submittalsCap } = usePmCapabilities();
 
   const submittalQuery = useSubmittal(projectId, submittalId ?? '', open);
   const reviewsQuery = useSubmittalReviews(projectId, submittalId ?? '', open);
-  const updateSubmittal = useUpdateSubmittal();
   const addReview = useAddSubmittalReview();
   const issueSubmittal = useIssueSubmittal();
   const submitToLead = useSubmitSubmittalToLead();
@@ -69,37 +84,42 @@ export default function SubmittalDetailDrawer({
   const isExternalRelease =
     submittal?.submittalPurpose === 'DISCIPLINE_SITE' ||
     submittal?.submittalPurpose === 'DISCIPLINE_CONSULTANT';
-
-  async function handleStatusChange(status: SubmittalStatus): Promise<void> {
-    if (!submittalId || !submittal) {
-      return;
-    }
-    await updateSubmittal.mutateAsync({
-      projectId,
-      submittalId,
-      body: { status },
-    });
-    onUpdated();
-    void submittalQuery.refetch();
-  }
+  const isAssignedReviewer =
+    Boolean(submittal?.assignedTo) &&
+    submittal?.assignedTo === currentUserId;
+  const canRecordReview =
+    submittalsCap.canCreate &&
+    isAssignedReviewer &&
+    submittal !== undefined &&
+    REVIEWABLE_SUBMITTAL_STATUSES.includes(submittal.status);
+  const canSubmitToLead =
+    isConstruction &&
+    submittal?.status === 'DRAFT' &&
+    submittal?.submittedBy === currentUserId &&
+    submittalsCap.canCreate;
 
   async function handleAddReview(values: ReviewFormValues): Promise<void> {
     if (!submittalId || !submittal) {
       return;
     }
-    await addReview.mutateAsync({
-      projectId,
-      submittalId,
-      body: {
-        status: values.status,
-        comments: values.comments?.trim() || undefined,
-        revisionNumber: submittal.revisionNumber,
-      },
-    });
-    form.resetFields();
-    onUpdated();
-    void reviewsQuery.refetch();
-    void submittalQuery.refetch();
+    try {
+      await addReview.mutateAsync({
+        projectId,
+        submittalId,
+        body: {
+          status: values.status,
+          comments: values.comments?.trim() || undefined,
+          revisionNumber: submittal.revisionNumber,
+        },
+      });
+      form.resetFields();
+      messageApi.success('Review recorded');
+      onUpdated();
+      void reviewsQuery.refetch();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to record review', messageApi);
+    }
   }
 
   async function handleSubmitToLead(): Promise<void> {
@@ -230,7 +250,7 @@ export default function SubmittalDetailDrawer({
             description="Upload shop drawings, product data sheets, samples photos, and other approval documents."
           />
 
-          {isConstruction && submittal.status === 'DRAFT' && submittalId && (
+          {canSubmitToLead && submittalId && (
             <Alert
               type="warning"
               showIcon
@@ -246,26 +266,6 @@ export default function SubmittalDetailDrawer({
                 </Button>
               }
             />
-          )}
-
-          {(isConstruction || isExternalRelease) && (
-            <div>
-              <p className="mb-2 text-sm font-medium text-slate-700">
-                Update status
-              </p>
-              <Select
-                className="w-full max-w-sm"
-                value={submittal.status}
-                onChange={(value: SubmittalStatus) =>
-                  void handleStatusChange(value)
-                }
-                loading={updateSubmittal.isPending}
-                options={SUBMITTAL_WORKFLOW.map((step) => ({
-                  value: step.key,
-                  label: step.label,
-                }))}
-              />
-            </div>
           )}
 
           <div>
@@ -303,49 +303,60 @@ export default function SubmittalDetailDrawer({
               />
             )}
 
-            <Form<ReviewFormValues>
-              form={form}
-              layout="vertical"
-              className="mt-4"
-              initialValues={{ status: submittal.status }}
-              onFinish={(values: ReviewFormValues) =>
-                void handleAddReview(values)
-              }
-            >
-              <Form.Item
-                label="Record review"
-                name="status"
-                rules={[{ required: true, message: 'Select review status' }]}
+            {canRecordReview && (
+              <Form<ReviewFormValues>
+                form={form}
+                layout="vertical"
+                className="mt-4"
+                initialValues={{ status: 'UNDER_REVIEW' }}
+                onFinish={(values: ReviewFormValues) =>
+                  void handleAddReview(values)
+                }
               >
-                <Select
-                  options={SUBMITTAL_WORKFLOW.filter((step) =>
-                    [
-                      'APPROVED',
-                      'APPROVED_WITH_COMMENTS',
-                      'REVISE_AND_RESUBMIT',
-                      'REJECTED',
-                      'UNDER_REVIEW',
-                    ].includes(step.key),
-                  ).map((step) => ({
-                    value: step.key,
-                    label: step.label,
-                  }))}
+                <Form.Item
+                  label="Record review"
+                  name="status"
+                  rules={[{ required: true, message: 'Select review status' }]}
+                >
+                  <Select
+                    options={SUBMITTAL_WORKFLOW.filter((step) =>
+                      SUBMITTAL_REVIEW_STATUS_OPTIONS.includes(
+                        step.key as SubmittalStatus,
+                      ),
+                    ).map((step) => ({
+                      value: step.key,
+                      label: step.label,
+                    }))}
+                  />
+                </Form.Item>
+                <Form.Item label="Comments" name="comments">
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Review comments and markup notes"
+                  />
+                </Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={addReview.isPending}
+                >
+                  Add review entry
+                </Button>
+              </Form>
+            )}
+
+            {!canRecordReview &&
+              isConstruction &&
+              submittal.status === 'SUBMITTED' &&
+              submittal.submittedBy === currentUserId && (
+                <Alert
+                  type="info"
+                  showIcon
+                  className="mt-4"
+                  title="Awaiting discipline leader review"
+                  description="Your submittal has been submitted. The assigned reviewer will record the approval outcome."
                 />
-              </Form.Item>
-              <Form.Item label="Comments" name="comments">
-                <Input.TextArea
-                  rows={3}
-                  placeholder="Review comments and markup notes"
-                />
-              </Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={addReview.isPending}
-              >
-                Add review entry
-              </Button>
-            </Form>
+              )}
           </div>
 
           {isExternalRelease && submittalId && (

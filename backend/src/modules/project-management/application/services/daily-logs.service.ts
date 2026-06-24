@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -54,6 +54,21 @@ const DAILY_LOG_DETAIL_INCLUDE = {
 const DAILY_LOG_LIST_INCLUDE = {
   workforce: { select: { workerCount: true } },
 };
+
+const IMMUTABLE_DAILY_LOG_STATUSES = new Set(['SUBMITTED', 'APPROVED']);
+
+const DAILY_LOG_DATA_FIELDS = [
+  'logDate',
+  'shift',
+  'weatherCondition',
+  'temperatureC',
+  'rainfallMm',
+  'workSummary',
+] as const satisfies ReadonlyArray<keyof UpdateDailyLogDto>;
+
+function hasDailyLogDataChanges(dto: UpdateDailyLogDto): boolean {
+  return DAILY_LOG_DATA_FIELDS.some((field) => dto[field] !== undefined);
+}
 
 @Injectable()
 export class DailyLogsService {
@@ -160,7 +175,16 @@ export class DailyLogsService {
     dailyLogId: string,
     dto: UpdateDailyLogDto,
   ): Promise<MappedDailyLogDetail> {
-    await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    const existing = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+
+    if (
+      IMMUTABLE_DAILY_LOG_STATUSES.has(existing.status) &&
+      hasDailyLogDataChanges(dto)
+    ) {
+      throw new BadRequestException(
+        'Daily log cannot be edited after submission.',
+      );
+    }
 
     const row = await this.prisma.dailyLog.update({
       where: { id: dailyLogId },

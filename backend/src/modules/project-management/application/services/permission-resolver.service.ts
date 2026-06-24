@@ -1,6 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { EdvStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
 import { ProjectDesignPhase } from '../../domain/contracts/enums/project-design-phase.enum';
 import { canPerformFromContext } from '../../domain/permission-context-builder';
@@ -35,6 +37,7 @@ export class PermissionResolverService {
   constructor(
     private readonly permissionService: PermissionService,
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -59,6 +62,10 @@ export class PermissionResolverService {
       input.projectId,
       input.userId,
     );
+    const projectDesignPhase = await this.resolveProjectDesignPhase(
+      input.companyId,
+      input.projectId,
+    );
 
     const allowed = canPerformFromContext({
       companyId: input.companyId,
@@ -70,7 +77,7 @@ export class PermissionResolverService {
       edvStatus: input.edv.status as never,
       grantedActions,
       projectTeamRole: projectTeamRole as never,
-      projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+      projectDesignPhase,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
@@ -106,6 +113,10 @@ export class PermissionResolverService {
       input.projectId,
       input.userId,
     );
+    const projectDesignPhase = await this.resolveProjectDesignPhase(
+      input.companyId,
+      input.projectId,
+    );
 
     const allowed = canPerformFromContext({
       companyId: input.companyId,
@@ -115,7 +126,7 @@ export class PermissionResolverService {
       taskDisciplineId: input.taskDisciplineId,
       grantedActions,
       projectTeamRole: projectTeamRole as never,
-      projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+      projectDesignPhase,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
@@ -148,16 +159,19 @@ export class PermissionResolverService {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
       granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
       granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+      granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     }
     if (schedule.canEdit) {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
       granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
       granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
       granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+      granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     }
     if (schedule.canApprove) {
       this.grantReviewGovernanceActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
+      granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
     }
 
     // Review governance is enforced by discipline/session assignment layers.
@@ -177,6 +191,25 @@ export class PermissionResolverService {
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
+  }
+
+  /**
+   * Loads the tenant-scoped project design phase used by workflow permission gates.
+   */
+  private async resolveProjectDesignPhase(
+    companyId: string,
+    projectId: string,
+  ): Promise<ProjectDesignPhase> {
+    const project = await this.prisma.project.findFirst({
+      where: activeOnly({ id: projectId, companyId }),
+      select: { designStage: true },
+    });
+
+    if (!project?.designStage) {
+      throw new BadRequestException('Project design phase is not set.');
+    }
+
+    return project.designStage as ProjectDesignPhase;
   }
 
   private mapTransitionToAction(
