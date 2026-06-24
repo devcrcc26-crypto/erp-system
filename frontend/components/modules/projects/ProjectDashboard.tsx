@@ -44,6 +44,12 @@ const QUICK_LINKS = [
     label: 'Schedule',
     description: 'Milestones, tasks, and Gantt',
   },
+  {
+    href: 'overview/reports',
+    navIconKey: 'reports',
+    label: 'Reports',
+    description: 'KPIs, charts, and module snapshots',
+  },
 ] as const;
 
 function formatCount(value: number | undefined, hasStats: boolean): string {

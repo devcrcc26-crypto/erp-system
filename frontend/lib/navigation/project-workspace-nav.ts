@@ -64,6 +64,16 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroupKey: 'workspace.groups.overview',
         epcSurface: 'engineering',
       },
+      {
+        key: 'reports',
+        label: 'Reports',
+        labelKey: 'workspace.items.reports',
+        iconKey: 'reports',
+        pathSuffix: 'overview/reports',
+        capability: 'projects',
+        breadcrumbGroup: 'Overview',
+        breadcrumbGroupKey: 'workspace.groups.overview',
+      },
     ],
   },
   {
