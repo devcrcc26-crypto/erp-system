@@ -1,12 +1,14 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Select, Space, Spin } from 'antd';
+import { Alert, Button, Input, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -133,11 +135,7 @@ export default function SubmittalsPageContent({
   );
 
   if (submittalsQuery.isLoading) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const apiUnavailable =

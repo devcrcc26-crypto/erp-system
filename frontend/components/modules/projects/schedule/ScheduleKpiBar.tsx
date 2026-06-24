@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import {
@@ -8,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import type { ScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import { formatScheduleVariance } from '@/lib/utils/schedule-metrics';
 
@@ -17,12 +20,18 @@ export default function ScheduleKpiBar({
   metrics: ScheduleMetrics;
 }): React.ReactNode {
   const variance = metrics.scheduleVariancePct;
-  const varianceColor =
+  const varianceIconColor =
     variance === null
-      ? '#64748b'
+      ? tokens.colorTextSecondary
       : variance >= 0
-        ? '#16a34a'
-        : '#dc2626';
+        ? tokens.colorGreen600
+        : tokens.colorRed600;
+  const varianceIconBg =
+    variance === null
+      ? tokens.colorGray50
+      : variance >= 0
+        ? tokens.colorGreen50
+        : tokens.colorRed50;
 
   return (
     <section className={`${layout.cardGrid} grid-cols-2 xl:grid-cols-4`}>
@@ -34,8 +43,8 @@ export default function ScheduleKpiBar({
             : '—'
         }
         icon={LineChartOutlined}
-        iconBg="#dbeafe"
-        iconColor="#2563eb"
+        iconBg={tokens.colorBlue50}
+        iconColor={tokens.colorBlue400}
       />
       <KPICard
         label="Actual progress"
@@ -45,22 +54,22 @@ export default function ScheduleKpiBar({
             : '—'
         }
         icon={CalendarOutlined}
-        iconBg="#dcfce7"
-        iconColor="#16a34a"
+        iconBg={tokens.colorGreen50}
+        iconColor={tokens.colorGreen600}
       />
       <KPICard
         label="Schedule variance"
         value={formatScheduleVariance(variance)}
         icon={FlagOutlined}
-        iconBg="#fef3c7"
-        iconColor={varianceColor}
+        iconBg={varianceIconBg}
+        iconColor={varianceIconColor}
       />
       <KPICard
         label="Critical tasks"
         value={String(metrics.criticalCount)}
         icon={WarningOutlined}
-        iconBg="#fee2e2"
-        iconColor="#dc2626"
+        iconBg={tokens.colorRed50}
+        iconColor={tokens.colorRed600}
       />
     </section>
   );

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -10,18 +12,18 @@ import {
   Input,
   Select,
   Space,
-  Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateRfiRequest,
@@ -204,7 +206,8 @@ export default function RfisPageContent({
         render: (value: string, record) => (
           <Button
             type="link"
-            className="!px-0"
+            className={`!px-0 ${layout.traceabilityLinkClass}`}
+            style={{ color: tokens.colorTeal600 }}
             onClick={() => setSelectedRfiId(record.id)}
           >
             {value}
@@ -254,7 +257,18 @@ export default function RfisPageContent({
         dataIndex: 'dueDate',
         key: 'dueDate',
         render: (value: string | null, record) => (
-          <span className={isOverdue(value) && record.status !== 'CLOSED' ? 'font-medium text-red-600' : undefined}>
+          <span
+            className={
+              isOverdue(value) && record.status !== 'CLOSED'
+                ? 'font-medium'
+                : undefined
+            }
+            style={
+              isOverdue(value) && record.status !== 'CLOSED'
+                ? { color: tokens.colorRed600 }
+                : undefined
+            }
+          >
             {formatProjectDate(value)}
           </span>
         ),
@@ -264,11 +278,7 @@ export default function RfisPageContent({
   );
 
   if (rfisQuery.isLoading) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const apiUnavailable =

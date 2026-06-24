@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -10,14 +12,13 @@ import {
   Input,
   Select,
   Space,
-  Spin,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Mail } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -244,11 +245,7 @@ export default function CorrespondencePageContent({
   );
 
   if (query.isLoading) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const rows = query.data?.data ?? [];

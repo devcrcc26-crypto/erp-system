@@ -72,3 +72,27 @@ export default function FormLayout({
     </Card>
   );
 }
+
+/**
+ * Page-level loading skeleton for list and dashboard views.
+ */
+export function PageLoadingSkeleton(): React.ReactNode {
+  return (
+    <div
+      className="rounded-[12px] bg-white p-6"
+      style={{ border: `0.5px solid ${tokens.colorBorder}` }}
+    >
+      <div className="erp-page-skeleton mb-4 h-5 w-40" />
+      <div className="erp-page-skeleton mb-6 h-4 w-72" />
+      <div className="mb-4 flex gap-3">
+        <div className="erp-page-skeleton h-9 w-64 rounded-lg" />
+        <div className="erp-page-skeleton h-9 w-48 rounded-lg" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="erp-page-skeleton h-10 w-full rounded" />
+        ))}
+      </div>
+    </div>
+  );
+}

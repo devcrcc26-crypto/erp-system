@@ -1,7 +1,10 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { Button } from 'antd';
 import type { ReactNode } from 'react';
+import { tokens } from '@/lib/theme/tokens';
 
 export type TableEmptyStateProps = {
   icon: ReactNode;
@@ -21,15 +24,28 @@ export default function TableEmptyState({
 }: TableEmptyStateProps): ReactNode {
   return (
     <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-      <div className="mb-3 text-slate-400 [&_svg]:h-8 [&_svg]:w-8">{icon}</div>
-      <p className="text-sm font-medium text-slate-800">{title}</p>
+      <div
+        className="mb-3 [&_svg]:h-10 [&_svg]:w-10"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {icon}
+      </div>
+      <p
+        className="text-[14px] font-medium"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {title}
+      </p>
       {description && (
-        <p className="mt-1 max-w-sm text-[13px] leading-snug text-slate-500">
+        <p
+          className="mt-1 max-w-[280px] text-[13px] font-normal leading-[1.5]"
+          style={{ color: tokens.colorTextSecondary }}
+        >
           {description}
         </p>
       )}
       {action && (
-        <Button type="default" ghost className="mt-4" onClick={action.onClick}>
+        <Button type="primary" className="mt-4" onClick={action.onClick}>
           {action.label}
         </Button>
       )}

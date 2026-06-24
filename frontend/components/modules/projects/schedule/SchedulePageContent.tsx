@@ -1,7 +1,10 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Spin, Tabs } from 'antd';
+import { Alert, Tabs } from 'antd';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
   useAllTasks,
@@ -51,11 +54,7 @@ export default function SchedulePageContent({
   const metrics = useMemo(() => computeScheduleMetrics(tasks), [tasks]);
 
   if (isLoading) {
-    return (
-      <div className={layout.loadingCard}>
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (

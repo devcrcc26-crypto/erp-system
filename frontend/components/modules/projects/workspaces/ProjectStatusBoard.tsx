@@ -1,11 +1,15 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
-import { Col, Row, Spin } from 'antd';
+import { Col, Row } from 'antd';
 import { BarChart3 } from 'lucide-react';
 import Card from '@/components/ui/Card/Card';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
+import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectStatusBoard } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -33,24 +37,20 @@ export default function ProjectStatusBoard({
     (boardQuery.error.status === 404 || boardQuery.error.status === 0);
 
   if (boardQuery.isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const board = boardQuery.data;
 
   const kpiSection = (
-    <Row gutter={[24, 24]}>
+    <Row gutter={[12, 12]}>
       <Col xs={12} lg={6}>
         <KPICard
           label="Active reviews"
           value={String(board?.activeReviewSessions ?? '—')}
           icon={FileSearchOutlined}
-          iconBg="#dbeafe"
-          iconColor="#1d4ed8"
+          iconBg={tokens.colorBlue50}
+          iconColor={tokens.colorBlue400}
         />
       </Col>
       <Col xs={12} lg={6}>
@@ -58,8 +58,8 @@ export default function ProjectStatusBoard({
           label="SLA overdue"
           value={String(board?.slaOverdueSessions ?? '—')}
           icon={ClockCircleOutlined}
-          iconBg="#fef3c7"
-          iconColor="#92400e"
+          iconBg={tokens.colorAmber50}
+          iconColor={tokens.colorAmber400}
         />
       </Col>
       <Col xs={12} lg={6}>
@@ -67,8 +67,8 @@ export default function ProjectStatusBoard({
           label="Open comments"
           value={String(board?.openComments ?? '—')}
           icon={CommentOutlined}
-          iconBg="#ffedd5"
-          iconColor="#c2410c"
+          iconBg={tokens.colorTeal50}
+          iconColor={tokens.colorTeal600}
         />
       </Col>
       <Col xs={12} lg={6}>
@@ -76,8 +76,8 @@ export default function ProjectStatusBoard({
           label="Pending submittals"
           value={String(board?.pendingSubmittals ?? '—')}
           icon={CheckCircleOutlined}
-          iconBg="#dcfce7"
-          iconColor="#15803d"
+          iconBg={tokens.colorGreen50}
+          iconColor={tokens.colorGreen600}
         />
       </Col>
     </Row>
@@ -93,14 +93,17 @@ export default function ProjectStatusBoard({
       description={t('pages.statusBoard.description')}
     >
       {apiUnavailable && (
-        <p className="mb-4 text-sm text-slate-500">
+        <p
+          className="mb-4 text-[12px] font-normal"
+          style={{ color: tokens.colorTextSecondary }}
+        >
           Status board API not available — KPIs will populate when the backend is connected.
         </p>
       )}
 
       {kpiSection}
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
         <StatusBreakdownCard
           title="Packages by status"
           data={board?.packagesByStatus ?? {}}
@@ -124,7 +127,30 @@ function StatusBreakdownCard({
   const entries = Object.entries(data);
 
   return (
-    <Card size="small" title={title}>
+    <Card
+      size="small"
+      title={
+        <span
+          className="text-[13px] font-medium"
+          style={{ color: tokens.colorTextPrimary }}
+        >
+          {title}
+        </span>
+      }
+      styles={{
+        header: {
+          padding: '14px 18px',
+          borderBottom: `0.5px solid ${tokens.colorBorder}`,
+          minHeight: 'auto',
+        },
+        body: { padding: '16px 18px' },
+      }}
+      style={{
+        borderRadius: tokens.borderRadiusCard,
+        border: `0.5px solid ${tokens.colorBorder}`,
+        boxShadow: 'none',
+      }}
+    >
       {entries.length === 0 ? (
         <TableEmptyState
           icon={<BarChart3 />}
@@ -136,10 +162,17 @@ function StatusBreakdownCard({
           {entries.map(([status, count]) => (
             <li
               key={status}
-              className="flex items-center justify-between text-sm"
+              className="flex items-center justify-between text-[13px]"
             >
-              <span>{formatProjectedStatus(status)}</span>
-              <span className="font-semibold tabular-nums">{count}</span>
+              <span style={{ color: tokens.colorTextPrimary }}>
+                {formatProjectedStatus(status)}
+              </span>
+              <span
+                className="font-medium tabular-nums"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {count}
+              </span>
             </li>
           ))}
         </ul>

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,7 +16,6 @@ import {
   InputNumber,
   Progress,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
@@ -23,7 +24,7 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
@@ -51,6 +52,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 interface CloseoutFormValues {
   practicalCompletionDate?: Dayjs;
@@ -83,7 +85,11 @@ function AddCollapse({
       items={[
         {
           key: 'add',
-          label: <span className="text-sm font-medium text-orange-600">{label}</span>,
+          label: (
+            <span className="text-[13px] font-medium" style={{ color: tokens.colorTeal600 }}>
+              {label}
+            </span>
+          ),
           children: <div className="pt-1">{children}</div>,
         },
       ]}
