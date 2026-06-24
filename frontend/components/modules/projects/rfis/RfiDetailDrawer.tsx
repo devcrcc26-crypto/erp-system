@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -108,7 +108,7 @@ export default function RfiDetailDrawer({
       {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={rfi ? `${rfi.rfiNumber} — ${rfi.title}` : 'RFI detail'}
+      title={rfi ? `${rfi.rfiNumber} - ${rfi.title}` : 'RFI detail'}
       destroyOnHidden
     >
       {rfiQuery.isLoading && (
@@ -154,19 +154,19 @@ export default function RfiDetailDrawer({
               />
             </Descriptions.Item>
             <Descriptions.Item label="Discipline">
-              {rfi.discipline ?? '—'}
+              {rfi.discipline ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Raised by">
               {resolveUserName(rfi.raisedBy)}
             </Descriptions.Item>
             <Descriptions.Item label="Assigned to">
-              {rfi.assignedTo ? resolveUserName(rfi.assignedTo) : '—'}
+              {rfi.assignedTo ? resolveUserName(rfi.assignedTo) : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Due date">
               {formatProjectDate(rfi.dueDate)}
             </Descriptions.Item>
             <Descriptions.Item label="Description">
-              {rfi.description ?? '—'}
+              {rfi.description ?? '-'}
             </Descriptions.Item>
           </Descriptions>
 

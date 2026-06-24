@@ -113,7 +113,7 @@ export class SubmittalsController {
 
   @Post(':id/issue')
   @RequirePermission('submittals', 'create')
-  @ApiOperation({ summary: 'Issue submittal — freeze package snapshots' })
+  @ApiOperation({ summary: 'Issue submittal - freeze package snapshots' })
   issue(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -137,7 +137,7 @@ export class SubmittalsController {
 
   @Post('batch-issue')
   @RequirePermission('submittals', 'create')
-  @ApiOperation({ summary: 'Issue multiple submittals — freeze snapshots each' })
+  @ApiOperation({ summary: 'Issue multiple submittals - freeze snapshots each' })
   batchIssue(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

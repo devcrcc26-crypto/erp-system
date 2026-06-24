@@ -34,7 +34,7 @@ export default function DecisionTraceView({
       title={title}
       description={
         trace
-          ? `${trace.documentNumber ?? '—'} — ${trace.title}`
+          ? `${trace.documentNumber ?? '-'} - ${trace.title}`
           : 'Approval lineage from workflow events'
       }
     >
@@ -54,7 +54,7 @@ export default function DecisionTraceView({
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                {formatProjectDate(entry.createdAt)} —{' '}
+                {formatProjectDate(entry.createdAt)} -{' '}
                 {resolveUserName(entry.actorId)}
               </p>
               {entry.reason && (

@@ -23,7 +23,7 @@ import { PermissionResolverService } from './permission-resolver.service';
 import { SubmittalSnapshotService } from './submittal-snapshot.service';
 
 /**
- * Design-package submittal workflow — snapshot at issue, no EDV mutation.
+ * Design-package submittal workflow - snapshot at issue, no EDV mutation.
  */
 @Injectable()
 export class SubmittalWorkflowService {
@@ -151,7 +151,7 @@ export class SubmittalWorkflowService {
   }
 
   /**
-   * Issues submittal — freezes immutable snapshots per package item.
+   * Issues submittal - freezes immutable snapshots per package item.
    */
   async issueSubmittal(
     command: IssueSubmittalCommand,

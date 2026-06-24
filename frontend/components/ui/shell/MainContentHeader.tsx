@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -10,7 +10,7 @@ import type { BreadcrumbSegment } from '@/config/navConfig';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Sticky main-content header — page title, breadcrumb trail, notifications, profile.
+ * Sticky main-content header - page title, breadcrumb trail, notifications, profile.
  */
 export default function MainContentHeader({
   breadcrumbs,
@@ -37,7 +37,7 @@ export default function MainContentHeader({
       className="sticky top-0 z-20 shrink-0 bg-white"
       style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
     >
-      {/* Mobile / tablet — single compact row */}
+      {/* Mobile / tablet - single compact row */}
       <div className="flex h-[52px] items-center gap-2 px-3 lg:hidden">
         {onOpenMobileNav && (
           <button
@@ -65,7 +65,7 @@ export default function MainContentHeader({
         <HeaderActions compact />
       </div>
 
-      {/* Desktop — title, breadcrumbs, and actions */}
+      {/* Desktop - title, breadcrumbs, and actions */}
       <div className="hidden min-h-[52px] items-center justify-between gap-4 px-6 py-3 lg:flex xl:px-6">
         <div className="min-w-0 flex-1">
           <h1

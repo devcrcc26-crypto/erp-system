@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -152,7 +152,7 @@ function RailActionButton({
 }
 
 /**
- * Shared main navigation panel — icon rail (desktop) and drawer (mobile).
+ * Shared main navigation panel - icon rail (desktop) and drawer (mobile).
  */
 export default function MainNavPanel({
   isExpanded,

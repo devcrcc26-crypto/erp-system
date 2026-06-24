@@ -28,7 +28,7 @@ export interface SlaEscalationResult {
 }
 
 /**
- * SLA escalation engine — visibility only, never blocks workflow.
+ * SLA escalation engine - visibility only, never blocks workflow.
  */
 @Injectable()
 export class ReviewSlaService {
@@ -87,7 +87,7 @@ export class ReviewSlaService {
   }
 
   /**
-   * Flags overdue active sessions for visibility — never changes governance tier or assignee.
+   * Flags overdue active sessions for visibility - never changes governance tier or assignee.
    */
   async escalateOverdueSessions(companyId: string): Promise<SlaEscalationResult[]> {
     const now = new Date();
@@ -114,7 +114,7 @@ export class ReviewSlaService {
 
       if (this.getNextTier(session.currentTier) === null) {
         this.logger.warn(
-          `SLA overdue at final tier for session ${session.id} — PMO alert only`,
+          `SLA overdue at final tier for session ${session.id} - PMO alert only`,
         );
       }
 

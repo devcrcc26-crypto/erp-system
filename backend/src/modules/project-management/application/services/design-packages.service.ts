@@ -89,7 +89,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Creates a design package — projectedStatus stored only (defaults IN_PROGRESS).
+   * Creates a design package - projectedStatus stored only (defaults IN_PROGRESS).
    */
   async create(
     ctx: PmContext,
@@ -126,7 +126,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Updates design package fields — no projection recompute (Wave 1).
+   * Updates design package fields - no projection recompute (Wave 1).
    */
   async update(
     ctx: PmContext,
@@ -412,7 +412,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Submits design package for review — opens session and freezes snapshot.
+   * Submits design package for review - opens session and freezes snapshot.
    */
   async submitForReview(
     ctx: PmContext,
@@ -470,7 +470,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Returns package for rework — closes session and reverts EDVs to DRAFT.
+   * Returns package for rework - closes session and reverts EDVs to DRAFT.
    */
   async returnForRework(
     ctx: PmContext,
@@ -531,7 +531,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Locks all EDVs in multiple packages — one kernel tx per package.
+   * Locks all EDVs in multiple packages - one kernel tx per package.
    */
   async batchLockPackages(
     ctx: PmContext,

@@ -74,7 +74,7 @@ export default function ReviewInboxTable({
             {formatProjectDate(value)}
           </span>
         ) : (
-          '—'
+          '-'
         ),
     },
     {

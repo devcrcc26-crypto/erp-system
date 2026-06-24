@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -28,7 +28,7 @@ export function splitBreadcrumbTrail(segments: readonly BreadcrumbSegment[]): {
 }
 
 /**
- * Route-driven breadcrumb trail — parent segments only (current page is the title).
+ * Route-driven breadcrumb trail - parent segments only (current page is the title).
  */
 export default function Breadcrumbs({
   segments,

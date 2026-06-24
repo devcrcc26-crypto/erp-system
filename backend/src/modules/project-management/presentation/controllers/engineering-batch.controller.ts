@@ -66,7 +66,7 @@ export class EngineeringBatchController {
 
   @Post('engineering-documents/:id/trigger-revision')
   @RequirePermission('schedule', 'edit')
-  @ApiOperation({ summary: 'Trigger external revision loop — new DRAFT EDV from LOCKED' })
+  @ApiOperation({ summary: 'Trigger external revision loop - new DRAFT EDV from LOCKED' })
   triggerRevision(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') engineeringDocumentId: string,

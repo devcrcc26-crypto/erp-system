@@ -1,8 +1,8 @@
-# Construction ERP — Complete Learning & Recreation Guide
+# Construction ERP - Complete Learning & Recreation Guide
 
 **Core Foundation Module + Project Management Module**
 
-> This document teaches you how this enterprise Construction ERP was built — not just what exists, but *why* each decision was made. It is written for learners with little professional experience who want to understand and eventually recreate the system.
+> This document teaches you how this enterprise Construction ERP was built - not just what exists, but *why* each decision was made. It is written for learners with little professional experience who want to understand and eventually recreate the system.
 
 **Repository:** `construction-erp` monorepo (`backend/` + `frontend/`)  
 **Last analyzed:** June 2026  
@@ -33,7 +33,7 @@
 
 ## 1.1 What Is This System?
 
-This is a **Construction ERP** (Enterprise Resource Planning) system — software that helps medium and large construction companies run their business digitally. Think of it as the "operating system" for a construction company:
+This is a **Construction ERP** (Enterprise Resource Planning) system - software that helps medium and large construction companies run their business digitally. Think of it as the "operating system" for a construction company:
 
 - Who works here? (**Users, roles, permissions**)
 - What company are we? (**Company setup, branches, departments**)
@@ -46,7 +46,7 @@ An ERP replaces spreadsheets, email chains, and paper folders with one connected
 
 ## 1.2 High-Level Architecture
 
-The system is a **monorepo** — one Git repository containing two applications that talk to each other:
+The system is a **monorepo** - one Git repository containing two applications that talk to each other:
 
 ```mermaid
 flowchart TB
@@ -107,7 +107,7 @@ sequenceDiagram
 | **Reporting** | `backend/src/modules/reporting/` | Report definitions, schedules, dashboard widgets |
 | **Project Management** | `backend/src/modules/project-management/` | Projects, schedule, site ops, EPC engineering workflow |
 
-**Shared infrastructure** lives in `backend/src/shared/` — guards, interceptors, Prisma, storage, mail, permissions.
+**Shared infrastructure** lives in `backend/src/shared/` - guards, interceptors, Prisma, storage, mail, permissions.
 
 ## 1.4 Module Relationships
 
@@ -143,11 +143,11 @@ flowchart LR
 
 **Key dependency rules:**
 
-1. **Every module depends on Auth** — JWT proves who you are.
-2. **Every module depends on Permissions** — RBAC proves what you can do.
-3. **PM depends on Documents** — engineering files live in `DocumentFolder` / `DocumentVersion`.
-4. **PM depends on NumberSeries** — RFI-001, SUB-042, etc. come from PostgreSQL sequences.
-5. **PM does NOT bypass company_id** — multi-tenancy is enforced everywhere.
+1. **Every module depends on Auth** - JWT proves who you are.
+2. **Every module depends on Permissions** - RBAC proves what you can do.
+3. **PM depends on Documents** - engineering files live in `DocumentFolder` / `DocumentVersion`.
+4. **PM depends on NumberSeries** - RFI-001, SUB-042, etc. come from PostgreSQL sequences.
+5. **PM does NOT bypass company_id** - multi-tenancy is enforced everywhere.
 
 ## 1.5 Data Flow Across the System
 
@@ -176,7 +176,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | JavaScript with static types — the compiler catches type errors before runtime |
+| **What** | JavaScript with static types - the compiler catches type errors before runtime |
 | **Why here** | Same language on frontend and backend; shared mental model; fewer bugs in large codebases |
 | **Advantages** | Autocomplete, refactoring safety, self-documenting interfaces |
 | **Disadvantages** | Build step required; learning curve for beginners |
@@ -189,7 +189,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | JavaScript runtime outside the browser — runs your server code |
+| **What** | JavaScript runtime outside the browser - runs your server code |
 | **Why here** | NestJS and Next.js both require Node |
 | **Advantages** | One language stack, huge npm ecosystem, async I/O for APIs |
 | **Disadvantages** | Single-threaded; CPU-heavy work needs worker threads or queues |
@@ -240,7 +240,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | Node.js framework inspired by Angular — modules, dependency injection, decorators |
+| **What** | Node.js framework inspired by Angular - modules, dependency injection, decorators |
 | **Why here** | Enterprise structure (modules, guards, pipes), TypeScript-first, Swagger built-in |
 | **Advantages** | Opinionated architecture, testable, scales to large teams |
 | **Disadvantages** | Boilerplate; steeper learning curve than Express |
@@ -283,7 +283,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | Command Query Responsibility Segregation — separate read and write handlers |
+| **What** | Command Query Responsibility Segregation - separate read and write handlers |
 | **Why here** | Auth module uses `LoginCommand` → `LoginHandler` for clear write flows |
 | **Advantages** | Testable handlers, single responsibility per use case |
 | **Disadvantages** | More files; overkill for simple CRUD |
@@ -316,14 +316,14 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | Job queue — background work (send email, workflow SLA) off the HTTP thread |
+| **What** | Job queue - background work (send email, workflow SLA) off the HTTP thread |
 | **Why here** | Operations >500ms should not block API responses |
 | **Advantages** | Retries, scheduling, monitoring |
 | **Disadvantages** | Requires Redis; more moving parts |
 | **Alternatives** | RabbitMQ, SQS, in-process queues |
 | **Industry** | Standard for Node async work |
 
-**Note:** `REDIS_ENABLED=false` by default in dev — queues are optional locally.
+**Note:** `REDIS_ENABLED=false` by default in dev - queues are optional locally.
 
 ### MinIO
 
@@ -355,7 +355,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | UI library — components, hooks, virtual DOM |
+| **What** | UI library - components, hooks, virtual DOM |
 | **Why here** | Ecosystem; Ant Design is React-based |
 | **Advantages** | Huge community, component model |
 | **Disadvantages** | Client state + server state split can confuse beginners |
@@ -377,7 +377,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 | Aspect | Detail |
 |--------|--------|
-| **What** | Server state management — fetch, cache, refetch, pagination |
+| **What** | Server state management - fetch, cache, refetch, pagination |
 | **Why here** | API data should NOT live in Zustand; Query handles stale data, loading, errors |
 | **Advantages** | Eliminates most `useEffect` fetch boilerplate |
 | **Disadvantages** | Another abstraction to learn |
@@ -389,7 +389,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 | Aspect | Detail |
 |--------|--------|
 | **What** | Lightweight client state store |
-| **Why here** | Auth tokens, user profile, capabilities — data that isn't "server fetched list" |
+| **Why here** | Auth tokens, user profile, capabilities - data that isn't "server fetched list" |
 | **Advantages** | Minimal API, persist middleware |
 | **Disadvantages** | Easy to misuse for server data |
 | **Alternatives** | Redux, Jotai, Context API |
@@ -450,7 +450,7 @@ For each technology: **what it is**, **why it's used here**, **advantages**, **d
 
 **Why:** Testability (mock `IAuthRepository` in tests), loose coupling, single place to configure services.
 
-**Example** — `LoginHandler` receives repository and services without `new`:
+**Example** - `LoginHandler` receives repository and services without `new`:
 
 ```typescript
 // backend/src/modules/auth/application/commands/login.handler.ts
@@ -462,7 +462,7 @@ constructor(
 ) {}
 ```
 
-**Industry:** Core pattern in Spring, NestJS, Angular — "Inversion of Control."
+**Industry:** Core pattern in Spring, NestJS, Angular - "Inversion of Control."
 
 ---
 
@@ -496,13 +496,13 @@ construction-erp/
 ```
 backend/
 ├── prisma/
-│   ├── schema.prisma        # 73 models — source of truth for DB
+│   ├── schema.prisma        # 73 models - source of truth for DB
 │   ├── migrations/          # Versioned SQL migrations (never edit old ones)
 │   ├── seed.ts              # Roles, permissions, admin user
 │   └── ERD.md               # Auto-generated entity diagram
 ├── src/
 │   ├── main.ts              # Bootstrap: helmet, CORS, Swagger, ValidationPipe
-│   ├── app.module.ts        # Root module — wires everything
+│   ├── app.module.ts        # Root module - wires everything
 │   ├── app.controller.ts    # Health check
 │   ├── modules/             # Feature modules (bounded contexts)
 │   │   ├── auth/
@@ -552,7 +552,7 @@ modules/{module-name}/
     └── pipes/
 ```
 
-**Reality check:** Only `auth` and the **EPC workflow** portion of PM fully follow this. Most foundation modules use `application/services` + `presentation/controllers` calling `PrismaService` directly — a pragmatic shortcut during rapid development.
+**Reality check:** Only `auth` and the **EPC workflow** portion of PM fully follow this. Most foundation modules use `application/services` + `presentation/controllers` calling `PrismaService` directly - a pragmatic shortcut during rapid development.
 
 ---
 
@@ -605,7 +605,7 @@ frontend/
 |---------|---------|
 | `(auth)` | Parentheses = route group, not in URL. Shared layout for login pages. |
 | `(dashboard)` | Authenticated layout with sidebar + top nav. |
-| `[projectId]` | Dynamic segment — URL contains actual project UUID. |
+| `[projectId]` | Dynamic segment - URL contains actual project UUID. |
 
 ---
 
@@ -628,9 +628,9 @@ Presentation → Application → Domain → Infrastructure
 
 ## 4.2 Clean Architecture
 
-**Definition:** Dependencies point inward — outer layers depend on inner abstractions, not the reverse.
+**Definition:** Dependencies point inward - outer layers depend on inner abstractions, not the reverse.
 
-**Example — Auth module:**
+**Example - Auth module:**
 
 ```
 auth.controller.ts  →  LoginHandler  →  IAuthRepository (interface)
@@ -656,15 +656,15 @@ The handler depends on `IAuthRepository`, not Prisma directly. You can swap Post
 | Project Management | RFI, Submittal, Punch Item, Milestone |
 | EPC Engineering | EDV, Design Package, Review Session |
 
-**Value objects & enums:** `EdvStatus`, `RfiStatus`, `ProjectTeamRole` — business states, not arbitrary strings.
+**Value objects & enums:** `EdvStatus`, `RfiStatus`, `ProjectTeamRole` - business states, not arbitrary strings.
 
 ---
 
 ## 4.4 Modular Monolith
 
-**Definition:** One deployable application split into modules with clear boundaries — not microservices yet, but structured to become them later.
+**Definition:** One deployable application split into modules with clear boundaries - not microservices yet, but structured to become them later.
 
-**In this codebase:** Each NestJS `@Module()` is a bounded context. `AppModule` imports all modules. No network calls between modules — just TypeScript imports.
+**In this codebase:** Each NestJS `@Module()` is a bounded context. `AppModule` imports all modules. No network calls between modules - just TypeScript imports.
 
 **Benefits:** Simpler ops than microservices; still organized for team ownership.  
 **Drawbacks:** All modules scale together; one bug can affect whole process.
@@ -675,9 +675,9 @@ The handler depends on `IAuthRepository`, not Prisma directly. You can swap Post
 
 **Definition:** Separate models/paths for reads (queries) and writes (commands).
 
-**Where used:** Auth module — `LoginCommand`, `RefreshTokenCommand`, `LogoutCommand` each have dedicated handlers.
+**Where used:** Auth module - `LoginCommand`, `RefreshTokenCommand`, `LogoutCommand` each have dedicated handlers.
 
-**Why not everywhere:** Simple CRUD (list RFIs, update issue) uses one service with `findMany` and `update` — CQRS would triple file count without benefit.
+**Why not everywhere:** Simple CRUD (list RFIs, update issue) uses one service with `findMany` and `update` - CQRS would triple file count without benefit.
 
 ---
 
@@ -689,18 +689,18 @@ The handler depends on `IAuthRepository`, not Prisma directly. You can swap Post
 
 **Partial implementation:** EPC repositories in `backend/src/modules/project-management/infrastructure/repositories/`.
 
-**Bypassed:** Most PM CRUD services call `this.prisma.rfi.findMany()` directly — technical debt acknowledged in project docs.
+**Bypassed:** Most PM CRUD services call `this.prisma.rfi.findMany()` directly - technical debt acknowledged in project docs.
 
 ---
 
 ## 4.7 Service Layer Pattern
 
-**Definition:** Application services coordinate use cases — validate input, call repositories, return DTOs.
+**Definition:** Application services coordinate use cases - validate input, call repositories, return DTOs.
 
 **Examples:**
-- `UserManagementService` — user CRUD + role assignment
-- `ProjectsService` — project portfolio
-- `WorkflowKernelService` — all EPC workflow mutations
+- `UserManagementService` - user CRUD + role assignment
+- `ProjectsService` - project portfolio
+- `WorkflowKernelService` - all EPC workflow mutations
 
 ---
 
@@ -725,7 +725,7 @@ The handler depends on `IAuthRepository`, not Prisma directly. You can swap Post
 **Definition:** Components communicate via events rather than direct calls.
 
 **Examples:**
-- `WorkflowEventLog` — append-only event log for engineering workflow
+- `WorkflowEventLog` - append-only event log for engineering workflow
 - `WorkflowCommittedDispatcher` → BullMQ queue after transaction commit
 - Domain events via `@nestjs/cqrs` EventBus (auth module foundation)
 
@@ -798,7 +798,7 @@ sequenceDiagram
     H-->>C: { accessToken, refreshToken, sessionId, user }
 ```
 
-**Key implementation** — `backend/src/modules/auth/application/commands/login.handler.ts`:
+**Key implementation** - `backend/src/modules/auth/application/commands/login.handler.ts`:
 1. Find user by email (must be active, not soft-deleted)
 2. Verify password with bcrypt
 3. Reject if email not verified
@@ -816,7 +816,7 @@ sequenceDiagram
 **Why refresh rotation:** If refresh token is stolen, old hash in DB won't match after rotation.
 
 ### Session capabilities
-`GET /auth/capabilities` returns UI flags (`canManageUsers`, `canViewProjects`, etc.) derived from RBAC — frontend hides nav items without exposing security (server still enforces permissions).
+`GET /auth/capabilities` returns UI flags (`canManageUsers`, `canViewProjects`, etc.) derived from RBAC - frontend hides nav items without exposing security (server still enforces permissions).
 
 ---
 
@@ -853,7 +853,7 @@ flowchart TD
 ## 5.3 Roles & Permissions (`user-management` + `shared/permissions`)
 
 ### Business purpose
-RBAC — Role-Based Access Control. Users get roles; roles get permissions; permissions gate API endpoints.
+RBAC - Role-Based Access Control. Users get roles; roles get permissions; permissions gate API endpoints.
 
 ### Permission model
 
@@ -866,10 +866,10 @@ RolePermission flags per permission:
 ```
 
 ### Role inheritance
-`Role.parentRoleId` — child roles inherit parent permissions (OR merge).
+`Role.parentRoleId` - child roles inherit parent permissions (OR merge).
 
 ### Data scopes (row-level)
-`DataScope` on `UserRole` — limit visibility to COMPANY, BRANCH, DEPARTMENT, PROJECT, or SELF.
+`DataScope` on `UserRole` - limit visibility to COMPANY, BRANCH, DEPARTMENT, PROJECT, or SELF.
 
 ### Permission check flow
 
@@ -883,9 +883,9 @@ const allowed = await this.permissionService.hasPermission(
 );
 ```
 
-**Frontend:** `frontend/components/modules/settings/SettingsPageContent.tsx` — permission matrix editor.
+**Frontend:** `frontend/components/modules/settings/SettingsPageContent.tsx` - permission matrix editor.
 
-**Seed data:** `backend/prisma/seed.ts` — 12 core roles (System Administrator → Employee).
+**Seed data:** `backend/prisma/seed.ts` - 12 core roles (System Administrator → Employee).
 
 ---
 
@@ -907,24 +907,24 @@ flowchart TD
 
 ### Financial periods
 Two-stage close per `.cursorrules`:
-1. **LOCK** — no new transactions
-2. **CLOSE** — period finalized
+1. **LOCK** - no new transactions
+2. **CLOSE** - period finalized
 
-`FinancialYear` and `FinancialPeriod` have no soft delete — status changes only.
+`FinancialYear` and `FinancialPeriod` have no soft delete - status changes only.
 
 ### Number series
 `NumberSeries` stores PostgreSQL sequence **names** (not counters). `nextval()` avoids race conditions vs table-based counters.
 
 **API:** `POST /number-series/:documentType/next`
 
-**Frontend gap:** No dedicated UI yet — API complete, admin uses API/Swagger.
+**Frontend gap:** No dedicated UI yet - API complete, admin uses API/Swagger.
 
 ---
 
 ## 5.5 Audit Trail (`audit`)
 
 ### Business purpose
-Immutable record of who changed what, when — compliance and debugging.
+Immutable record of who changed what, when - compliance and debugging.
 
 ### How it works
 Global `AuditInterceptor` on CUD operations (POST, PUT, PATCH, DELETE):
@@ -932,7 +932,7 @@ Global `AuditInterceptor` on CUD operations (POST, PUT, PATCH, DELETE):
 - Stores before/after JSON snapshots
 - Excludes auth routes and read-only endpoints
 
-**Table:** `AuditLog` — append-only, never updated or soft-deleted.
+**Table:** `AuditLog` - append-only, never updated or soft-deleted.
 
 **Query API:** `GET /audit-logs` with filters + pagination (`audit.view` permission).
 
@@ -941,7 +941,7 @@ Global `AuditInterceptor` on CUD operations (POST, PUT, PATCH, DELETE):
 ## 5.6 Notifications (`notifications`)
 
 ### Business purpose
-Alert users to events — in-app bell + optional email.
+Alert users to events - in-app bell + optional email.
 
 ### Architecture
 
@@ -982,7 +982,7 @@ Central file storage with folders, versions, and per-role access control.
 5. Download via presigned URL (time-limited)
 
 ### Folder ACL
-`DocumentAccess` — per folder, per role: view, upload, download, delete.
+`DocumentAccess` - per folder, per role: view, upload, download, delete.
 
 **PM integration:** `EngineeringDocumentFolderService` creates project-scoped folders automatically.
 
@@ -994,9 +994,9 @@ Central file storage with folders, versions, and per-role access control.
 Custom reports, scheduled exports, role-scoped dashboard widgets.
 
 ### Components
-- `ReportDefinition` — JSON config for fields, filters, grouping
-- `ReportSchedule` — cron + email recipients
-- `DashboardWidget` — KPI tiles on home dashboard
+- `ReportDefinition` - JSON config for fields, filters, grouping
+- `ReportSchedule` - cron + email recipients
+- `DashboardWidget` - KPI tiles on home dashboard
 
 **Frontend:** Dashboard uses widgets; `/reports` page is placeholder.
 
@@ -1014,7 +1014,7 @@ Custom reports, scheduled exports, role-scoped dashboard widgets.
 | Prisma + soft delete | `shared/prisma/soft-delete.util.ts` | `activeOnly()` helper |
 | Storage | `shared/storage/` | MinIO/S3 abstraction |
 
-**App wiring** — `backend/src/app.module.ts` registers global filter, interceptors, guards.
+**App wiring** - `backend/src/app.module.ts` registers global filter, interceptors, guards.
 
 ---
 
@@ -1025,15 +1025,15 @@ Custom reports, scheduled exports, role-scoped dashboard widgets.
 **133 TypeScript files**, **19 controllers**, **~180 endpoints**, **~41 database tables**.
 
 Two architectural styles coexist:
-1. **CRUD services** — RFIs, issues, daily logs (Prisma in service)
-2. **EPC workflow kernel** — engineering documents, design packages, review (domain state machines + repositories)
+1. **CRUD services** - RFIs, issues, daily logs (Prisma in service)
+2. **EPC workflow kernel** - engineering documents, design packages, review (domain state machines + repositories)
 
 ---
 
 ## 6.2 Projects & Portfolio
 
 ### Business purpose
-Single source of truth for construction projects — code, client, dates, budget, status, team.
+Single source of truth for construction projects - code, client, dates, budget, status, team.
 
 ### Database
 `Project` links to `Company`, `Branch`, `Department`, `User` (project manager).
@@ -1048,8 +1048,8 @@ Single source of truth for construction projects — code, client, dates, budget
 | PUT | `/projects/:projectId/team` | Team membership |
 
 ### Frontend
-- `/projects` — `PortfolioKanbanPageContent` (list/kanban)
-- `/projects/[projectId]` — project dashboard
+- `/projects` - `PortfolioKanbanPageContent` (list/kanban)
+- `/projects/[projectId]` - project dashboard
 - `ProjectShell` + `ProjectWorkspaceSidebar` wrap all project pages
 
 ---
@@ -1057,16 +1057,16 @@ Single source of truth for construction projects — code, client, dates, budget
 ## 6.3 Schedule & Tasks
 
 ### Business purpose
-Programme management — milestones, tasks, Gantt dependencies, engineering disciplines per task.
+Programme management - milestones, tasks, Gantt dependencies, engineering disciplines per task.
 
 ### Entities
-- `Milestone` — key dates
-- `Task` — hierarchical (parent/child), assignee, dates
-- `TaskDiscipline` — engineering discipline scope on a task
-- `TaskDependency` — FS/SS/FF/SF links for Gantt
+- `Milestone` - key dates
+- `Task` - hierarchical (parent/child), assignee, dates
+- `TaskDiscipline` - engineering discipline scope on a task
+- `TaskDependency` - FS/SS/FF/SF links for Gantt
 
 ### Frontend
-`frontend/components/modules/projects/schedule/` — Gantt, calendar, milestones panel.
+`frontend/components/modules/projects/schedule/` - Gantt, calendar, milestones panel.
 
 **API base:** `/projects/:projectId/schedule/*`
 
@@ -1075,7 +1075,7 @@ Programme management — milestones, tasks, Gantt dependencies, engineering disc
 ## 6.4 EPC Engineering Workflow (Advanced)
 
 ### Business purpose
-Control engineering document lifecycle — the heart of design-build EPC contractors.
+Control engineering document lifecycle - the heart of design-build EPC contractors.
 
 ### Three-layer model
 
@@ -1083,15 +1083,15 @@ Defined in `backend/src/modules/project-management/domain/contracts/domain-bound
 
 | Layer | Entities | Responsibility |
 |-------|----------|----------------|
-| **Layer 1 — File** | Document, DocumentVersion, DocumentFolder | Storage only |
-| **Layer 2 — Engineering** | EngineeringDocument, EngineeringDocumentVersion, DesignPackage | EDV status is **sole lifecycle authority** |
-| **Layer 3 — Workflow** | ReviewSession, ReviewComment, WorkflowEventLog | Review orchestration; projected statuses are derived |
+| **Layer 1 - File** | Document, DocumentVersion, DocumentFolder | Storage only |
+| **Layer 2 - Engineering** | EngineeringDocument, EngineeringDocumentVersion, DesignPackage | EDV status is **sole lifecycle authority** |
+| **Layer 3 - Workflow** | ReviewSession, ReviewComment, WorkflowEventLog | Review orchestration; projected statuses are derived |
 
 ### State classes
 
-1. **Source of truth:** `EngineeringDocumentVersion.status` — only writable via `WorkflowKernel`
-2. **Structural aggregates:** `DesignPackage.projectedStatus`, `TaskDiscipline.projectedStatus` — computed in Phase B
-3. **Ephemeral:** `ReviewSession`, `ReviewComment` — session-scoped, not authoritative for EDV
+1. **Source of truth:** `EngineeringDocumentVersion.status` - only writable via `WorkflowKernel`
+2. **Structural aggregates:** `DesignPackage.projectedStatus`, `TaskDiscipline.projectedStatus` - computed in Phase B
+3. **Ephemeral:** `ReviewSession`, `ReviewComment` - session-scoped, not authoritative for EDV
 
 ### WorkflowKernel
 
@@ -1109,11 +1109,11 @@ flowchart TD
 **Guards:** `ConflictGuardService`, `DefinitionOfDoneService`, `PermissionResolverService`, `StatusWriteGateService`
 
 ### Key screens
-- `/projects/[projectId]/disciplines` — discipline list
-- `/projects/[projectId]/disciplines/[taskDisciplineId]` — workspace
-- `/projects/[projectId]/engineering-documents/[edId]` — EDV detail
-- `/projects/[projectId]/review-inbox` — pending reviews
-- `/projects/[projectId]/overview/status` — status board
+- `/projects/[projectId]/disciplines` - discipline list
+- `/projects/[projectId]/disciplines/[taskDisciplineId]` - workspace
+- `/projects/[projectId]/engineering-documents/[edId]` - EDV detail
+- `/projects/[projectId]/review-inbox` - pending reviews
+- `/projects/[projectId]/overview/status` - status board
 
 ---
 
@@ -1137,11 +1137,11 @@ Formal submission of shop drawings, product data, samples for client/consultant 
 ## 6.6 RFIs (Requests for Information)
 
 ### Business purpose
-Formal questions from site to designer/client — tracked, numbered, with responses.
+Formal questions from site to designer/client - tracked, numbered, with responses.
 
 ### Model
-- `Rfi` — subject, priority, status, assignee
-- `RfiResponse` — threaded responses
+- `Rfi` - subject, priority, status, assignee
+- `RfiResponse` - threaded responses
 
 ### Numbering
 `DocumentNumberService` → `NumberSeries` type `RFI`.
@@ -1169,12 +1169,12 @@ Each follows: **Controller → Service → Prisma**, with `PmContext { companyId
 ## 6.8 Closeout
 
 ### Business purpose
-Project handover — checklist, warranties, final account preparation.
+Project handover - checklist, warranties, final account preparation.
 
 ### Model
-- `Closeout` — overall closeout record and status
-- `CloseoutChecklistItem` — individual handover tasks
-- `Warranty` — warranty periods and documents
+- `Closeout` - overall closeout record and status
+- `CloseoutChecklistItem` - individual handover tasks
+- `Warranty` - warranty periods and documents
 
 ### API
 `GET/POST/PATCH /projects/:projectId/closeout`  
@@ -1314,13 +1314,13 @@ erDiagram
 | **Purpose** | Construction job container |
 | **FKs** | companyId, branchId, departmentId, projectManagerId |
 | **Indexes** | company_id + deleted_at (every list query) |
-| **Status** | `ProjectStatus` enum — PLANNING, ACTIVE, ON_HOLD, COMPLETED, CANCELLED |
+| **Status** | `ProjectStatus` enum - PLANNING, ACTIVE, ON_HOLD, COMPLETED, CANCELLED |
 
 ### `EngineeringDocumentVersion`
 | Aspect | Detail |
 |--------|--------|
 | **Purpose** | Authoritative engineering document lifecycle |
-| **Critical field** | `status` (EdvStatus enum) — only WorkflowKernel writes |
+| **Critical field** | `status` (EdvStatus enum) - only WorkflowKernel writes |
 | **Relationship** | Belongs to EngineeringDocument → TaskDiscipline → Task → Project |
 
 ### `WorkflowEventLog`
@@ -1344,7 +1344,7 @@ Per `.cursorrules`, indexes on:
 
 ## 7.6 Multi-Tenancy
 
-**Rule:** Every query MUST include `company_id`. Never trust `company_id` from request body — always from JWT.
+**Rule:** Every query MUST include `company_id`. Never trust `company_id` from request body - always from JWT.
 
 ```typescript
 // Typical service pattern
@@ -1371,7 +1371,7 @@ await this.prisma.project.findMany({
 }
 ```
 
-Wrapped by `ResponseEnvelopeInterceptor` — `backend/src/shared/interceptors/response-envelope.interceptor.ts`
+Wrapped by `ResponseEnvelopeInterceptor` - `backend/src/shared/interceptors/response-envelope.interceptor.ts`
 
 ### Error response
 ```json
@@ -1441,9 +1441,9 @@ export class CreateProjectDto {
 ```
 
 `ValidationPipe` options in `main.ts`:
-- `whitelist: true` — strip unknown properties (prevents mass assignment)
-- `forbidNonWhitelisted: true` — reject unknown properties
-- `transform: true` — convert query strings to numbers/booleans
+- `whitelist: true` - strip unknown properties (prevents mass assignment)
+- `forbidNonWhitelisted: true` - reject unknown properties
+- `transform: true` - convert query strings to numbers/booleans
 
 ---
 
@@ -1451,7 +1451,7 @@ export class CreateProjectDto {
 
 Query params: `?page=1&limit=20&sortBy=createdAt&sortOrder=desc`
 
-Services return `{ data: T[], meta: PaginationMeta }` — interceptor wraps into envelope.
+Services return `{ data: T[], meta: PaginationMeta }` - interceptor wraps into envelope.
 
 **DTO:** `backend/src/shared/dtos/pagination-query.dto.ts`
 
@@ -1526,7 +1526,7 @@ app/layout.tsx
 
 ## 9.2 The 8 Core UI Components
 
-Built first per `.cursorrules` — every module page assembles from these:
+Built first per `.cursorrules` - every module page assembles from these:
 
 | # | Component | Purpose |
 |---|-----------|---------|
@@ -1548,7 +1548,7 @@ Built first per `.cursorrules` — every module page assembles from these:
 ### Middleware (`frontend/middleware.ts`)
 - Checks cookie `erp-authenticated` (lightweight flag)
 - Redirects unauthenticated users to `/login`
-- JWT stored in Zustand (not cookie) — middleware is first gate only
+- JWT stored in Zustand (not cookie) - middleware is first gate only
 
 ### Auth store (`frontend/stores/auth.store.ts`)
 Persists: `accessToken`, `refreshToken`, `sessionId`, `user`, `capabilities`
@@ -1636,7 +1636,7 @@ Ant Design `Form` with rules mirroring backend DTOs:
 </Form.Item>
 ```
 
-Client validation improves UX; **server always re-validates** — never trust frontend alone.
+Client validation improves UX; **server always re-validates** - never trust frontend alone.
 
 ---
 
@@ -1678,7 +1678,7 @@ Client validation improves UX; **server always re-validates** — never trust fr
 
 ## 10.5 SQL Injection
 
-**Protected by Prisma** — parameterized queries only. Raw SQL (if any) must be documented and parameterized.
+**Protected by Prisma** - parameterized queries only. Raw SQL (if any) must be documented and parameterized.
 
 ## 10.6 XSS (Cross-Site Scripting)
 
@@ -1688,12 +1688,12 @@ Client validation improves UX; **server always re-validates** — never trust fr
 
 ## 10.7 CSRF
 
-- JWT in `Authorization` header (not cookie) for API — immune to classic CSRF on API
+- JWT in `Authorization` header (not cookie) for API - immune to classic CSRF on API
 - Frontend auth cookie is flag only, not the actual token
 
 ## 10.8 HTTP Security Headers
 
-`helmet()` in `main.ts` — X-Content-Type-Options, X-Frame-Options, etc.
+`helmet()` in `main.ts` - X-Content-Type-Options, X-Frame-Options, etc.
 
 ## 10.9 CORS
 
@@ -1711,11 +1711,11 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 | Principle | Meaning | In this project |
 |-----------|---------|-----------------|
-| **S** — Single Responsibility | One class, one reason to change | `LoginHandler` only handles login; `TokenService` only tokens |
-| **O** — Open/Closed | Open for extension, closed for modification | New workflow commands extend `WorkflowKernel` without changing EDV machine |
-| **L** — Liskov Substitution | Subtypes replaceable for base types | `IAuthRepository` implementations interchangeable in tests |
-| **I** — Interface Segregation | Small focused interfaces | `IStorageService` — upload/download/delete only |
-| **D** — Dependency Inversion | Depend on abstractions | Handlers depend on `IAuthRepository`, not Prisma |
+| **S** - Single Responsibility | One class, one reason to change | `LoginHandler` only handles login; `TokenService` only tokens |
+| **O** - Open/Closed | Open for extension, closed for modification | New workflow commands extend `WorkflowKernel` without changing EDV machine |
+| **L** - Liskov Substitution | Subtypes replaceable for base types | `IAuthRepository` implementations interchangeable in tests |
+| **I** - Interface Segregation | Small focused interfaces | `IStorageService` - upload/download/delete only |
+| **D** - Dependency Inversion | Depend on abstractions | Handlers depend on `IAuthRepository`, not Prisma |
 
 ## 11.2 DRY (Don't Repeat Yourself)
 
@@ -1725,7 +1725,7 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 ## 11.3 KISS (Keep It Simple, Stupid)
 
-- PM CRUD uses direct Prisma in services — simpler than full CQRS for list endpoints
+- PM CRUD uses direct Prisma in services - simpler than full CQRS for list endpoints
 - Middleware cookie flag instead of parsing JWT in Edge middleware
 
 ## 11.4 Separation of Concerns
@@ -1738,7 +1738,7 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 ## 11.5 Encapsulation
 
 - `passwordHash` never in response DTOs
-- Refresh tokens stored hashed — even DB leak doesn't expose usable tokens
+- Refresh tokens stored hashed - even DB leak doesn't expose usable tokens
 
 ## 11.6 Cohesion & Coupling
 
@@ -1762,37 +1762,37 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 ## 12.2 NestJS (not Express)
 
-**Why:** Enforces module boundaries, DI, guards, pipes — scales to 50+ developers.  
+**Why:** Enforces module boundaries, DI, guards, pipes - scales to 50+ developers.  
 **Tradeoff:** Boilerplate for hello-world; worth it at ERP scale.  
-**Alternative rejected:** Raw Express — too little structure for 73 tables.
+**Alternative rejected:** Raw Express - too little structure for 73 tables.
 
 ## 12.3 PostgreSQL (not MongoDB)
 
-**Why:** Construction ERP is relational — projects have tasks have disciplines have documents. ACID transactions for financial-adjacent data.  
+**Why:** Construction ERP is relational - projects have tasks have disciplines have documents. ACID transactions for financial-adjacent data.  
 **Tradeoff:** Schema migrations required for changes.  
-**Sequences:** `NumberSeries` uses PostgreSQL `nextval()` — correct choice for concurrent document numbering.
+**Sequences:** `NumberSeries` uses PostgreSQL `nextval()` - correct choice for concurrent document numbering.
 
 ## 12.4 Prisma (not TypeORM)
 
 **Why:** Best-in-class TypeScript DX, migration workflow, schema as documentation.  
-**Tradeoff:** Repository pattern not automatic — team uses Prisma directly in many services.  
+**Tradeoff:** Repository pattern not automatic - team uses Prisma directly in many services.  
 **Path forward:** Extract repositories incrementally for PM CRUD.
 
 ## 12.5 JWT + Refresh Sessions (not server sessions only)
 
 **Why:** Stateless API scaling; mobile/portal ready.  
-**Tradeoff:** Revocation complexity — solved with `USER_SESSION` table.  
+**Tradeoff:** Revocation complexity - solved with `USER_SESSION` table.  
 **Security:** Refresh token rotation prevents long-lived stolen access tokens.
 
 ## 12.6 RBAC + Capabilities (not per-module roles)
 
 **Why:** `.cursorrules` defines 12 business roles, not 40 module-specific roles. One person can hold multiple roles.  
-**Tradeoff:** Permission matrix complexity — mitigated by seed data and settings UI.
+**Tradeoff:** Permission matrix complexity - mitigated by seed data and settings UI.
 
 ## 12.7 Soft Delete (not hard delete)
 
 **Why:** Construction disputes need history; accidental deletes recoverable.  
-**Tradeoff:** Every query needs `deleted_at IS NULL` — enforced via `activeOnly()` helper and Prisma middleware goal.
+**Tradeoff:** Every query needs `deleted_at IS NULL` - enforced via `activeOnly()` helper and Prisma middleware goal.
 
 ## 12.8 API Envelope (not raw arrays)
 
@@ -1801,7 +1801,7 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 ## 12.9 EPC Three-Layer Model
 
-**Why:** File storage, engineering metadata, and review workflow have different lifecycles — collapsing them causes bugs (e.g., deleting file shouldn't delete review history).  
+**Why:** File storage, engineering metadata, and review workflow have different lifecycles - collapsing them causes bugs (e.g., deleting file shouldn't delete review history).  
 **Tradeoff:** Steep learning curve; ~40 domain files.  
 **Payoff:** Enterprise-grade document control comparable to commercial EDMS tools.
 
@@ -1812,19 +1812,19 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 ## 12.11 TanStack Query + Zustand split
 
-**Why:** Industry best practice — don't put API cache in global client store.  
+**Why:** Industry best practice - don't put API cache in global client store.  
 **Tradeoff:** Two state libraries to learn.
 
 ## 12.12 BullMQ optional in dev
 
 **Why:** `REDIS_ENABLED=false` lets developers run without Redis for basic CRUD.  
-**Tradeoff:** Workflow async features differ between dev and prod — E2E tests force `REDIS_ENABLED=false`.
+**Tradeoff:** Workflow async features differ between dev and prod - E2E tests force `REDIS_ENABLED=false`.
 
 ---
 
 # 13. Step-by-Step Recreation Guide
 
-## Phase 0 — Prerequisites (1–2 weeks)
+## Phase 0 - Prerequisites (1–2 weeks)
 
 **Goal:** Understand fundamentals.
 
@@ -1838,7 +1838,7 @@ Every CUD operation logged to immutable `AuditLog` with user, timestamp, before/
 
 ---
 
-## Phase 1 — Empty Monorepo (Day 1–2)
+## Phase 1 - Empty Monorepo (Day 1–2)
 
 **Goal:** Runnable empty shell.
 
@@ -1863,14 +1863,14 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 2 — Database Foundation (Week 1)
+## Phase 2 - Database Foundation (Week 1)
 
 **Goal:** Company + User tables with migrations.
 
 **Files:**
-- `backend/prisma/schema.prisma` — Company, User models
-- `backend/prisma/migrations/` — first migration
-- `backend/prisma/seed.ts` — admin user
+- `backend/prisma/schema.prisma` - Company, User models
+- `backend/prisma/migrations/` - first migration
+- `backend/prisma/seed.ts` - admin user
 
 **Concepts:** Migrations, UUID keys, timestamps, soft delete columns, `company_id` on every table.
 
@@ -1878,7 +1878,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 3 — NestJS Core (Week 2)
+## Phase 3 - NestJS Core (Week 2)
 
 **Goal:** Health check + Prisma + config validation.
 
@@ -1894,7 +1894,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 4 — Authentication (Week 3)
+## Phase 4 - Authentication (Week 3)
 
 **Goal:** Login, JWT, refresh, sessions.
 
@@ -1910,11 +1910,11 @@ cd backend && npx prisma init
 
 **Concepts:** bcrypt, JWT, refresh rotation, CQRS, repository pattern.
 
-**Test:** `auth.e2e-spec.ts` — login returns tokens.
+**Test:** `auth.e2e-spec.ts` - login returns tokens.
 
 ---
 
-## Phase 5 — RBAC (Week 4)
+## Phase 5 - RBAC (Week 4)
 
 **Goal:** Roles, permissions, guards.
 
@@ -1923,13 +1923,13 @@ cd backend && npx prisma init
 - `shared/permissions/permission.service.ts`
 - `shared/permissions/permissions.guard.ts`
 - `user-management/` module
-- `seed.ts` — 12 roles + permission matrix
+- `seed.ts` - 12 roles + permission matrix
 
 **Concepts:** Authorization vs authentication, decorator metadata (`@RequirePermission`).
 
 ---
 
-## Phase 6 — Frontend Auth Shell (Week 5)
+## Phase 6 - Frontend Auth Shell (Week 5)
 
 **Goal:** Login page, protected dashboard, token refresh.
 
@@ -1945,7 +1945,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 7 — Core Foundation APIs (Weeks 6–8)
+## Phase 7 - Core Foundation APIs (Weeks 6–8)
 
 **Goal:** Company setup, audit, notifications, documents.
 
@@ -1960,7 +1960,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 8 — Project CRUD (Weeks 9–10)
+## Phase 8 - Project CRUD (Weeks 9–10)
 
 **Goal:** Project portfolio + team.
 
@@ -1975,7 +1975,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 9 — Schedule & Site Ops (Weeks 11–14)
+## Phase 9 - Schedule & Site Ops (Weeks 11–14)
 
 **Goal:** Tasks, RFIs, issues, daily logs, meetings, etc.
 
@@ -1992,7 +1992,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 10 — EPC Workflow (Weeks 15–20+)
+## Phase 10 - EPC Workflow (Weeks 15–20+)
 
 **Goal:** Engineering document control.
 
@@ -2009,7 +2009,7 @@ cd backend && npx prisma init
 
 ---
 
-## Phase 11 — Production Hardening
+## Phase 11 - Production Hardening
 
 - Rate limiting in production
 - HTTPS ingress
@@ -2077,7 +2077,7 @@ cd backend && npx prisma init
 
 ---
 
-# Appendix A — Key File Reference
+# Appendix A - Key File Reference
 
 | Purpose | Path |
 |---------|------|
@@ -2099,27 +2099,27 @@ cd backend && npx prisma init
 
 ---
 
-# Appendix B — Glossary (Construction + Software)
+# Appendix B - Glossary (Construction + Software)
 
 | Term | Meaning |
 |------|---------|
-| **ERP** | Enterprise Resource Planning — integrated business software |
-| **RFI** | Request for Information — formal question during construction |
+| **ERP** | Enterprise Resource Planning - integrated business software |
+| **RFI** | Request for Information - formal question during construction |
 | **Submittal** | Documents submitted for approval (shop drawings, samples) |
-| **EDV** | Engineering Document Version — controlled engineering file revision |
-| **EPC** | Engineering, Procurement, Construction — project delivery model |
+| **EDV** | Engineering Document Version - controlled engineering file revision |
+| **EPC** | Engineering, Procurement, Construction - project delivery model |
 | **Punch list** | Snag list of defects before handover |
 | **Closeout** | Final project handover phase |
 | **RBAC** | Role-Based Access Control |
-| **JWT** | JSON Web Token — signed credential |
-| **DTO** | Data Transfer Object — validated API input/output shape |
-| **ORM** | Object-Relational Mapping — Prisma |
+| **JWT** | JSON Web Token - signed credential |
+| **DTO** | Data Transfer Object - validated API input/output shape |
+| **ORM** | Object-Relational Mapping - Prisma |
 | **CQRS** | Command Query Responsibility Segregation |
 | **Tenant** | One company's isolated data in multi-tenant SaaS |
 
 ---
 
-# Appendix C — Running the System Locally
+# Appendix C - Running the System Locally
 
 ```bash
 # 1. Start infrastructure

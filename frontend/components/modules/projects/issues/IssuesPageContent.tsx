@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -88,7 +88,7 @@ function IssueFormDrawer({
     () =>
       (disciplinesQuery.data ?? []).map((row) => ({
         value: row.id,
-        label: `${row.taskName} — ${row.disciplineName}`,
+        label: `${row.taskName} - ${row.disciplineName}`,
       })),
     [disciplinesQuery.data],
   );
@@ -238,7 +238,7 @@ export default function IssuesPageContent({
         title: 'Location',
         dataIndex: 'location',
         key: 'location',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Severity',
@@ -267,7 +267,7 @@ export default function IssuesPageContent({
         dataIndex: 'assignedTo',
         key: 'assignedTo',
         render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '—',
+          userId ? resolveUserName(userId) : '-',
       },
       {
         title: 'Due',
@@ -328,7 +328,7 @@ export default function IssuesPageContent({
             showIcon
             className="!mb-4"
             title="Issue APIs are not connected yet."
-            description="This page is ready —data will appear when the project management backend module is available."
+            description="This page is ready -data will appear when the project management backend module is available."
           />
         )}
 

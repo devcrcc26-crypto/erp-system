@@ -1,13 +1,8 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
-import {
-  CalendarOutlined,
-  FlagOutlined,
-  LineChartOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined, FlagOutlined } from '@ant-design/icons';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
@@ -34,24 +29,13 @@ export default function ScheduleKpiBar({
         : tokens.colorRed50;
 
   return (
-    <section className={`${layout.cardGrid} grid-cols-2 xl:grid-cols-4`}>
-      <KPICard
-        label="Planned progress"
-        value={
-          metrics.plannedProgressPct !== null
-            ? `${metrics.plannedProgressPct}%`
-            : '—'
-        }
-        icon={LineChartOutlined}
-        iconBg={tokens.colorBlue50}
-        iconColor={tokens.colorBlue400}
-      />
+    <section className={`${layout.cardGrid} grid-cols-2`}>
       <KPICard
         label="Actual progress"
         value={
           metrics.actualProgressPct !== null
             ? `${metrics.actualProgressPct}%`
-            : '—'
+            : '-'
         }
         icon={CalendarOutlined}
         iconBg={tokens.colorGreen50}
@@ -63,13 +47,6 @@ export default function ScheduleKpiBar({
         icon={FlagOutlined}
         iconBg={varianceIconBg}
         iconColor={varianceIconColor}
-      />
-      <KPICard
-        label="Critical tasks"
-        value={String(metrics.criticalCount)}
-        icon={WarningOutlined}
-        iconBg={tokens.colorRed50}
-        iconColor={tokens.colorRed600}
       />
     </section>
   );

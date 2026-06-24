@@ -24,7 +24,7 @@ export class DocumentNumberService {
 
   /**
    * Returns the next formatted document number from the PostgreSQL sequence.
-   * @param documentType — one of {@link SUPPORTED_DOCUMENT_TYPES} (must exist in `number_series` for the company)
+   * @param documentType - one of {@link SUPPORTED_DOCUMENT_TYPES} (must exist in `number_series` for the company)
    */
   async getNextNumber(ctx: PmContext, documentType: string): Promise<string> {
     const series = await this.prisma.numberSeries.findFirst({

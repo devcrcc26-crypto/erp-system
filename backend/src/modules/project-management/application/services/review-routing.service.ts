@@ -14,7 +14,7 @@ export interface ReviewRoutingResult {
 }
 
 /**
- * Routes review comments by severity — MINOR stays at tier, MAJOR escalates.
+ * Routes review comments by severity - MINOR stays at tier, MAJOR escalates.
  */
 @Injectable()
 export class ReviewRoutingService {
@@ -43,7 +43,7 @@ export class ReviewRoutingService {
       };
     }
 
-    // MAJOR — escalate to next governance tier when possible
+    // MAJOR - escalate to next governance tier when possible
     const tierOrder: ReviewTier[] = [
       ReviewTier.DISCIPLINE_OWNER,
       ReviewTier.REVIEWER,

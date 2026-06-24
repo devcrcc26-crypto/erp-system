@@ -14,7 +14,7 @@ export interface EdvTransitionResult {
   readonly message?: string;
 }
 
-/** Explicit allowed transitions — linear lockstep v1. */
+/** Explicit allowed transitions - linear lockstep v1. */
 const ALLOWED_EDV_TRANSITIONS: Readonly<
   Record<EdvStatus, readonly EdvStatus[]>
 > = {
@@ -89,7 +89,7 @@ export function canTransitionEdvStatus(
 }
 
 /**
- * Applies a validated transition — throws if invalid.
+ * Applies a validated transition - throws if invalid.
  */
 export function transitionEdvStatus(
   from: EdvStatus,

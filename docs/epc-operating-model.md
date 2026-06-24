@@ -2,25 +2,25 @@
 
 ## Domain boundaries
 
-- **Layer 1 — File (Core Foundation):** `Document`, `DocumentVersion`, `DocumentFolder` — storage + versioning only; no engineering workflow state
-- **Layer 2 — Engineering (PM register):** `EngineeringDocument`, `EngineeringDocumentVersion`, `DesignPackage`, `DesignPackageItem`, `DesignPackageDependency`, `TaskDiscipline` — meaning, discipline ownership, package grouping
-- **Layer 3 — Workflow (PM orchestration):** `ReviewSession`, `ReviewComment`, `ReviewContextSnapshot`, `Submittal`, `WorkflowEventLog`, `RFI`, `Issue`, `ChangeRequest` — approvals, loops, external boundary
-- **Writable lifecycle authority:** `EngineeringDocumentVersion.status` only — via `WorkflowKernel` / write gate
-- **Derived aggregates (never direct write):** `DesignPackage.projectedStatus`, `TaskDiscipline.projectedStatus` — Phase B projection only
-- **Ephemeral session state:** `ReviewSession`, `ReviewComment` — not authoritative for EDV lifecycle
-- **External boundary:** `Submittal`, `SubmittalReview`, client-recorded responses — trigger-only; never mutates internal EDV status
+- **Layer 1 - File (Core Foundation):** `Document`, `DocumentVersion`, `DocumentFolder` - storage + versioning only; no engineering workflow state
+- **Layer 2 - Engineering (PM register):** `EngineeringDocument`, `EngineeringDocumentVersion`, `DesignPackage`, `DesignPackageItem`, `DesignPackageDependency`, `TaskDiscipline` - meaning, discipline ownership, package grouping
+- **Layer 3 - Workflow (PM orchestration):** `ReviewSession`, `ReviewComment`, `ReviewContextSnapshot`, `Submittal`, `WorkflowEventLog`, `RFI`, `Issue`, `ChangeRequest` - approvals, loops, external boundary
+- **Writable lifecycle authority:** `EngineeringDocumentVersion.status` only - via `WorkflowKernel` / write gate
+- **Derived aggregates (never direct write):** `DesignPackage.projectedStatus`, `TaskDiscipline.projectedStatus` - Phase B projection only
+- **Ephemeral session state:** `ReviewSession`, `ReviewComment` - not authoritative for EDV lifecycle
+- **External boundary:** `Submittal`, `SubmittalReview`, client-recorded responses - trigger-only; never mutates internal EDV status
 
 ## Work structure
 
 - `TaskDiscipline` → `DesignPackage` → `EngineeringDocumentVersion` → Review → Submittal
-- One workflow lifecycle for all `EngineeringDocumentType` values — type affects metadata only
+- One workflow lifecycle for all `EngineeringDocumentType` values - type affects metadata only
 
 ## Role layers
 
-- **Production:** Designer, **Discipline Owner**, Reviewer, Discipline Lead — create, check, discipline sign-off
-- **Control:** Department Chief Engineer — governance, risk acceptance, lock authorization
-- **Execution:** Project Manager, Dispatcher, Planning Engineer, Site Coordinator, Client Consultant — WBS, assignment, milestones, site/consultant RFIs
-- **Logistics:** Document Controller, Deputy Chief Engineer — file hygiene, submittal packaging
+- **Production:** Designer, **Discipline Owner**, Reviewer, Discipline Lead - create, check, discipline sign-off
+- **Control:** Department Chief Engineer - governance, risk acceptance, lock authorization
+- **Execution:** Project Manager, Dispatcher, Planning Engineer, Site Coordinator, Client Consultant - WBS, assignment, milestones, site/consultant RFIs
+- **Logistics:** Document Controller, Deputy Chief Engineer - file hygiene, submittal packaging
 
 ## Review tier chain
 

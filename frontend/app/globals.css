@@ -42,7 +42,7 @@ body {
   background-color: var(--color-page-bg);
 }
 
-/* Ant Design sidebar — teal active accent */
+/* Ant Design sidebar - teal active accent */
 .erp-sidebar-menu.ant-menu .ant-menu-item {
   margin: 0;
   width: 100%;
@@ -60,7 +60,7 @@ body {
   color: var(--color-text-primary) !important;
 }
 
-/* Project workspace sidebar — grouped engineering nav */
+/* Project workspace sidebar - grouped engineering nav */
 .erp-project-sidebar-menu.ant-menu {
   padding: 4px 8px 12px;
   border-inline-end: none !important;
@@ -142,7 +142,7 @@ body {
   color: var(--color-teal-600) !important;
 }
 
-/* Drawer shell — design system slide-over */
+/* Drawer shell - design system slide-over */
 .erp-detail-drawer .ant-drawer-header {
   flex-shrink: 0;
 }
@@ -306,7 +306,7 @@ body {
   padding: 16px;
 }
 
-/* Hide scrollbars app-wide — scrolling still works via touch, trackpad, wheel */
+/* Hide scrollbars app-wide - scrolling still works via touch, trackpad, wheel */
 html,
 body,
 main,
@@ -352,7 +352,7 @@ main::-webkit-scrollbar,
   -webkit-overflow-scrolling: touch;
 }
 
-/* Shell breadcrumb — Ant Design trail in main header */
+/* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: calc(13px * var(--erp-font-scale));
   font-weight: 400;
@@ -391,7 +391,7 @@ main::-webkit-scrollbar,
   color: var(--color-text-primary) !important;
 }
 
-/* Shell nav links — override Ant Design / browser default blue */
+/* Shell nav links - override Ant Design / browser default blue */
 .shell-context-sidebar a {
   text-decoration: none;
 }
@@ -404,7 +404,7 @@ main::-webkit-scrollbar,
   color: var(--color-text-primary);
 }
 
-/* ── ERP data table — design system ── */
+/* ── ERP data table - design system ── */
 
 .erp-data-table .ant-table-thead > tr > th {
   background: var(--color-surface-secondary) !important;
@@ -466,7 +466,7 @@ main::-webkit-scrollbar,
   min-width: 0;
 }
 
-/* Gantt horizontal scroll — edge hint when scrollbars are hidden */
+/* Gantt horizontal scroll - edge hint when scrollbars are hidden */
 .erp-gantt-scroll {
   -webkit-overflow-scrolling: touch;
   background:
@@ -495,7 +495,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Drawer forms — stack fields on narrow screens */
+/* Drawer forms - stack fields on narrow screens */
 @media (max-width: 767px) {
   .erp-drawer-form .ant-picker,
   .erp-drawer-form .ant-select,

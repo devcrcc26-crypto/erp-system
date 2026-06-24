@@ -10,7 +10,7 @@ export interface WorkflowCommandBase {
   readonly idempotencyKey?: string;
 }
 
-/** Phase A + B — EDV status transition via write gate. */
+/** Phase A + B - EDV status transition via write gate. */
 export interface TransitionEdvStatusCommand extends WorkflowCommandBase {
   readonly type: 'TransitionEdvStatus';
   readonly engineeringDocumentVersionId: string;
@@ -18,14 +18,14 @@ export interface TransitionEdvStatusCommand extends WorkflowCommandBase {
   readonly reason?: string;
 }
 
-/** Phase A + B — open ReviewSession + ReviewContextSnapshot. */
+/** Phase A + B - open ReviewSession + ReviewContextSnapshot. */
 export interface SubmitPackageForReviewCommand extends WorkflowCommandBase {
   readonly type: 'SubmitPackageForReview';
   readonly designPackageId: string;
   readonly taskDisciplineId: string;
 }
 
-/** Comment state machine — session-scoped. */
+/** Comment state machine - session-scoped. */
 export interface AddReviewCommentCommand extends WorkflowCommandBase {
   readonly type: 'AddReviewComment';
   readonly reviewSessionId: string;
@@ -76,7 +76,7 @@ export interface ReturnPackageForReworkCommand extends WorkflowCommandBase {
   readonly reason: string;
 }
 
-/** v1: one tx per package unit — all-or-nothing. */
+/** v1: one tx per package unit - all-or-nothing. */
 export interface BatchApproveEdvsCommand extends WorkflowCommandBase {
   readonly type: 'BatchApproveEdvs';
   readonly designPackageId: string;
@@ -92,7 +92,7 @@ export interface BatchReturnEdvsCommand extends WorkflowCommandBase {
   readonly commentTemplate: string;
 }
 
-/** Lock all EDVs in package after governance — TransitionEdvStatus(LOCKED) per EDV. */
+/** Lock all EDVs in package after governance - TransitionEdvStatus(LOCKED) per EDV. */
 export interface LockPackageEdvsCommand extends WorkflowCommandBase {
   readonly type: 'LockPackageEdvs';
   readonly designPackageId: string;
@@ -125,7 +125,7 @@ export interface AddSubmittalItemsCommand extends WorkflowCommandBase {
   readonly designPackageIds: readonly string[];
 }
 
-/** External boundary trigger — creates internal revision loop. */
+/** External boundary trigger - creates internal revision loop. */
 export interface TriggerRevisionCommand extends WorkflowCommandBase {
   readonly type: 'TriggerRevision';
   readonly engineeringDocumentId: string;

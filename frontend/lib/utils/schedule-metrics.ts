@@ -324,7 +324,7 @@ export function getGanttBarLayout(
 
 export function formatScheduleVariance(value: number | null): string {
   if (value === null) {
-    return '—';
+    return '-';
   }
   const prefix = value > 0 ? '+' : '';
   return `${prefix}${value}%`;

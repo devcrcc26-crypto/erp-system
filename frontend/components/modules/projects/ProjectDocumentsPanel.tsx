@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -178,7 +178,7 @@ export default function ProjectDocumentsPanel({
     <div className={layout.pageStack}>
       <FormLayout
         title="Project documents"
-        description="All files uploaded across this project — daily logs, meetings, RFIs, punch items, and the project repository."
+        description="All files uploaded across this project - daily logs, meetings, RFIs, punch items, and the project repository."
         extra={
           folderId ? (
             <Upload

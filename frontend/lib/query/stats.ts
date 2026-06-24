@@ -13,14 +13,14 @@ export interface DashboardStats {
 
 function formatCount(value: number | null): string {
   if (value === null) {
-    return '—';
+    return '-';
   }
   return value.toLocaleString();
 }
 
 function formatPercent(value: number | null): string {
   if (value === null) {
-    return '—';
+    return '-';
   }
   return `${value}%`;
 }
@@ -41,7 +41,7 @@ async function fetchCompletionRate(): Promise<number | null> {
   }
 }
 
-/** Portfolio KPIs — project counts from PM API; team/completion from core APIs when permitted. */
+/** Portfolio KPIs - project counts from PM API; team/completion from core APIs when permitted. */
 async function fetchDashboardStats(): Promise<DashboardStats> {
   const [projects, activeProjects, teamMembers, completionRate] = await Promise.all([
     silentPaginatedTotal('/projects'),

@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -6,8 +6,8 @@ import { useEffect } from 'react';
 import {
   Button,
   Checkbox,
+  Collapse,
   DatePicker,
-  Divider,
   Drawer,
   Form,
   Input,
@@ -403,71 +403,83 @@ export default function TaskFormDrawer({
           <Checkbox>Critical path task</Checkbox>
         </Form.Item>
 
-        <Divider titlePlacement="left">Extended Fields</Divider>
-
-        <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
-          <Form.Item label="Urgency" name="urgencyLevel">
-            <Select options={URGENCY_OPTIONS} />
-          </Form.Item>
-          <Form.Item label="Language" name="language">
-            <Select options={LANGUAGE_OPTIONS} />
-          </Form.Item>
-          <Form.Item label="Approval level" name="approvalLevel">
-            <Select allowClear options={APPROVAL_LEVEL_OPTIONS} />
-          </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Design stage" name="designStage">
-            <Input />
-          </Form.Item>
-          <Form.Item label="Commissioning method" name="commissioningMethod">
-            <Input />
-          </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="On-site receiving time" name="onSiteReceivingTime">
-            <DatePicker className="w-full" showTime />
-          </Form.Item>
-          <Form.Item label="Assignment to HQ time" name="assignmentToHqTime">
-            <DatePicker className="w-full" showTime />
-          </Form.Item>
-        </div>
-        <Form.Item label="Contact form number" name="contactFormNumber">
-          <Input />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label="Requires archiving"
-            name="requiresArchiving"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
-          <Form.Item
-            label="Custom schedule"
-            name="hasCustomSchedule"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
-        </div>
-        <Form.Item label="Task attributes" name="taskAttributes">
-          <Input />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Actual completion time" name="actualCompletionTime">
-            <DatePicker className="w-full" showTime />
-          </Form.Item>
-          <Form.Item label="Actual workdays" name="actualWorkdays">
-            <InputNumber className="!w-full" min={0} />
-          </Form.Item>
-        </div>
-        <Form.Item label="Completion status" name="completionStatus">
-          <Select allowClear options={COMPLETION_STATUS_OPTIONS} />
-        </Form.Item>
-        <Form.Item label="Remark" name="remark">
-          <Input.TextArea rows={2} />
-        </Form.Item>
+        <Collapse
+          bordered={false}
+          className="erp-schedule-collapse bg-transparent"
+          items={[
+            {
+              key: 'extended',
+              label: 'Advanced options',
+              children: (
+                <>
+                  <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
+                    <Form.Item label="Urgency" name="urgencyLevel">
+                      <Select options={URGENCY_OPTIONS} />
+                    </Form.Item>
+                    <Form.Item label="Language" name="language">
+                      <Select options={LANGUAGE_OPTIONS} />
+                    </Form.Item>
+                    <Form.Item label="Approval level" name="approvalLevel">
+                      <Select allowClear options={APPROVAL_LEVEL_OPTIONS} />
+                    </Form.Item>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                    <Form.Item label="Design stage" name="designStage">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="Commissioning method" name="commissioningMethod">
+                      <Input />
+                    </Form.Item>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                    <Form.Item label="On-site receiving time" name="onSiteReceivingTime">
+                      <DatePicker className="w-full" showTime />
+                    </Form.Item>
+                    <Form.Item label="Assignment to HQ time" name="assignmentToHqTime">
+                      <DatePicker className="w-full" showTime />
+                    </Form.Item>
+                  </div>
+                  <Form.Item label="Contact form number" name="contactFormNumber">
+                    <Input />
+                  </Form.Item>
+                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                    <Form.Item
+                      label="Requires archiving"
+                      name="requiresArchiving"
+                      valuePropName="checked"
+                    >
+                      <Switch />
+                    </Form.Item>
+                    <Form.Item
+                      label="Custom schedule"
+                      name="hasCustomSchedule"
+                      valuePropName="checked"
+                    >
+                      <Switch />
+                    </Form.Item>
+                  </div>
+                  <Form.Item label="Task attributes" name="taskAttributes">
+                    <Input />
+                  </Form.Item>
+                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                    <Form.Item label="Actual completion time" name="actualCompletionTime">
+                      <DatePicker className="w-full" showTime />
+                    </Form.Item>
+                    <Form.Item label="Actual workdays" name="actualWorkdays">
+                      <InputNumber className="!w-full" min={0} />
+                    </Form.Item>
+                  </div>
+                  <Form.Item label="Completion status" name="completionStatus">
+                    <Select allowClear options={COMPLETION_STATUS_OPTIONS} />
+                  </Form.Item>
+                  <Form.Item label="Remark" name="remark">
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                </>
+              ),
+            },
+          ]}
+        />
 
         <div className="flex justify-end gap-3 pt-2">
           <Button onClick={onClose}>Cancel</Button>

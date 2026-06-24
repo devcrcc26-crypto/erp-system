@@ -1,4 +1,4 @@
-# Project Management Module — Developer Study Guide
+# Project Management Module - Developer Study Guide
 
 This guide explains how the **Project Management (PM)** module works in this codebase: where to click in the UI, which files implement each feature, how screens connect, how roles affect access, and how data flows from browser to database.
 
@@ -37,7 +37,7 @@ All data is **company-scoped** (`company_id` from JWT). Project sub-resources ar
 
 | Entity | Role in the module |
 |--------|-------------------|
-| `Project` | Root record — code, name, status, dates, budget |
+| `Project` | Root record - code, name, status, dates, budget |
 | `ProjectTeam` | Users assigned to a project with a role |
 | `Milestone` / `Task` / `TaskDependency` | Schedule programme |
 | `Rfi` / `RfiResponse` | Formal questions and answers |
@@ -79,7 +79,7 @@ Projects (Portfolio)
 │   ├── Issues                      → issues / defects
 │   ├── Punch List                  → punch items
 │   └── Closeout                    → checklist and status
-└── Reports (global)                → /reports (placeholder — not PM-specific yet)
+└── Reports (global)                → /reports (placeholder - not PM-specific yet)
 ```
 
 ### How features relate
@@ -116,7 +116,7 @@ All PM pages use the **dashboard layout**: `frontend/app/(dashboard)/layout.tsx`
 ### Global (portfolio-level)
 
 ```text
-Projects — List
+Projects - List
 ├── Route:        /projects
 ├── Page file:    frontend/app/(dashboard)/projects/page.tsx
 ├── Component:    frontend/components/modules/projects/ProjectsPageContent.tsx
@@ -124,7 +124,7 @@ Projects — List
 ├── Sidebar:      AppShell → "Projects" (href /projects)
 └── Opens from:   Sidebar, breadcrumb from project shell
 
-Kanban Board — Portfolio
+Kanban Board - Portfolio
 ├── Route:        /kanban-board
 ├── Page file:    frontend/app/(dashboard)/kanban-board/page.tsx
 ├── Component:    frontend/components/modules/projects/PortfolioKanbanPageContent.tsx
@@ -196,14 +196,14 @@ AppShell Sidebar
 
 ### 3.1 Project List (`/projects`)
 
-**Purpose:** Company-wide portfolio — search, filter by status, paginate, create and edit projects.
+**Purpose:** Company-wide portfolio - search, filter by status, paginate, create and edit projects.
 
 **How user reaches it:** Sidebar → Projects.
 
 **Main components:**
-- `ProjectsPageContent` — page orchestration
-- `DataTable` — project grid
-- `ProjectFormDrawer` — create/edit form
+- `ProjectsPageContent` - page orchestration
+- `DataTable` - project grid
+- `ProjectFormDrawer` - create/edit form
 - `StatusBadge`, `FormLayout`, `PlaceholderPage`
 
 **Data displayed:** `projectCode`, `name`, `projectType`, `status`, `plannedFinishDate`, `budget`, `location`
@@ -261,7 +261,7 @@ PortfolioKanbanPageContent
 
 ### 3.3 Project Dashboard (`/projects/[id]`)
 
-**Purpose:** Single-project home — KPIs, schedule variance, quick links to RFIs/Issues/Documents.
+**Purpose:** Single-project home - KPIs, schedule variance, quick links to RFIs/Issues/Documents.
 
 **Main components:** `ProjectDashboard`, `KPICard`, `FormLayout`
 
@@ -324,7 +324,7 @@ Demo seed creates one folder per project with 3 PDFs (`backend/prisma/seed-pm-de
 
 ### 3.6 Schedule (`/projects/[id]/schedule`)
 
-**Purpose:** Programme management — Gantt, task list, milestones, calendar.
+**Purpose:** Programme management - Gantt, task list, milestones, calendar.
 
 **Tabs inside page:** Gantt | Tasks | Milestones | Calendar (`SchedulePageContent`)
 
@@ -526,18 +526,18 @@ Schedule KPI bar + Gantt bar fill + Dashboard metrics reflect new average
 ```
 
 `computeScheduleMetrics()` in `frontend/lib/utils/schedule-metrics.ts` calculates:
-- `actualProgressPct` — average of task `progressPct`
-- `plannedProgressPct` — time-based expected progress from start/finish dates
-- `scheduleVariancePct` — actual minus planned
+- `actualProgressPct` - average of task `progressPct`
+- `plannedProgressPct` - time-based expected progress from start/finish dates
+- `scheduleVariancePct` - actual minus planned
 
 ---
 
 ### 4.8 Generate Report
 
 **Implemented today:**
-- **Project Dashboard stats** — `GET /projects/:id/dashboard` (counts + progress)
-- **Schedule KPI bar** — client-side from tasks
-- **Portfolio Kanban** — visual status distribution
+- **Project Dashboard stats** - `GET /projects/:id/dashboard` (counts + progress)
+- **Schedule KPI bar** - client-side from tasks
+- **Portfolio Kanban** - visual status distribution
 
 **Not implemented:**
 - `/reports` page is a placeholder
@@ -551,7 +551,7 @@ User opens /projects/[id] (Dashboard)
         ↓
 useProjectDashboardStats(projectId)
         ↓
-ProjectsService.getDashboardStats — aggregates open RFIs, issues, punch, submittals, task progress
+ProjectsService.getDashboardStats - aggregates open RFIs, issues, punch, submittals, task progress
         ↓
 KPICard grid displays metrics
 ```
@@ -569,13 +569,13 @@ For a future report export, you would extend `backend/src/modules/reporting/` an
 | **System Administrator** | Full access to all modules including all PM permissions |
 | **Managing Director** | Full CRUD on all 12 PM permission modules |
 | **Project Manager** | Full CRUD on all 12 PM permission modules |
-| **Site Engineer** | `projects`, `schedule`, `rfis`, `daily_logs`, `issues`, `punch_items`, `risks` — view/create/edit (no delete) |
-| **Document Controller** | `projects`, `submittals`, `drawings`, `correspondence` — view/create/edit (no delete) |
-| **Safety Officer** | `projects`, `risks`, `issues`, `daily_logs` — view/create/edit (no delete) |
+| **Site Engineer** | `projects`, `schedule`, `rfis`, `daily_logs`, `issues`, `punch_items`, `risks` - view/create/edit (no delete) |
+| **Document Controller** | `projects`, `submittals`, `drawings`, `correspondence` - view/create/edit (no delete) |
+| **Safety Officer** | `projects`, `risks`, `issues`, `daily_logs` - view/create/edit (no delete) |
 | **Employee** | View-only on all PM modules |
 | Finance, HR, Procurement, etc. | No PM permissions in seed (unless custom roles added) |
 
-Demo users in `seed-pm-demo.ts`: `pm@`, `engineer@`, `safety@`, `docs@` company.local — same password as admin.
+Demo users in `seed-pm-demo.ts`: `pm@`, `engineer@`, `safety@`, `docs@` company.local - same password as admin.
 
 ### Permission modules (backend)
 
@@ -588,29 +588,29 @@ Actions: `view`, `create`, `edit`, `delete`
 ### What menu items each role sees
 
 Sidebar PM entries (from `AppShell.tsx`):
-- **Projects** — all authenticated users (API may 403)
-- **Kanban Board** — all authenticated users
+- **Projects** - all authenticated users (API may 403)
+- **Kanban Board** - all authenticated users
 
-**Project tabs** — visible to all users who can open a project; API enforces per submodule.
+**Project tabs** - visible to all users who can open a project; API enforces per submodule.
 
 ### Permission matrix (seed defaults)
 
-Legend: **V** view, **C** create, **E** edit, **D** delete, **—** none
+Legend: **V** view, **C** create, **E** edit, **D** delete, **-** none
 
 | Module | Sys Admin / MD / PM | Site Engineer | Doc Controller | Safety Officer | Employee |
 |--------|---------------------|---------------|----------------|--------------|----------|
 | projects | V C E D | V C E | V C E | V C E | V |
-| schedule | V C E D | V C E | — | — | V |
-| rfis | V C E D | V C E | — | — | V |
-| submittals | V C E D | — | V C E | — | V |
-| drawings | V C E D | — | V C E | — | V |
-| daily_logs | V C E D | V C E | — | V C E | V |
-| meetings | V C E D | — | — | — | V |
-| correspondence | V C E D | — | V C E | — | V |
-| risks | V C E D | V C E | — | V C E | V |
-| issues | V C E D | V C E | — | V C E | V |
-| punch_items | V C E D | V C E | — | — | V |
-| closeout | V C E D | — | — | — | V |
+| schedule | V C E D | V C E | - | - | V |
+| rfis | V C E D | V C E | - | - | V |
+| submittals | V C E D | - | V C E | - | V |
+| drawings | V C E D | - | V C E | - | V |
+| daily_logs | V C E D | V C E | - | V C E | V |
+| meetings | V C E D | - | - | - | V |
+| correspondence | V C E D | - | V C E | - | V |
+| risks | V C E D | V C E | - | V C E | V |
+| issues | V C E D | V C E | - | V C E | V |
+| punch_items | V C E D | V C E | - | - | V |
+| closeout | V C E D | - | - | - | V |
 
 **Documents** (project files tab) uses the **`documents`** permission module (Core Foundation), not PM modules. Admin has full access; others need `documents.view` / `documents.create`.
 
@@ -618,7 +618,7 @@ Legend: **V** view, **C** create, **E** edit, **D** delete, **—** none
 
 | Layer | Behavior |
 |-------|----------|
-| `middleware.ts` | JWT cookie only — no RBAC |
+| `middleware.ts` | JWT cookie only - no RBAC |
 | `fetchPmCapabilities()` | Probes endpoints; sets `canView` only |
 | Most PM pages | Rely on API 403 + error UI |
 | `ProjectDocumentsPanel` | Explicit 403 message |
@@ -628,7 +628,7 @@ Legend: **V** view, **C** create, **E** edit, **D** delete, **—** none
 
 ## 6. File-by-File Module Analysis
 
-### 6.1 Frontend — App routes
+### 6.1 Frontend - App routes
 
 | File | Purpose | Imported by | Depends on |
 |------|---------|-------------|------------|
@@ -642,7 +642,7 @@ Legend: **V** view, **C** create, **E** edit, **D** delete, **—** none
 
 ---
 
-### 6.2 Frontend — Core PM components
+### 6.2 Frontend - Core PM components
 
 | File | Purpose | Key exports | Depends on |
 |------|---------|-------------|------------|
@@ -654,11 +654,11 @@ Legend: **V** view, **C** create, **E** edit, **D** delete, **—** none
 | `ProjectDocumentsPanel.tsx` | Resolve project folder, show files | default | `useProjectDocumentFolder` |
 | `PortfolioKanbanPageContent.tsx` | Status columns | default | `useAllProjects` |
 | `KanbanColumn.tsx` | Single kanban column | default | `ProjectKanbanCard` |
-| `ProjectKanbanCard.tsx` | Project card UI | default | — |
+| `ProjectKanbanCard.tsx` | Project card UI | default | - |
 
 ---
 
-### 6.3 Frontend — Submodule components (pattern)
+### 6.3 Frontend - Submodule components (pattern)
 
 Each `*PageContent.tsx`:
 - Owns list state (page, filters, selected row)
@@ -669,16 +669,16 @@ Each `*PageContent.tsx`:
 Detail drawers (`*DetailDrawer.tsx`): fetch single record + child records (responses, reviews, versions).
 
 Schedule subdirectory:
-- `SchedulePageContent.tsx` — tab orchestration
-- `ScheduleGantt.tsx` — Gantt timeline UI
-- `TasksPanel.tsx` — task table + `TaskFormDrawer`
-- `MilestonesPanel.tsx` — milestone table + form drawer
-- `ScheduleCalendar.tsx` — month/year calendar
-- `ScheduleKpiBar.tsx` — metric cards
+- `SchedulePageContent.tsx` - tab orchestration
+- `ScheduleGantt.tsx` - Gantt timeline UI
+- `TasksPanel.tsx` - task table + `TaskFormDrawer`
+- `MilestonesPanel.tsx` - milestone table + form drawer
+- `ScheduleCalendar.tsx` - month/year calendar
+- `ScheduleKpiBar.tsx` - metric cards
 
 ---
 
-### 6.4 Frontend — Query layer (`lib/query/`)
+### 6.4 Frontend - Query layer (`lib/query/`)
 
 | File | Purpose | Key hooks | API prefix |
 |------|---------|-----------|------------|
@@ -694,7 +694,7 @@ Schedule subdirectory:
 | `issues.ts` | Issues | similar pattern | `/projects/:id/issues` |
 | `punch-items.ts` | Punch items | similar pattern | `/projects/:id/punch-items` |
 | `closeout.ts` | Closeout | similar pattern | `/projects/:id/closeout` |
-| `pm-query-utils.ts` | `projectPath()`, `toQueryString()` | — | — |
+| `pm-query-utils.ts` | `projectPath()`, `toQueryString()` | - | - |
 | `documents.ts` | Project folder resolution | `useProjectDocumentFolder`, `useFolderDocuments` | `/document-folders` |
 
 **Cache keys pattern:** `['pm', 'projects', ...]` or `['pm', 'schedule', projectId, ...]`
@@ -703,7 +703,7 @@ Schedule subdirectory:
 
 ---
 
-### 6.5 Frontend — Supporting files
+### 6.5 Frontend - Supporting files
 
 | File | Purpose |
 |------|---------|
@@ -721,7 +721,7 @@ Schedule subdirectory:
 
 ---
 
-### 6.6 Backend — Module entry
+### 6.6 Backend - Module entry
 
 | File | Purpose |
 |------|---------|
@@ -731,7 +731,7 @@ Registered in `backend/src/app.module.ts` as `ProjectManagementModule`.
 
 ---
 
-### 6.7 Backend — Controllers (presentation)
+### 6.7 Backend - Controllers (presentation)
 
 Each controller:
 - Path prefix under `@Controller('projects/:projectId/...')` except `ProjectsController` (`projects`)
@@ -758,12 +758,12 @@ Each controller:
 
 ---
 
-### 6.8 Backend — Services (application)
+### 6.8 Backend - Services (application)
 
 | File | Responsibility |
 |------|----------------|
 | `projects.service.ts` | Project CRUD, dashboard stats, team |
-| `project-scope.service.ts` | `getProjectOrThrow` — tenancy + existence |
+| `project-scope.service.ts` | `getProjectOrThrow` - tenancy + existence |
 | `schedule.service.ts` | Milestones, tasks, dependencies |
 | `rfis.service.ts` | RFIs + responses |
 | `submittals.service.ts` | Submittals + reviews |
@@ -781,7 +781,7 @@ Each controller:
 
 ---
 
-### 6.9 Backend — DTOs and utilities
+### 6.9 Backend - DTOs and utilities
 
 | File | Purpose |
 |------|---------|
@@ -827,7 +827,7 @@ ProjectsPageContent
 ProjectShell
 ├── Breadcrumb (Projects → project name)
 ├── Header card (code, name, StatusBadge, dates, budget, location)
-├── Tabs (14 links — router navigation via href)
+├── Tabs (14 links - router navigation via href)
 └── children → active tab page component
 ```
 
@@ -835,7 +835,7 @@ ProjectShell
 
 ```text
 SchedulePageContent
-├── ScheduleKpiBar (4× KPICard — task count, critical, progress, variance)
+├── ScheduleKpiBar (4× KPICard - task count, critical, progress, variance)
 └── Tabs (destroyOnHidden)
     ├── ScheduleGantt
     │   ├── Legend
@@ -885,7 +885,7 @@ RfisPageContent
 | Form state | **Ant Design Form** | All create/edit drawers |
 | Local UI state | **useState** | Drawer open, selected row, filters, active tab |
 
-**No React Context** for PM data. **No PM data in Zustand** (by design — TanStack Query owns server state).
+**No React Context** for PM data. **No PM data in Zustand** (by design - TanStack Query owns server state).
 
 ### Query client defaults
 
@@ -957,9 +957,9 @@ they call APIs and handle 401/403.
 ```text
 HTTP GET /api/projects/:projectId/{resource}?page=1&limit=20
         ↓
-JwtAuthGuard (APP_GUARD) — attach user to request
+JwtAuthGuard (APP_GUARD) - attach user to request
         ↓
-PermissionsGuard — check role permissions for module.view
+PermissionsGuard - check role permissions for module.view
         ↓
 {Module}Controller.list(projectId, query)
         ↓
@@ -979,7 +979,7 @@ buildPaginatedResult → ResponseEnvelopeInterceptor → { success, data, meta }
 ```text
 HTTP POST + JSON body (validated by ValidationPipe + DTO)
         ↓
-PermissionsGuard — module.create
+PermissionsGuard - module.create
         ↓
 Service.create*
         ↓
@@ -1009,7 +1009,7 @@ GET /document-folders?contextType=PROJECT&contextId={projectId}
         ↓
 DocumentService.listFolders (documents module)
         ↓
-Not in project-management module — separate DocumentsModule
+Not in project-management module - separate DocumentsModule
 ```
 
 ---
@@ -1026,8 +1026,8 @@ Not in project-management module — separate DocumentsModule
 | Report PDF generation | Not implemented (`/reports` is placeholder) |
 
 **Related (outside PM):**
-- `NotificationsModule` — unread count in header (`useUnreadNotificationCount`); not PM-event-driven yet
-- `DocumentNumberService` — synchronous sequence next-number on create (not queued)
+- `NotificationsModule` - unread count in header (`useUnreadNotificationCount`); not PM-event-driven yet
+- `DocumentNumberService` - synchronous sequence next-number on create (not queued)
 
 When adding async work later, follow `.cursorrules`: queue via BullMQ, processor in infrastructure layer.
 
@@ -1037,83 +1037,83 @@ When adding async work later, follow `.cursorrules`: queue via BullMQ, processor
 
 Study the module in this order. Each step builds on the previous.
 
-### Step 1 — Portfolio entry page
+### Step 1 - Portfolio entry page
 
 **Read:** `frontend/app/(dashboard)/projects/page.tsx` → `ProjectsPageContent.tsx`
 
 **Why:** Simplest end-to-end screen: list + create. Shows the standard DataTable + drawer + query hook pattern used everywhere.
 
-### Step 2 — Dashboard layout shell
+### Step 2 - Dashboard layout shell
 
 **Read:** `frontend/app/(dashboard)/layout.tsx` → `components/ui/AppShell/AppShell.tsx`
 
 **Why:** Understand sidebar links (`/projects`, `/kanban-board`) and where page titles come from.
 
-### Step 3 — Project shell and routing
+### Step 3 - Project shell and routing
 
 **Read:** `frontend/app/(dashboard)/projects/[projectId]/layout.tsx` → `ProjectShell.tsx`
 
 **Why:** All 14 project tabs share this layout. Learn tab definitions, `useProject`, and `project-context.store`.
 
-### Step 4 — Query layer for projects
+### Step 4 - Query layer for projects
 
 **Read:** `frontend/lib/query/projects.ts` → `frontend/lib/query/pm-query-utils.ts`
 
 **Why:** Establishes cache keys, pagination, and mutation invalidation conventions copied by all other `lib/query/*.ts` files.
 
-### Step 5 — Domain types and display helpers
+### Step 5 - Domain types and display helpers
 
 **Read:** `frontend/lib/api/project-management.types.ts` → `lib/utils/project-display.ts` → `lib/api/workflow.ts`
 
 **Why:** Every component imports these. Know enums (`ProjectStatus`, `TaskStatus`, etc.) before reading forms.
 
-### Step 6 — One full submodule (RFIs recommended)
+### Step 6 - One full submodule (RFIs recommended)
 
 **Read:** `RfisPageContent.tsx` → `RfiDetailDrawer.tsx` → `lib/query/rfis.ts`
 
 **Why:** Representative pattern: list, drawer, workflow stepper, nested responses. Other submodules copy this structure.
 
-### Step 7 — Schedule (most complex UI)
+### Step 7 - Schedule (most complex UI)
 
 **Read:** `SchedulePageContent.tsx` → `TasksPanel.tsx` → `ScheduleGantt.tsx` → `lib/query/schedule.ts` → `lib/utils/schedule-metrics.ts`
 
-**Why:** Multiple tabs, lazy queries, shared task data, Gantt math — hardest frontend area.
+**Why:** Multiple tabs, lazy queries, shared task data, Gantt math - hardest frontend area.
 
-### Step 8 — Project documents (cross-module)
+### Step 8 - Project documents (cross-module)
 
 **Read:** `ProjectDocumentsPanel.tsx` → `lib/query/documents.ts` → `DocumentAttachmentPanel.tsx`
 
 **Why:** Shows how PM integrates with Core Documents module via folder context.
 
-### Step 9 — Backend module registration
+### Step 9 - Backend module registration
 
 **Read:** `backend/src/modules/project-management/project-management.module.ts` → `backend/src/app.module.ts`
 
 **Why:** See all controllers and services in one place.
 
-### Step 10 — Backend projects vertical slice
+### Step 10 - Backend projects vertical slice
 
 **Read:** `projects.controller.ts` → `projects.service.ts` → `project-scope.service.ts` → `pm.dtos.ts` → `pm-mapper.util.ts`
 
 **Why:** Complete request path for the root entity. Other controllers mirror this.
 
-### Step 11 — Backend schedule vertical slice
+### Step 11 - Backend schedule vertical slice
 
 **Read:** `schedule.controller.ts` → `schedule.service.ts`
 
 **Why:** Nested resource under project; same scope checks as RFIs/issues.
 
-### Step 12 — Permissions and seed data
+### Step 12 - Permissions and seed data
 
 **Read:** `backend/prisma/seed.ts` (`PM_MODULES`, `pmPermissionFlags`) → `backend/prisma/seed-pm-demo.ts`
 
 **Why:** Understand which roles can do what and what demo data exists for local testing.
 
-### Step 13 — Supporting utilities
+### Step 13 - Supporting utilities
 
 **Read:** `document-number.service.ts`, `pm-pagination.util.ts`
 
-**Why:** Auto-numbering and safe sort fields — easy to miss but important for creates and lists.
+**Why:** Auto-numbering and safe sort fields - easy to miss but important for creates and lists.
 
 ---
 
@@ -1131,7 +1131,7 @@ End-to-end path a **Project Manager** takes with files and permissions at each s
 
 2. OPEN DASHBOARD (global)
    Route: / (or default after login)
-   Component: dashboard (reporting module — partial)
+   Component: dashboard (reporting module - partial)
    PM touchpoint: may show project counts via lib/query/stats.ts
 
 3. NAVIGATE TO PROJECTS
@@ -1205,7 +1205,7 @@ End-to-end path a **Project Manager** takes with files and permissions at each s
     Service: CloseoutService
 ```
 
-### Quick reference — route → backend service
+### Quick reference - route → backend service
 
 | Step | Route | Controller | Service method |
 |------|-------|------------|----------------|
@@ -1219,7 +1219,7 @@ End-to-end path a **Project Manager** takes with files and permissions at each s
 
 ---
 
-## Appendix A — Full frontend file list (PM)
+## Appendix A - Full frontend file list (PM)
 
 ```text
 frontend/app/(dashboard)/projects/                          (16 route files)
@@ -1252,7 +1252,7 @@ frontend/hooks/useAuthHydrated.ts
 frontend/hooks/useUserNameLookup.ts
 ```
 
-## Appendix B — Full backend file list (PM module)
+## Appendix B - Full backend file list (PM module)
 
 ```text
 backend/src/modules/project-management/
@@ -1266,11 +1266,11 @@ backend/src/modules/project-management/
 │       └── pm-pagination.util.ts
 └── presentation/controllers/ (12 controller files)
 
-backend/prisma/seed.ts          — permissions & roles
-backend/prisma/seed-pm-demo.ts  — demo projects & sample data
+backend/prisma/seed.ts          - permissions & roles
+backend/prisma/seed-pm-demo.ts  - demo projects & sample data
 ```
 
-## Appendix C — Local dev quick start (module-focused)
+## Appendix C - Local dev quick start (module-focused)
 
 1. Seed database: `npm run prisma:seed --workspace=backend` (creates roles, DEMO-001…007 projects).
 2. Login as admin or `pm@company.local`.

@@ -73,11 +73,11 @@
     },
     "myComments": {
       "title": "我的意见",
-      "description": "设计人员队列——处理审阅意见并上传修订版。"
+      "description": "设计人员队列--处理审阅意见并上传修订版。"
     },
     "reviewMode": {
       "title": "审阅模式",
-      "description": "三栏审阅工作区——文档、意见、依赖关系。"
+      "description": "三栏审阅工作区--文档、意见、依赖关系。"
     },
     "engineeringDocument": {
       "title": "工程文档",
@@ -136,11 +136,11 @@
   },
   "projection": {
     "lagPendingTitle": "状态投影进行中",
-    "lagPendingDescription": "工作流已提交——包与专业标识将在投影完成后自动刷新。"
+    "lagPendingDescription": "工作流已提交--包与专业标识将在投影完成后自动刷新。"
   },
   "empty": {
     "noModules": "您当前角色无可用的项目模块。",
-    "noDisciplines": "未找到专业——请使用「添加专业」将专业关联到进度任务。",
+    "noDisciplines": "未找到专业--请使用「添加专业」将专业关联到进度任务。",
     "noReviewInbox": "收件箱中暂无审阅会话",
     "noComments": "暂无分配给您的意见",
     "noDeliverables": "未找到交付包",
@@ -339,9 +339,9 @@
       "sessionId": "会话 ID",
       "beforeValue": "变更前",
       "afterValue": "变更后",
-      "noBeforeOnCreate": "无先前状态 — 这是一条创建记录。",
+      "noBeforeOnCreate": "无先前状态 - 这是一条创建记录。",
       "noBeforeCaptured": "此记录未捕获变更前的状态。",
-      "noAfterOnDelete": "记录已删除 — 无变更后状态。"
+      "noAfterOnDelete": "记录已删除 - 无变更后状态。"
     },
     "source": {
       "USER_ACTION": "用户操作",
@@ -402,7 +402,7 @@
     "rolesDescription": "选择要查看或更新权限的角色。",
     "noRoles": "尚未配置角色。",
     "permissionsTitle": "权限",
-    "permissionsForRole": "权限 — {{name}}",
+    "permissionsForRole": "权限 - {{name}}",
     "permissionsDescription": "切换此角色的模块操作，然后保存更改。",
     "permissionsSelectRole": "选择角色以查看其权限矩阵。",
     "permissionsEmptyTitle": "请从列表中选择角色",

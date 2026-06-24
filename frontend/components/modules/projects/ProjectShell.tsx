@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -10,7 +10,7 @@ import { useProject } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Project route wrapper — loading/error gates; layout lives in AppShell.
+ * Project route wrapper - loading/error gates; layout lives in AppShell.
  */
 export default function ProjectShell({
   projectId,

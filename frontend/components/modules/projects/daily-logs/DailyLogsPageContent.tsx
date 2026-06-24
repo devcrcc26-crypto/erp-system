@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -195,7 +195,7 @@ export default function DailyLogsPageContent({
         title: 'Shift',
         dataIndex: 'shift',
         key: 'shift',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Site engineer',
@@ -207,13 +207,13 @@ export default function DailyLogsPageContent({
         title: 'Weather',
         dataIndex: 'weatherCondition',
         key: 'weatherCondition',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Workers',
         dataIndex: 'totalWorkers',
         key: 'totalWorkers',
-        render: (value: number) => value || '—',
+        render: (value: number) => value || '-',
       },
       {
         title: 'Status',
@@ -231,7 +231,7 @@ export default function DailyLogsPageContent({
         dataIndex: 'workSummary',
         key: 'workSummary',
         ellipsis: true,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
     ],
     [resolveUserName],

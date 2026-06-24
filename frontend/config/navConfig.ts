@@ -125,7 +125,7 @@ export function buildIconRailItems(
   ];
 }
 
-/** Context sidebar section config — sourced from project workspace nav. */
+/** Context sidebar section config - sourced from project workspace nav. */
 export const contextNavSections: readonly ProjectWorkspaceNavGroup[] =
   PROJECT_WORKSPACE_NAV;
 

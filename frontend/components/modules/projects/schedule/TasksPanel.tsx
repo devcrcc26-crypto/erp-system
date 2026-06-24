@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
+  Collapse,
   Form,
   InputNumber,
   Modal,
   Progress,
   Select,
-  Switch,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,7 +27,6 @@ import {
   useCreateTaskDependency,
   useDeleteTask,
   useDeleteTaskDependency,
-  useTaskDependencies,
   useUpdateTaskDependency,
   scheduleKeys,
 } from '@/lib/query/schedule';
@@ -60,13 +59,16 @@ interface DependencyFormValues {
 export default function TasksPanel({
   projectId,
   tasks: allTasks,
+  dependencies,
+  dependenciesLoading,
   criticalOnly,
-  onCriticalOnlyChange,
 }: {
   projectId: string;
   tasks: Task[];
+  dependencies: TaskDependency[];
+  dependenciesLoading: boolean;
   criticalOnly: boolean;
-  onCriticalOnlyChange: (value: boolean) => void;
+  onCriticalOnlyChange?: (value: boolean) => void;
 }): React.ReactNode {
   const queryClient = useQueryClient();
   const messageApi = useAppMessage();
@@ -111,7 +113,6 @@ export default function TasksPanel({
     });
   }, [dependencyOpen, dependencySeed, depForm, editingDependency]);
 
-  const dependenciesQuery = useTaskDependencies(projectId);
   const createDependency = useCreateTaskDependency();
   const updateDependency = useUpdateTaskDependency();
   const deleteDependency = useDeleteTaskDependency();
@@ -126,7 +127,7 @@ export default function TasksPanel({
   const taskLabelById = useMemo(() => {
     const labels = new Map<string, string>();
     for (const task of allTasks) {
-      labels.set(task.id, `${task.taskIdCode} — ${task.name}`);
+      labels.set(task.id, `${task.taskIdCode} - ${task.name}`);
     }
     return labels;
   }, [allTasks]);
@@ -187,16 +188,9 @@ export default function TasksPanel({
     {
       title: '',
       key: 'actions',
-      width: 220,
+      width: 120,
       render: (_value, record) => (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => openAddDependency(record)}
-          >
-            Add dependency
-          </Button>
+        <div className="flex gap-2">
           <Button
             type="link"
             className="!px-0"
@@ -331,29 +325,19 @@ export default function TasksPanel({
   return (
     <>
       <FormLayout
-        title="Task list"
-        description="Programme tasks with progress, assignments, and critical path flags."
+        title="Tasks"
+        description="Programme tasks linked to milestones and the Gantt chart."
         extra={
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <Switch
-                size="small"
-                checked={criticalOnly}
-                onChange={onCriticalOnlyChange}
-              />
-              Critical only
-            </label>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditing(null);
-                setDrawerOpen(true);
-              }}
-            >
-              Add task
-            </Button>
-          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditing(null);
+              setDrawerOpen(true);
+            }}
+          >
+            Add task
+          </Button>
         }
       >
         <DataTable<Task>
@@ -364,19 +348,38 @@ export default function TasksPanel({
         />
       </FormLayout>
 
-      <FormLayout
-        title="Task dependencies"
-        description="Predecessor and successor links used by the Gantt chart."
-        className="mt-6"
-      >
-        <DataTable<TaskDependency>
-          rowKey="id"
-          columns={dependencyColumns}
-          dataSource={dependenciesQuery.data ?? []}
-          loading={dependenciesQuery.isLoading}
-          locale={{ emptyText: 'No dependencies defined' }}
-        />
-      </FormLayout>
+      <Collapse
+        bordered={false}
+        className="erp-schedule-collapse mt-4 bg-transparent"
+        items={[
+          {
+            key: 'dependencies',
+            label: `Task dependencies (${dependencies.length})`,
+            extra: (
+              <Button
+                type="link"
+                size="small"
+                className="!px-0"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openAddDependency();
+                }}
+              >
+                Add dependency
+              </Button>
+            ),
+            children: (
+              <DataTable<TaskDependency>
+                rowKey="id"
+                columns={dependencyColumns}
+                dataSource={dependencies}
+                loading={dependenciesLoading}
+                locale={{ emptyText: 'No dependencies defined' }}
+              />
+            ),
+          },
+        ]}
+      />
 
       <TaskFormDrawer
         open={drawerOpen}

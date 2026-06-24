@@ -116,7 +116,7 @@ export default function ScheduleCalendar({
               key={`${key}-${task.id}`}
               className="truncate rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
               style={{ backgroundColor: taskAccentColor(task) }}
-              title={`${task.taskIdCode} — ${task.name}`}
+              title={`${task.taskIdCode} - ${task.name}`}
             >
               {task.taskIdCode}
             </li>

@@ -30,10 +30,10 @@ export default function GovernanceReviewPanel({
           />
         </Descriptions.Item>
         <Descriptions.Item label="Review tier">
-          {reviewMode?.currentTier?.replace(/_/g, ' ') ?? '—'}
+          {reviewMode?.currentTier?.replace(/_/g, ' ') ?? '-'}
         </Descriptions.Item>
         <Descriptions.Item label="Session status">
-          {reviewMode?.sessionStatus?.replace(/_/g, ' ') ?? '—'}
+          {reviewMode?.sessionStatus?.replace(/_/g, ' ') ?? '-'}
         </Descriptions.Item>
         <Descriptions.Item label="Package items">
           {reviewMode?.packageEdvIds.length ?? 0}

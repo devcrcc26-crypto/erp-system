@@ -18,7 +18,7 @@ export interface DisciplineFormValues {
 
 export function formatDisciplineDateTime(value: string | null): string {
   if (!value) {
-    return '—';
+    return '-';
   }
   return dayjs(value).format('DD/MM/YYYY HH:mm');
 }

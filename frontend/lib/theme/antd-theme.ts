@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 import type { ThemeConfig } from 'antd';
 import { FONT_SIZE_BASE_PX, getFontScale } from './font-scale';

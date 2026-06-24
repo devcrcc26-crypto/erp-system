@@ -7,7 +7,7 @@ This document describes metadata fields and workflow semantics for **Engineering
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | UUID | Stable document identity across revisions |
-| `companyId` | UUID | Tenant isolation — always from JWT |
+| `companyId` | UUID | Tenant isolation - always from JWT |
 | `taskDisciplineId` | UUID | Owning discipline within project schedule |
 | `documentNumber` | string | Company-scoped number from `NUMBER_SERIES` |
 | `title` | string | Human-readable title |
@@ -43,7 +43,7 @@ DRAFT → IN_REVIEW → APPROVED → LOCKED → ISSUED
 | Phase | When written | Purpose |
 |-------|----------------|---------|
 | `INTENT` | Inside Phase A+B transaction | Records intended state change |
-| `COMMITTED` | Post-commit (BullMQ or sync) | Confirms successful persistence — prevents ghost approvals |
+| `COMMITTED` | Post-commit (BullMQ or sync) | Confirms successful persistence - prevents ghost approvals |
 | `CORRECTION` | Admin correction API | Append-only audit fix referencing prior event |
 
 `correlationId` ties INTENT and COMMITTED rows for one command.
@@ -60,7 +60,7 @@ DRAFT → IN_REVIEW → APPROVED → LOCKED → ISSUED
 
 | Field | Description |
 |-------|-------------|
-| `severity` | `MINOR` / `MODERATE` / `MAJOR` — drives `ReviewRoutingService` |
+| `severity` | `MINOR` / `MODERATE` / `MAJOR` - drives `ReviewRoutingService` |
 | `status` | Designer resolution state (`OPEN` → `RESOLVED`) |
 | `assignedToUserId` | Designer responsible for closure |
 

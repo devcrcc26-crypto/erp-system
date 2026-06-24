@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -15,7 +15,6 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import type { Milestone } from '@/lib/api/project-management.types';
@@ -187,7 +186,7 @@ export default function MilestonesPanel({
       key: 'variance',
       render: (_value, record) => {
         if (!record.plannedDate || !record.actualDate) {
-          return '—';
+          return '-';
         }
         const planned = new Date(record.plannedDate).getTime();
         const actual = new Date(record.actualDate).getTime();
@@ -239,29 +238,24 @@ export default function MilestonesPanel({
 
   return (
     <>
-      <FormLayout
-        title="Milestones"
-        description="Key project milestones with planned versus actual dates."
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditing(null);
-              setDrawerOpen(true);
-            }}
-          >
-            Add milestone
-          </Button>
-        }
-      >
-        <DataTable<Milestone>
+      <div className="mb-3 flex justify-end">
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditing(null);
+            setDrawerOpen(true);
+          }}
+        >
+          Add milestone
+        </Button>
+      </div>
+      <DataTable<Milestone>
           rowKey="id"
           columns={columns}
           dataSource={milestones}
           locale={{ emptyText: 'No milestones defined' }}
-        />
-      </FormLayout>
+      />
 
       <MilestoneFormDrawer
         open={drawerOpen}

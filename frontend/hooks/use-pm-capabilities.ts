@@ -43,14 +43,14 @@ export function useCanViewProjectNav(
 }
 
 /**
- * Review inbox — requires inbox probe and schedule module access.
+ * Review inbox - requires inbox probe and schedule module access.
  */
 export function useCanViewReviewInbox(): boolean {
   return useEpcCapabilities().canViewReviewInbox;
 }
 
 /**
- * Designer comment queue — requires my-comments probe.
+ * Designer comment queue - requires my-comments probe.
  */
 export function useCanViewMyComments(): boolean {
   return useEpcCapabilities().canViewMyComments;

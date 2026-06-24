@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -145,7 +145,7 @@ export default function SubmittalDetailDrawer({
       onClose={onClose}
       title={
         submittal
-          ? `${submittal.submittalNumber} — ${submittal.title}`
+          ? `${submittal.submittalNumber} - ${submittal.title}`
           : 'Submittal detail'
       }
       destroyOnHidden
@@ -193,13 +193,13 @@ export default function SubmittalDetailDrawer({
               {submittal.revisionNumber}
             </Descriptions.Item>
             <Descriptions.Item label="Spec reference">
-              {submittal.specReference ?? '—'}
+              {submittal.specReference ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Contractor">
-              {submittal.contractor ?? '—'}
+              {submittal.contractor ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Supplier">
-              {submittal.supplier ?? '—'}
+              {submittal.supplier ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Submitted by">
               {resolveUserName(submittal.submittedBy)}
@@ -207,12 +207,12 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Assigned to">
               {submittal.assignedTo
                 ? resolveUserName(submittal.assignedTo)
-                : '—'}
+                : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Reviewed by">
               {submittal.reviewedBy
                 ? resolveUserName(submittal.reviewedBy)
-                : '—'}
+                : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Submission date">
               {formatProjectDate(submittal.submissionDate)}

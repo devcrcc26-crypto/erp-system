@@ -33,7 +33,7 @@ export class EpcWorkflowRepository {
     return this.prisma.$transaction(work);
   }
 
-  /** @deprecated Use runPhaseAB — alias for backward compatibility */
+  /** @deprecated Use runPhaseAB - alias for backward compatibility */
   async runPhaseA<T>(work: (tx: PrismaTx) => Promise<T>): Promise<T> {
     return this.runPhaseAB(work);
   }

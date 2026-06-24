@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -277,7 +277,7 @@ export default function CloseoutPageContent({
       title: 'Supplier',
       dataIndex: 'supplier',
       key: 'supplier',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Start',
@@ -414,7 +414,7 @@ export default function CloseoutPageContent({
               value={
                 closeout.finalSettlement
                   ? Number(closeout.finalSettlement).toLocaleString()
-                  : '—'
+                  : '-'
               }
               extra="Contract closeout value"
             />

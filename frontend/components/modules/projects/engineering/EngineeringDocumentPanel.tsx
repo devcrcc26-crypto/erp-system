@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -104,7 +104,7 @@ export default function EngineeringDocumentPanel({
       title: 'Number',
       dataIndex: 'documentNumber',
       key: 'documentNumber',
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: 'Title',
@@ -122,7 +122,7 @@ export default function EngineeringDocumentPanel({
       key: 'status',
       render: (_value, record) => {
         const latest = record.versions?.[record.versions.length - 1];
-        return latest ? <EdvStatusBadge status={latest.status} /> : '—';
+        return latest ? <EdvStatusBadge status={latest.status} /> : '-';
       },
     },
     {
@@ -131,7 +131,7 @@ export default function EngineeringDocumentPanel({
       align: 'right',
       render: (_value, record) => {
         const latest = record.versions?.[record.versions.length - 1];
-        return latest?.revisionLabel ?? '—';
+        return latest?.revisionLabel ?? '-';
       },
     },
     {

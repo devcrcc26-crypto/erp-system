@@ -8,7 +8,7 @@ const APPROVE_BLOCKING_STATUSES: ReadonlySet<CommentStatus> = new Set([
 ]);
 
 /**
- * Mirrors backend `canApprovePackage` — all comments must be VERIFIED or CLOSED.
+ * Mirrors backend `canApprovePackage` - all comments must be VERIFIED or CLOSED.
  */
 export function canApproveReviewSession(
   commentStatuses: readonly CommentStatus[],

@@ -18,7 +18,7 @@ test.describe('EPC review workflow', () => {
     const reachable = await isBackendReachable(API_BASE_URL);
     test.skip(
       !reachable,
-      'Backend API is not reachable — start backend and run db:seed before E2E tests.',
+      'Backend API is not reachable - start backend and run db:seed before E2E tests.',
     );
   });
 

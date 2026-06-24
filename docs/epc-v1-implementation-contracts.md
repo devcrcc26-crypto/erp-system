@@ -1,14 +1,14 @@
 # EPC v1 Implementation Contracts
 
-Wave 0 gate — no Wave 1 migration until signed off.
+Wave 0 gate - no Wave 1 migration until signed off.
 
 ## WorkflowKernel
 
 - **Single entry:** `WorkflowKernel.execute(command: WorkflowCommand): Promise<WorkflowResultSnapshot>`
-- **Controllers / task-workflow:** call kernel only — never Prisma for status writes
+- **Controllers / task-workflow:** call kernel only - never Prisma for status writes
 - **Two-phase transaction (single `$transaction`):**
-  - **Phase A — Write intent:** permission check, conflict-guard, EDV transition, `INTENT` event append, `projectionPending = true`
-  - **Phase B — Projection hook:** `PackageStatusResolver`, `DisciplineStatusResolver`, clear `projectionPending`
+  - **Phase A - Write intent:** permission check, conflict-guard, EDV transition, `INTENT` event append, `projectionPending = true`
+  - **Phase B - Projection hook:** `PackageStatusResolver`, `DisciplineStatusResolver`, clear `projectionPending`
   - **Post-commit async:** `COMMITTED` event, notifications, SLA, cache
 - **API returns:** post-Phase-B state only
 - **Batch ops (v1):** one kernel invocation per package unit; all-or-nothing per transaction
@@ -26,21 +26,21 @@ Wave 0 gate — no Wave 1 migration until signed off.
 
 ## Permission model
 
-- **Algorithm:** `canPerform(user, action, context)` — deny wins; default-deny; assignee override for tier actions
+- **Algorithm:** `canPerform(user, action, context)` - deny wins; default-deny; assignee override for tier actions
 - **Layers (order, short-circuit on deny):**
-  1. System role — `RolePermission` action flags
-  2. Project team role — `ProjectTeam.roleOnProject`
-  3. Discipline assignment — `TaskDiscipline.{designer,reviewer,lead,chief}UserId`
-  4. Project design phase — `ProjectDesignPhase` gates
-  5. Workflow state — e.g. cannot `lock` unless EDV `APPROVED`
+  1. System role - `RolePermission` action flags
+  2. Project team role - `ProjectTeam.roleOnProject`
+  3. Discipline assignment - `TaskDiscipline.{designer,reviewer,lead,chief}UserId`
+  4. Project design phase - `ProjectDesignPhase` gates
+  5. Workflow state - e.g. cannot `lock` unless EDV `APPROVED`
 - **Cache:** per-request only (v1)
 
 ## Version identity
 
-- **Primary FK:** `EngineeringDocumentVersion.id` (UUID) — immutable
-- **Display only:** `revisionLabel` — never FK
+- **Primary FK:** `EngineeringDocumentVersion.id` (UUID) - immutable
+- **Display only:** `revisionLabel` - never FK
 - **Linear lockstep (v1):** one active `DRAFT` per `EngineeringDocument`; no revision label reuse
-- **Rollback:** no delete — `SUPERSEDED` or `CORRECTION` event
+- **Rollback:** no delete - `SUPERSEDED` or `CORRECTION` event
 
 ## Package dependency
 

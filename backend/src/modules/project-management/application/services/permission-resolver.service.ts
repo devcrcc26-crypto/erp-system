@@ -41,7 +41,7 @@ export class PermissionResolverService {
   ) {}
 
   /**
-   * Asserts user may perform EDV status transition — deny wins.
+   * Asserts user may perform EDV status transition - deny wins.
    */
   async assertEdvTransitionAllowed(
     input: EdvTransitionPermissionInput & {
@@ -92,7 +92,7 @@ export class PermissionResolverService {
   }
 
   /**
-   * Asserts user may perform a workflow action — deny wins.
+   * Asserts user may perform a workflow action - deny wins.
    */
   async assertActionAllowed(input: WorkflowActionPermissionInput): Promise<void> {
     const grantedActions = await this.resolveGrantedActions(

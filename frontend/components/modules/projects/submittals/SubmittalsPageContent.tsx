@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -104,7 +104,7 @@ export default function SubmittalsPageContent({
         dataIndex: 'assignedTo',
         key: 'assignedTo',
         render: (value: string | null) =>
-          value ? resolveUserName(value) : '—',
+          value ? resolveUserName(value) : '-',
       },
       {
         title: 'Due',
@@ -128,7 +128,7 @@ export default function SubmittalsPageContent({
         title: 'Contractor',
         dataIndex: 'contractor',
         key: 'contractor',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
     ],
     [resolveUserName],
@@ -175,7 +175,7 @@ export default function SubmittalsPageContent({
             showIcon
             className="!mb-4"
             title="Submittal APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            description="This page is ready - data will appear when the project management backend module is available."
           />
         )}
 

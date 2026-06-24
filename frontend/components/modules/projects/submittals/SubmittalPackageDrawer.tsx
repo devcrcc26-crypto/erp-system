@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -205,17 +205,17 @@ function SubmittalPackageForm({
         value,
         label:
           value === 'DISCIPLINE_SITE'
-            ? 'Discipline — site issue'
-            : 'Discipline — consultant issue',
+            ? 'Discipline - site issue'
+            : 'Discipline - consultant issue',
       })),
       ...DEPUTY_PURPOSES.map((value) => ({
         value,
         label:
           value === 'DEPUTY_BID'
-            ? 'Deputy — bid package'
+            ? 'Deputy - bid package'
             : value === 'DEPUTY_INTERIM'
-              ? 'Deputy — interim package'
-              : 'Deputy — final package',
+              ? 'Deputy - interim package'
+              : 'Deputy - final package',
       })),
     ];
     return options;

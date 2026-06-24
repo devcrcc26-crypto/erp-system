@@ -294,7 +294,7 @@ export class EngineeringDocumentsService {
   }
 
   /**
-   * Updates EDV revision label only — status changes must use transitionEdvStatus.
+   * Updates EDV revision label only - status changes must use transitionEdvStatus.
    */
   async updateVersion(
     ctx: PmContext,

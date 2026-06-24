@@ -154,7 +154,7 @@ function mapProjectTeamRole(label: string): ProjectTeamRole {
   return ProjectTeamRole.OTHER;
 }
 
-interface DemoProjectDef {
+export interface DemoProjectDef {
   index: number;
   code: string;
   name: string;
@@ -207,7 +207,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
   },
 ];
 
-async function seedDemoUsers(ctx: PmSeedContext): Promise<{
+export async function seedDemoUsers(ctx: PmSeedContext): Promise<{
   pmUserId: string;
   engineerUserId: string;
   safetyUserId: string;
@@ -272,7 +272,7 @@ async function seedDemoUsers(ctx: PmSeedContext): Promise<{
   };
 }
 
-async function seedProjectBundle(
+export async function seedProjectBundle(
   ctx: PmSeedContext,
   def: DemoProjectDef,
   users: {
@@ -390,6 +390,20 @@ async function seedProjectBundle(
     });
   }
 
+  await prisma.documentVersion.upsert({
+    where: { id: sid(p, 14) },
+    update: {},
+    create: {
+      id: sid(p, 14),
+      documentId: sid(p, 11),
+      uploadedBy: adminUserId,
+      versionNumber: 2,
+      fileKey: `demo/${def.code}/Contract-Agreement-v2.pdf`,
+      fileSizeBytes: 262_000,
+      changeNote: 'Contract amendment - scope clarification',
+    },
+  });
+
   // ── Schedule: milestones + tasks + dependency ────────────────────────────
   const milestone1Id = sid(p, 20);
   const milestone2Id = sid(p, 21);
@@ -433,7 +447,7 @@ async function seedProjectBundle(
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T100`,
       name: 'Foundation and piling',
-      description: 'Pile caps, ground beams, and blinding concrete.',
+      description: 'Pile caps, ground beams - blinding concrete.',
       startDate: d(def.startDate),
       finishDate: d('2026-05-31'),
       durationDays: 120,
@@ -456,7 +470,7 @@ async function seedProjectBundle(
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T200`,
       name: 'Superstructure and envelope',
-      description: 'Structural frame, cladding, and MEP rough-in.',
+      description: 'Structural frame, cladding - MEP rough-in.',
       startDate: d('2026-06-01'),
       finishDate: d(def.plannedFinishDate),
       durationDays: 240,
@@ -654,6 +668,17 @@ async function seedProjectBundle(
       createdAt: d('2026-02-01'),
     },
   });
+  await prisma.drawingLink.upsert({
+    where: { id: sid(p, 63) },
+    update: {},
+    create: {
+      id: sid(p, 63),
+      drawingId: drawing1Id,
+      linkedEntityType: 'rfi',
+      linkedEntityId: sid(p, 40),
+      createdBy: adminUserId,
+    },
+  });
 
   // ── Daily logs ───────────────────────────────────────────────────────────
   const dailyLogId = sid(p, 70);
@@ -711,6 +736,18 @@ async function seedProjectBundle(
       company: 'Owner Representative',
       purpose: 'Monthly site inspection',
       createdBy: adminUserId,
+    },
+  });
+  await prisma.dailyLogIncident.upsert({
+    where: { id: sid(p, 74) },
+    update: {},
+    create: {
+      id: sid(p, 74),
+      dailyLogId,
+      incidentType: 'NEAR_MISS',
+      description: 'Unsecured ladder observed at grid B2 - corrected on site.',
+      severity: 'LOW',
+      createdBy: users.safetyUserId,
     },
   });
 
@@ -937,10 +974,12 @@ async function seedProjectBundle(
     },
   });
 
-  // ── Closeout (completed project + one active with early closeout) ────────
-  if (def.status === 'COMPLETED' || p === 2) {
+  // ── Closeout ─────────────────────────────────────────────────────────────
+  {
     const closeoutStatus: CloseoutStatus =
-      def.status === 'COMPLETED' ? 'DEFECTS_LIABILITY_PERIOD' : 'PRACTICAL_COMPLETION';
+      def.status === 'COMPLETED'
+        ? 'DEFECTS_LIABILITY_PERIOD'
+        : 'PRACTICAL_COMPLETION';
 
     const closeout = await prisma.closeout.upsert({
       where: { projectId },

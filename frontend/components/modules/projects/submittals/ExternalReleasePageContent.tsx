@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -43,7 +43,7 @@ function formatPurpose(purpose: SubmittalPurpose | null): string {
   if (purpose === 'DISCIPLINE_CONSULTANT') {
     return 'Consultants';
   }
-  return '—';
+  return '-';
 }
 
 export default function ExternalReleasePageContent({

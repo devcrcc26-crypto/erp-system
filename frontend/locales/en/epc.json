@@ -73,11 +73,11 @@
     },
     "myComments": {
       "title": "My Comments",
-      "description": "Designer queue — resolve reviewer comments and upload revisions."
+      "description": "Designer queue - resolve reviewer comments and upload revisions."
     },
     "reviewMode": {
       "title": "Review Mode",
-      "description": "Three-column review workspace — documents, comments, dependencies."
+      "description": "Three-column review workspace - documents, comments, dependencies."
     },
     "engineeringDocument": {
       "title": "Engineering Document",
@@ -136,11 +136,11 @@
   },
   "projection": {
     "lagPendingTitle": "Status projection in progress",
-    "lagPendingDescription": "Workflow committed — package and discipline badges refresh automatically when projection completes."
+    "lagPendingDescription": "Workflow committed - package and discipline badges refresh automatically when projection completes."
   },
   "empty": {
     "noModules": "No project modules available for your role.",
-    "noDisciplines": "No disciplines found — use Add discipline to link a discipline to a schedule task.",
+    "noDisciplines": "No disciplines found - use Add discipline to link a discipline to a schedule task.",
     "noReviewInbox": "No review sessions in your inbox",
     "noComments": "No comments assigned to you",
     "noDeliverables": "No deliverable packages found",
@@ -339,9 +339,9 @@
       "sessionId": "Session ID",
       "beforeValue": "Before",
       "afterValue": "After",
-      "noBeforeOnCreate": "No prior state — this was a create action.",
+      "noBeforeOnCreate": "No prior state - this was a create action.",
       "noBeforeCaptured": "Prior state was not captured for this entry.",
-      "noAfterOnDelete": "Record removed — no after state."
+      "noAfterOnDelete": "Record removed - no after state."
     },
     "source": {
       "USER_ACTION": "User action",
@@ -402,7 +402,7 @@
     "rolesDescription": "Choose a role to review or update its access.",
     "noRoles": "No roles configured yet.",
     "permissionsTitle": "Permissions",
-    "permissionsForRole": "Permissions — {{name}}",
+    "permissionsForRole": "Permissions - {{name}}",
     "permissionsDescription": "Toggle module actions for this role, then save your changes.",
     "permissionsSelectRole": "Select a role to view its permission matrix.",
     "permissionsEmptyTitle": "Select a role from the list",

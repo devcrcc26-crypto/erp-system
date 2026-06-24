@@ -25,7 +25,7 @@ export class WorkflowEventLogService {
   ) {}
 
   /**
-   * Append-only event log write — no update or delete.
+   * Append-only event log write - no update or delete.
    */
   async append(
     ctx: PmContext,

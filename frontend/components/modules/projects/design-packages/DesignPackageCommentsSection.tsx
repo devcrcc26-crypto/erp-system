@@ -53,7 +53,7 @@ function toMyCommentItem(
     documentVersionId: doc?.documentVersionId ?? '',
     engineeringDocumentId: doc?.engineeringDocumentId ?? '',
     documentTitle: doc?.documentTitle ?? 'Document',
-    revisionLabel: doc?.revisionLabel ?? '—',
+    revisionLabel: doc?.revisionLabel ?? '-',
     projectId,
     projectName: '',
     taskDisciplineId,
@@ -67,7 +67,7 @@ function toMyCommentItem(
 }
 
 /**
- * Package-level review comments — read-only for reviewers, actionable for assigned designers.
+ * Package-level review comments - read-only for reviewers, actionable for assigned designers.
  */
 export default function DesignPackageCommentsSection({
   projectId,
@@ -248,7 +248,7 @@ export default function DesignPackageCommentsSection({
                       ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
                       : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
                     {comment.resolutionNote?.trim()
-                      ? ` — ${comment.resolutionNote.trim()}`
+                      ? ` - ${comment.resolutionNote.trim()}`
                       : ''}
                   </p>
                 )}

@@ -27,7 +27,7 @@ export interface ProjectionDriftCorrection {
 }
 
 /**
- * Phase B — structural aggregate projection using Wave 0.5 pure resolvers only.
+ * Phase B - structural aggregate projection using Wave 0.5 pure resolvers only.
  */
 @Injectable()
 export class StateProjectionService {
@@ -74,7 +74,7 @@ export class StateProjectionService {
   }
 
   /**
-   * Full reconciliation — recomputes all packages and disciplines for drift correction.
+   * Full reconciliation - recomputes all packages and disciplines for drift correction.
    */
   async reconcileCompanyInTx(
     tx: PrismaTx,

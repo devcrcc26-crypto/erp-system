@@ -1,5 +1,5 @@
 /**
- * Three-layer domain boundaries — contracts only (Wave 0).
+ * Three-layer domain boundaries - contracts only (Wave 0).
  * Implementation must not collapse layers or bypass write gates.
  */
 
@@ -12,20 +12,20 @@ export const EPC_DOMAIN_LAYERS = {
 export type EpcDomainLayer =
   (typeof EPC_DOMAIN_LAYERS)[keyof typeof EPC_DOMAIN_LAYERS];
 
-/** State class 1 — sole writable lifecycle authority. */
+/** State class 1 - sole writable lifecycle authority. */
 export const EPC_STATE_CLASS_SOURCE_OF_TRUTH = {
   entity: 'EngineeringDocumentVersion',
   field: 'status',
   writableVia: 'WorkflowKernel',
 } as const;
 
-/** State class 2 — derived aggregates; Phase B projection only. */
+/** State class 2 - derived aggregates; Phase B projection only. */
 export const EPC_STATE_CLASS_STRUCTURAL_AGGREGATES = [
   'DesignPackage.projectedStatus',
   'TaskDiscipline.projectedStatus',
 ] as const;
 
-/** State class 3 — session-scoped; not authoritative for EDV lifecycle. */
+/** State class 3 - session-scoped; not authoritative for EDV lifecycle. */
 export const EPC_STATE_CLASS_EPHEMERAL_WORKFLOW = [
   'ReviewSession',
   'ReviewComment',

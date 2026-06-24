@@ -1,7 +1,7 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 /**
- * Design tokens — teal-forward construction ERP palette.
+ * Design tokens - teal-forward construction ERP palette.
  * Used by Ant Design ConfigProvider and shared UI components.
  */
 export const tokens = {

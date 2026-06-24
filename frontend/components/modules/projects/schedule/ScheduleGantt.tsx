@@ -2,11 +2,8 @@
 
 import { useMemo } from 'react';
 import { Empty, Switch, Tooltip } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { Task, TaskDependency } from '@/lib/api/project-management.types';
+import type { Task } from '@/lib/api/project-management.types';
 import {
   buildGanttTimeline,
   GANTT_BAR_HEIGHT_PX,
@@ -155,12 +152,10 @@ function TaskTimelineBar({
 
 export default function ScheduleGantt({
   tasks,
-  dependencies,
   criticalOnly,
   onCriticalOnlyChange,
 }: {
   tasks: Task[];
-  dependencies: TaskDependency[];
   criticalOnly: boolean;
   onCriticalOnlyChange: (value: boolean) => void;
 }): React.ReactNode {
@@ -178,42 +173,6 @@ export default function ScheduleGantt({
     () => (dateRange ? buildGanttTimeline(dateRange) : null),
     [dateRange],
   );
-
-  const taskNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const task of tasks) {
-      map.set(task.id, `${task.taskIdCode} — ${task.name}`);
-    }
-    return map;
-  }, [tasks]);
-
-  const dependencyColumns: ColumnsType<TaskDependency> = [
-    {
-      title: 'Predecessor',
-      dataIndex: 'predecessorTaskId',
-      key: 'predecessor',
-      render: (id: string) => taskNameById.get(id) ?? id,
-    },
-    {
-      title: 'Successor',
-      dataIndex: 'successorTaskId',
-      key: 'successor',
-      render: (id: string) => taskNameById.get(id) ?? id,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'dependencyType',
-      key: 'dependencyType',
-      width: 80,
-    },
-    {
-      title: 'Lag (days)',
-      dataIndex: 'lagDays',
-      key: 'lagDays',
-      align: 'right',
-      width: 100,
-    },
-  ];
 
   return (
     <div className={layout.pageStack}>
@@ -439,18 +398,6 @@ export default function ScheduleGantt({
         </>
       )}
 
-      <FormLayout
-        title="Task dependencies"
-        description="Predecessor links (FS / SS / FF / SF) with lag days."
-      >
-        <DataTable<TaskDependency>
-          size="small"
-          rowKey="id"
-          columns={dependencyColumns}
-          dataSource={dependencies}
-          locale={{ emptyText: 'No dependencies defined' }}
-        />
-      </FormLayout>
     </div>
   );
 }

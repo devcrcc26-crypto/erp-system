@@ -65,7 +65,7 @@ export function useUsers(
 }
 
 /**
- * Company user directory for assignment pickers — available with projects.view.
+ * Company user directory for assignment pickers - available with projects.view.
  */
 export function useUsersDirectory(
   params: PaginationParams = { page: 1, limit: 100 },

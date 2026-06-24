@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -37,7 +37,7 @@ function mergeFallbackComment(
       engineeringDocumentId: '',
       documentVersionId: '',
       documentTitle: 'Document',
-      revisionLabel: '—',
+      revisionLabel: '-',
     },
     responseRevision: fallbackComment.responseRevision ?? null,
   };
@@ -84,11 +84,11 @@ export default function ReviewCommentDetailDrawer({
       ? `${comment.commentedOn.documentTitle} · Rev ${comment.commentedOn.revisionLabel}`
       : comment
         ? `${comment.engineeringDocumentVersionId.slice(0, 8)}…`
-        : '—');
+        : '-');
 
   const drawerTitle =
-    resolvedDocumentLabel !== '—'
-      ? `Comment — ${resolvedDocumentLabel}`
+    resolvedDocumentLabel !== '-'
+      ? `Comment - ${resolvedDocumentLabel}`
       : 'Comment detail';
 
   const showResponse =

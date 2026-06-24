@@ -26,7 +26,7 @@ import type {
   ResetPasswordRequest,
 } from '@/lib/api/types';
 
-/** TanStack Query key for session capabilities — shared across login and session sync. */
+/** TanStack Query key for session capabilities - shared across login and session sync. */
 export const sessionCapabilitiesQueryKey = ['auth', 'capabilities'] as const;
 
 /** Capabilities rarely change mid-session; cache 60s to avoid duplicate /auth/capabilities calls. */

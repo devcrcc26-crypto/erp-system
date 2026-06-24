@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -156,7 +156,7 @@ export default function PunchItemDetailDrawer({
         open={open}
         onClose={onClose}
         title={
-          item ? `${item.punchNumber} — ${item.description.slice(0, 40)}` : 'Punch item'
+          item ? `${item.punchNumber} - ${item.description.slice(0, 40)}` : 'Punch item'
         }
         destroyOnHidden
         extra={

@@ -194,7 +194,7 @@ function mapReviewCommentDetail(
     engineeringDocumentId: '',
     documentVersionId: '',
     documentTitle: 'Document',
-    revisionLabel: '—',
+    revisionLabel: '-',
   };
 
   return {

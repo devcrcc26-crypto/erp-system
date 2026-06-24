@@ -58,7 +58,7 @@ export class UserManagementService {
 
   /**
    * Minimal user list for assignment pickers (task assignee, project team, review routing).
-   * Available to anyone with project portfolio access — not full user administration.
+   * Available to anyone with project portfolio access - not full user administration.
    */
   async listUsersDirectory(
     ctx: AuditContext,

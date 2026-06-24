@@ -56,7 +56,7 @@ export function validateSubmittalPackage(
 }
 
 /**
- * Validates all packages in a batch — fails on first ineligible package.
+ * Validates all packages in a batch - fails on first ineligible package.
  */
 export function validateSubmittalPackages(
   inputs: readonly SubmittalPackageValidationInput[],

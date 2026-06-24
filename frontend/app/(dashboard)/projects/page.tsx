@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 import ProjectsPageContent from '@/components/modules/projects/ProjectsPageContent';
 

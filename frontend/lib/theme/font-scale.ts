@@ -1,4 +1,4 @@
-/** Default body font size (px) — matches design system base. */
+/** Default body font size (px) - matches design system base. */
 export const FONT_SIZE_BASE_PX = 13;
 
 /** Minimum readable font size (px). */

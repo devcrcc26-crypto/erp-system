@@ -13,7 +13,7 @@ export interface RoleLens {
   /** Matches schedule create permission used by submit-for-review API. */
   canSubmitDesignPackage: boolean;
   canApproveReview: boolean;
-  /** Designer queue — acknowledge, revise, and resolve assigned comments. */
+  /** Designer queue - acknowledge, revise, and resolve assigned comments. */
   canResolveAssignedComments: boolean;
   canViewSubmittals: boolean;
   canCreateSubmittals: boolean;

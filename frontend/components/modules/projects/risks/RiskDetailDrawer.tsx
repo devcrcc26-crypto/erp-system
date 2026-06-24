@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -169,7 +169,7 @@ export default function RiskDetailDrawer({
         {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
-        title={risk ? `${risk.riskIdCode} — ${risk.title}` : 'Risk'}
+        title={risk ? `${risk.riskIdCode} - ${risk.title}` : 'Risk'}
         destroyOnHidden
         extra={
           risk && isEditable ? (

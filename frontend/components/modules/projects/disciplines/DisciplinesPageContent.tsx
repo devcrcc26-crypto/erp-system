@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -100,14 +100,14 @@ export default function DisciplinesPageContent({
         record.projectedStatus ? (
           <ProjectedStatusBadge status={record.projectedStatus} />
         ) : (
-          '—'
+          '-'
         ),
     },
     {
       title: 'Designer',
       dataIndex: 'designerName',
       key: 'designerName',
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: 'Packages',

@@ -113,7 +113,7 @@ export default function DesignPackagePanel({
         }
         options.push({
           value: version.id,
-          label: `${doc.title} — Rev ${version.revisionLabel} (${version.status})`,
+          label: `${doc.title} - Rev ${version.revisionLabel} (${version.status})`,
         });
       }
     }
@@ -157,7 +157,7 @@ export default function DesignPackagePanel({
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       render: (value: string | null) =>
-        value ? new Date(value).toLocaleDateString() : '—',
+        value ? new Date(value).toLocaleDateString() : '-',
     },
     {
       title: '',
@@ -239,7 +239,7 @@ export default function DesignPackagePanel({
       description={
         compact
           ? undefined
-          : 'Packages grouped by projected workflow status — not folder hierarchy.'
+          : 'Packages grouped by projected workflow status - not folder hierarchy.'
       }
       extra={
         lens.canCreateEngineering ? (
@@ -550,14 +550,14 @@ export function DesignPackageItemsTable({
       key: 'revision',
       align: 'right',
       render: (_value, record) =>
-        edvMap.get(record.engineeringDocumentVersionId)?.revisionLabel ?? '—',
+        edvMap.get(record.engineeringDocumentVersionId)?.revisionLabel ?? '-',
     },
     {
       title: 'Status',
       key: 'status',
       render: (_value, record) => {
         const status = edvMap.get(record.engineeringDocumentVersionId)?.status;
-        return status ? <EdvStatusBadge status={status} /> : '—';
+        return status ? <EdvStatusBadge status={status} /> : '-';
       },
     },
     {

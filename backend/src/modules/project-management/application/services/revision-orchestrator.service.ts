@@ -30,7 +30,7 @@ import { PmContext } from '../types/pm-context.type';
 import { SubmittalEdvSnapshotRow } from './submittal-snapshot.service';
 
 /**
- * External revision loop — RFI/CR triggers new DRAFT EDV from LOCKED source.
+ * External revision loop - RFI/CR triggers new DRAFT EDV from LOCKED source.
  * Never mutates LOCKED EDV status.
  */
 @Injectable()
@@ -194,7 +194,7 @@ export class RevisionOrchestratorService {
   }
 
   /**
-   * Processes a PENDING external review trigger — one new EDV per affected document.
+   * Processes a PENDING external review trigger - one new EDV per affected document.
    */
   async processExternalReviewTrigger(
     ctx: PmContext,

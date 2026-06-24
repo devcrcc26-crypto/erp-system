@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 import FilterSection from '@/components/FilterSection';
 import DashboardCharts from '@/components/charts/DashboardCharts';

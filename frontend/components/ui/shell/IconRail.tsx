@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -16,7 +16,7 @@ import {
 const LG_BREAKPOINT_PX = 1024;
 
 /**
- * Desktop icon rail with pin + hover-peek behaviour. Hidden below lg — use MainNavPanel in a drawer on mobile.
+ * Desktop icon rail with pin + hover-peek behaviour. Hidden below lg - use MainNavPanel in a drawer on mobile.
  */
 export default function IconRail({
   coverContextSidebar = false,

@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -153,7 +153,7 @@ export default function CorrespondenceDetailDrawer({
         onClose={onClose}
         title={
           item
-            ? `${item.referenceNumber} — ${item.subject}`
+            ? `${item.referenceNumber} - ${item.subject}`
             : 'Correspondence'
         }
         destroyOnHidden

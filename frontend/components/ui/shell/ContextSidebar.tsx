@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -60,7 +60,7 @@ function canViewNavItem(
 }
 
 /**
- * Project context sidebar — grouped nav driven by config.
+ * Project context sidebar - grouped nav driven by config.
  */
 export default function ContextSidebar({
   projectId,

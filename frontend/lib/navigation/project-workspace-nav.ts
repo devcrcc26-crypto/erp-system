@@ -8,7 +8,7 @@ export interface ProjectWorkspaceNavItem {
   readonly label: string;
   /** i18n key under `epc.json` (e.g. `workspace.items.disciplines`). */
   readonly labelKey: string;
-  /** Icon registry key — defaults to `key` when omitted. */
+  /** Icon registry key - defaults to `key` when omitted. */
   readonly iconKey?: string;
   /** Path after `/projects/{projectId}/`; empty string = dashboard root. */
   readonly pathSuffix: string;

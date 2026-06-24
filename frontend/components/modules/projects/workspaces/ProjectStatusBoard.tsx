@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -47,7 +47,7 @@ export default function ProjectStatusBoard({
       <Col xs={12} lg={6}>
         <KPICard
           label="Active reviews"
-          value={String(board?.activeReviewSessions ?? '—')}
+          value={String(board?.activeReviewSessions ?? '-')}
           icon={FileSearchOutlined}
           iconBg={tokens.colorBlue50}
           iconColor={tokens.colorBlue400}
@@ -56,7 +56,7 @@ export default function ProjectStatusBoard({
       <Col xs={12} lg={6}>
         <KPICard
           label="SLA overdue"
-          value={String(board?.slaOverdueSessions ?? '—')}
+          value={String(board?.slaOverdueSessions ?? '-')}
           icon={ClockCircleOutlined}
           iconBg={tokens.colorAmber50}
           iconColor={tokens.colorAmber400}
@@ -65,7 +65,7 @@ export default function ProjectStatusBoard({
       <Col xs={12} lg={6}>
         <KPICard
           label="Open comments"
-          value={String(board?.openComments ?? '—')}
+          value={String(board?.openComments ?? '-')}
           icon={CommentOutlined}
           iconBg={tokens.colorTeal50}
           iconColor={tokens.colorTeal600}
@@ -74,7 +74,7 @@ export default function ProjectStatusBoard({
       <Col xs={12} lg={6}>
         <KPICard
           label="Pending submittals"
-          value={String(board?.pendingSubmittals ?? '—')}
+          value={String(board?.pendingSubmittals ?? '-')}
           icon={CheckCircleOutlined}
           iconBg={tokens.colorGreen50}
           iconColor={tokens.colorGreen600}
@@ -97,7 +97,7 @@ export default function ProjectStatusBoard({
           className="mb-4 text-[12px] font-normal"
           style={{ color: tokens.colorTextSecondary }}
         >
-          Status board API not available — KPIs will populate when the backend is connected.
+          Status board API not available - KPIs will populate when the backend is connected.
         </p>
       )}
 

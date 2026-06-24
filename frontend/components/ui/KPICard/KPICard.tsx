@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 import type { ComponentType, ReactNode } from 'react';
 import Card from '@/components/ui/Card/Card';
@@ -21,7 +21,7 @@ type KPICardProps = {
 };
 
 /**
- * KPI metric card — design-system stat surface.
+ * KPI metric card - design-system stat surface.
  */
 export default function KPICard({
   label,

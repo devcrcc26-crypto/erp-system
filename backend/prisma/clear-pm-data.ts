@@ -6,7 +6,7 @@ const DEFAULT_COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 
 /**
  * Deletes all projects and dependent PM/EPC records for a company.
- * Keeps company, users, roles, permissions, and reference data intact.
+ * Keeps company, users, roles, permissions - reference data intact.
  */
 export async function clearAllProjectData(
   companyId: string = DEFAULT_COMPANY_ID,
@@ -359,7 +359,7 @@ async function main(): Promise<void> {
   const result = await clearAllProjectData(companyId);
 
   if (result.projectCount === 0) {
-    console.log('No projects found — database is already clean.');
+    console.log('No projects found - database is already clean.');
   } else {
     console.log(`Removed ${result.projectCount} project(s): ${result.projectCodes.join(', ')}`);
     console.log('  Including: tasks, disciplines, packages, review sessions, documents, RFIs, submittals, etc.');

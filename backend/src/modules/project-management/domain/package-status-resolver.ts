@@ -4,12 +4,12 @@ import { DesignPackageProjectedStatus } from './contracts/enums/design-package-p
 export interface PackageStatusInput {
   readonly edvStatuses: readonly EdvStatus[];
   readonly reworkRequired?: boolean;
-  /** Active governance session — EDV APPROVED does not mean package is lead-ready yet. */
+  /** Active governance session - EDV APPROVED does not mean package is lead-ready yet. */
   readonly activeGovernanceSession?: boolean;
 }
 
 /**
- * Priority order — worst case wins when aggregating at discipline level.
+ * Priority order - worst case wins when aggregating at discipline level.
  * Index 0 = highest severity.
  */
 export const PACKAGE_STATUS_PRIORITY: readonly DesignPackageProjectedStatus[] =

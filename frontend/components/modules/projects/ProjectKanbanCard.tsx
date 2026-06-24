@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -107,7 +107,7 @@ export default function ProjectKanbanCard({
             color: tokens.colorTeal600,
           }}
         >
-          RFIs {stats?.openRfis ?? '—'}
+          RFIs {stats?.openRfis ?? '-'}
         </span>
         <span
           className="rounded-[10px] px-2 py-0.5"
@@ -116,7 +116,7 @@ export default function ProjectKanbanCard({
             color: tokens.colorRed600,
           }}
         >
-          Issues {stats?.openIssues ?? '—'}
+          Issues {stats?.openIssues ?? '-'}
         </span>
       </div>
     </>

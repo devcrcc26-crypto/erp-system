@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -88,7 +88,7 @@ function RfiFormDrawer({
     () =>
       (disciplinesQuery.data ?? []).map((row) => ({
         value: row.id,
-        label: `${row.taskName} — ${row.disciplineName}`,
+        label: `${row.taskName} - ${row.disciplineName}`,
       })),
     [disciplinesQuery.data],
   );
@@ -225,7 +225,7 @@ export default function RfisPageContent({
         title: 'Discipline',
         dataIndex: 'discipline',
         key: 'discipline',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Priority',
@@ -251,7 +251,7 @@ export default function RfisPageContent({
         dataIndex: 'assignedTo',
         key: 'assignedTo',
         render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '—',
+          userId ? resolveUserName(userId) : '-',
       },
       {
         title: 'Due',
@@ -294,7 +294,7 @@ export default function RfisPageContent({
     <>
       <FormLayout
         title="RFIs"
-        description="Requests for information —track clarifications from design to closeout."
+        description="Requests for information -track clarifications from design to closeout."
         extra={
           <Button
             type="primary"
@@ -312,7 +312,7 @@ export default function RfisPageContent({
             showIcon
             className="!mb-4"
             title="RFI APIs are not connected yet."
-            description="This page is ready —data will appear when the project management backend module is available."
+            description="This page is ready -data will appear when the project management backend module is available."
           />
         )}
 

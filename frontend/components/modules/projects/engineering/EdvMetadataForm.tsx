@@ -78,7 +78,7 @@ export default function EdvMetadataForm({
         <Input placeholder="Document title" />
       </Form.Item>
       <Form.Item label="Document number" name="documentNumber">
-        <Input placeholder="Optional — auto-numbered if blank" />
+        <Input placeholder="Optional - auto-numbered if blank" />
       </Form.Item>
 
       {documentType === 'DRAWING' && (

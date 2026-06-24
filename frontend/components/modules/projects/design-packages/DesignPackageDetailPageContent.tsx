@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -360,16 +360,16 @@ export default function DesignPackageDetailPageContent({
           </div>
           <div>
             <p className="text-xs text-slate-500">Review tier</p>
-            <p className="text-sm font-medium">{reviewMode?.currentTier ?? '—'}</p>
+            <p className="text-sm font-medium">{reviewMode?.currentTier ?? '-'}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Session</p>
-            <p className="text-sm font-medium">{reviewMode?.sessionStatus ?? '—'}</p>
+            <p className="text-sm font-medium">{reviewMode?.sessionStatus ?? '-'}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Submitted</p>
             <p className="text-sm font-medium">
-              {pkg.submittedAt ? new Date(pkg.submittedAt).toLocaleDateString() : '—'}
+              {pkg.submittedAt ? new Date(pkg.submittedAt).toLocaleDateString() : '-'}
             </p>
           </div>
         </div>

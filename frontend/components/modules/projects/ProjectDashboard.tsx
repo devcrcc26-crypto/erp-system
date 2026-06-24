@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -50,7 +50,7 @@ function formatCount(value: number | undefined, hasStats: boolean): string {
   if (hasStats && value != null) {
     return String(value);
   }
-  return '—';
+  return '-';
 }
 
 export default function ProjectDashboard({
@@ -158,7 +158,7 @@ export default function ProjectDashboard({
                   className="text-[18px] font-medium tracking-[-0.02em]"
                   style={{ color: tokens.colorTextPrimary }}
                 >
-                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '—'}
+                  {plannedProgressPct != null ? `${plannedProgressPct}%` : '-'}
                 </dd>
               </div>
               <div>
@@ -172,7 +172,7 @@ export default function ProjectDashboard({
                   className="text-[18px] font-medium tracking-[-0.02em]"
                   style={{ color: tokens.colorTextPrimary }}
                 >
-                  {actualProgressPct != null ? `${actualProgressPct}%` : '—'}
+                  {actualProgressPct != null ? `${actualProgressPct}%` : '-'}
                 </dd>
               </div>
               <div className="col-span-2">
@@ -186,7 +186,7 @@ export default function ProjectDashboard({
                   className="text-[18px] font-medium tracking-[-0.02em]"
                   style={{ color: tokens.colorTextPrimary }}
                 >
-                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '—'}
+                  {scheduleVariancePct != null ? `${scheduleVariancePct}%` : '-'}
                 </dd>
               </div>
             </dl>

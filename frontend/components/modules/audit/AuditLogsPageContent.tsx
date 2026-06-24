@@ -33,7 +33,7 @@ function formatTimestamp(value: string): string {
 
 function formatUserName(log: AuditLog): string {
   if (!log.user) {
-    return '—';
+    return '-';
   }
   return `${log.user.firstName} ${log.user.lastName}`.trim() || log.user.email;
 }
@@ -132,7 +132,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         dataIndex: 'recordReference',
         key: 'recordReference',
         ellipsis: true,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: t('auditLogs.columns.source'),
@@ -151,7 +151,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         dataIndex: 'ipAddress',
         key: 'ipAddress',
         width: 130,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: '',

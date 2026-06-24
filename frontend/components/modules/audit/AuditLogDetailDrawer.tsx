@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -14,7 +14,7 @@ function formatTimestamp(value: string): string {
 
 function formatUserName(log: AuditLog): string {
   if (!log.user) {
-    return '—';
+    return '-';
   }
   return `${log.user.firstName} ${log.user.lastName}`.trim() || log.user.email;
 }
@@ -53,7 +53,7 @@ function JsonBlock({
   emptyLabel?: string;
 }): React.ReactNode {
   if (value === null || value === undefined) {
-    return <span style={{ color: 'var(--color-text-tertiary)' }}>{emptyLabel ?? '—'}</span>;
+    return <span style={{ color: 'var(--color-text-tertiary)' }}>{emptyLabel ?? '-'}</span>;
   }
 
   return (
@@ -119,19 +119,19 @@ export default function AuditLogDetailDrawer({
               <span className="break-all font-mono text-xs">{log.recordId}</span>
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.recordReference')}>
-              {log.recordReference ?? '—'}
+              {log.recordReference ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.ipAddress')}>
-              {log.ipAddress ?? '—'}
+              {log.ipAddress ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.deviceInfo')}>
-              {log.deviceInfo ?? '—'}
+              {log.deviceInfo ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.correlationId')}>
-              {log.correlationId ?? '—'}
+              {log.correlationId ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.sessionId')}>
-              {log.sessionId ?? '—'}
+              {log.sessionId ?? '-'}
             </Descriptions.Item>
           </Descriptions>
 

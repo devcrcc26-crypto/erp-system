@@ -20,7 +20,7 @@ export interface ExternalReviewTriggerInput {
 }
 
 /**
- * Records external review outcomes as triggers only — never mutates EDV workflow state.
+ * Records external review outcomes as triggers only - never mutates EDV workflow state.
  */
 @Injectable()
 export class ExternalReviewTriggerService {
@@ -51,7 +51,7 @@ export class ExternalReviewTriggerService {
     const payload: Prisma.InputJsonValue = {
       reviewStatus: input.reviewStatus,
       comments: input.comments ?? null,
-      note: 'Trigger only — revision orchestrator processes in Wave 6',
+      note: 'Trigger only - revision orchestrator processes in Wave 6',
     };
 
     const triggerId = await this.epcSubmittalRepository.createExternalReviewTrigger(tx, {

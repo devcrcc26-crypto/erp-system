@@ -1,22 +1,17 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Tabs } from 'antd';
+import { Alert, Collapse } from 'antd';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
-import {
-  useAllTasks,
-  useMilestones,
-  useTaskDependencies,
-} from '@/lib/query/schedule';
+import { useAllTasks, useTaskDependencies } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ScheduleKpiBar from '@/components/modules/projects/schedule/ScheduleKpiBar';
 import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPanel';
 import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
-import ScheduleCalendar from '@/components/modules/projects/schedule/ScheduleCalendar';
 import { layout } from '@/lib/theme/layout';
 
 export default function SchedulePageContent({
@@ -25,28 +20,17 @@ export default function SchedulePageContent({
   projectId: string;
 }): React.ReactNode {
   const [criticalOnly, setCriticalOnly] = useState(false);
-  const [activeTab, setActiveTab] = useState('gantt');
+  const [milestonesOpen, setMilestonesOpen] = useState(false);
 
   const tasksQuery = useAllTasks(projectId);
-  const milestonesQuery = useMilestones(
-    projectId,
-    { page: 1, limit: 50 },
-    activeTab === 'milestones',
-  );
-  const dependenciesQuery = useTaskDependencies(projectId, activeTab === 'gantt');
+  const dependenciesQuery = useTaskDependencies(projectId);
 
-  const isLoading =
-    tasksQuery.isLoading ||
-    (activeTab === 'gantt' && dependenciesQuery.isLoading) ||
-    (activeTab === 'milestones' && milestonesQuery.isLoading);
+  const isLoading = tasksQuery.isLoading || dependenciesQuery.isLoading;
 
   const apiUnavailable =
-    (tasksQuery.isError &&
-      tasksQuery.error instanceof ApiRequestError &&
-      (tasksQuery.error.status === 404 || tasksQuery.error.status === 0)) ||
-    (milestonesQuery.isError &&
-      milestonesQuery.error instanceof ApiRequestError &&
-      milestonesQuery.error.status === 404);
+    tasksQuery.isError &&
+    tasksQuery.error instanceof ApiRequestError &&
+    (tasksQuery.error.status === 404 || tasksQuery.error.status === 0);
 
   const tasks = tasksQuery.data?.data ?? [];
   const dependencies = dependenciesQuery.data ?? [];
@@ -64,51 +48,40 @@ export default function SchedulePageContent({
           type="info"
           showIcon
           title="Schedule APIs are not connected yet."
-          description="Milestones, tasks, Gantt, and dependencies will populate when the project management backend module is available."
+          description="Tasks and the Gantt chart will populate when the project management backend module is available."
         />
       )}
 
       <ScheduleKpiBar metrics={metrics} />
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        destroyOnHidden
-        className="erp-schedule-tabs min-w-0"
+      <ScheduleGantt
+        tasks={tasks}
+        criticalOnly={criticalOnly}
+        onCriticalOnlyChange={setCriticalOnly}
+      />
+
+      <TasksPanel
+        projectId={projectId}
+        tasks={tasks}
+        dependencies={dependencies}
+        dependenciesLoading={dependenciesQuery.isLoading}
+        criticalOnly={criticalOnly}
+      />
+
+      <Collapse
+        bordered={false}
+        className="erp-schedule-collapse bg-transparent"
+        activeKey={milestonesOpen ? ['milestones'] : []}
+        onChange={(keys) =>
+          setMilestonesOpen(
+            Array.isArray(keys) ? keys.includes('milestones') : keys === 'milestones',
+          )
+        }
         items={[
-          {
-            key: 'gantt',
-            label: 'Gantt',
-            children: (
-              <ScheduleGantt
-                tasks={tasks}
-                dependencies={dependencies}
-                criticalOnly={criticalOnly}
-                onCriticalOnlyChange={setCriticalOnly}
-              />
-            ),
-          },
-          {
-            key: 'tasks',
-            label: 'Tasks',
-            children: (
-              <TasksPanel
-                projectId={projectId}
-                tasks={tasks}
-                criticalOnly={criticalOnly}
-                onCriticalOnlyChange={setCriticalOnly}
-              />
-            ),
-          },
           {
             key: 'milestones',
             label: 'Milestones',
             children: <MilestonesPanel projectId={projectId} />,
-          },
-          {
-            key: 'calendar',
-            label: 'Calendar',
-            children: <ScheduleCalendar tasks={tasks} />,
           },
         ]}
       />

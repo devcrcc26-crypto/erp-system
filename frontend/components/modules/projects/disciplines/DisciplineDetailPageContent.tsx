@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -128,17 +128,17 @@ export default function DisciplineDetailPageContent({
                 pending={projectionPending}
               />
             ) : (
-              '—'
+              '-'
             )}
           </Descriptions.Item>
           <Descriptions.Item label="Designer">
-            {discipline.designerName ?? '—'}
+            {discipline.designerName ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Reviewer">
-            {discipline.reviewerName ?? '—'}
+            {discipline.reviewerName ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Discipline owner">
-            {discipline.disciplineOwnerName ?? '—'}
+            {discipline.disciplineOwnerName ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Dept review">
             {formatDisciplineDateTime(discipline.deptReviewTime)}

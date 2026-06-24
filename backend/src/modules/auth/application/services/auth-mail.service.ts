@@ -110,7 +110,7 @@ export class AuthMailService {
       if (this.isDevelopment && this.isLocalMailCatcher) {
         this.logger.log(
           `Email queued to local mail catcher for ${input.to}. ` +
-            'Real inboxes (e.g. Gmail) will not receive it — use the link logged above or open Mailpit at http://localhost:8025',
+            'Real inboxes (e.g. Gmail) will not receive it - use the link logged above or open Mailpit at http://localhost:8025',
         );
       }
     } catch (error) {

@@ -38,7 +38,7 @@ export class WorkflowCommittedDispatcher {
     }
 
     this.logger.debug(
-      'Redis queue unavailable — committing workflow events synchronously',
+      'Redis queue unavailable - committing workflow events synchronously',
     );
     await this.workflowCommittedService.commitByCorrelation(
       companyId,

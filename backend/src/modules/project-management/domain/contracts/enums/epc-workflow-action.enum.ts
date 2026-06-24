@@ -1,4 +1,4 @@
-/** Action-level permissions — replace coarse module RBAC for workflow mutations. */
+/** Action-level permissions - replace coarse module RBAC for workflow mutations. */
 export enum EpcWorkflowAction {
   ENGINEERING_DOCUMENT_VERSION_UPLOAD = 'engineering_document.version.upload',
   ENGINEERING_DOCUMENT_VERSION_LOCK = 'engineering_document.version.lock',

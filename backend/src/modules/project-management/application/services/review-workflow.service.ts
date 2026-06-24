@@ -58,7 +58,7 @@ import {
 } from './state-projection.service';
 
 /**
- * Review lifecycle commands — session, comments, snapshot (Wave 4).
+ * Review lifecycle commands - session, comments, snapshot (Wave 4).
  * EDV status remains sole lifecycle authority via EdvTransitionService.
  */
 @Injectable()
@@ -829,7 +829,7 @@ export class ReviewWorkflowService {
   }
 
   /**
-   * Returns package for rework — closes session and reverts EDVs to DRAFT.
+   * Returns package for rework - closes session and reverts EDVs to DRAFT.
    */
   async returnPackageForRework(
     command: ReturnPackageForReworkCommand,

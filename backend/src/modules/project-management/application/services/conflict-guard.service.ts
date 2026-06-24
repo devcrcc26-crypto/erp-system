@@ -213,7 +213,7 @@ export class ConflictGuardService {
   }
 
   /**
-   * Validates batch transition plan before any write — all-or-nothing.
+   * Validates batch transition plan before any write - all-or-nothing.
    */
   assertBatchTransitionPlan(
     loaded: readonly EdvWithDiscipline[],

@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 /** Icon rail layout widths (px). */
 export const RAIL_COLLAPSED_WIDTH = 64;

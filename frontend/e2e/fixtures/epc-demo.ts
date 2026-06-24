@@ -1,5 +1,5 @@
 /**
- * Deterministic EPC demo IDs — must match backend/prisma/seed-epc-demo.ts.
+ * Deterministic EPC demo IDs - must match backend/prisma/seed-epc-demo.ts.
  */
 function sid(project: number, entity: number): string {
   const n = project * 1000 + entity;
@@ -11,8 +11,8 @@ export const EPC_DEMO = {
   taskDisciplineId: sid(1, 200),
   designPackageId: sid(1, 210),
   designPackageLeadId: sid(1, 212),
-  designPackageName: 'Foundation Drawings — Review Package',
-  designPackageLeadName: 'Structural Calculations — Lead Review',
+  designPackageName: 'Foundation Drawings - Review Package',
+  designPackageLeadName: 'Structural Calculations - Lead Review',
   reviewCommentSnippet: 'Clarify pile cap reinforcement',
 } as const;
 

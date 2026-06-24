@@ -133,7 +133,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Legacy create — metadata only without design packages.
+   * Legacy create - metadata only without design packages.
    */
   async createSubmittal(
     ctx: PmContext,
@@ -372,7 +372,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Issues submittal — captures immutable package snapshots.
+   * Issues submittal - captures immutable package snapshots.
    */
   async issueSubmittal(
     ctx: PmContext,
@@ -417,7 +417,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Issues multiple submittals — one kernel tx per submittal.
+   * Issues multiple submittals - one kernel tx per submittal.
    */
   async batchIssue(
     ctx: PmContext,
@@ -527,7 +527,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Records external submittal review — trigger only, no EDV mutation.
+   * Records external submittal review - trigger only, no EDV mutation.
    */
   async addReview(
     ctx: PmContext,

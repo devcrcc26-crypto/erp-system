@@ -12,7 +12,7 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
-/** GET without throwing on 401/403 — avoids noisy axios console errors for permission probes. */
+/** GET without throwing on 401/403 - avoids noisy axios console errors for permission probes. */
 export async function silentApiGet(path: string): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, {
     headers: authHeaders(),

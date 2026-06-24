@@ -44,7 +44,7 @@ export default function DisciplineDetailDrawer({
   const showTaskSelect = !isEditing && !taskId;
   const taskOptions = (tasksQuery.data?.data ?? []).map((task) => ({
     value: task.id,
-    label: `${task.taskIdCode} — ${task.name}`,
+    label: `${task.taskIdCode} - ${task.name}`,
   }));
 
   async function handleSubmit(values: DisciplineDetailFormValues): Promise<void> {

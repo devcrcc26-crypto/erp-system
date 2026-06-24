@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -118,7 +118,7 @@ export default function ConstructionSubmittalDrawer({
         },
       });
       messageApi.success(
-        'Submittal created — upload documents and submit to discipline leader',
+        'Submittal created - upload documents and submit to discipline leader',
       );
       form.resetFields();
       onCreated(result.id);

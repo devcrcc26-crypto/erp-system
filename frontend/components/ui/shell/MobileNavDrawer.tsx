@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -13,7 +13,7 @@ import { tokens } from '@/lib/theme/tokens';
 type MobileNavPane = 'app' | 'project';
 
 /**
- * Unified mobile navigation drawer — app menu and project menu in one place.
+ * Unified mobile navigation drawer - app menu and project menu in one place.
  */
 export default function MobileNavDrawer({
   open,

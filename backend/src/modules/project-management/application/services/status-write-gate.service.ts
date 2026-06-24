@@ -20,7 +20,7 @@ export interface StatusWriteGateInput {
 @Injectable()
 export class StatusWriteGateService {
   /**
-   * Validates transition — throws on invalid.
+   * Validates transition - throws on invalid.
    */
   assertTransition(input: StatusWriteGateInput): EdvTransitionResult {
     const result = canTransitionEdvStatus(input.from, input.to);

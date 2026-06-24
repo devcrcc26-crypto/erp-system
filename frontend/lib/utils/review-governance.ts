@@ -1,7 +1,7 @@
 import type { ReviewTier } from '@/lib/api/epc.types';
 
 /**
- * Final governance tier — only here may EDVs be batch-approved to APPROVED.
+ * Final governance tier - only here may EDVs be batch-approved to APPROVED.
  */
 export function isFinalReviewTier(
   tier: ReviewTier | string | null | undefined,

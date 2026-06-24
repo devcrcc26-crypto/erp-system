@@ -29,7 +29,7 @@ export default function ReviewApprovalBlockedAlert({
             {blocking.map((comment) => (
               <li key={comment.id}>
                 <span className="font-medium">{comment.status}</span>
-                {' — '}
+                {' - '}
                 {comment.body}
               </li>
             ))}

@@ -1,4 +1,4 @@
-# Project Management Module — Full Implementation Guide
+# Project Management Module - Full Implementation Guide
 
 This document describes the **complete Project Management (PM) implementation** in the Construction ERP: backend architecture, API surface, database models, frontend routes, UI layout, and feature maturity.
 
@@ -29,12 +29,12 @@ Paths are relative to the monorepo root unless noted.
 
 The Project Management module is the operational core for construction projects after award. It supports:
 
-- **Portfolio management** — register, filter, and track projects company-wide
-- **Programme / scheduling** — milestones, tasks, dependencies, Gantt, calendar
-- **EPC engineering workflow** — disciplines, engineering documents (EDVs), design packages, multi-tier review, submittals
-- **Site operations** — RFIs, issues, daily logs, meetings, correspondence, risks, punch list
-- **Document control** — drawings register, project document folders (Core Documents module)
-- **Project closeout** — handover checklist and status workflow
+- **Portfolio management** - register, filter, and track projects company-wide
+- **Programme / scheduling** - milestones, tasks, dependencies, Gantt, calendar
+- **EPC engineering workflow** - disciplines, engineering documents (EDVs), design packages, multi-tier review, submittals
+- **Site operations** - RFIs, issues, daily logs, meetings, correspondence, risks, punch list
+- **Document control** - drawings register, project document folders (Core Documents module)
+- **Project closeout** - handover checklist and status workflow
 
 All data is **company-scoped** (`company_id` from JWT). Project sub-resources are **project-scoped** (`projectId` in the URL).
 
@@ -50,7 +50,7 @@ All data is **company-scoped** (`company_id` from JWT). Project sub-resources ar
 | Types | `frontend/lib/api/project-management.types.ts`, `frontend/lib/api/epc.types.ts` |
 | Navigation config | `frontend/lib/navigation/project-workspace-nav.ts` |
 
-There is **one** NestJS module for all PM concerns — no separate `project-setup` module.
+There is **one** NestJS module for all PM concerns - no separate `project-setup` module.
 
 ---
 
@@ -79,7 +79,7 @@ backend/src/modules/project-management/
 
 **Architecture notes:**
 
-- **No CQRS** — unlike `auth`, PM uses application services calling Prisma directly (classic PM) or infrastructure repositories (EPC workflow).
+- **No CQRS** - unlike `auth`, PM uses application services calling Prisma directly (classic PM) or infrastructure repositories (EPC workflow).
 - **Rich domain layer** for EPC: EDV state machine, workflow kernel, permission evaluator, conflict guards.
 - **Async processing** via BullMQ for workflow commits and SLA dispatch (Redis-gated).
 - **Global API prefix:** `/api` (configurable via `API_PREFIX`).
@@ -123,7 +123,7 @@ frontend/
 
 | Model | Purpose |
 |-------|---------|
-| `Project` | Project master — code, name, status, type, dates, budget, location, PM |
+| `Project` | Project master - code, name, status, type, dates, budget, location, PM |
 | `ProjectTeam` | Team membership with role-on-project |
 | `Milestone` | Schedule milestones |
 | `Task` | Tasks with hierarchy, progress, EPC metadata |
@@ -144,7 +144,7 @@ frontend/
 | `ReviewSession` | Package review sessions |
 | `ReviewContextSnapshot` | Point-in-time review context |
 | `ReviewComment` | Threaded review comments |
-| `Deliverable` | Deliverable tracking (schema only — no dedicated API yet) |
+| `Deliverable` | Deliverable tracking (schema only - no dedicated API yet) |
 | `ExternalReviewTrigger` | External review triggers |
 | `SubmittalItem` | Submittal line items (EDV/package refs) |
 | `ProjectChangeRequest` | Change requests from RFI/external review (internal service) |
@@ -326,15 +326,15 @@ PATCH /api/projects/:projectId/closeout/checklist/:itemId
 | **Submittals** | CRUD + issue workflow + design-package submittals | `/submittals` with drawers | ✅ Implemented (advanced) |
 | **RFIs** | CRUD + responses | `/rfis` with detail drawer | ✅ Implemented |
 | **Drawings** | CRUD + versions + links | `/drawings` | ✅ Implemented (basic version upload) |
-| **Daily Site Logs** | Header CRUD; child entities read-only | `/daily-logs` | ⚠️ Partial — no write APIs for workforce/equipment/visitors/incidents |
-| **Meetings** | Header CRUD; agenda/attendees read-only | `/meetings` | ⚠️ Partial — no agenda/attendee/action-item APIs |
+| **Daily Site Logs** | Header CRUD; child entities read-only | `/daily-logs` | ⚠️ Partial - no write APIs for workforce/equipment/visitors/incidents |
+| **Meetings** | Header CRUD; agenda/attendees read-only | `/meetings` | ⚠️ Partial - no agenda/attendee/action-item APIs |
 | **Correspondence** | Full CRUD | `/correspondence` | ✅ Implemented (list-first UI) |
 | **Risk Register** | Full CRUD | `/risks` | ✅ Implemented (list-first UI) |
 | **Issues & Defects** | Full CRUD | `/issues` | ✅ Implemented |
 | **Punch List** | Full CRUD | `/punch-list` | ✅ Implemented (list-first UI) |
-| **Project Closeout** | Init + checklist | `/closeout` | ⚠️ Partial — `Warranty` model has no CRUD API |
+| **Project Closeout** | Init + checklist | `/closeout` | ⚠️ Partial - `Warranty` model has no CRUD API |
 | **Deliverables** | Schema only | Aggregates design packages | ⚠️ Partial |
-| **Project Change Requests** | Internal service only | None | ⚠️ Partial — backend-only |
+| **Project Change Requests** | Internal service only | None | ⚠️ Partial - backend-only |
 | **Status Board / Workload** | EPC workspace endpoints | `/overview/status`, `/overview/workload` | ✅ Implemented |
 | **Portfolio Kanban** | Project list/kanban | `/kanban-board` | ✅ Implemented |
 | **Documents (DMS)** | Separate `documents` module | `/documents` panel | ✅ Integrated |
@@ -346,7 +346,7 @@ PATCH /api/projects/:projectId/closeout/checklist/:itemId
 ### 6.1 Layout Hierarchy
 
 ```
-AppShell (global — navy top nav 48px + dark sidebar 240px)
+AppShell (global - navy top nav 48px + dark sidebar 240px)
 ├── Dashboard, Projects, Review Inbox*, My Comments*, Kanban Board
 └── /projects/[projectId]/*
     └── ProjectShell
@@ -422,12 +422,12 @@ The PM module follows a **Procore-inspired** design system defined in `.cursorru
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  NAVY TOP BAR (48px) — logo, page title, user menu, notifications│
+│  NAVY TOP BAR (48px) - logo, page title, user menu, notifications│
 ├──────────┬──────────────────────────────────────────────────────┤
 │  DARK    │  PAGE BACKGROUND (#F5F6F7)                          │
 │  SIDEBAR │                                                       │
 │  (240px) │  ┌─────────────────────────────────────────────────┐ │
-│          │  │  WHITE CARD — page content                       │ │
+│          │  │  WHITE CARD - page content                       │ │
 │  • Dash  │  │                                                   │ │
 │  • Proj  │  │  FormLayout header (title + filters + actions)   │ │
 │  • Inbox │  │  ─────────────────────────────────────────────  │ │
@@ -443,7 +443,7 @@ When you open a project, the global sidebar stays; content area switches to the 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  [Global AppShell — unchanged]                                   │
+│  [Global AppShell - unchanged]                                   │
 ├──────────┬──────────────────────────────────────────────────────┤
 │  Global  │  ┌─ PROJECT HEADER CARD (white) ──────────────────┐  │
 │  sidebar │  │  Project Name          [Status Badge]           │  │
@@ -620,7 +620,7 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 
 ## 9. Screen-by-Screen UI Guide
 
-### 9.1 Portfolio — Projects List (`/projects`)
+### 9.1 Portfolio - Projects List (`/projects`)
 
 **What you see:**
 - White card with page title "Projects"
@@ -635,7 +635,7 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 
 ---
 
-### 9.2 Portfolio — Kanban Board (`/kanban-board`)
+### 9.2 Portfolio - Kanban Board (`/kanban-board`)
 
 **What you see:**
 - Horizontal columns grouped by project status (Planning, Active, On Hold, Completed, etc.)
@@ -697,8 +697,8 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 **Discipline Detail page:**
 - Breadcrumb: Disciplines → [Discipline Name]
 - `Descriptions` block with discipline metadata
-- **Design Packages** panel — package cards/table with status, item count
-- **Engineering Documents** panel — EDV table with document number, title, type, latest version status
+- **Design Packages** panel - package cards/table with status, item count
+- **Engineering Documents** panel - EDV table with document number, title, type, latest version status
 
 **Package Detail page:**
 - Items table (EDVs in package)
@@ -727,9 +727,9 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 - **"+ New Submittal"** and **"Design Package Submittal"** buttons
 
 **Drawers:**
-- `SubmittalFormDrawer` — create/edit
-- `SubmittalDetailDrawer` — detail with review history
-- `SubmittalPackageDrawer` — issue submittal from design package
+- `SubmittalFormDrawer` - create/edit
+- `SubmittalDetailDrawer` - detail with review history
+- `SubmittalPackageDrawer` - issue submittal from design package
 
 ---
 
@@ -777,7 +777,7 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 
 **What you see:**
 - Resolves the project's document folder from Core Documents module
-- `DocumentAttachmentPanel` — file browser, upload, folder navigation
+- `DocumentAttachmentPanel` - file browser, upload, folder navigation
 
 ---
 
@@ -849,12 +849,12 @@ Sidebar items are **filtered by RBAC** via `usePmCapabilities()` and `useEpcCapa
 
 ### 10.3 Common Patterns
 
-1. **`enabled` flags** — queries gated on auth hydration, capabilities, or active tab
-2. **`retry: false`** on PM reads — 404 treated as "API not connected" with graceful `Alert`
+1. **`enabled` flags** - queries gated on auth hydration, capabilities, or active tab
+2. **`retry: false`** on PM reads - 404 treated as "API not connected" with graceful `Alert`
 3. **Mutations invalidate** related query keys on success
-4. **`useAllProjects` / `useAllTasks`** — walk paginated API (page size 100) for portfolio/Gantt
-5. **Polling** — discipline projection status uses `refetchInterval` when `projectionPending`
-6. **Path helper** — `projectPath(projectId, resource)` in `lib/query/pm-query-utils.ts`
+4. **`useAllProjects` / `useAllTasks`** - walk paginated API (page size 100) for portfolio/Gantt
+5. **Polling** - discipline projection status uses `refetchInterval` when `projectionPending`
+6. **Path helper** - `projectPath(projectId, resource)` in `lib/query/pm-query-utils.ts`
 
 ### 10.4 API Response Envelope
 
@@ -894,10 +894,10 @@ Actions: `view`, `create`, `edit`, `delete` per PM module key.
 
 Wraps the project layout. Derives engineering/review/submittal permissions from PM + EPC capabilities. Used by:
 
-- `ProjectWorkspaceSidebar` — hides nav items (including engineering surfaces when the user has no assigned disciplines and lacks bypass)
-- `EngineeringDocumentPanel` — gates register/upload actions
-- `DesignPackagePanel` — gates review workflow buttons
-- `SubmittalsPageContent` — gates design package submittal creation
+- `ProjectWorkspaceSidebar` - hides nav items (including engineering surfaces when the user has no assigned disciplines and lacks bypass)
+- `EngineeringDocumentPanel` - gates register/upload actions
+- `DesignPackagePanel` - gates review workflow buttons
+- `SubmittalsPageContent` - gates design package submittal creation
 
 **Discipline scoping (EPC responsibility workflow):**
 
@@ -922,12 +922,12 @@ Wraps the project layout. Derives engineering/review/submittal permissions from 
 | EPC Operating Model | `docs/epc-operating-model.md` | EPC workflow concepts and roles |
 | EPC V1 Contracts | `docs/epc-v1-implementation-contracts.md` | API contracts for engineering workflow |
 | Engineering Document Metadata | `docs/engineering-document-metadata.md` | EDV metadata schema |
-| PM Study Guide (legacy) | `PROJECT_MANAGEMENT_STUDY_GUIDE.md` | Developer walkthrough (classic PM only — predates EPC) |
+| PM Study Guide (legacy) | `PROJECT_MANAGEMENT_STUDY_GUIDE.md` | Developer walkthrough (classic PM only - predates EPC) |
 | Backend Implementation | `backend/BACKEND_IMPLEMENTATION.md` | General backend patterns |
 
 ---
 
-## Appendix A — Entity Relationship (Simplified)
+## Appendix A - Entity Relationship (Simplified)
 
 ```mermaid
 erDiagram
@@ -963,7 +963,7 @@ erDiagram
 
 ---
 
-## Appendix B — File Index (Key Files)
+## Appendix B - File Index (Key Files)
 
 ### Backend
 - `backend/src/modules/project-management/project-management.module.ts`
@@ -971,12 +971,12 @@ erDiagram
 - `backend/src/modules/project-management/application/dtos/engineering-document.dtos.ts`
 - `backend/src/modules/project-management/presentation/controllers/*.controller.ts` (19 files)
 
-### Frontend — Pages
+### Frontend - Pages
 - `frontend/app/(dashboard)/projects/page.tsx`
 - `frontend/app/(dashboard)/projects/[projectId]/layout.tsx`
 - `frontend/app/(dashboard)/projects/[projectId]/*/page.tsx` (23 routes)
 
-### Frontend — Components
+### Frontend - Components
 - `frontend/components/modules/projects/ProjectShell.tsx`
 - `frontend/components/modules/projects/ProjectDashboard.tsx`
 - `frontend/components/modules/projects/ProjectsPageContent.tsx`
@@ -985,7 +985,7 @@ erDiagram
 - `frontend/components/modules/projects/schedule/SchedulePageContent.tsx`
 - `frontend/components/modules/projects/schedule/ScheduleGantt.tsx`
 
-### Frontend — Config & Hooks
+### Frontend - Config & Hooks
 - `frontend/lib/navigation/project-workspace-nav.ts`
 - `frontend/lib/api/project-management.types.ts`
 - `frontend/lib/api/epc.types.ts`
@@ -993,4 +993,4 @@ erDiagram
 
 ---
 
-*Last updated: June 2026 — reflects EPC engineering workflow, 19 controllers, 23 project routes, and capability-gated navigation.*
+*Last updated: June 2026 - reflects EPC engineering workflow, 19 controllers, 23 project routes, and capability-gated navigation.*

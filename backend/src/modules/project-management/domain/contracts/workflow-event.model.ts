@@ -18,7 +18,7 @@ export interface WorkflowStateSnapshot {
   readonly revisionLabel?: string;
 }
 
-/** Append-only event log row contract — no update/delete ever. */
+/** Append-only event log row contract - no update/delete ever. */
 export interface WorkflowEventLogEntry {
   readonly id: string;
   readonly companyId: string;
@@ -36,9 +36,9 @@ export interface WorkflowEventLogEntry {
 }
 
 /**
- * INTENT — written inside $transaction; rolled back with tx failure.
- * COMMITTED — written post-commit; confirms durable state.
- * CORRECTION — append-only fix; references correctsEventId; reason required.
+ * INTENT - written inside $transaction; rolled back with tx failure.
+ * COMMITTED - written post-commit; confirms durable state.
+ * CORRECTION - append-only fix; references correctsEventId; reason required.
  */
 export interface WorkflowEventModel {
   readonly phases: typeof WorkflowEventPhase;

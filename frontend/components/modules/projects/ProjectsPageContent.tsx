@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -181,7 +181,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         <PlaceholderPage
           icon={Network}
           title="Projects"
-          description="Project management APIs are not available yet. The frontend is ready —connect the backend module to enable this page."
+          description="Project management APIs are not available yet. The frontend is ready -connect the backend module to enable this page."
         />
       );
     }

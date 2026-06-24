@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -365,7 +365,7 @@ export default function DailyLogDetailDrawer({
         title: 'Contractor',
         dataIndex: 'contractor',
         key: 'contractor',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       { title: 'Workers', dataIndex: 'workerCount', key: 'workerCount', width: 90 },
       ...(isEditable
@@ -403,14 +403,14 @@ export default function DailyLogDetailDrawer({
         dataIndex: 'hoursUsed',
         key: 'hoursUsed',
         width: 100,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Downtime',
         dataIndex: 'hoursDowntime',
         key: 'hoursDowntime',
         width: 100,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       ...(isEditable
         ? [
@@ -445,13 +445,13 @@ export default function DailyLogDetailDrawer({
         title: 'Company',
         dataIndex: 'company',
         key: 'company',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Purpose',
         dataIndex: 'purpose',
         key: 'purpose',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       ...(isEditable
         ? [
@@ -487,7 +487,7 @@ export default function DailyLogDetailDrawer({
         dataIndex: 'severity',
         key: 'severity',
         width: 100,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Description',
@@ -535,7 +535,7 @@ export default function DailyLogDetailDrawer({
                 Shift
               </dt>
               <dd className={`mt-1 ${layout.drawerMutedText}`}>
-                {currentLog.shift ?? '—'}
+                {currentLog.shift ?? '-'}
               </dd>
             </div>
             <div>
@@ -906,7 +906,7 @@ export default function DailyLogDetailDrawer({
         onClose={onClose}
         title={
           log
-            ? `Daily log — ${formatProjectDate(log.logDate)}`
+            ? `Daily log - ${formatProjectDate(log.logDate)}`
             : 'Daily log detail'
         }
         destroyOnHidden

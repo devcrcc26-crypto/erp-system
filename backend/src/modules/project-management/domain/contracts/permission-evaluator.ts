@@ -6,7 +6,7 @@ import {
   TIER_ACTIONS_REQUIRING_ASSIGNEE,
 } from './permission.model';
 
-/** Layer evaluation order — short-circuit on first DENY. */
+/** Layer evaluation order - short-circuit on first DENY. */
 export const PERMISSION_LAYER_ORDER: readonly PermissionLayerId[] = [
   PermissionLayerId.SYSTEM_ROLE,
   PermissionLayerId.PROJECT_TEAM_ROLE,
@@ -16,7 +16,7 @@ export const PERMISSION_LAYER_ORDER: readonly PermissionLayerId[] = [
 ];
 
 /**
- * Pure deny-wins evaluator — contract algorithm for permission-resolver (Wave 0).
+ * Pure deny-wins evaluator - contract algorithm for permission-resolver (Wave 0).
  * DENY on any layer → false.
  * All required layers ALLOW → true.
  * Otherwise → false (default-deny).

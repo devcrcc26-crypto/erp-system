@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -210,13 +210,13 @@ export default function PunchItemsPageContent({
         title: 'Area',
         dataIndex: 'roomOrArea',
         key: 'roomOrArea',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Trade',
         dataIndex: 'tradeResponsible',
         key: 'tradeResponsible',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Severity',
@@ -234,7 +234,7 @@ export default function PunchItemsPageContent({
         dataIndex: 'assignedTo',
         key: 'assignedTo',
         render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '—',
+          userId ? resolveUserName(userId) : '-',
       },
       {
         title: 'Due',

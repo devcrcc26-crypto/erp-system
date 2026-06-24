@@ -76,7 +76,7 @@ const REASSIGNMENT_ADMIN_ROLES = new Set([
 ]);
 
 /**
- * WorkflowKernel — Phase A + Phase B with review lifecycle (Wave 4).
+ * WorkflowKernel - Phase A + Phase B with review lifecycle (Wave 4).
  * EDV transitions remain sole lifecycle authority.
  */
 @Injectable()

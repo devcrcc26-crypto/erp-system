@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -59,7 +59,7 @@ export default function IssueDetailDrawer({
       {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={issue ? `${issue.issueNumber} — ${issue.issueType}` : 'Issue detail'}
+      title={issue ? `${issue.issueNumber} - ${issue.issueType}` : 'Issue detail'}
       destroyOnHidden
     >
       {issueQuery.isLoading && (
@@ -105,13 +105,13 @@ export default function IssueDetailDrawer({
               />
             </Descriptions.Item>
             <Descriptions.Item label="Location">
-              {issue.location ?? '—'}
+              {issue.location ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Raised by">
               {resolveUserName(issue.raisedBy)}
             </Descriptions.Item>
             <Descriptions.Item label="Assigned to">
-              {issue.assignedTo ? resolveUserName(issue.assignedTo) : '—'}
+              {issue.assignedTo ? resolveUserName(issue.assignedTo) : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Due date">
               {formatProjectDate(issue.dueDate)}

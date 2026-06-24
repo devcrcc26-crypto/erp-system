@@ -17,7 +17,7 @@ export enum PermissionLayerId {
   WORKFLOW_STATE = 'WORKFLOW_STATE',
 }
 
-/** Per-layer evaluation result — evaluated in PermissionLayerId order. */
+/** Per-layer evaluation result - evaluated in PermissionLayerId order. */
 export interface PermissionLayerResult {
   readonly layer: PermissionLayerId;
   readonly verdict: PermissionLayerVerdict;
@@ -55,7 +55,7 @@ export const TIER_ACTIONS_REQUIRING_ASSIGNEE: readonly EpcWorkflowAction[] = [
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
 ];
 
-/** Workflow-state gates — layer 5 examples (extended in Wave 0.5). */
+/** Workflow-state gates - layer 5 examples (extended in Wave 0.5). */
 export const WORKFLOW_STATE_ACTION_GATES: Readonly<
   Partial<Record<EpcWorkflowAction, readonly EdvStatus[]>>
 > = {

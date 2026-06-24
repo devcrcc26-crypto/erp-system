@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -116,7 +116,7 @@ export default function DrawingDetailDrawer({
       onClose={onClose}
       title={
         drawing
-          ? `${drawing.drawingNumber} Rev ${drawing.revision} —${drawing.title}`
+          ? `${drawing.drawingNumber} Rev ${drawing.revision} -${drawing.title}`
           : 'Drawing detail'
       }
       destroyOnHidden
@@ -152,7 +152,7 @@ export default function DrawingDetailDrawer({
               {drawing.revision}
             </Descriptions.Item>
             <Descriptions.Item label="Discipline">
-              {drawing.discipline ?? '—'}
+              {drawing.discipline ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Latest">
               {drawing.isLatest ? (

@@ -19,7 +19,7 @@ const PACKAGE_TO_DISCIPLINE: Readonly<
 };
 
 /**
- * Derives TaskDiscipline.projectedStatus — worst-case across DesignPackages.
+ * Derives TaskDiscipline.projectedStatus - worst-case across DesignPackages.
  */
 export function resolveDisciplineProjectedStatus(
   packageStatuses: readonly DesignPackageProjectedStatus[],

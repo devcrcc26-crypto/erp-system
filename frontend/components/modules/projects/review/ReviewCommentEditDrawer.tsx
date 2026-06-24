@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -61,7 +61,7 @@ export default function ReviewCommentEditDrawer({
   }, [comment, edvOptions]);
 
   const drawerTitle = documentContext
-    ? `Edit comment — ${documentContext}`
+    ? `Edit comment - ${documentContext}`
     : 'Edit comment';
 
   async function handleSubmit(values: EditCommentFormValues): Promise<void> {

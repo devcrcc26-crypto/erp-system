@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -148,7 +148,7 @@ export default function MeetingDetailDrawer({
       title: 'Presenter',
       dataIndex: 'presenterId',
       key: 'presenterId',
-      render: (id: string | null) => (id ? resolveUserName(id) : '—'),
+      render: (id: string | null) => (id ? resolveUserName(id) : '-'),
     },
     ...(isEditable
       ? [
@@ -186,19 +186,19 @@ export default function MeetingDetailDrawer({
       title: 'Name',
       key: 'name',
       render: (_: unknown, r: MeetingAttendee) =>
-        r.userId ? resolveUserName(r.userId) : (r.externalName ?? '—'),
+        r.userId ? resolveUserName(r.userId) : (r.externalName ?? '-'),
     },
     {
       title: 'Organization',
       dataIndex: 'organization',
       key: 'organization',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Role',
       dataIndex: 'roleAtMeeting',
       key: 'roleAtMeeting',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Attended',
@@ -327,7 +327,7 @@ export default function MeetingDetailDrawer({
         {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
-        title={meeting ? `${meeting.meetingNumber} — ${meeting.title}` : 'Meeting'}
+        title={meeting ? `${meeting.meetingNumber} - ${meeting.title}` : 'Meeting'}
         destroyOnHidden
         extra={
           meeting && isEditable ? (

@@ -296,7 +296,7 @@ export default function ReviewCommentPanel({
                         ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
                         : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
                       {comment.resolutionNote?.trim()
-                        ? ` — ${comment.resolutionNote.trim()}`
+                        ? ` - ${comment.resolutionNote.trim()}`
                         : ''}
                     </p>
                   )}
@@ -305,7 +305,7 @@ export default function ReviewCommentPanel({
                     <p className="mb-1 text-xs text-emerald-700">
                       Resolved
                       {comment.resolutionNote?.trim()
-                        ? ` — ${comment.resolutionNote.trim()}`
+                        ? ` - ${comment.resolutionNote.trim()}`
                         : ''}
                     </p>
                   )}

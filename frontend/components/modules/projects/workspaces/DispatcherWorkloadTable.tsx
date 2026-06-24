@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -65,7 +65,7 @@ export default function DispatcherWorkloadTable({
   return (
     <FormLayout
       title="Dispatcher workload"
-      description="Review queue bottlenecks by assignee — use to balance reviewer load."
+      description="Review queue bottlenecks by assignee - use to balance reviewer load."
     >
       {apiUnavailable && (
         <p

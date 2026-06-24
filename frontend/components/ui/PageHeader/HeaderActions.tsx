@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -12,7 +12,7 @@ import { useUser } from '@/lib/query/users';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Notifications bell and signed-in user profile link — shared by page and project headers.
+ * Notifications bell and signed-in user profile link - shared by page and project headers.
  */
 export default function HeaderActions({
   compact = false,

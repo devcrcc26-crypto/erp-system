@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { WorkflowSlaDispatcher } from '../../application/services/workflow-sla-dispatcher.service';
 
 /**
- * Hourly SLA escalation scheduler — enqueues BullMQ jobs when Redis is enabled.
+ * Hourly SLA escalation scheduler - enqueues BullMQ jobs when Redis is enabled.
  */
 @Injectable()
 export class ReviewSlaCron {

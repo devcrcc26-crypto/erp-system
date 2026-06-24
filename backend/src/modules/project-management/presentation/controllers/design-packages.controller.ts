@@ -278,7 +278,7 @@ export class DesignPackagesController {
 
   @Post(':packageId/submit-for-review')
   @RequirePermission('schedule', 'create')
-  @ApiOperation({ summary: 'Submit package for review — opens session + frozen snapshot' })
+  @ApiOperation({ summary: 'Submit package for review - opens session + frozen snapshot' })
   submitForReview(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -318,7 +318,7 @@ export class DesignPackagesController {
 
   @Post(':packageId/return-for-rework')
   @RequirePermission('schedule', 'approve')
-  @ApiOperation({ summary: 'Return package for rework — closes session, EDVs to DRAFT' })
+  @ApiOperation({ summary: 'Return package for rework - closes session, EDVs to DRAFT' })
   returnForRework(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

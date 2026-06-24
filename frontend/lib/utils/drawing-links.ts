@@ -21,7 +21,7 @@ export function drawingLinkToEntityLink(link: DrawingLink): EntityLink {
   return {
     entityType,
     entityId: link.linkedEntityId,
-    label: `${link.linkedEntityType} — ${link.linkedEntityId}`,
+    label: `${link.linkedEntityType} - ${link.linkedEntityId}`,
   };
 }
 

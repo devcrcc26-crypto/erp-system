@@ -44,7 +44,7 @@ export function formatProjectTeamRole(role: ProjectTeamRole): string {
 
 export function formatProjectType(type: ProjectType | null): string {
   if (!type) {
-    return '—';
+    return '-';
   }
   return PROJECT_TYPE_LABELS[type];
 }
@@ -60,7 +60,7 @@ export function projectStatusVariant(status: ProjectStatus): StatusBadgeVariant 
 
 export function formatProjectDate(value: string | null): string {
   if (!value) {
-    return '—';
+    return '-';
   }
   return new Date(value).toLocaleDateString();
 }
@@ -70,7 +70,7 @@ export function formatProjectBudget(
   currency: string | null,
 ): string {
   if (!budget) {
-    return '—';
+    return '-';
   }
   const amount = Number(budget);
   if (Number.isNaN(amount)) {

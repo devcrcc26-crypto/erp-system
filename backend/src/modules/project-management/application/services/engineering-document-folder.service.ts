@@ -126,7 +126,7 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
-   * Resolves discipline folder by ID — throws if missing.
+   * Resolves discipline folder by ID - throws if missing.
    */
   async getDisciplineFolderOrThrow(
     ctx: PmContext,

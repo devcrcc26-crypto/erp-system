@@ -175,7 +175,7 @@ export class EpcWorkspaceService {
   }
 
   /**
-   * Designer comment queue — assigned comments awaiting designer action.
+   * Designer comment queue - assigned comments awaiting designer action.
    */
   async getMyComments(
     ctx: PmContext,
@@ -361,7 +361,7 @@ export class EpcWorkspaceService {
   }
 
   /**
-   * Dispatcher workload — assigned sessions and comments per user.
+   * Dispatcher workload - assigned sessions and comments per user.
    */
   async getWorkload(
     ctx: PmContext,
@@ -434,7 +434,7 @@ export class EpcWorkspaceService {
   }
 
   /**
-   * Review mode payload — session, snapshot, comments.
+   * Review mode payload - session, snapshot, comments.
    */
   async getReviewMode(
     ctx: PmContext,
@@ -537,7 +537,7 @@ export class EpcWorkspaceService {
           engineeringDocumentId: '',
           documentVersionId: '',
           documentTitle: 'Document',
-          revisionLabel: '—',
+          revisionLabel: '-',
         };
 
         return {

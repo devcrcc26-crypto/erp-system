@@ -1,5 +1,5 @@
 /**
- * EPC design workflow types — aligned with backend DTOs and mappers.
+ * EPC design workflow types - aligned with backend DTOs and mappers.
  */
 
 export type EdvStatus =
@@ -358,7 +358,7 @@ export interface WorkflowResultSnapshot {
   intentEventIds: readonly string[];
 }
 
-// ——— Request payloads ———
+// --- Request payloads ---
 
 export interface RegisterEngineeringDocumentRequest {
   documentVersionId: string;

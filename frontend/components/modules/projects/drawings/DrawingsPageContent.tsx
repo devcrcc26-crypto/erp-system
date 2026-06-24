@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -181,7 +181,7 @@ export default function DrawingsPageContent({
         title: 'Discipline',
         dataIndex: 'discipline',
         key: 'discipline',
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Revision',
@@ -262,7 +262,7 @@ export default function DrawingsPageContent({
             showIcon
             className="!mb-4"
             title="Drawing APIs are not connected yet."
-            description="This page is ready —data will appear when the project management backend module is available."
+            description="This page is ready -data will appear when the project management backend module is available."
           />
         )}
 

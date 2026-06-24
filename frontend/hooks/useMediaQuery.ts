@@ -19,7 +19,7 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/** Tailwind `lg` breakpoint — 1024px and up. */
+/** Tailwind `lg` breakpoint - 1024px and up. */
 export function useIsLgUp(): boolean {
   return useMediaQuery('(min-width: 1024px)');
 }

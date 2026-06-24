@@ -36,7 +36,7 @@ export class WorkflowSlaDispatcher {
       return;
     }
 
-    this.logger.debug('Redis queue unavailable — running SLA escalation synchronously');
+    this.logger.debug('Redis queue unavailable - running SLA escalation synchronously');
     await this.reviewSla.runHourlyEscalation();
   }
 }

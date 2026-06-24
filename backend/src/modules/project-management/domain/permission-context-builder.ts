@@ -43,7 +43,7 @@ const PROJECT_TEAM_REQUIRED_ACTIONS: ReadonlySet<EpcWorkflowAction> =
     EpcWorkflowAction.REVISION_TRIGGER,
   ]);
 
-/** Phase gates — action denied when project is in a locked phase. */
+/** Phase gates - action denied when project is in a locked phase. */
 const PHASE_LOCKED_ACTIONS: Readonly<
   Partial<Record<EpcWorkflowAction, readonly ProjectDesignPhase[]>>
 > = {
@@ -85,7 +85,7 @@ const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
 ]);
 
 /**
- * Layer 1 — system role action flags.
+ * Layer 1 - system role action flags.
  */
 export function evaluateSystemRoleLayer(
   input: PermissionContextInput,
@@ -99,7 +99,7 @@ export function evaluateSystemRoleLayer(
 }
 
 /**
- * Layer 2 — project team membership.
+ * Layer 2 - project team membership.
  */
 export function evaluateProjectTeamLayer(
   input: PermissionContextInput,
@@ -144,7 +144,7 @@ export function evaluateProjectTeamLayer(
 }
 
 /**
- * Layer 3 — TaskDiscipline assignee FK match.
+ * Layer 3 - TaskDiscipline assignee FK match.
  */
 export function evaluateDisciplineAssignmentLayer(
   input: PermissionContextInput,
@@ -208,7 +208,7 @@ export function evaluateDisciplineAssignmentLayer(
 }
 
 /**
- * Layer 4 — project design phase gates.
+ * Layer 4 - project design phase gates.
  */
 export function evaluateProjectDesignPhaseLayer(
   input: PermissionContextInput,
@@ -238,7 +238,7 @@ export function evaluateProjectDesignPhaseLayer(
 }
 
 /**
- * Layer 5 — workflow state gates (EDV status).
+ * Layer 5 - workflow state gates (EDV status).
  */
 export function evaluateWorkflowStateLayer(
   input: PermissionContextInput,
@@ -298,7 +298,7 @@ export function buildPermissionLayerResults(
 }
 
 /**
- * Full deterministic permission check — layers + assignee override.
+ * Full deterministic permission check - layers + assignee override.
  */
 export function canPerformFromContext(input: PermissionContextInput): boolean {
   const layerAllowed = evaluatePermissionLayers(

@@ -28,7 +28,7 @@ export const EPC_DEMO_PROJECT_CODES = ['DEMO-001', 'DEMO-002', 'DEMO-003'] as co
 
 const DEMO_PROJECT_INDEX = 1;
 
-/** Stable IDs for Playwright on DEMO-001 — unchanged from original seed. */
+/** Stable IDs for Playwright on DEMO-001 - unchanged from original seed. */
 export const EPC_DEMO = {
   projectId: sid(DEMO_PROJECT_INDEX, 1),
   taskId: sid(DEMO_PROJECT_INDEX, 30),
@@ -47,11 +47,11 @@ export const EPC_DEMO = {
   reviewContextSnapshotId: sid(DEMO_PROJECT_INDEX, 221),
   reviewContextSnapshotLeadId: sid(DEMO_PROJECT_INDEX, 227),
   reviewCommentId: sid(DEMO_PROJECT_INDEX, 223),
-  designPackageName: 'Foundation Drawings — Review Package',
-  designPackageLeadName: 'Structural Calculations — Lead Review',
+  designPackageName: 'Foundation Drawings - Review Package',
+  designPackageLeadName: 'Structural Calculations - Lead Review',
   designPackageReviewerId: sid(DEMO_PROJECT_INDEX, 216),
   reviewSessionReviewerId: sid(DEMO_PROJECT_INDEX, 228),
-  designPackageReviewerName: 'Steel Connection Details — Reviewer Package',
+  designPackageReviewerName: 'Steel Connection Details - Reviewer Package',
 } as const;
 
 const REVIEWER_USER_ID = '00000000-0000-4000-8000-000000000084';
@@ -282,11 +282,19 @@ async function seedTaskDisciplineReviews(
 }
 
 /**
- * DEMO-001 — Marina Tower: owner, reviewer, and lead tiers each have an approvable inbox package.
+ * Standard EPC workflow for a project index - owner, reviewer - lead review tiers.
  */
-async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
+async function seedEpcProjectStandard(
+  ctx: PmSeedContext,
+  p: number,
+  projectCode: string,
+  names: {
+    designPackageName: string;
+    designPackageLeadName: string;
+    designPackageReviewerName: string;
+  },
+): Promise<void> {
   const { prisma, companyId, adminUserId } = ctx;
-  const p = 1;
   const taskId = sid(p, 30);
 
   await prisma.taskDiscipline.upsert({
@@ -328,7 +336,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       documentId: sid(p, 11),
       uploadedBy: adminUserId,
       versionNumber: 1,
-      fileKey: 'demo/DEMO-001/Foundation-Layout-Rev-A.pdf',
+      fileKey: `demo/${projectCode}/Foundation-Layout-Rev-A.pdf`,
       fileSizeBytes: 512_000,
       changeNote: 'EPC demo drawing upload',
     },
@@ -383,7 +391,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 210) },
     update: {
-      name: EPC_DEMO.designPackageName,
+      name: names.designPackageName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-01'),
       updatedBy: adminUserId,
@@ -392,7 +400,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: EPC_DEMO.designPackageName,
+      name: names.designPackageName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-01'),
       createdBy: adminUserId,
@@ -457,7 +465,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 212) },
     update: {
-      name: EPC_DEMO.designPackageLeadName,
+      name: names.designPackageLeadName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-05'),
       updatedBy: adminUserId,
@@ -466,7 +474,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 212),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: EPC_DEMO.designPackageLeadName,
+      name: names.designPackageLeadName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-05'),
       createdBy: adminUserId,
@@ -531,7 +539,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 214) },
     update: {
-      name: 'MEP Coordination — Draft Package',
+      name: 'MEP Coordination - Draft Package',
       projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
       submittedAt: null,
       updatedBy: adminUserId,
@@ -540,7 +548,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 214),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: 'MEP Coordination — Draft Package',
+      name: 'MEP Coordination - Draft Package',
       projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
       createdBy: ENGINEER_USER_ID,
       updatedBy: ENGINEER_USER_ID,
@@ -555,7 +563,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       documentId: sid(p, 11),
       uploadedBy: adminUserId,
       versionNumber: 4,
-      fileKey: 'demo/DEMO-001/MEP-Coordination-Rev-A.pdf',
+      fileKey: `demo/${projectCode}/MEP-Coordination-Rev-A.pdf`,
       fileSizeBytes: 445_000,
       changeNote: 'MEP coordination overlay',
     },
@@ -608,7 +616,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 216) },
     update: {
-      name: EPC_DEMO.designPackageReviewerName,
+      name: names.designPackageReviewerName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-10'),
       updatedBy: adminUserId,
@@ -617,7 +625,7 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 216),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: EPC_DEMO.designPackageReviewerName,
+      name: names.designPackageReviewerName,
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-03-10'),
       createdBy: adminUserId,
@@ -742,8 +750,32 @@ async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
   ]);
 }
 
+/** DEMO-001 - Marina Tower: owner, reviewer - lead tiers each have an approvable inbox package. */
+async function seedEpcProject001(ctx: PmSeedContext): Promise<void> {
+  await seedEpcProjectStandard(ctx, 1, 'DEMO-001', {
+    designPackageName: EPC_DEMO.designPackageName,
+    designPackageLeadName: EPC_DEMO.designPackageLeadName,
+    designPackageReviewerName: EPC_DEMO.designPackageReviewerName,
+  });
+}
+
 /**
- * DEMO-002 — Airport Expansion: dept-chief governance tier + closed approved package.
+ * Seeds the standard EPC workflow on any project index (e.g. FULL-001 at index 4).
+ */
+export async function seedEpcStandardWorkflow(
+  ctx: PmSeedContext,
+  projectIndex: number,
+  projectCode: string,
+): Promise<void> {
+  await seedEpcProjectStandard(ctx, projectIndex, projectCode, {
+    designPackageName: `${projectCode} - Foundation Drawings Package`,
+    designPackageLeadName: `${projectCode} - Structural Calculations Package`,
+    designPackageReviewerName: `${projectCode} - Steel Connection Details Package`,
+  });
+}
+
+/**
+ * DEMO-002 - Airport Expansion: dept-chief governance tier + closed approved package.
  */
 async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
   const { prisma, companyId, adminUserId } = ctx;
@@ -878,7 +910,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 210) },
     update: {
-      name: 'Terminal MEP Release — Dept Review',
+      name: 'Terminal MEP Release - Dept Review',
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-02-15'),
       updatedBy: adminUserId,
@@ -887,7 +919,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: 'Terminal MEP Release — Dept Review',
+      name: 'Terminal MEP Release - Dept Review',
       projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
       submittedAt: d('2026-02-15'),
       createdBy: adminUserId,
@@ -980,7 +1012,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 212) },
     update: {
-      name: 'Electrical Single Line — Approved',
+      name: 'Electrical Single Line - Approved',
       projectedStatus: DesignPackageProjectedStatus.APPROVED,
       submittedAt: d('2026-01-10'),
       approvedAt: d('2026-02-01'),
@@ -990,7 +1022,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 212),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: 'Electrical Single Line — Approved',
+      name: 'Electrical Single Line - Approved',
       projectedStatus: DesignPackageProjectedStatus.APPROVED,
       submittedAt: d('2026-01-10'),
       approvedAt: d('2026-02-01'),
@@ -1141,7 +1173,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
 }
 
 /**
- * DEMO-003 — Riverside Residential: locked package, issued design submittal, version history.
+ * DEMO-003 - Riverside Residential: locked package, issued design submittal, version history.
  */
 async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
   const { prisma, companyId, adminUserId } = ctx;
@@ -1291,7 +1323,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
   await prisma.designPackage.upsert({
     where: { id: sid(p, 210) },
     update: {
-      name: 'Civil Issue Package — IFC',
+      name: 'Civil Issue Package - IFC',
       projectedStatus: DesignPackageProjectedStatus.APPROVED,
       submittedAt: d('2026-03-01'),
       approvedAt: d('2026-03-10'),
@@ -1301,7 +1333,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
       id: sid(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
-      name: 'Civil Issue Package — IFC',
+      name: 'Civil Issue Package - IFC',
       projectedStatus: DesignPackageProjectedStatus.APPROVED,
       submittedAt: d('2026-03-01'),
       approvedAt: d('2026-03-10'),
@@ -1368,7 +1400,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
   await prisma.submittal.upsert({
     where: { id: sid(p, 55) },
     update: {
-      title: 'Civil Design Issue — Site Grading IFC',
+      title: 'Civil Design Issue - Site Grading IFC',
       status: SubmittalStatus.APPROVED,
       issuedAt: d('2026-03-12'),
       updatedBy: DOCS_USER_ID,
@@ -1380,7 +1412,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
       reviewedBy: PM_USER_ID,
       submittalNumber: 'SUB-DEMO-003-EPC-001',
       category: 'Design',
-      title: 'Civil Design Issue — Site Grading IFC',
+      title: 'Civil Design Issue - Site Grading IFC',
       contractor: 'Riverside JV',
       specReference: 'DIV 31 22 00',
       revisionNumber: 1,
@@ -1490,7 +1522,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
 }
 
 /**
- * Seeds full EPC workflow data on DEMO-001, DEMO-002, and DEMO-003.
+ * Seeds full EPC workflow data on DEMO-001, DEMO-002 - DEMO-003.
  */
 export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
   const { prisma, companyId } = ctx;
@@ -1502,7 +1534,7 @@ export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
   });
 
   if (projects.length < 3) {
-    console.log('  EPC demo skipped — DEMO-001…003 projects not found');
+    console.log('  EPC demo skipped - DEMO-001…003 projects not found');
     return;
   }
 
@@ -1513,7 +1545,7 @@ export async function seedEpcDemoData(ctx: PmSeedContext): Promise<void> {
   await seedEpcProject003(ctx);
 
   console.log('  EPC workflow demo seeded on 3 projects:');
-  console.log('    DEMO-001 Marina Tower — discipline owner + reviewer + lead review active');
-  console.log('    DEMO-002 Airport Expansion — dept chief governance review');
-  console.log('    DEMO-003 Riverside Residential — issued design submittal');
+  console.log('    DEMO-001 Marina Tower - discipline owner + reviewer + lead review active');
+  console.log('    DEMO-002 Airport Expansion - dept chief governance review');
+  console.log('    DEMO-003 Riverside Residential - issued design submittal');
 }

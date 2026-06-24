@@ -1,4 +1,4 @@
-// UI polish pass — styles only, no logic changes
+// UI polish pass - styles only, no logic changes
 
 'use client';
 
@@ -16,20 +16,20 @@ import { useDashboardStats } from '@/lib/query/stats';
 
 function formatCount(value: number | null | undefined, loading: boolean): string {
   if (loading) {
-    return '—';
+    return '-';
   }
   if (value === null || value === undefined) {
-    return '—';
+    return '-';
   }
   return value.toLocaleString();
 }
 
 function formatPercent(value: number | null | undefined, loading: boolean): string {
   if (loading) {
-    return '—';
+    return '-';
   }
   if (value === null || value === undefined) {
-    return '—';
+    return '-';
   }
   return `${value}%`;
 }
