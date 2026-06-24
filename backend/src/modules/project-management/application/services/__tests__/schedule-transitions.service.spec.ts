@@ -155,5 +155,20 @@ describe('ScheduleService status transitions', () => {
       expect(prisma.task.update).toHaveBeenCalled();
       expect(result.name).toBe('Foundation work');
     });
+
+    it('allows update when status is unchanged (IN_PROGRESS → IN_PROGRESS)', async () => {
+      mockTaskWithStatus('IN_PROGRESS');
+      prisma.task.update.mockResolvedValue(
+        buildTask('IN_PROGRESS'),
+      );
+
+      const result = await service.updateTask(ctx, projectId, taskId, {
+        status: 'IN_PROGRESS' as TaskStatus,
+        name: 'Updated foundation work',
+      });
+
+      expect(prisma.task.update).toHaveBeenCalled();
+      expect(result.status).toBe('IN_PROGRESS');
+    });
   });
 });

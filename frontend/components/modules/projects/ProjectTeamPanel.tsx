@@ -19,6 +19,16 @@ function formatUserLabel(user: User): string {
   return `${user.firstName} ${user.lastName} (${user.email})`;
 }
 
+const EMPTY_TEAM: ProjectTeamMember[] = [];
+
+function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const setB = new Set(b);
+  return a.every((id) => setB.has(id));
+}
+
 function useUserNameLookup(): (userId: string) => string {
   const usersQuery = useUsersDirectory({ page: 1, limit: 100 });
   const users = usersQuery.data?.data ?? [];
@@ -51,13 +61,17 @@ export default function ProjectTeamPanel({
   const messageApi = useAppMessage();
   const resolveUserName = useUserNameLookup();
 
-  const members = teamQuery.data ?? [];
+  const members = teamQuery.data ?? EMPTY_TEAM;
 
   useEffect(() => {
-    if (!dirty) {
-      setSelectedUserIds([...new Set(members.map((member) => member.userId))]);
+    if (dirty) {
+      return;
     }
-  }, [members, dirty]);
+    const ids = teamQuery.data
+      ? [...new Set(teamQuery.data.map((member) => member.userId))]
+      : [];
+    setSelectedUserIds((prev) => (sameIdSet(prev, ids) ? prev : ids));
+  }, [teamQuery.data, dirty]);
 
   const userOptions = useMemo(() => {
     const users = usersQuery.data?.data ?? [];

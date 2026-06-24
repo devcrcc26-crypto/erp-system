@@ -282,17 +282,19 @@ export class ScheduleService {
         where: activeOnly({ id: taskId, projectId }),
         select: { status: true },
       });
-      const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
-        NOT_STARTED: ['IN_PROGRESS', 'ON_HOLD'],
-        IN_PROGRESS: ['COMPLETED', 'ON_HOLD', 'NOT_STARTED'],
-        ON_HOLD: ['IN_PROGRESS', 'NOT_STARTED'],
-        COMPLETED: ['IN_PROGRESS'],
-      };
-      const allowed = TASK_STATUS_TRANSITIONS[current!.status];
-      if (!allowed?.includes(dto.status)) {
-        throw new BadRequestException(
-          `Invalid task status transition from ${current!.status} to ${dto.status}.`,
-        );
+      if (dto.status !== current!.status) {
+        const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
+          NOT_STARTED: ['IN_PROGRESS', 'ON_HOLD'],
+          IN_PROGRESS: ['COMPLETED', 'ON_HOLD', 'NOT_STARTED'],
+          ON_HOLD: ['IN_PROGRESS', 'NOT_STARTED'],
+          COMPLETED: ['IN_PROGRESS'],
+        };
+        const allowed = TASK_STATUS_TRANSITIONS[current!.status];
+        if (!allowed?.includes(dto.status)) {
+          throw new BadRequestException(
+            `Invalid task status transition from ${current!.status} to ${dto.status}.`,
+          );
+        }
       }
     }
 
