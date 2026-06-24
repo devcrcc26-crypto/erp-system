@@ -1,10 +1,12 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Alert, Breadcrumb, Button, Descriptions, Spin } from 'antd';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { Alert, Breadcrumb, Button, Descriptions } from 'antd';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import DesignPackagePanel from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import EngineeringDocumentPanel from '@/components/modules/projects/engineering/EngineeringDocumentPanel';
@@ -56,11 +58,7 @@ export default function DisciplineDetailPageContent({
   ]);
 
   if (disciplineQuery.isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (disciplineQuery.isError) {
@@ -72,11 +70,7 @@ export default function DisciplineDetailPageContent({
       disciplineQuery.error.status === 429;
 
     if (isForbidden && !lens.disciplineScopeBypass) {
-      return (
-        <div className="flex justify-center py-16">
-          <Spin />
-        </div>
-      );
+      return <PageLoadingSkeleton />;
     }
 
     return (

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -6,14 +8,13 @@ import {
   Button,
   Input,
   Space,
-  Spin,
   Upload,
 } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ProjectDocumentRecord } from '@/lib/api/documents.types';
@@ -26,6 +27,7 @@ import {
   useUploadDocumentToFolder,
 } from '@/lib/query/documents';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -84,8 +86,16 @@ export default function ProjectDocumentsPanel({
         ellipsis: true,
         render: (_: unknown, record) => (
           <div className="min-w-0">
-            <p className="truncate text-slate-900">{record.folderName}</p>
-            <p className="truncate text-xs text-slate-500">
+            <p
+              className="truncate text-[12px]"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {record.folderName}
+            </p>
+            <p
+              className="truncate text-[12px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
               {formatContextLabel(record.folderContextType)} · {record.folderPath}
             </p>
           </div>
@@ -132,11 +142,7 @@ export default function ProjectDocumentsPanel({
   );
 
   if (foldersQuery.isLoading || documentsQuery.isLoading) {
-    return (
-      <div className={layout.loadingCard}>
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (foldersQuery.isError) {

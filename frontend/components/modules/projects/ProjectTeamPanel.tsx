@@ -1,10 +1,12 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Select, Spin } from 'antd';
+import { Alert, Button, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ProjectTeamMember } from '@/lib/api/project-management.types';
 import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
@@ -99,11 +101,7 @@ export default function ProjectTeamPanel({
   }
 
   if (teamQuery.isLoading) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   const apiUnavailable =

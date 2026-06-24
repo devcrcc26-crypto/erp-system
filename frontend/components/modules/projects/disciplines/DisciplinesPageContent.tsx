@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -18,6 +20,8 @@ import { useDesignPackages } from '@/lib/query/design-packages';
 import { useDeleteTaskDiscipline } from '@/lib/query/schedule';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 function DisciplinePackageCount({
   projectId,
@@ -28,7 +32,7 @@ function DisciplinePackageCount({
 }): React.ReactNode {
   const query = useDesignPackages(projectId, disciplineId);
   if (query.isLoading) {
-    return <span className="text-slate-400">…</span>;
+    return <span style={{ color: tokens.colorTextTertiary }}>…</span>;
   }
   return <span>{query.data?.length ?? 0}</span>;
 }
@@ -74,7 +78,11 @@ export default function DisciplinesPageContent({
       dataIndex: 'disciplineName',
       key: 'disciplineName',
       render: (name: string, record) => (
-        <Link href={`/projects/${projectId}/disciplines/${record.id}`}>
+        <Link
+          href={`/projects/${projectId}/disciplines/${record.id}`}
+          className={`${layout.traceabilityLinkClass} no-underline hover:underline`}
+          style={{ color: tokens.colorTeal600 }}
+        >
           {name}
         </Link>
       ),

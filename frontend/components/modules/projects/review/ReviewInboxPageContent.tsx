@@ -1,8 +1,10 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState } from 'react';
-import { Alert, Select, Spin } from 'antd';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { Alert, Select } from 'antd';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ReviewInboxTable from '@/components/modules/projects/review/ReviewInboxTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -29,11 +31,7 @@ export default function ReviewInboxPageContent({
   const canViewReviewInbox = useCanViewReviewInbox();
 
   if (!capabilitiesReady) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spin size="large" />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (!canViewReviewInbox) {

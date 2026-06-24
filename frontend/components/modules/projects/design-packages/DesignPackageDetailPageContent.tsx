@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
@@ -10,10 +12,9 @@ import {
   Input,
   Modal,
   Space,
-  Spin,
   Tooltip,
 } from 'antd';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
@@ -113,11 +114,7 @@ export default function DesignPackageDetailPageContent({
   );
 
   if (packageQuery.isLoading || disciplineQuery.isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (!pkg || !disciplineQuery.data) {

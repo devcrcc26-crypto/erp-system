@@ -36,7 +36,7 @@ export default function StatusBadge({
 
   return (
     <Tag
-      bordered={false}
+      variant="filled"
       style={{
         margin: 0,
         borderRadius: 20,

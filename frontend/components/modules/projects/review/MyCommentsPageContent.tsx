@@ -1,10 +1,12 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Space, Spin } from 'antd';
+import { Alert, Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
 import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
@@ -51,11 +53,7 @@ export default function MyCommentsPageContent({
   const capabilitiesReady = useCapabilitiesReady();
 
   if (!capabilitiesReady) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spin size="large" />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (!canViewMyComments) {

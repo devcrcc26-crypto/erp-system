@@ -46,7 +46,7 @@ export default function PlaceholderPage({
               {description ?? t('placeholder.defaultDescription')}
             </p>
             <Tag
-              bordered={false}
+              variant="filled"
               className="!mt-6"
               style={{
                 borderRadius: 20,

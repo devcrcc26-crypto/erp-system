@@ -1,13 +1,15 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import type { ColumnsType } from 'antd/es/table';
-import { Spin } from 'antd';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DispatcherWorkloadItem } from '@/lib/api/epc.types';
 import { useProjectWorkload } from '@/lib/query/epc-workspace';
+import { tokens } from '@/lib/theme/tokens';
 
 export default function DispatcherWorkloadTable({
   projectId,
@@ -57,11 +59,7 @@ export default function DispatcherWorkloadTable({
   ];
 
   if (workloadQuery.isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   return (
@@ -70,7 +68,10 @@ export default function DispatcherWorkloadTable({
       description="Review queue bottlenecks by assignee — use to balance reviewer load."
     >
       {apiUnavailable && (
-        <p className="mb-4 text-sm text-slate-500">
+        <p
+          className="mb-4 text-[12px]"
+          style={{ color: tokens.colorTextSecondary }}
+        >
           Workload API not available yet.
         </p>
       )}

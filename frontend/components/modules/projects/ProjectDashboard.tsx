@@ -10,8 +10,7 @@ import {
   IssuesCloseOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';

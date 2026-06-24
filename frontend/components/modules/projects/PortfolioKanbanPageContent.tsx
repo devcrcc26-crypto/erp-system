@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState, type ChangeEvent } from 'react';
@@ -11,12 +13,12 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { Alert, Input, Spin } from 'antd';
+import { Alert, Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { ListChecks } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
@@ -140,11 +142,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   }
 
   if (!authHydrated) {
-    return (
-      <div className={layout.loadingCard}>
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -158,11 +156,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   }
 
   if (projectsQuery.isLoading) {
-    return (
-      <div className={layout.loadingCard}>
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (projectsQuery.isError) {

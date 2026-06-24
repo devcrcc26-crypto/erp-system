@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo } from 'react';
@@ -13,6 +15,7 @@ import type { DesignPackage } from '@/lib/api/epc.types';
 import { designPackagesPath } from '@/lib/query/epc-query-utils';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { tokens } from '@/lib/theme/tokens';
 
 interface DeliverableRow {
   id: string;
@@ -70,6 +73,8 @@ export default function DeliverablesPageContent({
         render: (name: string, record) => (
           <Link
             href={`/projects/${projectId}/disciplines/${record.taskDisciplineId}/packages/${record.id}`}
+            className="text-[13px] font-medium no-underline hover:underline"
+            style={{ color: tokens.colorTeal600 }}
           >
             {name}
           </Link>
@@ -95,6 +100,9 @@ export default function DeliverablesPageContent({
         dataIndex: 'itemCount',
         key: 'itemCount',
         width: 100,
+        render: (value: number) => (
+          <span className="tabular-nums">{value}</span>
+        ),
       },
     ],
     [projectId],

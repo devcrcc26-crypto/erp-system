@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Card from '@/components/ui/Card/Card';
 import type { Project, ProjectDashboardStats } from '@/lib/api/project-management.types';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
 export default function ProjectKanbanCard({
@@ -39,12 +42,13 @@ export default function ProjectKanbanCard({
   const progressPct = stats?.actualProgressPct ?? null;
 
   const cardBody = (
-  <>
+    <>
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
             href={`/projects/${project.id}`}
-            className="text-sm font-semibold text-orange-600 hover:text-orange-700"
+            className={`${layout.traceabilityLinkClass} no-underline hover:underline`}
+            style={{ color: tokens.colorTeal600 }}
             onClick={(event: MouseEvent<HTMLAnchorElement>) =>
               event.stopPropagation()
             }
@@ -52,7 +56,8 @@ export default function ProjectKanbanCard({
             {project.projectCode}
           </Link>
           <Typography.Paragraph
-            className="!mb-0 !mt-1 text-sm font-medium text-slate-900"
+            className="!mb-0 !mt-1 text-[13px] font-medium"
+            style={{ color: tokens.colorTextPrimary }}
             ellipsis={{ rows: 2 }}
           >
             {project.name}
@@ -60,7 +65,10 @@ export default function ProjectKanbanCard({
         </div>
       </div>
 
-      <div className="space-y-2 text-xs text-slate-500">
+      <div
+        className="space-y-2 text-[11px]"
+        style={{ color: tokens.colorTextTertiary }}
+      >
         <div className="flex items-center gap-2">
           <UserOutlined />
           <span className="truncate">
@@ -75,7 +83,10 @@ export default function ProjectKanbanCard({
 
       {progressPct != null && (
         <div className="mt-3">
-          <div className="mb-1 flex justify-between text-xs text-slate-500">
+          <div
+            className="mb-1 flex justify-between text-[11px]"
+            style={{ color: tokens.colorTextTertiary }}
+          >
             <span>Progress</span>
             <span>{progressPct}%</span>
           </div>
@@ -88,25 +99,39 @@ export default function ProjectKanbanCard({
         </div>
       )}
 
-      <div className="mt-3 flex gap-3 text-xs">
-        <span className="rounded-full bg-orange-50 px-2 py-0.5 text-orange-700">
+      <div className="mt-3 flex gap-2 text-[10px] font-medium">
+        <span
+          className="rounded-[10px] px-2 py-0.5"
+          style={{
+            backgroundColor: tokens.colorTeal50,
+            color: tokens.colorTeal600,
+          }}
+        >
           RFIs {stats?.openRfis ?? '—'}
         </span>
-        <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700">
+        <span
+          className="rounded-[10px] px-2 py-0.5"
+          style={{
+            backgroundColor: tokens.colorRed50,
+            color: tokens.colorRed600,
+          }}
+        >
           Issues {stats?.openIssues ?? '—'}
         </span>
       </div>
     </>
   );
 
+  const cardStyle = {
+    borderRadius: tokens.borderRadiusCard,
+    border: `0.5px solid ${tokens.colorBorder}`,
+    boxShadow: 'none' as const,
+    opacity: isDragging ? 0.95 : 1,
+  };
+
   if (isDragging) {
     return (
-      <Card
-        size="small"
-        variant="borderless"
-        className="shadow-md"
-        style={{ borderRadius: tokens.borderRadius, opacity: 0.95 }}
-      >
+      <Card size="small" variant="borderless" style={cardStyle}>
         {cardBody}
       </Card>
     );
@@ -117,10 +142,10 @@ export default function ProjectKanbanCard({
       <Card
         size="small"
         variant="borderless"
-        className={`shadow-sm transition-shadow hover:shadow-md ${
+        className={`transition-colors hover:bg-[var(--color-surface-secondary)] ${
           dragEnabled ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
-        style={{ borderRadius: tokens.borderRadius }}
+        style={cardStyle}
       >
         {cardBody}
       </Card>
@@ -155,7 +180,15 @@ export function ProjectManagerAvatar({
 }): React.ReactNode {
   const initial = name?.charAt(0)?.toUpperCase() ?? '?';
   return (
-    <Avatar size="small" style={{ backgroundColor: tokens.colorNavy }}>
+    <Avatar
+      size="small"
+      style={{
+        backgroundColor: tokens.colorBlue50,
+        color: tokens.colorBlue800,
+        fontWeight: 500,
+        fontSize: 11,
+      }}
+    >
       {initial}
     </Avatar>
   );

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
@@ -6,6 +8,7 @@ import ReviewModePanel from '@/components/modules/projects/review/ReviewModePane
 import { useDesignPackage } from '@/lib/query/design-packages';
 import { useCanViewReviewInbox, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 export default function ReviewModePageContent({
   packageId,
@@ -69,8 +72,16 @@ export default function ReviewModePageContent({
       <div className="min-w-0">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-slate-900">{packageName}</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1
+              className="text-[18px] font-medium"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {packageName}
+            </h1>
+            <p
+              className="mt-1 text-[12px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
               Review package documents, add comments, and run batch actions.
             </p>
           </div>
