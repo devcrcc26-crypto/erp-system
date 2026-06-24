@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo } from 'react';
@@ -6,8 +8,6 @@ import {
   Button,
   Descriptions,
   Drawer,
-  Spin,
-  Tag,
   Timeline,
   Upload,
 } from 'antd';
@@ -29,6 +29,7 @@ import {
   drawingLinkToEntityLink,
   entityLinkToDrawingLinkPayload,
 } from '@/lib/utils/drawing-links';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function DrawingDetailDrawer({
@@ -110,6 +111,7 @@ export default function DrawingDetailDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
       title={
@@ -117,17 +119,18 @@ export default function DrawingDetailDrawer({
           ? `${drawing.drawingNumber} Rev ${drawing.revision} —${drawing.title}`
           : 'Drawing detail'
       }
-      size="large"
       destroyOnHidden
     >
       {drawingQuery.isLoading && (
-        <div className="flex justify-center py-12">
-          <Spin />
+        <div className="flex flex-col gap-3">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-32 w-full rounded" />
         </div>
       )}
 
       {drawingQuery.isError && (
-        <p className="text-sm text-slate-500">
+        <p className={layout.drawerMutedText}>
           {drawingQuery.error instanceof ApiRequestError
             ? drawingQuery.error.message
             : 'Unable to load drawing.'}
@@ -135,8 +138,13 @@ export default function DrawingDetailDrawer({
       )}
 
       {drawing && (
-        <div className="space-y-6">
-          <Descriptions column={2} size="small" bordered>
+        <div className={layout.drawerStack}>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            column={2}
+            size="small"
+            bordered
+          >
             <Descriptions.Item label="Number">
               {drawing.drawingNumber}
             </Descriptions.Item>
@@ -148,9 +156,9 @@ export default function DrawingDetailDrawer({
             </Descriptions.Item>
             <Descriptions.Item label="Latest">
               {drawing.isLatest ? (
-                <Tag color="green">Latest</Tag>
+                <StatusBadge label="Latest" variant="success" />
               ) : (
-                <Tag>Superseded</Tag>
+                <StatusBadge label="Superseded" variant="default" />
               )}
             </Descriptions.Item>
             <Descriptions.Item label="Status" span={2}>
@@ -168,9 +176,9 @@ export default function DrawingDetailDrawer({
             description="Inline PDF viewing will be enabled when file versions are stored. DWG and IFC files will be available for download only."
           />
 
-          <div>
+          <section className={layout.drawerSection}>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">
+              <h3 className={layout.drawerHeading}>
                 Version history
               </h3>
               <Upload disabled showUploadList={false}>
@@ -180,33 +188,39 @@ export default function DrawingDetailDrawer({
               </Upload>
             </div>
             {versions.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className={layout.drawerMutedText}>
                 No file versions uploaded yet.
               </p>
             ) : (
               <Timeline
+                className="erp-drawer-timeline"
                 items={versions.map((version) => ({
                   content: (
                     <div>
-                      <p className="font-medium text-slate-900">
+                      <p className={layout.drawerHeading}>
                         Revision {version.revision}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className={layout.drawerMetaLabel}>
                         {resolveUserName(version.uploadedBy)} ·{' '}
                         {formatProjectDate(version.createdAt)}
                       </p>
                       {version.changeNote && (
-                        <p className="mt-1 text-sm text-slate-600">
+                        <p className={`mt-1 ${layout.drawerMutedText}`}>
                           {version.changeNote}
                         </p>
                       )}
-                      <Tag className="!mt-2">{version.status}</Tag>
+                      <span className="mt-2 inline-block">
+                        <StatusBadge
+                          label={version.status}
+                          variant="default"
+                        />
+                      </span>
                     </div>
                   ),
                 }))}
               />
             )}
-          </div>
+          </section>
 
           <EntityLinkPicker
             value={entityLinks}

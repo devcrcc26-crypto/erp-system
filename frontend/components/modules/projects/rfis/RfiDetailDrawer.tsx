@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +11,6 @@ import {
   Form,
   Input,
   Select,
-  Spin,
 } from 'antd';
 import { MessageSquare } from 'lucide-react';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
@@ -33,6 +34,7 @@ import {
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ResponseFormValues {
@@ -103,20 +105,22 @@ export default function RfiDetailDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
       title={rfi ? `${rfi.rfiNumber} — ${rfi.title}` : 'RFI detail'}
-      size="large"
       destroyOnHidden
     >
       {rfiQuery.isLoading && (
-        <div className="flex justify-center py-12">
-          <Spin />
+        <div className="flex flex-col gap-3">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-32 w-full rounded" />
         </div>
       )}
 
       {rfiQuery.isError && (
-        <p className="text-sm text-slate-500">
+        <p className={layout.drawerMutedText}>
           {rfiQuery.error instanceof ApiRequestError
             ? rfiQuery.error.message
             : 'Unable to load RFI.'}
@@ -124,10 +128,19 @@ export default function RfiDetailDrawer({
       )}
 
       {rfi && (
-        <div className="space-y-6">
-          <WorkflowStepper steps={RFI_WORKFLOW} currentStatus={rfi.status} />
+        <div className={layout.drawerStack}>
+          <WorkflowStepper
+            className="erp-drawer-workflow"
+            steps={RFI_WORKFLOW}
+            currentStatus={rfi.status}
+          />
 
-          <Descriptions column={1} size="small" bordered>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            column={1}
+            size="small"
+            bordered
+          >
             <Descriptions.Item label="Status">
               <StatusBadge
                 label={formatRfiStatus(rfi.status)}
@@ -157,8 +170,8 @@ export default function RfiDetailDrawer({
             </Descriptions.Item>
           </Descriptions>
 
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">
+          <section className={layout.drawerSection}>
+            <p className={`mb-2 ${layout.drawerHeading}`}>
               Update status
             </p>
             <Select
@@ -171,10 +184,10 @@ export default function RfiDetailDrawer({
                 label: step.label,
               }))}
             />
-          </div>
+          </section>
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-3`}>
               Responses
             </h3>
             {responses.length === 0 ? (
@@ -184,18 +197,18 @@ export default function RfiDetailDrawer({
                 description="Official responses will appear here once posted"
               />
             ) : (
-              <ul className="divide-y divide-slate-200 rounded-md border border-slate-200">
+              <ul className="erp-drawer-list">
                 {responses.map((item) => (
                   <li key={item.id} className="px-4 py-3">
                     <div className="mb-1 flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-medium text-slate-900">
+                      <span className={layout.drawerHeading}>
                         {resolveUserName(item.respondedBy)}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className={layout.drawerMetaLabel}>
                         {formatProjectDate(item.respondedAt)}
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-slate-700">
+                    <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
                       {item.responseText}
                     </p>
                   </li>
@@ -206,7 +219,7 @@ export default function RfiDetailDrawer({
             <Form<ResponseFormValues>
               form={form}
               layout="vertical"
-              className="mt-4"
+              className="erp-drawer-form mt-4"
               onFinish={(values: ResponseFormValues) =>
                 void handleAddResponse(values)
               }
@@ -226,7 +239,7 @@ export default function RfiDetailDrawer({
                 Post response
               </Button>
             </Form>
-          </div>
+          </section>
 
           <DocumentAttachmentPanel
             folderId={rfi.attachmentFolderId ?? undefined}

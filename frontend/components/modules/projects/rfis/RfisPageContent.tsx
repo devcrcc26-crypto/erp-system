@@ -22,7 +22,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -116,15 +116,16 @@ function RfiFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="Raise RFI"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<RfiFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         initialValues={{ priority: 'MEDIUM' }}
         onFinish={(values: RfiFormValues) => void handleSubmit(values)}
       >

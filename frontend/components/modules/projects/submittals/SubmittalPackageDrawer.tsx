@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo } from 'react';
@@ -24,6 +26,7 @@ import { apiGet } from '@/lib/api/client';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { designPackageKeys } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
+import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 
 interface SubmittalPackageFormValues {
@@ -84,9 +87,9 @@ export default function SubmittalPackageDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       title="Create design submittal"
       open={open}
-      size={560}
       onClose={onClose}
       footer={
         <Space>
@@ -236,6 +239,7 @@ function SubmittalPackageForm({
     <Form<SubmittalPackageFormValues>
       form={form}
       layout="vertical"
+      className="erp-drawer-form"
       initialValues={{ submittalPurpose: 'DISCIPLINE_SITE' as SubmittalPurpose }}
       onFinish={(values: SubmittalPackageFormValues) => void onSubmit(values)}
     >

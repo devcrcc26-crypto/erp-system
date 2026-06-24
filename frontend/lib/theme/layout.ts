@@ -1,5 +1,8 @@
 // UI polish pass — styles only, no logic changes
 
+import type { DrawerProps } from 'antd';
+import { tokens } from './tokens';
+
 /**
  * Shared layout spacing for page sections and card surfaces.
  */
@@ -15,6 +18,13 @@ export const layout = {
   drawerStack: 'erp-drawer-stack flex flex-col gap-4',
   drawerSection:
     'erp-drawer-section flex flex-col gap-4 border-t border-[var(--color-border-tertiary)] pt-4',
+  drawerHeading: 'text-[13px] font-medium leading-[1.5] text-[var(--color-text-primary)]',
+  drawerMutedText: 'text-[12px] font-normal leading-[1.5] text-[var(--color-text-secondary)]',
+  drawerMetaLabel:
+    'text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]',
+  drawerSurface:
+    'rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-4',
+  drawerDescriptionsClass: 'erp-drawer-descriptions',
   projectSidebarMenu: 'erp-project-sidebar-menu',
   /** Responsive form / filter card header */
   formHeader:
@@ -29,16 +39,58 @@ export const layout = {
   filterControlXs: 'w-full min-w-0 sm:w-[140px]',
 } as const;
 
-/** Drawer styles — padding reduced on small viewports via globals.css */
-export const antDrawerBodyStyles = {
-  body: { padding: '20px 20px' },
-  footer: { padding: '16px 20px' },
-} as const;
+/** Standard slide-over width (detail views). */
+export const DRAWER_WIDTH_STANDARD = 480;
 
-export const antDrawerBodyStylesMd = {
-  body: { padding: '20px 20px' },
-  footer: { padding: '16px 20px' },
-} as const;
+/** Wide slide-over width (complex forms, multi-tab detail). */
+export const DRAWER_WIDTH_WIDE = 640;
+
+export const detailDrawerClassName = 'erp-detail-drawer';
+export const responsiveDetailDrawerClassName =
+  'erp-detail-drawer erp-responsive-drawer';
+
+export const detailDrawerStyles: NonNullable<DrawerProps['styles']> = {
+  header: {
+    padding: '0 20px',
+    minHeight: 52,
+    height: 52,
+    borderBottom: `0.5px solid ${tokens.colorBorder}`,
+  },
+  body: {
+    padding: 20,
+  },
+  footer: {
+    padding: '16px 20px',
+    borderTop: `0.5px solid ${tokens.colorBorder}`,
+  },
+  content: {
+    borderLeft: `0.5px solid ${tokens.colorBorder}`,
+  },
+};
+
+/** @deprecated Use detailDrawerStyles */
+export const antDrawerBodyStyles = detailDrawerStyles;
+
+/** @deprecated Use detailDrawerStyles */
+export const antDrawerBodyStylesMd = detailDrawerStyles;
+
+export const standardDetailDrawerProps: Pick<
+  DrawerProps,
+  'size' | 'className' | 'styles'
+> = {
+  size: DRAWER_WIDTH_STANDARD,
+  className: detailDrawerClassName,
+  styles: detailDrawerStyles,
+};
+
+export const wideDetailDrawerProps: Pick<
+  DrawerProps,
+  'size' | 'className' | 'styles'
+> = {
+  size: DRAWER_WIDTH_WIDE,
+  className: responsiveDetailDrawerClassName,
+  styles: detailDrawerStyles,
+};
 
 export const cardStyles = {
   header: { padding: '14px 18px', minHeight: 'auto' as const },

@@ -33,7 +33,7 @@ import {
   useCorrespondence,
   useCreateCorrespondence,
 } from '@/lib/query/correspondence';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   correspondenceStatusVariant,
@@ -105,10 +105,10 @@ function CorrespondenceFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="New correspondence"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<CorrespondenceFormValues>

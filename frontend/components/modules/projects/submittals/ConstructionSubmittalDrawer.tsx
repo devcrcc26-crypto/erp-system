@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo } from 'react';
@@ -24,6 +26,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useCreateConstructionSubmittal } from '@/lib/query/submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useQuery } from '@tanstack/react-query';
+import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ConstructionSubmittalFormValues {
@@ -127,9 +130,9 @@ export default function ConstructionSubmittalDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       title="New construction submittal"
       open={open}
-      size={640}
       onClose={onClose}
       destroyOnHidden
       footer={
@@ -156,6 +159,7 @@ export default function ConstructionSubmittalDrawer({
       <Form<ConstructionSubmittalFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         initialValues={{ revisionNumber: 1 }}
         onFinish={(values: ConstructionSubmittalFormValues) =>
           void handleSubmit(values)

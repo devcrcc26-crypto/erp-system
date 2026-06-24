@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import {
@@ -5,7 +7,6 @@ import {
   Descriptions,
   Drawer,
   Select,
-  Spin,
 } from 'antd';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -15,6 +16,7 @@ import type { IssueStatus } from '@/lib/api/project-management.types';
 import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { useIssue, useUpdateIssue } from '@/lib/query/issues';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatIssueStatus,
@@ -54,20 +56,22 @@ export default function IssueDetailDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
       title={issue ? `${issue.issueNumber} — ${issue.issueType}` : 'Issue detail'}
-      size="large"
       destroyOnHidden
     >
       {issueQuery.isLoading && (
-        <div className="flex justify-center py-12">
-          <Spin />
+        <div className="flex flex-col gap-3">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-32 w-full rounded" />
         </div>
       )}
 
       {issueQuery.isError && (
-        <p className="text-sm text-slate-500">
+        <p className={layout.drawerMutedText}>
           {issueQuery.error instanceof ApiRequestError
             ? issueQuery.error.message
             : 'Unable to load issue.'}
@@ -75,10 +79,19 @@ export default function IssueDetailDrawer({
       )}
 
       {issue && (
-        <div className="space-y-6">
-          <WorkflowStepper steps={ISSUE_WORKFLOW} currentStatus={issue.status} />
+        <div className={layout.drawerStack}>
+          <WorkflowStepper
+            className="erp-drawer-workflow"
+            steps={ISSUE_WORKFLOW}
+            currentStatus={issue.status}
+          />
 
-          <Descriptions column={1} size="small" bordered>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            column={1}
+            size="small"
+            bordered
+          >
             <Descriptions.Item label="Status">
               <StatusBadge
                 label={formatIssueStatus(issue.status)}
@@ -114,8 +127,8 @@ export default function IssueDetailDrawer({
             </Descriptions.Item>
           </Descriptions>
 
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">
+          <section className={layout.drawerSection}>
+            <p className={`mb-2 ${layout.drawerHeading}`}>
               Update status
             </p>
             <Select
@@ -128,7 +141,7 @@ export default function IssueDetailDrawer({
                 label: step.label,
               }))}
             />
-          </div>
+          </section>
 
           <DocumentAttachmentPanel
             folderId={issue.attachmentFolderId ?? undefined}

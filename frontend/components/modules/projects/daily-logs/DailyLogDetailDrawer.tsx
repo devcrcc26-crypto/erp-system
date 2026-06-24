@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -11,7 +13,6 @@ import {
   Input,
   InputNumber,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
@@ -46,7 +47,8 @@ import {
   useRemoveDailyLogWorkforce,
   useUpdateDailyLog,
 } from '@/lib/query/daily-logs';
-import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   dailyLogStatusVariant,
@@ -112,9 +114,9 @@ function DrawerSection({
       }
     >
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className={layout.drawerHeading}>{title}</h3>
         {description && (
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+          <p className={`mt-1 ${layout.drawerMutedText}`}>{description}</p>
         )}
       </div>
       {children}
@@ -137,7 +139,9 @@ function AddEntryCollapse({
         {
           key: 'add',
           label: (
-            <span className="text-sm font-medium text-orange-600">{label}</span>
+            <span className="text-sm font-medium" style={{ color: tokens.colorTeal600 }}>
+              {label}
+            </span>
           ),
           children: <div className="pt-1">{children}</div>,
         },
@@ -515,45 +519,45 @@ export default function DailyLogDetailDrawer({
 
   function renderSummaryHeader(currentLog: DailyLogDetail): React.ReactNode {
     return (
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <div className={layout.drawerSurface}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <dl className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className={layout.drawerMetaLabel}>
                 Date
               </dt>
-              <dd className="mt-1 text-sm font-medium text-slate-900">
+              <dd className={`mt-1 ${layout.drawerHeading}`}>
                 {formatProjectDate(currentLog.logDate)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className={layout.drawerMetaLabel}>
                 Shift
               </dt>
-              <dd className="mt-1 text-sm text-slate-900">
+              <dd className={`mt-1 ${layout.drawerMutedText}`}>
                 {currentLog.shift ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className={layout.drawerMetaLabel}>
                 Site engineer
               </dt>
-              <dd className="mt-1 text-sm text-slate-900">
+              <dd className={`mt-1 ${layout.drawerMutedText}`}>
                 {resolveUserName(currentLog.siteEngineerId)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className={layout.drawerMetaLabel}>
                 Workers on site
               </dt>
-              <dd className="mt-1 text-sm text-slate-900">
+              <dd className={`mt-1 ${layout.drawerMutedText}`}>
                 {currentLog.totalWorkers}
               </dd>
             </div>
           </dl>
 
           <div className="flex w-full flex-col gap-2 lg:w-56">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <span className={layout.drawerMetaLabel}>
               Status
             </span>
             <StatusBadge
@@ -897,6 +901,7 @@ export default function DailyLogDetailDrawer({
   return (
     <>
       <Drawer
+        {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
         title={
@@ -904,9 +909,6 @@ export default function DailyLogDetailDrawer({
             ? `Daily log — ${formatProjectDate(log.logDate)}`
             : 'Daily log detail'
         }
-        size="large"
-        className="erp-responsive-drawer"
-        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           log && isEditable ? (
@@ -917,13 +919,15 @@ export default function DailyLogDetailDrawer({
         }
       >
         {logQuery.isLoading && (
-          <div className="flex justify-center py-16">
-            <Spin />
+          <div className="flex flex-col gap-3">
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-32 w-full rounded" />
           </div>
         )}
 
         {logQuery.isError && (
-          <p className="text-sm text-slate-500">
+          <p className={layout.drawerMutedText}>
             {logQuery.error instanceof ApiRequestError
               ? logQuery.error.message
               : 'Unable to load daily log.'}
@@ -935,6 +939,7 @@ export default function DailyLogDetailDrawer({
             {renderSummaryHeader(log)}
 
             <WorkflowStepper
+              className="erp-drawer-workflow"
               steps={DAILY_LOG_WORKFLOW}
               currentStatus={log.status}
             />

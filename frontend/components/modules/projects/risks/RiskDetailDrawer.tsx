@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,7 +12,6 @@ import {
   Input,
   InputNumber,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -33,7 +34,7 @@ import {
   useRisk,
   useUpdateRisk,
 } from '@/lib/query/risks';
-import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatRiskCategory,
@@ -165,12 +166,10 @@ export default function RiskDetailDrawer({
   return (
     <>
       <Drawer
+        {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
         title={risk ? `${risk.riskIdCode} — ${risk.title}` : 'Risk'}
-        size="large"
-        className="erp-responsive-drawer"
-        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           risk && isEditable ? (
@@ -181,12 +180,14 @@ export default function RiskDetailDrawer({
         }
       >
         {riskQuery.isLoading && (
-          <div className="flex justify-center py-16">
-            <Spin />
+          <div className="flex flex-col gap-3">
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-32 w-full rounded" />
           </div>
         )}
         {riskQuery.isError && (
-          <p className="text-sm text-slate-500">
+          <p className={layout.drawerMutedText}>
             {riskQuery.error instanceof ApiRequestError
               ? riskQuery.error.message
               : 'Unable to load risk.'}
@@ -194,16 +195,16 @@ export default function RiskDetailDrawer({
         )}
         {risk && (
           <div className={layout.drawerStack}>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className={layout.drawerSurface}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">
+                  <p className={layout.drawerMetaLabel}>
                     {formatRiskCategory(risk.category)}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Owner: {resolveUserName(risk.ownerId)}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Review: {formatProjectDate(risk.reviewDate)}
                   </p>
                 </div>
@@ -229,7 +230,11 @@ export default function RiskDetailDrawer({
               </div>
             </div>
 
-            <WorkflowStepper steps={RISK_WORKFLOW} currentStatus={risk.status} />
+            <WorkflowStepper
+              className="erp-drawer-workflow"
+              steps={RISK_WORKFLOW}
+              currentStatus={risk.status}
+            />
 
             <Tabs
               activeKey={activeTab}

@@ -1,14 +1,16 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo } from 'react';
-import { Button, Descriptions, Drawer, Spin } from 'antd';
+import { Button, Descriptions, Drawer } from 'antd';
 import CommentRevisionSection from '@/components/modules/projects/review/CommentRevisionSection';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { ReviewCommentDetail, ReviewModeComment } from '@/lib/api/epc.types';
 import { useReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { antDrawerBodyStyles } from '@/lib/theme/layout';
+import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 
 function mergeFallbackComment(
   fallbackComment: ReviewModeComment,
@@ -100,11 +102,10 @@ export default function ReviewCommentDetailDrawer({
 
   return (
     <Drawer
+      {...standardDetailDrawerProps}
       title={drawerTitle}
       open={open}
       onClose={onClose}
-      size={520}
-      styles={antDrawerBodyStyles}
       footer={
         canEdit || (canDelete && onDelete) ? (
           <div className="flex justify-end gap-2">
@@ -124,14 +125,21 @@ export default function ReviewCommentDetailDrawer({
       }
     >
       {detailQuery.isLoading && !comment ? (
-        <div className="flex justify-center py-12">
-          <Spin />
+        <div className="flex flex-col gap-3">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-24 w-full rounded" />
         </div>
       ) : !comment ? (
-        <p className="text-sm text-slate-500">Comment not found.</p>
+        <p className={layout.drawerMutedText}>Comment not found.</p>
       ) : (
-        <div className="space-y-4">
-          <Descriptions bordered size="small" column={1}>
+        <div className={layout.drawerStack}>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            bordered
+            size="small"
+            column={1}
+          >
             <Descriptions.Item label="Document">
               {resolvedDocumentLabel}
             </Descriptions.Item>
@@ -154,20 +162,22 @@ export default function ReviewCommentDetailDrawer({
               {formatProjectDate(comment.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label="Comment">
-              <p className="whitespace-pre-wrap text-sm text-slate-800">
+              <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
                 {comment.body}
               </p>
             </Descriptions.Item>
           </Descriptions>
 
           {showResponse ? (
-            <CommentRevisionSection
+            <section className={layout.drawerSection}>
+              <CommentRevisionSection
               commentedOn={comment.commentedOn}
               responseRevision={comment.responseRevision}
               resolutionNote={comment.resolutionNote}
               resolvedAt={comment.resolvedAt}
               verifiedAt={comment.verifiedAt}
-            />
+              />
+            </section>
           ) : null}
         </div>
       )}

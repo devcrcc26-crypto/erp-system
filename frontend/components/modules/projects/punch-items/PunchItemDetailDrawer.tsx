@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +11,6 @@ import {
   Form,
   Input,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -32,7 +33,7 @@ import {
   usePunchItem,
   useUpdatePunchItem,
 } from '@/lib/query/punch-items';
-import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatPunchItemStatus,
@@ -151,14 +152,12 @@ export default function PunchItemDetailDrawer({
   return (
     <>
       <Drawer
+        {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
         title={
           item ? `${item.punchNumber} — ${item.description.slice(0, 40)}` : 'Punch item'
         }
-        size="large"
-        className="erp-responsive-drawer"
-        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           item && isEditable ? (
@@ -169,12 +168,14 @@ export default function PunchItemDetailDrawer({
         }
       >
         {itemQuery.isLoading && (
-          <div className="flex justify-center py-16">
-            <Spin />
+          <div className="flex flex-col gap-3">
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-32 w-full rounded" />
           </div>
         )}
         {itemQuery.isError && (
-          <p className="text-sm text-slate-500">
+          <p className={layout.drawerMutedText}>
             {itemQuery.error instanceof ApiRequestError
               ? itemQuery.error.message
               : 'Unable to load punch item.'}
@@ -182,22 +183,24 @@ export default function PunchItemDetailDrawer({
         )}
         {item && (
           <div className={layout.drawerStack}>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className={layout.drawerSurface}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm text-slate-900">
+                  <p className={layout.drawerHeading}>
                     {item.roomOrArea ? `Area: ${item.roomOrArea}` : 'No area specified'}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Raised by {resolveUserName(item.raisedBy)}
                     {item.assignedTo
                       ? ` · Assigned to ${resolveUserName(item.assignedTo)}`
                       : ''}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Due {formatProjectDate(item.dueDate)}
                     {isOverdue(item.dueDate) && item.status !== 'CLOSED' && (
-                      <span className="ml-2 text-red-600">Overdue</span>
+                      <span className="ml-2" style={{ color: 'var(--color-red-400)' }}>
+                        Overdue
+                      </span>
                     )}
                   </p>
                 </div>
@@ -224,6 +227,7 @@ export default function PunchItemDetailDrawer({
             </div>
 
             <WorkflowStepper
+              className="erp-drawer-workflow"
               steps={PUNCH_ITEM_WORKFLOW}
               currentStatus={item.status}
             />
@@ -277,7 +281,7 @@ export default function PunchItemDetailDrawer({
                         <DatePicker className="w-full" />
                       </Form.Item>
                       {!isEditable && (
-                        <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                        <div className={`grid gap-2 sm:grid-cols-2 ${layout.drawerMutedText}`}>
                           <p>Corrected: {formatProjectDate(item.correctedAt)}</p>
                           <p>Verified: {formatProjectDate(item.verifiedAt)}</p>
                         </div>

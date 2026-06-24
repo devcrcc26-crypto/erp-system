@@ -19,7 +19,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -116,15 +116,16 @@ function IssueFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="Raise issue"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<IssueFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         initialValues={{ severity: 'MEDIUM' }}
         onFinish={(values: IssueFormValues) => void handleSubmit(values)}
       >

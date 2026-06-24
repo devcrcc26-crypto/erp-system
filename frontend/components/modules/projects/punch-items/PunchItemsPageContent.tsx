@@ -35,7 +35,7 @@ import {
   useCreatePunchItem,
   usePunchItems,
 } from '@/lib/query/punch-items';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatPunchItemStatus,
@@ -108,10 +108,10 @@ function PunchItemFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="New punch item"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<PunchItemFormValues>

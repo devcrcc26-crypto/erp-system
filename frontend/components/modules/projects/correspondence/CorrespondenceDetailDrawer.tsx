@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +11,6 @@ import {
   Form,
   Input,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -30,7 +31,7 @@ import {
   useDeleteCorrespondence,
   useUpdateCorrespondence,
 } from '@/lib/query/correspondence';
-import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   correspondenceStatusVariant,
@@ -147,6 +148,7 @@ export default function CorrespondenceDetailDrawer({
   return (
     <>
       <Drawer
+        {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
         title={
@@ -154,9 +156,6 @@ export default function CorrespondenceDetailDrawer({
             ? `${item.referenceNumber} — ${item.subject}`
             : 'Correspondence'
         }
-        size="large"
-        className="erp-responsive-drawer"
-        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           item && isEditable ? (
@@ -167,12 +166,14 @@ export default function CorrespondenceDetailDrawer({
         }
       >
         {itemQuery.isLoading && (
-          <div className="flex justify-center py-16">
-            <Spin />
+          <div className="flex flex-col gap-3">
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-32 w-full rounded" />
           </div>
         )}
         {itemQuery.isError && (
-          <p className="text-sm text-slate-500">
+          <p className={layout.drawerMutedText}>
             {itemQuery.error instanceof ApiRequestError
               ? itemQuery.error.message
               : 'Unable to load correspondence.'}
@@ -180,16 +181,16 @@ export default function CorrespondenceDetailDrawer({
         )}
         {item && (
           <div className={layout.drawerStack}>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className={layout.drawerSurface}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">
+                  <p className={layout.drawerMetaLabel}>
                     {item.correspondenceType.replace(/_/g, ' ')}
                   </p>
-                  <p className="mt-1 text-sm text-slate-900">
+                  <p className={`mt-1 ${layout.drawerHeading}`}>
                     {formatProjectDate(item.correspondenceDate)}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     {item.senderName} → {item.recipientName}
                   </p>
                 </div>
@@ -214,6 +215,7 @@ export default function CorrespondenceDetailDrawer({
             </div>
 
             <WorkflowStepper
+              className="erp-drawer-workflow"
               steps={CORRESPONDENCE_WORKFLOW}
               currentStatus={item.status}
             />

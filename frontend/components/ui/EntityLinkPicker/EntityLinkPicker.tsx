@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState, type ChangeEvent } from 'react';
@@ -18,6 +20,7 @@ import {
   type EntityLink,
   type EntityLinkType,
 } from '@/lib/api/documents.types';
+import { layout } from '@/lib/theme/layout';
 
 /**
  * Manage polymorphic links between drawings and PM entities.
@@ -97,6 +100,7 @@ export default function EntityLinkPicker({
     <FormLayout
       title={title}
       description={description}
+      className="erp-drawer-attachment"
       extra={
         !readOnly ? (
           <Button icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
@@ -111,17 +115,19 @@ export default function EntityLinkPicker({
           description="No linked records yet."
         />
       ) : (
-        <ul className="divide-y divide-slate-200">
+        <ul className="erp-drawer-file-list">
           {value.map((link) => (
             <li
               key={`${link.entityType}-${link.entityId}`}
               className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
             >
               <Space>
-                <LinkOutlined className="text-slate-400" />
-                <Tag>{ENTITY_LINK_TYPE_LABELS[link.entityType]}</Tag>
-                <span className="font-medium text-slate-900">{link.label}</span>
-                <span className="text-xs text-slate-500">{link.entityId}</span>
+                <LinkOutlined className="text-[var(--color-text-tertiary)]" />
+                <Tag variant="filled">{ENTITY_LINK_TYPE_LABELS[link.entityType]}</Tag>
+                <span className="text-[12px] font-medium text-[var(--color-text-primary)]">
+                  {link.label}
+                </span>
+                <span className={layout.drawerMutedText}>{link.entityId}</span>
               </Space>
               {!readOnly && (
                 <Button
@@ -148,9 +154,9 @@ export default function EntityLinkPicker({
         okText="Add link"
         destroyOnHidden
       >
-        <div className="space-y-4">
+        <div className={layout.drawerStack}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className={`mb-1 block ${layout.drawerHeading}`}>
               Record type
             </label>
             <Select
@@ -164,7 +170,7 @@ export default function EntityLinkPicker({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className={`mb-1 block ${layout.drawerHeading}`}>
               Reference ID
             </label>
             <Input
@@ -176,7 +182,7 @@ export default function EntityLinkPicker({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className={`mb-1 block ${layout.drawerHeading}`}>
               Display label
             </label>
             <Input

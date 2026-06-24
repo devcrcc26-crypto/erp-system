@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import {
@@ -8,7 +10,6 @@ import {
   Form,
   Input,
   Select,
-  Spin,
   Timeline,
 } from 'antd';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
@@ -28,6 +29,7 @@ import {
 } from '@/lib/query/submittals';
 import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
 import { useIssueSubmittal } from '@/lib/query/epc-submittals';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -138,6 +140,7 @@ export default function SubmittalDetailDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
       title={
@@ -145,17 +148,18 @@ export default function SubmittalDetailDrawer({
           ? `${submittal.submittalNumber} — ${submittal.title}`
           : 'Submittal detail'
       }
-      size="large"
       destroyOnHidden
     >
       {submittalQuery.isLoading && (
-        <div className="flex justify-center py-12">
-          <Spin />
+        <div className="flex flex-col gap-3">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-32 w-full rounded" />
         </div>
       )}
 
       {submittalQuery.isError && (
-        <p className="text-sm text-slate-500">
+        <p className={layout.drawerMutedText}>
           {submittalQuery.error instanceof ApiRequestError
             ? submittalQuery.error.message
             : 'Unable to load submittal.'}
@@ -163,13 +167,19 @@ export default function SubmittalDetailDrawer({
       )}
 
       {submittal && (
-        <div className="space-y-6">
+        <div className={layout.drawerStack}>
           <WorkflowStepper
+            className="erp-drawer-workflow"
             steps={SUBMITTAL_WORKFLOW}
             currentStatus={submittal.status}
           />
 
-          <Descriptions column={1} size="small" bordered>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            column={1}
+            size="small"
+            bordered
+          >
             <Descriptions.Item label="Status">
               <StatusBadge
                 label={formatSubmittalStatus(submittal.status)}
@@ -222,19 +232,12 @@ export default function SubmittalDetailDrawer({
 
           {submittal.items.length > 0 && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold text-slate-900">
+              <h3 className={`${layout.drawerHeading} mb-2`}>
                 Linked design packages
               </h3>
-              <div className="overflow-hidden rounded-md border border-slate-200">
-                {submittal.items.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`px-4 py-3 text-sm text-slate-700 ${
-                      index < submittal.items.length - 1
-                        ? 'border-b border-slate-200'
-                        : ''
-                    }`}
-                  >
+              <div className="erp-drawer-list">
+                {submittal.items.map((item) => (
+                  <div key={item.id} className={`px-4 py-3 ${layout.drawerMutedText}`}>
                     Package {item.sortOrder + 1}
                     {item.snapshotCaptured ? ' (snapshot captured)' : ''}
                   </div>
@@ -268,14 +271,15 @@ export default function SubmittalDetailDrawer({
             />
           )}
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-3`}>
               Review history
             </h3>
             {reviews.length === 0 ? (
-              <p className="text-sm text-slate-500">No reviews recorded yet.</p>
+              <p className={layout.drawerMutedText}>No reviews recorded yet.</p>
             ) : (
               <Timeline
+                className="erp-drawer-timeline"
                 items={reviews.map((review) => ({
                   content: (
                     <div>
@@ -284,16 +288,16 @@ export default function SubmittalDetailDrawer({
                           label={formatSubmittalStatus(review.status)}
                           variant={submittalStatusVariant(review.status)}
                         />
-                        <span className="text-xs text-slate-500">
+                        <span className={layout.drawerMetaLabel}>
                           Rev {review.revisionNumber} ·{' '}
                           {formatProjectDate(review.reviewedAt)}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className={`mt-1 ${layout.drawerMutedText}`}>
                         {resolveUserName(review.reviewedBy)}
                       </p>
                       {review.comments && (
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                        <p className={`mt-2 whitespace-pre-wrap ${layout.drawerMutedText}`}>
                           {review.comments}
                         </p>
                       )}
@@ -307,7 +311,7 @@ export default function SubmittalDetailDrawer({
               <Form<ReviewFormValues>
                 form={form}
                 layout="vertical"
-                className="mt-4"
+                className="erp-drawer-form mt-4"
                 initialValues={{ status: 'UNDER_REVIEW' }}
                 onFinish={(values: ReviewFormValues) =>
                   void handleAddReview(values)
@@ -357,7 +361,7 @@ export default function SubmittalDetailDrawer({
                   description="Your submittal has been submitted. The assigned reviewer will record the approval outcome."
                 />
               )}
-          </div>
+          </section>
 
           {isExternalRelease && submittalId && (
             <SubmittalExternalReviewPanel submittalId={submittalId} />

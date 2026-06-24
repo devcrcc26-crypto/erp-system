@@ -33,7 +33,7 @@ import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateRisk, useRisks } from '@/lib/query/risks';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatRiskCategory,
@@ -118,10 +118,10 @@ function RiskFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="New risk"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<RiskFormValues>

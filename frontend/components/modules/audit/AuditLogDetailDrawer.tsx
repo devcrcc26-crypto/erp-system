@@ -1,9 +1,11 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { Descriptions, Drawer } from 'antd';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
-import { antDrawerBodyStylesMd } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 function formatTimestamp(value: string): string {
@@ -51,11 +53,11 @@ function JsonBlock({
   emptyLabel?: string;
 }): React.ReactNode {
   if (value === null || value === undefined) {
-    return <span className="text-slate-400">{emptyLabel ?? '—'}</span>;
+    return <span style={{ color: 'var(--color-text-tertiary)' }}>{emptyLabel ?? '—'}</span>;
   }
 
   return (
-    <pre className="max-h-64 overflow-auto rounded-md bg-slate-50 p-3 text-xs text-slate-700">
+    <pre className="erp-drawer-code-block">
       {JSON.stringify(value, null, 2)}
     </pre>
   );
@@ -74,22 +76,28 @@ export default function AuditLogDetailDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       title={t('auditLogs.detailTitle')}
       open={open}
       onClose={onClose}
-      size={640}
-      styles={antDrawerBodyStylesMd}
     >
       {log ? (
-        <div className="space-y-6">
-          <Descriptions column={1} size="small" bordered>
+        <div className={layout.drawerStack}>
+          <Descriptions
+            className={layout.drawerDescriptionsClass}
+            column={1}
+            size="small"
+            bordered
+          >
             <Descriptions.Item label={t('auditLogs.columns.timestamp')}>
               {formatTimestamp(log.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.user')}>
               {formatUserName(log)}
               {log.user?.email ? (
-                <span className="block text-xs text-slate-500">{log.user.email}</span>
+                <span className={`block ${layout.drawerMetaLabel} normal-case tracking-normal`}>
+                  {log.user.email}
+                </span>
               ) : null}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.source')}>
@@ -127,8 +135,8 @@ export default function AuditLogDetailDrawer({
             </Descriptions.Item>
           </Descriptions>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-slate-800">
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-2`}>
               {t('auditLogs.detail.beforeValue')}
             </h3>
             <JsonBlock
@@ -139,10 +147,10 @@ export default function AuditLogDetailDrawer({
                   : t('auditLogs.detail.noBeforeCaptured')
               }
             />
-          </div>
+          </section>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-slate-800">
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-2`}>
               {t('auditLogs.detail.afterValue')}
             </h3>
             <JsonBlock
@@ -153,7 +161,7 @@ export default function AuditLogDetailDrawer({
                   : undefined
               }
             />
-          </div>
+          </section>
         </div>
       ) : null}
     </Drawer>

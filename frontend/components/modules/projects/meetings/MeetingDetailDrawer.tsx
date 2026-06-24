@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState } from 'react';
@@ -12,7 +14,6 @@ import {
   Form,
   Input,
   Select,
-  Spin,
   Tabs,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
@@ -47,7 +48,8 @@ import {
   useUpdateMeetingActionItem,
   useUpdateMeetingAttendee,
 } from '@/lib/query/meetings';
-import { antDrawerBodyStylesMd, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatMeetingStatus,
@@ -69,7 +71,11 @@ function AddCollapse({
       items={[
         {
           key: 'add',
-          label: <span className="text-sm font-medium text-orange-600">{label}</span>,
+          label: (
+            <span className="text-sm font-medium" style={{ color: tokens.colorTeal600 }}>
+              {label}
+            </span>
+          ),
           children: <div className="pt-1">{children}</div>,
         },
       ]}
@@ -318,12 +324,10 @@ export default function MeetingDetailDrawer({
   return (
     <>
       <Drawer
+        {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
         title={meeting ? `${meeting.meetingNumber} — ${meeting.title}` : 'Meeting'}
-        size="large"
-        className="erp-responsive-drawer"
-        styles={antDrawerBodyStylesMd}
         destroyOnHidden
         extra={
           meeting && isEditable ? (
@@ -334,12 +338,14 @@ export default function MeetingDetailDrawer({
         }
       >
         {meetingQuery.isLoading && (
-          <div className="flex justify-center py-16">
-            <Spin />
+          <div className="flex flex-col gap-3">
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-10 w-full rounded" />
+            <div className="erp-page-skeleton h-32 w-full rounded" />
           </div>
         )}
         {meetingQuery.isError && (
-          <p className="text-sm text-slate-500">
+          <p className={layout.drawerMutedText}>
             {meetingQuery.error instanceof ApiRequestError
               ? meetingQuery.error.message
               : 'Unable to load meeting.'}
@@ -347,17 +353,17 @@ export default function MeetingDetailDrawer({
         )}
         {meeting && (
           <div className={layout.drawerStack}>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className={layout.drawerSurface}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">
+                  <p className={layout.drawerMetaLabel}>
                     {meeting.meetingType.replace(/_/g, ' ')}
                   </p>
-                  <p className="mt-1 text-sm text-slate-900">
+                  <p className={`mt-1 ${layout.drawerHeading}`}>
                     {formatProjectDate(meeting.meetingDate)}
                     {meeting.location ? ` · ${meeting.location}` : ''}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Organizer: {resolveUserName(meeting.organizerId)}
                   </p>
                 </div>
@@ -380,6 +386,7 @@ export default function MeetingDetailDrawer({
             </div>
 
             <WorkflowStepper
+              className="erp-drawer-workflow"
               steps={MEETING_WORKFLOW}
               currentStatus={meeting.status}
             />
@@ -400,7 +407,7 @@ export default function MeetingDetailDrawer({
                     </span>
                   ),
                   children: (
-                    <div className="space-y-4">
+                    <div className={layout.drawerStack}>
                       <DataTable
                         size="small"
                         rowKey="id"
@@ -472,7 +479,7 @@ export default function MeetingDetailDrawer({
                     </span>
                   ),
                   children: (
-                    <div className="space-y-4">
+                    <div className={layout.drawerStack}>
                       <DataTable
                         size="small"
                         rowKey="id"
@@ -538,7 +545,7 @@ export default function MeetingDetailDrawer({
                     </span>
                   ),
                   children: (
-                    <div className="space-y-4">
+                    <div className={layout.drawerStack}>
                       <DataTable
                         size="small"
                         rowKey="id"

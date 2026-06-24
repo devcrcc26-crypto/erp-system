@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useMemo } from 'react';
@@ -7,7 +9,7 @@ import type { CommentSeverity, ReviewModeComment } from '@/lib/api/epc.types';
 import { useUpdateReviewComment } from '@/lib/query/review-comments';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { antDrawerBodyStyles } from '@/lib/theme/layout';
+import { standardDetailDrawerProps } from '@/lib/theme/layout';
 
 interface EditCommentFormValues {
   engineeringDocumentVersionId: string;
@@ -86,11 +88,10 @@ export default function ReviewCommentEditDrawer({
 
   return (
     <Drawer
+      {...standardDetailDrawerProps}
       title={drawerTitle}
       open={open}
       onClose={onClose}
-      size={480}
-      styles={antDrawerBodyStyles}
       footer={
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
@@ -107,6 +108,7 @@ export default function ReviewCommentEditDrawer({
       <Form<EditCommentFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         onFinish={(values: EditCommentFormValues) => void handleSubmit(values)}
       >
         <Form.Item

@@ -18,7 +18,7 @@ import { FileStack } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -77,15 +77,16 @@ function DrawingFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="Register drawing"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<DrawingFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         initialValues={{ revision: 'A' }}
         onFinish={(values: DrawingFormValues) => void handleSubmit(values)}
       >

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect } from 'react';
@@ -31,7 +33,7 @@ import {
   useUpdateTask,
 } from '@/lib/query/schedule';
 import { calculateTaskDurationDays } from '@/lib/utils/schedule-metrics';
-import { antDrawerBodyStyles } from '@/lib/theme/layout';
+import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -289,11 +291,10 @@ export default function TaskFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title={isEditing ? 'Edit task' : 'Add task'}
       onClose={onClose}
-      size="large"
-      styles={antDrawerBodyStyles}
     >
       <div className="flex flex-col gap-6">
         <Form<TaskFormValues>

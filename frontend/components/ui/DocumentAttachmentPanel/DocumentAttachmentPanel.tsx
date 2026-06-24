@@ -1,6 +1,8 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
-import { Alert, Button, Empty, Spin, Upload } from 'antd';
+import { Alert, Button, Empty, Upload } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type { DocumentRecord } from '@/lib/api/documents.types';
@@ -10,6 +12,7 @@ import {
 } from '@/lib/query/documents';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
+import { layout } from '@/lib/theme/layout';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -51,7 +54,11 @@ export default function DocumentAttachmentPanel({
 
   if (!folderId) {
     return (
-      <FormLayout title={title} description={description}>
+      <FormLayout
+        title={title}
+        description={description}
+        className="erp-drawer-attachment"
+      >
         <Alert
           type="info"
           showIcon
@@ -63,9 +70,14 @@ export default function DocumentAttachmentPanel({
 
   if (documentsQuery.isLoading) {
     return (
-      <FormLayout title={title} description={description}>
-        <div className="flex justify-center py-8">
-          <Spin />
+      <FormLayout
+        title={title}
+        description={description}
+        className="erp-drawer-attachment"
+      >
+        <div className="flex flex-col gap-2 py-2">
+          <div className="erp-page-skeleton h-10 w-full rounded" />
+          <div className="erp-page-skeleton h-10 w-full rounded" />
         </div>
       </FormLayout>
     );
@@ -78,7 +90,11 @@ export default function DocumentAttachmentPanel({
         : 0;
 
     return (
-      <FormLayout title={title} description={description}>
+      <FormLayout
+        title={title}
+        description={description}
+        className="erp-drawer-attachment"
+      >
         <Alert
           type={status === 403 ? 'warning' : 'error'}
           showIcon
@@ -98,6 +114,7 @@ export default function DocumentAttachmentPanel({
     <FormLayout
       title={title}
       description={description}
+      className="erp-drawer-attachment"
       extra={
         !readOnly ? (
           <Upload
@@ -125,15 +142,17 @@ export default function DocumentAttachmentPanel({
           description="No files attached yet."
         />
       ) : (
-        <ul className="divide-y divide-slate-200">
+        <ul className="erp-drawer-file-list">
           {documents.map((document) => (
             <li
               key={document.id}
               className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
             >
               <div className="min-w-0">
-                <p className="font-medium text-slate-900">{document.name}</p>
-                <p className="text-sm text-slate-500">
+                <p className="text-[12px] font-medium text-[var(--color-text-primary)]">
+                  {document.name}
+                </p>
+                <p className={layout.drawerMutedText}>
                   {document.fileType} · {formatFileSize(document.fileSizeBytes)} ·
                   v{document.version}
                 </p>

@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import {
@@ -22,6 +24,7 @@ import type {
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
+import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useCreateProject, useUpdateProject } from '@/lib/query/projects';
 
 const PROJECT_TYPE_OPTIONS: Array<{ value: ProjectType; label: string }> = [
@@ -171,10 +174,10 @@ export default function ProjectFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title={isEditing ? 'Edit project' : 'New project'}
       onClose={onClose}
-      size="large"
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {
         if (!visible) {
@@ -188,6 +191,7 @@ export default function ProjectFormDrawer({
       <Form<ProjectFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         onFinish={(values: ProjectFormValues) => void handleSubmit(values)}
       >
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">

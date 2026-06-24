@@ -20,7 +20,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -99,15 +99,16 @@ function DailyLogFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="New daily log"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<DailyLogFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         initialValues={{ logDate: dayjs() }}
         onFinish={(values: DailyLogFormValues) => void handleSubmit(values)}
       >

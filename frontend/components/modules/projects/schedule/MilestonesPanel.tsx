@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -23,6 +25,7 @@ import {
   useMilestones,
   useUpdateMilestone,
 } from '@/lib/query/schedule';
+import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -109,6 +112,7 @@ function MilestoneFormDrawer({
 
   return (
     <Drawer
+      {...standardDetailDrawerProps}
       open={open}
       title={isEditing ? 'Edit milestone' : 'Add milestone'}
       onClose={onClose}
@@ -116,6 +120,7 @@ function MilestoneFormDrawer({
       <Form<MilestoneFormValues>
         form={form}
         layout="vertical"
+        className="erp-drawer-form"
         onFinish={(values: MilestoneFormValues) => void handleSubmit(values)}
       >
         <Form.Item

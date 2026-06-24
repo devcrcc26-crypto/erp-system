@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useState } from 'react';
@@ -38,7 +40,7 @@ import EdvMetadataForm, {
   type EdvMetadataFormValues,
   buildMetadataFromForm,
 } from '@/components/modules/projects/engineering/EdvMetadataForm';
-import { antDrawerBodyStyles, layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 
 interface DocumentWithVersions {
   id: string;
@@ -241,15 +243,14 @@ export default function EngineeringDocumentPanel({
       />
 
       <Drawer
+        {...wideDetailDrawerProps}
         title="Register engineering document"
         open={registerOpen}
-        size={560}
         onClose={() => {
           setRegisterOpen(false);
           setPendingFile(null);
           form.resetFields();
         }}
-        styles={antDrawerBodyStyles}
         footer={
           <Space>
             <Button onClick={() => setRegisterOpen(false)}>Cancel</Button>
@@ -282,7 +283,7 @@ export default function EngineeringDocumentPanel({
 
           {uploadFolderQuery.isLoading && <Spin />}
           {uploadFolderPath && (
-            <p className="text-xs text-slate-500">
+            <p className={layout.drawerMutedText}>
               Files upload to: <span className="font-mono">{uploadFolderPath}</span>
             </p>
           )}

@@ -27,7 +27,7 @@ import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateMeeting, useMeetings } from '@/lib/query/meetings';
-import { layout } from '@/lib/theme/layout';
+import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatMeetingStatus,
@@ -94,10 +94,10 @@ function MeetingFormDrawer({
 
   return (
     <Drawer
+      {...wideDetailDrawerProps}
       open={open}
       title="New meeting"
       onClose={onClose}
-      size="large"
       destroyOnHidden
     >
       <Form<MeetingFormValues>
