@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import { Avatar } from 'antd';
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
+import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUser } from '@/lib/query/users';
@@ -41,6 +42,7 @@ export default function HeaderActions({
         compact ? 'gap-1' : 'gap-2',
       ].join(' ')}
     >
+      <FontSizeControl compact={compact} />
       <NotificationPanel />
       <Link
         href="/profile"

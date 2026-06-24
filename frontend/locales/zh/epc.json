@@ -213,7 +213,11 @@
     "importFromExcel": "从 Excel 导入",
     "viewOnlyAccess": "您仅有查看权限。",
     "defaultUser": "用户",
-    "openProfile": "打开个人资料"
+    "openProfile": "打开个人资料",
+    "fontSize": "字体大小",
+    "increaseFontSize": "增大字体",
+    "decreaseFontSize": "减小字体",
+    "resetFontSize": "重置字体大小"
   },
   "shell": {
     "openNavigation": "打开导航菜单",

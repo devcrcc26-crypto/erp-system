@@ -17,6 +17,8 @@
   --color-surface-secondary: #f8f7f4;
   --color-red-400: #e24b4a;
   --color-red-600: #c43d3c;
+  --erp-font-scale: 1;
+  --erp-font-base: 13px;
   --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
 
@@ -33,7 +35,7 @@ body {
 
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-size: var(--erp-font-base);
   font-weight: 400;
   line-height: 1.5;
   color: var(--color-text-primary);
@@ -75,7 +77,7 @@ body {
 .erp-project-sidebar-menu .ant-menu-item-group-title {
   padding: 10px 12px 8px;
   margin-top: 4px;
-  font-size: 10px;
+  font-size: calc(10px * var(--erp-font-scale));
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -114,11 +116,11 @@ body {
 }
 
 .erp-project-sidebar-menu .ant-menu-item .anticon {
-  font-size: 16px;
+  font-size: calc(16px * var(--erp-font-scale));
 }
 
 .erp-nav-icon .anticon {
-  font-size: 16px;
+  font-size: calc(16px * var(--erp-font-scale));
 }
 
 /* Drawer / modal form spacing */
@@ -131,7 +133,7 @@ body {
 }
 
 .erp-drawer-form .ant-form-item-label > label {
-  font-size: 12px;
+  font-size: calc(12px * var(--erp-font-scale));
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -151,7 +153,7 @@ body {
 }
 
 .erp-detail-drawer .ant-drawer-title {
-  font-size: 14px;
+  font-size: calc(14px * var(--erp-font-scale));
   font-weight: 500;
   line-height: 1.4;
   color: var(--color-text-primary);
@@ -255,7 +257,7 @@ body {
 
 /* Workflow stepper inside drawers */
 .erp-detail-drawer .erp-drawer-workflow .ant-steps-item-title {
-  font-size: 11px !important;
+  font-size: calc(11px * var(--erp-font-scale)) !important;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -352,7 +354,7 @@ main::-webkit-scrollbar,
 
 /* Shell breadcrumb — Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
-  font-size: 13px;
+  font-size: calc(13px * var(--erp-font-scale));
   font-weight: 400;
   line-height: 1.4;
 }
@@ -375,7 +377,7 @@ main::-webkit-scrollbar,
 
 .shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-separator {
   margin-inline: 6px;
-  font-size: 13px;
+  font-size: calc(13px * var(--erp-font-scale));
   color: var(--color-text-tertiary);
 }
 
@@ -407,7 +409,7 @@ main::-webkit-scrollbar,
 .erp-data-table .ant-table-thead > tr > th {
   background: var(--color-surface-secondary) !important;
   padding: 10px 16px !important;
-  font-size: 11px !important;
+  font-size: calc(11px * var(--erp-font-scale)) !important;
   font-weight: 500 !important;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -422,7 +424,7 @@ main::-webkit-scrollbar,
 .erp-data-table .ant-table-tbody > tr > td {
   padding: 0 16px !important;
   height: 40px;
-  font-size: 13px;
+  font-size: calc(13px * var(--erp-font-scale));
   font-weight: 400;
   color: var(--color-text-primary);
   border-bottom: 0.5px solid var(--color-border-tertiary) !important;

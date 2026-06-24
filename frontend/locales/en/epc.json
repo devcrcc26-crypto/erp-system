@@ -213,7 +213,11 @@
     "importFromExcel": "Import from Excel",
     "viewOnlyAccess": "You have view-only access.",
     "defaultUser": "User",
-    "openProfile": "Open profile"
+    "openProfile": "Open profile",
+    "fontSize": "Font size",
+    "increaseFontSize": "Increase font size",
+    "decreaseFontSize": "Decrease font size",
+    "resetFontSize": "Reset font size"
   },
   "shell": {
     "openNavigation": "Open navigation menu",
