@@ -85,6 +85,9 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can view in-app notifications' })
   canViewNotifications!: boolean;
 
+  @ApiProperty({ description: 'Can view company audit logs' })
+  canViewAuditLogs!: boolean;
+
   @ApiProperty({ type: PmCapabilitiesDto })
   pm!: PmCapabilitiesDto;
 

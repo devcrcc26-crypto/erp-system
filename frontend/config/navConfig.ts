@@ -40,6 +40,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/messages': 'nav.messages',
   '/settings': 'nav.settings',
   '/profile': 'nav.profile',
+  '/audit-logs': 'nav.auditLogs',
 };
 
 /**
@@ -48,6 +49,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 export function buildIconRailItems(
   canViewReviewInbox: boolean,
   canViewMyComments: boolean,
+  canViewAuditLogs: boolean,
 ): IconRailItem[] {
   return [
     {
@@ -91,6 +93,13 @@ export function buildIconRailItems(
       href: '/users',
       iconKey: 'users',
       visible: true,
+    },
+    {
+      key: '/audit-logs',
+      labelKey: 'nav.auditLogs',
+      href: '/audit-logs',
+      iconKey: 'audit-logs',
+      visible: canViewAuditLogs,
     },
     {
       key: '/reports',

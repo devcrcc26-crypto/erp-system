@@ -4,6 +4,7 @@
     "projects": "项目",
     "kanbanBoard": "看板",
     "users": "用户",
+    "auditLogs": "审计日志",
     "teams": "团队",
     "reports": "报表",
     "messages": "消息",
@@ -297,6 +298,52 @@
       "summary": "已导入 {{created}} 个用户，已发送 {{sent}} 封激活邮件",
       "line": "行号",
       "name": "姓名"
+    }
+  },
+  "auditLogs": {
+    "title": "审计日志",
+    "description": "系统中创建、更新和删除操作的不可变记录。",
+    "noPermission": "您没有查看审计日志的权限。",
+    "loadError": "无法加载审计日志，请稍后重试。",
+    "entryCount": "共 {{count}} 条记录",
+    "viewDetails": "详情",
+    "detailTitle": "审计记录详情",
+    "emptyTitle": "暂无审计记录",
+    "emptyDescription": "用户进行更改后，系统活动将显示在此处。",
+    "filters": {
+      "module": "模块",
+      "action": "操作",
+      "user": "用户",
+      "dateFrom": "开始日期",
+      "dateTo": "结束日期"
+    },
+    "columns": {
+      "timestamp": "时间",
+      "user": "用户",
+      "module": "模块",
+      "action": "操作",
+      "recordType": "记录类型",
+      "recordId": "记录 ID",
+      "recordReference": "参考号",
+      "source": "来源",
+      "ipAddress": "IP 地址"
+    },
+    "detail": {
+      "ipAddress": "IP 地址",
+      "deviceInfo": "设备",
+      "correlationId": "关联 ID",
+      "sessionId": "会话 ID",
+      "beforeValue": "变更前",
+      "afterValue": "变更后",
+      "noBeforeOnCreate": "无先前状态 — 这是一条创建记录。",
+      "noBeforeCaptured": "此记录未捕获变更前的状态。",
+      "noAfterOnDelete": "记录已删除 — 无变更后状态。"
+    },
+    "source": {
+      "USER_ACTION": "用户操作",
+      "SYSTEM_JOB": "系统任务",
+      "API_INTEGRATION": "API 集成",
+      "MIGRATION": "迁移"
     }
   },
   "profile": {

@@ -5,9 +5,15 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { Observable, tap } from 'rxjs';
+import { from, Observable, switchMap, tap } from 'rxjs';
+import { Prisma } from '@prisma/client';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { AuditSnapshotService } from '../../application/services/audit-snapshot.service';
 import { AuditService } from '../../application/services/audit.service';
+import {
+  looksLikeEntityUuid,
+  sanitizeAuditValue,
+} from '../../application/utils/audit-value.util';
 
 const EXCLUDED_PATH_PREFIXES = [
   '/api/health',
@@ -21,17 +27,12 @@ const EXCLUDED_PATH_PREFIXES = [
   '/api/notifications',
 ];
 
-const SENSITIVE_KEYS = new Set([
-  'password',
-  'passwordHash',
-  'refreshToken',
-  'accessToken',
-  'token',
-]);
-
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly auditSnapshotService: AuditSnapshotService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -53,19 +54,50 @@ export class AuditInterceptor implements NestInterceptor {
 
     const action = this.mapAction(method);
     const moduleName = this.extractModule(path);
-    const recordType = this.extractRecordType(path);
+    const params = request.params as Record<string, string>;
+    const recordType = this.extractRecordType(path, params);
+    const recordId = this.extractRecordId(params);
 
-    return next.handle().pipe(
-      tap((responseBody: unknown) => {
-        void this.writeAuditLog(
-          user,
-          request,
-          action,
-          moduleName,
-          recordType,
-          responseBody,
-        );
-      }),
+    if (action === 'create') {
+      return next.handle().pipe(
+        tap((responseBody: unknown) => {
+          void this.writeAuditLog(
+            user,
+            request,
+            action,
+            moduleName,
+            recordType,
+            this.extractRecordId(params, responseBody),
+            undefined,
+            responseBody,
+          );
+        }),
+      );
+    }
+
+    return from(
+      this.auditSnapshotService.capture(
+        user.companyId,
+        recordType,
+        recordId,
+      ),
+    ).pipe(
+      switchMap((beforeValue) =>
+        next.handle().pipe(
+          tap((responseBody: unknown) => {
+            void this.writeAuditLog(
+              user,
+              request,
+              action,
+              moduleName,
+              recordType,
+              this.extractRecordId(params, responseBody) || recordId,
+              beforeValue,
+              responseBody,
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -75,11 +107,17 @@ export class AuditInterceptor implements NestInterceptor {
     action: string,
     module: string,
     recordType: string,
+    recordId: string,
+    beforeValue: Prisma.InputJsonValue | undefined,
     responseBody: unknown,
   ): Promise<void> {
-    const params = request.params as Record<string, string>;
     const data = this.extractData(responseBody);
-    const recordId = params.id ?? this.extractId(data) ?? 'unknown';
+    const afterValue =
+      action === 'delete'
+        ? undefined
+        : data
+          ? (sanitizeAuditValue(data) as Prisma.InputJsonValue)
+          : undefined;
 
     await this.auditService.create(
       this.auditService.buildFromRequestContext({
@@ -90,9 +128,8 @@ export class AuditInterceptor implements NestInterceptor {
         action,
         recordType,
         recordId,
-        afterValue: data
-          ? (this.sanitize(data) as object)
-          : undefined,
+        beforeValue,
+        afterValue,
       }),
     );
   }
@@ -116,9 +153,57 @@ export class AuditInterceptor implements NestInterceptor {
     return segments[0] ?? 'unknown';
   }
 
-  private extractRecordType(path: string): string {
+  private extractRecordType(
+    path: string,
+    params: Record<string, string>,
+  ): string {
     const segments = path.replace(/^\/api\/?/, '').split('/').filter(Boolean);
-    return segments[0]?.replace(/-/g, '_') ?? 'unknown';
+    if (segments.length === 0) {
+      return 'unknown';
+    }
+
+    const lastSegment = segments[segments.length - 1];
+    const paramValues = Object.values(params);
+    const targetsRecord =
+      looksLikeEntityUuid(lastSegment) ||
+      paramValues.some((value) => value === lastSegment);
+
+    if (targetsRecord && segments.length >= 2) {
+      return segments[segments.length - 2].replace(/-/g, '_');
+    }
+
+    return segments[0].replace(/-/g, '_');
+  }
+
+  private extractRecordId(
+    params: Record<string, string>,
+    responseBody?: unknown,
+  ): string {
+    const fromResponse = this.extractId(this.extractData(responseBody));
+    if (fromResponse) {
+      return fromResponse;
+    }
+
+    if (params.id) {
+      return params.id;
+    }
+
+    const namedIdEntries = Object.entries(params).filter(
+      ([key]) => key !== 'projectId' && /Id$/i.test(key),
+    );
+    if (namedIdEntries.length > 0) {
+      return namedIdEntries[namedIdEntries.length - 1][1];
+    }
+
+    const paramValues = Object.values(params);
+    for (let index = paramValues.length - 1; index >= 0; index -= 1) {
+      const value = paramValues[index];
+      if (looksLikeEntityUuid(value)) {
+        return value;
+      }
+    }
+
+    return 'unknown';
   }
 
   private extractData(body: unknown): unknown {
@@ -139,22 +224,5 @@ export class AuditInterceptor implements NestInterceptor {
       return typeof id === 'string' ? id : undefined;
     }
     return undefined;
-  }
-
-  private sanitize(value: unknown): unknown {
-    if (Array.isArray(value)) {
-      return value.map((item) => this.sanitize(item));
-    }
-    if (typeof value === 'object' && value !== null) {
-      const result: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(value)) {
-        if (SENSITIVE_KEYS.has(key)) {
-          continue;
-        }
-        result[key] = this.sanitize(val);
-      }
-      return result;
-    }
-    return value;
   }
 }

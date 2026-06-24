@@ -1,16 +1,24 @@
 import { CallHandler, ExecutionContext } from '@nestjs/common';
 import { lastValueFrom, of } from 'rxjs';
+import { AuditSnapshotService } from '../../application/services/audit-snapshot.service';
 import { AuditService } from '../../application/services/audit.service';
 import { AuditInterceptor } from './audit.interceptor';
 
 describe('AuditInterceptor', () => {
   let auditService: jest.Mocked<Pick<AuditService, 'create' | 'buildFromRequestContext'>>;
+  let auditSnapshotService: jest.Mocked<Pick<AuditSnapshotService, 'capture'>>;
   let interceptor: AuditInterceptor;
+
+  const user = {
+    userId: 'user-1',
+    companyId: 'company-1',
+    sessionId: 'session-1',
+  };
 
   const buildContext = (
     method: string,
     path: string,
-    user?: { userId: string; companyId: string; sessionId: string },
+    params: Record<string, string> = { id: 'record-1' },
   ): ExecutionContext =>
     ({
       switchToHttp: () => ({
@@ -18,13 +26,17 @@ describe('AuditInterceptor', () => {
           method,
           path,
           user,
-          params: { id: 'record-1' },
+          params,
         }),
       }),
     }) as unknown as ExecutionContext;
 
   const next: CallHandler = {
-    handle: () => of({ id: 'record-1', name: 'Test Branch' }),
+    handle: () =>
+      of({
+        success: true,
+        data: { id: 'record-1', name: 'Updated Branch' },
+      }),
   };
 
   beforeEach(() => {
@@ -37,7 +49,13 @@ describe('AuditInterceptor', () => {
         deviceInfo: 'jest',
       })),
     };
-    interceptor = new AuditInterceptor(auditService as unknown as AuditService);
+    auditSnapshotService = {
+      capture: jest.fn().mockResolvedValue({ id: 'record-1', name: 'Old Branch' }),
+    };
+    interceptor = new AuditInterceptor(
+      auditService as unknown as AuditService,
+      auditSnapshotService as unknown as AuditSnapshotService,
+    );
   });
 
   it('skips GET requests', async () => {
@@ -56,34 +74,19 @@ describe('AuditInterceptor', () => {
 
   it('skips logout (audited in LogoutHandler before session deletion)', async () => {
     await lastValueFrom(
-      interceptor.intercept(
-        buildContext('POST', '/api/auth/logout', {
-          userId: 'user-1',
-          companyId: 'company-1',
-          sessionId: 'session-1',
-        }),
-        next,
-      ),
+      interceptor.intercept(buildContext('POST', '/api/auth/logout'), next),
     );
     expect(auditService.create).not.toHaveBeenCalled();
   });
 
-  it('writes audit log on successful CUD', async () => {
-    const user = {
-      userId: 'user-1',
-      companyId: 'company-1',
-      sessionId: 'session-1',
-    };
-
+  it('writes audit log on successful create without before value', async () => {
     await lastValueFrom(
-      interceptor.intercept(
-        buildContext('POST', '/api/branches', user),
-        next,
-      ),
+      interceptor.intercept(buildContext('POST', '/api/branches'), next),
     );
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    expect(auditSnapshotService.capture).not.toHaveBeenCalled();
     expect(auditService.create).toHaveBeenCalledWith(
       expect.objectContaining({
         companyId: 'company-1',
@@ -91,7 +94,67 @@ describe('AuditInterceptor', () => {
         module: 'branches',
         action: 'create',
         recordId: 'record-1',
+        beforeValue: undefined,
+        afterValue: { id: 'record-1', name: 'Updated Branch' },
       }),
+    );
+  });
+
+  it('captures before value on update', async () => {
+    await lastValueFrom(
+      interceptor.intercept(buildContext('PATCH', '/api/branches/record-1'), next),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(auditSnapshotService.capture).toHaveBeenCalledWith(
+      'company-1',
+      'branches',
+      'record-1',
+    );
+    expect(auditService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'update',
+        beforeValue: { id: 'record-1', name: 'Old Branch' },
+        afterValue: { id: 'record-1', name: 'Updated Branch' },
+      }),
+    );
+  });
+
+  it('captures before value on delete without after value', async () => {
+    await lastValueFrom(
+      interceptor.intercept(buildContext('DELETE', '/api/branches/record-1'), next),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(auditService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'delete',
+        beforeValue: { id: 'record-1', name: 'Old Branch' },
+        afterValue: undefined,
+      }),
+    );
+  });
+
+  it('resolves alternate route param names for project issues', async () => {
+    await lastValueFrom(
+      interceptor.intercept(
+        buildContext(
+          'PATCH',
+          '/api/projects/project-1/issues/issue-1',
+          { projectId: 'project-1', issueId: 'issue-1' },
+        ),
+        next,
+      ),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(auditSnapshotService.capture).toHaveBeenCalledWith(
+      'company-1',
+      'issues',
+      'issue-1',
     );
   });
 });

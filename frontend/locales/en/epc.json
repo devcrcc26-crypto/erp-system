@@ -4,6 +4,7 @@
     "projects": "Projects",
     "kanbanBoard": "Kanban Board",
     "users": "Users",
+    "auditLogs": "Audit Log",
     "teams": "Teams",
     "reports": "Reports",
     "messages": "Messages",
@@ -297,6 +298,52 @@
       "summary": "{{created}} users imported, {{sent}} activation emails sent",
       "line": "Line",
       "name": "Name"
+    }
+  },
+  "auditLogs": {
+    "title": "Audit Log",
+    "description": "Immutable record of create, update, and delete actions across the system.",
+    "noPermission": "You do not have permission to view audit logs.",
+    "loadError": "Unable to load audit logs. Please try again later.",
+    "entryCount": "{{count}} entries total",
+    "viewDetails": "Details",
+    "detailTitle": "Audit entry details",
+    "emptyTitle": "No audit entries",
+    "emptyDescription": "System activity will appear here as users make changes.",
+    "filters": {
+      "module": "Module",
+      "action": "Action",
+      "user": "User",
+      "dateFrom": "From date",
+      "dateTo": "To date"
+    },
+    "columns": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "module": "Module",
+      "action": "Action",
+      "recordType": "Record type",
+      "recordId": "Record ID",
+      "recordReference": "Reference",
+      "source": "Source",
+      "ipAddress": "IP address"
+    },
+    "detail": {
+      "ipAddress": "IP address",
+      "deviceInfo": "Device",
+      "correlationId": "Correlation ID",
+      "sessionId": "Session ID",
+      "beforeValue": "Before",
+      "afterValue": "After",
+      "noBeforeOnCreate": "No prior state — this was a create action.",
+      "noBeforeCaptured": "Prior state was not captured for this entry.",
+      "noAfterOnDelete": "Record removed — no after state."
+    },
+    "source": {
+      "USER_ACTION": "User action",
+      "SYSTEM_JOB": "System job",
+      "API_INTEGRATION": "API integration",
+      "MIGRATION": "Migration"
     }
   },
   "profile": {

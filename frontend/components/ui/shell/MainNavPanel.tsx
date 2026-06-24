@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  AuditOutlined,
   DashboardOutlined,
   ProjectOutlined,
   UnorderedListOutlined,
@@ -26,6 +27,7 @@ import {
   useCanViewMyComments,
   useCanViewReviewInbox,
 } from '@/hooks/use-pm-capabilities';
+import { useCanViewAuditLogs } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
@@ -38,6 +40,7 @@ const RAIL_ICONS: Record<string, React.ReactNode> = {
   'my-comments': <CommentOutlined />,
   kanban: <UnorderedListOutlined />,
   users: <TeamOutlined />,
+  'audit-logs': <AuditOutlined />,
   teams: <TeamOutlined />,
   reports: <BarChartOutlined />,
   messages: <MailOutlined />,
@@ -182,8 +185,13 @@ export default function MainNavPanel({
   const { t } = useEpcTranslation();
   const canViewReviewInbox = useCanViewReviewInbox();
   const canViewMyComments = useCanViewMyComments();
+  const canViewAuditLogs = useCanViewAuditLogs();
 
-  const navItems = buildIconRailItems(canViewReviewInbox, canViewMyComments);
+  const navItems = buildIconRailItems(
+    canViewReviewInbox,
+    canViewMyComments,
+    canViewAuditLogs,
+  );
   const visibleNavItems = navItems.filter((item) => item.visible);
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';

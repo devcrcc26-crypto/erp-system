@@ -39,7 +39,7 @@ export class SessionCapabilitiesService {
    * Resolves UI capability flags for the authenticated session from RBAC.
    */
   async resolve(userId: string, companyId: string): Promise<CapabilitiesDto> {
-    const [users, roles, notifications, pm, schedule] = await Promise.all([
+    const [users, roles, notifications, audit, pm, schedule] = await Promise.all([
       this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
       this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
       this.permissionService.getUserModulePermissions(
@@ -47,6 +47,7 @@ export class SessionCapabilitiesService {
         companyId,
         'notifications',
       ),
+      this.permissionService.getUserModulePermissions(userId, companyId, 'audit'),
       this.resolvePmCapabilities(userId, companyId),
       this.permissionService.getUserModulePermissions(
         userId,
@@ -61,6 +62,7 @@ export class SessionCapabilitiesService {
       canManageRoles: roles.canView,
       canEditRoles: roles.canEdit,
       canViewNotifications: notifications.canView,
+      canViewAuditLogs: audit.canView,
       pm,
       epc: await this.resolveEpcCapabilities(userId, companyId, schedule),
     };

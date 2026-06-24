@@ -56,6 +56,42 @@ describe('Audit on CUD (e2e)', () => {
     expect(entry.afterValue).toMatchObject({ name: branchName });
   });
 
+  it('stores before and after values when a branch is updated', async () => {
+    const originalName = `Audit Branch Original ${Date.now()}`;
+    const updatedName = `Audit Branch Updated ${Date.now()}`;
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/branches')
+      .set(authHeader(adminToken))
+      .send({ name: originalName })
+      .expect(201);
+
+    const branchId = createResponse.body.data.id as string;
+
+    await request(app.getHttpServer())
+      .patch(`/api/branches/${branchId}`)
+      .set(authHeader(adminToken))
+      .send({ name: updatedName })
+      .expect(200);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const auditResponse = await request(app.getHttpServer())
+      .get('/api/audit-logs')
+      .query({ module: 'branches', action: 'update', recordId: branchId, limit: 5 })
+      .set(authHeader(adminToken))
+      .expect(200);
+
+    const entry = auditResponse.body.data.find(
+      (log: { recordId: string; action: string }) =>
+        log.recordId === branchId && log.action === 'update',
+    );
+
+    expect(entry).toBeDefined();
+    expect(entry.beforeValue).toMatchObject({ name: originalName });
+    expect(entry.afterValue).toMatchObject({ name: updatedName });
+  });
+
   it('does not audit excluded notification endpoints', async () => {
     const beforeResponse = await request(app.getHttpServer())
       .get('/api/audit-logs')

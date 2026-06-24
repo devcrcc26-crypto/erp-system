@@ -314,12 +314,57 @@ export interface ReportExecutionResult {
 import type { PmCapabilities } from '@/lib/api/project-management.types';
 import { createEmptyPmCapabilities } from '@/lib/api/project-management.types';
 
+export type AuditLogSource =
+  | 'USER_ACTION'
+  | 'SYSTEM_JOB'
+  | 'API_INTEGRATION'
+  | 'MIGRATION';
+
+export interface AuditLogUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string | null;
+  companyId: string;
+  sessionId: string | null;
+  correlationId: string | null;
+  batchId: string | null;
+  source: AuditLogSource;
+  module: string;
+  action: string;
+  recordType: string;
+  recordId: string;
+  recordReference: string | null;
+  beforeValue: unknown;
+  afterValue: unknown;
+  ipAddress: string | null;
+  deviceInfo: string | null;
+  createdAt: string;
+  user: AuditLogUser | null;
+}
+
+export interface AuditLogQueryParams extends PaginationParams {
+  module?: string;
+  action?: string;
+  userId?: string;
+  recordType?: string;
+  recordId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export interface AuthCapabilities {
   canManageUsers: boolean;
   canCreateUsers: boolean;
   canManageRoles: boolean;
   canEditRoles: boolean;
   canViewNotifications: boolean;
+  canViewAuditLogs: boolean;
 }
 
 export interface EpcCapabilities {
@@ -347,6 +392,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canManageRoles: false,
   canEditRoles: false,
   canViewNotifications: false,
+  canViewAuditLogs: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },
 };
