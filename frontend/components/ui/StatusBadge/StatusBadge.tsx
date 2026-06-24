@@ -1,6 +1,9 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { Tag } from 'antd';
+import { tokens } from '@/lib/theme/tokens';
 
 export type StatusBadgeVariant =
   | 'default'
@@ -12,14 +15,14 @@ export type StatusBadgeVariant =
 
 const VARIANT_COLORS: Record<
   StatusBadgeVariant,
-  { color: string; bg: string; border: string }
+  { color: string; bg: string }
 > = {
-  default: { color: '#475569', bg: '#f1f5f9', border: '#e2e8f0' },
-  success: { color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
-  warning: { color: '#92400e', bg: '#fef3c7', border: '#fde68a' },
-  error: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-  info: { color: '#0369a1', bg: '#e0f2fe', border: '#bae6fd' },
-  orange: { color: '#c2410c', bg: '#ffedd5', border: '#fed7aa' },
+  default: { color: tokens.colorGray600, bg: tokens.colorGray50 },
+  success: { color: tokens.colorGreen600, bg: tokens.colorGreen50 },
+  warning: { color: tokens.colorAmber400, bg: tokens.colorAmber50 },
+  error: { color: tokens.colorRed600, bg: tokens.colorRed50 },
+  info: { color: tokens.colorBlue400, bg: tokens.colorBlue50 },
+  orange: { color: tokens.colorAmber400, bg: tokens.colorAmber50 },
 };
 
 export default function StatusBadge({
@@ -33,18 +36,16 @@ export default function StatusBadge({
 
   return (
     <Tag
-      bordered
+      bordered={false}
       style={{
-        margin: 4,
-        borderRadius: 9999,
+        margin: 0,
+        borderRadius: 20,
         color: colors.color,
         backgroundColor: colors.bg,
-        borderColor: colors.border,
         fontWeight: 500,
-        fontSize: 12,
-        lineHeight: '20px',
-        padding: '2px 10px',
-
+        fontSize: 11,
+        lineHeight: '1.4',
+        padding: '3px 10px',
       }}
     >
       {label}

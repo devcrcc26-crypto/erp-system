@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -8,7 +10,6 @@ import {
   Input,
   Select,
   Space,
-  Spin,
 } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Network } from 'lucide-react';
@@ -25,6 +26,7 @@ import { useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAuthStore } from '@/stores/auth.store';
+import { tokens } from '@/lib/theme/tokens';
 import {
   formatProjectBudget,
   formatProjectDate,
@@ -33,6 +35,27 @@ import {
   projectStatusVariant,
 } from '@/lib/utils/project-display';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
+
+function PageLoadingSkeleton(): React.ReactNode {
+  return (
+    <div
+      className="rounded-[12px] bg-white p-6"
+      style={{ border: `0.5px solid ${tokens.colorBorder}` }}
+    >
+      <div className="erp-page-skeleton mb-4 h-5 w-40" />
+      <div className="erp-page-skeleton mb-6 h-4 w-72" />
+      <div className="mb-4 flex gap-3">
+        <div className="erp-page-skeleton h-9 w-64 rounded-lg" />
+        <div className="erp-page-skeleton h-9 w-48 rounded-lg" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="erp-page-skeleton h-10 w-full rounded" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ProjectsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -65,7 +88,8 @@ export default function ProjectsPageContent(): React.ReactNode {
         render: (code: string, record) => (
           <Link
             href={`/projects/${record.id}`}
-            className="font-medium text-orange-600 hover:text-orange-700"
+            className="font-[family-name:var(--font-mono)] text-[12px] font-normal no-underline hover:underline"
+            style={{ color: tokens.colorTeal600 }}
           >
             {code}
           </Link>
@@ -98,14 +122,24 @@ export default function ProjectsPageContent(): React.ReactNode {
         title: 'Planned finish',
         dataIndex: 'plannedFinishDate',
         key: 'plannedFinishDate',
-        render: (value: string | null) => formatProjectDate(value),
+        render: (value: string | null) => (
+          <span
+            className="text-[13px]"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: 'Budget',
         key: 'budget',
         align: 'right',
-        render: (_value, record) =>
-          formatProjectBudget(record.budget, record.currency),
+        render: (_value, record) => (
+          <span className="text-[13px] tabular-nums">
+            {formatProjectBudget(record.budget, record.currency)}
+          </span>
+        ),
       },
       {
         title: '',
@@ -114,8 +148,10 @@ export default function ProjectsPageContent(): React.ReactNode {
         render: (_value, record) => (
           <Button
             type="text"
-            icon={<EditOutlined />}
+            icon={<EditOutlined style={{ fontSize: 16 }} />}
             aria-label="Edit project"
+            className="!flex !h-8 !w-8 !items-center !justify-center !rounded-lg hover:!bg-[var(--color-surface-secondary)]"
+            style={{ color: tokens.colorTextSecondary }}
             onClick={() => {
               setEditingProject(record);
               setDrawerOpen(true);
@@ -128,11 +164,7 @@ export default function ProjectsPageContent(): React.ReactNode {
   );
 
   if (!authHydrated) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -146,11 +178,7 @@ export default function ProjectsPageContent(): React.ReactNode {
   }
 
   if (projectsQuery.isLoading) {
-    return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (projectsQuery.isError) {

@@ -237,6 +237,56 @@ main::-webkit-scrollbar,
   color: var(--color-text-primary);
 }
 
+/* ── ERP data table — design system ── */
+
+.erp-data-table .ant-table-thead > tr > th {
+  background: var(--color-surface-secondary) !important;
+  padding: 10px 16px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary) !important;
+  border-bottom: 0.5px solid var(--color-border-tertiary) !important;
+}
+
+.erp-data-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.erp-data-table .ant-table-tbody > tr > td {
+  padding: 0 16px !important;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  border-bottom: 0.5px solid var(--color-border-tertiary) !important;
+}
+
+.erp-data-table .ant-table-tbody > tr:hover > td {
+  background: var(--color-surface-secondary) !important;
+}
+
+.erp-data-table .ant-table {
+  background: transparent;
+}
+
+.erp-data-table .ant-table-container {
+  border: none !important;
+}
+
+/* Page loading skeleton pulse */
+@keyframes erp-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.erp-page-skeleton {
+  animation: erp-skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  background: var(--color-surface-secondary);
+}
+
 /* ── Mobile responsive shared styles ── */
 
 .erp-table-scroll .ant-table-wrapper {

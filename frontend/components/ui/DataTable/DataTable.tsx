@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { Table } from 'antd';
@@ -39,7 +41,7 @@ export default function DataTable<T extends object>({
         size={resolvedSize}
         pagination={resolvedPagination}
         scroll={resolvedScroll}
-        className={className}
+        className={['erp-data-table', className].filter(Boolean).join(' ')}
         {...props}
         style={{ ...props.style }}
       />

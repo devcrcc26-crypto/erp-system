@@ -1,7 +1,9 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Card from '@/components/ui/Card/Card';
-import { cardStyles, layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import type { ReactNode } from 'react';
 
 /**
@@ -25,20 +27,38 @@ export default function FormLayout({
   return (
     <Card
       variant="borderless"
-      className={`border border-slate-200 erp-responsive-card ${className ?? ''}`}
-      styles={cardStyles}
-      style={{ borderRadius: 8, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
+      className={`erp-responsive-card ${className ?? ''}`}
+      styles={{
+        body: { padding: hasHeader ? '0' : '16px 18px' },
+      }}
+      style={{
+        borderRadius: tokens.borderRadiusCard,
+        border: `0.5px solid ${tokens.colorBorder}`,
+        boxShadow: 'none',
+        background: tokens.colorCardBg,
+      }}
     >
       {hasHeader && (
-        <div className={`${layout.formHeader} border-b border-slate-100`}>
+        <div
+          className="flex flex-col gap-3 px-[18px] py-[14px] sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+          style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
+        >
           <div className="min-w-0 flex-1">
             {title && (
-              <div className="text-base font-semibold text-slate-900 sm:text-lg">
+              <div
+                className="text-[13px] font-medium leading-[1.5]"
+                style={{ color: tokens.colorTextPrimary }}
+              >
                 {title}
               </div>
             )}
             {description && (
-              <p className="mt-1 text-sm font-normal text-slate-500">{description}</p>
+              <p
+                className="mt-1 text-[12px] font-normal leading-[1.5]"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {description}
+              </p>
             )}
           </div>
           {extra && (
@@ -48,7 +68,7 @@ export default function FormLayout({
           )}
         </div>
       )}
-      <div className={hasHeader ? 'pt-4 sm:pt-6' : undefined}>{children}</div>
+      <div className={hasHeader ? 'px-[18px] py-4' : undefined}>{children}</div>
     </Card>
   );
 }
