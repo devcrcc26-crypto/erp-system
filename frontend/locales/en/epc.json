@@ -91,7 +91,52 @@
       "description": "Internal messaging, project threads, and team notifications will live here."
     },
     "reports": {
-      "description": "Dashboards, custom reports, and construction performance analytics will live here."
+      "description": "Company-wide portfolio analytics, KPIs, and cross-project performance.",
+      "signInRequired": "Sign in to view system reports."
+    },
+    "systemReports": {
+      "title": "System reports",
+      "description": "Company-wide portfolio KPIs, organization footprint, and cross-project site operations.",
+      "print": "Print report",
+      "generatedAt": "Generated",
+      "partialDataTitle": "Limited metrics available",
+      "partialDataDescription": "Project portfolio charts use live project data. Full organization and site operations metrics require the portfolio summary API.",
+      "sections": {
+        "portfolio": "Portfolio",
+        "siteOps": "Site operations (all projects)",
+        "charts": "Visual breakdown",
+        "projectRegister": "Project register"
+      },
+      "metrics": {
+        "totalProjects": "Total projects",
+        "activeProjects": "Active projects",
+        "teamMembers": "Team members",
+        "completionRate": "Completion rate",
+        "branches": "Branches",
+        "departments": "Departments",
+        "users": "Users",
+        "activeUsers": "Active users",
+        "auditLast30Days": "Audit events (30 days)"
+      },
+      "charts": {
+        "projectsByStatus": "Projects by status",
+        "projectsByStatusHint": "Portfolio distribution across project lifecycle stages",
+        "projectsByType": "Projects by type",
+        "projectsByTypeHint": "Residential, commercial, infrastructure, and industrial mix",
+        "completionRate": "Portfolio completion",
+        "completionRateHint": "Share of projects completed or closed",
+        "organization": "Organization footprint",
+        "organizationHint": "Branches, departments, and user counts",
+        "siteOpsPortfolio": "Site operations portfolio",
+        "siteOpsPortfolioHint": "Open RFIs, issues, and punch items across all projects"
+      },
+      "table": {
+        "code": "Code",
+        "name": "Name",
+        "status": "Status",
+        "progress": "Progress",
+        "reports": "Reports"
+      }
     },
     "projectReports": {
       "title": "Project reports",

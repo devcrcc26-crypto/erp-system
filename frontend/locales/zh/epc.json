@@ -91,7 +91,52 @@
       "description": "内部消息、项目讨论和团队通知将在此提供。"
     },
     "reports": {
-      "description": "仪表板、自定义报表和施工绩效分析将在此提供。"
+      "description": "全公司项目组合分析、KPI 与跨项目绩效。",
+      "signInRequired": "请登录后查看系统报表。"
+    },
+    "systemReports": {
+      "title": "系统报表",
+      "description": "全公司项目组合 KPI、组织规模与跨项目现场运营指标。",
+      "print": "打印报表",
+      "generatedAt": "生成时间",
+      "partialDataTitle": "部分指标不可用",
+      "partialDataDescription": "项目组合图表使用实时项目数据。完整组织与现场运营指标需组合摘要 API。",
+      "sections": {
+        "portfolio": "项目组合",
+        "siteOps": "现场运营（全部项目）",
+        "charts": "图表分析",
+        "projectRegister": "项目台账"
+      },
+      "metrics": {
+        "totalProjects": "项目总数",
+        "activeProjects": "进行中项目",
+        "teamMembers": "团队成员",
+        "completionRate": "完成率",
+        "branches": "分支机构",
+        "departments": "部门",
+        "users": "用户",
+        "activeUsers": "活跃用户",
+        "auditLast30Days": "审计事件（30 天）"
+      },
+      "charts": {
+        "projectsByStatus": "按状态项目分布",
+        "projectsByStatusHint": "项目在全生命周期各阶段的分布",
+        "projectsByType": "按类型项目分布",
+        "projectsByTypeHint": "住宅、商业、基建与工业项目构成",
+        "completionRate": "组合完成率",
+        "completionRateHint": "已完成或已关闭项目占比",
+        "organization": "组织规模",
+        "organizationHint": "分支机构、部门与用户数量",
+        "siteOpsPortfolio": "现场运营组合",
+        "siteOpsPortfolioHint": "全部项目的未关闭 RFI、问题与尾项"
+      },
+      "table": {
+        "code": "编号",
+        "name": "名称",
+        "status": "状态",
+        "progress": "进度",
+        "reports": "报表"
+      }
     },
     "projectReports": {
       "title": "项目报表",

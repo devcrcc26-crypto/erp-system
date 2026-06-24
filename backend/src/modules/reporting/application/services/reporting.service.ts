@@ -3,7 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  IssueStatus,
+  Prisma,
+  ProjectStatus,
+  PunchItemStatus,
+  RfiStatus,
+} from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -22,6 +28,35 @@ import {
 import { ReportExecutorService } from './report-executor.service';
 
 type RequestContext = { companyId: string; userId: string };
+
+export interface PortfolioSummary {
+  readonly generatedAt: string;
+  readonly completionRate: number;
+  readonly projects: {
+    readonly total: number;
+    readonly active: number;
+    readonly byStatus: Record<string, number>;
+    readonly byType: Record<string, number>;
+  };
+  readonly users: {
+    readonly total: number;
+    readonly active: number;
+  };
+  readonly organization: {
+    readonly branches: number;
+    readonly departments: number;
+  };
+  readonly audit: {
+    readonly last30Days: number;
+    readonly total: number;
+  };
+  readonly siteOps: {
+    readonly openRfis: number;
+    readonly overdueRfis: number;
+    readonly openIssues: number;
+    readonly openPunchItems: number;
+  };
+}
 
 @Injectable()
 export class ReportingService {
@@ -245,6 +280,136 @@ export class ReportingService {
       throw new ForbiddenException('You do not have access to this report');
     }
     return report;
+  }
+
+  /**
+   * Returns company-wide portfolio metrics for the system reports page.
+   */
+  async getPortfolioSummary(ctx: RequestContext): Promise<PortfolioSummary> {
+    const { companyId } = ctx;
+    const companyProjects = activeOnly({ companyId });
+    const projectScope = {
+      deletedAt: null,
+      project: companyProjects,
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      statusGroups,
+      typeGroups,
+      activeProjects,
+      usersTotal,
+      usersActive,
+      branches,
+      departments,
+      auditTotal,
+      auditLast30Days,
+      openRfis,
+      overdueRfis,
+      openIssues,
+      openPunchItems,
+      completionRate,
+    ] = await Promise.all([
+      this.prisma.project.groupBy({
+        by: ['status'],
+        where: companyProjects,
+        _count: { _all: true },
+      }),
+      this.prisma.project.groupBy({
+        by: ['projectType'],
+        where: companyProjects,
+        _count: { _all: true },
+      }),
+      this.prisma.project.count({
+        where: { ...companyProjects, status: ProjectStatus.ACTIVE },
+      }),
+      this.prisma.user.count({ where: activeOnly({ companyId }) }),
+      this.prisma.user.count({
+        where: activeOnly({ companyId, isActive: true }),
+      }),
+      this.prisma.branch.count({ where: activeOnly({ companyId }) }),
+      this.prisma.department.count({ where: activeOnly({ companyId }) }),
+      this.prisma.auditLog.count({ where: { companyId } }),
+      this.prisma.auditLog.count({
+        where: { companyId, createdAt: { gte: thirtyDaysAgo } },
+      }),
+      this.prisma.rfi.count({
+        where: {
+          ...projectScope,
+          status: { not: RfiStatus.CLOSED },
+        },
+      }),
+      this.prisma.rfi.count({
+        where: {
+          ...projectScope,
+          dueDate: { lt: today },
+          status: { notIn: [RfiStatus.CLOSED, RfiStatus.ANSWERED] },
+        },
+      }),
+      this.prisma.issue.count({
+        where: {
+          ...projectScope,
+          status: { not: IssueStatus.CLOSED },
+        },
+      }),
+      this.prisma.punchItem.count({
+        where: {
+          ...projectScope,
+          status: { not: PunchItemStatus.CLOSED },
+        },
+      }),
+      this.getPortfolioCompletionRate(ctx),
+    ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const group of statusGroups) {
+      byStatus[group.status] = group._count._all;
+    }
+
+    const byType: Record<string, number> = {};
+    for (const group of typeGroups) {
+      const key = group.projectType ?? 'UNSPECIFIED';
+      byType[key] = group._count._all;
+    }
+
+    const totalProjects = statusGroups.reduce(
+      (sum, group) => sum + group._count._all,
+      0,
+    );
+
+    return {
+      generatedAt: new Date().toISOString(),
+      completionRate: completionRate.rate,
+      projects: {
+        total: totalProjects,
+        active: activeProjects,
+        byStatus,
+        byType,
+      },
+      users: {
+        total: usersTotal,
+        active: usersActive,
+      },
+      organization: {
+        branches,
+        departments,
+      },
+      audit: {
+        last30Days: auditLast30Days,
+        total: auditTotal,
+      },
+      siteOps: {
+        openRfis,
+        overdueRfis,
+        openIssues,
+        openPunchItems,
+      },
+    };
   }
 
   /**

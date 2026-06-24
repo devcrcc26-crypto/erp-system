@@ -63,6 +63,13 @@ export class ReportsController {
     return this.reportingService.getPortfolioCompletionRate(this.ctx(user));
   }
 
+  @Get('portfolio-summary')
+  @RequirePermission('reports', 'view')
+  @ApiOperation({ summary: 'Company-wide portfolio summary for system reports' })
+  portfolioSummary(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.reportingService.getPortfolioSummary(this.ctx(user));
+  }
+
   @Get(':id')
   @RequirePermission('reports', 'view')
   get(
