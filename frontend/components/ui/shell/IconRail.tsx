@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -65,9 +67,15 @@ export default function IconRail({
         onMouseLeave={onPeekLeave}
         className={[
           'flex h-full flex-col transition-[width] duration-200 ease-in-out',
-          isOverlayPeek ? 'absolute left-0 top-0 z-50 shadow-xl' : 'relative',
+          isOverlayPeek
+            ? 'absolute left-0 top-0 z-50 border-r'
+            : 'relative',
         ].join(' ')}
-        style={{ width: panelWidth, background: tokens.colorSidebarBg }}
+        style={{
+          width: panelWidth,
+          background: tokens.colorSidebarBg,
+          borderColor: isOverlayPeek ? tokens.colorBorder : undefined,
+        }}
         aria-label={t('shell.mainNavigation')}
       >
         <div

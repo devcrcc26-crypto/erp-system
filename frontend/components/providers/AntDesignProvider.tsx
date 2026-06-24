@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { AntdRegistry } from '@ant-design/nextjs-registry';

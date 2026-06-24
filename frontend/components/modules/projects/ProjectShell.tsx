@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { Spin } from 'antd';
@@ -5,7 +7,7 @@ import { Network } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProject } from '@/lib/query/projects';
-import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Project route wrapper — loading/error gates; layout lives in AppShell.
@@ -21,7 +23,10 @@ export default function ProjectShell({
 
   if (projectQuery.isLoading) {
     return (
-      <div className={layout.loadingCard}>
+      <div
+        className="flex justify-center rounded-[12px] bg-white p-8 sm:p-16"
+        style={{ border: `0.5px solid ${tokens.colorBorder}` }}
+      >
         <Spin />
       </div>
     );
@@ -46,5 +51,5 @@ export default function ProjectShell({
     );
   }
 
-  return <div className={layout.pageStack}>{children}</div>;
+  return <div className="flex flex-col gap-4">{children}</div>;
 }

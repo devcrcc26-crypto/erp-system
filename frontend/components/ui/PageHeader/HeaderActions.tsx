@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
@@ -35,29 +37,46 @@ export default function HeaderActions({
   return (
     <div
       className={[
-        'flex shrink-0 items-center self-center',
-        compact ? 'gap-1' : 'gap-2 self-start pt-1 md:gap-3',
+        'flex shrink-0 items-center',
+        compact ? 'gap-1' : 'gap-2',
       ].join(' ')}
     >
       <NotificationPanel />
       <Link
         href="/profile"
         className={[
-          'flex shrink-0 items-center rounded-md transition-colors hover:bg-slate-50',
-          compact ? 'gap-0 p-0' : 'gap-2 md:gap-3 md:px-2 md:py-1',
+          'flex shrink-0 items-center rounded-lg transition-colors hover:bg-[var(--color-surface-secondary)]',
+          compact ? 'gap-0 p-0' : 'gap-2 px-1.5 py-1',
         ].join(' ')}
         aria-label={t('common.openProfile')}
       >
         <Avatar
-          size={compact ? 32 : { xs: 36, md: 40 }}
-          style={{ backgroundColor: tokens.colorSidebarBg, fontWeight: 600 }}
+          size={compact ? 28 : 28}
+          style={{
+            backgroundColor: tokens.colorBlue50,
+            color: tokens.colorBlue800,
+            fontWeight: 500,
+            fontSize: 11,
+          }}
         >
           {avatarInitial}
         </Avatar>
-        <div className="hidden text-sm md:block">
-          <p className="font-semibold text-slate-900">{displayName}</p>
-          <p className="text-slate-500">{roleName}</p>
-        </div>
+        {!compact && (
+          <div className="hidden text-[13px] md:block">
+            <p
+              className="font-medium leading-[1.4]"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {displayName}
+            </p>
+            <p
+              className="text-[10px] font-normal leading-[1.4]"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {roleName}
+            </p>
+          </div>
+        )}
       </Link>
     </div>
   );

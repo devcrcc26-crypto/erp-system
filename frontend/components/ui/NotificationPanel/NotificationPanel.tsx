@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,6 +16,7 @@ import {
 import type { InAppNotification } from '@/lib/api/documents.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useAuthStore } from '@/stores/auth.store';
+import { tokens } from '@/lib/theme/tokens';
 
 dayjs.extend(relativeTime);
 
@@ -108,11 +111,22 @@ export default function NotificationPanel(): React.ReactNode {
 
   const dropdownContent = (
     <div
-      className="w-80 rounded-md border border-slate-200 bg-white shadow-lg md:w-96"
-      style={{ borderRadius: 6 }}
+      className="w-80 bg-white md:w-96"
+      style={{
+        borderRadius: 12,
+        border: `0.5px solid ${tokens.colorBorder}`,
+      }}
     >
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-        <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
+      >
+        <h3
+          className="text-[13px] font-medium"
+          style={{ color: tokens.colorTextPrimary }}
+        >
+          Notifications
+        </h3>
         {allowed && unreadCount > 0 && (
           <Button
             type="link"
@@ -165,11 +179,23 @@ export default function NotificationPanel(): React.ReactNode {
     >
       <button
         type="button"
-        className="relative rounded-md p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+        className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--color-surface-secondary)]"
+        style={{
+          border: `0.5px solid ${tokens.colorBorder}`,
+          color: tokens.colorTextSecondary,
+        }}
         aria-label="Open notifications"
       >
-        <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-          <BellOutlined style={{ fontSize: 20 }} />
+        <Badge
+          count={unreadCount}
+          size="small"
+          offset={[-2, 2]}
+          style={{
+            backgroundColor: tokens.colorRed400,
+            boxShadow: `0 0 0 1.5px ${tokens.colorPageBg}`,
+          }}
+        >
+          <BellOutlined style={{ fontSize: 16 }} />
         </Badge>
       </button>
     </Dropdown>

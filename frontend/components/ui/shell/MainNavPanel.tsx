@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import Link from 'next/link';
@@ -48,31 +50,30 @@ const RAIL_ICONS: Record<string, React.ReactNode> = {
 };
 
 function railItemClass(isActive: boolean, isExpanded: boolean): string {
-  const base = 'flex shrink-0 items-center transition-colors duration-150';
+  const base =
+    'flex shrink-0 items-center no-underline transition-colors duration-150';
   if (isExpanded) {
     return [
       base,
-      'w-full gap-4 border-l-4 py-4 pl-6 pr-6 text-sm',
-      isActive ? 'font-semibold text-white' : 'font-normal hover:text-white',
+      'w-full gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] leading-[1.5]',
+      isActive ? 'font-medium' : 'font-normal',
     ].join(' ');
   }
   return [
     base,
-    'mx-auto h-10 w-10 justify-center text-base',
-    isActive ? 'text-white' : 'hover:text-white',
+    'mx-auto h-8 w-8 justify-center rounded-lg text-[16px]',
+    isActive ? 'font-medium' : 'font-normal',
   ].join(' ');
 }
 
-function railItemStyle(isActive: boolean, isExpanded: boolean): React.CSSProperties {
+function railItemStyle(isActive: boolean): React.CSSProperties {
   if (isActive) {
     return {
       backgroundColor: tokens.colorSidebarActive,
-      borderLeftColor: isExpanded ? tokens.colorSidebarAccent : 'transparent',
       color: tokens.colorSidebarTextActive,
     };
   }
   return {
-    borderLeftColor: 'transparent',
     color: tokens.colorSidebarText,
   };
 }
@@ -97,13 +98,16 @@ function RailNavButton({
       title={label}
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
-      className={railItemClass(isActive, isExpanded)}
-      style={{
-        ...railItemStyle(isActive, isExpanded),
-        ...(isActive && !isExpanded
-          ? { backgroundColor: tokens.colorSidebarActive, borderRadius: 6 }
-          : {}),
-      }}
+      className={[
+        railItemClass(isActive, isExpanded),
+        !isActive && isExpanded
+          ? 'hover:bg-[var(--color-surface-secondary)]'
+          : '',
+        !isActive && !isExpanded
+          ? 'hover:bg-[var(--color-surface-secondary)]'
+          : '',
+      ].join(' ')}
+      style={railItemStyle(isActive)}
     >
       <span className="flex shrink-0 items-center justify-center leading-none">
         {RAIL_ICONS[item.iconKey] ?? <ProjectOutlined />}
@@ -143,10 +147,10 @@ function RailActionButton({
       className={[
         'flex shrink-0 items-center transition-colors duration-150 disabled:opacity-60',
         isExpanded
-          ? 'w-full gap-4 border-l-4 border-transparent py-4 pl-6 pr-6 text-sm font-normal hover:text-white'
-          : 'mx-auto h-10 w-10 justify-center text-base hover:text-white',
+          ? 'w-full gap-2.5 rounded-lg border-transparent px-2.5 py-[7px] text-[13px] font-normal leading-[1.5] hover:bg-[var(--color-surface-secondary)]'
+          : 'mx-auto h-8 w-8 justify-center rounded-lg text-[16px] hover:bg-[var(--color-surface-secondary)]',
       ].join(' ')}
-      style={{ color: tokens.colorSidebarText }}
+      style={{ color: tokens.colorTextSecondary }}
     >
       <span className="flex shrink-0 items-center justify-center leading-none">
         {icon}
@@ -216,22 +220,37 @@ export default function MainNavPanel({
   return (
     <div
       className="flex h-full flex-col"
-      style={{ background: tokens.colorSidebarBg }}
+      style={{
+        background: tokens.colorSidebarBg,
+        borderRight: `0.5px solid ${tokens.colorBorder}`,
+      }}
     >
       <div
         className={[
-          'shrink-0 pb-5 pt-8',
-          isExpanded ? 'px-7' : 'flex justify-center px-3',
+          'shrink-0 pb-4 pt-5',
+          isExpanded ? 'px-3' : 'flex justify-center px-2',
         ].join(' ')}
       >
         {isExpanded ? (
-          <h1 className="truncate text-xl font-bold tracking-wide text-white">
-            {t('shell.brandTitle')}
-          </h1>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-medium text-white"
+              style={{ backgroundColor: tokens.colorSidebarAccent }}
+              aria-hidden
+            >
+              {t('shell.brandShort')}
+            </div>
+            <h1
+              className="truncate text-[14px] font-medium tracking-[-0.01em]"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {t('shell.brandTitle')}
+            </h1>
+          </div>
         ) : (
           <div
-            className="flex h-8 w-8 items-center justify-center text-xs font-bold text-white"
-            style={{ backgroundColor: tokens.colorSidebarAccent, borderRadius: 6 }}
+            className="flex h-7 w-7 items-center justify-center rounded-[7px] text-[11px] font-medium text-white"
+            style={{ backgroundColor: tokens.colorSidebarAccent }}
             title={t('shell.brandTitle')}
             aria-label={t('shell.brandWorkspace')}
           >
@@ -240,9 +259,9 @@ export default function MainNavPanel({
         )}
       </div>
 
-      <hr className="border-slate-700" />
+      <hr style={{ border: 'none', borderTop: `0.5px solid ${tokens.colorBorder}` }} />
 
-      <nav className="flex flex-1 flex-col overflow-y-auto py-1">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {visibleNavItems.map((item) => (
           <RailNavButton
             key={item.key}
@@ -255,23 +274,35 @@ export default function MainNavPanel({
         ))}
       </nav>
 
-      <div className="flex flex-col pb-2">
+      <div
+        className="flex flex-col gap-0.5 px-2 pb-3 pt-2"
+        style={{ borderTop: `0.5px solid ${tokens.colorBorder}` }}
+      >
         <Link
           href="/profile"
           onClick={onNavigate}
           title={t('nav.profile')}
           aria-label={t('nav.profile')}
           aria-current={profileActive ? 'page' : undefined}
-          className={railItemClass(profileActive, isExpanded)}
-          style={{
-            ...railItemStyle(profileActive, isExpanded),
-            ...(profileActive && !isExpanded
-              ? { backgroundColor: tokens.colorSidebarActive, borderRadius: 6 }
-              : {}),
-          }}
+          className={[
+            railItemClass(profileActive, isExpanded),
+            !profileActive && isExpanded
+              ? 'hover:bg-[var(--color-surface-secondary)]'
+              : '',
+            !profileActive && !isExpanded
+              ? 'hover:bg-[var(--color-surface-secondary)]'
+              : '',
+          ].join(' ')}
+          style={railItemStyle(profileActive)}
         >
-          <span className="flex shrink-0 items-center justify-center leading-none">
-            <UserOutlined />
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium"
+            style={{
+              backgroundColor: tokens.colorBlue50,
+              color: tokens.colorBlue800,
+            }}
+          >
+            <UserOutlined className="text-[12px]" />
           </span>
           <span
             className={[
@@ -300,15 +331,15 @@ export default function MainNavPanel({
             aria-label={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
             aria-pressed={pinned}
             className={[
-              'mt-1 flex h-8 shrink-0 items-center transition-colors hover:text-white',
-              isExpanded ? 'w-full justify-end px-6' : 'mx-auto w-8 justify-center',
+              'mt-0.5 flex h-8 shrink-0 items-center rounded-lg transition-colors hover:bg-[var(--color-surface-secondary)]',
+              isExpanded ? 'w-full justify-end px-2.5' : 'mx-auto w-8 justify-center',
             ].join(' ')}
-            style={{ color: tokens.colorSidebarText }}
+            style={{ color: tokens.colorTextTertiary }}
           >
             {pinned ? (
-              <LeftOutlined className="text-xs" />
+              <LeftOutlined className="text-[12px]" />
             ) : (
-              <RightOutlined className="text-xs" />
+              <RightOutlined className="text-[12px]" />
             )}
           </button>
         )}

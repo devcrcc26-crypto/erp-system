@@ -1,6 +1,8 @@
 import AppShell from '@/components/ui/AppShell/AppShell';
 import DashboardProviders from '@/components/providers/DashboardProviders';
 
+// UI polish pass — styles only, no logic changes
+
 export default function DashboardLayout({
   children,
 }: {

@@ -1,12 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar-bg: #1e2533;
-  --color-sidebar-active: #2d3748;
-  --color-sidebar-accent: #f97316;
-  --color-page-bg: #f1f5f9;
-  --color-fill-quaternary: #f1f5f9;
-  --color-border-secondary: #e2e8f0;
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-active: #e1f5ee;
+  --color-sidebar-accent: #1d9e75;
+  --color-page-bg: #f1efe8;
+  --color-fill-quaternary: #f8f7f4;
+  --color-border-secondary: rgba(0, 0, 0, 0.18);
+  --color-border-tertiary: rgba(0, 0, 0, 0.12);
+  --color-teal-400: #1d9e75;
+  --color-teal-50: #e1f5ee;
+  --color-teal-600: #0f6e56;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #5f5e5a;
+  --color-text-tertiary: #888780;
+  --color-surface-secondary: #f8f7f4;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
 
 *,
@@ -21,25 +30,30 @@ body {
 }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background-color: var(--color-page-bg);
 }
 
-/* Ant Design sidebar — match original orange active accent */
-.erp-sidebar-menu.ant-menu-dark .ant-menu-item {
+/* Ant Design sidebar — teal active accent */
+.erp-sidebar-menu.ant-menu .ant-menu-item {
   margin: 0;
   width: 100%;
-  border-radius: 0;
-  border-left: 4px solid transparent;
+  border-radius: 8px;
 }
 
-.erp-sidebar-menu.ant-menu-dark .ant-menu-item-selected {
-  background-color: #2d3748 !important;
-  border-left-color: #f97316 !important;
-  font-weight: 600;
+.erp-sidebar-menu.ant-menu .ant-menu-item-selected {
+  background-color: var(--color-teal-50) !important;
+  color: var(--color-teal-600) !important;
+  font-weight: 500;
 }
 
-.erp-sidebar-menu.ant-menu-dark .ant-menu-item:hover {
-  color: #ffffff !important;
+.erp-sidebar-menu.ant-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Project workspace sidebar — grouped engineering nav */
@@ -59,11 +73,11 @@ body {
 .erp-project-sidebar-menu .ant-menu-item-group-title {
   padding: 10px 12px 8px;
   margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   line-height: 1.4;
 }
 
@@ -87,14 +101,14 @@ body {
 }
 
 .erp-project-sidebar-menu .ant-menu-item-selected {
-  background-color: #fef0e6 !important;
-  color: #d4610a !important;
-  font-weight: 600;
+  background-color: var(--color-teal-50) !important;
+  color: var(--color-teal-600) !important;
+  font-weight: 500;
 }
 
 .erp-project-sidebar-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
-  background-color: #f8fafc !important;
-  color: #1e293b !important;
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-primary) !important;
 }
 
 .erp-project-sidebar-menu .ant-menu-item .anticon {
@@ -174,6 +188,7 @@ main::-webkit-scrollbar,
 /* Shell breadcrumb — Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.4;
 }
 
@@ -184,22 +199,29 @@ main::-webkit-scrollbar,
 
 .shell-breadcrumb.ant-breadcrumb li,
 .shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-link {
-  color: #64748b;
+  color: var(--color-text-tertiary);
+}
+
+.shell-breadcrumb.ant-breadcrumb li:last-child,
+.shell-breadcrumb.ant-breadcrumb li:last-child .ant-breadcrumb-link {
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 
 .shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-separator {
   margin-inline: 6px;
-  color: #cbd5e1;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
 }
 
 .shell-breadcrumb-link {
-  color: #64748b !important;
+  color: var(--color-text-tertiary) !important;
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 .shell-breadcrumb-link:hover {
-  color: #1e293b !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Shell nav links — override Ant Design / browser default blue */
@@ -208,11 +230,11 @@ main::-webkit-scrollbar,
 }
 
 .shell-context-sidebar a:not([aria-current='page']) {
-  color: #475569;
+  color: var(--color-text-primary);
 }
 
 .shell-context-sidebar a:not([aria-current='page']):hover {
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 /* ── Mobile responsive shared styles ── */

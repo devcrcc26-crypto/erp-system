@@ -1,6 +1,12 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  RAIL_COLLAPSED_WIDTH,
+  RAIL_EXPANDED_WIDTH,
+} from '@/components/ui/shell/shell-layout';
 import { useIsLgUp } from '@/hooks/useMediaQuery';
 
 const STORAGE_KEY = 'rail:expanded';
@@ -10,7 +16,7 @@ export interface UseRailExpandedResult {
   pinned: boolean;
   isPeeking: boolean;
   isExpanded: boolean;
-  layoutWidth: 64 | 256;
+  layoutWidth: typeof RAIL_COLLAPSED_WIDTH | typeof RAIL_EXPANDED_WIDTH;
   togglePinned: () => void;
   onPeekEnter: () => void;
   onPeekLeave: () => void;
@@ -91,7 +97,7 @@ export function useRailExpanded(): UseRailExpandedResult {
   }, [effectivePinned, isLgUp, clearLeaveTimer]);
 
   const isExpanded = effectivePinned || isPeeking;
-  const layoutWidth = effectivePinned ? 256 : 64;
+  const layoutWidth = effectivePinned ? RAIL_EXPANDED_WIDTH : RAIL_COLLAPSED_WIDTH;
 
   return {
     pinned: effectivePinned,

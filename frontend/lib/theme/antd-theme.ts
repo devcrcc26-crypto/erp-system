@@ -1,8 +1,13 @@
+// UI polish pass — styles only, no logic changes
+
 import type { ThemeConfig } from 'antd';
 import { tokens } from './tokens';
 
+const fontStack =
+  "system-ui, -apple-system, 'Segoe UI', sans-serif";
+
 /**
- * Ant Design theme aligned with the existing frontend visual design.
+ * Ant Design theme aligned with the construction ERP design system.
  */
 export const antdTheme: ThemeConfig = {
   token: {
@@ -13,46 +18,79 @@ export const antdTheme: ThemeConfig = {
     colorBorder: tokens.colorBorder,
     colorText: tokens.colorTextPrimary,
     colorTextSecondary: tokens.colorTextSecondary,
+    colorTextTertiary: tokens.colorTextTertiary,
+    colorSuccess: tokens.colorGreen400,
+    colorWarning: tokens.colorAmber400,
+    colorError: tokens.colorRed400,
+    colorInfo: tokens.colorBlue400,
     borderRadius: tokens.borderRadius,
-    fontFamily: 'Arial, Helvetica, sans-serif',
+    borderRadiusLG: tokens.borderRadiusCard,
+    fontSize: 13,
+    fontSizeSM: 11,
+    fontSizeLG: 14,
+    fontWeightStrong: 500,
+    fontFamily: fontStack,
     controlHeight: 36,
+    lineHeight: 1.5,
+    boxShadow: 'none',
+    boxShadowSecondary: 'none',
   },
   components: {
     Button: {
       primaryShadow: 'none',
-      fontWeight: 600,
+      defaultShadow: 'none',
+      fontWeight: 500,
+      controlHeight: 32,
+      borderRadius: 8,
     },
     Card: {
-      borderRadiusLG: tokens.borderRadius,
+      borderRadiusLG: tokens.borderRadiusCard,
       padding: tokens.cardPadding,
       paddingLG: tokens.cardPadding,
     },
     Table: {
-      headerBg: 'var(--color-fill-quaternary)',
+      headerBg: tokens.colorSurfaceSecondary,
       headerColor: tokens.colorTextSecondary,
-      headerSplitColor: 'var(--color-border-secondary)',
-      rowHoverBg: '#f8fafc',
+      headerSplitColor: tokens.colorBorder,
+      rowHoverBg: tokens.colorSurfaceSecondary,
     },
     Input: {
-      colorBgContainer: '#f8fafc',
+      colorBgContainer: tokens.colorCardBg,
       activeBg: tokens.colorCardBg,
+      controlHeight: 36,
+      borderRadius: 8,
     },
     Select: {
-      colorBgContainer: '#f8fafc',
+      colorBgContainer: tokens.colorCardBg,
+      controlHeight: 36,
+      borderRadius: 8,
     },
     Modal: {
-      borderRadiusLG: tokens.borderRadius,
+      borderRadiusLG: tokens.borderRadiusCard,
     },
     Menu: {
-      darkItemBg: tokens.colorSidebarBg,
-      darkItemSelectedBg: tokens.colorSidebarActive,
-      darkItemColor: tokens.colorSidebarText,
-      darkItemSelectedColor: tokens.colorSidebarTextActive,
-      darkSubMenuItemBg: tokens.colorSidebarBg,
+      itemBg: tokens.colorSidebarBg,
+      itemSelectedBg: tokens.colorSidebarActive,
+      itemColor: tokens.colorSidebarText,
+      itemSelectedColor: tokens.colorSidebarTextActive,
+      subMenuItemBg: tokens.colorSidebarBg,
+      itemBorderRadius: 8,
+      itemHeight: 36,
+      fontSize: 13,
     },
     Layout: {
       siderBg: tokens.colorSidebarBg,
       bodyBg: tokens.colorPageBg,
+      headerBg: tokens.colorCardBg,
+    },
+    Breadcrumb: {
+      fontSize: 13,
+      itemColor: tokens.colorTextTertiary,
+      lastItemColor: tokens.colorTextPrimary,
+      separatorColor: tokens.colorTextTertiary,
+    },
+    Drawer: {
+      borderRadiusLG: 0,
     },
   },
 };

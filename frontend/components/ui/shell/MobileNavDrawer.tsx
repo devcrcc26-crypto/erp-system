@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -57,10 +59,16 @@ export default function MobileNavDrawer({
           background: tokens.colorCardBg,
         },
         header: { display: 'none' },
+        content: {
+          borderRight: `0.5px solid ${tokens.colorBorder}`,
+        },
       }}
     >
       {showTabs && (
-        <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-3">
+        <div
+          className="shrink-0 bg-white px-3 py-3"
+          style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
+        >
           <Segmented<MobileNavPane>
             block
             value={pane}

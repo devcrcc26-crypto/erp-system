@@ -1,18 +1,9 @@
+// UI polish pass — styles only, no logic changes
+
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import AntDesignProvider from "@/components/providers/AntDesignProvider";
 import { QueryProvider } from "@/lib/query/provider";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "CCECC PWF",
@@ -25,10 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="flex min-h-screen flex-col">
         <AntDesignProvider>
           <QueryProvider>

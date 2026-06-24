@@ -1,3 +1,5 @@
+// UI polish pass — styles only, no logic changes
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -14,7 +16,6 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProject, toProjectSummary } from '@/lib/query/projects';
 import { useProjectContextStore } from '@/stores/project-context.store';
-import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Three-pane application shell: icon rail, context sidebar, and main content.
@@ -90,17 +91,14 @@ export default function AppShell({
         </div>
       )}
 
-      <main
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
-        style={{ background: tokens.colorPageBg }}
-      >
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <MainContentHeader
           breadcrumbs={routeMeta.breadcrumbs}
           pageTitle={pageTitle}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 
-        <div className="flex flex-col px-4 py-4 sm:px-6 sm:py-6 md:px-8">
+        <div className="flex flex-col p-6">
           <div className="min-w-0 flex-1">{children}</div>
         </div>
       </main>
