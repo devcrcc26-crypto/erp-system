@@ -544,10 +544,16 @@ export default function CloseoutPageContent({
                                       .then(() => void refetchCloseout());
                                   }}
                                 />
-                                <span className="min-w-0 flex-1 text-sm text-slate-700">
+                                <span
+                                  className="min-w-0 flex-1 text-[12px]"
+                                  style={{ color: tokens.colorTextPrimary }}
+                                >
                                   {item.description}
                                   {item.isComplete && item.verifiedBy && (
-                                    <span className="mt-1 block text-xs text-slate-500">
+                                    <span
+                                      className="mt-1 block text-[12px]"
+                                      style={{ color: tokens.colorTextSecondary }}
+                                    >
                                       Verified by{' '}
                                       {resolveUserName(item.verifiedBy)}
                                       {item.completedAt
