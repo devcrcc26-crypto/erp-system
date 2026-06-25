@@ -2,6 +2,7 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import {
   Alert,
@@ -40,6 +41,7 @@ import {
 import { useAppMessage } from '@/hooks/use-app-message';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { buildRevisionTriggerQuery } from '@/lib/utils/revision-trigger-url';
 
 interface ResponseFormValues {
   responseText: string;
@@ -266,7 +268,25 @@ export default function RfiDetailDrawer({
             showIcon
             className="mt-4"
             title="EPC revision"
-            description="If this RFI requires a new engineering document revision, open the linked document from Disciplines and use Trigger Revision on the engineering document detail page."
+            description={
+              rfi.taskDisciplineId
+                ? 'If this RFI requires a new engineering document revision, open the linked discipline, choose the document, then trigger an external revision on the document detail page.'
+                : 'Link this RFI to an engineering discipline when raising it so designers can start a controlled document revision from the discipline workspace.'
+            }
+            action={
+              rfi.taskDisciplineId ? (
+                <Link
+                  href={`/projects/${projectId}/disciplines/${rfi.taskDisciplineId}${buildRevisionTriggerQuery({
+                    triggerSource: 'RFI',
+                    triggerEntityId: rfi.id,
+                  })}`}
+                >
+                  <Button size="small" type="primary">
+                    Open discipline
+                  </Button>
+                </Link>
+              ) : undefined
+            }
           />
         </div>
       )}

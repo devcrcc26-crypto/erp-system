@@ -58,7 +58,9 @@ describe('RfisService status transitions', () => {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
       } as unknown as DisciplineScopeService,
       {
-        findEntityFolder: jest.fn().mockResolvedValue(null),
+        ensureRfiFolder: jest
+          .fn()
+          .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/rfis/RFI-001' }),
       } as unknown as EngineeringDocumentFolderService,
     );
   });

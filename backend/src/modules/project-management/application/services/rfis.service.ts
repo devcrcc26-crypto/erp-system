@@ -2,9 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { FolderContextType, Prisma, RfiStatus } from '@prisma/client';
+import { Prisma, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -44,6 +45,8 @@ const RFI_SORT_FIELDS = new Set([
 
 @Injectable()
 export class RfisService {
+  private readonly logger = new Logger(RfisService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
@@ -337,14 +340,27 @@ export class RfisService {
     ctx: PmContext,
     rfi: Parameters<typeof mapRfi>[0],
   ): Promise<MappedRfi> {
-    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
-      ctx,
-      FolderContextType.RFI,
-      rfi.id,
-    );
+    let attachmentFolderId: string | null = null;
+
+    try {
+      const folder =
+        await this.engineeringDocumentFolderService.ensureRfiFolder(
+          ctx,
+          rfi.projectId,
+          rfi.id,
+          rfi.rfiNumber,
+        );
+      attachmentFolderId = folder.id;
+    } catch (error) {
+      this.logger.warn(
+        `RFI ${rfi.id} attachment folder could not be ensured`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
     return {
       ...mapRfi(rfi),
-      attachmentFolderId: folder?.id ?? null,
+      attachmentFolderId,
     };
   }
 

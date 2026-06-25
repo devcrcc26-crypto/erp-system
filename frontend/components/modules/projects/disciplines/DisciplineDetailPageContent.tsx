@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Alert, Breadcrumb, Button, Descriptions } from 'antd';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -17,6 +17,7 @@ import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 import { layout } from '@/lib/theme/layout';
+import { parseRevisionTriggerParams } from '@/lib/utils/revision-trigger-url';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -28,6 +29,8 @@ export default function DisciplineDetailPageContent({
   taskDisciplineId: string;
 }): React.ReactNode {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const revisionTriggerContext = parseRevisionTriggerParams(searchParams);
   const messageApi = useAppMessage();
   const lens = useRoleLens();
   const packagesQuery = useDesignPackages(projectId, taskDisciplineId);
@@ -113,6 +116,15 @@ export default function DisciplineDetailPageContent({
           { title: discipline.disciplineName },
         ]}
       />
+
+      {revisionTriggerContext?.triggerSource === 'RFI' && (
+        <Alert
+          type="info"
+          showIcon
+          title="RFI revision workflow"
+          description="Open the affected engineering document below, then use Trigger revision on the document detail page. The RFI will be pre-selected as the trigger source."
+        />
+      )}
 
       <FormLayout
         title={discipline.disciplineName}

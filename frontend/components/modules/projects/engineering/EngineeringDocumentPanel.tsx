@@ -16,6 +16,7 @@ import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { RcFile } from 'antd/es/upload';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -41,6 +42,10 @@ import EdvMetadataForm, {
   buildMetadataFromForm,
 } from '@/components/modules/projects/engineering/EdvMetadataForm';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import {
+  appendRevisionTriggerQuery,
+  parseRevisionTriggerParams,
+} from '@/lib/utils/revision-trigger-url';
 
 interface DocumentWithVersions {
   id: string;
@@ -66,6 +71,8 @@ export default function EngineeringDocumentPanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const searchParams = useSearchParams();
+  const revisionTriggerContext = parseRevisionTriggerParams(searchParams);
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canRegister =
@@ -139,7 +146,12 @@ export default function EngineeringDocumentPanel({
       key: 'actions',
       width: 80,
       render: (_value, record) => (
-        <Link href={`/projects/${projectId}/engineering-documents/${record.id}`}>
+        <Link
+          href={appendRevisionTriggerQuery(
+            `/projects/${projectId}/engineering-documents/${record.id}`,
+            revisionTriggerContext,
+          )}
+        >
           Open
         </Link>
       ),
