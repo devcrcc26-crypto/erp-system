@@ -17,6 +17,8 @@ export interface ProjectWorkspaceNavItem {
   readonly breadcrumbGroupKey: string;
   /** When set, item also requires the matching EPC probe. */
   readonly epcSurface?: 'engineering';
+  /** Hide unless user is assigned on a discipline (team-only members still see other items). */
+  readonly requiresDisciplineAssignment?: boolean;
   /** When set, item also requires the matching EPC workspace capability. */
   readonly epcCapability?: 'reviewInbox' | 'myComments';
 }
@@ -53,6 +55,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Overview',
         breadcrumbGroupKey: 'workspace.groups.overview',
         epcSurface: 'engineering',
+        requiresDisciplineAssignment: true,
       },
       {
         key: 'workload',
@@ -99,6 +102,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Engineering',
         breadcrumbGroupKey: 'workspace.groups.engineering',
         epcSurface: 'engineering',
+        requiresDisciplineAssignment: true,
       },
       {
         key: 'deliverables',
@@ -109,6 +113,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Engineering',
         breadcrumbGroupKey: 'workspace.groups.engineering',
         epcSurface: 'engineering',
+        requiresDisciplineAssignment: true,
       },
     ],
   },
@@ -145,6 +150,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Review & Release',
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
         epcSurface: 'engineering',
+        requiresDisciplineAssignment: true,
       },
       {
         key: 'review-inbox',

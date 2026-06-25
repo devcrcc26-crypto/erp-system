@@ -442,8 +442,13 @@ export class ProjectsService {
     });
 
     if (!(await this.disciplineScopeService.hasDisciplineScopeBypass(ctx))) {
-      const projectIds =
-        await this.disciplineScopeService.getAssignedProjectIds(ctx);
+      const [disciplineProjectIds, teamProjectIds] = await Promise.all([
+        this.disciplineScopeService.getAssignedProjectIds(ctx),
+        this.projectScopeService.getTeamProjectIds(ctx),
+      ]);
+      const projectIds = [
+        ...new Set([...disciplineProjectIds, ...teamProjectIds]),
+      ];
       where.id = { in: projectIds.length > 0 ? projectIds : ['__none__'] };
     }
 

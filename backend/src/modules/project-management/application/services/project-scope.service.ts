@@ -31,6 +31,21 @@ export class ProjectScopeService {
   }
 
   /**
+   * Project IDs where the user is an active team member.
+   */
+  async getTeamProjectIds(ctx: PmContext): Promise<string[]> {
+    const rows = await this.prisma.projectTeam.findMany({
+      where: activeOnly({
+        userId: ctx.userId,
+        project: activeOnly({ companyId: ctx.companyId }),
+      }),
+      select: { projectId: true },
+    });
+
+    return [...new Set(rows.map((row) => row.projectId))];
+  }
+
+  /**
    * Prisma where fragment enforcing project tenancy for child entities.
    */
   getProjectIdWhere(

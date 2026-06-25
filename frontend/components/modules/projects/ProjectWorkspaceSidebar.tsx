@@ -50,7 +50,7 @@ function canViewNavItem(
   }
 
   if (
-    item.epcSurface === 'engineering' &&
+    item.requiresDisciplineAssignment &&
     !disciplineScopeBypass &&
     !hasAssignedDisciplines
   ) {

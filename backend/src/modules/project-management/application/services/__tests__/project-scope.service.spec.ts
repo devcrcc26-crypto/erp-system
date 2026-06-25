@@ -16,14 +16,14 @@ describe('ProjectScopeService', () => {
 
   let prisma: {
     project: { findFirst: jest.Mock };
-    projectTeam: { findFirst: jest.Mock };
+    projectTeam: { findFirst: jest.Mock; findMany: jest.Mock };
   };
   let service: ProjectScopeService;
 
   beforeEach(() => {
     prisma = {
       project: { findFirst: jest.fn() },
-      projectTeam: { findFirst: jest.fn() },
+      projectTeam: { findFirst: jest.fn(), findMany: jest.fn() },
     };
     service = new ProjectScopeService(prisma as unknown as PrismaService);
   });
@@ -71,6 +71,28 @@ describe('ProjectScopeService', () => {
     expect(prisma.projectTeam.findFirst).toHaveBeenCalledWith({
       where: { projectId, userId: ctx.userId, deletedAt: null },
       select: { id: true },
+    });
+  });
+
+  it('returns distinct project ids for active team memberships', async () => {
+    prisma.projectTeam.findMany.mockResolvedValue([
+      { projectId: 'project-1' },
+      { projectId: 'project-2' },
+      { projectId: 'project-1' },
+    ]);
+
+    await expect(service.getTeamProjectIds(ctx)).resolves.toEqual([
+      'project-1',
+      'project-2',
+    ]);
+
+    expect(prisma.projectTeam.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: ctx.userId,
+        deletedAt: null,
+        project: { companyId: ctx.companyId, deletedAt: null },
+      },
+      select: { projectId: true },
     });
   });
 });

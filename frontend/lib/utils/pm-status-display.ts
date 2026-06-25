@@ -12,6 +12,7 @@ import type {
   RfiStatus,
   SubmittalStatus,
   TaskStatus,
+  MilestoneStatus,
 } from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import {
@@ -74,6 +75,19 @@ export function taskStatusVariant(status: TaskStatus): StatusBadgeVariant {
     COMPLETED: 'success',
   };
   return variants[status];
+}
+
+export function milestoneStatusVariant(
+  status: MilestoneStatus | string,
+): StatusBadgeVariant {
+  const variants: Record<string, StatusBadgeVariant> = {
+    PLANNED: 'default',
+    IN_PROGRESS: 'info',
+    AT_RISK: 'warning',
+    DELAYED: 'error',
+    COMPLETED: 'success',
+  };
+  return variants[status] ?? 'default';
 }
 
 export function rfiStatusVariant(status: RfiStatus): StatusBadgeVariant {

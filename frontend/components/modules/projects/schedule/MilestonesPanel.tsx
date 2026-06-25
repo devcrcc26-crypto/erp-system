@@ -2,13 +2,14 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
   Drawer,
   Form,
   Input,
+  Select,
   Tag,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -17,7 +18,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import type { Milestone } from '@/lib/api/project-management.types';
+import type { Milestone, MilestoneStatus } from '@/lib/api/project-management.types';
 import {
   useCreateMilestone,
   useDeleteMilestone,
@@ -28,12 +29,17 @@ import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  formatMilestoneStatus,
+  MILESTONE_STATUS_OPTIONS,
+} from '@/lib/utils/milestone-status';
+import { milestoneStatusVariant } from '@/lib/utils/pm-status-display';
 
 interface MilestoneFormValues {
   name: string;
   plannedDate?: Dayjs;
   actualDate?: Dayjs;
-  status?: string;
+  status?: MilestoneStatus;
 }
 
 function MilestoneFormDrawer({
@@ -75,14 +81,31 @@ function MilestoneFormDrawer({
     }
 
     form.resetFields();
+    form.setFieldsValue({ status: 'PLANNED' });
   }, [open, milestone, form]);
+
+  const statusOptions = useMemo(() => {
+    if (
+      milestone?.status &&
+      !MILESTONE_STATUS_OPTIONS.some((option) => option.value === milestone.status)
+    ) {
+      return [
+        ...MILESTONE_STATUS_OPTIONS,
+        {
+          value: milestone.status as MilestoneStatus,
+          label: formatMilestoneStatus(milestone.status),
+        },
+      ];
+    }
+    return MILESTONE_STATUS_OPTIONS;
+  }, [milestone?.status]);
 
   async function handleSubmit(values: MilestoneFormValues): Promise<void> {
     const body = {
       name: values.name.trim(),
       plannedDate: values.plannedDate?.toISOString(),
       actualDate: values.actualDate?.toISOString(),
-      status: values.status?.trim() || undefined,
+      status: values.status ?? 'PLANNED',
     };
 
     try {
@@ -135,8 +158,8 @@ function MilestoneFormDrawer({
         <Form.Item label="Actual date" name="actualDate">
           <DatePicker className="w-full" />
         </Form.Item>
-        <Form.Item label="Status" name="status">
-          <Input placeholder="e.g. On track" />
+        <Form.Item label="Status" name="status" initialValue="PLANNED">
+          <Select options={statusOptions} placeholder="Select status" />
         </Form.Item>
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
@@ -205,7 +228,12 @@ export default function MilestonesPanel({
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => <StatusBadge label={status} variant="default" />,
+      render: (status: MilestoneStatus) => (
+        <StatusBadge
+          label={formatMilestoneStatus(status)}
+          variant={milestoneStatusVariant(status)}
+        />
+      ),
     },
     {
       title: '',

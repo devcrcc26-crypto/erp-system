@@ -204,10 +204,17 @@ export interface Milestone {
   name: string;
   plannedDate: string | null;
   actualDate: string | null;
-  status: string;
+  status: MilestoneStatus;
   createdAt: string;
   updatedAt: string;
 }
+
+export type MilestoneStatus =
+  | 'PLANNED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'DELAYED'
+  | 'AT_RISK';
 
 export interface Task {
   id: string;
@@ -726,7 +733,7 @@ export interface CreateMilestoneRequest {
   name: string;
   plannedDate?: string;
   actualDate?: string;
-  status?: string;
+  status?: MilestoneStatus;
 }
 
 export type UpdateMilestoneRequest = Partial<CreateMilestoneRequest>;
