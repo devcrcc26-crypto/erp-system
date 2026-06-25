@@ -1,0 +1,230 @@
+import { BadRequestException } from '@nestjs/common';
+import { MilestoneStatus, Task, TaskStatus } from '@prisma/client';
+import { PrismaService } from '../../../../../shared/prisma/prisma.service';
+import { DocumentNumberService } from '../document-number.service';
+import { ScheduleService } from '../schedule.service';
+import { PmContext } from '../../types/pm-context.type';
+import { ProjectScopeService } from '../project-scope.service';
+
+describe('ScheduleService', () => {
+  const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
+  const dispatcherUserId = 'dispatcher-1';
+  const projectId = 'project-1';
+  const taskId = 'task-1';
+  function buildTask(status: TaskStatus): Task {
+    return {
+      id: taskId,
+      projectId,
+      milestoneId: null,
+      parentTaskId: null,
+      dispatcherUserId,
+      taskIdCode: 'TASK-00001',
+      name: 'Foundation work',
+      description: null,
+      startDate: null,
+      finishDate: null,
+      durationDays: null,
+      progressPct: 0,
+      status,
+      isCritical: false,
+      commissioningMethod: null,
+      requiresArchiving: false,
+      taskAttributes: null,
+      onSiteReceivingTime: null,
+      assignmentToHqTime: null,
+      contactFormNumber: null,
+      designStage: null,
+      urgencyLevel: 'NORMAL',
+      hasCustomSchedule: false,
+      language: 'ENGLISH',
+      approvalLevel: null,
+      actualCompletionTime: null,
+      actualWorkdays: null,
+      completionStatus: null,
+      remark: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      createdBy: ctx.userId,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedBy: ctx.userId,
+      deletedAt: null,
+      deletedBy: null,
+    } as unknown as Task;
+  }
+
+  let prisma: {
+    milestone: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
+    task: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
+    taskDependency: { create: jest.Mock };
+    projectTeam: { count: jest.Mock };
+  };
+  let projectScopeService: { getProjectOrThrow: jest.Mock };
+  let service: ScheduleService;
+
+  beforeEach(() => {
+    prisma = {
+      milestone: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+      task: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      taskDependency: {
+        create: jest.fn(),
+      },
+      projectTeam: {
+        count: jest.fn(),
+      },
+    };
+
+    projectScopeService = {
+      getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+    };
+
+    service = new ScheduleService(
+      prisma as unknown as PrismaService,
+      projectScopeService as unknown as ProjectScopeService,
+      {} as never,
+      {
+        getNextNumber: jest.fn().mockResolvedValue('TASK-00001'),
+      } as unknown as DocumentNumberService,
+      {} as never,
+    );
+  });
+
+  describe('createTask', () => {
+    it('validates dispatcherUserId is on the project team', async () => {
+      prisma.projectTeam.count.mockResolvedValue(0);
+
+      await expect(
+        service.createTask(ctx, projectId, {
+          name: 'Foundation work',
+          dispatcherUserId,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException('One or more users are not on the project team'),
+      );
+
+      expect(prisma.task.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateTask', () => {
+    function mockTaskWithStatus(status: TaskStatus): void {
+      prisma.task.findFirst.mockImplementation(
+        (args: { select?: { status?: boolean } }) => {
+          if (args?.select?.status) {
+            return Promise.resolve({ status });
+          }
+          return Promise.resolve({ id: taskId });
+        },
+      );
+      prisma.projectTeam.count.mockResolvedValue(1);
+    }
+
+    it.each([
+      ['NOT_STARTED', 'IN_PROGRESS'],
+      ['IN_PROGRESS', 'COMPLETED'],
+      ['DELAYED', 'IN_PROGRESS'],
+    ] as const)(
+      'allows %s to %s transition',
+      async (fromStatus, toStatus) => {
+        mockTaskWithStatus(fromStatus);
+        prisma.task.update.mockResolvedValue(buildTask(toStatus));
+
+        const result = await service.updateTask(ctx, projectId, taskId, {
+          status: toStatus,
+        });
+
+        expect(prisma.task.update).toHaveBeenCalled();
+        expect(result.status).toBe(toStatus);
+      },
+    );
+
+    it('blocks DELAYED to COMPLETED transition', async () => {
+      mockTaskWithStatus(TaskStatus.DELAYED);
+
+      await expect(
+        service.updateTask(ctx, projectId, taskId, {
+          status: TaskStatus.COMPLETED,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid task status transition from DELAYED to COMPLETED.',
+        ),
+      );
+
+      expect(prisma.task.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createTaskDependency', () => {
+    it.todo('detects dependency cycles once FIX I6 is applied');
+  });
+
+  describe('updateMilestone', () => {
+    it('blocks ACHIEVED to IN_PROGRESS transition', async () => {
+      prisma.milestone.findFirst.mockResolvedValue({
+        id: 'milestone-1',
+        projectId,
+        name: 'Structural complete',
+        plannedDate: new Date('2026-09-01'),
+        actualDate: new Date('2026-09-01'),
+        status: MilestoneStatus.ACHIEVED,
+        createdAt: new Date('2026-06-01T00:00:00.000Z'),
+        createdBy: ctx.userId,
+        updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+        updatedBy: ctx.userId,
+        deletedAt: null,
+        deletedBy: null,
+      });
+
+      await expect(
+        service.updateMilestone(ctx, projectId, 'milestone-1', {
+          status: MilestoneStatus.IN_PROGRESS,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid milestone status transition from ACHIEVED to IN_PROGRESS.',
+        ),
+      );
+
+      expect(prisma.milestone.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createMilestone', () => {
+    it('creates milestone with PLANNED status', async () => {
+      prisma.milestone.create.mockResolvedValue({
+        id: 'milestone-1',
+        projectId,
+        name: 'Structural complete',
+        plannedDate: new Date('2026-09-01'),
+        actualDate: null,
+        status: MilestoneStatus.PLANNED,
+        createdAt: new Date('2026-06-01T00:00:00.000Z'),
+        createdBy: ctx.userId,
+        updatedAt: new Date('2026-06-01T00:00:00.000Z'),
+        updatedBy: ctx.userId,
+        deletedAt: null,
+        deletedBy: null,
+      });
+
+      const result = await service.createMilestone(ctx, projectId, {
+        name: 'Structural complete',
+        plannedDate: '2026-09-01',
+      });
+
+      expect(prisma.milestone.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectId,
+          status: MilestoneStatus.PLANNED,
+        }),
+      });
+      expect(result.status).toBe('PLANNED');
+    });
+  });
+});

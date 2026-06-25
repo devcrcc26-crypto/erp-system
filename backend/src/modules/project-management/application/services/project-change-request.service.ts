@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -30,6 +31,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
+import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const CHANGE_REQUEST_SORT_FIELDS = new Set([
@@ -40,6 +42,11 @@ const CHANGE_REQUEST_SORT_FIELDS = new Set([
   'status',
 ]);
 
+const CHANGE_REQUEST_APPROVABLE_STATUSES = new Set<string>([
+  ProjectChangeRequestStatus.SUBMITTED,
+  'UNDER_REVIEW',
+]);
+
 /**
  * Manages project change requests — manual CRUD and external trigger drafts.
  */
@@ -48,6 +55,7 @@ export class ProjectChangeRequestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly documentNumberService: DocumentNumberService,
   ) {}
 
   /**
@@ -104,7 +112,9 @@ export class ProjectChangeRequestService {
   ): Promise<MappedProjectChangeRequest> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const changeNumber = await this.generateChangeNumber(ctx);
+    const changeNumber = await this.documentNumberService.nextChangeRequestNumber(
+      ctx.companyId,
+    );
 
     const row = await this.prisma.projectChangeRequest.create({
       data: {
@@ -164,9 +174,7 @@ export class ProjectChangeRequestService {
       changeRequestId,
     );
 
-    if (existing.status === ProjectChangeRequestStatus.APPROVED) {
-      return mapProjectChangeRequest(existing);
-    }
+    this.assertChangeRequestApprovable(existing.status);
 
     const row = await this.prisma.projectChangeRequest.update({
       where: { id: changeRequestId },
@@ -194,6 +202,8 @@ export class ProjectChangeRequestService {
       projectId,
       changeRequestId,
     );
+
+    this.assertChangeRequestRejectable(existing.status);
 
     const rejectionNote = `Rejection reason: ${dto.reason.trim()}`;
     const description = existing.description
@@ -325,10 +335,44 @@ export class ProjectChangeRequestService {
     return row;
   }
 
-  private async generateChangeNumber(ctx: PmContext): Promise<string> {
-    const count = await this.prisma.projectChangeRequest.count({
-      where: activeOnly({ companyId: ctx.companyId }),
-    });
-    return `CR-${String(count + 1).padStart(5, '0')}`;
+  private assertChangeRequestApprovable(status: ProjectChangeRequestStatus): void {
+    const currentStatus = status as string;
+
+    if (currentStatus === ProjectChangeRequestStatus.APPROVED) {
+      throw new ConflictException('Change request is already approved.');
+    }
+    if (currentStatus === ProjectChangeRequestStatus.REJECTED) {
+      throw new ConflictException(
+        'A rejected change request cannot be approved. Create a new one.',
+      );
+    }
+    if (currentStatus === 'CANCELLED') {
+      throw new ConflictException(
+        'A cancelled change request cannot be approved.',
+      );
+    }
+    if (!CHANGE_REQUEST_APPROVABLE_STATUSES.has(currentStatus)) {
+      throw new ConflictException(
+        'Only submitted or under-review change requests can be approved.',
+      );
+    }
+  }
+
+  private assertChangeRequestRejectable(status: ProjectChangeRequestStatus): void {
+    const currentStatus = status as string;
+
+    if (currentStatus === ProjectChangeRequestStatus.APPROVED) {
+      throw new ConflictException(
+        'An approved change request cannot be rejected.',
+      );
+    }
+    if (currentStatus === ProjectChangeRequestStatus.REJECTED) {
+      throw new ConflictException('Change request is already rejected.');
+    }
+    if (currentStatus === 'CANCELLED') {
+      throw new ConflictException(
+        'Cannot reject a cancelled change request.',
+      );
+    }
   }
 }

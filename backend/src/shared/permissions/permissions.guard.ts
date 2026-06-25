@@ -34,7 +34,9 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!required) {
-      return true;
+      throw new ForbiddenException(
+        'This endpoint requires explicit permission declaration.',
+      );
     }
 
     const request = context.switchToHttp().getRequest<Request>();

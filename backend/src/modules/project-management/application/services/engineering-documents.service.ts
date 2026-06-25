@@ -111,6 +111,12 @@ export class EngineeringDocumentsService {
       taskDisciplineId,
     );
 
+    if (!dto.documentNumber?.trim()) {
+      throw new BadRequestException(
+        'Document number is required for engineering documents.',
+      );
+    }
+
     await this.folderService.ensureDisciplineFolder(
       ctx,
       projectId,
@@ -132,7 +138,7 @@ export class EngineeringDocumentsService {
       company: { connect: { id: ctx.companyId } },
       taskDiscipline: { connect: { id: taskDisciplineId } },
       documentType: dto.documentType,
-      documentNumber: dto.documentNumber,
+      documentNumber: dto.documentNumber.trim(),
       title: dto.title,
       metadata,
       createdBy: ctx.userId,

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MilestoneStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -58,6 +59,16 @@ const TASK_SORT_FIELDS = new Set([
   'status',
 ]);
 
+const MILESTONE_STATUS_TRANSITIONS: Record<
+  MilestoneStatus,
+  MilestoneStatus[]
+> = {
+  PLANNED: [MilestoneStatus.IN_PROGRESS, MilestoneStatus.MISSED],
+  IN_PROGRESS: [MilestoneStatus.ACHIEVED, MilestoneStatus.MISSED],
+  ACHIEVED: [],
+  MISSED: [MilestoneStatus.IN_PROGRESS],
+};
+
 @Injectable()
 export class ScheduleService {
   constructor(
@@ -100,6 +111,26 @@ export class ScheduleService {
   }
 
   /**
+   * Returns a single project milestone by id.
+   */
+  async getMilestoneById(
+    ctx: PmContext,
+    projectId: string,
+    milestoneId: string,
+  ): Promise<MappedMilestone> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const milestone = await this.prisma.milestone.findFirst({
+      where: activeOnly({ id: milestoneId, projectId }),
+    });
+    if (!milestone) {
+      throw new NotFoundException('Milestone not found');
+    }
+
+    return mapMilestone(milestone);
+  }
+
+  /**
    * Creates a milestone on a project schedule.
    */
   async createMilestone(
@@ -115,7 +146,8 @@ export class ScheduleService {
         name: dto.name,
         plannedDate: parseOptionalDate(dto.plannedDate),
         actualDate: parseOptionalDate(dto.actualDate),
-        status: dto.status ?? 'PLANNED',
+        status:
+          (dto.status as MilestoneStatus | undefined) ?? MilestoneStatus.PLANNED,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -133,7 +165,16 @@ export class ScheduleService {
     milestoneId: string,
     dto: UpdateMilestoneDto,
   ): Promise<MappedMilestone> {
-    await this.getMilestoneOrThrow(projectId, milestoneId);
+    const existing = await this.getMilestoneOrThrow(projectId, milestoneId);
+
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      const allowed = MILESTONE_STATUS_TRANSITIONS[existing.status];
+      if (!allowed.includes(dto.status as MilestoneStatus)) {
+        throw new BadRequestException(
+          `Invalid milestone status transition from ${existing.status} to ${dto.status}.`,
+        );
+      }
+    }
 
     const milestone = await this.prisma.milestone.update({
       where: { id: milestoneId },
@@ -141,7 +182,7 @@ export class ScheduleService {
         name: dto.name,
         plannedDate: parseOptionalDate(dto.plannedDate),
         actualDate: parseOptionalDate(dto.actualDate),
-        status: dto.status,
+        status: dto.status as MilestoneStatus | undefined,
         updatedBy: ctx.userId,
       },
     });
@@ -193,6 +234,26 @@ export class ScheduleService {
       query.page,
       query.limit,
     );
+  }
+
+  /**
+   * Returns a single project task by id.
+   */
+  async getTaskById(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+  ): Promise<MappedTask> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const task = await this.prisma.task.findFirst({
+      where: activeOnly({ id: taskId, projectId }),
+    });
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    return mapTask(task);
   }
 
   /**
@@ -686,10 +747,10 @@ export class ScheduleService {
   private async getMilestoneOrThrow(
     projectId: string,
     milestoneId: string,
-  ): Promise<{ id: string }> {
+  ): Promise<{ id: string; status: MilestoneStatus }> {
     const milestone = await this.prisma.milestone.findFirst({
       where: activeOnly({ id: milestoneId, projectId }),
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!milestone) {
       throw new NotFoundException('Milestone not found');

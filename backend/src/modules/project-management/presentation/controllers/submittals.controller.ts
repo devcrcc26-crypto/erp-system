@@ -170,7 +170,7 @@ export class SubmittalsController {
   }
 
   @Post(':id/reviews')
-  @RequirePermission('submittals', 'view')
+  @RequirePermission('submittals', 'edit')
   @ApiOperation({ summary: 'Add submittal review (assigned discipline lead)' })
   addReview(
     @CurrentUser() user: AuthenticatedUser,

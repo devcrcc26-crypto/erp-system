@@ -205,6 +205,8 @@ const workflowBullProcessors = redisEnabled
     RisksService,
     PunchItemsService,
     CloseoutService,
+    ProjectChangeRequestService,
+    DeliverableService,
   ],
 })
 export class ProjectManagementModule {}

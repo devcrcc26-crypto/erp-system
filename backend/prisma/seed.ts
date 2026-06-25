@@ -165,6 +165,36 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'closeout', action: 'create', description: 'Initialize closeout' },
   { module: 'closeout', action: 'edit', description: 'Edit closeout' },
   { module: 'closeout', action: 'delete', description: 'Delete closeout' },
+
+  { module: 'change_requests', action: 'view', description: 'View change requests' },
+  { module: 'change_requests', action: 'create', description: 'Create change requests' },
+  { module: 'change_requests', action: 'edit', description: 'Edit change requests' },
+  { module: 'change_requests', action: 'delete', description: 'Delete change requests' },
+
+  { module: 'deliverables', action: 'view', description: 'View deliverables' },
+  { module: 'deliverables', action: 'create', description: 'Create deliverables' },
+  { module: 'deliverables', action: 'edit', description: 'Edit deliverables' },
+  { module: 'deliverables', action: 'delete', description: 'Delete deliverables' },
+
+  { module: 'engineering_documents', action: 'view', description: 'View engineering documents' },
+  { module: 'engineering_documents', action: 'create', description: 'Create engineering documents' },
+  { module: 'engineering_documents', action: 'edit', description: 'Edit engineering documents' },
+  { module: 'engineering_documents', action: 'delete', description: 'Delete engineering documents' },
+  { module: 'engineering_documents', action: 'approve', description: 'Lock engineering documents' },
+
+  { module: 'design_packages', action: 'view', description: 'View design packages' },
+  { module: 'design_packages', action: 'create', description: 'Create design packages' },
+  { module: 'design_packages', action: 'edit', description: 'Edit design packages' },
+  { module: 'design_packages', action: 'delete', description: 'Delete design packages' },
+
+  { module: 'review_sessions', action: 'view', description: 'View review sessions' },
+  { module: 'review_sessions', action: 'create', description: 'Create review sessions' },
+  { module: 'review_sessions', action: 'approve', description: 'Approve review sessions' },
+
+  { module: 'review_comments', action: 'view', description: 'View review comments' },
+  { module: 'review_comments', action: 'create', description: 'Create review comments' },
+  { module: 'review_comments', action: 'edit', description: 'Edit review comments' },
+  { module: 'review_comments', action: 'delete', description: 'Delete review comments' },
 ];
 
 const ACTION_TO_FLAG: Record<string, keyof PermissionFlags> = {
@@ -263,7 +293,38 @@ const PM_MODULES = [
   'issues',
   'punch_items',
   'closeout',
+  'change_requests',
+  'deliverables',
+  'engineering_documents',
+  'design_packages',
+  'review_sessions',
+  'review_comments',
 ] as const;
+
+const EXTENDED_PM_MODULES = [
+  'change_requests',
+  'deliverables',
+  'engineering_documents',
+  'design_packages',
+  'review_sessions',
+  'review_comments',
+] as const;
+
+const REVIEW_TIER_ROLES = new Set([
+  'Discipline Owner',
+  'Reviewer',
+  'Discipline Lead',
+  'Department Chief',
+  'Institute Chief',
+  'Deputy Chief',
+]);
+
+const CHIEF_ROLES = new Set([
+  'Department Chief',
+  'Institute Chief',
+  'Deputy Chief',
+  'Discipline Lead',
+]);
 
 function documentsPermissionFlags(
   roleName: string,
@@ -318,6 +379,105 @@ function documentsPermissionFlags(
   return null;
 }
 
+function extendedPmModulePermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (!EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])) {
+    return null;
+  }
+
+  const flag = ACTION_TO_FLAG[action];
+  if (!flag) {
+    return null;
+  }
+
+  if (module === 'change_requests') {
+    if (roleName === 'Project Manager' || roleName === 'Managing Director') {
+      return fullPermissionFlags();
+    }
+    if (roleName === 'Site Engineer') {
+      if (isElevatedPermissionAction(action)) {
+        return null;
+      }
+      return singleActionFlags(action);
+    }
+    return null;
+  }
+
+  if (module === 'deliverables') {
+    if (roleName === 'Project Manager') {
+      return fullPermissionFlags();
+    }
+    if (roleName === 'Site Engineer' || roleName === 'Designer') {
+      if (isElevatedPermissionAction(action)) {
+        return null;
+      }
+      return singleActionFlags(action);
+    }
+    return null;
+  }
+
+  if (module === 'engineering_documents') {
+    const epcViewRoles = new Set<string>([...EPC_WORKFLOW_ROLES, 'Institute Chief']);
+
+    if (roleName === 'Designer') {
+      if (action === 'view' || action === 'create' || action === 'edit') {
+        return singleActionFlags(action);
+      }
+      return null;
+    }
+    if (CHIEF_ROLES.has(roleName) && action === 'approve') {
+      return singleActionFlags(action);
+    }
+    if (epcViewRoles.has(roleName) && action === 'view') {
+      return viewOnlyFlags();
+    }
+    return null;
+  }
+
+  if (module === 'design_packages') {
+    if (roleName === 'Project Manager') {
+      return fullPermissionFlags();
+    }
+    if (roleName === 'Designer') {
+      if (action === 'view' || action === 'create' || action === 'edit') {
+        return singleActionFlags(action);
+      }
+      return null;
+    }
+    return null;
+  }
+
+  if (module === 'review_sessions') {
+    if (roleName === 'Project Manager') {
+      if (action === 'view' || action === 'create') {
+        return singleActionFlags(action);
+      }
+      return null;
+    }
+    if (REVIEW_TIER_ROLES.has(roleName) && action === 'approve') {
+      return singleActionFlags(action);
+    }
+    return null;
+  }
+
+  if (module === 'review_comments') {
+    if (roleName === 'Project Manager' && action === 'view') {
+      return viewOnlyFlags();
+    }
+    if (REVIEW_TIER_ROLES.has(roleName)) {
+      if (action === 'view' || action === 'create' || action === 'edit') {
+        return singleActionFlags(action);
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
+
 function pmPermissionFlags(
   roleName: string,
   module: string,
@@ -325,6 +485,10 @@ function pmPermissionFlags(
 ): PermissionFlags | null {
   if (module === 'documents') {
     return documentsPermissionFlags(roleName, action);
+  }
+
+  if (EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])) {
+    return extendedPmModulePermissionFlags(roleName, module, action);
   }
 
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
@@ -387,6 +551,10 @@ function designWorkflowRolePermissionFlags(
 ): PermissionFlags | null {
   if (module === 'documents') {
     return documentsPermissionFlags(roleName, action);
+  }
+
+  if (EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])) {
+    return extendedPmModulePermissionFlags(roleName, module, action);
   }
 
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
@@ -469,6 +637,10 @@ function epcWorkflowPermissionFlags(
 ): PermissionFlags | null {
   if (module === 'documents') {
     return documentsPermissionFlags(roleName, action);
+  }
+
+  if (EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])) {
+    return extendedPmModulePermissionFlags(roleName, module, action);
   }
 
   if (!PM_MODULES.includes(module as (typeof PM_MODULES)[number])) {
@@ -633,6 +805,45 @@ async function createPostgresSequence(sequenceName: string): Promise<void> {
   );
 }
 
+/**
+ * Upserts a role permission row keyed by (roleId, permissionId).
+ */
+async function upsertRolePermission(
+  roleId: string,
+  permissionId: string,
+  flags: PermissionFlags,
+): Promise<void> {
+  await prisma.rolePermission.upsert({
+    where: {
+      roleId_permissionId: {
+        roleId,
+        permissionId,
+      },
+    },
+    update: flags,
+    create: {
+      roleId,
+      permissionId,
+      ...flags,
+      createdBy: SYSTEM_USER_ID,
+      updatedBy: SYSTEM_USER_ID,
+    },
+  });
+}
+
+/**
+ * Removes legacy duplicate role_permission rows before idempotent re-seeding.
+ */
+async function deduplicateRolePermissions(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    DELETE FROM "role_permission" AS rp1
+    USING "role_permission" AS rp2
+    WHERE rp1.id > rp2.id
+      AND rp1.role_id = rp2.role_id
+      AND rp1.permission_id = rp2.permission_id
+  `);
+}
+
 async function main(): Promise<void> {
   const adminEmail =
     process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
@@ -702,46 +913,18 @@ async function main(): Promise<void> {
   }
 
   // ── Role permissions ─────────────────────────────────────────────────────
+  await deduplicateRolePermissions();
+
   for (const permission of permissions) {
     const adminFlags = fullPermissionFlags();
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: adminRoleId,
-          permissionId: permission.id,
-        },
-      },
-      update: adminFlags,
-      create: {
-        roleId: adminRoleId,
-        permissionId: permission.id,
-        ...adminFlags,
-        createdBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
-      },
-    });
+    await upsertRolePermission(adminRoleId, permission.id, adminFlags);
 
     const employeeFlags = employeePermissionFlags(
       permission.module,
       permission.action,
     );
     if (employeeFlags) {
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: employeeRoleId,
-            permissionId: permission.id,
-          },
-        },
-        update: employeeFlags,
-        create: {
-          roleId: employeeRoleId,
-          permissionId: permission.id,
-          ...employeeFlags,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      });
+      await upsertRolePermission(employeeRoleId, permission.id, employeeFlags);
     }
   }
 
@@ -765,28 +948,11 @@ async function main(): Promise<void> {
       if (!flags) {
         continue;
       }
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId,
-            permissionId: permission.id,
-          },
-        },
-        update: flags,
-        create: {
-          roleId,
-          permissionId: permission.id,
-          ...flags,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      });
+      await upsertRolePermission(roleId, permission.id, flags);
     }
   }
 
   const reportsOnlyRoleNames = [
-    'General Manager',
-    'Project Director',
     'Finance Manager',
     'Accountant',
   ] as const;
@@ -805,22 +971,7 @@ async function main(): Promise<void> {
       if (!flags) {
         continue;
       }
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId,
-            permissionId: permission.id,
-          },
-        },
-        update: flags,
-        create: {
-          roleId,
-          permissionId: permission.id,
-          ...flags,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      });
+      await upsertRolePermission(roleId, permission.id, flags);
     }
   }
 
@@ -830,30 +981,21 @@ async function main(): Promise<void> {
       continue;
     }
     for (const permission of permissions) {
-      const flags = designWorkflowRolePermissionFlags(
-        roleName,
-        permission.module,
-        permission.action,
-      );
+      const flags =
+        designWorkflowRolePermissionFlags(
+          roleName,
+          permission.module,
+          permission.action,
+        ) ??
+        reportsPermissionFlags(
+          roleName,
+          permission.module,
+          permission.action,
+        );
       if (!flags) {
         continue;
       }
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId,
-            permissionId: permission.id,
-          },
-        },
-        update: flags,
-        create: {
-          roleId,
-          permissionId: permission.id,
-          ...flags,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      });
+      await upsertRolePermission(roleId, permission.id, flags);
     }
   }
 
@@ -871,22 +1013,27 @@ async function main(): Promise<void> {
       if (!flags) {
         continue;
       }
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId,
-            permissionId: permission.id,
-          },
-        },
-        update: flags,
-        create: {
-          roleId,
-          permissionId: permission.id,
-          ...flags,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      });
+      await upsertRolePermission(roleId, permission.id, flags);
+    }
+  }
+
+  const extendedPmOnlyRoleNames = ['Institute Chief'] as const;
+
+  for (const roleName of extendedPmOnlyRoleNames) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      continue;
+    }
+    for (const permission of permissions) {
+      const flags = extendedPmModulePermissionFlags(
+        roleName,
+        permission.module,
+        permission.action,
+      );
+      if (!flags) {
+        continue;
+      }
+      await upsertRolePermission(roleId, permission.id, flags);
     }
   }
 
@@ -899,22 +1046,7 @@ async function main(): Promise<void> {
     if (permission.action !== 'view') {
       continue;
     }
-    await prisma.rolePermission.upsert({
-      where: {
-        roleId_permissionId: {
-          roleId: employeeRoleId,
-          permissionId: permission.id,
-        },
-      },
-      update: employeePmViewFlags,
-      create: {
-        roleId: employeeRoleId,
-        permissionId: permission.id,
-        ...employeePmViewFlags,
-        createdBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
-      },
-    });
+    await upsertRolePermission(employeeRoleId, permission.id, employeePmViewFlags);
   }
 
   // ── Organisation bootstrap ─────────────────────────────────────────────
@@ -1170,6 +1302,10 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  await createPostgresSequence('change_request_number_seq');
+  await createPostgresSequence('risk_number_seq');
+  await createPostgresSequence('deliverable_number_seq');
 
   // ── System document folder ───────────────────────────────────────────────
   await prisma.documentFolder.upsert({

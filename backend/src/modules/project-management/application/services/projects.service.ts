@@ -387,14 +387,26 @@ export class ProjectsService {
 
       for (const userId of uniqueUserIds) {
         if (!rowsByUserId.has(userId)) {
-          await tx.projectTeam.create({
-            data: {
-              projectId,
-              userId,
-              createdBy: ctx.userId,
-              updatedBy: ctx.userId,
-            },
-          });
+          try {
+            await tx.projectTeam.create({
+              data: {
+                projectId,
+                userId,
+                createdBy: ctx.userId,
+                updatedBy: ctx.userId,
+              },
+            });
+          } catch (error: unknown) {
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2002'
+            ) {
+              throw new ConflictException(
+                'User is already a member of this project.',
+              );
+            }
+            throw error;
+          }
         }
       }
     });

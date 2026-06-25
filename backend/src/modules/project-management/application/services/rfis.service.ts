@@ -5,7 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, RfiStatus } from '@prisma/client';
+import { FolderContextType, Prisma, RfiStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -78,9 +79,15 @@ export class RfisService {
       this.prisma.rfi.count({ where }),
     ]);
 
-    const data = await Promise.all(
-      rows.map((row) => this.enrichRfi(ctx, row)),
+    const folderIds = await this.resolveRfiAttachmentFolderIds(
+      ctx,
+      projectId,
+      rows,
     );
+    const data = rows.map((row) => ({
+      ...mapRfi(row),
+      attachmentFolderId: folderIds.get(row.id) ?? null,
+    }));
 
     return buildPaginatedResult(data, total, query.page, query.limit);
   }
@@ -364,6 +371,98 @@ export class RfisService {
       ...mapRfi(rfi),
       attachmentFolderId,
     };
+  }
+
+  /**
+   * Resolves attachment folder ids for a batch of RFIs using at most two
+   * document-folder queries (lookup + optional createMany).
+   */
+  private async resolveRfiAttachmentFolderIds(
+    ctx: PmContext,
+    projectId: string,
+    rfis: Array<{ id: string; rfiNumber: string }>,
+  ): Promise<Map<string, string>> {
+    const folderIds = new Map<string, string>();
+    if (rfis.length === 0) {
+      return folderIds;
+    }
+
+    try {
+      const rfiIds = rfis.map((rfi) => rfi.id);
+      const existingFolders = await this.prisma.documentFolder.findMany({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          contextType: FolderContextType.RFI,
+          contextId: { in: rfiIds },
+        }),
+        select: { id: true, contextId: true },
+      });
+
+      for (const folder of existingFolders) {
+        if (folder.contextId) {
+          folderIds.set(folder.contextId, folder.id);
+        }
+      }
+
+      const missingRfis = rfis.filter((rfi) => !folderIds.has(rfi.id));
+      if (missingRfis.length === 0) {
+        return folderIds;
+      }
+
+      const project = await this.prisma.project.findFirst({
+        where: activeOnly({ id: projectId, companyId: ctx.companyId }),
+        select: { id: true, projectCode: true, name: true },
+      });
+      if (!project) {
+        return folderIds;
+      }
+
+      const projectFolder =
+        await this.engineeringDocumentFolderService.ensureProjectFolder(
+          ctx,
+          project.id,
+          project.projectCode,
+          project.name,
+        );
+
+      const createRows = missingRfis.map((rfi) => {
+        const folderId = randomUUID();
+        const segment = this.toFolderSegment(rfi.rfiNumber);
+        folderIds.set(rfi.id, folderId);
+        return {
+          id: folderId,
+          companyId: ctx.companyId,
+          parentId: projectFolder.id,
+          name: segment,
+          path: `${projectFolder.path}/rfis/${segment}`,
+          contextType: FolderContextType.RFI,
+          contextId: rfi.id,
+          isSystem: true,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        };
+      });
+
+      await this.prisma.documentFolder.createMany({
+        data: createRows,
+        skipDuplicates: true,
+      });
+    } catch (error) {
+      this.logger.warn(
+        'RFI attachment folders could not be resolved for list',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return folderIds;
+  }
+
+  private toFolderSegment(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 'untitled';
+    }
+    return trimmed.replace(/[/\\]+/g, '-');
   }
 
   private async assertRfiVisible(

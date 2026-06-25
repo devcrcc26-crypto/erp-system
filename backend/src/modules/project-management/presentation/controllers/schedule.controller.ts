@@ -49,6 +49,21 @@ export class ScheduleController {
     return this.scheduleService.listMilestones(this.ctx(user), projectId, query);
   }
 
+  @Get('milestones/:milestoneId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get project milestone by id' })
+  getMilestone(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('milestoneId') milestoneId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.getMilestoneById(
+      this.ctx(user),
+      projectId,
+      milestoneId,
+    );
+  }
+
   @Post('milestones')
   @RequirePermission('schedule', 'create')
   @ApiOperation({ summary: 'Create project milestone' })
@@ -98,6 +113,17 @@ export class ScheduleController {
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {
     return this.scheduleService.listTasks(this.ctx(user), projectId, query);
+  }
+
+  @Get('tasks/:taskId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get project task by id' })
+  getTask(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.getTaskById(this.ctx(user), projectId, taskId);
   }
 
   @Post('tasks')

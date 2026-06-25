@@ -487,6 +487,7 @@ erDiagram
   String id PK
   String project_id FK
   String user_id FK
+  String role_on_project "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -500,7 +501,7 @@ erDiagram
   String name
   DateTime planned_date "nullable"
   DateTime actual_date "nullable"
-  String status
+  MilestoneStatus status
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -575,7 +576,7 @@ erDiagram
   String company_id FK
   String task_discipline_id FK
   EngineeringDocumentType document_type
-  String document_number "nullable"
+  String document_number
   String title
   Json metadata
   DateTime created_at
@@ -1104,6 +1105,8 @@ erDiagram
   String created_by
   DateTime updated_at
   String updated_by
+  DateTime deleted_at "nullable"
+  String deleted_by "nullable"
 }
 "closeout_checklist_item" {
   String id PK
@@ -1117,6 +1120,8 @@ erDiagram
   String created_by
   DateTime updated_at
   String updated_by
+  DateTime deleted_at "nullable"
+  String deleted_by "nullable"
 }
 "warranty" {
   String id PK
@@ -1870,6 +1875,7 @@ Properties as follows:
 - `id`:
 - `project_id`:
 - `user_id`:
+- `role_on_project`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2604,6 +2610,8 @@ Properties as follows:
 - `created_by`:
 - `updated_at`:
 - `updated_by`:
+- `deleted_at`:
+- `deleted_by`:
 
 ### `closeout_checklist_item`
 
@@ -2620,6 +2628,8 @@ Properties as follows:
 - `created_by`:
 - `updated_at`:
 - `updated_by`:
+- `deleted_at`:
+- `deleted_by`:
 
 ### `warranty`
 

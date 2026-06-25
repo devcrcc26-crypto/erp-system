@@ -106,7 +106,7 @@ export class RfisController {
   }
 
   @Post(':rfiId/responses')
-  @RequirePermission('rfis', 'view')
+  @RequirePermission('rfis', 'edit')
   @ApiOperation({ summary: 'Add RFI response (assigned designer only)' })
   addResponse(
     @CurrentUser() user: AuthenticatedUser,

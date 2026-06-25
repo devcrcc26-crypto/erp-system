@@ -686,7 +686,13 @@ export type PmModuleKey =
   | 'risks'
   | 'issues'
   | 'punchItems'
-  | 'closeout';
+  | 'closeout'
+  | 'deliverables'
+  | 'change_requests'
+  | 'engineering_documents'
+  | 'design_packages'
+  | 'review_sessions'
+  | 'review_comments';
 
 export interface ModuleCapabilities {
   canView: boolean;
@@ -710,6 +716,12 @@ export const PM_MODULE_KEYS: PmModuleKey[] = [
   'issues',
   'punchItems',
   'closeout',
+  'deliverables',
+  'change_requests',
+  'engineering_documents',
+  'design_packages',
+  'review_sessions',
+  'review_comments',
 ];
 
 export const EMPTY_MODULE_CAPABILITIES: ModuleCapabilities = {

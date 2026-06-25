@@ -169,28 +169,21 @@ export class PermissionResolverService {
       granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     }
     if (schedule.canApprove) {
-      this.grantReviewGovernanceActions(granted);
+      this.grantReviewApprovalActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
       granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
-    }
-
-    // Review governance is enforced by discipline/session assignment layers.
-    // Anyone with schedule read access may attempt review actions; non-reviewers are denied downstream.
-    if (schedule.canView) {
-      this.grantReviewGovernanceActions(granted);
     }
 
     return granted;
   }
 
-  private grantReviewGovernanceActions(
+  private grantReviewApprovalActions(
     granted: Set<EpcWorkflowAction>,
   ): void {
     granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
-    granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
   }
 
   /**

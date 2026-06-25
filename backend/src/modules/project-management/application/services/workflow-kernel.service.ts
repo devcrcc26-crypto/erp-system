@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  Optional,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
@@ -94,7 +93,7 @@ export class WorkflowKernelService {
     private readonly submittalWorkflow: SubmittalWorkflowService,
     private readonly revisionOrchestrator: RevisionOrchestratorService,
     private readonly workflowTransactionRunner: WorkflowTransactionRunner,
-    @Optional() private readonly permissionService?: PermissionService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /**
@@ -222,12 +221,6 @@ export class WorkflowKernelService {
   }
 
   private async assertAdminReassignmentAllowed(ctx: PmContext): Promise<void> {
-    if (!this.permissionService) {
-      throw new ForbiddenException(
-        'Only System Administrator or Managing Director can reassign review sessions',
-      );
-    }
-
     const roleNames = await this.permissionService.getUserRoleNames(
       ctx.userId,
       ctx.companyId,

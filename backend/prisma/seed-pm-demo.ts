@@ -6,6 +6,7 @@ import {
   IssueStatus,
   MeetingStatus,
   MeetingType,
+  Prisma,
   PrismaClient,
   ProjectStatus,
   ProjectTeamRole,
@@ -20,7 +21,7 @@ import {
   TaskStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { cleanupEpcDemoData, seedEpcDemoData } from './seed-epc-demo';
+import { cleanupEpcDemoData, EPC_DEMO_PROJECT_CODES, seedEpcDemoData } from './seed-epc-demo';
 
 /** Deterministic UUID for PM demo records (project 1–9, entity 1–999). */
 function sid(project: number, entity: number): string {
@@ -323,26 +324,37 @@ export async function seedProjectBundle(
   const consultantUserId = '00000000-0000-4000-8000-00000000008a';
 
   const teamMembers = [
-    { entity: 2, userId: users.pmUserId, role: 'Project Manager' },
-    { entity: 3, userId: users.engineerUserId, role: 'Site Engineer' },
-    { entity: 4, userId: users.safetyUserId, role: 'Safety Officer' },
-    { entity: 5, userId: users.docsUserId, role: 'Document Controller' },
-    { entity: 6, userId: adminUserId, role: 'Client Representative' },
-    { entity: 7, userId: siteCoordUserId, role: 'Site Coordinator' },
-    { entity: 8, userId: consultantUserId, role: 'Client Consultant' },
+    { entity: 2, userId: users.pmUserId, roleOnProject: 'Project Manager' },
+    { entity: 3, userId: users.engineerUserId, roleOnProject: 'Site Engineer' },
+    { entity: 4, userId: users.safetyUserId, roleOnProject: 'Safety Officer' },
+    { entity: 5, userId: users.docsUserId, roleOnProject: 'Document Controller' },
+    { entity: 6, userId: adminUserId, roleOnProject: 'Client Representative' },
+    { entity: 7, userId: siteCoordUserId, roleOnProject: 'Site Coordinator' },
+    { entity: 8, userId: consultantUserId, roleOnProject: 'Client Consultant' },
   ];
 
   for (const member of teamMembers) {
+    const teamId = sid(p, member.entity);
+    const roleOnProject = mapProjectTeamRole(member.roleOnProject);
+
+    const createData = {
+      id: teamId,
+      projectId,
+      userId: member.userId,
+      roleOnProject,
+      createdBy: adminUserId,
+      updatedBy: adminUserId,
+    };
+
+    const updateData = {
+      roleOnProject,
+      updatedBy: adminUserId,
+    };
+
     await prisma.projectTeam.upsert({
-      where: { id: sid(p, member.entity) },
-      update: {},
-      create: {
-        id: sid(p, member.entity),
-        projectId,
-        userId: member.userId,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      },
+      where: { id: teamId },
+      update: updateData as Prisma.ProjectTeamUncheckedUpdateInput,
+      create: createData as Prisma.ProjectTeamUncheckedCreateInput,
     });
   }
 
@@ -390,19 +402,21 @@ export async function seedProjectBundle(
     });
   }
 
-  await prisma.documentVersion.upsert({
-    where: { id: sid(p, 14) },
-    update: {},
-    create: {
-      id: sid(p, 14),
-      documentId: sid(p, 11),
-      uploadedBy: adminUserId,
-      versionNumber: 2,
-      fileKey: `demo/${def.code}/Contract-Agreement-v2.pdf`,
-      fileSizeBytes: 262_000,
-      changeNote: 'Contract amendment - scope clarification',
-    },
-  });
+  if (!(EPC_DEMO_PROJECT_CODES as readonly string[]).includes(def.code)) {
+    await prisma.documentVersion.upsert({
+      where: { id: sid(p, 14) },
+      update: {},
+      create: {
+        id: sid(p, 14),
+        documentId: sid(p, 11),
+        uploadedBy: adminUserId,
+        versionNumber: 2,
+        fileKey: `demo/${def.code}/Contract-Agreement-v2.pdf`,
+        fileSizeBytes: 262_000,
+        changeNote: 'Contract amendment - scope clarification',
+      },
+    });
+  }
 
   // ── Schedule: milestones + tasks + dependency ────────────────────────────
   const milestone1Id = sid(p, 20);
@@ -428,7 +442,8 @@ export async function seedProjectBundle(
       projectId,
       name: 'Practical Completion',
       plannedDate: d(def.plannedFinishDate),
-      status: def.status === 'COMPLETED' ? 'COMPLETED' : 'PLANNED',
+      status:
+        def.status === 'COMPLETED' ? 'ACHIEVED' : 'PLANNED',
       actualDate: def.actualFinishDate ? d(def.actualFinishDate) : undefined,
       createdBy: adminUserId,
       updatedBy: adminUserId,

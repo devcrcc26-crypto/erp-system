@@ -3,6 +3,7 @@ import { DeliverableStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DeliverableService } from '../deliverable.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
+import { DocumentNumberService } from '../document-number.service';
 import { ProjectScopeService } from '../project-scope.service';
 import { PmContext } from '../../types/pm-context.type';
 
@@ -40,6 +41,9 @@ describe('DeliverableService', () => {
       {
         getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
       } as unknown as ProjectScopeService,
+      {
+        nextDeliverableNumber: jest.fn().mockResolvedValue('DLV-0001'),
+      } as unknown as DocumentNumberService,
       {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         getAssignedDisciplineIds: jest.fn().mockResolvedValue([]),
@@ -87,6 +91,7 @@ describe('DeliverableService', () => {
     expect(prisma.deliverable.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          name: 'DLV-0001 - Foundation drawings',
           status: DeliverableStatus.PLANNED,
         }),
       }),

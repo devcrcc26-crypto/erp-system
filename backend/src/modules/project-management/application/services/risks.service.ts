@@ -20,6 +20,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
+import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const RISK_SORT_FIELDS = new Set([
@@ -39,6 +40,7 @@ export class RisksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly documentNumberService: DocumentNumberService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
@@ -96,11 +98,15 @@ export class RisksService {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
     await this.assertUserInCompany(ctx, dto.ownerId);
 
+    const riskIdCode = await this.documentNumberService.nextRiskNumber(
+      ctx.companyId,
+    );
+
     const row = await this.prisma.risk.create({
       data: {
         projectId,
         ownerId: dto.ownerId,
-        riskIdCode: dto.riskIdCode,
+        riskIdCode,
         title: dto.title,
         description: dto.description,
         category: dto.category,

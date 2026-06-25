@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, PunchItemStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -134,10 +134,14 @@ export class PunchItemsService {
     punchItemId: string,
     dto: UpdatePunchItemDto,
   ): Promise<MappedPunchItem> {
-    await this.getPunchItemOrThrow(projectId, punchItemId);
+    const existing = await this.getPunchItemOrThrow(projectId, punchItemId);
 
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
+    }
+
+    if (dto.status === PunchItemStatus.VERIFIED) {
+      this.assertVerifierIsNotRaiser(existing, ctx.userId);
     }
 
     const row = await this.prisma.punchItem.update({
@@ -244,6 +248,17 @@ export class PunchItemsService {
     });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+  }
+
+  private assertVerifierIsNotRaiser(
+    punchItem: { raisedBy: string },
+    userId: string,
+  ): void {
+    if (userId === punchItem.raisedBy) {
+      throw new ForbiddenException(
+        'The person who raised a punch item cannot verify their own item. A second person must verify.',
+      );
     }
   }
 }

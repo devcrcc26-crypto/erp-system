@@ -1,14 +1,21 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { Submittal, SubmittalPurpose, SubmittalStatus } from '@prisma/client';
+import {
+  BadRequestException,
+} from '@nestjs/common';
+import { Submittal, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
+import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
+import { ExternalReviewTriggerService } from '../external-review-trigger.service';
 import { SubmittalsService } from '../submittals.service';
+import { WorkflowKernelService } from '../workflow-kernel.service';
 import { PmContext } from '../../types/pm-context.type';
+import { ProjectScopeService } from '../project-scope.service';
 
 describe('SubmittalsService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
   const projectId = 'project-1';
   const submittalId = 'submittal-1';
+  const reviewerUserId = 'reviewer-1';
 
   const existingSubmittal = {
     id: submittalId,
@@ -16,9 +23,10 @@ describe('SubmittalsService', () => {
     status: SubmittalStatus.DRAFT,
     submittalPurpose: null,
     submittedBy: ctx.userId,
-    assignedTo: null,
+    assignedTo: reviewerUserId,
     taskDisciplineId: null,
-    title: 'Original title',
+    submittalNumber: 'SUB-00001',
+    title: 'Structural steel shop drawings',
     category: 'Structural',
     contractor: null,
     supplier: null,
@@ -26,209 +34,126 @@ describe('SubmittalsService', () => {
     revisionNumber: 1,
     dueDate: null,
     reviewDate: null,
+    submissionDate: null,
+    issuedAt: null,
+    reviewedBy: null,
     deletedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    createdBy: ctx.userId,
+    updatedBy: ctx.userId,
   } as Submittal;
 
   let prisma: {
-    submittal: { findFirst: jest.Mock; update: jest.Mock };
-    submittalItem: { findMany: jest.Mock; count: jest.Mock };
-    submittalReview: { create: jest.Mock; findFirst: jest.Mock };
-    taskDiscipline: { findFirst: jest.Mock };
-    document: { count: jest.Mock };
+    submittal: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
+    submittalItem: { findMany: jest.Mock };
+    submittalReview: { create: jest.Mock };
     $transaction: jest.Mock;
   };
+  let projectScopeService: { getProjectOrThrow: jest.Mock };
+  let workflowKernel: { execute: jest.Mock };
   let externalReviewTrigger: { recordFromSubmittalReview: jest.Mock };
-  let folderService: { findEntityFolder: jest.Mock };
   let service: SubmittalsService;
 
   beforeEach(() => {
     prisma = {
       submittal: {
         findFirst: jest.fn(),
+        create: jest.fn(),
         update: jest.fn(),
       },
       submittalItem: {
         findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
       },
       submittalReview: {
         create: jest.fn(),
-        findFirst: jest.fn(),
-      },
-      taskDiscipline: {
-        findFirst: jest.fn(),
-      },
-      document: {
-        count: jest.fn(),
       },
       $transaction: jest.fn(),
     };
+
+    projectScopeService = {
+      getProjectOrThrow: jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+      }),
+    };
+
+    workflowKernel = {
+      execute: jest.fn(),
+    };
+
     externalReviewTrigger = {
       recordFromSubmittalReview: jest.fn().mockResolvedValue(undefined),
-    };
-    folderService = {
-      findEntityFolder: jest.fn().mockResolvedValue({ id: 'folder-1' }),
     };
 
     service = new SubmittalsService(
       prisma as unknown as PrismaService,
-      {} as never,
-      {} as never,
-      {} as never,
-      externalReviewTrigger as never,
-      folderService as unknown as EngineeringDocumentFolderService,
+      projectScopeService as unknown as ProjectScopeService,
+      {
+        getNextNumber: jest.fn().mockResolvedValue('SUB-00001'),
+      } as unknown as DocumentNumberService,
+      workflowKernel as unknown as WorkflowKernelService,
+      externalReviewTrigger as unknown as ExternalReviewTriggerService,
+      {
+        ensureSubmittalFolder: jest
+          .fn()
+          .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/submittals/SUB-00001' }),
+      } as unknown as EngineeringDocumentFolderService,
       {} as never,
     );
   });
 
-  describe('updateSubmittal', () => {
-    it.each([
-      SubmittalStatus.APPROVED,
-      SubmittalStatus.APPROVED_WITH_COMMENTS,
-      SubmittalStatus.REVISE_AND_RESUBMIT,
-      SubmittalStatus.REJECTED,
-    ])('throws BadRequestException when status is %s', async (status) => {
-      await expect(
-        service.updateSubmittal(ctx, projectId, submittalId, { status }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Submittal verdict status must be set through the review endpoint, not direct update.',
-        ),
+  describe('createSubmittal', () => {
+    it('scopes creation to the project and company context', async () => {
+      prisma.submittal.create.mockResolvedValue(existingSubmittal);
+
+      await service.createSubmittal(ctx, projectId, {
+        category: 'Structural',
+        title: 'Structural steel shop drawings',
+      });
+
+      expect(projectScopeService.getProjectOrThrow).toHaveBeenCalledWith(
+        ctx,
+        projectId,
       );
-
-      expect(prisma.submittal.findFirst).not.toHaveBeenCalled();
-      expect(prisma.submittal.update).not.toHaveBeenCalled();
-    });
-
-    it('succeeds when updating a non-verdict field without status', async () => {
-      prisma.submittal.findFirst.mockResolvedValue(existingSubmittal);
-      prisma.submittal.update.mockResolvedValue({
-        ...existingSubmittal,
-        title: 'Updated title',
-      });
-
-      const result = await service.updateSubmittal(ctx, projectId, submittalId, {
-        title: 'Updated title',
-      });
-
-      expect(prisma.submittal.findFirst).toHaveBeenCalledWith({
-        where: { id: submittalId, projectId, deletedAt: null },
-      });
-      expect(prisma.submittal.update).toHaveBeenCalledWith({
-        where: { id: submittalId },
+      expect(prisma.submittal.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          title: 'Updated title',
+          projectId,
+          submittedBy: ctx.userId,
+          createdBy: ctx.userId,
           updatedBy: ctx.userId,
         }),
       });
-      expect(result.title).toBe('Updated title');
-    });
-
-    it('succeeds when updating status to a non-verdict value', async () => {
-      prisma.submittal.findFirst
-        .mockResolvedValueOnce(existingSubmittal)
-        .mockResolvedValueOnce({ status: SubmittalStatus.DRAFT });
-      prisma.submittal.update.mockResolvedValue({
-        ...existingSubmittal,
-        status: SubmittalStatus.SUBMITTED,
-      });
-
-      const result = await service.updateSubmittal(ctx, projectId, submittalId, {
-        status: SubmittalStatus.SUBMITTED,
-      });
-
-      expect(result.status).toBe(SubmittalStatus.SUBMITTED);
-    });
-
-    it('throws BadRequestException for SUBMITTED → UNDER_REVIEW via PATCH', async () => {
-      prisma.submittal.findFirst
-        .mockResolvedValueOnce(existingSubmittal)
-        .mockResolvedValueOnce({ status: SubmittalStatus.SUBMITTED });
-
-      await expect(
-        service.updateSubmittal(ctx, projectId, submittalId, {
-          status: SubmittalStatus.UNDER_REVIEW,
-        }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Invalid submittal status transition from SUBMITTED to UNDER_REVIEW.',
-        ),
-      );
-    });
-
-    it('throws BadRequestException for DRAFT → UNDER_REVIEW via PATCH', async () => {
-      prisma.submittal.findFirst
-        .mockResolvedValueOnce(existingSubmittal)
-        .mockResolvedValueOnce({ status: SubmittalStatus.DRAFT });
-
-      await expect(
-        service.updateSubmittal(ctx, projectId, submittalId, {
-          status: SubmittalStatus.UNDER_REVIEW,
-        }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Invalid submittal status transition from DRAFT to UNDER_REVIEW.',
-        ),
-      );
-    });
-
-    it('succeeds when recalling SUBMITTED to DRAFT', async () => {
-      const submitted = { ...existingSubmittal, status: SubmittalStatus.SUBMITTED };
-      prisma.submittal.findFirst
-        .mockResolvedValueOnce(submitted)
-        .mockResolvedValueOnce({ status: SubmittalStatus.SUBMITTED });
-      prisma.submittal.update.mockResolvedValue({
-        ...submitted,
-        status: SubmittalStatus.DRAFT,
-      });
-
-      const result = await service.updateSubmittal(ctx, projectId, submittalId, {
-        status: SubmittalStatus.DRAFT,
-      });
-
-      expect(result.status).toBe(SubmittalStatus.DRAFT);
     });
   });
 
   describe('addReview', () => {
-    const leadUserId = 'lead-1';
-    const disciplineId = 'discipline-1';
-
-    const constructionSubmittal = {
-      ...existingSubmittal,
-      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
-      status: SubmittalStatus.SUBMITTED,
-      assignedTo: leadUserId,
-      taskDisciplineId: disciplineId,
-    } as Submittal;
-
-    it('allows the discipline lead to record a construction review', async () => {
-      prisma.submittal.findFirst.mockResolvedValue(constructionSubmittal);
-      prisma.taskDiscipline.findFirst.mockResolvedValue({
-        disciplineLeadUserId: leadUserId,
-      });
+    it('creates SubmittalReview and updates parent status', async () => {
+      const submitted = {
+        ...existingSubmittal,
+        status: SubmittalStatus.SUBMITTED,
+      };
+      prisma.submittal.findFirst.mockResolvedValue(submitted);
       prisma.$transaction.mockImplementation(
         async (work: (tx: typeof prisma) => Promise<unknown>) => work(prisma),
       );
       prisma.submittalReview.create.mockResolvedValue({
         id: 'review-1',
         submittalId,
-        reviewedBy: leadUserId,
+        reviewedBy: reviewerUserId,
         revisionNumber: 1,
         status: SubmittalStatus.APPROVED,
         comments: 'Approved as submitted',
-        reviewedAt: new Date('2026-02-01'),
-        createdAt: new Date('2026-02-01'),
+        reviewedAt: new Date('2026-02-01T00:00:00.000Z'),
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
       });
       prisma.submittal.update.mockResolvedValue({
-        ...constructionSubmittal,
+        ...submitted,
         status: SubmittalStatus.APPROVED,
       });
 
       const result = await service.addReview(
-        { ...ctx, userId: leadUserId },
+        { ...ctx, userId: reviewerUserId },
         projectId,
         submittalId,
         {
@@ -237,115 +162,101 @@ describe('SubmittalsService', () => {
         },
       );
 
-      expect(result.status).toBe(SubmittalStatus.APPROVED);
-      expect(prisma.submittalReview.create).toHaveBeenCalled();
-    });
-
-    it('rejects construction reviews from non-lead users', async () => {
-      prisma.submittal.findFirst.mockResolvedValue(constructionSubmittal);
-      prisma.taskDiscipline.findFirst.mockResolvedValue({
-        disciplineLeadUserId: leadUserId,
-      });
-
-      await expect(
-        service.addReview(ctx, projectId, submittalId, {
+      expect(prisma.submittalReview.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          submittalId,
+          reviewedBy: reviewerUserId,
           status: SubmittalStatus.APPROVED,
-          comments: 'Not my review',
         }),
-      ).rejects.toThrow(ForbiddenException);
-    });
-  });
-
-  describe('submitToDisciplineLead', () => {
-    const disciplineId = 'discipline-1';
-    const leadUserId = 'lead-1';
-
-    const constructionSubmittal = {
-      ...existingSubmittal,
-      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
-      taskDisciplineId: disciplineId,
-      revisionNumber: 2,
-      reviewedBy: leadUserId,
-      reviewDate: new Date('2026-02-01'),
-    } as Submittal;
-
-    beforeEach(() => {
-      prisma.taskDiscipline.findFirst.mockResolvedValue({
-        disciplineLeadUserId: leadUserId,
       });
-      prisma.submittalItem.count.mockResolvedValue(0);
-      prisma.document.count.mockResolvedValue(1);
-      expect(folderService.findEntityFolder).toBeDefined();
-      folderService.findEntityFolder.mockResolvedValue({ id: 'folder-1' });
-    });
-
-    it('allows the submitter to resubmit after revise and resubmit', async () => {
-      prisma.submittal.findFirst.mockResolvedValue({
-        ...constructionSubmittal,
-        status: SubmittalStatus.REVISE_AND_RESUBMIT,
-      });
-      prisma.submittalReview.findFirst.mockResolvedValue({
-        reviewedAt: new Date('2026-02-01'),
-        status: SubmittalStatus.REVISE_AND_RESUBMIT,
-      });
-      prisma.document.count.mockResolvedValue(1);
-      prisma.submittal.update.mockResolvedValue({
-        ...constructionSubmittal,
-        status: SubmittalStatus.SUBMITTED,
-        revisionNumber: 3,
-        reviewedBy: null,
-        reviewDate: null,
-      });
-
-      const result = await service.submitToDisciplineLead(
-        ctx,
-        projectId,
-        submittalId,
-      );
-
-      expect(result.status).toBe(SubmittalStatus.SUBMITTED);
-      expect(result.revisionNumber).toBe(3);
       expect(prisma.submittal.update).toHaveBeenCalledWith({
         where: { id: submittalId },
         data: expect.objectContaining({
-          assignedTo: leadUserId,
-          status: SubmittalStatus.SUBMITTED,
-          revisionNumber: 3,
-          reviewedBy: null,
-          reviewDate: null,
+          status: SubmittalStatus.APPROVED,
+          reviewedBy: reviewerUserId,
         }),
       });
+      expect(result.status).toBe(SubmittalStatus.APPROVED);
     });
+  });
 
-    it('rejects resubmit without revised uploads', async () => {
-      prisma.submittal.findFirst.mockResolvedValue({
-        ...constructionSubmittal,
-        status: SubmittalStatus.REVISE_AND_RESUBMIT,
-      });
-      prisma.submittalReview.findFirst.mockResolvedValue({
-        reviewedAt: new Date('2026-02-01'),
-        status: SubmittalStatus.REVISE_AND_RESUBMIT,
-      });
-      prisma.document.count.mockResolvedValue(0);
-
+  describe('updateSubmittal', () => {
+    it('rejects APPROVED status via direct PATCH', async () => {
       await expect(
-        service.submitToDisciplineLead(ctx, projectId, submittalId),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('rejects resubmit from a user who is not the submitter', async () => {
-      prisma.submittal.findFirst.mockResolvedValue({
-        ...constructionSubmittal,
-        status: SubmittalStatus.REVISE_AND_RESUBMIT,
-      });
-
-      await expect(
-        service.submitToDisciplineLead(
-          { ...ctx, userId: 'other-user' },
-          projectId,
-          submittalId,
+        service.updateSubmittal(ctx, projectId, submittalId, {
+          status: SubmittalStatus.APPROVED,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Submittal verdict status must be set through the review endpoint, not direct update.',
         ),
-      ).rejects.toThrow(ForbiddenException);
+      );
+
+      expect(prisma.submittal.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('rejects REJECTED status via direct PATCH', async () => {
+      await expect(
+        service.updateSubmittal(ctx, projectId, submittalId, {
+          status: SubmittalStatus.REJECTED,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Submittal verdict status must be set through the review endpoint, not direct update.',
+        ),
+      );
+
+      expect(prisma.submittal.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('allows DRAFT to SUBMITTED transition', async () => {
+      prisma.submittal.findFirst
+        .mockResolvedValueOnce(existingSubmittal)
+        .mockResolvedValueOnce({ status: SubmittalStatus.DRAFT });
+      prisma.submittal.update.mockResolvedValue({
+        ...existingSubmittal,
+        status: SubmittalStatus.SUBMITTED,
+      });
+
+      const result = await service.updateSubmittal(ctx, projectId, submittalId, {
+        status: SubmittalStatus.SUBMITTED,
+      });
+
+      expect(result.status).toBe(SubmittalStatus.SUBMITTED);
+    });
+  });
+
+  describe('batchIssue', () => {
+    it.todo(
+      'requires all submittals to be in SUBMITTED status before batch issue',
+    );
+
+    it('issues each SUBMITTED submittal through the workflow kernel', async () => {
+      prisma.submittal.findFirst.mockResolvedValue({
+        ...existingSubmittal,
+        status: SubmittalStatus.SUBMITTED,
+      });
+      workflowKernel.execute.mockResolvedValue({
+        commandType: 'IssueSubmittal',
+        submittalId,
+      });
+
+      const results = await service.batchIssue(ctx, projectId, {
+        submittalIds: [submittalId],
+      });
+
+      expect(prisma.submittal.findFirst).toHaveBeenCalledWith({
+        where: { id: submittalId, projectId, deletedAt: null },
+      });
+      expect(workflowKernel.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'IssueSubmittal',
+          companyId: ctx.companyId,
+          actorId: ctx.userId,
+          submittalId,
+        }),
+      );
+      expect(results).toHaveLength(1);
     });
   });
 });

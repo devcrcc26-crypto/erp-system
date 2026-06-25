@@ -66,7 +66,10 @@ const DEFAULT_CLOSEOUT_CHECKLIST: Array<{
 ];
 
 const CLOSEOUT_DETAIL_INCLUDE = {
-  checklistItems: { orderBy: { createdAt: 'asc' as const } },
+  checklistItems: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'asc' as const },
+  },
   warranties: {
     where: { deletedAt: null },
     orderBy: { createdAt: 'asc' as const },
@@ -90,7 +93,11 @@ export class CloseoutService {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
     const row = await this.prisma.closeout.findFirst({
-      where: { projectId },
+      where: {
+        projectId,
+        deletedAt: null,
+        project: activeOnly({ companyId: ctx.companyId }),
+      },
       include: CLOSEOUT_DETAIL_INCLUDE,
     });
     if (!row) {
@@ -110,7 +117,11 @@ export class CloseoutService {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
     const existing = await this.prisma.closeout.findFirst({
-      where: { projectId },
+      where: {
+        projectId,
+        deletedAt: null,
+        project: activeOnly({ companyId: ctx.companyId }),
+      },
       select: { id: true },
     });
     if (existing) {
@@ -160,7 +171,7 @@ export class CloseoutService {
     projectId: string,
     dto: UpdateCloseoutDto,
   ): Promise<MappedCloseoutDetail> {
-    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    const closeout = await this.getCloseoutRecordOrThrow(ctx, projectId);
 
     const row = await this.prisma.closeout.update({
       where: { id: closeout.id },
@@ -190,10 +201,10 @@ export class CloseoutService {
     itemId: string,
     dto: UpdateCloseoutChecklistItemDto,
   ): Promise<MappedCloseoutChecklistItem> {
-    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    const closeout = await this.getCloseoutRecordOrThrow(ctx, projectId);
 
     const item = await this.prisma.closeoutChecklistItem.findFirst({
-      where: { id: itemId, closeoutId: closeout.id },
+      where: activeOnly({ id: itemId, closeoutId: closeout.id }),
     });
     if (!item) {
       throw new NotFoundException('Checklist item not found');
@@ -228,7 +239,7 @@ export class CloseoutService {
     projectId: string,
     dto: CreateWarrantyDto,
   ): Promise<MappedWarranty> {
-    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    const closeout = await this.getCloseoutRecordOrThrow(ctx, projectId);
 
     const row = await this.prisma.warranty.create({
       data: {
@@ -254,7 +265,7 @@ export class CloseoutService {
     warrantyId: string,
     dto: UpdateWarrantyDto,
   ): Promise<MappedWarranty> {
-    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    const closeout = await this.getCloseoutRecordOrThrow(ctx, projectId);
     await this.getWarrantyOrThrow(closeout.id, warrantyId);
 
     const row = await this.prisma.warranty.update({
@@ -279,7 +290,7 @@ export class CloseoutService {
     projectId: string,
     warrantyId: string,
   ): Promise<void> {
-    const closeout = await this.getCloseoutRecordOrThrow(projectId);
+    const closeout = await this.getCloseoutRecordOrThrow(ctx, projectId);
     await this.getWarrantyOrThrow(closeout.id, warrantyId);
 
     await this.prisma.warranty.update({
@@ -288,9 +299,15 @@ export class CloseoutService {
     });
   }
 
-  private async getCloseoutRecordOrThrow(projectId: string) {
+  private async getCloseoutRecordOrThrow(ctx: PmContext, projectId: string) {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
     const row = await this.prisma.closeout.findFirst({
-      where: { projectId },
+      where: {
+        projectId,
+        deletedAt: null,
+        project: activeOnly({ companyId: ctx.companyId }),
+      },
     });
     if (!row) {
       throw new NotFoundException('Closeout not found');

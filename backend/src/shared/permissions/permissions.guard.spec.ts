@@ -36,15 +36,20 @@ describe('PermissionsGuard', () => {
     expect(permissionService.hasPermission).not.toHaveBeenCalled();
   });
 
-  it('allows routes without explicit permission metadata', async () => {
+  it('throws when endpoint has no @RequirePermission decorator', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(undefined);
 
-    await expect(guard.canActivate(buildContext())).resolves.toBe(true);
+    await expect(guard.canActivate(buildContext())).rejects.toMatchObject({
+      response: {
+        message: 'This endpoint requires explicit permission declaration.',
+      },
+    });
+    expect(permissionService.hasPermission).not.toHaveBeenCalled();
   });
 
-  it('denies when permission is missing', async () => {
+  it('throws ForbiddenException when permission is missing', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
       .mockReturnValueOnce({ module: 'users', action: 'create' });
@@ -57,7 +62,7 @@ describe('PermissionsGuard', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('allows when permission is granted', async () => {
+  it('passes when @RequirePermission is present and role matches', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
       .mockReturnValueOnce({ module: 'users', action: 'view' });

@@ -20,6 +20,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DisciplineScopeService } from './discipline-scope.service';
+import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
 
 const DELIVERABLE_SORT_FIELDS = new Set([
@@ -38,6 +39,7 @@ export class DeliverableService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly documentNumberService: DocumentNumberService,
     private readonly disciplineScopeService: DisciplineScopeService,
   ) {}
 
@@ -120,6 +122,10 @@ export class DeliverableService {
       );
     }
 
+    const deliverableNumber = await this.documentNumberService.nextDeliverableNumber(
+      ctx.companyId,
+    );
+
     const row = await this.prisma.deliverable.create({
       data: {
         companyId: ctx.companyId,
@@ -127,7 +133,7 @@ export class DeliverableService {
         taskDisciplineId: dto.taskDisciplineId,
         designPackageId: dto.designPackageId,
         engineeringDocumentId: dto.engineeringDocumentId,
-        name: dto.name,
+        name: `${deliverableNumber} - ${dto.name}`,
         status: DeliverableStatus.PLANNED,
         dueDate: parseOptionalDate(dto.dueDate),
         createdBy: ctx.userId,
