@@ -97,26 +97,52 @@
     "systemReports": {
       "title": "系统报表",
       "description": "全公司项目组合 KPI、组织规模与跨项目现场运营指标。",
-      "print": "打印报表",
+      "company": "公司",
+      "preparedBy": "编制人",
+      "print": "打印",
+      "exportPdf": "导出 PDF",
+      "exportSuccess": "系统报表 PDF 已下载。",
+      "exportError": "无法生成 PDF，请重试。",
+      "pdfFooter": "施工 ERP",
+      "noAuditActivity": "无活动",
       "generatedAt": "生成时间",
       "partialDataTitle": "部分指标不可用",
       "partialDataDescription": "项目组合图表使用实时项目数据。完整组织与现场运营指标需组合摘要 API。",
       "sections": {
+        "executiveSummary": "执行摘要",
         "portfolio": "项目组合",
+        "organization": "组织",
         "siteOps": "现场运营（全部项目）",
+        "audit": "审计与合规",
+        "auditModules": "主要审计模块（30 天）",
+        "breakdown": "明细分解",
         "charts": "图表分析",
         "projectRegister": "项目台账"
+      },
+      "breakdown": {
+        "byStatus": "按状态项目",
+        "byType": "按类型项目"
       },
       "metrics": {
         "totalProjects": "项目总数",
         "activeProjects": "进行中项目",
+        "planningProjects": "规划 / 投标",
+        "onHoldProjects": "暂停",
+        "completedProjects": "已完工",
+        "closedProjects": "已关闭",
         "teamMembers": "团队成员",
         "completionRate": "完成率",
+        "averageProgress": "平均进度",
+        "portfolioBudget": "组合预算",
         "branches": "分支机构",
         "departments": "部门",
         "users": "用户",
         "activeUsers": "活跃用户",
-        "auditLast30Days": "审计事件（30 天）"
+        "inactiveUsers": "非活跃用户",
+        "auditLast30Days": "审计事件（30 天）",
+        "auditTotal": "审计事件（全部）",
+        "auditTopModule": "主要审计模块",
+        "totalOpenSiteOps": "未关闭现场事项合计"
       },
       "charts": {
         "projectsByStatus": "按状态项目分布",
@@ -131,17 +157,29 @@
         "siteOpsPortfolioHint": "全部项目的未关闭 RFI、问题与尾项"
       },
       "table": {
+        "metric": "指标",
+        "value": "数值",
+        "count": "数量",
+        "share": "占比",
+        "module": "模块",
         "code": "编号",
         "name": "名称",
         "status": "状态",
+        "type": "类型",
         "progress": "进度",
+        "budget": "预算",
+        "plannedFinish": "计划竣工",
         "reports": "报表"
       }
     },
     "projectReports": {
       "title": "项目报表",
       "description": "汇总本项目 KPI、进度与工程工作流指标。",
-      "print": "打印报表",
+      "preparedBy": "编制人",
+      "exportPdf": "导出 PDF",
+      "exportSuccess": "项目报表 PDF 已下载。",
+      "exportError": "无法生成 PDF，请重试。",
+      "pdfFooter": "施工 ERP",
       "partialDataTitle": "部分指标暂不可用",
       "partialDataDescription": "现场运营与工程计数将随后端模块接入而显示。进度与任务图表使用实时任务数据。",
       "projectCode": "项目编号",
@@ -152,11 +190,18 @@
       "overallProgress": "总体进度",
       "generatedAt": "生成时间",
       "sections": {
+        "projectOverview": "项目概览",
         "siteOps": "现场运营",
         "schedule": "进度",
         "engineering": "工程工作流",
         "charts": "图表分析",
         "moduleSummary": "模块快照"
+      },
+      "breakdown": {
+        "tasksByStatus": "按状态任务",
+        "siteOpsBreakdown": "现场运营分解",
+        "packagesByStatus": "按状态设计包",
+        "disciplinesByStatus": "按状态专业"
       },
       "metrics": {
         "openRfis": "未关闭 RFI",
@@ -169,7 +214,9 @@
         "activeReviews": "进行中审阅",
         "slaOverdue": "SLA 逾期",
         "openComments": "未关闭意见",
-        "pendingSubmittals": "待处理送审"
+        "pendingSubmittals": "待处理送审",
+        "taskCount": "任务总数",
+        "criticalTasks": "关键任务"
       },
       "charts": {
         "tasksByStatus": "按状态任务分布",

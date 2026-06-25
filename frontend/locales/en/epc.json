@@ -97,26 +97,52 @@
     "systemReports": {
       "title": "System reports",
       "description": "Company-wide portfolio KPIs, organization footprint, and cross-project site operations.",
-      "print": "Print report",
+      "company": "Company",
+      "preparedBy": "Prepared by",
+      "print": "Print",
+      "exportPdf": "Export PDF",
+      "exportSuccess": "System report PDF downloaded.",
+      "exportError": "Could not generate the PDF. Please try again.",
+      "pdfFooter": "Construction ERP",
+      "noAuditActivity": "No activity",
       "generatedAt": "Generated",
       "partialDataTitle": "Limited metrics available",
       "partialDataDescription": "Project portfolio charts use live project data. Full organization and site operations metrics require the portfolio summary API.",
       "sections": {
+        "executiveSummary": "Executive summary",
         "portfolio": "Portfolio",
+        "organization": "Organization",
         "siteOps": "Site operations (all projects)",
+        "audit": "Audit & compliance",
+        "auditModules": "Top audit modules (30 days)",
+        "breakdown": "Detailed breakdown",
         "charts": "Visual breakdown",
         "projectRegister": "Project register"
+      },
+      "breakdown": {
+        "byStatus": "Projects by status",
+        "byType": "Projects by type"
       },
       "metrics": {
         "totalProjects": "Total projects",
         "activeProjects": "Active projects",
+        "planningProjects": "Planning / tender",
+        "onHoldProjects": "On hold",
+        "completedProjects": "Completed",
+        "closedProjects": "Closed",
         "teamMembers": "Team members",
         "completionRate": "Completion rate",
+        "averageProgress": "Average progress",
+        "portfolioBudget": "Portfolio budget",
         "branches": "Branches",
         "departments": "Departments",
         "users": "Users",
         "activeUsers": "Active users",
-        "auditLast30Days": "Audit events (30 days)"
+        "inactiveUsers": "Inactive users",
+        "auditLast30Days": "Audit events (30 days)",
+        "auditTotal": "Audit events (all time)",
+        "auditTopModule": "Top audit module",
+        "totalOpenSiteOps": "Total open site items"
       },
       "charts": {
         "projectsByStatus": "Projects by status",
@@ -131,17 +157,29 @@
         "siteOpsPortfolioHint": "Open RFIs, issues, and punch items across all projects"
       },
       "table": {
+        "metric": "Metric",
+        "value": "Value",
+        "count": "Count",
+        "share": "Share",
+        "module": "Module",
         "code": "Code",
         "name": "Name",
         "status": "Status",
+        "type": "Type",
         "progress": "Progress",
+        "budget": "Budget",
+        "plannedFinish": "Planned finish",
         "reports": "Reports"
       }
     },
     "projectReports": {
       "title": "Project reports",
       "description": "Consolidated KPIs, schedule progress, and engineering workflow metrics for this project.",
-      "print": "Print report",
+      "preparedBy": "Prepared by",
+      "exportPdf": "Export PDF",
+      "exportSuccess": "Project report PDF downloaded.",
+      "exportError": "Could not generate the PDF. Please try again.",
+      "pdfFooter": "Construction ERP",
       "partialDataTitle": "Some metrics are unavailable",
       "partialDataDescription": "Site operations and engineering counts populate as backend modules connect. Schedule and task charts use live task data.",
       "projectCode": "Project code",
@@ -152,11 +190,18 @@
       "overallProgress": "Overall progress",
       "generatedAt": "Generated",
       "sections": {
+        "projectOverview": "Project overview",
         "siteOps": "Site operations",
         "schedule": "Schedule",
         "engineering": "Engineering workflow",
         "charts": "Visual breakdown",
         "moduleSummary": "Module snapshot"
+      },
+      "breakdown": {
+        "tasksByStatus": "Tasks by status",
+        "siteOpsBreakdown": "Site operations breakdown",
+        "packagesByStatus": "Design packages by status",
+        "disciplinesByStatus": "Disciplines by status"
       },
       "metrics": {
         "openRfis": "Open RFIs",
@@ -169,7 +214,9 @@
         "activeReviews": "Active reviews",
         "slaOverdue": "SLA overdue",
         "openComments": "Open comments",
-        "pendingSubmittals": "Pending submittals"
+        "pendingSubmittals": "Pending submittals",
+        "taskCount": "Total tasks",
+        "criticalTasks": "Critical tasks"
       },
       "charts": {
         "tasksByStatus": "Tasks by status",

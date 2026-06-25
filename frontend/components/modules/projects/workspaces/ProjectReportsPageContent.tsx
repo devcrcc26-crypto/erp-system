@@ -1,12 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Alert, Button, Col, Row, Table } from 'antd';
-import {
-  CalendarOutlined,
-  PrinterOutlined,
-} from '@ant-design/icons';
+import { FilePdfOutlined, CalendarOutlined } from '@ant-design/icons';
 import {
   Bar,
   BarChart,
@@ -31,6 +28,7 @@ import { getNavIconComponent } from '@/lib/navigation/nav-icons';
 import { projectNavHref } from '@/lib/navigation/project-workspace-nav';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Task, TaskStatus } from '@/lib/api/project-management.types';
+import type { ProjectReportPdfLabels } from '@/lib/api/reporting.types';
 import { useProject, useProjectDashboardStats } from '@/lib/query/projects';
 import { useProjectStatusBoard } from '@/lib/query/epc-workspace';
 import { useAllTasks } from '@/lib/query/schedule';
@@ -49,6 +47,9 @@ import {
   type ScheduleMetrics,
 } from '@/lib/utils/schedule-metrics';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
+import { exportProjectReportPdf } from '@/lib/utils/project-report-pdf';
 import { BarChart3 } from 'lucide-react';
 
 const CHART_HEIGHT = 220;
@@ -346,12 +347,74 @@ function formatPercent(value: number | null | undefined): string {
   return `${value}%`;
 }
 
+function chartToBreakdownRows(data: ChartDatum[]): { label: string; count: number }[] {
+  return data
+    .filter((entry) => entry.value > 0)
+    .map((entry) => ({ label: entry.name, count: entry.value }));
+}
+
+function buildProjectReportPdfLabels(
+  t: (key: string) => string,
+): ProjectReportPdfLabels {
+  return {
+    title: t('pages.projectReports.title'),
+    subtitle: t('pages.projectReports.description'),
+    preparedBy: t('pages.projectReports.preparedBy'),
+    generatedAt: t('pages.projectReports.generatedAt'),
+    projectOverview: t('pages.projectReports.sections.projectOverview'),
+    projectCode: t('pages.projectReports.projectCode'),
+    projectName: t('pages.projectReports.projectName'),
+    status: t('pages.projectReports.status'),
+    plannedFinish: t('pages.projectReports.plannedFinish'),
+    budget: t('pages.projectReports.budget'),
+    overallProgress: t('pages.projectReports.overallProgress'),
+    siteOps: t('pages.projectReports.sections.siteOps'),
+    siteOpsBreakdown: t('pages.projectReports.breakdown.siteOpsBreakdown'),
+    schedule: t('pages.projectReports.sections.schedule'),
+    engineering: t('pages.projectReports.sections.engineering'),
+    moduleSummary: t('pages.projectReports.sections.moduleSummary'),
+    tasksByStatus: t('pages.projectReports.breakdown.tasksByStatus'),
+    packagesByStatus: t('pages.projectReports.breakdown.packagesByStatus'),
+    disciplinesByStatus: t('pages.projectReports.breakdown.disciplinesByStatus'),
+    metric: t('pages.systemReports.table.metric'),
+    value: t('pages.systemReports.table.value'),
+    count: t('pages.systemReports.table.count'),
+    share: t('pages.systemReports.table.share'),
+    module: t('pages.projectReports.table.module'),
+    snapshot: t('pages.projectReports.table.snapshot'),
+    footer: t('pages.projectReports.pdfFooter'),
+    openRfis: t('pages.projectReports.metrics.openRfis'),
+    overdueRfis: t('pages.projectReports.metrics.overdueRfis'),
+    openIssues: t('pages.projectReports.metrics.openIssues'),
+    openPunch: t('pages.projectReports.metrics.openPunch'),
+    plannedProgress: t('pages.projectReports.metrics.plannedProgress'),
+    actualProgress: t('pages.projectReports.metrics.actualProgress'),
+    scheduleVariance: t('pages.projectReports.metrics.scheduleVariance'),
+    taskCount: t('pages.projectReports.metrics.taskCount'),
+    criticalTasks: t('pages.projectReports.metrics.criticalTasks'),
+    activeReviews: t('pages.projectReports.metrics.activeReviews'),
+    slaOverdue: t('pages.projectReports.metrics.slaOverdue'),
+    openComments: t('pages.projectReports.metrics.openComments'),
+    pendingSubmittals: t('pages.projectReports.metrics.pendingSubmittals'),
+  };
+}
+
+function formatPdfCount(value: number | null | undefined): string {
+  if (value == null) {
+    return '-';
+  }
+  return String(value);
+}
+
 export default function ProjectReportsPageContent({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
+  const authUser = useAuthStore((state) => state.user);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const projectQuery = useProject(projectId);
   const statsQuery = useProjectDashboardStats(projectId);
   const boardQuery = useProjectStatusBoard(projectId);
@@ -502,6 +565,90 @@ export default function ProjectReportsPageContent({
     tasks.length,
   ]);
 
+  const handleExportPdf = useCallback((): void => {
+    if (!project) {
+      return;
+    }
+
+    setExportingPdf(true);
+    try {
+      const preparedBy = authUser
+        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
+        : 'User';
+      const generatedAt = new Date().toISOString();
+
+      exportProjectReportPdf({
+        project,
+        generatedAt,
+        preparedBy,
+        labels: buildProjectReportPdfLabels(t),
+        siteOps: hasStats
+          ? {
+              openRfis: stats.openRfis,
+              overdueRfis: stats.overdueRfis,
+              openIssues: stats.openIssues,
+              openPunchItems: stats.openPunchItems,
+            }
+          : {
+              openRfis: null,
+              overdueRfis: null,
+              openIssues: null,
+              openPunchItems: null,
+            },
+        schedule: {
+          plannedProgressPct,
+          actualProgressPct,
+          scheduleVariancePct,
+          taskCount: scheduleFromTasks.taskCount,
+          criticalCount: scheduleFromTasks.criticalCount,
+        },
+        engineering:
+          board && !boardApiUnavailable
+            ? {
+                activeReviewSessions: board.activeReviewSessions,
+                slaOverdueSessions: board.slaOverdueSessions,
+                openComments: board.openComments,
+                pendingSubmittals: board.pendingSubmittals,
+              }
+            : null,
+        taskStatusRows: chartToBreakdownRows(taskStatusChart),
+        siteOpsRows: chartToBreakdownRows(siteOpsChart),
+        packageStatusRows: chartToBreakdownRows(packagesChart),
+        disciplineStatusRows: chartToBreakdownRows(disciplinesChart),
+        moduleSummaryRows: moduleSummary.map((row) => ({
+          module: row.module,
+          snapshot: row.metric,
+        })),
+        formatPercent,
+        formatCount: formatPdfCount,
+      });
+      messageApi.success(t('pages.projectReports.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.projectReports.exportError'));
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [
+    project,
+    authUser,
+    t,
+    messageApi,
+    hasStats,
+    stats,
+    plannedProgressPct,
+    actualProgressPct,
+    scheduleVariancePct,
+    scheduleFromTasks.taskCount,
+    scheduleFromTasks.criticalCount,
+    board,
+    boardApiUnavailable,
+    taskStatusChart,
+    siteOpsChart,
+    packagesChart,
+    disciplinesChart,
+    moduleSummary,
+  ]);
+
   if (isLoading) {
     return <PageLoadingSkeleton />;
   }
@@ -513,10 +660,12 @@ export default function ProjectReportsPageContent({
         description={t('pages.projectReports.description')}
         extra={
           <Button
-            icon={<PrinterOutlined />}
-            onClick={() => window.print()}
+            type="primary"
+            icon={<FilePdfOutlined />}
+            loading={exportingPdf}
+            onClick={handleExportPdf}
           >
-            {t('pages.projectReports.print')}
+            {t('pages.projectReports.exportPdf')}
           </Button>
         }
       >

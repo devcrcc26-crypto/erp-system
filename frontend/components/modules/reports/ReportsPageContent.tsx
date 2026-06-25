@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Alert, Button, Col, Row, Table } from 'antd';
 import {
-  PrinterOutlined,
+  FilePdfOutlined,
   ProjectOutlined,
   RiseOutlined,
   TeamOutlined,
@@ -33,10 +33,13 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus, ProjectType } from '@/lib/api/project-management.types';
-import type { PortfolioSummary } from '@/lib/api/reporting.types';
+import type { PortfolioSummary, SystemReportPdfLabels } from '@/lib/api/reporting.types';
 import { usePortfolioSummary } from '@/lib/query/reports';
 import { useAllProjects } from '@/lib/query/projects';
+import { normalizePortfolioSummary } from '@/lib/utils/portfolio-summary';
+import { exportSystemReportPdf } from '@/lib/utils/system-report-pdf';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { layout } from '@/lib/theme/layout';
@@ -378,7 +381,60 @@ function formatTypeLabel(type: string): string {
   return formatProjectType(type as ProjectType);
 }
 
-function buildFallbackSummary(projects: Project[]): PortfolioSummary {
+function formatCount(value: number | null | undefined): string {
+  return (value ?? 0).toLocaleString();
+}
+
+function buildSystemReportPdfLabels(
+  t: (key: string) => string,
+): SystemReportPdfLabels {
+  return {
+    title: t('pages.systemReports.title'),
+    subtitle: t('pages.systemReports.description'),
+    preparedBy: t('pages.systemReports.preparedBy'),
+    generatedAt: t('pages.systemReports.generatedAt'),
+    executiveSummary: t('pages.systemReports.sections.executiveSummary'),
+    portfolio: t('pages.systemReports.sections.portfolio'),
+    organization: t('pages.systemReports.sections.organization'),
+    siteOps: t('pages.systemReports.sections.siteOps'),
+    audit: t('pages.systemReports.sections.audit'),
+    auditModules: t('pages.systemReports.sections.auditModules'),
+    projectRegister: t('pages.systemReports.sections.projectRegister'),
+    byStatus: t('pages.systemReports.breakdown.byStatus'),
+    byType: t('pages.systemReports.breakdown.byType'),
+    metric: t('pages.systemReports.table.metric'),
+    value: t('pages.systemReports.table.value'),
+    status: t('pages.systemReports.table.status'),
+    count: t('pages.systemReports.table.count'),
+    share: t('pages.systemReports.table.share'),
+    module: t('pages.systemReports.table.module'),
+    code: t('pages.systemReports.table.code'),
+    name: t('pages.systemReports.table.name'),
+    type: t('pages.systemReports.table.type'),
+    progress: t('pages.systemReports.table.progress'),
+    budget: t('pages.systemReports.table.budget'),
+    plannedFinish: t('pages.systemReports.table.plannedFinish'),
+    footer: t('pages.systemReports.pdfFooter'),
+    completionRate: t('pages.systemReports.metrics.completionRate'),
+    averageProgress: t('pages.systemReports.metrics.averageProgress'),
+    portfolioBudget: t('pages.systemReports.metrics.portfolioBudget'),
+    activeProjects: t('pages.systemReports.metrics.activeProjects'),
+    totalOpenSiteOps: t('pages.systemReports.metrics.totalOpenSiteOps'),
+    auditLast30Days: t('pages.systemReports.metrics.auditLast30Days'),
+    auditTotal: t('pages.systemReports.metrics.auditTotal'),
+    branches: t('pages.systemReports.metrics.branches'),
+    departments: t('pages.systemReports.metrics.departments'),
+    usersTotal: t('pages.systemReports.metrics.users'),
+    usersActive: t('pages.systemReports.metrics.activeUsers'),
+    usersInactive: t('pages.systemReports.metrics.inactiveUsers'),
+    openRfis: t('pages.projectReports.metrics.openRfis'),
+    overdueRfis: t('pages.projectReports.metrics.overdueRfis'),
+    openIssues: t('pages.projectReports.metrics.openIssues'),
+    openPunchItems: t('pages.projectReports.metrics.openPunch'),
+  };
+}
+
+function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
   const byStatus = aggregateProjectsByStatus(projects);
   const byType = aggregateProjectsByType(projects);
   const total = projects.length;
@@ -404,9 +460,12 @@ function buildFallbackSummary(projects: Project[]): PortfolioSummary {
 
 export default function ReportsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const authUser = useAuthStore((state) => state.user);
   const canFetch = authHydrated && isAuthenticated;
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const summaryQuery = usePortfolioSummary(canFetch);
   const projectsQuery = useAllProjects({}, canFetch);
@@ -419,15 +478,19 @@ export default function ReportsPageContent(): React.ReactNode {
       summaryQuery.error.status === 0);
 
   const projects = projectsQuery.data?.data ?? [];
+  const companyName = authUser?.companyName ?? 'Company';
   const summary = useMemo((): PortfolioSummary | null => {
     if (summaryQuery.data) {
-      return summaryQuery.data;
+      return normalizePortfolioSummary(summaryQuery.data, companyName);
     }
     if (summaryApiUnavailable && projects.length > 0) {
-      return buildFallbackSummary(projects);
+      return normalizePortfolioSummary(
+        buildFallbackSummary(projects),
+        companyName,
+      );
     }
     return null;
-  }, [summaryQuery.data, summaryApiUnavailable, projects]);
+  }, [summaryQuery.data, summaryApiUnavailable, projects, companyName]);
 
   const statusChart = useMemo(
     () =>
@@ -564,6 +627,33 @@ export default function ReportsPageContent(): React.ReactNode {
     [t],
   );
 
+  const handleExportPdf = useCallback((): void => {
+    if (!summary) {
+      return;
+    }
+
+    setExportingPdf(true);
+    try {
+      const preparedBy = authUser
+        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
+        : 'User';
+
+      exportSystemReportPdf({
+        summary,
+        projects,
+        preparedBy,
+        labels: buildSystemReportPdfLabels(t),
+        formatStatusLabel,
+        formatTypeLabel,
+      });
+      messageApi.success(t('pages.systemReports.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.systemReports.exportError'));
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [summary, projects, authUser, t, messageApi]);
+
   if (!authHydrated) {
     return <PageLoadingSkeleton />;
   }
@@ -598,8 +688,13 @@ export default function ReportsPageContent(): React.ReactNode {
         title={t('pages.systemReports.title')}
         description={t('pages.systemReports.description')}
         extra={
-          <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
-            {t('pages.systemReports.print')}
+          <Button
+            type="primary"
+            icon={<FilePdfOutlined />}
+            loading={exportingPdf}
+            onClick={handleExportPdf}
+          >
+            {t('pages.systemReports.exportPdf')}
           </Button>
         }
       >
@@ -642,7 +737,7 @@ export default function ReportsPageContent(): React.ReactNode {
               className="mt-1 text-[18px] font-medium tabular-nums"
               style={{ color: tokens.colorTextPrimary }}
             >
-              {summary.projects.total.toLocaleString()}
+              {formatCount(summary.projects.total)}
             </p>
           </div>
           <div>
@@ -670,7 +765,7 @@ export default function ReportsPageContent(): React.ReactNode {
               className="mt-1 text-[18px] font-medium tabular-nums"
               style={{ color: tokens.colorTextPrimary }}
             >
-              {summary.audit.last30Days.toLocaleString()}
+              {formatCount(summary.audit.last30Days)}
             </p>
           </div>
         </div>
@@ -685,7 +780,7 @@ export default function ReportsPageContent(): React.ReactNode {
           <Col xs={12} lg={6}>
             <KPICard
               label={t('pages.systemReports.metrics.totalProjects')}
-              value={summary.projects.total.toLocaleString()}
+              value={formatCount(summary.projects.total)}
               icon={ProjectOutlined}
               iconBg={tokens.colorTeal50}
               iconColor={tokens.colorTeal600}
@@ -694,7 +789,7 @@ export default function ReportsPageContent(): React.ReactNode {
           <Col xs={12} lg={6}>
             <KPICard
               label={t('pages.systemReports.metrics.activeProjects')}
-              value={summary.projects.active.toLocaleString()}
+              value={formatCount(summary.projects.active)}
               icon={ProjectOutlined}
               iconBg={tokens.colorBlue50}
               iconColor={tokens.colorBlue400}
@@ -705,7 +800,7 @@ export default function ReportsPageContent(): React.ReactNode {
               label={t('pages.systemReports.metrics.teamMembers')}
               value={
                 summary.users.total > 0
-                  ? summary.users.total.toLocaleString()
+                  ? formatCount(summary.users.total)
                   : '-'
               }
               icon={TeamOutlined}

@@ -30,31 +30,42 @@ import { ReportExecutorService } from './report-executor.service';
 type RequestContext = { companyId: string; userId: string };
 
 export interface PortfolioSummary {
-  readonly generatedAt: string;
-  readonly completionRate: number;
-  readonly projects: {
-    readonly total: number;
-    readonly active: number;
-    readonly byStatus: Record<string, number>;
-    readonly byType: Record<string, number>;
+  generatedAt: string;
+  companyName: string;
+  baseCurrency: string;
+  completionRate: number;
+  projects: {
+    total: number;
+    active: number;
+    onHold: number;
+    planning: number;
+    completed: number;
+    closed: number;
+    averageProgressPct: number | null;
+    totalBudget: string | null;
+    byStatus: Record<string, number>;
+    byType: Record<string, number>;
   };
-  readonly users: {
-    readonly total: number;
-    readonly active: number;
+  users: {
+    total: number;
+    active: number;
+    inactive: number;
   };
-  readonly organization: {
-    readonly branches: number;
-    readonly departments: number;
+  organization: {
+    branches: number;
+    departments: number;
   };
-  readonly audit: {
-    readonly last30Days: number;
-    readonly total: number;
+  audit: {
+    last30Days: number;
+    total: number;
+    topModules: readonly { module: string; count: number }[];
   };
-  readonly siteOps: {
-    readonly openRfis: number;
-    readonly overdueRfis: number;
-    readonly openIssues: number;
-    readonly openPunchItems: number;
+  siteOps: {
+    openRfis: number;
+    overdueRfis: number;
+    openIssues: number;
+    openPunchItems: number;
+    totalOpen: number;
   };
 }
 
@@ -300,21 +311,33 @@ export class ReportingService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const [
+      company,
       statusGroups,
       typeGroups,
       activeProjects,
+      onHoldProjects,
+      planningProjects,
+      completedProjects,
+      closedProjects,
+      progressAgg,
+      budgetRows,
       usersTotal,
       usersActive,
       branches,
       departments,
       auditTotal,
       auditLast30Days,
+      auditModuleGroups,
       openRfis,
       overdueRfis,
       openIssues,
       openPunchItems,
       completionRate,
     ] = await Promise.all([
+      this.prisma.company.findFirst({
+        where: { id: companyId },
+        select: { legalName: true, baseCurrency: true },
+      }),
       this.prisma.project.groupBy({
         by: ['status'],
         where: companyProjects,
@@ -328,6 +351,29 @@ export class ReportingService {
       this.prisma.project.count({
         where: { ...companyProjects, status: ProjectStatus.ACTIVE },
       }),
+      this.prisma.project.count({
+        where: { ...companyProjects, status: ProjectStatus.ON_HOLD },
+      }),
+      this.prisma.project.count({
+        where: {
+          ...companyProjects,
+          status: { in: [ProjectStatus.PLANNING, ProjectStatus.TENDER] },
+        },
+      }),
+      this.prisma.project.count({
+        where: { ...companyProjects, status: ProjectStatus.COMPLETED },
+      }),
+      this.prisma.project.count({
+        where: { ...companyProjects, status: ProjectStatus.CLOSED },
+      }),
+      this.prisma.project.aggregate({
+        where: companyProjects,
+        _avg: { overallProgressPct: true },
+      }),
+      this.prisma.project.findMany({
+        where: companyProjects,
+        select: { budget: true },
+      }),
       this.prisma.user.count({ where: activeOnly({ companyId }) }),
       this.prisma.user.count({
         where: activeOnly({ companyId, isActive: true }),
@@ -337,6 +383,11 @@ export class ReportingService {
       this.prisma.auditLog.count({ where: { companyId } }),
       this.prisma.auditLog.count({
         where: { companyId, createdAt: { gte: thirtyDaysAgo } },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ['module'],
+        where: { companyId, createdAt: { gte: thirtyDaysAgo } },
+        _count: { _all: true },
       }),
       this.prisma.rfi.count({
         where: {
@@ -382,18 +433,51 @@ export class ReportingService {
       0,
     );
 
+    const budgetTotal = budgetRows.reduce((sum, row) => {
+      if (row.budget == null) {
+        return sum;
+      }
+      return sum + Number(row.budget);
+    }, 0);
+
+    const averageProgressPct =
+      progressAgg._avg?.overallProgressPct != null
+        ? Math.round(progressAgg._avg.overallProgressPct)
+        : null;
+
+    const topModules = auditModuleGroups
+      .sort((a, b) => b._count._all - a._count._all)
+      .slice(0, 6)
+      .map((group) => ({
+        module: group.module,
+        count: group._count._all,
+      }));
+
+    const totalOpenSiteOps =
+      openRfis + overdueRfis + openIssues + openPunchItems;
+
     return {
       generatedAt: new Date().toISOString(),
+      companyName: company?.legalName ?? 'Company',
+      baseCurrency: company?.baseCurrency ?? 'USD',
       completionRate: completionRate.rate,
       projects: {
         total: totalProjects,
         active: activeProjects,
+        onHold: onHoldProjects,
+        planning: planningProjects,
+        completed: completedProjects,
+        closed: closedProjects,
+        averageProgressPct,
+        totalBudget:
+          budgetTotal > 0 ? budgetTotal.toFixed(2) : null,
         byStatus,
         byType,
       },
       users: {
         total: usersTotal,
         active: usersActive,
+        inactive: Math.max(0, usersTotal - usersActive),
       },
       organization: {
         branches,
@@ -402,12 +486,14 @@ export class ReportingService {
       audit: {
         last30Days: auditLast30Days,
         total: auditTotal,
+        topModules,
       },
       siteOps: {
         openRfis,
         overdueRfis,
         openIssues,
         openPunchItems,
+        totalOpen: totalOpenSiteOps,
       },
     };
   }
