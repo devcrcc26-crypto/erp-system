@@ -122,7 +122,6 @@ export default function MeetingDetailDrawer({
       await updateMeeting.mutateAsync({ projectId, meetingId, body: { status } });
       messageApi.success('Meeting status updated');
       onUpdated();
-      void meetingQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Failed to update status', messageApi);
     }
@@ -169,7 +168,7 @@ export default function MeetingDetailDrawer({
                       meetingId: meetingId!,
                       agendaItemId: record.id,
                     })
-                    .then(() => void meetingQuery.refetch())
+                    .then(() => onUpdated())
                     .catch((e: unknown) =>
                       notifyApiError(e, 'Failed to remove item', messageApi),
                     )
@@ -216,7 +215,7 @@ export default function MeetingDetailDrawer({
                 attendeeId: record.id,
                 body: { attended: e.target.checked },
               })
-              .then(() => void meetingQuery.refetch())
+              .then(() => onUpdated())
           }
         />
       ),
@@ -240,7 +239,7 @@ export default function MeetingDetailDrawer({
                       meetingId: meetingId!,
                       attendeeId: record.id,
                     })
-                    .then(() => void meetingQuery.refetch())
+                    .then(() => onUpdated())
                 }
               />
             ),
@@ -288,7 +287,7 @@ export default function MeetingDetailDrawer({
                 meetingId: meetingId!,
                 actionItemId: record.id,
                 body: { status: value },
-              }).then(() => void meetingQuery.refetch())
+              }).then(() => onUpdated())
             }
           />
         ) : (
@@ -312,7 +311,7 @@ export default function MeetingDetailDrawer({
                     projectId,
                     meetingId: meetingId!,
                     actionItemId: record.id,
-                  }).then(() => void meetingQuery.refetch())
+                  }).then(() => onUpdated())
                 }
               />
             ),
@@ -439,7 +438,7 @@ export default function MeetingDetailDrawer({
                                 })
                                 .then(() => {
                                   messageApi.success('Agenda item added');
-                                  void meetingQuery.refetch();
+                                  onUpdated();
                                 })
                                 .catch((e: unknown) =>
                                   notifyApiError(e, 'Failed to add item', messageApi),
@@ -507,8 +506,11 @@ export default function MeetingDetailDrawer({
                                 })
                                 .then(() => {
                                   messageApi.success('Attendee added');
-                                  void meetingQuery.refetch();
+                                  onUpdated();
                                 })
+                                .catch((e: unknown) =>
+                                  notifyApiError(e, 'Failed to add attendee', messageApi),
+                                )
                             }
                           >
                             <Form.Item name="userId" label="User (internal)">
@@ -576,7 +578,7 @@ export default function MeetingDetailDrawer({
                                 })
                                 .then(() => {
                                   messageApi.success('Action item added');
-                                  void meetingQuery.refetch();
+                                  onUpdated();
                                 })
                             }
                           >

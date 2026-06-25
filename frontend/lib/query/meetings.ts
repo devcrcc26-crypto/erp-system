@@ -88,6 +88,7 @@ export function useMeeting(
     queryFn: () =>
       apiGet<MeetingDetail>(`${meetingsPath(projectId)}/${meetingId}`),
     enabled: Boolean(projectId) && Boolean(meetingId) && enabled,
+    staleTime: 30_000,
   });
 }
 
@@ -127,8 +128,12 @@ export function useUpdateMeeting() {
         `${meetingsPath(projectId)}/${meetingId}`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (data, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        ...data,
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -172,8 +177,12 @@ export function useAddMeetingAgendaItem() {
         `${meetingsPath(projectId)}/${meetingId}/agenda`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (item, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        agendaItems: [...meeting.agendaItems, item],
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -197,8 +206,14 @@ export function useUpdateMeetingAgendaItem() {
         `${meetingsPath(projectId)}/${meetingId}/agenda/${agendaItemId}`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (item, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        agendaItems: meeting.agendaItems.map((row) =>
+          row.id === variables.agendaItemId ? item : row,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -220,7 +235,13 @@ export function useRemoveMeetingAgendaItem() {
         `${meetingsPath(projectId)}/${meetingId}/agenda/${agendaItemId}`,
       ),
     onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        agendaItems: meeting.agendaItems.filter(
+          (row) => row.id !== variables.agendaItemId,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -242,8 +263,12 @@ export function useAddMeetingAttendee() {
         `${meetingsPath(projectId)}/${meetingId}/attendees`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (attendee, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        attendees: [...meeting.attendees, attendee],
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -267,8 +292,14 @@ export function useUpdateMeetingAttendee() {
         `${meetingsPath(projectId)}/${meetingId}/attendees/${attendeeId}`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (attendee, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        attendees: meeting.attendees.map((row) =>
+          row.id === variables.attendeeId ? attendee : row,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -290,7 +321,13 @@ export function useRemoveMeetingAttendee() {
         `${meetingsPath(projectId)}/${meetingId}/attendees/${attendeeId}`,
       ),
     onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        attendees: meeting.attendees.filter(
+          (row) => row.id !== variables.attendeeId,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -312,8 +349,12 @@ export function useAddMeetingActionItem() {
         `${meetingsPath(projectId)}/${meetingId}/action-items`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (item, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        actionItems: [...meeting.actionItems, item],
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -337,8 +378,14 @@ export function useUpdateMeetingActionItem() {
         `${meetingsPath(projectId)}/${meetingId}/action-items/${actionItemId}`,
         body,
       ),
-    onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+    onSuccess: (item, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        actionItems: meeting.actionItems.map((row) =>
+          row.id === variables.actionItemId ? item : row,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
 }
@@ -360,9 +407,26 @@ export function useRemoveMeetingActionItem() {
         `${meetingsPath(projectId)}/${meetingId}/action-items/${actionItemId}`,
       ),
     onSuccess: (_data, variables) => {
-      void invalidateMeetingDetail(queryClient, variables);
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        actionItems: meeting.actionItems.filter(
+          (row) => row.id !== variables.actionItemId,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
     },
   });
+}
+
+function patchMeetingDetail(
+  queryClient: ReturnType<typeof useQueryClient>,
+  variables: { projectId: string; meetingId: string },
+  patch: (meeting: MeetingDetail) => MeetingDetail,
+): void {
+  queryClient.setQueryData<MeetingDetail>(
+    meetingKeys.detail(variables.projectId, variables.meetingId),
+    (current) => (current ? patch(current) : current),
+  );
 }
 
 function invalidateMeetingDetail(
@@ -371,8 +435,5 @@ function invalidateMeetingDetail(
 ): void {
   void queryClient.invalidateQueries({
     queryKey: meetingKeys.lists(variables.projectId),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: meetingKeys.detail(variables.projectId, variables.meetingId),
   });
 }

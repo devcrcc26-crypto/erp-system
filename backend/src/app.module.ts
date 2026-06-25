@@ -40,15 +40,13 @@ import { StorageModule } from './shared/storage/storage.module';
       {
         name: 'default',
         ttl: 60_000,
-        limit: process.env.NODE_ENV === 'production' ? 100 : 1000,
-        // Local development should not trip rate limits during normal UI navigation.
-        skipIf: () => process.env.NODE_ENV !== 'production',
-      },
-      {
-        name: 'auth',
-        ttl: 60_000,
-        limit: 10,
-        skipIf: () => process.env.NODE_ENV === 'test',
+        limit:
+          process.env.NODE_ENV === 'production'
+            ? Number(process.env.THROTTLE_LIMIT ?? 300)
+            : 10_000,
+        skipIf: () =>
+          process.env.NODE_ENV === 'development' ||
+          process.env.NODE_ENV === 'test',
       },
     ]),
     PrismaModule,
