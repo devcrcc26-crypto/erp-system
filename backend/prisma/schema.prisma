@@ -1717,12 +1717,15 @@ model TaskDependency {
   lagDays           Int                @default(0) @map("lag_days")
   createdAt         DateTime           @default(now()) @map("created_at")
   createdBy         String             @map("created_by")
+  deletedAt         DateTime?          @map("deleted_at")
+  deletedBy         String?            @map("deleted_by")
 
   predecessorTask Task @relation("PredecessorTask", fields: [predecessorTaskId], references: [id])
   successorTask   Task @relation("SuccessorTask", fields: [successorTaskId], references: [id])
 
   @@index([predecessorTaskId], map: "idx_task_dependency_predecessor")
   @@index([successorTaskId], map: "idx_task_dependency_successor")
+  @@index([deletedAt], map: "idx_task_dependency_deleted_at")
   @@map("task_dependency")
 }
 

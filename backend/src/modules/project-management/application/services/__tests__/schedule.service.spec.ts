@@ -54,7 +54,7 @@ describe('ScheduleService', () => {
   let prisma: {
     milestone: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     task: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
-    taskDependency: { create: jest.Mock };
+    taskDependency: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     projectTeam: { count: jest.Mock };
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
@@ -74,6 +74,8 @@ describe('ScheduleService', () => {
       },
       taskDependency: {
         create: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
       },
       projectTeam: {
         count: jest.fn(),
@@ -163,6 +165,31 @@ describe('ScheduleService', () => {
 
   describe('createTaskDependency', () => {
     it.todo('detects dependency cycles once FIX I6 is applied');
+  });
+
+  describe('deleteTaskDependency', () => {
+    it('soft-deletes the dependency with deletedAt and deletedBy', async () => {
+      const dependencyId = 'dependency-1';
+      prisma.taskDependency.findFirst.mockResolvedValue({
+        id: dependencyId,
+        predecessorTaskId: 'task-predecessor',
+        successorTaskId: 'task-successor',
+      });
+      prisma.taskDependency.update.mockResolvedValue({});
+
+      await service.deleteTaskDependency(ctx, projectId, dependencyId);
+
+      expect(prisma.taskDependency.update).toHaveBeenCalledWith({
+        where: { id: dependencyId },
+        data: {
+          deletedAt: expect.any(Date),
+          deletedBy: ctx.userId,
+        },
+      });
+      expect(prisma.taskDependency.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: dependencyId }, data: expect.objectContaining({ deletedAt: null }) }),
+      );
+    });
   });
 
   describe('updateMilestone', () => {

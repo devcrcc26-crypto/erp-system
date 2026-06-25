@@ -348,6 +348,7 @@ export class ScheduleService {
           NOT_STARTED: ['IN_PROGRESS', 'DELAYED'],
           IN_PROGRESS: ['COMPLETED', 'DELAYED', 'NOT_STARTED'],
           DELAYED: ['IN_PROGRESS', 'NOT_STARTED'],
+          // Intentional: allow reopening completed tasks for schedule corrections.
           COMPLETED: ['IN_PROGRESS'],
         };
         const allowed = TASK_STATUS_TRANSITIONS[current!.status];
@@ -422,6 +423,7 @@ export class ScheduleService {
 
     const dependencies = await this.prisma.taskDependency.findMany({
       where: {
+        ...activeOnly({}),
         predecessorTask: activeOnly({ projectId }),
         successorTask: activeOnly({ projectId }),
       },
@@ -476,7 +478,7 @@ export class ScheduleService {
 
     const existing = await this.prisma.taskDependency.findFirst({
       where: {
-        id: dependencyId,
+        ...activeOnly({ id: dependencyId }),
         predecessorTask: activeOnly({ projectId }),
         successorTask: activeOnly({ projectId }),
       },
@@ -514,7 +516,7 @@ export class ScheduleService {
   }
 
   /**
-   * Deletes a task dependency scoped to a project.
+   * Soft-deletes a task dependency scoped to a project.
    */
   async deleteTaskDependency(
     ctx: PmContext,
@@ -525,7 +527,7 @@ export class ScheduleService {
 
     const dependency = await this.prisma.taskDependency.findFirst({
       where: {
-        id: dependencyId,
+        ...activeOnly({ id: dependencyId }),
         predecessorTask: activeOnly({ projectId }),
         successorTask: activeOnly({ projectId }),
       },
@@ -534,7 +536,10 @@ export class ScheduleService {
       throw new NotFoundException('Task dependency not found');
     }
 
-    await this.prisma.taskDependency.delete({ where: { id: dependencyId } });
+    await this.prisma.taskDependency.update({
+      where: { id: dependencyId },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
   }
 
   /**

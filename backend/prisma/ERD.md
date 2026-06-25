@@ -709,6 +709,8 @@ erDiagram
   Int lag_days
   DateTime created_at
   String created_by
+  DateTime deleted_at "nullable"
+  String deleted_by "nullable"
 }
 "rfi" {
   String id PK
@@ -2136,6 +2138,8 @@ Properties as follows:
 - `lag_days`:
 - `created_at`:
 - `created_by`:
+- `deleted_at`:
+- `deleted_by`:
 
 ### `rfi`
 

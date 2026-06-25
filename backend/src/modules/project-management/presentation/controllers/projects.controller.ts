@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -75,17 +76,18 @@ export class ProjectsController {
     return this.projectsService.setTeam(this.ctx(user), projectId, dto);
   }
 
-  @Get(':id')
+  @Get(':projectId')
   @RequirePermission('projects', 'view')
   @ApiOperation({ summary: 'Get project by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('projectId') projectId: string,
   ): Promise<unknown> {
-    return this.projectsService.getProject(this.ctx(user), id);
+    return this.projectsService.getProject(this.ctx(user), projectId);
   }
 
   @Post()
+  @HttpCode(201)
   @RequirePermission('projects', 'create')
   @ApiOperation({ summary: 'Create project' })
   create(
@@ -95,25 +97,25 @@ export class ProjectsController {
     return this.projectsService.createProject(this.ctx(user), dto);
   }
 
-  @Patch(':id')
+  @Patch(':projectId')
   @RequirePermission('projects', 'edit')
   @ApiOperation({ summary: 'Update project' })
   update(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('projectId') projectId: string,
     @Body() dto: UpdateProjectDto,
   ): Promise<unknown> {
-    return this.projectsService.updateProject(this.ctx(user), id, dto);
+    return this.projectsService.updateProject(this.ctx(user), projectId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':projectId')
   @RequirePermission('projects', 'delete')
   @ApiOperation({ summary: 'Delete project' })
   async remove(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('projectId') projectId: string,
   ): Promise<{ message: string }> {
-    await this.projectsService.deleteProject(this.ctx(user), id);
+    await this.projectsService.deleteProject(this.ctx(user), projectId);
     return { message: 'Project deleted' };
   }
 }
