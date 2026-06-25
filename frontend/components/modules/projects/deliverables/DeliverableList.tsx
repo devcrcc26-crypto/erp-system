@@ -164,8 +164,16 @@ export default function DeliverableList({
               <Table
                 pagination={false}
                 showHeader={false}
+                rowKey={(row) => String(row)}
                 dataSource={[1, 2, 3]}
-                columns={[{ render: () => <div className="erp-page-skeleton h-10 w-full rounded" /> }]}
+                columns={[
+                  {
+                    key: 'skeleton',
+                    render: () => (
+                      <div className="erp-page-skeleton h-10 w-full rounded" />
+                    ),
+                  },
+                ]}
               />
             ) : (
               <TableEmptyState
