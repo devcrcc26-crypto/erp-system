@@ -96,16 +96,42 @@ export default function SubmittalDetailDrawer({
   const isAssignedReviewer =
     Boolean(submittal?.assignedTo) &&
     submittal?.assignedTo === currentUserId;
-  const canRecordReview =
-    submittalsCap.canCreate &&
-    isAssignedReviewer &&
+  const isDisciplineLead =
+    Boolean(submittal?.disciplineLeadUserId) &&
+    submittal?.disciplineLeadUserId === currentUserId;
+  const isConstructionReviewer =
+    isConstruction &&
+    (isAssignedReviewer || isDisciplineLead) &&
     submittal !== undefined &&
     REVIEWABLE_SUBMITTAL_STATUSES.includes(submittal.status);
+  const canRecordReview = isConstruction
+    ? isConstructionReviewer && (submittalsCap.canView || submittalsCap.canEdit)
+    : submittalsCap.canCreate &&
+      isAssignedReviewer &&
+      submittal !== undefined &&
+      REVIEWABLE_SUBMITTAL_STATUSES.includes(submittal.status);
   const canSubmitToLead =
     isConstruction &&
     submittal?.status === 'DRAFT' &&
     submittal?.submittedBy === currentUserId &&
     submittalsCap.canCreate;
+  const canRecallToDraft =
+    isConstruction &&
+    submittal?.status === 'SUBMITTED' &&
+    submittal?.submittedBy === currentUserId &&
+    submittalsCap.canEdit;
+  const canUploadAttachments =
+    submittal !== undefined &&
+    ((submittal.status === 'DRAFT' &&
+      submittal.submittedBy === currentUserId) ||
+      (isConstructionReviewer &&
+        (submittalsCap.canView || submittalsCap.canEdit)));
+  const showDirectStatusControl =
+    submittal !== undefined &&
+    !isConstruction &&
+    !SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) &&
+    nextStatusOptions(submittal.status, SUBMITTAL_DIRECT_TRANSITIONS).length >
+      0;
 
   async function handleAddReview(values: ReviewFormValues): Promise<void> {
     if (!submittalId || !submittal) {
@@ -142,6 +168,24 @@ export default function SubmittalDetailDrawer({
       void submittalQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Failed to submit submittal', messageApi);
+    }
+  }
+
+  async function handleRecallToDraft(): Promise<void> {
+    if (!submittalId) {
+      return;
+    }
+    try {
+      await updateSubmittal.mutateAsync({
+        projectId,
+        submittalId,
+        body: { status: 'DRAFT' },
+      });
+      messageApi.success('Submittal recalled to draft');
+      onUpdated();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to recall submittal', messageApi);
     }
   }
 
@@ -253,39 +297,39 @@ export default function SubmittalDetailDrawer({
             )}
           </Descriptions>
 
-          {submittal && (
+          {showDirectStatusControl && (
             <section className={layout.drawerSection}>
               <p className={`mb-2 ${layout.drawerHeading}`}>Update status</p>
-              {SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) ? (
-                <div className="flex flex-col gap-2">
-                  <StatusBadge
-                    label={formatSubmittalStatus(submittal.status)}
-                    variant={submittalStatusVariant(submittal.status)}
-                  />
-                  <p className={layout.drawerMutedText}>
-                    Set via review — cannot be changed directly.
-                  </p>
-                </div>
-              ) : nextStatusOptions(
+              <Select
+                className="w-full max-w-xs"
+                value={submittal.status}
+                onChange={(value: SubmittalStatus) =>
+                  void handleDirectStatusChange(value)
+                }
+                loading={updateSubmittal.isPending}
+                options={nextStatusOptions(
                   submittal.status,
                   SUBMITTAL_DIRECT_TRANSITIONS,
-                ).length > 0 ? (
-                <Select
-                  className="w-full max-w-xs"
-                  value={submittal.status}
-                  onChange={(value: SubmittalStatus) =>
-                    void handleDirectStatusChange(value)
-                  }
-                  loading={updateSubmittal.isPending}
-                  options={nextStatusOptions(
-                    submittal.status,
-                    SUBMITTAL_DIRECT_TRANSITIONS,
-                  ).map((status) => ({
-                    value: status,
-                    label: formatSubmittalStatus(status),
-                  }))}
+                ).map((status) => ({
+                  value: status,
+                  label: formatSubmittalStatus(status),
+                }))}
+              />
+            </section>
+          )}
+
+          {SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) && (
+            <section className={layout.drawerSection}>
+              <p className={`mb-2 ${layout.drawerHeading}`}>Review outcome</p>
+              <div className="flex flex-col gap-2">
+                <StatusBadge
+                  label={formatSubmittalStatus(submittal.status)}
+                  variant={submittalStatusVariant(submittal.status)}
                 />
-              ) : null}
+                <p className={layout.drawerMutedText}>
+                  Set via review — cannot be changed directly.
+                </p>
+              </div>
             </section>
           )}
 
@@ -307,10 +351,33 @@ export default function SubmittalDetailDrawer({
 
           <DocumentAttachmentPanel
             folderId={submittal.attachmentFolderId ?? undefined}
-            readOnly={submittal.status !== 'DRAFT'}
-            title="Supporting documents"
-            description="Upload shop drawings, product data sheets, samples photos, and other approval documents."
+            readOnly={!canUploadAttachments}
+            title={
+              isConstructionReviewer ? 'Review attachments' : 'Supporting documents'
+            }
+            description={
+              isConstructionReviewer
+                ? 'Upload marked-up drawings, review comments, and other response files before recording your review.'
+                : 'Upload shop drawings, product data sheets, samples photos, and other approval documents.'
+            }
           />
+
+          {canRecallToDraft && submittalId && (
+            <Alert
+              type="info"
+              showIcon
+              title="Submitted for review"
+              description="You can recall this submittal to draft if you need to make changes before the discipline leader reviews it."
+              action={
+                <Button
+                  loading={updateSubmittal.isPending}
+                  onClick={() => void handleRecallToDraft()}
+                >
+                  Recall to draft
+                </Button>
+              }
+            />
+          )}
 
           {canSubmitToLead && submittalId && (
             <Alert
@@ -371,15 +438,15 @@ export default function SubmittalDetailDrawer({
                 form={form}
                 layout="vertical"
                 className="erp-drawer-form mt-4"
-                initialValues={{ status: 'UNDER_REVIEW' }}
+                initialValues={{ status: 'APPROVED' }}
                 onFinish={(values: ReviewFormValues) =>
                   void handleAddReview(values)
                 }
               >
                 <Form.Item
-                  label="Record review"
+                  label="Review outcome"
                   name="status"
-                  rules={[{ required: true, message: 'Select review status' }]}
+                  rules={[{ required: true, message: 'Select review outcome' }]}
                 >
                   <Select
                     options={SUBMITTAL_WORKFLOW.filter((step) =>
@@ -392,18 +459,31 @@ export default function SubmittalDetailDrawer({
                     }))}
                   />
                 </Form.Item>
-                <Form.Item label="Comments" name="comments">
+                <Form.Item
+                  label="Comments"
+                  name="comments"
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Enter review comments',
+                    },
+                  ]}
+                >
                   <Input.TextArea
-                    rows={3}
-                    placeholder="Review comments and markup notes"
+                    rows={4}
+                    placeholder="Review comments, conditions, and required revisions"
                   />
                 </Form.Item>
+                <p className={`mb-3 ${layout.drawerMutedText}`}>
+                  Attach marked-up files in the section above, then record your
+                  review outcome.
+                </p>
                 <Button
                   type="primary"
                   htmlType="submit"
                   loading={addReview.isPending}
                 >
-                  Add review entry
+                  Record review
                 </Button>
               </Form>
             )}
@@ -417,7 +497,22 @@ export default function SubmittalDetailDrawer({
                   showIcon
                   className="mt-4"
                   title="Awaiting discipline leader review"
-                  description="Your submittal has been submitted. The assigned reviewer will record the approval outcome."
+                  description="Your submittal has been submitted. The assigned discipline leader will record the approval outcome."
+                />
+              )}
+
+            {!canRecordReview &&
+              isConstruction &&
+              submittal.status === 'SUBMITTED' &&
+              submittal.submittedBy !== currentUserId &&
+              !isDisciplineLead &&
+              !isAssignedReviewer && (
+                <Alert
+                  type="info"
+                  showIcon
+                  className="mt-4"
+                  title="Awaiting discipline leader review"
+                  description="This submittal is with the assigned discipline leader for approval."
                 />
               )}
           </section>

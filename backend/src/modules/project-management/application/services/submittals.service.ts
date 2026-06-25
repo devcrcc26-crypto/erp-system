@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -61,6 +61,19 @@ const SUBMITTAL_STATUS_TRANSITIONS: Record<string, string[]> = {
   UNDER_REVIEW: [],
 };
 
+const REVIEWABLE_SUBMITTAL_STATUSES = new Set<SubmittalStatus>([
+  SubmittalStatus.SUBMITTED,
+  SubmittalStatus.UNDER_REVIEW,
+]);
+
+const SUBMITTAL_REVIEW_OUTCOME_STATUSES = new Set<SubmittalStatus>([
+  SubmittalStatus.UNDER_REVIEW,
+  SubmittalStatus.APPROVED,
+  SubmittalStatus.APPROVED_WITH_COMMENTS,
+  SubmittalStatus.REVISE_AND_RESUBMIT,
+  SubmittalStatus.REJECTED,
+]);
+
 @Injectable()
 export class SubmittalsService {
   constructor(
@@ -119,7 +132,10 @@ export class SubmittalsService {
   > {
     const row = await this.prisma.submittal.findFirst({
       where: activeOnly({ id: submittalId, projectId }),
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: {
+        items: { orderBy: { sortOrder: 'asc' } },
+        taskDiscipline: { select: { disciplineLeadUserId: true } },
+      },
     });
     if (!row) {
       throw new NotFoundException('Submittal not found');
@@ -133,6 +149,7 @@ export class SubmittalsService {
 
     return {
       ...mapSubmittal(row),
+      disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
       items: row.items.map(mapSubmittalItem),
       attachmentFolderId: folder?.id ?? null,
     };
@@ -478,7 +495,27 @@ export class SubmittalsService {
       );
     }
 
-    await this.getSubmittalOrThrow(projectId, submittalId);
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+
+    if (
+      dto.status !== undefined &&
+      submittal.submittalPurpose === SubmittalPurpose.IN_CONSTRUCTION
+    ) {
+      if (dto.status === SubmittalStatus.SUBMITTED) {
+        throw new BadRequestException(
+          'Use the submit-to-lead action for in-construction submittals',
+        );
+      }
+      if (
+        dto.status === SubmittalStatus.DRAFT &&
+        submittal.status === SubmittalStatus.SUBMITTED &&
+        submittal.submittedBy !== ctx.userId
+      ) {
+        throw new ForbiddenException(
+          'Only the submitter can recall an in-construction submittal to draft',
+        );
+      }
+    }
 
     if (dto.status !== undefined) {
       const current = await this.prisma.submittal.findFirst({
@@ -557,6 +594,14 @@ export class SubmittalsService {
     dto: CreateSubmittalReviewDto,
   ): Promise<MappedSubmittalReview> {
     const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    await this.assertCanReviewSubmittal(ctx, submittal);
+
+    if (!SUBMITTAL_REVIEW_OUTCOME_STATUSES.has(dto.status)) {
+      throw new BadRequestException(
+        `Invalid review status ${dto.status} for submittal review`,
+      );
+    }
+
     const revisionNumber =
       dto.revisionNumber ?? submittal.revisionNumber ?? 1;
 
@@ -671,5 +716,55 @@ export class SubmittalsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
+  }
+
+  /**
+   * Ensures only the assigned reviewer or discipline lead can record a review.
+   */
+  private async assertCanReviewSubmittal(
+    ctx: PmContext,
+    submittal: {
+      id: string;
+      submittalPurpose: SubmittalPurpose | null;
+      status: SubmittalStatus;
+      assignedTo: string | null;
+      taskDisciplineId: string | null;
+    },
+  ): Promise<void> {
+    if (!REVIEWABLE_SUBMITTAL_STATUSES.has(submittal.status)) {
+      throw new BadRequestException(
+        `Cannot review submittal in ${submittal.status} status`,
+      );
+    }
+
+    if (submittal.submittalPurpose === SubmittalPurpose.IN_CONSTRUCTION) {
+      const disciplineLeadUserId = submittal.taskDisciplineId
+        ? (
+            await this.prisma.taskDiscipline.findFirst({
+              where: activeOnly({
+                id: submittal.taskDisciplineId,
+                companyId: ctx.companyId,
+              }),
+              select: { disciplineLeadUserId: true },
+            })
+          )?.disciplineLeadUserId ?? null
+        : null;
+
+      const isAssignee = submittal.assignedTo === ctx.userId;
+      const isDisciplineLead = disciplineLeadUserId === ctx.userId;
+
+      if (!isAssignee && !isDisciplineLead) {
+        throw new ForbiddenException(
+          'Only the assigned discipline leader can review this submittal',
+        );
+      }
+      return;
+    }
+
+    if (submittal.assignedTo !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the assigned reviewer can record a review for this submittal',
+      );
+    }
   }
 }

@@ -42,6 +42,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { buildRevisionTriggerQuery } from '@/lib/utils/revision-trigger-url';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface ResponseFormValues {
   responseText: string;
@@ -67,9 +68,14 @@ export default function RfiDetailDrawer({
   const updateRfi = useUpdateRfi();
   const addResponse = useAddRfiResponse();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
 
   const rfi = rfiQuery.data;
   const responses = responsesQuery.data ?? [];
+  const canRespond =
+    Boolean(rfi?.assignedTo) &&
+    rfi?.assignedTo === currentUserId &&
+    rfi.status !== 'CLOSED';
 
   async function handleStatusChange(status: RfiStatus): Promise<void> {
     if (!rfiId || !rfi) {
@@ -232,29 +238,45 @@ export default function RfiDetailDrawer({
               </ul>
             )}
 
-            <Form<ResponseFormValues>
-              form={form}
-              layout="vertical"
-              className="erp-drawer-form mt-4"
-              onFinish={(values: ResponseFormValues) =>
-                void handleAddResponse(values)
-              }
-            >
-              <Form.Item
-                label="Add response"
-                name="responseText"
-                rules={[{ required: true, message: 'Enter a response' }]}
+            {canRespond ? (
+              <Form<ResponseFormValues>
+                form={form}
+                layout="vertical"
+                className="erp-drawer-form mt-4"
+                onFinish={(values: ResponseFormValues) =>
+                  void handleAddResponse(values)
+                }
               >
-                <Input.TextArea rows={3} placeholder="Official response text" />
-              </Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={addResponse.isPending}
-              >
-                Post response
-              </Button>
-            </Form>
+                <Form.Item
+                  label="Add response"
+                  name="responseText"
+                  rules={[{ required: true, message: 'Enter a response' }]}
+                >
+                  <Input.TextArea rows={3} placeholder="Official response text" />
+                </Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={addResponse.isPending}
+                >
+                  Post response
+                </Button>
+              </Form>
+            ) : (
+              <Alert
+                type="info"
+                showIcon
+                className="mt-4"
+                title="Response restricted"
+                description={
+                  !rfi.assignedTo
+                    ? 'Assign a designer on this RFI before an official response can be posted.'
+                    : rfi.status === 'CLOSED'
+                      ? 'This RFI is closed — no further responses can be posted.'
+                      : 'Only the assigned designer can post an official response.'
+                }
+              />
+            )}
           </section>
 
           <DocumentAttachmentPanel

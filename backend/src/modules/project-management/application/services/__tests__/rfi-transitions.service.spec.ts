@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Rfi, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
@@ -39,6 +39,8 @@ describe('RfisService status transitions', () => {
 
   let prisma: {
     rfi: { findFirst: jest.Mock; update: jest.Mock };
+    rfiResponse: { create: jest.Mock };
+    $transaction: jest.Mock;
   };
   let service: RfisService;
 
@@ -48,6 +50,10 @@ describe('RfisService status transitions', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      rfiResponse: {
+        create: jest.fn(),
+      },
+      $transaction: jest.fn(),
     };
 
     service = new RfisService(
@@ -145,6 +151,76 @@ describe('RfisService status transitions', () => {
       expect(prisma.rfi.findFirst).toHaveBeenCalledTimes(1);
       expect(prisma.rfi.update).toHaveBeenCalled();
       expect(result.title).toBe('Updated title');
+    });
+  });
+
+  describe('addRfiResponse', () => {
+    const assignedDesignerId = 'designer-1';
+
+    it('allows the assigned designer to post a response', async () => {
+      const rfi = buildRfi('UNDER_REVIEW');
+      rfi.assignedTo = assignedDesignerId;
+      prisma.rfi.findFirst.mockResolvedValue(rfi);
+      prisma.$transaction.mockImplementation(
+        async (work: (tx: typeof prisma) => Promise<unknown>) => work(prisma),
+      );
+      prisma.rfiResponse.create.mockResolvedValue({
+        id: 'response-1',
+        rfiId,
+        respondedBy: assignedDesignerId,
+        responseText: 'Use footing depth per drawing A-101.',
+        respondedAt: new Date('2026-02-01'),
+      });
+      prisma.rfi.update.mockResolvedValue({ ...rfi, status: 'ANSWERED' });
+
+      const result = await service.addRfiResponse(
+        { ...ctx, userId: assignedDesignerId },
+        projectId,
+        rfiId,
+        { responseText: 'Use footing depth per drawing A-101.' },
+      );
+
+      expect(result.responseText).toBe('Use footing depth per drawing A-101.');
+      expect(prisma.rfiResponse.create).toHaveBeenCalled();
+    });
+
+    it('rejects responses from users who are not the assignee', async () => {
+      const rfi = buildRfi('UNDER_REVIEW');
+      rfi.assignedTo = assignedDesignerId;
+      prisma.rfi.findFirst.mockResolvedValue(rfi);
+
+      await expect(
+        service.addRfiResponse(ctx, projectId, rfiId, {
+          responseText: 'Not my RFI',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects responses when no designer is assigned', async () => {
+      prisma.rfi.findFirst.mockResolvedValue(buildRfi('UNDER_REVIEW'));
+
+      await expect(
+        service.addRfiResponse(ctx, projectId, rfiId, {
+          responseText: 'Nobody assigned',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects responses on closed RFIs', async () => {
+      const rfi = buildRfi('CLOSED');
+      rfi.assignedTo = assignedDesignerId;
+      prisma.rfi.findFirst.mockResolvedValue(rfi);
+
+      await expect(
+        service.addRfiResponse(
+          { ...ctx, userId: assignedDesignerId },
+          projectId,
+          rfiId,
+          { responseText: 'Too late' },
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

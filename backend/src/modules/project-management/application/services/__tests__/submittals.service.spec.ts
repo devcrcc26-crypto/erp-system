@@ -1,5 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
-import { Submittal, SubmittalStatus } from '@prisma/client';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Submittal, SubmittalPurpose, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { SubmittalsService } from '../submittals.service';
 import { PmContext } from '../../types/pm-context.type';
@@ -13,6 +13,10 @@ describe('SubmittalsService', () => {
     id: submittalId,
     projectId,
     status: SubmittalStatus.DRAFT,
+    submittalPurpose: null,
+    submittedBy: ctx.userId,
+    assignedTo: null,
+    taskDisciplineId: null,
     title: 'Original title',
     category: 'Structural',
     contractor: null,
@@ -28,7 +32,12 @@ describe('SubmittalsService', () => {
 
   let prisma: {
     submittal: { findFirst: jest.Mock; update: jest.Mock };
+    submittalItem: { findMany: jest.Mock };
+    submittalReview: { create: jest.Mock };
+    taskDiscipline: { findFirst: jest.Mock };
+    $transaction: jest.Mock;
   };
+  let externalReviewTrigger: { recordFromSubmittalReview: jest.Mock };
   let service: SubmittalsService;
 
   beforeEach(() => {
@@ -37,6 +46,19 @@ describe('SubmittalsService', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      submittalItem: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      submittalReview: {
+        create: jest.fn(),
+      },
+      taskDiscipline: {
+        findFirst: jest.fn(),
+      },
+      $transaction: jest.fn(),
+    };
+    externalReviewTrigger = {
+      recordFromSubmittalReview: jest.fn().mockResolvedValue(undefined),
     };
 
     service = new SubmittalsService(
@@ -44,7 +66,7 @@ describe('SubmittalsService', () => {
       {} as never,
       {} as never,
       {} as never,
-      {} as never,
+      externalReviewTrigger as never,
       {} as never,
       {} as never,
     );
@@ -156,6 +178,70 @@ describe('SubmittalsService', () => {
       });
 
       expect(result.status).toBe(SubmittalStatus.DRAFT);
+    });
+  });
+
+  describe('addReview', () => {
+    const leadUserId = 'lead-1';
+    const disciplineId = 'discipline-1';
+
+    const constructionSubmittal = {
+      ...existingSubmittal,
+      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+      status: SubmittalStatus.SUBMITTED,
+      assignedTo: leadUserId,
+      taskDisciplineId: disciplineId,
+    } as Submittal;
+
+    it('allows the discipline lead to record a construction review', async () => {
+      prisma.submittal.findFirst.mockResolvedValue(constructionSubmittal);
+      prisma.taskDiscipline.findFirst.mockResolvedValue({
+        disciplineLeadUserId: leadUserId,
+      });
+      prisma.$transaction.mockImplementation(
+        async (work: (tx: typeof prisma) => Promise<unknown>) => work(prisma),
+      );
+      prisma.submittalReview.create.mockResolvedValue({
+        id: 'review-1',
+        submittalId,
+        reviewedBy: leadUserId,
+        revisionNumber: 1,
+        status: SubmittalStatus.APPROVED,
+        comments: 'Approved as submitted',
+        reviewedAt: new Date('2026-02-01'),
+        createdAt: new Date('2026-02-01'),
+      });
+      prisma.submittal.update.mockResolvedValue({
+        ...constructionSubmittal,
+        status: SubmittalStatus.APPROVED,
+      });
+
+      const result = await service.addReview(
+        { ...ctx, userId: leadUserId },
+        projectId,
+        submittalId,
+        {
+          status: SubmittalStatus.APPROVED,
+          comments: 'Approved as submitted',
+        },
+      );
+
+      expect(result.status).toBe(SubmittalStatus.APPROVED);
+      expect(prisma.submittalReview.create).toHaveBeenCalled();
+    });
+
+    it('rejects construction reviews from non-lead users', async () => {
+      prisma.submittal.findFirst.mockResolvedValue(constructionSubmittal);
+      prisma.taskDiscipline.findFirst.mockResolvedValue({
+        disciplineLeadUserId: leadUserId,
+      });
+
+      await expect(
+        service.addReview(ctx, projectId, submittalId, {
+          status: SubmittalStatus.APPROVED,
+          comments: 'Not my review',
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

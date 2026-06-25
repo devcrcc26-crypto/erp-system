@@ -263,6 +263,7 @@ export class RfisService {
   ): Promise<MappedRfiResponse> {
     const rfi = await this.getRfiOrThrow(projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, rfi);
+    this.assertCanRespondToRfi(ctx, rfi);
 
     const response = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rfiResponse.create({
@@ -311,6 +312,7 @@ export class RfisService {
         { taskDisciplineId: null },
         { taskDisciplineId: { in: assignedIds } },
         { raisedBy: ctx.userId },
+        { assignedTo: ctx.userId },
       ];
     }
 
@@ -367,13 +369,22 @@ export class RfisService {
   private async assertRfiVisible(
     ctx: PmContext,
     projectId: string,
-    rfi: { taskDisciplineId: string | null; raisedBy: string },
+    rfi: {
+      taskDisciplineId: string | null;
+      raisedBy: string;
+      assignedTo: string | null;
+    },
   ): Promise<void> {
     const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
       ctx,
       projectId,
     );
-    if (bypass || rfi.raisedBy === ctx.userId || rfi.taskDisciplineId === null) {
+    if (
+      bypass ||
+      rfi.raisedBy === ctx.userId ||
+      rfi.assignedTo === ctx.userId ||
+      rfi.taskDisciplineId === null
+    ) {
       return;
     }
 
@@ -387,6 +398,30 @@ export class RfisService {
     }
 
     throw new ForbiddenException('You do not have access to this RFI');
+  }
+
+  /**
+   * Only the RFI assignee may post an official response.
+   */
+  private assertCanRespondToRfi(
+    ctx: PmContext,
+    rfi: { assignedTo: string | null; status: RfiStatus },
+  ): void {
+    if (rfi.status === RfiStatus.CLOSED) {
+      throw new BadRequestException('Cannot respond to a closed RFI');
+    }
+
+    if (!rfi.assignedTo) {
+      throw new ForbiddenException(
+        'This RFI has no assigned designer — assign a designer before posting a response',
+      );
+    }
+
+    if (rfi.assignedTo !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the assigned designer can respond to this RFI',
+      );
+    }
   }
 
   private async getRfiOrThrow(projectId: string, rfiId: string) {

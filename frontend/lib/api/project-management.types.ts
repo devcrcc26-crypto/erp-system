@@ -320,6 +320,7 @@ export interface Submittal {
   id: string;
   projectId: string;
   taskDisciplineId: string | null;
+  disciplineLeadUserId?: string | null;
   submittedBy: string;
   assignedTo: string | null;
   reviewedBy: string | null;
