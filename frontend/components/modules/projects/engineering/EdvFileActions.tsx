@@ -2,16 +2,18 @@
 
 import { useState, type MouseEvent } from 'react';
 import { Button, Space, Tooltip } from 'antd';
-import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
+import { DownloadOutlined } from '@ant-design/icons';
+// import { EyeOutlined } from '@ant-design/icons';
 import {
   downloadDocumentVersion,
-  openDocumentVersion,
+  // openDocumentVersion,
 } from '@/lib/utils/document-download';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
 /**
- * View and download actions for an engineering document version file.
+ * Download actions for an engineering document version file.
+ * View is disabled until an in-app preview is available.
  */
 export default function EdvFileActions({
   documentVersionId,
@@ -26,24 +28,22 @@ export default function EdvFileActions({
   compact?: boolean;
 }): React.ReactNode {
   const messageApi = useAppMessage();
-  const [loadingAction, setLoadingAction] = useState<'view' | 'download' | null>(
-    null,
-  );
+  const [loadingAction, setLoadingAction] = useState<'download' | null>(null);
 
   if (!documentVersionId) {
     return null;
   }
 
-  async function handleView(): Promise<void> {
-    setLoadingAction('view');
-    try {
-      await openDocumentVersion(documentVersionId!);
-    } catch (error) {
-      notifyApiError(error, 'Unable to open document', messageApi);
-    } finally {
-      setLoadingAction(null);
-    }
-  }
+  // async function handleView(): Promise<void> {
+  //   setLoadingAction('view');
+  //   try {
+  //     await openDocumentVersion(documentVersionId!);
+  //   } catch (error) {
+  //     notifyApiError(error, 'Unable to open document', messageApi);
+  //   } finally {
+  //     setLoadingAction(null);
+  //   }
+  // }
 
   async function handleDownload(): Promise<void> {
     setLoadingAction('download');
@@ -59,7 +59,7 @@ export default function EdvFileActions({
   if (compact) {
     return (
       <Space size={2} onClick={(event: MouseEvent) => event.stopPropagation()}>
-        <Tooltip title="View">
+        {/* <Tooltip title="View">
           <Button
             type="text"
             size={size}
@@ -69,7 +69,7 @@ export default function EdvFileActions({
             disabled={loadingAction !== null && loadingAction !== 'view'}
             onClick={() => void handleView()}
           />
-        </Tooltip>
+        </Tooltip> */}
         <Tooltip title="Download">
           <Button
             type="text"
@@ -87,7 +87,7 @@ export default function EdvFileActions({
 
   return (
     <Space size={4} wrap onClick={(event: MouseEvent) => event.stopPropagation()}>
-      <Button
+      {/* <Button
         type="link"
         size={size}
         className="!px-1"
@@ -97,7 +97,7 @@ export default function EdvFileActions({
         onClick={() => void handleView()}
       >
         View
-      </Button>
+      </Button> */}
       <Button
         type="link"
         size={size}

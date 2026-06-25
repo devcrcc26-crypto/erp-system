@@ -11,13 +11,12 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { ProjectTeamMember } from '@/lib/api/project-management.types';
 import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
-import type { User } from '@/lib/api/types';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-function formatUserLabel(user: User): string {
-  return `${user.firstName} ${user.lastName} (${user.email})`;
-}
+import {
+  formatUserPickerLabel,
+  formatUserRoleNames,
+} from '@/lib/utils/user-display';
 
 const EMPTY_TEAM: ProjectTeamMember[] = [];
 
@@ -29,16 +28,21 @@ function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
   return a.every((id) => setB.has(id));
 }
 
-function useUserNameLookup(): (userId: string) => string {
+function useUserDirectoryLookup(): (
+  userId: string,
+) => { name: string; roles: string } {
   const usersQuery = useUsersDirectory({ page: 1, limit: 100 });
   const users = usersQuery.data?.data ?? [];
 
   return (userId: string) => {
     const user = users.find((item) => item.id === userId);
     if (!user) {
-      return userId;
+      return { name: userId, roles: '-' };
     }
-    return `${user.firstName} ${user.lastName}`;
+    return {
+      name: `${user.firstName} ${user.lastName}`,
+      roles: formatUserRoleNames(user),
+    };
   };
 }
 
@@ -59,7 +63,7 @@ export default function ProjectTeamPanel({
   });
   const setTeam = useSetProjectTeam();
   const messageApi = useAppMessage();
-  const resolveUserName = useUserNameLookup();
+  const resolveUser = useUserDirectoryLookup();
 
   const members = teamQuery.data ?? EMPTY_TEAM;
 
@@ -87,7 +91,7 @@ export default function ProjectTeamPanel({
       })
       .map((user) => ({
         value: user.id,
-        label: formatUserLabel(user),
+        label: formatUserPickerLabel(user),
       }));
   }, [usersQuery.data?.data]);
 
@@ -96,7 +100,13 @@ export default function ProjectTeamPanel({
       title: 'Name',
       dataIndex: 'userId',
       key: 'userId',
-      render: (userId: string) => resolveUserName(userId),
+      render: (userId: string) => resolveUser(userId).name,
+    },
+    {
+      title: 'Role',
+      dataIndex: 'userId',
+      key: 'role',
+      render: (userId: string) => resolveUser(userId).roles,
     },
   ];
 

@@ -5,11 +5,7 @@ import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
 import { useProjectTeam } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
-import type { User } from '@/lib/api/types';
-
-function formatUserLabel(user: User): string {
-  return `${user.firstName} ${user.lastName} (${user.email})`;
-}
+import { formatUserPickerLabel } from '@/lib/utils/user-display';
 
 /**
  * User picker limited to active members of the project team.
@@ -55,7 +51,7 @@ export default function ProjectTeamUserSelect({
       )
       .map((user) => ({
         value: user.id,
-        label: formatUserLabel(user),
+        label: formatUserPickerLabel(user),
       }));
   }, [usersQuery.data?.data, teamUserIds, excludeUserIds]);
 

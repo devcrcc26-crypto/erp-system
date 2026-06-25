@@ -515,6 +515,7 @@ export class UserManagementService {
       lastName: true,
       email: true,
       isActive: true,
+      userRoles: this.userRolesListSelect(),
     };
   }
 
