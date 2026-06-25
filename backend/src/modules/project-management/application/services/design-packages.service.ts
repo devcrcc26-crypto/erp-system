@@ -7,6 +7,8 @@ import {
 import {
   DesignPackageProjectedStatus,
   EdvStatus,
+  ReviewSession,
+  ReviewSessionStatus,
   WorkflowEntityType,
 } from '@prisma/client';
 import {
@@ -22,6 +24,7 @@ import {
   ReturnPackageForReworkDto,
   UpdateDesignPackageDto,
 } from '../dtos/engineering-document.dtos';
+import { ReviewSessionListQueryDto } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapDesignPackage,
@@ -36,10 +39,29 @@ import {
   EngineeringDocumentVersionRepository,
   TaskDisciplineScopeRepository,
 } from '../../infrastructure/repositories/epc-storage.repository';
+import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
+import {
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
 import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { DependencyGraphService } from './dependency-graph.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
+
+export interface MappedReviewSessionListItem {
+  id: string;
+  designPackageId: string;
+  designPackageName: string;
+  taskDisciplineId: string;
+  status: string;
+  currentTier: string;
+  assigneeName: string | null;
+  slaDeadlineAt: string | null;
+  slaOverdue: boolean;
+  openedAt: string;
+}
 
 @Injectable()
 export class DesignPackagesService {
@@ -50,6 +72,7 @@ export class DesignPackagesService {
     private readonly workflowEventLogService: WorkflowEventLogService,
     private readonly workflowKernel: WorkflowKernelService,
     private readonly dependencyGraphService: DependencyGraphService,
+    private readonly epcReviewRepository: EpcReviewRepository,
   ) {}
 
   /**
@@ -561,6 +584,121 @@ export class DesignPackagesService {
       results.push(result);
     }
     return results;
+  }
+
+  /**
+   * Lists review sessions for a task discipline.
+   */
+  async listReviewSessions(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    query: ReviewSessionListQueryDto,
+  ): Promise<PaginatedResult<MappedReviewSessionListItem>> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+
+    const status = query.status
+      ? (query.status as ReviewSessionStatus)
+      : ReviewSessionStatus.ACTIVE;
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+
+    const { rows, total } = await this.epcReviewRepository.listSessionsForDiscipline(
+      ctx.companyId,
+      taskDisciplineId,
+      status,
+      skip,
+      take,
+    );
+
+    return buildPaginatedResult(
+      rows.map((row) => this.mapReviewSessionListItem(row)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  /**
+   * Returns the frozen context snapshot for a review session.
+   */
+  async getReviewContextSnapshot(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    reviewSessionId: string,
+  ): Promise<{
+    snapshotId: string;
+    capturedAt: string;
+    contentHash: string | null;
+    edvs: Array<{
+      id: string;
+      revisionLabel: string;
+      status: string;
+      engineeringDocumentName: string;
+    }>;
+  }> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const snapshot = await this.epcReviewRepository.findSessionSnapshotForPackage(
+      ctx.companyId,
+      packageId,
+      reviewSessionId,
+    );
+    if (!snapshot) {
+      throw new NotFoundException(
+        'No context snapshot found for this review session.',
+      );
+    }
+
+    return {
+      snapshotId: snapshot.id,
+      capturedAt: snapshot.capturedAt.toISOString(),
+      contentHash: snapshot.contentHash,
+      edvs: snapshot.edvDetails.map((edv) => ({
+        id: edv.id,
+        revisionLabel: edv.revisionLabel,
+        status: edv.status,
+        engineeringDocumentName: edv.engineeringDocument.title,
+      })),
+    };
+  }
+
+  private mapReviewSessionListItem(
+    row: ReviewSession & {
+      designPackage: { id: string; name: string };
+      assignedToUser: {
+        id: string;
+        firstName: string;
+        lastName: string;
+      } | null;
+    },
+  ): MappedReviewSessionListItem {
+    const now = Date.now();
+    const slaOverdue =
+      row.slaDeadlineAt != null && row.slaDeadlineAt.getTime() < now;
+
+    return {
+      id: row.id,
+      designPackageId: row.designPackageId,
+      designPackageName: row.designPackage.name,
+      taskDisciplineId: row.taskDisciplineId,
+      status: row.status,
+      currentTier: row.currentTier,
+      assigneeName: row.assignedToUser
+        ? `${row.assignedToUser.firstName} ${row.assignedToUser.lastName}`.trim()
+        : null,
+      slaDeadlineAt: row.slaDeadlineAt?.toISOString() ?? null,
+      slaOverdue,
+      openedAt: row.openedAt.toISOString(),
+    };
   }
 
   private async assertDisciplineScope(

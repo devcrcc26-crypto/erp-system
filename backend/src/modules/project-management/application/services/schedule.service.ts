@@ -284,9 +284,9 @@ export class ScheduleService {
       });
       if (dto.status !== current!.status) {
         const TASK_STATUS_TRANSITIONS: Record<string, string[]> = {
-          NOT_STARTED: ['IN_PROGRESS', 'ON_HOLD'],
-          IN_PROGRESS: ['COMPLETED', 'ON_HOLD', 'NOT_STARTED'],
-          ON_HOLD: ['IN_PROGRESS', 'NOT_STARTED'],
+          NOT_STARTED: ['IN_PROGRESS', 'DELAYED'],
+          IN_PROGRESS: ['COMPLETED', 'DELAYED', 'NOT_STARTED'],
+          DELAYED: ['IN_PROGRESS', 'NOT_STARTED'],
           COMPLETED: ['IN_PROGRESS'],
         };
         const allowed = TASK_STATUS_TRANSITIONS[current!.status];

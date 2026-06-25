@@ -86,7 +86,9 @@ describe('DailyLogsService immutability', () => {
         weatherCondition: 'Rainy',
       }),
     ).rejects.toThrow(
-      new BadRequestException('Daily log cannot be edited after submission.'),
+      new BadRequestException(
+        'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
+      ),
     );
 
     expect(prisma.dailyLog.update).not.toHaveBeenCalled();
@@ -100,7 +102,9 @@ describe('DailyLogsService immutability', () => {
         workSummary: 'Revised summary',
       }),
     ).rejects.toThrow(
-      new BadRequestException('Daily log cannot be edited after submission.'),
+      new BadRequestException(
+        'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
+      ),
     );
 
     expect(prisma.dailyLog.update).not.toHaveBeenCalled();

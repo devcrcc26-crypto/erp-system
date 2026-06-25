@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -26,6 +27,7 @@ import {
   UpdateDesignPackageDto,
 } from '../../application/dtos/engineering-document.dtos';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
+import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('Design Packages')
 @ApiBearerAuth()
@@ -67,6 +69,23 @@ export class DesignPackagesController {
       projectId,
       taskDisciplineId,
       dto,
+    );
+  }
+
+  @Get('review-sessions')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List review sessions for a discipline' })
+  listReviewSessions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Query() query: ReviewSessionListQueryDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.listReviewSessions(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      query,
     );
   }
 
@@ -313,6 +332,25 @@ export class DesignPackagesController {
       packageId,
       reviewSessionId,
       dto,
+    );
+  }
+
+  @Get(':packageId/review-sessions/:reviewSessionId/snapshot')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get frozen context snapshot for a review session' })
+  getReviewSnapshot(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Param('reviewSessionId') reviewSessionId: string,
+  ): Promise<unknown> {
+    return this.designPackagesService.getReviewContextSnapshot(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      reviewSessionId,
     );
   }
 

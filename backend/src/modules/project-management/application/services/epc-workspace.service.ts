@@ -1,13 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CommentStatus,
+  ReviewSession,
   ReviewSessionStatus,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
+import { ReviewSessionListQueryDto } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
+import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
+import { MappedReviewSessionListItem } from './design-packages.service';
 import { ProjectScopeService } from './project-scope.service';
 import {
   CommentEdvSnapshot,
@@ -119,6 +128,7 @@ export class EpcWorkspaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
+    private readonly epcReviewRepository: EpcReviewRepository,
   ) {}
 
   /**
@@ -612,6 +622,67 @@ export class EpcWorkspaceService {
     }
 
     return entries;
+  }
+
+  /**
+   * Lists review sessions across all disciplines in a project.
+   */
+  async listProjectReviewSessions(
+    ctx: PmContext,
+    projectId: string,
+    query: ReviewSessionListQueryDto,
+  ): Promise<PaginatedResult<MappedReviewSessionListItem>> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const status = query.status
+      ? (query.status as ReviewSessionStatus)
+      : ReviewSessionStatus.ACTIVE;
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+
+    const { rows, total } = await this.epcReviewRepository.listSessionsForProject(
+      ctx.companyId,
+      projectId,
+      status,
+      skip,
+      take,
+    );
+
+    return buildPaginatedResult(
+      rows.map((row) => this.mapReviewSessionListItem(row)),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  private mapReviewSessionListItem(
+    row: ReviewSession & {
+      designPackage: { id: string; name: string };
+      assignedToUser: {
+        id: string;
+        firstName: string;
+        lastName: string;
+      } | null;
+    },
+  ): MappedReviewSessionListItem {
+    const now = Date.now();
+    const slaOverdue =
+      row.slaDeadlineAt != null && row.slaDeadlineAt.getTime() < now;
+
+    return {
+      id: row.id,
+      designPackageId: row.designPackageId,
+      designPackageName: row.designPackage.name,
+      taskDisciplineId: row.taskDisciplineId,
+      status: row.status,
+      currentTier: row.currentTier,
+      assigneeName: row.assignedToUser
+        ? `${row.assignedToUser.firstName} ${row.assignedToUser.lastName}`.trim()
+        : null,
+      slaDeadlineAt: row.slaDeadlineAt?.toISOString() ?? null,
+      slaOverdue,
+      openedAt: row.openedAt.toISOString(),
+    };
   }
 }
 

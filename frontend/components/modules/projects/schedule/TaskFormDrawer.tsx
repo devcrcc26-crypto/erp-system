@@ -33,6 +33,11 @@ import {
   useUpdateTask,
 } from '@/lib/query/schedule';
 import { calculateTaskDurationDays } from '@/lib/utils/schedule-metrics';
+import {
+  nextStatusOptions,
+  TASK_VALID_TRANSITIONS,
+} from '@/lib/utils/pm-status-transitions';
+import { formatTaskStatus } from '@/lib/utils/pm-status-display';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -227,6 +232,13 @@ export default function TaskFormDrawer({
   const milestonesQuery = useMilestones(projectId, { page: 1, limit: 50 }, open);
   const milestones = milestonesQuery.data?.data ?? [];
   const isEditing = Boolean(task);
+  const taskStatusOptions =
+    isEditing && task
+      ? nextStatusOptions(task.status, TASK_VALID_TRANSITIONS).map((status) => ({
+          value: status,
+          label: formatTaskStatus(status),
+        }))
+      : TASK_STATUS_OPTIONS;
 
   useEffect(() => {
     if (!open) {
@@ -311,18 +323,24 @@ export default function TaskFormDrawer({
           }}
           onFinish={(values: TaskFormValues) => void handleSubmit(values)}
         >
-        {isEditing && (
+        {isEditing && task && (
           <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
             <Form.Item label="Task ID" name="taskIdCode">
               <Input disabled />
             </Form.Item>
-            <Form.Item
-              label="Status"
-              name="status"
-              rules={[{ required: true, message: 'Status is required' }]}
-            >
-              <Select options={TASK_STATUS_OPTIONS} />
-            </Form.Item>
+            {taskStatusOptions.length > 0 ? (
+              <Form.Item
+                label="Status"
+                name="status"
+                rules={[{ required: true, message: 'Status is required' }]}
+              >
+                <Select options={taskStatusOptions} />
+              </Form.Item>
+            ) : (
+              <Form.Item label="Status">
+                <Input disabled value={formatTaskStatus(task.status)} />
+              </Form.Item>
+            )}
           </div>
         )}
 

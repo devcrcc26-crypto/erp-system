@@ -4,6 +4,7 @@ import {
   CloseoutChecklistItem,
   Correspondence,
   DailyLog,
+  Deliverable,
   DailyLogEquipment,
   DailyLogIncident,
   DailyLogVisitor,
@@ -18,6 +19,7 @@ import {
   Milestone,
   Prisma,
   Project,
+  ProjectChangeRequest,
   ProjectTeam,
   PunchItem,
   Rfi,
@@ -1141,5 +1143,92 @@ export function mapIssue(issue: Issue): MappedIssue {
     verifiedAt: toIsoString(issue.verifiedAt),
     createdAt: toIsoString(issue.createdAt)!,
     updatedAt: toIsoString(issue.updatedAt)!,
+  };
+}
+
+export interface MappedProjectChangeRequest {
+  id: string;
+  companyId: string;
+  projectId: string;
+  changeNumber: string;
+  title: string;
+  description: string | null;
+  status: string;
+  sourceType: string;
+  sourceEntityId: string | null;
+  externalReviewTriggerId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+}
+
+export interface MappedDeliverable {
+  id: string;
+  companyId: string;
+  projectId: string;
+  taskDisciplineId: string | null;
+  taskDisciplineName: string | null;
+  designPackageId: string | null;
+  designPackageName: string | null;
+  engineeringDocumentId: string | null;
+  name: string;
+  status: string;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Maps a Prisma ProjectChangeRequest row to the API response shape.
+ */
+export function mapProjectChangeRequest(
+  row: ProjectChangeRequest,
+): MappedProjectChangeRequest {
+  const approved =
+    row.status === 'APPROVED'
+      ? { approvedBy: row.updatedBy, approvedAt: toIsoString(row.updatedAt) }
+      : { approvedBy: null, approvedAt: null };
+
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    projectId: row.projectId,
+    changeNumber: row.changeNumber,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    sourceType: row.sourceType,
+    sourceEntityId: row.sourceEntityId,
+    externalReviewTriggerId: row.externalReviewTriggerId,
+    createdAt: toIsoString(row.createdAt)!,
+    updatedAt: toIsoString(row.updatedAt)!,
+    ...approved,
+  };
+}
+
+type DeliverableWithRelations = Deliverable & {
+  taskDiscipline?: { id: string; disciplineName: string } | null;
+  designPackage?: { id: string; name: string } | null;
+};
+
+/**
+ * Maps a Prisma Deliverable row to the API response shape.
+ */
+export function mapDeliverable(row: DeliverableWithRelations): MappedDeliverable {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    projectId: row.projectId,
+    taskDisciplineId: row.taskDisciplineId,
+    taskDisciplineName: row.taskDiscipline?.disciplineName ?? null,
+    designPackageId: row.designPackageId,
+    designPackageName: row.designPackage?.name ?? null,
+    engineeringDocumentId: row.engineeringDocumentId,
+    name: row.name,
+    status: row.status,
+    dueDate: toDateString(row.dueDate),
+    createdAt: toIsoString(row.createdAt)!,
+    updatedAt: toIsoString(row.updatedAt)!,
   };
 }

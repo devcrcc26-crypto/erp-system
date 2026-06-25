@@ -61,7 +61,7 @@ describe('SubmittalsService', () => {
         service.updateSubmittal(ctx, projectId, submittalId, { status }),
       ).rejects.toThrow(
         new BadRequestException(
-          'Submittal verdict must be set through the review endpoint, not direct update.',
+          'Submittal verdict status must be set through the review endpoint, not direct update.',
         ),
       );
 
@@ -94,24 +94,68 @@ describe('SubmittalsService', () => {
     });
 
     it('succeeds when updating status to a non-verdict value', async () => {
-      prisma.submittal.findFirst.mockResolvedValue(existingSubmittal);
+      prisma.submittal.findFirst
+        .mockResolvedValueOnce(existingSubmittal)
+        .mockResolvedValueOnce({ status: SubmittalStatus.DRAFT });
       prisma.submittal.update.mockResolvedValue({
         ...existingSubmittal,
-        status: SubmittalStatus.UNDER_REVIEW,
+        status: SubmittalStatus.SUBMITTED,
       });
 
       const result = await service.updateSubmittal(ctx, projectId, submittalId, {
-        status: SubmittalStatus.UNDER_REVIEW,
+        status: SubmittalStatus.SUBMITTED,
       });
 
-      expect(prisma.submittal.update).toHaveBeenCalledWith({
-        where: { id: submittalId },
-        data: expect.objectContaining({
+      expect(result.status).toBe(SubmittalStatus.SUBMITTED);
+    });
+
+    it('throws BadRequestException for SUBMITTED → UNDER_REVIEW via PATCH', async () => {
+      prisma.submittal.findFirst
+        .mockResolvedValueOnce(existingSubmittal)
+        .mockResolvedValueOnce({ status: SubmittalStatus.SUBMITTED });
+
+      await expect(
+        service.updateSubmittal(ctx, projectId, submittalId, {
           status: SubmittalStatus.UNDER_REVIEW,
-          updatedBy: ctx.userId,
         }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid submittal status transition from SUBMITTED to UNDER_REVIEW.',
+        ),
+      );
+    });
+
+    it('throws BadRequestException for DRAFT → UNDER_REVIEW via PATCH', async () => {
+      prisma.submittal.findFirst
+        .mockResolvedValueOnce(existingSubmittal)
+        .mockResolvedValueOnce({ status: SubmittalStatus.DRAFT });
+
+      await expect(
+        service.updateSubmittal(ctx, projectId, submittalId, {
+          status: SubmittalStatus.UNDER_REVIEW,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid submittal status transition from DRAFT to UNDER_REVIEW.',
+        ),
+      );
+    });
+
+    it('succeeds when recalling SUBMITTED to DRAFT', async () => {
+      const submitted = { ...existingSubmittal, status: SubmittalStatus.SUBMITTED };
+      prisma.submittal.findFirst
+        .mockResolvedValueOnce(submitted)
+        .mockResolvedValueOnce({ status: SubmittalStatus.SUBMITTED });
+      prisma.submittal.update.mockResolvedValue({
+        ...submitted,
+        status: SubmittalStatus.DRAFT,
       });
-      expect(result.status).toBe(SubmittalStatus.UNDER_REVIEW);
+
+      const result = await service.updateSubmittal(ctx, projectId, submittalId, {
+        status: SubmittalStatus.DRAFT,
+      });
+
+      expect(result.status).toBe(SubmittalStatus.DRAFT);
     });
   });
 });

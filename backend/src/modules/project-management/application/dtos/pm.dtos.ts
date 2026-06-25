@@ -18,6 +18,9 @@ import {
   RfiStatus,
   RiskCategory,
   RiskStatus,
+  DeliverableStatus,
+  ProjectChangeRequestSource,
+  ProjectChangeRequestStatus,
   SubmittalPreparedByRole,
   SubmittalPurpose,
   SubmittalStatus,
@@ -1301,4 +1304,127 @@ export class DailyLogListQueryDto extends PmListQueryDto {
   @IsOptional()
   @IsDateString()
   logDateTo?: string;
+}
+
+export class DeliverableListQueryDto extends PmListQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  disciplineId?: string;
+}
+
+export class CreateChangeRequestDto {
+  @ApiProperty()
+  @IsString()
+  title!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ enum: ProjectChangeRequestSource })
+  @IsOptional()
+  @IsEnum(ProjectChangeRequestSource)
+  sourceType?: ProjectChangeRequestSource;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  sourceEntityId?: string;
+}
+
+export class UpdateChangeRequestDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ enum: ProjectChangeRequestStatus })
+  @IsOptional()
+  @IsEnum(ProjectChangeRequestStatus)
+  status?: ProjectChangeRequestStatus;
+}
+
+export class RejectChangeRequestDto {
+  @ApiProperty()
+  @IsString()
+  reason!: string;
+}
+
+export class CreateDeliverableDto {
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  engineeringDocumentId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+}
+
+export class UpdateDeliverableDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  engineeringDocumentId?: string;
+
+  @ApiPropertyOptional({ enum: DeliverableStatus })
+  @IsOptional()
+  @IsEnum(DeliverableStatus)
+  status?: DeliverableStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+}
+
+export class ExternalReviewTriggerListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: ['PENDING', 'PROCESSED', 'CANCELLED'] })
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
+export class ReviewSessionListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: string;
 }

@@ -13,6 +13,7 @@ import {
   ReviewSessionOutcome,
   ReviewSessionStatus,
   ReviewTier,
+  TaskDisciplineReviewStatus,
   WorkflowEntityType,
 } from '@prisma/client';
 import { CommentSeverity as DomainCommentSeverity } from '../../domain/contracts/enums/comment-severity.enum';
@@ -240,6 +241,14 @@ export class ReviewWorkflowService {
           referencedVersionIds: frozen.referencedVersionIds,
         },
         correlationId,
+      });
+
+      await this.upsertTaskDisciplineReviewInTx(tx, {
+        companyId: command.companyId,
+        taskDisciplineId: command.taskDisciplineId,
+        tier: ReviewTier.DISCIPLINE_OWNER,
+        status: TaskDisciplineReviewStatus.IN_REVIEW,
+        actorId: command.actorId,
       });
 
       const results = await this.edvTransitionService.applyInTx(tx, {
@@ -713,12 +722,29 @@ export class ReviewWorkflowService {
           ),
         });
 
+        await this.upsertTaskDisciplineReviewInTx(tx, {
+          companyId: command.companyId,
+          taskDisciplineId: session.taskDisciplineId,
+          tier: session.currentTier,
+          status: TaskDisciplineReviewStatus.APPROVED,
+          actorId: command.actorId,
+        });
+
         await this.advanceActiveSessionTierInTx(tx, {
           companyId: command.companyId,
           actorId: command.actorId,
           sessionId: session.id,
           correlationId,
           triggerAction: 'ADVANCE_REVIEW_TIER',
+        });
+
+        const nextTier = REVIEW_TIER_ORDER[tierIndex + 1] as ReviewTier;
+        await this.upsertTaskDisciplineReviewInTx(tx, {
+          companyId: command.companyId,
+          taskDisciplineId: session.taskDisciplineId,
+          tier: nextTier,
+          status: TaskDisciplineReviewStatus.IN_REVIEW,
+          actorId: command.actorId,
         });
 
         await this.epcWorkflowRepository.markPackageProjectionPendingById(
@@ -745,6 +771,14 @@ export class ReviewWorkflowService {
             phaseB.disciplineStatuses[session.taskDisciplineId],
         };
       }
+
+      await this.upsertTaskDisciplineReviewInTx(tx, {
+        companyId: command.companyId,
+        taskDisciplineId: session.taskDisciplineId,
+        tier: session.currentTier,
+        status: TaskDisciplineReviewStatus.APPROVED,
+        actorId: command.actorId,
+      });
 
       await this.epcReviewRepository.updateReviewSession(tx, session.id, {
         status: ReviewSessionStatus.APPROVED,
@@ -867,6 +901,14 @@ export class ReviewWorkflowService {
       if (!pkg) {
         throw new NotFoundException('Design package not found');
       }
+
+      await this.upsertTaskDisciplineReviewInTx(tx, {
+        companyId: command.companyId,
+        taskDisciplineId: session.taskDisciplineId,
+        tier: session.currentTier,
+        status: TaskDisciplineReviewStatus.RETURNED,
+        actorId: command.actorId,
+      });
 
       await this.epcReviewRepository.updateReviewSession(tx, session.id, {
         status: ReviewSessionStatus.RETURNED_FOR_REWORK,
@@ -1148,6 +1190,53 @@ export class ReviewWorkflowService {
       command.companyId,
       loaded.map((edv) => edv.id),
     );
+  }
+
+  private async upsertTaskDisciplineReviewInTx(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      taskDisciplineId: string;
+      tier: ReviewTier;
+      status: TaskDisciplineReviewStatus;
+      actorId: string;
+    },
+  ): Promise<void> {
+    if (!input.taskDisciplineId) {
+      this.logger.warn(
+        'Skipping TaskDisciplineReview write — taskDisciplineId unavailable',
+      );
+      return;
+    }
+
+    const isTerminal =
+      input.status === TaskDisciplineReviewStatus.APPROVED ||
+      input.status === TaskDisciplineReviewStatus.RETURNED;
+
+    await tx.taskDisciplineReview.upsert({
+      where: {
+        taskDisciplineId_reviewTier: {
+          taskDisciplineId: input.taskDisciplineId,
+          reviewTier: input.tier,
+        },
+      },
+      create: {
+        companyId: input.companyId,
+        taskDisciplineId: input.taskDisciplineId,
+        reviewTier: input.tier,
+        status: input.status,
+        reviewedAt: isTerminal ? new Date() : null,
+        reviewedBy: isTerminal ? input.actorId : null,
+        createdBy: input.actorId,
+        updatedBy: input.actorId,
+      },
+      update: {
+        status: input.status,
+        reviewedAt: isTerminal ? new Date() : undefined,
+        reviewedBy: isTerminal ? input.actorId : undefined,
+        updatedBy: input.actorId,
+      },
+    });
   }
 
   private async advanceActiveSessionTierInTx(

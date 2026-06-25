@@ -446,4 +446,144 @@ export class EpcReviewRepository {
       },
     });
   }
+
+  async listSessionsForDiscipline(
+    companyId: string,
+    taskDisciplineId: string,
+    status: ReviewSessionStatus | undefined,
+    skip: number,
+    take: number,
+  ): Promise<{
+    rows: Array<
+      ReviewSession & {
+        designPackage: { id: string; name: string };
+        assignedToUser: {
+          id: string;
+          firstName: string;
+          lastName: string;
+        } | null;
+      }
+    >;
+    total: number;
+  }> {
+    const where = activeOnly({
+      companyId,
+      taskDisciplineId,
+      ...(status ? { status } : {}),
+    });
+
+    const [rows, total] = await Promise.all([
+      this.prisma.reviewSession.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { openedAt: 'desc' },
+        include: {
+          designPackage: { select: { id: true, name: true } },
+          assignedToUser: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+      }),
+      this.prisma.reviewSession.count({ where }),
+    ]);
+
+    return { rows, total };
+  }
+
+  async listSessionsForProject(
+    companyId: string,
+    projectId: string,
+    status: ReviewSessionStatus | undefined,
+    skip: number,
+    take: number,
+  ): Promise<{
+    rows: Array<
+      ReviewSession & {
+        designPackage: { id: string; name: string };
+        assignedToUser: {
+          id: string;
+          firstName: string;
+          lastName: string;
+        } | null;
+      }
+    >;
+    total: number;
+  }> {
+    const where = activeOnly({
+      companyId,
+      taskDiscipline: { task: { projectId } },
+      ...(status ? { status } : {}),
+    });
+
+    const [rows, total] = await Promise.all([
+      this.prisma.reviewSession.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { openedAt: 'desc' },
+        include: {
+          designPackage: { select: { id: true, name: true } },
+          assignedToUser: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+      }),
+      this.prisma.reviewSession.count({ where }),
+    ]);
+
+    return { rows, total };
+  }
+
+  async findSessionSnapshotForPackage(
+    companyId: string,
+    designPackageId: string,
+    reviewSessionId: string,
+  ): Promise<
+    | (ReviewContextSnapshot & {
+        reviewSession: ReviewSession;
+        edvDetails: Array<{
+          id: string;
+          revisionLabel: string;
+          status: EdvStatus;
+          engineeringDocument: { id: string; title: string };
+        }>;
+      })
+    | null
+  > {
+    const session = await this.prisma.reviewSession.findFirst({
+      where: activeOnly({
+        id: reviewSessionId,
+        companyId,
+        designPackageId,
+      }),
+      include: {
+        contextSnapshot: true,
+      },
+    });
+
+    if (!session?.contextSnapshot) {
+      return null;
+    }
+
+    const edvDetails = await this.prisma.engineeringDocumentVersion.findMany({
+      where: {
+        companyId,
+        id: { in: session.contextSnapshot.referencedVersionIds },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        revisionLabel: true,
+        status: true,
+        engineeringDocument: { select: { id: true, title: true } },
+      },
+    });
+
+    return {
+      ...session.contextSnapshot,
+      reviewSession: session,
+      edvDetails,
+    };
+  }
 }

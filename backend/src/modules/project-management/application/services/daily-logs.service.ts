@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -139,31 +139,43 @@ export class DailyLogsService {
   ): Promise<MappedDailyLogDetail> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const row = await this.prisma.dailyLog.create({
-      data: {
-        projectId,
-        siteEngineerId: ctx.userId,
-        logDate: new Date(dto.logDate),
-        shift: dto.shift,
-        weatherCondition: dto.weatherCondition,
-        temperatureC: parseOptionalDecimal(dto.temperatureC),
-        rainfallMm: parseOptionalDecimal(dto.rainfallMm),
-        workSummary: dto.workSummary,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
-      include: DAILY_LOG_DETAIL_INCLUDE,
-    });
+    try {
+      const row = await this.prisma.dailyLog.create({
+        data: {
+          projectId,
+          siteEngineerId: ctx.userId,
+          logDate: new Date(dto.logDate),
+          shift: dto.shift,
+          weatherCondition: dto.weatherCondition,
+          temperatureC: parseOptionalDecimal(dto.temperatureC),
+          rainfallMm: parseOptionalDecimal(dto.rainfallMm),
+          workSummary: dto.workSummary,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+        include: DAILY_LOG_DETAIL_INCLUDE,
+      });
 
-    const folder =
-      await this.engineeringDocumentFolderService.ensureDailyLogFolder(
-        ctx,
-        projectId,
-        row.id,
-        toDateString(row.logDate)!,
-      );
+      const folder =
+        await this.engineeringDocumentFolderService.ensureDailyLogFolder(
+          ctx,
+          projectId,
+          row.id,
+          toDateString(row.logDate)!,
+        );
 
-    return mapDailyLogDetail(row, folder.id);
+      return mapDailyLogDetail(row, folder.id);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'A daily log already exists for this project, date, and shift.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -182,7 +194,7 @@ export class DailyLogsService {
       hasDailyLogDataChanges(dto)
     ) {
       throw new BadRequestException(
-        'Daily log cannot be edited after submission.',
+        'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
       );
     }
 

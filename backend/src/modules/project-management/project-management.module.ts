@@ -12,6 +12,7 @@ import { CloseoutService } from './application/services/closeout.service';
 import { CorrespondenceService } from './application/services/correspondence.service';
 import { DailyLogsService } from './application/services/daily-logs.service';
 import { DecisionTraceService } from './application/services/decision-trace.service';
+import { DeliverableService } from './application/services/deliverable.service';
 import { DefinitionOfDoneService } from './application/services/definition-of-done.service';
 import { DependencyGraphService } from './application/services/dependency-graph.service';
 import { DesignPackagesService } from './application/services/design-packages.service';
@@ -64,8 +65,10 @@ import { EpcReviewRepository } from './infrastructure/repositories/epc-review.re
 import { EpcSubmittalRepository } from './infrastructure/repositories/epc-submittal.repository';
 import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflow.repository';
 import { CloseoutController } from './presentation/controllers/closeout.controller';
+import { ChangeRequestsController } from './presentation/controllers/change-requests.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
+import { DeliverablesController } from './presentation/controllers/deliverables.controller';
 import { DesignPackagesController } from './presentation/controllers/design-packages.controller';
 import { DrawingsController } from './presentation/controllers/drawings.controller';
 import { EngineeringBatchController } from './presentation/controllers/engineering-batch.controller';
@@ -120,6 +123,8 @@ const workflowBullProcessors = redisEnabled
     RisksController,
     PunchItemsController,
     CloseoutController,
+    ChangeRequestsController,
+    DeliverablesController,
   ],
   providers: [
     ProjectsService,
@@ -152,6 +157,7 @@ const workflowBullProcessors = redisEnabled
     SubmittalSnapshotService,
     ExternalReviewTriggerService,
     ProjectChangeRequestService,
+    DeliverableService,
     EpcWorkspaceService,
     WorkflowCommittedService,
     WorkflowCommittedDispatcher,

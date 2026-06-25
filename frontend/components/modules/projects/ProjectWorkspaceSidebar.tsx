@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
-import { Menu } from 'antd';
+import { Badge, Menu } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   PROJECT_WORKSPACE_NAV,
@@ -13,12 +13,15 @@ import {
 } from '@/lib/navigation/project-workspace-nav';
 import { getNavIcon, resolveNavIconKey } from '@/lib/navigation/nav-icons';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import {
   useEpcCapabilities,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useChangeRequestOpenCount } from '@/lib/query/change-requests';
+import { useDeliverableActiveCount } from '@/lib/query/deliverables';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import type { PmModuleKey } from '@/lib/api/project-management.types';
 
@@ -75,6 +78,26 @@ export default function ProjectWorkspaceSidebar({
   const hasAssignedDisciplines = (disciplinesQuery.data?.length ?? 0) > 0;
   const { t } = useEpcTranslation();
   const selectedKey = resolveProjectNavKey(pathname, projectId);
+  const changeRequestCount = useChangeRequestOpenCount(
+    projectId,
+    pm.projects.canView,
+  );
+  const deliverableCount = useDeliverableActiveCount(
+    projectId,
+    pm.schedule.canView,
+  );
+
+  const navBadgeCount = (key: string): number | undefined => {
+    if (key === 'change-requests') {
+      const count = changeRequestCount.data ?? 0;
+      return count > 0 ? count : undefined;
+    }
+    if (key === 'deliverables') {
+      const count = deliverableCount.data ?? 0;
+      return count > 0 ? count : undefined;
+    }
+    return undefined;
+  };
 
   const menuItems: MenuProps['items'] = useMemo(() => {
     const groups: MenuProps['items'] = [];
@@ -97,20 +120,42 @@ export default function ProjectWorkspaceSidebar({
         key: `group-${group.key}`,
         type: 'group',
         label: t(group.labelKey),
-        children: visibleItems.map((item) => ({
-          key: item.key,
-          icon: getNavIcon(resolveNavIconKey(item.key, item.iconKey)),
-          label: (
-            <Link href={projectNavHref(projectId, item.pathSuffix)} onClick={onNavigate}>
-              {t(item.labelKey)}
-            </Link>
-          ),
-        })),
+        children: visibleItems.map((item) => {
+          const badge = navBadgeCount(item.key);
+          const labelText = t(item.labelKey);
+          return {
+            key: item.key,
+            icon: getNavIcon(resolveNavIconKey(item.key, item.iconKey)),
+            label: (
+              <Link
+                href={projectNavHref(projectId, item.pathSuffix)}
+                onClick={onNavigate}
+                className="flex items-center justify-between gap-2"
+              >
+                <span>{labelText}</span>
+                {badge != null && (
+                  <Badge
+                    count={badge}
+                    size="small"
+                    style={{
+                      backgroundColor:
+                        item.key === 'deliverables'
+                          ? tokens.colorTeal600
+                          : tokens.colorAmber400,
+                    }}
+                  />
+                )}
+              </Link>
+            ),
+          };
+        }),
       });
     }
 
     return groups;
   }, [
+    changeRequestCount.data,
+    deliverableCount.data,
     epc,
     hasAssignedDisciplines,
     lens.disciplineScopeBypass,

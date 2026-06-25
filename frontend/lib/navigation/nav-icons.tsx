@@ -56,6 +56,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   disciplines: ClusterOutlined,
   deliverables: CheckSquareOutlined,
   submittals: FileProtectOutlined,
+  'change-requests': ExportOutlined,
   'external-release': ExportOutlined,
   rfis: QuestionCircleOutlined,
   issues: IssuesCloseOutlined,

@@ -34,6 +34,7 @@
       "disciplines": "Disciplines & Packages",
       "deliverables": "Deliverables",
       "submittals": "Construction Submittals",
+      "changeRequests": "Change Requests",
       "externalRelease": "External Release",
       "reviewInbox": "Review Inbox",
       "myComments": "My Comments",
@@ -66,7 +67,7 @@
     },
     "deliverables": {
       "title": "Deliverables",
-      "description": "Derived from design packages and EDV statuses until full Deliverable API ships."
+      "description": "Track engineering deliverables from planning through approval."
     },
     "reviewInbox": {
       "title": "Review Inbox",

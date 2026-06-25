@@ -242,6 +242,63 @@ export function closeoutStatusVariant(
   return variants[status];
 }
 
+const CHANGE_REQUEST_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  CLOSED: 'Closed',
+};
+
+export function formatChangeRequestStatus(status: string): string {
+  return CHANGE_REQUEST_STATUS_LABELS[status] ?? status;
+}
+
+export function changeRequestStatusVariant(status: string): StatusBadgeVariant {
+  const variants: Record<string, StatusBadgeVariant> = {
+    DRAFT: 'default',
+    SUBMITTED: 'info',
+    APPROVED: 'success',
+    REJECTED: 'error',
+    CLOSED: 'default',
+  };
+  return variants[status] ?? 'default';
+}
+
+const DELIVERABLE_STATUS_LABELS: Record<string, string> = {
+  PLANNED: 'Planned',
+  IN_PROGRESS: 'In progress',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  WAIVED: 'Waived',
+};
+
+export function formatDeliverableStatus(status: string): string {
+  return DELIVERABLE_STATUS_LABELS[status] ?? status;
+}
+
+export function deliverableStatusVariant(status: string): StatusBadgeVariant {
+  const variants: Record<string, StatusBadgeVariant> = {
+    PLANNED: 'default',
+    IN_PROGRESS: 'warning',
+    SUBMITTED: 'info',
+    APPROVED: 'success',
+    WAIVED: 'default',
+  };
+  return variants[status] ?? 'default';
+}
+
+export function revisionTriggerStatusVariant(
+  status: string,
+): StatusBadgeVariant {
+  const variants: Record<string, StatusBadgeVariant> = {
+    PENDING: 'warning',
+    PROCESSED: 'success',
+    CANCELLED: 'default',
+  };
+  return variants[status] ?? 'default';
+}
+
 export function isOverdue(dueDate: string | null): boolean {
   if (!dueDate) {
     return false;

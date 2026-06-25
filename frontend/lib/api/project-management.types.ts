@@ -1013,3 +1013,128 @@ export interface PmListFilters {
   status?: string;
   submittalPurpose?: SubmittalPurpose;
 }
+
+export type ChangeRequestStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CLOSED';
+
+export interface ProjectChangeRequest {
+  id: string;
+  companyId: string;
+  projectId: string;
+  changeNumber: string;
+  title: string;
+  description: string | null;
+  status: ChangeRequestStatus;
+  sourceType: string;
+  sourceEntityId: string | null;
+  externalReviewTriggerId: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateChangeRequestDto {
+  title: string;
+  description?: string;
+  sourceType?: string;
+  sourceEntityId?: string;
+}
+
+export interface UpdateChangeRequestDto {
+  title?: string;
+  description?: string;
+  status?: ChangeRequestStatus;
+}
+
+export interface RejectChangeRequestDto {
+  reason: string;
+}
+
+export type DeliverableStatus =
+  | 'PLANNED'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'WAIVED';
+
+export interface Deliverable {
+  id: string;
+  companyId: string;
+  projectId: string;
+  name: string;
+  status: DeliverableStatus;
+  dueDate: string | null;
+  taskDisciplineId: string | null;
+  taskDisciplineName: string | null;
+  designPackageId: string | null;
+  designPackageName: string | null;
+  engineeringDocumentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDeliverableDto {
+  name: string;
+  taskDisciplineId?: string;
+  designPackageId?: string;
+  engineeringDocumentId?: string;
+  dueDate?: string;
+}
+
+export interface UpdateDeliverableDto {
+  name?: string;
+  status?: DeliverableStatus;
+  taskDisciplineId?: string;
+  designPackageId?: string;
+  engineeringDocumentId?: string;
+  dueDate?: string;
+}
+
+export type ExternalReviewTriggerStatus = 'PENDING' | 'PROCESSED' | 'CANCELLED';
+
+export type ExternalReviewTriggerType =
+  | 'RFI'
+  | 'CHANGE_REQUEST'
+  | 'SUBMITTAL_REVIEW';
+
+export interface ExternalReviewTrigger {
+  id: string;
+  projectId: string;
+  status: ExternalReviewTriggerStatus;
+  triggerType: ExternalReviewTriggerType;
+  sourceEntityType: string;
+  sourceEntityId: string;
+  submittalId: string | null;
+  createdAt: string;
+}
+
+export type ReviewTier =
+  | 'DISCIPLINE_OWNER'
+  | 'REVIEWER'
+  | 'DISCIPLINE_LEAD'
+  | 'DEPT_CHIEF';
+
+export type ReviewSessionStatus =
+  | 'ACTIVE'
+  | 'APPROVED'
+  | 'RETURNED_FOR_REWORK'
+  | 'CLOSED'
+  | 'SUPERSEDED';
+
+export interface ReviewSessionSummary {
+  id: string;
+  designPackageId: string;
+  designPackageName: string;
+  taskDisciplineId: string;
+  status: ReviewSessionStatus;
+  currentTier: ReviewTier;
+  assigneeName: string | null;
+  slaDeadlineAt: string | null;
+  slaOverdue: boolean;
+  openedAt: string;
+}

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { EpcWorkspaceService } from '../../application/services/epc-workspace.service';
+import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('EPC Workspace')
 @ApiBearerAuth()
@@ -69,6 +70,21 @@ export class EpcWorkspaceController {
     @Param('projectId') projectId: string,
   ): Promise<unknown> {
     return this.epcWorkspaceService.getWorkload(this.ctx(user), projectId);
+  }
+
+  @Get('projects/:projectId/review-sessions')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List review sessions across all disciplines in a project' })
+  listProjectReviewSessions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Query() query: ReviewSessionListQueryDto,
+  ): Promise<unknown> {
+    return this.epcWorkspaceService.listProjectReviewSessions(
+      this.ctx(user),
+      projectId,
+      query,
+    );
   }
 
   @Get('design-packages/:designPackageId/review-mode')

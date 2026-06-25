@@ -180,17 +180,19 @@ export class RfisService {
         select: { status: true },
       });
       const RFI_STATUS_TRANSITIONS: Record<string, string[]> = {
-        DRAFT: ['OPEN', 'CANCELLED'],
-        OPEN: ['ANSWERED', 'CANCELLED'],
-        ANSWERED: ['CLOSED', 'OPEN'],
+        DRAFT: ['SUBMITTED'],
+        SUBMITTED: ['UNDER_REVIEW', 'DRAFT'],
+        UNDER_REVIEW: ['ANSWERED', 'SUBMITTED'],
+        ANSWERED: ['CLOSED', 'UNDER_REVIEW'],
         CLOSED: [],
-        CANCELLED: [],
       };
-      const allowed = RFI_STATUS_TRANSITIONS[current!.status];
-      if (!allowed?.includes(dto.status)) {
-        throw new BadRequestException(
-          `Invalid RFI status transition from ${current!.status} to ${dto.status}.`,
-        );
+      if (dto.status !== current!.status) {
+        const allowed = RFI_STATUS_TRANSITIONS[current!.status];
+        if (!allowed?.includes(dto.status)) {
+          throw new BadRequestException(
+            `Invalid RFI status transition from ${current!.status} to ${dto.status}.`,
+          );
+        }
       }
     }
 

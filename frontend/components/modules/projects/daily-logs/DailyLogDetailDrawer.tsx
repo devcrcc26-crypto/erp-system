@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   Badge,
   Button,
   Collapse,
@@ -187,6 +188,8 @@ export default function DailyLogDetailDrawer({
 
   const log = logQuery.data;
   const isEditable = log?.status === 'DRAFT';
+  const isDataLocked =
+    log?.status === 'SUBMITTED' || log?.status === 'APPROVED';
 
   async function handleSave(values: DailyLogEditValues): Promise<void> {
     if (!dailyLogId) {
@@ -583,6 +586,18 @@ export default function DailyLogDetailDrawer({
   function renderOverviewTab(currentLog: DailyLogDetail): React.ReactNode {
     return (
       <div className="flex flex-col gap-6 sm:gap-8">
+        {isDataLocked && (
+          <Alert
+            type="warning"
+            showIcon
+            title="This log has been submitted and its data fields are locked. Only status advancement is permitted."
+            style={{
+              backgroundColor: tokens.colorAmber50,
+              borderColor: tokens.colorAmber50,
+              color: tokens.colorAmber400,
+            }}
+          />
+        )}
         <DrawerSection
           title="Weather & conditions"
           description="Record site weather and environmental conditions for the day."

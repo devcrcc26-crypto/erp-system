@@ -127,6 +127,16 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
       },
       {
+        key: 'change-requests',
+        label: 'Change Requests',
+        labelKey: 'workspace.items.changeRequests',
+        iconKey: 'change-requests',
+        pathSuffix: 'change-requests',
+        capability: 'projects',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
+      },
+      {
         key: 'external-release',
         label: 'External Release',
         labelKey: 'workspace.items.externalRelease',

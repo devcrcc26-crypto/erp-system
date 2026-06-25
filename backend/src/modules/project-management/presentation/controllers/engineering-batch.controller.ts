@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -18,7 +19,9 @@ import {
 import { DecisionTraceService } from '../../application/services/decision-trace.service';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
 import { RevisionOrchestratorService } from '../../application/services/revision-orchestrator.service';
+import { ExternalReviewTriggerService } from '../../application/services/external-review-trigger.service';
 import { WorkflowKernelService } from '../../application/services/workflow-kernel.service';
+import { ExternalReviewTriggerListQueryDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('Engineering Batch')
 @ApiBearerAuth()
@@ -29,6 +32,7 @@ export class EngineeringBatchController {
     private readonly designPackagesService: DesignPackagesService,
     private readonly decisionTraceService: DecisionTraceService,
     private readonly revisionOrchestrator: RevisionOrchestratorService,
+    private readonly externalReviewTriggerService: ExternalReviewTriggerService,
     private readonly workflowKernel: WorkflowKernelService,
   ) {}
 
@@ -81,6 +85,36 @@ export class EngineeringBatchController {
       triggerEntityId: dto.triggerEntityId,
       idempotencyKey: dto.idempotencyKey,
     });
+  }
+
+  @Get('revision-triggers')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List external review triggers for a project' })
+  listRevisionTriggers(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Query() query: ExternalReviewTriggerListQueryDto,
+  ): Promise<unknown> {
+    return this.externalReviewTriggerService.listTriggers(
+      this.ctx(user),
+      projectId,
+      query,
+    );
+  }
+
+  @Get('revision-triggers/:triggerId')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Get external review trigger by id' })
+  getRevisionTrigger(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('triggerId') triggerId: string,
+  ): Promise<unknown> {
+    return this.externalReviewTriggerService.getTrigger(
+      this.ctx(user),
+      projectId,
+      triggerId,
+    );
   }
 
   @Post('revision-triggers/:triggerId/process')

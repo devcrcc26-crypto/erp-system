@@ -55,6 +55,12 @@ const VERDICT_SUBMITTAL_STATUSES = new Set<SubmittalStatus>([
   SubmittalStatus.REJECTED,
 ]);
 
+const SUBMITTAL_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['SUBMITTED'],
+  SUBMITTED: ['DRAFT'],
+  UNDER_REVIEW: [],
+};
+
 @Injectable()
 export class SubmittalsService {
   constructor(
@@ -468,11 +474,26 @@ export class SubmittalsService {
   ): Promise<MappedSubmittal> {
     if (dto.status !== undefined && VERDICT_SUBMITTAL_STATUSES.has(dto.status)) {
       throw new BadRequestException(
-        'Submittal verdict must be set through the review endpoint, not direct update.',
+        'Submittal verdict status must be set through the review endpoint, not direct update.',
       );
     }
 
     await this.getSubmittalOrThrow(projectId, submittalId);
+
+    if (dto.status !== undefined) {
+      const current = await this.prisma.submittal.findFirst({
+        where: activeOnly({ id: submittalId, projectId }),
+        select: { status: true },
+      });
+      if (dto.status !== current!.status) {
+        const allowed = SUBMITTAL_STATUS_TRANSITIONS[current!.status];
+        if (!allowed?.includes(dto.status)) {
+          throw new BadRequestException(
+            `Invalid submittal status transition from ${current!.status} to ${dto.status}.`,
+          );
+        }
+      }
+    }
 
     const row = await this.prisma.submittal.update({
       where: { id: submittalId },

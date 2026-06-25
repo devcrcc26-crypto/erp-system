@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client';
+import { apiGet, apiGetPaginated } from '@/lib/api/client';
 import {
   useCanViewReviewInbox,
   useCapabilitiesReady,
@@ -14,7 +14,14 @@ import type {
   ReviewModeView,
   VersionHistoryEntry,
 } from '@/lib/api/epc.types';
-import { projectPath } from '@/lib/query/pm-query-utils';
+import type {
+  ReviewSessionStatus,
+  ReviewSessionSummary,
+} from '@/lib/api/project-management.types';
+import type { PaginationMeta, PaginationParams } from '@/lib/api/types';
+import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
+
+type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
 export const epcWorkspaceKeys = {
   all: ['epc', 'workspace'] as const,
@@ -26,6 +33,18 @@ export const epcWorkspaceKeys = {
     [...epcWorkspaceKeys.all, 'status-board', projectId] as const,
   workload: (projectId: string) =>
     [...epcWorkspaceKeys.all, 'workload', projectId] as const,
+  reviewSessions: (projectId: string) =>
+    [...epcWorkspaceKeys.all, 'review-sessions', projectId] as const,
+  disciplineReviewSessions: (
+    projectId: string,
+    taskDisciplineId: string,
+  ) =>
+    [
+      ...epcWorkspaceKeys.all,
+      'discipline-review-sessions',
+      projectId,
+      taskDisciplineId,
+    ] as const,
   reviewMode: (designPackageId: string) =>
     [...epcWorkspaceKeys.all, 'review-mode', designPackageId] as const,
   versionHistory: (engineeringDocumentId: string) =>
@@ -101,6 +120,62 @@ export function useProjectWorkload(
     queryFn: () =>
       apiGet<DispatcherWorkloadItem[]>(`${projectPath(projectId)}/workload`),
     enabled: Boolean(projectId) && enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/** Alias for dispatcher workload panel (GAP 15). */
+export const useDispatcherWorkload = useProjectWorkload;
+
+export function useProjectReviewSessions(
+  projectId: string,
+  status: ReviewSessionStatus = 'ACTIVE',
+  params: PaginationParams = { page: 1, limit: 50 },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<ReviewSessionSummary>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  const queryParams = { ...params, status };
+
+  return useQuery({
+    queryKey: [...epcWorkspaceKeys.reviewSessions(projectId), queryParams],
+    queryFn: () =>
+      apiGetPaginated<ReviewSessionSummary>(
+        `${projectPath(projectId)}/review-sessions${toQueryString(queryParams)}`,
+      ),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+export function useDisciplineReviewSessions(
+  projectId: string,
+  taskDisciplineId: string,
+  status: ReviewSessionStatus = 'ACTIVE',
+  params: PaginationParams = { page: 1, limit: 50 },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<ReviewSessionSummary>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  const queryParams = { ...params, status };
+
+  return useQuery({
+    queryKey: [
+      ...epcWorkspaceKeys.disciplineReviewSessions(projectId, taskDisciplineId),
+      queryParams,
+    ],
+    queryFn: () =>
+      apiGetPaginated<ReviewSessionSummary>(
+        `${projectPath(projectId)}/task-disciplines/${taskDisciplineId}/design-packages/review-sessions${toQueryString(queryParams)}`,
+      ),
+    enabled:
+      Boolean(projectId) && Boolean(taskDisciplineId) && enabled,
     retry: false,
     ...options,
   });

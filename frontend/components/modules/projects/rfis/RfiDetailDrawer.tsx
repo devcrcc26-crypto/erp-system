@@ -33,6 +33,10 @@ import {
   rfiPriorityVariant,
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import {
+  nextStatusOptions,
+  RFI_VALID_TRANSITIONS,
+} from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -174,16 +178,26 @@ export default function RfiDetailDrawer({
             <p className={`mb-2 ${layout.drawerHeading}`}>
               Update status
             </p>
-            <Select
-              className="w-full max-w-xs"
-              value={rfi.status}
-              onChange={(value: RfiStatus) => void handleStatusChange(value)}
-              loading={updateRfi.isPending}
-              options={RFI_WORKFLOW.map((step) => ({
-                value: step.key,
-                label: step.label,
-              }))}
-            />
+            {nextStatusOptions(rfi.status, RFI_VALID_TRANSITIONS).length ===
+            0 ? (
+              <StatusBadge
+                label={formatRfiStatus(rfi.status)}
+                variant={rfiStatusVariant(rfi.status)}
+              />
+            ) : (
+              <Select
+                className="w-full max-w-xs"
+                value={rfi.status}
+                onChange={(value: RfiStatus) => void handleStatusChange(value)}
+                loading={updateRfi.isPending}
+                options={nextStatusOptions(rfi.status, RFI_VALID_TRANSITIONS).map(
+                  (status) => ({
+                    value: status,
+                    label: formatRfiStatus(status),
+                  }),
+                )}
+              />
+            )}
           </section>
 
           <section className={layout.drawerSection}>

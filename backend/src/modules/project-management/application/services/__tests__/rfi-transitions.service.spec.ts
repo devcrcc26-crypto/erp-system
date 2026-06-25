@@ -73,16 +73,16 @@ describe('RfisService status transitions', () => {
   }
 
   describe('updateRfi', () => {
-    it('allows DRAFT → OPEN', async () => {
+    it('allows DRAFT → SUBMITTED', async () => {
       mockRfiWithStatus('DRAFT');
-      prisma.rfi.update.mockResolvedValue(buildRfi('OPEN'));
+      prisma.rfi.update.mockResolvedValue(buildRfi('SUBMITTED'));
 
       const result = await service.updateRfi(ctx, projectId, rfiId, {
-        status: 'OPEN' as RfiStatus,
+        status: RfiStatus.SUBMITTED,
       });
 
       expect(prisma.rfi.update).toHaveBeenCalled();
-      expect(result.status).toBe('OPEN');
+      expect(result.status).toBe('SUBMITTED');
     });
 
     it('throws BadRequestException for DRAFT → CLOSED', async () => {
@@ -113,16 +113,16 @@ describe('RfisService status transitions', () => {
       expect(result.status).toBe('CLOSED');
     });
 
-    it('throws BadRequestException for CLOSED → OPEN', async () => {
+    it('throws BadRequestException for CLOSED → UNDER_REVIEW', async () => {
       mockRfiWithStatus('CLOSED');
 
       await expect(
         service.updateRfi(ctx, projectId, rfiId, {
-          status: 'OPEN' as RfiStatus,
+          status: RfiStatus.UNDER_REVIEW,
         }),
       ).rejects.toThrow(
         new BadRequestException(
-          'Invalid RFI status transition from CLOSED to OPEN.',
+          'Invalid RFI status transition from CLOSED to UNDER_REVIEW.',
         ),
       );
 

@@ -26,6 +26,7 @@ import {
   useSubmittal,
   useSubmittalReviews,
   useSubmitSubmittalToLead,
+  useUpdateSubmittal,
 } from '@/lib/query/submittals';
 import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
 import { useIssueSubmittal } from '@/lib/query/epc-submittals';
@@ -35,6 +36,11 @@ import {
   formatSubmittalStatus,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import {
+  nextStatusOptions,
+  SUBMITTAL_DIRECT_TRANSITIONS,
+  SUBMITTAL_VERDICT_STATUSES,
+} from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -79,6 +85,7 @@ export default function SubmittalDetailDrawer({
   const addReview = useAddSubmittalReview();
   const issueSubmittal = useIssueSubmittal();
   const submitToLead = useSubmitSubmittalToLead();
+  const updateSubmittal = useUpdateSubmittal();
 
   const submittal = submittalQuery.data;
   const reviews = reviewsQuery.data ?? [];
@@ -135,6 +142,22 @@ export default function SubmittalDetailDrawer({
       void submittalQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Failed to submit submittal', messageApi);
+    }
+  }
+
+  async function handleDirectStatusChange(status: SubmittalStatus): Promise<void> {
+    if (!submittalId || !submittal) return;
+    try {
+      await updateSubmittal.mutateAsync({
+        projectId,
+        submittalId,
+        body: { status },
+      });
+      messageApi.success('Submittal status updated');
+      onUpdated();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to update submittal status', messageApi);
     }
   }
 
@@ -229,6 +252,42 @@ export default function SubmittalDetailDrawer({
               </Descriptions.Item>
             )}
           </Descriptions>
+
+          {submittal && (
+            <section className={layout.drawerSection}>
+              <p className={`mb-2 ${layout.drawerHeading}`}>Update status</p>
+              {SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) ? (
+                <div className="flex flex-col gap-2">
+                  <StatusBadge
+                    label={formatSubmittalStatus(submittal.status)}
+                    variant={submittalStatusVariant(submittal.status)}
+                  />
+                  <p className={layout.drawerMutedText}>
+                    Set via review — cannot be changed directly.
+                  </p>
+                </div>
+              ) : nextStatusOptions(
+                  submittal.status,
+                  SUBMITTAL_DIRECT_TRANSITIONS,
+                ).length > 0 ? (
+                <Select
+                  className="w-full max-w-xs"
+                  value={submittal.status}
+                  onChange={(value: SubmittalStatus) =>
+                    void handleDirectStatusChange(value)
+                  }
+                  loading={updateSubmittal.isPending}
+                  options={nextStatusOptions(
+                    submittal.status,
+                    SUBMITTAL_DIRECT_TRANSITIONS,
+                  ).map((status) => ({
+                    value: status,
+                    label: formatSubmittalStatus(status),
+                  }))}
+                />
+              ) : null}
+            </section>
+          )}
 
           {submittal.items.length > 0 && (
             <div>

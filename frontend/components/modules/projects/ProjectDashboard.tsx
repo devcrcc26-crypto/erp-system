@@ -4,9 +4,7 @@
 
 import Link from 'next/link';
 import { Alert } from 'antd';
-import {
-  CalendarOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined, BranchesOutlined, InboxOutlined } from '@ant-design/icons';
 import { getNavIcon, getNavIconComponent, navIconClassName } from '@/lib/navigation/nav-icons';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
@@ -15,6 +13,8 @@ import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
 import { useAllTasks } from '@/lib/query/schedule';
+import { useChangeRequests } from '@/lib/query/change-requests';
+import { useDeliverables } from '@/lib/query/deliverables';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ProjectStatusBoard from '@/components/modules/projects/workspaces/ProjectStatusBoard';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -74,6 +74,44 @@ export default function ProjectDashboard({
 
   const tasksQuery = useAllTasks(projectId, statsApiUnavailable);
 
+  const changeRequestsQuery = useChangeRequests(
+    projectId,
+    { page: 1, limit: 100, sortBy: 'createdAt', sortOrder: 'desc' },
+    !statsApiUnavailable,
+  );
+  const deliverablesQuery = useDeliverables(
+    projectId,
+    { page: 1, limit: 100, sortBy: 'createdAt', sortOrder: 'desc' },
+    !statsApiUnavailable,
+  );
+
+  const openChangeRequests =
+    changeRequestsQuery.data?.data.filter((cr) => cr.status === 'SUBMITTED')
+      .length ?? 0;
+  const approvedChangeRequestsThisMonth =
+    changeRequestsQuery.data?.data.filter((cr) => {
+      if (cr.status !== 'APPROVED' || !cr.approvedAt) return false;
+      const d = new Date(cr.approvedAt);
+      const now = new Date();
+      return (
+        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      );
+    }).length ?? 0;
+  const activeDeliverables =
+    deliverablesQuery.data?.data.filter(
+      (d) => d.status === 'IN_PROGRESS' || d.status === 'SUBMITTED',
+    ).length ?? 0;
+  const approvedDeliverablesThisMonth =
+    deliverablesQuery.data?.data.filter((d) => {
+      if (d.status !== 'APPROVED') return false;
+      const updated = new Date(d.updatedAt);
+      const now = new Date();
+      return (
+        updated.getMonth() === now.getMonth() &&
+        updated.getFullYear() === now.getFullYear()
+      );
+    }).length ?? 0;
+
   if (statsQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
@@ -109,7 +147,7 @@ export default function ProjectDashboard({
         />
       )}
 
-      <div className={`${layout.cardGrid} sm:grid-cols-2 xl:grid-cols-4`}>
+      <div className={`${layout.cardGrid} sm:grid-cols-2 xl:grid-cols-3`}>
         <KPICard
           label="Open RFIs"
           value={formatCount(stats?.openRfis, hasStats)}
@@ -135,6 +173,34 @@ export default function ProjectDashboard({
           label="Open punch items"
           value={formatCount(stats?.openPunchItems, hasStats)}
           icon={getNavIconComponent('team')}
+          iconBg={tokens.colorBlue50}
+          iconColor={tokens.colorBlue400}
+        />
+        <KPICard
+          label="Open change requests"
+          value={String(openChangeRequests)}
+          extra={
+            approvedChangeRequestsThisMonth > 0 ? (
+              <span style={{ color: tokens.colorGreen600 }}>
+                {approvedChangeRequestsThisMonth} approved this month
+              </span>
+            ) : undefined
+          }
+          icon={BranchesOutlined}
+          iconBg={tokens.colorAmber50}
+          iconColor={tokens.colorAmber400}
+        />
+        <KPICard
+          label="Active deliverables"
+          value={String(activeDeliverables)}
+          extra={
+            approvedDeliverablesThisMonth > 0 ? (
+              <span style={{ color: tokens.colorGreen600 }}>
+                {approvedDeliverablesThisMonth} approved this month
+              </span>
+            ) : undefined
+          }
+          icon={InboxOutlined}
           iconBg={tokens.colorBlue50}
           iconColor={tokens.colorBlue400}
         />

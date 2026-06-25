@@ -1,4 +1,4 @@
-import DeliverablesPageContent from '@/components/modules/projects/workspaces/DeliverablesPageContent';
+import DeliverableList from '@/components/modules/projects/deliverables/DeliverableList';
 
 export default async function ProjectDeliverablesPage({
   params,
@@ -6,5 +6,5 @@ export default async function ProjectDeliverablesPage({
   params: Promise<{ projectId: string }>;
 }): Promise<React.ReactNode> {
   const { projectId } = await params;
-  return <DeliverablesPageContent projectId={projectId} />;
+  return <DeliverableList projectId={projectId} />;
 }
