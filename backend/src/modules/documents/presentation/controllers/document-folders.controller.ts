@@ -22,13 +22,17 @@ import {
   UpdateDocumentFolderDto,
 } from '../../application/dtos/document.dtos';
 import { DocumentService } from '../../application/services/document.service';
+import { DocumentPermissionService } from '../../application/services/document-permission.service';
 
 @ApiTags('Document Folders')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @Controller('document-folders')
 export class DocumentFoldersController {
-  constructor(private readonly documentService: DocumentService) {}
+  constructor(
+    private readonly documentService: DocumentService,
+    private readonly documentPermissionService: DocumentPermissionService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
@@ -98,12 +102,17 @@ export class DocumentFoldersController {
   }
 
   @Get(':id/documents')
-  @RequirePermission('documents', 'view')
-  listDocuments(
+  @ApiOperation({ summary: 'List documents in a folder' })
+  async listDocuments(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') folderId: string,
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {
+    await this.documentPermissionService.assertCanViewFolder(
+      user.userId,
+      user.companyId,
+      folderId,
+    );
     return this.documentService.listDocuments(this.ctx(user), folderId, query);
   }
 }

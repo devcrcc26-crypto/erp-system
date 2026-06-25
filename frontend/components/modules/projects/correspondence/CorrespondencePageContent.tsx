@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -18,6 +18,7 @@ import { Mail } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -75,15 +76,30 @@ function CorrespondenceFormDrawer({
   open: boolean;
   projectId: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (created: Correspondence) => void;
 }): React.ReactNode {
   const [form] = Form.useForm<CorrespondenceFormValues>();
+  const [created, setCreated] = useState<Correspondence | null>(null);
   const createItem = useCreateCorrespondence();
   const messageApi = useAppMessage();
 
+  useEffect(() => {
+    if (!open) {
+      setCreated(null);
+    }
+  }, [open]);
+
+  function handleClose(): void {
+    if (!created) {
+      form.resetFields();
+    }
+    setCreated(null);
+    onClose();
+  }
+
   async function handleSubmit(values: CorrespondenceFormValues): Promise<void> {
     try {
-      await createItem.mutateAsync({
+      const result = await createItem.mutateAsync({
         projectId,
         body: {
           correspondenceType: values.correspondenceType,
@@ -94,10 +110,9 @@ function CorrespondenceFormDrawer({
           referenceNumber: values.referenceNumber?.trim() || undefined,
         },
       });
-      messageApi.success('Correspondence created');
-      form.resetFields();
-      onSaved();
-      onClose();
+      setCreated(result);
+      messageApi.success('Correspondence created — attach files below');
+      onSaved(result);
     } catch (error) {
       notifyApiError(error, 'Failed to create correspondence', messageApi);
     }
@@ -107,71 +122,92 @@ function CorrespondenceFormDrawer({
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
-      title="New correspondence"
-      onClose={onClose}
+      title={created ? 'Attach correspondence files' : 'New correspondence'}
+      onClose={handleClose}
       destroyOnHidden
     >
-      <Form<CorrespondenceFormValues>
-        form={form}
-        layout="vertical"
-        className="erp-drawer-form"
-        initialValues={{
-          correspondenceDate: dayjs(),
-          correspondenceType: 'LETTER',
-        }}
-        onFinish={(values: CorrespondenceFormValues) => void handleSubmit(values)}
-      >
-        <Form.Item
-          label="Type"
-          name="correspondenceType"
-          rules={[{ required: true }]}
+      {created ? (
+        <div className="flex flex-col gap-4">
+          <Alert
+            type="success"
+            showIcon
+            title={`${created.referenceNumber} created`}
+            description="Upload the letter, notice, or supporting documents for this correspondence record."
+          />
+          <DocumentAttachmentPanel
+            folderId={created.attachmentFolderId ?? undefined}
+            title="Correspondence files"
+            description="Upload letters, scanned documents, email PDFs, and other supporting files."
+          />
+          <div className="flex justify-end">
+            <Button type="primary" onClick={handleClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Form<CorrespondenceFormValues>
+          form={form}
+          layout="vertical"
+          className="erp-drawer-form"
+          initialValues={{
+            correspondenceDate: dayjs(),
+            correspondenceType: 'LETTER',
+          }}
+          onFinish={(values: CorrespondenceFormValues) => void handleSubmit(values)}
         >
-          <Select options={TYPE_OPTIONS} />
-        </Form.Item>
-        <Form.Item label="Reference (optional)" name="referenceNumber">
-          <Input placeholder="Auto-generated if left blank" />
-        </Form.Item>
-        <Form.Item
-          label="Subject"
-          name="subject"
-          rules={[{ required: true, message: 'Subject is required' }]}
-        >
-          <Input />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
-            label="Sender"
-            name="senderName"
+            label="Type"
+            name="correspondenceType"
             rules={[{ required: true }]}
+          >
+            <Select options={TYPE_OPTIONS} />
+          </Form.Item>
+          <Form.Item label="Reference (optional)" name="referenceNumber">
+            <Input placeholder="Auto-generated if left blank" />
+          </Form.Item>
+          <Form.Item
+            label="Subject"
+            name="subject"
+            rules={[{ required: true, message: 'Subject is required' }]}
           >
             <Input />
           </Form.Item>
+          <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label="Sender"
+              name="senderName"
+              rules={[{ required: true }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label="Recipient"
+              name="recipientName"
+              rules={[{ required: true }]}
+            >
+              <Input />
+            </Form.Item>
+          </div>
           <Form.Item
-            label="Recipient"
-            name="recipientName"
+            label="Date"
+            name="correspondenceDate"
             rules={[{ required: true }]}
           >
-            <Input />
+            <DatePicker className="w-full" />
           </Form.Item>
-        </div>
-        <Form.Item
-          label="Date"
-          name="correspondenceDate"
-          rules={[{ required: true }]}
-        >
-          <DatePicker className="w-full" />
-        </Form.Item>
-        <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={createItem.isPending}
-          >
-            Create
-          </Button>
-        </div>
-      </Form>
+          <div className="flex justify-end gap-2">
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createItem.isPending}
+            >
+              Create & attach files
+            </Button>
+          </div>
+        </Form>
+      )}
     </Drawer>
   );
 }
@@ -328,7 +364,10 @@ export default function CorrespondencePageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void query.refetch()}
+        onSaved={(created) => {
+          void query.refetch();
+          setSelectedId(created.id);
+        }}
       />
 
       <CorrespondenceDetailDrawer

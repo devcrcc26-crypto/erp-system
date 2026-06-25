@@ -2,8 +2,9 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
+  Alert,
   Button,
   DatePicker,
   Divider,
@@ -11,7 +12,6 @@ import {
   Form,
   Input,
   Select,
-  Tabs,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -68,7 +68,6 @@ export default function CorrespondenceDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
   const [form] = Form.useForm<CorrespondenceEditValues>();
   const open = Boolean(correspondenceId);
   const messageApi = useAppMessage();
@@ -79,19 +78,7 @@ export default function CorrespondenceDetailDrawer({
 
   const item = itemQuery.data;
   const isEditable = item?.status === 'DRAFT';
-
-  useEffect(() => {
-    if (item) {
-      form.setFieldsValue({
-        correspondenceType: item.correspondenceType,
-        subject: item.subject,
-        senderName: item.senderName,
-        recipientName: item.recipientName,
-        correspondenceDate: dayjs(item.correspondenceDate),
-        referenceNumber: item.referenceNumber,
-      });
-    }
-  }, [item, form]);
+  const canUploadAttachments = item !== undefined && item.status !== 'CLOSED';
 
   async function handleStatusChange(status: CorrespondenceStatus): Promise<void> {
     if (!correspondenceId) return;
@@ -220,94 +207,86 @@ export default function CorrespondenceDetailDrawer({
               currentStatus={item.status}
             />
 
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              destroyOnHidden
-              items={[
-                {
-                  key: 'details',
-                  label: 'Details',
-                  children: (
-                    <Form<CorrespondenceEditValues>
-                      form={form}
-                      layout="vertical"
-                      className="erp-drawer-form"
-                      disabled={!isEditable}
-                      onFinish={(values: CorrespondenceEditValues) =>
-                        void handleSave(values)
-                      }
-                    >
-                      <Form.Item
-                        name="correspondenceType"
-                        label="Type"
-                        rules={[{ required: true }]}
-                      >
-                        <Select options={TYPE_OPTIONS} />
-                      </Form.Item>
-                      <Form.Item
-                        name="referenceNumber"
-                        label="Reference number"
-                      >
-                        <Input disabled />
-                      </Form.Item>
-                      <Form.Item
-                        name="subject"
-                        label="Subject"
-                        rules={[{ required: true }]}
-                      >
-                        <Input />
-                      </Form.Item>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Form.Item
-                          name="senderName"
-                          label="Sender"
-                          rules={[{ required: true }]}
-                        >
-                          <Input />
-                        </Form.Item>
-                        <Form.Item
-                          name="recipientName"
-                          label="Recipient"
-                          rules={[{ required: true }]}
-                        >
-                          <Input />
-                        </Form.Item>
-                      </div>
-                      <Form.Item
-                        name="correspondenceDate"
-                        label="Date"
-                        rules={[{ required: true }]}
-                      >
-                        <DatePicker className="w-full" />
-                      </Form.Item>
-                      {isEditable && (
-                        <div className="flex justify-end">
-                          <Button
-                            type="primary"
-                            htmlType="submit"
-                            loading={updateItem.isPending}
-                          >
-                            Save changes
-                          </Button>
-                        </div>
-                      )}
-                    </Form>
-                  ),
-                },
-                {
-                  key: 'attachments',
-                  label: 'Attachments',
-                  children: (
-                    <DocumentAttachmentPanel
-                      folderId={item.attachmentFolderId ?? undefined}
-                      readOnly={!isEditable}
-                      title="Correspondence files"
-                      description="Letters, scans, and supporting documents."
-                    />
-                  ),
-                },
-              ]}
+            <Form<CorrespondenceEditValues>
+              key={item.id}
+              form={form}
+              layout="vertical"
+              className="erp-drawer-form"
+              disabled={!isEditable}
+              initialValues={{
+                correspondenceType: item.correspondenceType,
+                subject: item.subject,
+                senderName: item.senderName,
+                recipientName: item.recipientName,
+                correspondenceDate: dayjs(item.correspondenceDate),
+                referenceNumber: item.referenceNumber,
+              }}
+              onFinish={(values: CorrespondenceEditValues) =>
+                void handleSave(values)
+              }
+            >
+              <Form.Item
+                name="correspondenceType"
+                label="Type"
+                rules={[{ required: true }]}
+              >
+                <Select options={TYPE_OPTIONS} />
+              </Form.Item>
+              <Form.Item name="referenceNumber" label="Reference number">
+                <Input disabled />
+              </Form.Item>
+              <Form.Item
+                name="subject"
+                label="Subject"
+                rules={[{ required: true }]}
+              >
+                <Input />
+              </Form.Item>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Form.Item
+                  name="senderName"
+                  label="Sender"
+                  rules={[{ required: true }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  name="recipientName"
+                  label="Recipient"
+                  rules={[{ required: true }]}
+                >
+                  <Input />
+                </Form.Item>
+              </div>
+              <Form.Item
+                name="correspondenceDate"
+                label="Date"
+                rules={[{ required: true }]}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+              {isEditable && (
+                <div className="flex justify-end">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={updateItem.isPending}
+                  >
+                    Save changes
+                  </Button>
+                </div>
+              )}
+            </Form>
+
+            <DocumentAttachmentPanel
+              folderId={item.attachmentFolderId ?? undefined}
+              readOnly={!canUploadAttachments}
+              title="Correspondence files"
+              description={
+                canUploadAttachments
+                  ? 'Upload letters, scanned documents, email PDFs, and other supporting files.'
+                  : 'Closed correspondence is read-only — attachments cannot be changed.'
+              }
             />
             <Divider className="!my-0" />
           </div>
