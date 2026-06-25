@@ -410,6 +410,30 @@
     "statusInactive": "停用",
     "statusPending": "待激活",
     "statusActive": "活跃",
+    "exportPdf": "导出 PDF",
+    "exportSuccess": "用户列表 PDF 已下载。",
+    "exportError": "无法生成 PDF，请重试。",
+    "pdfFooter": "施工 ERP",
+    "preparedBy": "编制人",
+    "generatedAt": "生成时间",
+    "exportSubtitle": "公司用户目录与访问摘要",
+    "noRoleAssigned": "未分配角色",
+    "exportSections": {
+      "summary": "摘要",
+      "statusBreakdown": "按状态用户",
+      "rolesBreakdown": "按角色用户",
+      "directory": "用户目录"
+    },
+    "exportMetrics": {
+      "totalUsers": "用户总数",
+      "activeUsers": "活跃",
+      "pendingUsers": "待激活",
+      "inactiveUsers": "停用"
+    },
+    "exportTable": {
+      "phone": "电话",
+      "lastLogin": "上次登录"
+    },
     "import": {
       "title": "从 Excel 导入用户",
       "description": "上传电子表格以批量邀请员工。每位用户将收到激活邮件以验证邮箱并设置密码。",

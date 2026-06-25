@@ -410,6 +410,30 @@
     "statusInactive": "Inactive",
     "statusPending": "Pending activation",
     "statusActive": "Active",
+    "exportPdf": "Export PDF",
+    "exportSuccess": "Users list PDF downloaded.",
+    "exportError": "Could not generate the PDF. Please try again.",
+    "pdfFooter": "Construction ERP",
+    "preparedBy": "Prepared by",
+    "generatedAt": "Generated",
+    "exportSubtitle": "Company user directory and access summary",
+    "noRoleAssigned": "No role assigned",
+    "exportSections": {
+      "summary": "Summary",
+      "statusBreakdown": "Users by status",
+      "rolesBreakdown": "Users by role",
+      "directory": "User directory"
+    },
+    "exportMetrics": {
+      "totalUsers": "Total users",
+      "activeUsers": "Active",
+      "pendingUsers": "Pending activation",
+      "inactiveUsers": "Inactive"
+    },
+    "exportTable": {
+      "phone": "Phone",
+      "lastLogin": "Last login"
+    },
     "import": {
       "title": "Import users from Excel",
       "description": "Upload a spreadsheet to invite multiple employees. Each user receives an activation email to verify their address and set a password.",

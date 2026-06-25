@@ -212,6 +212,27 @@ export async function downloadUserImportTemplate(): Promise<void> {
   await downloadApiFile('/users/import/template', 'user-import-template.xlsx');
 }
 
+/**
+ * Loads every user in the company for export (paginates until complete).
+ */
+export async function fetchAllUsers(): Promise<User[]> {
+  const limit = 100;
+  let page = 1;
+  let pages = 1;
+  const users: User[] = [];
+
+  do {
+    const result = await apiGetPaginated<User>(
+      `/users${toQueryString({ page, limit, sortBy: 'lastName', sortOrder: 'asc' })}`,
+    );
+    users.push(...result.data);
+    pages = result.meta.pages;
+    page += 1;
+  } while (page <= pages);
+
+  return users;
+}
+
 export function useRevokeRole() {
   const queryClient = useQueryClient();
 

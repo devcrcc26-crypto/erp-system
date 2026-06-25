@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Button,
@@ -14,7 +14,7 @@ import {
   Spin,
   type MenuProps,
 } from 'antd';
-import { MoreOutlined } from '@ant-design/icons';
+import { FilePdfOutlined, MoreOutlined } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
@@ -24,11 +24,13 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useRoles } from '@/lib/query/roles';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import {
+  fetchAllUsers,
   useAssignRole,
   useCreateUser,
   useDeleteUser,
@@ -39,6 +41,12 @@ import {
   useUsers,
 } from '@/lib/query/users';
 import type { Role, User } from '@/lib/api/types';
+import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
+import {
+  computeUsersExportSummary,
+  exportUsersPdf,
+} from '@/lib/utils/users-export-pdf';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface InviteFormValues {
   firstName: string;
@@ -82,6 +90,38 @@ function userStatusLabel(
     return t('users.statusPending');
   }
   return t('users.statusActive');
+}
+
+function buildUsersExportPdfLabels(
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): UsersExportPdfLabels {
+  return {
+    title: t('users.allUsers'),
+    subtitle: t('users.exportSubtitle'),
+    preparedBy: t('users.preparedBy'),
+    generatedAt: t('users.generatedAt'),
+    summary: t('users.exportSections.summary'),
+    statusBreakdown: t('users.exportSections.statusBreakdown'),
+    rolesBreakdown: t('users.exportSections.rolesBreakdown'),
+    directory: t('users.exportSections.directory'),
+    metric: t('pages.systemReports.table.metric'),
+    value: t('pages.systemReports.table.value'),
+    status: t('common.status'),
+    count: t('pages.systemReports.table.count'),
+    share: t('pages.systemReports.table.share'),
+    role: t('common.role'),
+    name: t('common.name'),
+    email: t('common.email'),
+    phone: t('users.exportTable.phone'),
+    roles: t('common.roles'),
+    lastLogin: t('users.exportTable.lastLogin'),
+    footer: t('users.pdfFooter'),
+    totalUsers: t('users.exportMetrics.totalUsers'),
+    activeUsers: t('users.exportMetrics.activeUsers'),
+    pendingUsers: t('users.exportMetrics.pendingUsers'),
+    inactiveUsers: t('users.exportMetrics.inactiveUsers'),
+    noRole: t('users.noRoleAssigned'),
+  };
 }
 
 function InviteEmployeeModal({
@@ -357,7 +397,10 @@ function EditEmployeeModal({
 
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
+  const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta } = useTablePagination();
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -378,6 +421,34 @@ export default function UsersPageContent(): React.ReactNode {
 
   const roles = rolesQuery.data?.data ?? [];
   const employeeRole = roles.find((role) => role.name === 'Employee');
+  const companyName = authUser?.companyName ?? 'Company';
+
+  const handleExportPdf = useCallback(async (): Promise<void> => {
+    setExportingPdf(true);
+    try {
+      const allUsers = await fetchAllUsers();
+      const generatedAt = new Date().toISOString();
+      const preparedBy = authUser
+        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
+        : 'User';
+
+      exportUsersPdf({
+        companyName,
+        generatedAt,
+        preparedBy,
+        labels: buildUsersExportPdfLabels(t),
+        users: allUsers,
+        summary: computeUsersExportSummary(allUsers),
+        formatUserStatus: (user) => userStatusLabel(user, t),
+        formatUserRoles: formatUserRoleNames,
+      });
+      messageApi.success(t('users.exportSuccess'));
+    } catch {
+      messageApi.error(t('users.exportError'));
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [authUser, companyName, messageApi, t]);
 
   if (usersQuery.isLoading) {
     return (
@@ -576,6 +647,13 @@ export default function UsersPageContent(): React.ReactNode {
         }
         extra={
           <Space wrap>
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={() => void handleExportPdf()}
+            >
+              {t('users.exportPdf')}
+            </Button>
             <Button onClick={() => setImportOpen(true)}>
               {t('common.importFromExcel')}
             </Button>
