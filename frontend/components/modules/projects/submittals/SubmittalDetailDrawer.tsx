@@ -115,6 +115,18 @@ export default function SubmittalDetailDrawer({
     submittal?.status === 'DRAFT' &&
     submittal?.submittedBy === currentUserId &&
     submittalsCap.canCreate;
+  const canResubmitToLead =
+    isConstruction &&
+    submittal?.status === 'REVISE_AND_RESUBMIT' &&
+    submittal?.submittedBy === currentUserId &&
+    submittalsCap.canCreate;
+  const isSubmitter =
+    submittal !== undefined && submittal.submittedBy === currentUserId;
+  const canEditResubmission =
+    isConstruction &&
+    isSubmitter &&
+    (submittal.status === 'DRAFT' ||
+      submittal.status === 'REVISE_AND_RESUBMIT');
   const canRecallToDraft =
     isConstruction &&
     submittal?.status === 'SUBMITTED' &&
@@ -122,8 +134,7 @@ export default function SubmittalDetailDrawer({
     submittalsCap.canEdit;
   const canUploadAttachments =
     submittal !== undefined &&
-    ((submittal.status === 'DRAFT' &&
-      submittal.submittedBy === currentUserId) ||
+    ((canEditResubmission && submittalsCap.canCreate) ||
       (isConstructionReviewer &&
         (submittalsCap.canView || submittalsCap.canEdit)));
   const showDirectStatusControl =
@@ -132,6 +143,9 @@ export default function SubmittalDetailDrawer({
     !SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) &&
     nextStatusOptions(submittal.status, SUBMITTAL_DIRECT_TRANSITIONS).length >
       0;
+
+  const latestReview =
+    reviews.length > 0 ? reviews[reviews.length - 1] : undefined;
 
   async function handleAddReview(values: ReviewFormValues): Promise<void> {
     if (!submittalId || !submittal) {
@@ -163,7 +177,11 @@ export default function SubmittalDetailDrawer({
     }
     try {
       await submitToLead.mutateAsync({ projectId, submittalId });
-      messageApi.success('Submittal submitted to discipline leader');
+      messageApi.success(
+        submittal?.status === 'REVISE_AND_RESUBMIT'
+          ? 'Revised submittal resubmitted to discipline leader'
+          : 'Submittal submitted to discipline leader',
+      );
       onUpdated();
       void submittalQuery.refetch();
     } catch (error) {
@@ -353,12 +371,18 @@ export default function SubmittalDetailDrawer({
             folderId={submittal.attachmentFolderId ?? undefined}
             readOnly={!canUploadAttachments}
             title={
-              isConstructionReviewer ? 'Review attachments' : 'Supporting documents'
+              isConstructionReviewer
+                ? 'Review attachments'
+                : canResubmitToLead
+                  ? 'Revised documents'
+                  : 'Supporting documents'
             }
             description={
               isConstructionReviewer
                 ? 'Upload marked-up drawings, review comments, and other response files before recording your review.'
-                : 'Upload shop drawings, product data sheets, samples photos, and other approval documents.'
+                : canResubmitToLead
+                  ? 'Upload the revised shop drawings, product data, or other documents addressing the discipline leader comments.'
+                  : 'Upload shop drawings, product data sheets, samples photos, and other approval documents.'
             }
           />
 
@@ -374,6 +398,28 @@ export default function SubmittalDetailDrawer({
                   onClick={() => void handleRecallToDraft()}
                 >
                   Recall to draft
+                </Button>
+              }
+            />
+          )}
+
+          {canResubmitToLead && submittalId && (
+            <Alert
+              type="warning"
+              showIcon
+              title="Revision required"
+              description={
+                latestReview?.comments
+                  ? `Discipline leader comments: ${latestReview.comments}`
+                  : 'Address the discipline leader comments, upload revised documents, then resubmit for review.'
+              }
+              action={
+                <Button
+                  type="primary"
+                  loading={submitToLead.isPending}
+                  onClick={() => void handleSubmitToLead()}
+                >
+                  Resubmit to discipline leader
                 </Button>
               }
             />

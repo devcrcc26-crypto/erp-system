@@ -97,7 +97,8 @@ export class SubmittalsController {
   @Post(':id/submit-to-lead')
   @RequirePermission('submittals', 'create')
   @ApiOperation({
-    summary: 'Submit in-construction submittal to discipline leader',
+    summary:
+      'Submit or resubmit in-construction submittal to discipline leader',
   })
   submitToLead(
     @CurrentUser() user: AuthenticatedUser,

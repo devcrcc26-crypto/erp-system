@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Submittal, SubmittalPurpose, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
+import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { SubmittalsService } from '../submittals.service';
 import { PmContext } from '../../types/pm-context.type';
 
@@ -32,12 +33,14 @@ describe('SubmittalsService', () => {
 
   let prisma: {
     submittal: { findFirst: jest.Mock; update: jest.Mock };
-    submittalItem: { findMany: jest.Mock };
-    submittalReview: { create: jest.Mock };
+    submittalItem: { findMany: jest.Mock; count: jest.Mock };
+    submittalReview: { create: jest.Mock; findFirst: jest.Mock };
     taskDiscipline: { findFirst: jest.Mock };
+    document: { count: jest.Mock };
     $transaction: jest.Mock;
   };
   let externalReviewTrigger: { recordFromSubmittalReview: jest.Mock };
+  let folderService: { findEntityFolder: jest.Mock };
   let service: SubmittalsService;
 
   beforeEach(() => {
@@ -48,17 +51,25 @@ describe('SubmittalsService', () => {
       },
       submittalItem: {
         findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
       },
       submittalReview: {
         create: jest.fn(),
+        findFirst: jest.fn(),
       },
       taskDiscipline: {
         findFirst: jest.fn(),
+      },
+      document: {
+        count: jest.fn(),
       },
       $transaction: jest.fn(),
     };
     externalReviewTrigger = {
       recordFromSubmittalReview: jest.fn().mockResolvedValue(undefined),
+    };
+    folderService = {
+      findEntityFolder: jest.fn().mockResolvedValue({ id: 'folder-1' }),
     };
 
     service = new SubmittalsService(
@@ -67,7 +78,7 @@ describe('SubmittalsService', () => {
       {} as never,
       {} as never,
       externalReviewTrigger as never,
-      {} as never,
+      folderService as unknown as EngineeringDocumentFolderService,
       {} as never,
     );
   });
@@ -241,6 +252,99 @@ describe('SubmittalsService', () => {
           status: SubmittalStatus.APPROVED,
           comments: 'Not my review',
         }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('submitToDisciplineLead', () => {
+    const disciplineId = 'discipline-1';
+    const leadUserId = 'lead-1';
+
+    const constructionSubmittal = {
+      ...existingSubmittal,
+      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+      taskDisciplineId: disciplineId,
+      revisionNumber: 2,
+      reviewedBy: leadUserId,
+      reviewDate: new Date('2026-02-01'),
+    } as Submittal;
+
+    beforeEach(() => {
+      prisma.taskDiscipline.findFirst.mockResolvedValue({
+        disciplineLeadUserId: leadUserId,
+      });
+      prisma.submittalItem.count.mockResolvedValue(0);
+      prisma.document.count.mockResolvedValue(1);
+      expect(folderService.findEntityFolder).toBeDefined();
+      folderService.findEntityFolder.mockResolvedValue({ id: 'folder-1' });
+    });
+
+    it('allows the submitter to resubmit after revise and resubmit', async () => {
+      prisma.submittal.findFirst.mockResolvedValue({
+        ...constructionSubmittal,
+        status: SubmittalStatus.REVISE_AND_RESUBMIT,
+      });
+      prisma.submittalReview.findFirst.mockResolvedValue({
+        reviewedAt: new Date('2026-02-01'),
+        status: SubmittalStatus.REVISE_AND_RESUBMIT,
+      });
+      prisma.document.count.mockResolvedValue(1);
+      prisma.submittal.update.mockResolvedValue({
+        ...constructionSubmittal,
+        status: SubmittalStatus.SUBMITTED,
+        revisionNumber: 3,
+        reviewedBy: null,
+        reviewDate: null,
+      });
+
+      const result = await service.submitToDisciplineLead(
+        ctx,
+        projectId,
+        submittalId,
+      );
+
+      expect(result.status).toBe(SubmittalStatus.SUBMITTED);
+      expect(result.revisionNumber).toBe(3);
+      expect(prisma.submittal.update).toHaveBeenCalledWith({
+        where: { id: submittalId },
+        data: expect.objectContaining({
+          assignedTo: leadUserId,
+          status: SubmittalStatus.SUBMITTED,
+          revisionNumber: 3,
+          reviewedBy: null,
+          reviewDate: null,
+        }),
+      });
+    });
+
+    it('rejects resubmit without revised uploads', async () => {
+      prisma.submittal.findFirst.mockResolvedValue({
+        ...constructionSubmittal,
+        status: SubmittalStatus.REVISE_AND_RESUBMIT,
+      });
+      prisma.submittalReview.findFirst.mockResolvedValue({
+        reviewedAt: new Date('2026-02-01'),
+        status: SubmittalStatus.REVISE_AND_RESUBMIT,
+      });
+      prisma.document.count.mockResolvedValue(0);
+
+      await expect(
+        service.submitToDisciplineLead(ctx, projectId, submittalId),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects resubmit from a user who is not the submitter', async () => {
+      prisma.submittal.findFirst.mockResolvedValue({
+        ...constructionSubmittal,
+        status: SubmittalStatus.REVISE_AND_RESUBMIT,
+      });
+
+      await expect(
+        service.submitToDisciplineLead(
+          { ...ctx, userId: 'other-user' },
+          projectId,
+          submittalId,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
   });

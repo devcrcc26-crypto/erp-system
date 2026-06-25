@@ -290,7 +290,8 @@ export class SubmittalsService {
   }
 
   /**
-   * Submits an in-construction submittal to the discipline leader for approval.
+   * Submits an in-construction submittal to the discipline leader for approval,
+   * or resubmits after a revise-and-resubmit outcome.
    */
   async submitToDisciplineLead(
     ctx: PmContext,
@@ -304,9 +305,22 @@ export class SubmittalsService {
         'Only in-construction submittals can be submitted to a discipline leader',
       );
     }
-    if (submittal.status !== SubmittalStatus.DRAFT) {
-      throw new ConflictException('Submittal has already been submitted');
+
+    const isInitialSubmit = submittal.status === SubmittalStatus.DRAFT;
+    const isResubmit = submittal.status === SubmittalStatus.REVISE_AND_RESUBMIT;
+
+    if (!isInitialSubmit && !isResubmit) {
+      throw new ConflictException(
+        'Submittal cannot be submitted in its current status',
+      );
     }
+
+    if (isResubmit && submittal.submittedBy !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the original submitter can resubmit after a revise request',
+      );
+    }
+
     if (!submittal.taskDisciplineId) {
       throw new BadRequestException('Submittal discipline is required');
     }
@@ -341,10 +355,41 @@ export class SubmittalsService {
         })
       : 0;
 
-    if (itemCount === 0 && attachmentCount === 0) {
+    if (isInitialSubmit && itemCount === 0 && attachmentCount === 0) {
       throw new BadRequestException(
         'Attach at least one design package or upload supporting documents before submitting',
       );
+    }
+
+    if (isResubmit) {
+      const latestReview = await this.prisma.submittalReview.findFirst({
+        where: { submittalId },
+        orderBy: { reviewedAt: 'desc' },
+        select: { reviewedAt: true, status: true },
+      });
+
+      if (!latestReview) {
+        throw new BadRequestException(
+          'No prior review found — cannot resubmit this submittal',
+        );
+      }
+
+      const revisedUploadCount =
+        folder && latestReview
+          ? await this.prisma.document.count({
+              where: activeOnly({
+                companyId: ctx.companyId,
+                folderId: folder.id,
+                createdAt: { gt: latestReview.reviewedAt },
+              }),
+            })
+          : 0;
+
+      if (revisedUploadCount === 0 && itemCount === 0) {
+        throw new BadRequestException(
+          'Upload revised documents before resubmitting to the discipline leader',
+        );
+      }
     }
 
     const row = await this.prisma.submittal.update({
@@ -353,6 +398,11 @@ export class SubmittalsService {
         assignedTo: discipline.disciplineLeadUserId,
         status: SubmittalStatus.SUBMITTED,
         submissionDate: this.todayDate(),
+        revisionNumber: isResubmit
+          ? submittal.revisionNumber + 1
+          : submittal.revisionNumber,
+        reviewedBy: isResubmit ? null : submittal.reviewedBy,
+        reviewDate: isResubmit ? null : submittal.reviewDate,
         updatedBy: ctx.userId,
       },
     });
