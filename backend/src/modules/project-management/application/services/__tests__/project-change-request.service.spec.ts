@@ -93,6 +93,18 @@ describe('ProjectChangeRequestService status transitions', () => {
       expect(prisma.projectChangeRequest.update).not.toHaveBeenCalled();
     });
 
+    it('throws ConflictException when status is CLOSED', async () => {
+      mockChangeRequestWithStatus(ProjectChangeRequestStatus.CLOSED);
+
+      await expect(
+        service.approveChangeRequest(ctx, projectId, changeRequestId),
+      ).rejects.toThrow(
+        new ConflictException('A closed change request cannot be approved.'),
+      );
+
+      expect(prisma.projectChangeRequest.update).not.toHaveBeenCalled();
+    });
+
     it('throws ConflictException when status is CANCELLED', async () => {
       mockChangeRequestWithStatus('CANCELLED');
 

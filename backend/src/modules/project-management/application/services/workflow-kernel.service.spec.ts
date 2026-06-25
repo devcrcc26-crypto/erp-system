@@ -88,6 +88,7 @@ describe('WorkflowKernelService', () => {
       submittalWorkflow as never,
       revisionOrchestrator as never,
       workflowTransactionRunner as never,
+      {} as never,
     );
   });
 

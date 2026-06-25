@@ -87,6 +87,7 @@ export default function EpcWorkspacePanels({
       });
       messageApi.success('Revision trigger processed');
       void triggersQuery.refetch();
+      void sessionsQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Failed to process trigger', messageApi);
     }

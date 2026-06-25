@@ -33,11 +33,13 @@ class TestUserGuard implements CanActivate {
 describe('ProjectsController', () => {
   let app: INestApplication;
   let projectsService: { createProject: jest.Mock };
+  let hasPermission: jest.Mock;
 
   beforeEach(async () => {
     projectsService = {
       createProject: jest.fn().mockResolvedValue(projectResponse),
     };
+    hasPermission = jest.fn().mockResolvedValue(true);
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       controllers: [ProjectsController],
@@ -46,7 +48,7 @@ describe('ProjectsController', () => {
         PermissionsGuard,
         {
           provide: PermissionService,
-          useValue: { hasPermission: jest.fn().mockResolvedValue(true) },
+          useValue: { hasPermission },
         },
         Reflector,
       ],
@@ -83,5 +85,21 @@ describe('ProjectsController', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data).toEqual(projectResponse);
     expect(projectsService.createProject).toHaveBeenCalled();
+  });
+
+  it('returns 403 when user lacks permission', async () => {
+    hasPermission.mockResolvedValue(false);
+
+    await request(app.getHttpServer())
+      .post('/projects')
+      .send({
+        projectCode: 'PRJ-00002',
+        name: 'Blocked Project',
+        projectType: 'COMMERCIAL',
+        status: 'PLANNING',
+      })
+      .expect(403);
+
+    expect(projectsService.createProject).not.toHaveBeenCalled();
   });
 });

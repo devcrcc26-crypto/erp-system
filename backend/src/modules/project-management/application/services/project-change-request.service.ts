@@ -351,6 +351,9 @@ export class ProjectChangeRequestService {
         'A cancelled change request cannot be approved.',
       );
     }
+    if (currentStatus === ProjectChangeRequestStatus.CLOSED) {
+      throw new ConflictException('A closed change request cannot be approved.');
+    }
     if (!CHANGE_REQUEST_APPROVABLE_STATUSES.has(currentStatus)) {
       throw new ConflictException(
         'Only submitted or under-review change requests can be approved.',

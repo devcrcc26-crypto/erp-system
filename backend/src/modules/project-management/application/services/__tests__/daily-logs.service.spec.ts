@@ -148,7 +148,21 @@ describe('DailyLogsService', () => {
       expect(result.status).toBe('APPROVED');
     });
 
-    it.todo('blocks DRAFT to APPROVED direct status transition');
+    it('blocks DRAFT to APPROVED direct status transition', async () => {
+      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('DRAFT'));
+
+      await expect(
+        service.updateDailyLog(ctx, projectId, dailyLogId, {
+          status: 'APPROVED',
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid daily log status transition from DRAFT to APPROVED.',
+        ),
+      );
+
+      expect(prisma.dailyLog.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('addWorkforce', () => {

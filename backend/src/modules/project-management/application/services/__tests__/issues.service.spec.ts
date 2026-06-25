@@ -1,3 +1,4 @@
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Issue, IssueSeverity, IssueStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
@@ -116,11 +117,44 @@ describe('IssuesService', () => {
   });
 
   describe('updateIssue', () => {
-    it.todo('enforces issue status transition guard');
+    it('enforces issue status transition guard', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({ status: IssueStatus.OPEN }),
+      );
 
-    it.todo(
-      'blocks the raiser from verifying their own issue once FIX H12 is applied',
-    );
+      await expect(
+        service.updateIssue(ctx, projectId, issueId, {
+          status: IssueStatus.VERIFIED,
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid issue status transition from OPEN to VERIFIED.',
+        ),
+      );
+
+      expect(prisma.issue.update).not.toHaveBeenCalled();
+    });
+
+    it('blocks the raiser from verifying their own issue', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.RESOLVED,
+          raisedBy: ctx.userId,
+        }),
+      );
+
+      await expect(
+        service.updateIssue(ctx, projectId, issueId, {
+          status: IssueStatus.VERIFIED,
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException(
+          'The person who raised an issue cannot verify their own issue. A second person must verify.',
+        ),
+      );
+
+      expect(prisma.issue.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('listIssues', () => {

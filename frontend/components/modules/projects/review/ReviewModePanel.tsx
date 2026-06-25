@@ -15,6 +15,7 @@ import {
   useDesignPackage,
   useDesignPackageDependencies,
   useDesignPackages,
+  useReviewContextSnapshot,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useBatchReviewApprove, useBatchReviewReturn } from '@/lib/query/review-batch';
@@ -80,6 +81,23 @@ export default function ReviewModePanel({
   } = useReviewWorkspaceStore();
 
   const reviewMode = reviewModeQuery.data;
+  const reviewSessionId = reviewMode?.reviewSessionId ?? null;
+  const contextSnapshotQuery = useReviewContextSnapshot(
+    projectId,
+    taskDisciplineId,
+    packageId,
+    reviewSessionId,
+    Boolean(reviewSessionId),
+  );
+  const snapshotEdvIds = useMemo(() => {
+    const fromSnapshot = contextSnapshotQuery.data?.edvs.map((edv) => edv.id);
+    if (fromSnapshot && fromSnapshot.length > 0) {
+      return fromSnapshot;
+    }
+    return reviewMode?.snapshotEdvIds ?? [];
+  }, [contextSnapshotQuery.data, reviewMode?.snapshotEdvIds]);
+  const snapshotContentHash =
+    contextSnapshotQuery.data?.contentHash ?? reviewMode?.contentHash ?? null;
   const packageEdvIds = useMemo(() => {
     const fromPackage = (packageQuery.data?.items ?? []).map(
       (item) => item.engineeringDocumentVersionId,
@@ -196,7 +214,6 @@ export default function ReviewModePanel({
     [packageEdvIds, edvMap],
   );
 
-  const reviewSessionId = reviewMode?.reviewSessionId ?? null;
   const sessionComments = reviewMode?.comments ?? [];
   const commentStatuses = sessionComments.map((comment) => comment.status);
   const approvalAllowed = canApproveReviewSession(commentStatuses);
@@ -215,6 +232,7 @@ export default function ReviewModePanel({
 
   function refetchAll(): void {
     void reviewModeQuery.refetch();
+    void contextSnapshotQuery.refetch();
     void packageQuery.refetch();
     void documentsQuery.refetch();
   }
@@ -396,8 +414,8 @@ export default function ReviewModePanel({
                       dependencies={dependenciesQuery.data ?? []}
                       packages={allPackagesQuery.data ?? []}
                       documents={documentsQuery.data?.data ?? []}
-                      snapshotEdvIds={reviewMode?.snapshotEdvIds ?? []}
-                      contentHash={reviewMode?.contentHash}
+                      snapshotEdvIds={snapshotEdvIds}
+                      contentHash={snapshotContentHash}
                     />
                     <GovernanceReviewPanel
                       designPackage={packageQuery.data}

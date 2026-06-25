@@ -57,6 +57,12 @@ const DAILY_LOG_LIST_INCLUDE = {
 
 const IMMUTABLE_DAILY_LOG_STATUSES = new Set(['SUBMITTED', 'APPROVED']);
 
+const DAILY_LOG_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['SUBMITTED'],
+  SUBMITTED: ['APPROVED'],
+  APPROVED: [],
+};
+
 const DAILY_LOG_DATA_FIELDS = [
   'logDate',
   'shift',
@@ -196,6 +202,15 @@ export class DailyLogsService {
       throw new BadRequestException(
         'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
       );
+    }
+
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      const allowed = DAILY_LOG_STATUS_TRANSITIONS[existing.status] ?? [];
+      if (!allowed.includes(dto.status)) {
+        throw new BadRequestException(
+          `Invalid daily log status transition from ${existing.status} to ${dto.status}.`,
+        );
+      }
     }
 
     const row = await this.prisma.dailyLog.update({

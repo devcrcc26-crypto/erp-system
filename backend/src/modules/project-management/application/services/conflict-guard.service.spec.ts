@@ -22,7 +22,7 @@ function mockEdv(id: string, status: EdvStatus): EdvWithDiscipline {
       companyId: 'co',
       taskDisciplineId: 'td',
       documentType: 'DRAWING',
-      documentNumber: null,
+      documentNumber: 'DOC-001',
       title: 't',
       metadata: {},
       createdAt: new Date(),

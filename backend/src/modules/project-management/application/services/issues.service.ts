@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FolderContextType, IssueStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -32,6 +32,15 @@ const ISSUE_SORT_FIELDS = new Set([
   'status',
   'dueDate',
 ]);
+
+const ISSUE_STATUS_TRANSITIONS: Record<string, string[]> = {
+  OPEN: ['ASSIGNED', 'IN_PROGRESS', 'CLOSED'],
+  ASSIGNED: ['IN_PROGRESS', 'OPEN', 'CLOSED'],
+  IN_PROGRESS: ['RESOLVED', 'ASSIGNED', 'CLOSED'],
+  RESOLVED: ['VERIFIED', 'IN_PROGRESS', 'CLOSED'],
+  VERIFIED: ['CLOSED', 'RESOLVED'],
+  CLOSED: [],
+};
 
 @Injectable()
 export class IssuesService {
@@ -164,6 +173,19 @@ export class IssuesService {
       );
     }
 
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      const allowed = ISSUE_STATUS_TRANSITIONS[existing.status] ?? [];
+      if (!allowed.includes(dto.status)) {
+        throw new BadRequestException(
+          `Invalid issue status transition from ${existing.status} to ${dto.status}.`,
+        );
+      }
+    }
+
+    if (dto.status === IssueStatus.VERIFIED) {
+      this.assertVerifierIsNotRaiser(existing, ctx.userId);
+    }
+
     const issue = await this.prisma.issue.update({
       where: { id: issueId },
       data: {
@@ -282,6 +304,17 @@ export class IssuesService {
     }
 
     throw new ForbiddenException('You do not have access to this issue');
+  }
+
+  private assertVerifierIsNotRaiser(
+    issue: { raisedBy: string },
+    userId: string,
+  ): void {
+    if (userId === issue.raisedBy) {
+      throw new ForbiddenException(
+        'The person who raised an issue cannot verify their own issue. A second person must verify.',
+      );
+    }
   }
 
   private async getIssueOrThrow(projectId: string, issueId: string) {

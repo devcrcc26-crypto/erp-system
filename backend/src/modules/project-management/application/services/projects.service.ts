@@ -1,9 +1,16 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, RfiStatus, IssueStatus, PunchItemStatus, Task } from '@prisma/client';
+import {
+  Prisma,
+  RfiStatus,
+  IssueStatus,
+  PunchItemStatus,
+  Task,
+} from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -31,6 +38,16 @@ import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
+
+const PROJECT_STATUS_TRANSITIONS: Record<string, string[]> = {
+  PLANNING: ['TENDER', 'ON_HOLD'],
+  TENDER: ['MOBILIZATION', 'PLANNING', 'ON_HOLD'],
+  MOBILIZATION: ['ACTIVE', 'ON_HOLD', 'TENDER'],
+  ACTIVE: ['ON_HOLD', 'COMPLETED'],
+  ON_HOLD: ['PLANNING', 'TENDER', 'MOBILIZATION', 'ACTIVE'],
+  COMPLETED: ['CLOSED'],
+  CLOSED: [],
+};
 
 const PROJECT_SORT_FIELDS = new Set([
   'createdAt',
@@ -194,6 +211,22 @@ export class ProjectsService {
     }
     if (dto.responsibleDepartmentId) {
       await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
+    }
+
+    if (dto.status !== undefined) {
+      const current = await this.prisma.project.findFirst({
+        where: activeOnly({ id, companyId: ctx.companyId }),
+        select: { status: true },
+      });
+      if (current && dto.status !== current.status) {
+        const allowed =
+          PROJECT_STATUS_TRANSITIONS[current.status as string] ?? [];
+        if (!allowed.includes(dto.status as string)) {
+          throw new BadRequestException(
+            `Invalid project status transition from ${current.status} to ${dto.status}.`,
+          );
+        }
+      }
     }
 
     const project = await this.prisma.project.update({

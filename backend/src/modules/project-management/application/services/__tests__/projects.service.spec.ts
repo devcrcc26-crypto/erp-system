@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import {
   IssueStatus,
   Prisma,
@@ -291,6 +291,18 @@ describe('ProjectsService', () => {
   });
 
   describe('updateProject transition guard', () => {
-    it.todo('rejects invalid project status transitions once FIX D1 is implemented');
+    it('rejects invalid project status transitions', async () => {
+      prisma.project.findFirst.mockResolvedValue({ status: 'PLANNING' });
+
+      await expect(
+        service.updateProject(ctx, projectId, { status: 'CLOSED' as never }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Invalid project status transition from PLANNING to CLOSED.',
+        ),
+      );
+
+      expect(prisma.project.update).not.toHaveBeenCalled();
+    });
   });
 });

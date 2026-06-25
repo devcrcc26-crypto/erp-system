@@ -22,6 +22,7 @@ import {
   UpdateTaskDto,
 } from '../dtos/pm.dtos';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { wouldCreateTaskDependencyCycle } from '../../domain/task-dependency-graph';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapMilestone,
@@ -452,6 +453,11 @@ export class ScheduleService {
     await this.getTaskOrThrow(projectId, dto.predecessorTaskId);
     await this.getTaskOrThrow(projectId, dto.successorTaskId);
 
+    await this.assertTaskDependencyAcyclic(projectId, {
+      predecessorTaskId: dto.predecessorTaskId,
+      successorTaskId: dto.successorTaskId,
+    });
+
     const dependency = await this.prisma.taskDependency.create({
       data: {
         predecessorTaskId: dto.predecessorTaskId,
@@ -499,6 +505,12 @@ export class ScheduleService {
 
     await this.getTaskOrThrow(projectId, predecessorTaskId);
     await this.getTaskOrThrow(projectId, successorTaskId);
+
+    await this.assertTaskDependencyAcyclic(
+      projectId,
+      { predecessorTaskId, successorTaskId },
+      dependencyId,
+    );
 
     const dependency = await this.prisma.taskDependency.update({
       where: { id: dependencyId },
@@ -775,6 +787,31 @@ export class ScheduleService {
       throw new NotFoundException('Task not found');
     }
     return task;
+  }
+
+  private async assertTaskDependencyAcyclic(
+    projectId: string,
+    candidate: { predecessorTaskId: string; successorTaskId: string },
+    excludeDependencyId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.taskDependency.findMany({
+      where: {
+        ...activeOnly(
+          excludeDependencyId ? { id: { not: excludeDependencyId } } : {},
+        ),
+        predecessorTask: activeOnly({ projectId }),
+        successorTask: activeOnly({ projectId }),
+      },
+      select: { predecessorTaskId: true, successorTaskId: true },
+    });
+
+    if (
+      wouldCreateTaskDependencyCycle(existing, candidate)
+    ) {
+      throw new BadRequestException(
+        'Task dependency would create a circular dependency.',
+      );
+    }
   }
 
   private async getTaskDisciplineOrThrow(

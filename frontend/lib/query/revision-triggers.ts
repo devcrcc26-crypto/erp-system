@@ -98,6 +98,9 @@ export function useProcessRevisionTrigger() {
       void queryClient.invalidateQueries({
         queryKey: ['epc', 'engineering-documents', variables.projectId],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['epc', 'workspace', 'review-sessions', variables.projectId],
+      });
     },
   });
 }

@@ -227,9 +227,22 @@ describe('SubmittalsService', () => {
   });
 
   describe('batchIssue', () => {
-    it.todo(
-      'requires all submittals to be in SUBMITTED status before batch issue',
-    );
+    it('requires all submittals to be in SUBMITTED status before batch issue', async () => {
+      prisma.submittal.findFirst.mockResolvedValue({
+        ...existingSubmittal,
+        status: SubmittalStatus.DRAFT,
+      });
+
+      await expect(
+        service.batchIssue(ctx, projectId, { submittalIds: [submittalId] }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Only submittals in SUBMITTED status can be issued.',
+        ),
+      );
+
+      expect(workflowKernel.execute).not.toHaveBeenCalled();
+    });
 
     it('issues each SUBMITTED submittal through the workflow kernel', async () => {
       prisma.submittal.findFirst.mockResolvedValue({

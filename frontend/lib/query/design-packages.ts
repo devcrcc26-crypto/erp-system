@@ -14,6 +14,7 @@ import type {
   DesignPackageItem,
   LockPackageEdvsRequest,
   ReturnPackageForReworkRequest,
+  ReviewContextSnapshot,
   SubmitPackageForReviewRequest,
   UpdateDesignPackageRequest,
   WorkflowResultSnapshot,
@@ -38,6 +39,17 @@ export const designPackageKeys = {
     [
       ...designPackageKeys.details(projectId, taskDisciplineId),
       packageId,
+    ] as const,
+  reviewContextSnapshot: (
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    reviewSessionId: string,
+  ) =>
+    [
+      ...designPackageKeys.detail(projectId, taskDisciplineId, packageId),
+      'review-context-snapshot',
+      reviewSessionId,
     ] as const,
   dependencies: (
     projectId: string,
@@ -560,5 +572,38 @@ export function useReturnPackageForRework() {
         variables.packageId,
       );
     },
+  });
+}
+
+export function useReviewContextSnapshot(
+  projectId: string,
+  taskDisciplineId: string,
+  packageId: string,
+  reviewSessionId: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: designPackageKeys.reviewContextSnapshot(
+      projectId,
+      taskDisciplineId,
+      packageId,
+      reviewSessionId ?? '',
+    ),
+    queryFn: () =>
+      apiGet<ReviewContextSnapshot>(
+        designPackagesPath(
+          projectId,
+          taskDisciplineId,
+          packageId,
+          `review-sessions/${reviewSessionId}/snapshot`,
+        ),
+      ),
+    enabled:
+      Boolean(projectId) &&
+      Boolean(taskDisciplineId) &&
+      Boolean(packageId) &&
+      Boolean(reviewSessionId) &&
+      enabled,
+    retry: false,
   });
 }

@@ -453,7 +453,8 @@ export class SubmittalsService {
     submittalId: string,
     dto: IssueSubmittalDto,
   ): Promise<WorkflowResultSnapshot> {
-    await this.getSubmittalOrThrow(projectId, submittalId);
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    this.assertSubmittalIssuable(submittal.status);
 
     return this.workflowKernel.execute({
       type: 'IssueSubmittal',
@@ -499,7 +500,8 @@ export class SubmittalsService {
   ): Promise<WorkflowResultSnapshot[]> {
     const results: WorkflowResultSnapshot[] = [];
     for (const submittalId of dto.submittalIds) {
-      await this.getSubmittalOrThrow(projectId, submittalId);
+      const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+      this.assertSubmittalIssuable(submittal.status);
       const result = await this.workflowKernel.execute({
         type: 'IssueSubmittal',
         companyId: ctx.companyId,
@@ -734,6 +736,14 @@ export class SubmittalsService {
       throw new NotFoundException('Submittal not found');
     }
     return row;
+  }
+
+  private assertSubmittalIssuable(status: SubmittalStatus): void {
+    if (status !== SubmittalStatus.SUBMITTED) {
+      throw new BadRequestException(
+        'Only submittals in SUBMITTED status can be issued.',
+      );
+    }
   }
 
   private async assertPackagesBelongToDiscipline(

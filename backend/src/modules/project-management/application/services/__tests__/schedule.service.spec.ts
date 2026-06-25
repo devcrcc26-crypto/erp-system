@@ -54,7 +54,12 @@ describe('ScheduleService', () => {
   let prisma: {
     milestone: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     task: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
-    taskDependency: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
+    taskDependency: {
+      create: jest.Mock;
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      update: jest.Mock;
+    };
     projectTeam: { count: jest.Mock };
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
@@ -75,6 +80,7 @@ describe('ScheduleService', () => {
       taskDependency: {
         create: jest.fn(),
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn(),
       },
       projectTeam: {
@@ -131,6 +137,7 @@ describe('ScheduleService', () => {
       ['NOT_STARTED', 'IN_PROGRESS'],
       ['IN_PROGRESS', 'COMPLETED'],
       ['DELAYED', 'IN_PROGRESS'],
+      ['DELAYED', 'NOT_STARTED'],
     ] as const)(
       'allows %s to %s transition',
       async (fromStatus, toStatus) => {
@@ -164,7 +171,32 @@ describe('ScheduleService', () => {
   });
 
   describe('createTaskDependency', () => {
-    it.todo('detects dependency cycles once FIX I6 is applied');
+    const taskA = 'task-a';
+    const taskB = 'task-b';
+
+    beforeEach(() => {
+      prisma.task.findFirst.mockResolvedValue({ id: taskA });
+    });
+
+    it('detects dependency cycles A→B→A', async () => {
+      prisma.taskDependency.findMany.mockResolvedValue([
+        { predecessorTaskId: taskA, successorTaskId: taskB },
+      ]);
+
+      await expect(
+        service.createTaskDependency(ctx, projectId, {
+          predecessorTaskId: taskB,
+          successorTaskId: taskA,
+          dependencyType: 'FS',
+        }),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Task dependency would create a circular dependency.',
+        ),
+      );
+
+      expect(prisma.taskDependency.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('deleteTaskDependency', () => {

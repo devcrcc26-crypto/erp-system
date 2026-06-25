@@ -289,6 +289,18 @@ export interface ReviewModeView {
   lastReturnedSessionComments: readonly { status: CommentStatus | string }[];
 }
 
+export interface ReviewContextSnapshot {
+  snapshotId: string;
+  capturedAt: string;
+  contentHash: string | null;
+  edvs: readonly {
+    id: string;
+    revisionLabel: string;
+    status: string;
+    engineeringDocumentName: string;
+  }[];
+}
+
 export interface VersionHistoryEvent {
   action: string;
   phase: WorkflowEventPhase;
