@@ -445,15 +445,27 @@ function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
   return {
     generatedAt: new Date().toISOString(),
     completionRate,
-    projects: { total, active, byStatus, byType },
-    users: { total: 0, active: 0 },
+    projects: {
+      total,
+      active,
+      onHold: byStatus.ON_HOLD ?? 0,
+      planning: (byStatus.PLANNING ?? 0) + (byStatus.TENDER ?? 0),
+      completed: byStatus.COMPLETED ?? 0,
+      closed: byStatus.CLOSED ?? 0,
+      averageProgressPct: null,
+      totalBudget: null,
+      byStatus,
+      byType,
+    },
+    users: { total: 0, active: 0, inactive: 0 },
     organization: { branches: 0, departments: 0 },
-    audit: { last30Days: 0, total: 0 },
+    audit: { last30Days: 0, total: 0, topModules: [] },
     siteOps: {
       openRfis: 0,
       overdueRfis: 0,
       openIssues: 0,
       openPunchItems: 0,
+      totalOpen: 0,
     },
   };
 }

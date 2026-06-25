@@ -19,11 +19,13 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateProjectRequest,
   Project,
+  ProjectDesignPhase,
   ProjectStatus,
   ProjectType,
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
+import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useCreateProject, useUpdateProject } from '@/lib/query/projects';
 
@@ -51,7 +53,7 @@ interface ProjectFormValues {
   commissioningMethod?: string;
   responsibleDepartmentId?: string;
   designProperties?: string;
-  designStage?: string;
+  designStage?: ProjectDesignPhase;
   responsiblePersonId?: string;
   description?: string;
   overallProgressPct?: number;
@@ -105,7 +107,7 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     commissioningMethod: values.commissioningMethod?.trim() || undefined,
     responsibleDepartmentId: values.responsibleDepartmentId?.trim() || undefined,
     designProperties: values.designProperties?.trim() || undefined,
-    designStage: values.designStage?.trim() || undefined,
+    designStage: values.designStage,
     responsiblePersonId: values.responsiblePersonId,
     description: values.description?.trim() || undefined,
     overallProgressPct: values.overallProgressPct,
@@ -287,8 +289,16 @@ export default function ProjectFormDrawer({
         <Form.Item label="Design properties" name="designProperties">
           <Input />
         </Form.Item>
-        <Form.Item label="Design stage" name="designStage">
-          <Input />
+        <Form.Item
+          label="Design stage"
+          name="designStage"
+          extra="Required for EPC engineering workflows such as revision triggers and submittals."
+        >
+          <Select
+            allowClear
+            placeholder="Select design stage"
+            options={PROJECT_DESIGN_PHASE_OPTIONS}
+          />
         </Form.Item>
         <Form.Item label="Responsible person" name="responsiblePersonId">
           <UserSelect placeholder="Assign responsible person" />

@@ -33,9 +33,10 @@ export default function VersionHistoryTimeline({
   }
 
   return (
-    <FormLayout
-      title="Version history"
-      description="Per-EDV workflow events with internal/external loop classification."
+    <div id="version-history">
+      <FormLayout
+        title="Version history"
+        description="Each row is a revision of this document. Trigger revision adds a new draft entry here — not a new document in the discipline list."
       extra={
         <Segmented
           value={loopFilter}
@@ -58,6 +59,7 @@ export default function VersionHistoryTimeline({
         <p className="text-sm text-slate-500">No version history available.</p>
       )}
     </FormLayout>
+    </div>
   );
 }
 

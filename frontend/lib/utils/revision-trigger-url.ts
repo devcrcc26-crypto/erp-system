@@ -60,5 +60,31 @@ export function appendRevisionTriggerQuery(
   if (!params) {
     return href;
   }
-  return `${href}${buildRevisionTriggerQuery(params)}`;
+  const separator = href.includes('?') ? '&' : '?';
+  return `${href}${separator}${buildRevisionTriggerQuery(params).slice(1)}`;
+}
+
+/**
+ * Builds the engineering document detail route with optional discipline and trigger context.
+ */
+export function buildEngineeringDocumentDetailHref(
+  projectId: string,
+  engineeringDocumentId: string,
+  options?: {
+    taskDisciplineId?: string;
+    revisionTrigger?: RevisionTriggerParams | null;
+  },
+): string {
+  const params = new URLSearchParams();
+  if (options?.taskDisciplineId) {
+    params.set('taskDisciplineId', options.taskDisciplineId);
+  }
+  if (options?.revisionTrigger) {
+    params.set('triggerSource', options.revisionTrigger.triggerSource);
+    params.set('triggerEntityId', options.revisionTrigger.triggerEntityId);
+  }
+
+  const query = params.toString();
+  const base = `/projects/${projectId}/engineering-documents/${engineeringDocumentId}`;
+  return query ? `${base}?${query}` : base;
 }

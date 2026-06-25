@@ -28,6 +28,7 @@ export interface DecisionTraceEntry {
 
 export interface DecisionTraceView {
   readonly engineeringDocumentId: string;
+  readonly taskDisciplineId: string;
   readonly documentNumber: string | null;
   readonly title: string;
   readonly entries: readonly DecisionTraceEntry[];
@@ -58,6 +59,7 @@ export class DecisionTraceService {
       where: activeOnly({ id: engineeringDocumentId, companyId: ctx.companyId }),
       select: {
         id: true,
+        taskDisciplineId: true,
         documentNumber: true,
         title: true,
         versions: {
@@ -97,6 +99,7 @@ export class DecisionTraceService {
 
     return {
       engineeringDocumentId: document.id,
+      taskDisciplineId: document.taskDisciplineId,
       documentNumber: document.documentNumber,
       title: document.title,
       entries: events.map((event) =>

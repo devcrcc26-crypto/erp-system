@@ -17,7 +17,9 @@ import type {
   BatchLockPackagesRequest,
   DecisionTraceView,
   EngineeringDocument,
+  EngineeringDocumentVersion,
   RegisterEngineeringDocumentRequest,
+  ReplaceDraftVersionFileRequest,
   TransitionEdvStatusRequest,
   TriggerRevisionRequest,
   UpdateEngineeringDocumentRequest,
@@ -486,6 +488,45 @@ export function useTriggerRevision() {
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.versionHistory(variables.engineeringDocumentId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...engineeringDocumentKeys.all, variables.projectId],
+      });
+    },
+  });
+}
+
+export function useReplaceDraftVersionFile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      engineeringDocumentId,
+      versionId,
+      body,
+    }: {
+      projectId: string;
+      engineeringDocumentId: string;
+      versionId: string;
+      body: ReplaceDraftVersionFileRequest;
+    }) =>
+      apiPatch<EngineeringDocumentVersion>(
+        `${projectPath(projectId)}/engineering-documents/${engineeringDocumentId}/versions/${versionId}/replace-draft-file`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.versionHistory(variables.engineeringDocumentId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.decisionTrace(
+          variables.projectId,
+          variables.engineeringDocumentId,
+        ),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...engineeringDocumentKeys.all, variables.projectId],
       });
     },
   });

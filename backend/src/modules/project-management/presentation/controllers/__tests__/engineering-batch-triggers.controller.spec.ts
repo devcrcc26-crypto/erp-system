@@ -12,6 +12,7 @@ import { EngineeringBatchController } from '../engineering-batch.controller';
 import { ExternalReviewTriggerService } from '../../../application/services/external-review-trigger.service';
 import { DesignPackagesService } from '../../../application/services/design-packages.service';
 import { DecisionTraceService } from '../../../application/services/decision-trace.service';
+import { EngineeringDocumentsService } from '../../../application/services/engineering-documents.service';
 import { RevisionOrchestratorService } from '../../../application/services/revision-orchestrator.service';
 import { WorkflowKernelService } from '../../../application/services/workflow-kernel.service';
 import { PermissionsGuard } from '../../../../../shared/permissions/permissions.guard';
@@ -63,6 +64,7 @@ describe('EngineeringBatchController revision triggers', () => {
         { provide: ExternalReviewTriggerService, useValue: triggerService },
         { provide: DesignPackagesService, useValue: {} },
         { provide: DecisionTraceService, useValue: {} },
+        { provide: EngineeringDocumentsService, useValue: {} },
         { provide: RevisionOrchestratorService, useValue: {} },
         { provide: WorkflowKernelService, useValue: {} },
         PermissionsGuard,

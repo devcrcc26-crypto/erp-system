@@ -324,6 +324,7 @@ export interface DecisionTraceEntry {
 
 export interface DecisionTraceView {
   engineeringDocumentId: string;
+  taskDisciplineId: string;
   documentNumber: string | null;
   title: string;
   entries: readonly DecisionTraceEntry[];
@@ -377,6 +378,10 @@ export interface UpdateEngineeringDocumentRequest {
 export interface UploadEngineeringDocumentVersionRequest {
   documentVersionId: string;
   revisionLabel?: string;
+}
+
+export interface ReplaceDraftVersionFileRequest {
+  documentVersionId: string;
 }
 
 export interface UpdateEngineeringDocumentVersionRequest {

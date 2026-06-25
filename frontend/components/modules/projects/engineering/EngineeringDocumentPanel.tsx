@@ -43,9 +43,10 @@ import EdvMetadataForm, {
 } from '@/components/modules/projects/engineering/EdvMetadataForm';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import {
-  appendRevisionTriggerQuery,
+  buildEngineeringDocumentDetailHref,
   parseRevisionTriggerParams,
 } from '@/lib/utils/revision-trigger-url';
+import { getLatestEngineeringDocumentVersion } from '@/lib/utils/engineering-document-versions';
 
 interface DocumentWithVersions {
   id: string;
@@ -128,7 +129,7 @@ export default function EngineeringDocumentPanel({
       title: 'Latest status',
       key: 'status',
       render: (_value, record) => {
-        const latest = record.versions?.[record.versions.length - 1];
+        const latest = getLatestEngineeringDocumentVersion(record.versions);
         return latest ? <EdvStatusBadge status={latest.status} /> : '-';
       },
     },
@@ -137,9 +138,16 @@ export default function EngineeringDocumentPanel({
       key: 'revision',
       align: 'right',
       render: (_value, record) => {
-        const latest = record.versions?.[record.versions.length - 1];
+        const latest = getLatestEngineeringDocumentVersion(record.versions);
         return latest?.revisionLabel ?? '-';
       },
+    },
+    {
+      title: 'Versions',
+      key: 'versionCount',
+      align: 'right',
+      width: 90,
+      render: (_value, record) => record.versions?.length ?? 0,
     },
     {
       title: '',
@@ -147,10 +155,10 @@ export default function EngineeringDocumentPanel({
       width: 80,
       render: (_value, record) => (
         <Link
-          href={appendRevisionTriggerQuery(
-            `/projects/${projectId}/engineering-documents/${record.id}`,
-            revisionTriggerContext,
-          )}
+          href={buildEngineeringDocumentDetailHref(projectId, record.id, {
+            taskDisciplineId,
+            revisionTrigger: revisionTriggerContext,
+          })}
         >
           Open
         </Link>

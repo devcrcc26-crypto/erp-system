@@ -568,6 +568,43 @@ function epcWorkflowPermissionFlags(
   return null;
 }
 
+/**
+ * Grants portfolio / system reports access for executive and finance roles.
+ */
+function reportsPermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (module !== 'reports') {
+    return null;
+  }
+
+  const fullReportsRoles = new Set([
+    'Managing Director',
+    'Project Manager',
+    'General Manager',
+    'Project Director',
+  ]);
+  const viewExportRoles = new Set(['Finance Manager', 'Accountant']);
+
+  if (fullReportsRoles.has(roleName)) {
+    if (action === 'approve' || action === 'delete') {
+      return null;
+    }
+    return singleActionFlags(action);
+  }
+
+  if (viewExportRoles.has(roleName)) {
+    if (action === 'view' || action === 'export') {
+      return singleActionFlags(action);
+    }
+    return null;
+  }
+
+  return null;
+}
+
 function employeePermissionFlags(
   module: string,
   action: string,
@@ -722,7 +759,49 @@ async function main(): Promise<void> {
       continue;
     }
     for (const permission of permissions) {
-      const flags = pmPermissionFlags(roleName, permission.module, permission.action);
+      const flags =
+        pmPermissionFlags(roleName, permission.module, permission.action) ??
+        reportsPermissionFlags(roleName, permission.module, permission.action);
+      if (!flags) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        update: flags,
+        create: {
+          roleId,
+          permissionId: permission.id,
+          ...flags,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
+  }
+
+  const reportsOnlyRoleNames = [
+    'General Manager',
+    'Project Director',
+    'Finance Manager',
+    'Accountant',
+  ] as const;
+
+  for (const roleName of reportsOnlyRoleNames) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      continue;
+    }
+    for (const permission of permissions) {
+      const flags = reportsPermissionFlags(
+        roleName,
+        permission.module,
+        permission.action,
+      );
       if (!flags) {
         continue;
       }

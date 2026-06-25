@@ -60,6 +60,12 @@ export class UploadEngineeringDocumentVersionDto {
   revisionLabel?: string;
 }
 
+export class ReplaceDraftVersionFileDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  documentVersionId!: string;
+}
+
 export class UpdateEngineeringDocumentDto {
   @ApiPropertyOptional()
   @IsOptional()

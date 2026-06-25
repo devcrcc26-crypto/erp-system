@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -15,9 +16,11 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   BatchLockPackagesDto,
   TriggerRevisionDto,
+  ReplaceDraftVersionFileDto,
 } from '../../application/dtos/engineering-document.dtos';
 import { DecisionTraceService } from '../../application/services/decision-trace.service';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
+import { EngineeringDocumentsService } from '../../application/services/engineering-documents.service';
 import { RevisionOrchestratorService } from '../../application/services/revision-orchestrator.service';
 import { ExternalReviewTriggerService } from '../../application/services/external-review-trigger.service';
 import { WorkflowKernelService } from '../../application/services/workflow-kernel.service';
@@ -31,6 +34,7 @@ export class EngineeringBatchController {
   constructor(
     private readonly designPackagesService: DesignPackagesService,
     private readonly decisionTraceService: DecisionTraceService,
+    private readonly engineeringDocumentsService: EngineeringDocumentsService,
     private readonly revisionOrchestrator: RevisionOrchestratorService,
     private readonly externalReviewTriggerService: ExternalReviewTriggerService,
     private readonly workflowKernel: WorkflowKernelService,
@@ -85,6 +89,25 @@ export class EngineeringBatchController {
       triggerEntityId: dto.triggerEntityId,
       idempotencyKey: dto.idempotencyKey,
     });
+  }
+
+  @Patch('engineering-documents/:id/versions/:versionId/replace-draft-file')
+  @RequirePermission('schedule', 'edit')
+  @ApiOperation({ summary: 'Attach a new file to an active draft EDV revision' })
+  replaceDraftVersionFile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') engineeringDocumentId: string,
+    @Param('versionId') versionId: string,
+    @Body() dto: ReplaceDraftVersionFileDto,
+  ): Promise<unknown> {
+    return this.engineeringDocumentsService.replaceDraftVersionFile(
+      this.ctx(user),
+      projectId,
+      engineeringDocumentId,
+      versionId,
+      dto,
+    );
   }
 
   @Get('revision-triggers')

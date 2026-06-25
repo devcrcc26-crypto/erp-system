@@ -18,6 +18,18 @@ export type ProjectStatus =
   | 'COMPLETED'
   | 'CLOSED';
 
+/** EPC workflow gate — must match backend ProjectDesignPhase enum. */
+export type ProjectDesignPhase =
+  | 'INITIATION'
+  | 'PLANNING'
+  | 'CONCEPT_DESIGN'
+  | 'SCHEMATIC'
+  | 'DETAILED_DESIGN'
+  | 'IFC'
+  | 'SUBMITTAL'
+  | 'CONSTRUCTION_SUPPORT'
+  | 'CLOSEOUT';
+
 export type TaskStatus =
   | 'NOT_STARTED'
   | 'IN_PROGRESS'
@@ -147,7 +159,7 @@ export interface Project {
   commissioningMethod: string | null;
   responsibleDepartmentId: string | null;
   designProperties: string | null;
-  designStage: string | null;
+  designStage: ProjectDesignPhase | null;
   responsiblePersonId: string | null;
   description: string | null;
   overallProgressPct: number;
@@ -218,7 +230,7 @@ export interface Task {
   onSiteReceivingTime: string | null;
   assignmentToHqTime: string | null;
   contactFormNumber: string | null;
-  designStage: string | null;
+  designStage: ProjectDesignPhase | null;
   urgencyLevel: UrgencyLevel;
   hasCustomSchedule: boolean;
   language: TaskLanguage;
@@ -626,7 +638,7 @@ export interface CreateProjectRequest {
   commissioningMethod?: string;
   responsibleDepartmentId?: string;
   designProperties?: string;
-  designStage?: string;
+  designStage?: ProjectDesignPhase;
   responsiblePersonId?: string;
   description?: string;
   overallProgressPct?: number;
@@ -738,7 +750,7 @@ export interface CreateTaskRequest {
   onSiteReceivingTime?: string;
   assignmentToHqTime?: string;
   contactFormNumber?: string;
-  designStage?: string;
+  designStage?: ProjectDesignPhase;
   urgencyLevel?: UrgencyLevel;
   hasCustomSchedule?: boolean;
   language?: TaskLanguage;

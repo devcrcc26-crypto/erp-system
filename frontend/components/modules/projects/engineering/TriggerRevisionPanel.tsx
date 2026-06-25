@@ -184,11 +184,12 @@ export default function TriggerRevisionPanel({
       });
       messageApi.success(
         result.newEdvId
-          ? 'External revision started — a new draft revision was created.'
+          ? 'Draft revision created — upload your revised file above, then check Version history below.'
           : 'External revision triggered successfully.',
       );
       closeModal();
       void historyQuery.refetch();
+      document.getElementById('version-history')?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
       notifyApiError(error, 'Failed to trigger revision', messageApi);
     }

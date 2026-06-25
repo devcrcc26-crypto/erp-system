@@ -14,6 +14,7 @@ import {
   UpdateEngineeringDocumentDto,
   UpdateEngineeringDocumentVersionDto,
   UploadEngineeringDocumentVersionDto,
+  ReplaceDraftVersionFileDto,
 } from '../dtos/engineering-document.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
@@ -326,6 +327,68 @@ export class EngineeringDocumentsService {
       revisionLabel: dto.revisionLabel,
       updatedBy: ctx.userId,
     });
+
+    return mapEngineeringDocumentVersion(row);
+  }
+
+  /**
+   * Replaces the stored file on an active DRAFT EDV (e.g. after external revision trigger).
+   */
+  async replaceDraftVersionFile(
+    ctx: PmContext,
+    projectId: string,
+    engineeringDocumentId: string,
+    versionId: string,
+    dto: ReplaceDraftVersionFileDto,
+  ): Promise<MappedEngineeringDocumentVersion> {
+    const document = await this.engineeringDocumentRepository.findById(
+      ctx.companyId,
+      engineeringDocumentId,
+    );
+    if (!document) {
+      throw new NotFoundException('Engineering document not found');
+    }
+
+    await this.assertDisciplineScope(
+      ctx,
+      projectId,
+      document.taskDisciplineId,
+    );
+
+    const existing = await this.engineeringDocumentVersionRepository.findById(
+      ctx.companyId,
+      versionId,
+    );
+    if (!existing || existing.engineeringDocumentId !== engineeringDocumentId) {
+      throw new NotFoundException('Engineering document version not found');
+    }
+    if (existing.status !== EdvStatus.DRAFT) {
+      throw new BadRequestException(
+        'Only draft revisions can receive a replacement file',
+      );
+    }
+
+    const docVersion = await this.taskDisciplineScopeRepository.findDocumentVersion(
+      ctx.companyId,
+      dto.documentVersionId,
+    );
+    if (!docVersion) {
+      throw new NotFoundException('Document version not found');
+    }
+
+    const row = await this.engineeringDocumentVersionRepository.update(versionId, {
+      documentVersion: { connect: { id: dto.documentVersionId } },
+      updatedBy: ctx.userId,
+    });
+
+    await this.workflowEventLogService.logCrud(
+      ctx,
+      WorkflowEntityType.EngineeringDocumentVersion,
+      versionId,
+      'VERSION_FILE_REPLACED',
+      { documentVersionId: existing.documentVersionId },
+      { documentVersionId: dto.documentVersionId },
+    );
 
     return mapEngineeringDocumentVersion(row);
   }

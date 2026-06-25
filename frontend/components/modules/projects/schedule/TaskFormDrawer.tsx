@@ -21,6 +21,7 @@ import type {
   ApprovalLevel,
   CompletionStatus,
   CreateTaskRequest,
+  ProjectDesignPhase,
   Task,
   TaskLanguage,
   TaskStatus,
@@ -41,6 +42,7 @@ import { formatTaskStatus } from '@/lib/utils/pm-status-display';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -89,7 +91,7 @@ interface TaskFormValues {
   urgencyLevel: UrgencyLevel;
   language: TaskLanguage;
   approvalLevel?: ApprovalLevel;
-  designStage?: string;
+  designStage?: ProjectDesignPhase;
   commissioningMethod?: string;
   onSiteReceivingTime?: Dayjs;
   assignmentToHqTime?: Dayjs;
@@ -131,7 +133,7 @@ function toExtendedPayload(
     onSiteReceivingTime: values.onSiteReceivingTime?.toISOString(),
     assignmentToHqTime: values.assignmentToHqTime?.toISOString(),
     contactFormNumber: values.contactFormNumber?.trim() || undefined,
-    designStage: values.designStage?.trim() || undefined,
+    designStage: values.designStage,
     urgencyLevel: values.urgencyLevel,
     hasCustomSchedule: values.hasCustomSchedule,
     language: values.language,
@@ -443,7 +445,11 @@ export default function TaskFormDrawer({
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
                     <Form.Item label="Design stage" name="designStage">
-                      <Input />
+                      <Select
+                        allowClear
+                        placeholder="Select design stage"
+                        options={PROJECT_DESIGN_PHASE_OPTIONS}
+                      />
                     </Form.Item>
                     <Form.Item label="Commissioning method" name="commissioningMethod">
                       <Input />
