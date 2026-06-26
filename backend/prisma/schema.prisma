@@ -149,7 +149,9 @@ model Company {
   externalReviewTriggers  ExternalReviewTrigger[]
   deliverables            Deliverable[]
   changeRequests          ProjectChangeRequest[]
-  taskDisciplineReviews   TaskDisciplineReview[]
+  taskDisciplineReviews    TaskDisciplineReview[]
+  designPackageAttachments DesignPackageAttachment[]
+  reviewSessionAttachments ReviewSessionAttachment[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -453,7 +455,11 @@ model User {
   designerDisciplines      TaskDiscipline[] @relation("DisciplineDesigner")
   reviewerDisciplines      TaskDiscipline[] @relation("DisciplineReviewer")
   leadDisciplines          TaskDiscipline[] @relation("DisciplineLead")
-  chiefDisciplines         TaskDiscipline[] @relation("DisciplineChief")
+  chiefDisciplines                  TaskDiscipline[]          @relation("DisciplineChief")
+  instituteChiefDisciplines         TaskDiscipline[]          @relation("DisciplineInstituteChief")
+  supportingDesignerDisciplines     TaskDiscipline[]          @relation("DisciplineSupportingDesigner")
+  packageAttachments                DesignPackageAttachment[] @relation("PackageAttachmentAuthor")
+  sessionAttachments                ReviewSessionAttachment[] @relation("SessionAttachmentAuthor")
   workflowEventLogs        WorkflowEventLog[]
   assignedReviewSessions   ReviewSession[]  @relation("ReviewSessionAssignee")
   authoredReviewComments   ReviewComment[] @relation("ReviewCommentAuthor")
@@ -788,9 +794,11 @@ model Document {
   deletedAt     DateTime? @map("deleted_at")
   deletedBy     String?   @map("deleted_by")
 
-  company  Company           @relation(fields: [companyId], references: [id])
-  folder   DocumentFolder    @relation(fields: [folderId], references: [id])
-  versions DocumentVersion[]
+  company                  Company                   @relation(fields: [companyId], references: [id])
+  folder                   DocumentFolder            @relation(fields: [folderId], references: [id])
+  versions                 DocumentVersion[]
+  designPackageAttachments DesignPackageAttachment[]
+  reviewSessionAttachments ReviewSessionAttachment[]
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -1024,6 +1032,11 @@ enum ExternalReviewTriggerStatus {
   CANCELLED
 }
 
+enum ExternalReviewTriggerMode {
+  REVISION
+  NEW_PACKAGE
+}
+
 enum IssueSeverity {
   LOW
   MEDIUM
@@ -1129,6 +1142,13 @@ enum DesignPackageProjectedStatus {
   PENDING_LEAD
   APPROVED
   REWORK_REQUIRED
+  LOCKED
+}
+
+enum DesignPackageStatus {
+  OPEN
+  SUBMITTED
+  CLOSED
 }
 
 enum TaskDisciplineProjectedStatus {
@@ -1219,6 +1239,7 @@ enum ReviewTier {
   REVIEWER
   DISCIPLINE_LEAD
   DEPT_CHIEF
+  INSTITUTE_CHIEF
 }
 
 enum SubmittalPurpose {
@@ -1429,8 +1450,13 @@ model TaskDiscipline {
   ownerUserId          String?                      @map("owner_user_id")
   reviewerUserId       String?                      @map("reviewer_user_id")
   disciplineLeadUserId String?                      @map("discipline_lead_user_id")
-  chiefUserId          String?                      @map("chief_user_id")
-  actualCompletionTime DateTime?                    @map("actual_completion_time")
+  chiefUserId              String?                      @map("chief_user_id")
+  instituteChiefUserId     String?                      @map("institute_chief_user_id")
+  supportingDesignerUserId String?                      @map("supporting_designer_user_id")
+  isClosed                 Boolean                      @default(false) @map("is_closed")
+  closedAt                 DateTime?                    @map("closed_at")
+  closedBy                 String?                      @map("closed_by")
+  actualCompletionTime     DateTime?                    @map("actual_completion_time")
   deptReviewTime       DateTime?                    @map("dept_review_time")
   createdAt              DateTime                     @default(now()) @map("created_at")
   createdBy              String                       @map("created_by")
@@ -1445,7 +1471,9 @@ model TaskDiscipline {
   ownerUser             User?                 @relation("DisciplineOwner", fields: [ownerUserId], references: [id])
   reviewerUser          User?                 @relation("DisciplineReviewer", fields: [reviewerUserId], references: [id])
   disciplineLeadUser    User?                 @relation("DisciplineLead", fields: [disciplineLeadUserId], references: [id])
-  chiefUser             User?                 @relation("DisciplineChief", fields: [chiefUserId], references: [id])
+  chiefUser                 User?                 @relation("DisciplineChief", fields: [chiefUserId], references: [id])
+  instituteChiefUser        User?                 @relation("DisciplineInstituteChief", fields: [instituteChiefUserId], references: [id])
+  supportingDesignerUser    User?                 @relation("DisciplineSupportingDesigner", fields: [supportingDesignerUserId], references: [id])
   engineeringDocuments  EngineeringDocument[]
   designPackages        DesignPackage[]
   reviewSessions        ReviewSession[]
@@ -1461,6 +1489,8 @@ model TaskDiscipline {
   @@index([designerUserId], map: "idx_task_discipline_designer_user_id")
   @@index([ownerUserId], map: "idx_task_discipline_owner_user_id")
   @@index([reviewerUserId], map: "idx_task_discipline_reviewer_user_id")
+  @@index([instituteChiefUserId], map: "idx_task_discipline_institute_chief_user_id")
+  @@index([supportingDesignerUserId], map: "idx_task_discipline_supporting_designer_user_id")
   @@map("task_discipline")
 }
 
@@ -1497,6 +1527,7 @@ model EngineeringDocumentVersion {
   documentVersionId     String    @map("document_version_id")
   revisionLabel         String    @map("revision_label")
   status                EdvStatus @default(DRAFT)
+  isCurrent             Boolean   @default(false) @map("is_current")
   createdAt             DateTime  @default(now()) @map("created_at")
   createdBy             String    @map("created_by")
   updatedAt             DateTime  @updatedAt @map("updated_at")
@@ -1528,6 +1559,13 @@ model DesignPackage {
   projectionPending Boolean                      @default(false) @map("projection_pending")
   submittedAt       DateTime?                    @map("submitted_at")
   approvedAt        DateTime?                    @map("approved_at")
+  requiredTiers     ReviewTier[]                 @map("required_tiers")
+  briefText         String?                      @map("brief_text")
+  sourceEntityType  String?                      @map("source_entity_type")
+  sourceEntityId    String?                      @map("source_entity_id")
+  packageStatus     DesignPackageStatus          @default(OPEN) @map("package_status")
+  packageClosedAt   DateTime?                    @map("package_closed_at")
+  packageClosedBy   String?                      @map("package_closed_by")
   createdAt         DateTime                     @default(now()) @map("created_at")
   createdBy         String                       @map("created_by")
   updatedAt         DateTime                     @updatedAt @map("updated_at")
@@ -1535,14 +1573,15 @@ model DesignPackage {
   deletedAt         DateTime?                    @map("deleted_at")
   deletedBy         String?                      @map("deleted_by")
 
-  company      Company                   @relation(fields: [companyId], references: [id])
-  taskDiscipline TaskDiscipline          @relation(fields: [taskDisciplineId], references: [id])
-  items        DesignPackageItem[]
-  dependencies DesignPackageDependency[] @relation("DependentPackage")
-  dependedOnBy DesignPackageDependency[] @relation("PrerequisitePackage")
+  company        Company                   @relation(fields: [companyId], references: [id])
+  taskDiscipline TaskDiscipline            @relation(fields: [taskDisciplineId], references: [id])
+  items          DesignPackageItem[]
+  dependencies   DesignPackageDependency[] @relation("DependentPackage")
+  dependedOnBy   DesignPackageDependency[] @relation("PrerequisitePackage")
   reviewSessions ReviewSession[]
   submittalItems SubmittalItem[]
   deliverables   Deliverable[]
+  attachments    DesignPackageAttachment[]
 
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
@@ -1640,8 +1679,9 @@ model ReviewSession {
   designPackage   DesignPackage          @relation(fields: [designPackageId], references: [id])
   taskDiscipline  TaskDiscipline         @relation(fields: [taskDisciplineId], references: [id])
   assignedToUser  User?                  @relation("ReviewSessionAssignee", fields: [assignedToUserId], references: [id])
-  contextSnapshot ReviewContextSnapshot?
-  comments        ReviewComment[]
+  contextSnapshot          ReviewContextSnapshot?
+  comments                 ReviewComment[]
+  reviewSessionAttachments ReviewSessionAttachment[]
 
   @@index([companyId], map: "idx_review_session_company_id")
   @@index([companyId, deletedAt], map: "idx_review_session_company_deleted")
@@ -1878,6 +1918,7 @@ model ExternalReviewTrigger {
   submittalItemIds String[]                    @map("submittal_item_ids")
   payload          Json                        @default("{}")
   status           ExternalReviewTriggerStatus @default(PENDING)
+  triggerMode      ExternalReviewTriggerMode   @default(REVISION) @map("trigger_mode")
   createdAt        DateTime                    @default(now()) @map("created_at")
   createdBy        String                      @map("created_by")
 
@@ -2406,4 +2447,49 @@ model Warranty {
 
   @@index([closeoutId], map: "idx_warranty_closeout_id")
   @@map("warranty")
+}
+
+model DesignPackageAttachment {
+  id              String        @id @default(uuid())
+  companyId       String        @map("company_id")
+  company         Company       @relation(fields: [companyId], references: [id])
+  designPackageId String        @map("design_package_id")
+  designPackage   DesignPackage @relation(fields: [designPackageId], references: [id])
+  documentId      String        @map("document_id")
+  document        Document      @relation(fields: [documentId], references: [id])
+  attachedBy      String        @map("attached_by")
+  attachedByUser  User          @relation("PackageAttachmentAuthor", fields: [attachedBy], references: [id])
+  attachedAt      DateTime      @default(now()) @map("attached_at")
+  purpose         String?
+  note            String?
+  deletedAt       DateTime?     @map("deleted_at")
+  deletedBy       String?       @map("deleted_by")
+
+  @@index([companyId], map: "idx_design_package_attachment_company_id")
+  @@index([designPackageId], map: "idx_design_package_attachment_package_id")
+  @@index([documentId], map: "idx_design_package_attachment_document_id")
+  @@map("design_package_attachments")
+}
+
+model ReviewSessionAttachment {
+  id               String        @id @default(uuid())
+  companyId        String        @map("company_id")
+  company          Company       @relation(fields: [companyId], references: [id])
+  reviewSessionId  String        @map("review_session_id")
+  reviewSession    ReviewSession @relation(fields: [reviewSessionId], references: [id])
+  tier             ReviewTier
+  attachedByUserId String        @map("attached_by_user_id")
+  attachedByUser   User          @relation("SessionAttachmentAuthor", fields: [attachedByUserId], references: [id])
+  documentId       String        @map("document_id")
+  document         Document      @relation(fields: [documentId], references: [id])
+  attachedAt       DateTime      @default(now()) @map("attached_at")
+  purpose          String?
+  note             String?
+  deletedAt        DateTime?     @map("deleted_at")
+  deletedBy        String?       @map("deleted_by")
+
+  @@index([companyId], map: "idx_review_session_attachment_company_id")
+  @@index([reviewSessionId], map: "idx_review_session_attachment_session_id")
+  @@index([documentId], map: "idx_review_session_attachment_document_id")
+  @@map("review_session_attachments")
 }

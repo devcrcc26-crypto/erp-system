@@ -18,6 +18,7 @@ export const DEFAULT_SLA_HOURS: Readonly<Record<ReviewTier, number>> = {
   [ReviewTier.REVIEWER]: 48,
   [ReviewTier.DISCIPLINE_LEAD]: 72,
   [ReviewTier.DEPT_CHIEF]: 120,
+  [ReviewTier.INSTITUTE_CHIEF]: 120,
 };
 
 export interface SlaEscalationResult {

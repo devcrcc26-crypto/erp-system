@@ -562,6 +562,11 @@ erDiagram
   String reviewer_user_id FK "nullable"
   String discipline_lead_user_id FK "nullable"
   String chief_user_id FK "nullable"
+  String institute_chief_user_id FK "nullable"
+  String supporting_designer_user_id FK "nullable"
+  Boolean is_closed
+  DateTime closed_at "nullable"
+  String closed_by "nullable"
   DateTime actual_completion_time "nullable"
   DateTime dept_review_time "nullable"
   DateTime created_at
@@ -593,6 +598,7 @@ erDiagram
   String document_version_id FK
   String revision_label
   EdvStatus status
+  Boolean is_current
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -609,6 +615,13 @@ erDiagram
   Boolean projection_pending
   DateTime submitted_at "nullable"
   DateTime approved_at "nullable"
+  ReviewTier required_tiers
+  String brief_text "nullable"
+  String source_entity_type "nullable"
+  String source_entity_id "nullable"
+  DesignPackageStatus package_status
+  DateTime package_closed_at "nullable"
+  String package_closed_by "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -807,6 +820,7 @@ erDiagram
   String submittal_item_ids
   Json payload
   ExternalReviewTriggerStatus status
+  ExternalReviewTriggerMode trigger_mode
   DateTime created_at
   String created_by
 }
@@ -1139,6 +1153,31 @@ erDiagram
   DateTime deleted_at "nullable"
   String deleted_by "nullable"
 }
+"design_package_attachments" {
+  String id PK
+  String company_id FK
+  String design_package_id FK
+  String document_id FK
+  String attached_by FK
+  DateTime attached_at
+  String purpose "nullable"
+  String note "nullable"
+  DateTime deleted_at "nullable"
+  String deleted_by "nullable"
+}
+"review_session_attachments" {
+  String id PK
+  String company_id FK
+  String review_session_id FK
+  ReviewTier tier
+  String attached_by_user_id FK
+  String document_id FK
+  DateTime attached_at
+  String purpose "nullable"
+  String note "nullable"
+  DateTime deleted_at "nullable"
+  String deleted_by "nullable"
+}
 "company_setting" }o--|| "company" : company
 "branch" }o--|| "company" : company
 "division" }o--|| "company" : company
@@ -1207,6 +1246,8 @@ erDiagram
 "task_discipline" }o--o| "user" : reviewerUser
 "task_discipline" }o--o| "user" : disciplineLeadUser
 "task_discipline" }o--o| "user" : chiefUser
+"task_discipline" }o--o| "user" : instituteChiefUser
+"task_discipline" }o--o| "user" : supportingDesignerUser
 "engineering_document" }o--|| "company" : company
 "engineering_document" }o--|| "task_discipline" : taskDiscipline
 "engineering_document_version" }o--|| "company" : company
@@ -1300,6 +1341,14 @@ erDiagram
 "closeout_checklist_item" }o--|| "closeout" : closeout
 "closeout_checklist_item" }o--o| "user" : verifier
 "warranty" }o--|| "closeout" : closeout
+"design_package_attachments" }o--|| "company" : company
+"design_package_attachments" }o--|| "design_package" : designPackage
+"design_package_attachments" }o--|| "document" : document
+"design_package_attachments" }o--|| "user" : attachedByUser
+"review_session_attachments" }o--|| "company" : company
+"review_session_attachments" }o--|| "review_session" : reviewSession
+"review_session_attachments" }o--|| "user" : attachedByUser
+"review_session_attachments" }o--|| "document" : document
 ```
 
 ### `company`
@@ -1961,6 +2010,11 @@ Properties as follows:
 - `reviewer_user_id`:
 - `discipline_lead_user_id`:
 - `chief_user_id`:
+- `institute_chief_user_id`:
+- `supporting_designer_user_id`:
+- `is_closed`:
+- `closed_at`:
+- `closed_by`:
 - `actual_completion_time`:
 - `dept_review_time`:
 - `created_at`:
@@ -1998,6 +2052,7 @@ Properties as follows:
 - `document_version_id`:
 - `revision_label`:
 - `status`:
+- `is_current`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2017,6 +2072,13 @@ Properties as follows:
 - `projection_pending`:
 - `submitted_at`:
 - `approved_at`:
+- `required_tiers`:
+- `brief_text`:
+- `source_entity_type`:
+- `source_entity_id`:
+- `package_status`:
+- `package_closed_at`:
+- `package_closed_by`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2254,6 +2316,7 @@ Properties as follows:
 - `submittal_item_ids`:
 - `payload`:
 - `status`:
+- `trigger_mode`:
 - `created_at`:
 - `created_by`:
 
@@ -2649,5 +2712,36 @@ Properties as follows:
 - `created_by`:
 - `updated_at`:
 - `updated_by`:
+- `deleted_at`:
+- `deleted_by`:
+
+### `design_package_attachments`
+
+Properties as follows:
+
+- `id`:
+- `company_id`:
+- `design_package_id`:
+- `document_id`:
+- `attached_by`:
+- `attached_at`:
+- `purpose`:
+- `note`:
+- `deleted_at`:
+- `deleted_by`:
+
+### `review_session_attachments`
+
+Properties as follows:
+
+- `id`:
+- `company_id`:
+- `review_session_id`:
+- `tier`:
+- `attached_by_user_id`:
+- `document_id`:
+- `attached_at`:
+- `purpose`:
+- `note`:
 - `deleted_at`:
 - `deleted_by`:
