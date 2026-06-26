@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { FolderContextType, IssueStatus, Prisma } from '@prisma/client';
+import { FolderContextType, IssueStatus, Prisma, ExternalReviewTriggerType } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -23,6 +23,7 @@ import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 
 const ISSUE_SORT_FIELDS = new Set([
   'createdAt',
@@ -50,6 +51,7 @@ export class IssuesService {
     private readonly documentNumberService: DocumentNumberService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
+    private readonly epcSubmittalRepository: EpcSubmittalRepository,
   ) {}
 
   /**
@@ -186,19 +188,39 @@ export class IssuesService {
       this.assertVerifierIsNotRaiser(existing, ctx.userId);
     }
 
-    const issue = await this.prisma.issue.update({
-      where: { id: issueId },
-      data: {
-        issueType: dto.issueType,
-        description: dto.description,
-        location: dto.location,
-        severity: dto.severity,
-        assignedTo: dto.assignedTo,
-        taskDisciplineId: dto.taskDisciplineId,
-        dueDate: parseOptionalDate(dto.dueDate),
-        status: dto.status,
-        updatedBy: ctx.userId,
-      },
+    const issue = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.issue.update({
+        where: { id: issueId },
+        data: {
+          issueType: dto.issueType,
+          description: dto.description,
+          location: dto.location,
+          severity: dto.severity,
+          assignedTo: dto.assignedTo,
+          taskDisciplineId: dto.taskDisciplineId,
+          dueDate: parseOptionalDate(dto.dueDate),
+          status: dto.status,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (
+        dto.status === IssueStatus.VERIFIED &&
+        existing.status !== IssueStatus.VERIFIED &&
+        existing.linkedDesignPackageId
+      ) {
+        await this.epcSubmittalRepository.createLinkedEntityTrigger(tx, {
+          companyId: ctx.companyId,
+          projectId,
+          triggerType: ExternalReviewTriggerType.ISSUE,
+          sourceEntityType: 'ISSUE',
+          sourceEntityId: issueId,
+          linkedDesignPackageId: existing.linkedDesignPackageId,
+          createdBy: ctx.userId,
+        });
+      }
+
+      return updated;
     });
 
     return this.enrichIssue(ctx, issue);

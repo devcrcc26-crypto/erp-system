@@ -134,26 +134,26 @@ export class EngineeringDocumentsService {
 
     const metadata = (dto.metadata ?? {}) as Prisma.InputJsonValue;
 
-    const created = await this.engineeringDocumentRepository.create({
-      company: { connect: { id: ctx.companyId } },
-      taskDiscipline: { connect: { id: taskDisciplineId } },
-      documentType: dto.documentType,
-      documentNumber: dto.documentNumber.trim(),
-      title: dto.title,
-      metadata,
-      createdBy: ctx.userId,
-      updatedBy: ctx.userId,
-      versions: {
-        create: {
-          company: { connect: { id: ctx.companyId } },
-          documentVersion: { connect: { id: dto.documentVersionId } },
-          revisionLabel: '0',
-          status: EdvStatus.DRAFT,
-          createdBy: ctx.userId,
-          updatedBy: ctx.userId,
-        },
+    const created = await this.engineeringDocumentRepository.createWithInitialCurrentVersion(
+      {
+        company: { connect: { id: ctx.companyId } },
+        taskDiscipline: { connect: { id: taskDisciplineId } },
+        documentType: dto.documentType,
+        documentNumber: dto.documentNumber.trim(),
+        title: dto.title,
+        metadata,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
       },
-    });
+      {
+        company: { connect: { id: ctx.companyId } },
+        documentVersion: { connect: { id: dto.documentVersionId } },
+        revisionLabel: '0',
+        status: EdvStatus.DRAFT,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    );
 
     const withVersions = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
@@ -242,15 +242,20 @@ export class EngineeringDocumentsService {
         ),
       );
 
-    const version = await this.engineeringDocumentVersionRepository.create({
-      company: { connect: { id: ctx.companyId } },
-      engineeringDocument: { connect: { id: engineeringDocumentId } },
-      documentVersion: { connect: { id: dto.documentVersionId } },
-      revisionLabel,
-      status: EdvStatus.DRAFT,
-      createdBy: ctx.userId,
-      updatedBy: ctx.userId,
-    });
+    const version = await this.engineeringDocumentVersionRepository.createAsCurrent(
+      {
+        company: { connect: { id: ctx.companyId } },
+        engineeringDocument: { connect: { id: engineeringDocumentId } },
+        documentVersion: { connect: { id: dto.documentVersionId } },
+        revisionLabel,
+        status: EdvStatus.DRAFT,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      ctx.companyId,
+      engineeringDocumentId,
+      ctx.userId,
+    );
 
     await this.workflowEventLogService.logCrud(
       ctx,

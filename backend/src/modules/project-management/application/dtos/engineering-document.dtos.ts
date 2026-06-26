@@ -16,6 +16,7 @@ import {
   DesignPackageProjectedStatus,
   EdvStatus,
   EngineeringDocumentType,
+  ReviewTier,
   TaskDisciplineProjectedStatus,
   WorkflowEntityType,
   WorkflowEventPhase,
@@ -178,7 +179,7 @@ export class BatchLockPackagesDto {
 export class TriggerRevisionDto {
   @ApiProperty({ enum: ['RFI', 'CHANGE_REQUEST', 'SUBMITTAL_REVIEW'] })
   @IsIn(['RFI', 'CHANGE_REQUEST', 'SUBMITTAL_REVIEW'])
-  triggerSource!: 'RFI' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
+  triggerSource!: 'RFI' | 'ISSUE' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
 
   @ApiProperty({ format: 'uuid' })
   @IsEntityUuid()
@@ -320,6 +321,33 @@ export class CreateDesignPackageDto {
   @IsOptional()
   @IsEnum(DesignPackageProjectedStatus)
   projectedStatus?: DesignPackageProjectedStatus;
+
+  @ApiPropertyOptional({ enum: ReviewTier, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(ReviewTier, { each: true })
+  requiredTiers?: ReviewTier[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  briefText?: string;
+
+  @ApiPropertyOptional({ enum: ['TASK', 'RFI', 'ISSUE', 'CHANGE_REQUEST'] })
+  @IsOptional()
+  @IsIn(['TASK', 'RFI', 'ISSUE', 'CHANGE_REQUEST'])
+  sourceEntityType?: 'TASK' | 'RFI' | 'ISSUE' | 'CHANGE_REQUEST';
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  sourceEntityId?: string;
+
+  @ApiPropertyOptional({ type: [String], format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  briefDocumentIds?: string[];
 }
 
 export class UpdateDesignPackageDto extends PartialType(CreateDesignPackageDto) {}

@@ -35,6 +35,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -1416,10 +1417,16 @@ export class UpdateDeliverableDto {
 }
 
 export class ExternalReviewTriggerListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ enum: ['PENDING', 'PROCESSED', 'CANCELLED'] })
+  @ApiPropertyOptional({ enum: ['PENDING', 'PROCESSED', 'PARTIAL', 'FAILED', 'CANCELLED'] })
   @IsOptional()
   @IsString()
   status?: string;
+}
+
+export class ConfigureRevisionTriggerDto {
+  @ApiProperty({ enum: ['REVISION', 'NEW_PACKAGE'] })
+  @IsIn(['REVISION', 'NEW_PACKAGE'])
+  triggerMode!: 'REVISION' | 'NEW_PACKAGE';
 }
 
 export class ReviewSessionListQueryDto extends PaginationQueryDto {
@@ -1427,4 +1434,20 @@ export class ReviewSessionListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   status?: string;
+}
+
+export class AddReviewSessionAttachmentDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  documentId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  purpose?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

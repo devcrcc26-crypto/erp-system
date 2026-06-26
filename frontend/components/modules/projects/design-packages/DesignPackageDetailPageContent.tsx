@@ -16,7 +16,11 @@ import {
 } from 'antd';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
+import RequiredTiersStepIndicator from '@/components/modules/projects/review/RequiredTiersStepIndicator';
+import ReviewSessionAttachmentsSection from '@/components/modules/projects/review/ReviewSessionAttachmentsSection';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
+import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import {
   DesignPackageAddDependencyModal,
@@ -28,6 +32,7 @@ import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
   useApproveReviewSession,
   useBatchApprovePackageEdvs,
+  useCloseDesignPackage,
   useDesignPackage,
   useDesignPackageDependencies,
   useDesignPackages,
@@ -47,6 +52,7 @@ import {
 } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
 import { layout } from '@/lib/theme/layout';
 
 export default function DesignPackageDetailPageContent({
@@ -60,7 +66,9 @@ export default function DesignPackageDetailPageContent({
 }): React.ReactNode {
   const lens = useRoleLens();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
 
@@ -99,6 +107,7 @@ export default function DesignPackageDetailPageContent({
   const returnPackage = useReturnPackageForRework();
   const batchLock = useBatchLockEngineeringDocuments();
   const batchApproveEdvs = useBatchApprovePackageEdvs();
+  const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
 
   const pkg = packageQuery.data;
   const reviewMode = reviewModeQuery.data;
@@ -139,6 +148,14 @@ export default function DesignPackageDetailPageContent({
       reviewMode?.currentTier,
       lockGuidance.inReviewEdvIds.length,
     );
+  const discipline = disciplineQuery.data;
+  const isDisciplineLeader =
+    Boolean(currentUserId) &&
+    discipline?.disciplineLeadUserId === currentUserId;
+  const canClosePackage =
+    isDisciplineLeader &&
+    pkg.projectedStatus === 'LOCKED' &&
+    pkg.packageStatus !== 'CLOSED';
 
   async function handleApproveAllEdvs(): Promise<void> {
     if (!reviewSessionId || lockGuidance.inReviewEdvIds.length === 0) {
@@ -310,6 +327,11 @@ export default function DesignPackageDetailPageContent({
                 Return for rework
               </Button>
             )}
+            {canClosePackage && (
+              <Button onClick={() => setClosePackageOpen(true)}>
+                Close Package
+              </Button>
+            )}
           </Space>
         }
       >
@@ -359,6 +381,10 @@ export default function DesignPackageDetailPageContent({
             />
           </div>
           <div>
+            <p className="text-xs text-slate-500">Package status</p>
+            <PackageStatusBadge status={pkg.packageStatus} />
+          </div>
+          <div>
             <p className="text-xs text-slate-500">Review tier</p>
             <p className="text-sm font-medium">{reviewMode?.currentTier ?? '-'}</p>
           </div>
@@ -372,6 +398,17 @@ export default function DesignPackageDetailPageContent({
               {pkg.submittedAt ? new Date(pkg.submittedAt).toLocaleDateString() : '-'}
             </p>
           </div>
+        </div>
+
+        <div className="mb-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Required review tiers
+          </p>
+          <RequiredTiersStepIndicator
+            requiredTiers={pkg.requiredTiers ?? []}
+            currentTier={reviewMode?.currentTier}
+            sessionStatus={reviewMode?.sessionStatus}
+          />
         </div>
       </FormLayout>
 
@@ -409,7 +446,16 @@ export default function DesignPackageDetailPageContent({
       </FormLayout>
 
       {reviewSessionId && (
-        <DesignPackageCommentsSection
+        <>
+          <ReviewSessionAttachmentsSection
+            projectId={projectId}
+            taskDisciplineId={taskDisciplineId}
+            packageId={packageId}
+            reviewSessionId={reviewSessionId}
+            currentTier={reviewMode?.currentTier ?? null}
+            requiredTiers={pkg.requiredTiers ?? []}
+          />
+          <DesignPackageCommentsSection
           projectId={projectId}
           taskDisciplineId={taskDisciplineId}
           packageId={packageId}
@@ -421,7 +467,30 @@ export default function DesignPackageDetailPageContent({
             void packageQuery.refetch();
           }}
         />
+        </>
       )}
+
+      <ConfirmDialog
+        open={closePackageOpen}
+        title="Close Design Package?"
+        description="This confirms all documents are locked and all linked RFIs, issues, and change requests are resolved. This cannot be undone."
+        confirmLabel="Close Package"
+        confirmLoading={closeDesignPackage.isPending}
+        onConfirm={() => {
+          void closeDesignPackage
+            .mutateAsync({ packageId })
+            .then(() => {
+              messageApi.success('Design package closed');
+              setClosePackageOpen(false);
+              void packageQuery.refetch();
+              void reviewModeQuery.refetch();
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to close design package', messageApi);
+            });
+        }}
+        onCancel={() => setClosePackageOpen(false)}
+      />
 
       <DesignPackageAddDependencyModal
         open={addDependencyOpen}

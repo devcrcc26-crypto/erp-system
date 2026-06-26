@@ -71,6 +71,7 @@ export class ReviewSlaService {
       reviewerUserId: string | null;
       disciplineLeadUserId: string | null;
       chiefUserId: string | null;
+      instituteChiefUserId?: string | null;
     },
   ): string | null {
     switch (tier) {
@@ -82,6 +83,8 @@ export class ReviewSlaService {
         return discipline.disciplineLeadUserId;
       case ReviewTier.DEPT_CHIEF:
         return discipline.chiefUserId;
+      case ReviewTier.INSTITUTE_CHIEF:
+        return discipline.instituteChiefUserId ?? null;
       default:
         return null;
     }

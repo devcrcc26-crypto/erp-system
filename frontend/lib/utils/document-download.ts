@@ -44,3 +44,25 @@ export async function downloadDocumentVersion(
   anchor.click();
   anchor.remove();
 }
+
+/**
+ * Triggers download of a core document (review session attachment).
+ */
+export async function downloadDocument(
+  documentId: string,
+  fileName?: string,
+): Promise<void> {
+  const { url } = await apiGet<DocumentDownloadResponse>(
+    `/documents/${documentId}/download-url`,
+  );
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  if (fileName) {
+    anchor.download = fileName;
+  }
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}

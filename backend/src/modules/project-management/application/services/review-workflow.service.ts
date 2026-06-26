@@ -45,6 +45,11 @@ import {
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  mapReviewSessionAttachment,
+  mapReviewSessionAttachments,
+  MappedReviewSessionAttachment,
+} from '../utils/review-session-attachment.mapper';
 import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
 import { ConflictGuardService } from './conflict-guard.service';
 import { DefinitionOfDoneService } from './definition-of-done.service';
@@ -185,6 +190,13 @@ export class ReviewWorkflowService {
         loaded.map((e) => e.status as EdvStatus),
       );
 
+      const firstRequiredTier = pkg.requiredTiers[0] as ReviewTier | undefined;
+      if (!firstRequiredTier) {
+        throw new BadRequestException(
+          'Design package has no required tiers. Set requiredTiers before submitting.',
+        );
+      }
+
       const discipline = pkg.taskDisciplineId
         ? await this.epcReviewRepository.findPackageWithDiscipline(
             tx,
@@ -194,23 +206,17 @@ export class ReviewWorkflowService {
         : null;
       const taskDiscipline = discipline?.taskDiscipline;
       const assignedToUserId = taskDiscipline
-        ? this.reviewSla.resolveAssigneeForTier(
-            ReviewTier.DISCIPLINE_OWNER,
-            taskDiscipline,
-          )
+        ? this.reviewSla.resolveAssigneeForTier(firstRequiredTier, taskDiscipline)
         : null;
       const openedAt = new Date();
-      const slaDeadlineAt = this.reviewSla.computeDeadline(
-        openedAt,
-        ReviewTier.DISCIPLINE_OWNER,
-      );
+      const slaDeadlineAt = this.reviewSla.computeDeadline(openedAt, firstRequiredTier);
 
       const session = await this.epcReviewRepository.createReviewSession(tx, {
         companyId: command.companyId,
         designPackageId: command.designPackageId,
         taskDisciplineId: command.taskDisciplineId,
         assignedToUserId,
-        currentTier: ReviewTier.DISCIPLINE_OWNER,
+        currentTier: firstRequiredTier,
         slaDeadlineAt,
         createdBy: command.actorId,
       });
@@ -246,7 +252,7 @@ export class ReviewWorkflowService {
       await this.upsertTaskDisciplineReviewInTx(tx, {
         companyId: command.companyId,
         taskDisciplineId: command.taskDisciplineId,
-        tier: ReviewTier.DISCIPLINE_OWNER,
+        tier: firstRequiredTier,
         status: TaskDisciplineReviewStatus.IN_REVIEW,
         actorId: command.actorId,
       });
@@ -706,8 +712,15 @@ export class ReviewWorkflowService {
 
       await this.closeVerifiedCommentsInTx(tx, session.id, command);
 
-      const tierIndex = REVIEW_TIER_ORDER.indexOf(session.currentTier as never);
-      const isFinalTier = tierIndex >= REVIEW_TIER_ORDER.length - 1;
+      const currentIndex = REVIEW_TIER_ORDER.indexOf(session.currentTier as never);
+      const packageRequiredTiers = approveDiscipline?.requiredTiers ?? [];
+      const nextTier = (REVIEW_TIER_ORDER
+        .slice(currentIndex + 1)
+        .find((tier) => packageRequiredTiers.includes(tier as ReviewTier)) ?? null) as ReviewTier | null;
+      const remainingRequired = packageRequiredTiers.filter(
+        (t) => REVIEW_TIER_ORDER.indexOf(t as never) > currentIndex,
+      );
+      const isFinalTier = remainingRequired.length === 0;
 
       if (!isFinalTier) {
         await this.revertPrematureEdvApprovalsInTx(tx, {
@@ -736,13 +749,13 @@ export class ReviewWorkflowService {
           sessionId: session.id,
           correlationId,
           triggerAction: 'ADVANCE_REVIEW_TIER',
+          nextTier: nextTier!,
         });
 
-        const nextTier = REVIEW_TIER_ORDER[tierIndex + 1] as ReviewTier;
         await this.upsertTaskDisciplineReviewInTx(tx, {
           companyId: command.companyId,
           taskDisciplineId: session.taskDisciplineId,
-          tier: nextTier,
+          tier: nextTier!,
           status: TaskDisciplineReviewStatus.IN_REVIEW,
           actorId: command.actorId,
         });
@@ -1247,6 +1260,7 @@ export class ReviewWorkflowService {
       sessionId: string;
       correlationId: string;
       triggerAction: string;
+      nextTier: ReviewTier;
     },
   ): Promise<void> {
     const session = await this.epcReviewRepository.findSessionById(
@@ -1258,13 +1272,7 @@ export class ReviewWorkflowService {
       return;
     }
 
-    const tierIndex = REVIEW_TIER_ORDER.indexOf(session.currentTier as never);
-    const isFinalTier = tierIndex >= REVIEW_TIER_ORDER.length - 1;
-    if (isFinalTier) {
-      return;
-    }
-
-    const nextTier = REVIEW_TIER_ORDER[tierIndex + 1] as ReviewTier;
+    const nextTier = input.nextTier;
     const discipline = await this.epcReviewRepository.findPackageWithDiscipline(
       tx,
       input.companyId,
@@ -1351,6 +1359,7 @@ export class ReviewWorkflowService {
       reviewerUserId: string | null;
       disciplineLeadUserId: string | null;
       chiefUserId: string | null;
+      instituteChiefUserId: string | null;
     },
   ): void {
     if (!discipline) {
@@ -1376,6 +1385,7 @@ export class ReviewWorkflowService {
       reviewerUserId: string | null;
       disciplineLeadUserId: string | null;
       chiefUserId: string | null;
+      instituteChiefUserId: string | null;
     },
   ): CommentActorRole {
     if (
@@ -1389,6 +1399,7 @@ export class ReviewWorkflowService {
       discipline?.reviewerUserId === userId ||
       discipline?.disciplineLeadUserId === userId ||
       discipline?.chiefUserId === userId ||
+      discipline?.instituteChiefUserId === userId ||
       comment.createdBy === userId
     ) {
       return 'reviewer';
@@ -1467,5 +1478,79 @@ export class ReviewWorkflowService {
       throw new BadRequestException('Task not found for discipline');
     }
     return task.projectId;
+  }
+
+  /**
+   * Attaches a document to the active review session at the current tier.
+   */
+  async addSessionAttachment(input: {
+    companyId: string;
+    actorId: string;
+    designPackageId: string;
+    reviewSessionId: string;
+    documentId: string;
+    purpose?: string;
+    note?: string;
+  }): Promise<MappedReviewSessionAttachment> {
+    const session = await this.epcReviewRepository.findSessionForCompany(
+      input.companyId,
+      input.reviewSessionId,
+    );
+    if (!session || session.designPackageId !== input.designPackageId) {
+      throw new NotFoundException('Review session not found');
+    }
+    if (session.status !== ReviewSessionStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Attachments can only be added to an active review session',
+      );
+    }
+    if (session.assignedToUserId !== input.actorId) {
+      throw new ForbiddenException(
+        "Only the current tier's reviewer can attach files during their review.",
+      );
+    }
+
+    const document = await this.epcReviewRepository.findDocumentForCompany(
+      input.companyId,
+      input.documentId,
+    );
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const row = await this.epcReviewRepository.createSessionAttachment({
+      companyId: input.companyId,
+      reviewSessionId: input.reviewSessionId,
+      tier: session.currentTier,
+      attachedByUserId: input.actorId,
+      documentId: input.documentId,
+      purpose: input.purpose,
+      note: input.note,
+    });
+
+    return mapReviewSessionAttachment(row);
+  }
+
+  /**
+   * Lists all tier attachments for a review session.
+   */
+  async listSessionAttachments(input: {
+    companyId: string;
+    designPackageId: string;
+    reviewSessionId: string;
+  }): Promise<MappedReviewSessionAttachment[]> {
+    const session = await this.epcReviewRepository.findSessionForCompany(
+      input.companyId,
+      input.reviewSessionId,
+    );
+    if (!session || session.designPackageId !== input.designPackageId) {
+      throw new NotFoundException('Review session not found');
+    }
+
+    const rows = await this.epcReviewRepository.listSessionAttachments(
+      input.companyId,
+      input.reviewSessionId,
+    );
+    return mapReviewSessionAttachments(rows);
   }
 }

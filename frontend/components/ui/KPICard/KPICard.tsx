@@ -51,7 +51,7 @@ export default function KPICard({
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
             style={{ backgroundColor: iconBg, color: iconColor }}
           >
-            <Icon style={{ fontSize: 16 }} />
+            <Icon className="text-base" />
           </div>
         )}
         <div className="min-w-0 flex-1">

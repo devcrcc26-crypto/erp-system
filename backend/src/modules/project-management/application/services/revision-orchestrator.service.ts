@@ -1,12 +1,16 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
   EdvStatus,
+  ExternalReviewTriggerMode,
   ExternalReviewTriggerStatus,
+  ExternalReviewTriggerType,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
@@ -17,6 +21,7 @@ import {
   WorkflowResultSnapshot,
 } from '../../domain/contracts/workflow-kernel.contract';
 import { validateNewRevisionUpload } from '../../domain/edv-state-machine';
+import { DesignPackageRepository } from '../../infrastructure/repositories/epc-storage.repository';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import {
   EpcWorkflowRepository,
@@ -29,15 +34,30 @@ import { StateProjectionService } from './state-projection.service';
 import { PmContext } from '../types/pm-context.type';
 import { SubmittalEdvSnapshotRow } from './submittal-snapshot.service';
 
+export interface ProcessExternalReviewTriggerResult {
+  triggerId: string;
+  triggerStatus: ExternalReviewTriggerStatus;
+  triggerMode: ExternalReviewTriggerMode;
+  revision?: {
+    succeeded: WorkflowResultSnapshot[];
+    failed: Array<{ engineeringDocumentId: string; error: string }>;
+    skipped: string[];
+  };
+  newPackageId?: string;
+}
+
 /**
- * External revision loop - RFI/CR triggers new DRAFT EDV from LOCKED source.
+ * External revision loop - RFI/Issue/CR triggers new DRAFT EDV from LOCKED source.
  * Never mutates LOCKED EDV status.
  */
 @Injectable()
 export class RevisionOrchestratorService {
+  private readonly logger = new Logger(RevisionOrchestratorService.name);
+
   constructor(
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
     private readonly epcSubmittalRepository: EpcSubmittalRepository,
+    private readonly designPackageRepository: DesignPackageRepository,
     private readonly edvTransitionService: EdvTransitionService,
     private readonly permissionResolver: PermissionResolverService,
     private readonly stateProjection: StateProjectionService,
@@ -194,13 +214,13 @@ export class RevisionOrchestratorService {
   }
 
   /**
-   * Processes a PENDING external review trigger - one new EDV per affected document.
+   * Processes a PENDING external review trigger.
    */
   async processExternalReviewTrigger(
     ctx: PmContext,
     triggerId: string,
     correlationId?: string,
-  ): Promise<WorkflowResultSnapshot[]> {
+  ): Promise<ProcessExternalReviewTriggerResult> {
     const trigger = await this.epcSubmittalRepository.findExternalTriggerById(
       ctx.companyId,
       triggerId,
@@ -212,43 +232,206 @@ export class RevisionOrchestratorService {
       throw new ConflictException('Trigger is not PENDING');
     }
 
-    const documentIds = await this.resolveDocumentIdsFromTrigger(trigger);
-    const results: WorkflowResultSnapshot[] = [];
-
-    for (const engineeringDocumentId of documentIds) {
-      const result = await this.triggerRevision(
-        {
-          type: 'TriggerRevision',
-          companyId: ctx.companyId,
-          actorId: ctx.userId,
-          engineeringDocumentId,
-          triggerSource:
-            trigger.triggerType === 'RFI'
-              ? 'RFI'
-              : trigger.triggerType === 'CHANGE_REQUEST'
-                ? 'CHANGE_REQUEST'
-                : 'SUBMITTAL_REVIEW',
-          triggerEntityId: trigger.sourceEntityId,
-          correlationId,
-        },
-        correlationId ?? triggerId,
-      );
-      results.push(result);
+    if (trigger.triggerMode === ExternalReviewTriggerMode.NEW_PACKAGE) {
+      return this.processNewPackageTrigger(ctx, trigger, correlationId ?? triggerId);
     }
 
-    await this.epcSubmittalRepository.markTriggerProcessed(
+    return this.processRevisionTrigger(ctx, trigger, correlationId ?? triggerId);
+  }
+
+  private async processNewPackageTrigger(
+    ctx: PmContext,
+    trigger: {
+      id: string;
+      companyId: string;
+      triggerType: ExternalReviewTriggerType;
+      sourceEntityType: string;
+      sourceEntityId: string;
+      linkedDesignPackageId: string | null;
+    },
+    correlationId: string,
+  ): Promise<ProcessExternalReviewTriggerResult> {
+    if (!trigger.linkedDesignPackageId) {
+      throw new BadRequestException(
+        'NEW_PACKAGE mode requires a linked design package',
+      );
+    }
+
+    const taskDisciplineId =
+      await this.epcSubmittalRepository.findPackageTaskDisciplineId(
+        ctx.companyId,
+        trigger.linkedDesignPackageId,
+      );
+    if (!taskDisciplineId) {
+      throw new NotFoundException('Linked design package not found');
+    }
+
+    const sourceEntityType = this.mapTriggerTypeToPackageSourceEntityType(
+      trigger.triggerType,
+    );
+    const newPackage = await this.designPackageRepository.createRevisionPackageFromTrigger({
+      companyId: ctx.companyId,
+      taskDisciplineId,
+      name: `Revision Package — ${trigger.triggerType} ${trigger.sourceEntityId}`,
+      sourceEntityType,
+      sourceEntityId: trigger.sourceEntityId,
+      createdBy: ctx.userId,
+    });
+
+    await this.epcSubmittalRepository.updateTriggerStatus(
       ctx.companyId,
-      triggerId,
+      trigger.id,
       ctx.userId,
+      ExternalReviewTriggerStatus.PROCESSED,
     );
 
-    return results;
+    return {
+      triggerId: trigger.id,
+      triggerStatus: ExternalReviewTriggerStatus.PROCESSED,
+      triggerMode: ExternalReviewTriggerMode.NEW_PACKAGE,
+      newPackageId: newPackage.id,
+    };
+  }
+
+  private async processRevisionTrigger(
+    ctx: PmContext,
+    trigger: {
+      id: string;
+      companyId: string;
+      triggerType: ExternalReviewTriggerType;
+      sourceEntityId: string;
+      submittalItemIds: string[];
+      linkedDesignPackageId: string | null;
+    },
+    correlationId: string,
+  ): Promise<ProcessExternalReviewTriggerResult> {
+    const documentIds = await this.resolveDocumentIdsFromTrigger(trigger);
+    const succeeded: WorkflowResultSnapshot[] = [];
+    const failed: Array<{ engineeringDocumentId: string; error: string }> = [];
+    const skipped: string[] = [];
+
+    for (const engineeringDocumentId of documentIds) {
+      const hasDraft = await this.epcSubmittalRepository.documentHasDraftEdv(
+        ctx.companyId,
+        engineeringDocumentId,
+      );
+      if (hasDraft) {
+        skipped.push(engineeringDocumentId);
+        continue;
+      }
+
+      try {
+        const result = await this.triggerRevision(
+          {
+            type: 'TriggerRevision',
+            companyId: ctx.companyId,
+            actorId: ctx.userId,
+            engineeringDocumentId,
+            triggerSource: this.mapTriggerTypeToRevisionSource(trigger.triggerType),
+            triggerEntityId: trigger.sourceEntityId,
+            correlationId,
+          },
+          correlationId,
+        );
+        succeeded.push(result);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Revision trigger failed';
+        this.logger.warn(
+          `Revision trigger failed for document ${engineeringDocumentId}: ${message}`,
+        );
+        failed.push({ engineeringDocumentId, error: message });
+      }
+    }
+
+    const triggerStatus = this.resolveRevisionTriggerStatus(
+      succeeded.length,
+      failed.length,
+      skipped.length,
+      documentIds.length,
+    );
+
+    if (triggerStatus !== ExternalReviewTriggerStatus.PENDING) {
+      await this.epcSubmittalRepository.updateTriggerStatus(
+        ctx.companyId,
+        trigger.id,
+        ctx.userId,
+        triggerStatus,
+      );
+    }
+
+    return {
+      triggerId: trigger.id,
+      triggerStatus,
+      triggerMode: ExternalReviewTriggerMode.REVISION,
+      revision: { succeeded, failed, skipped },
+    };
+  }
+
+  private resolveRevisionTriggerStatus(
+    succeededCount: number,
+    failedCount: number,
+    skippedCount: number,
+    totalCount: number,
+  ): ExternalReviewTriggerStatus {
+    if (failedCount === 0 && succeededCount + skippedCount === totalCount) {
+      return ExternalReviewTriggerStatus.PROCESSED;
+    }
+    if (failedCount > 0 && succeededCount > 0) {
+      return ExternalReviewTriggerStatus.PARTIAL;
+    }
+    if (failedCount > 0 && succeededCount === 0) {
+      return ExternalReviewTriggerStatus.FAILED;
+    }
+    return ExternalReviewTriggerStatus.PROCESSED;
+  }
+
+  private mapTriggerTypeToRevisionSource(
+    triggerType: ExternalReviewTriggerType,
+  ): TriggerRevisionCommand['triggerSource'] {
+    switch (triggerType) {
+      case ExternalReviewTriggerType.RFI:
+        return 'RFI';
+      case ExternalReviewTriggerType.ISSUE:
+        return 'ISSUE';
+      case ExternalReviewTriggerType.CHANGE_REQUEST:
+        return 'CHANGE_REQUEST';
+      default:
+        return 'SUBMITTAL_REVIEW';
+    }
+  }
+
+  private mapTriggerTypeToPackageSourceEntityType(
+    triggerType: ExternalReviewTriggerType,
+  ): string {
+    switch (triggerType) {
+      case ExternalReviewTriggerType.RFI:
+        return 'RFI';
+      case ExternalReviewTriggerType.ISSUE:
+        return 'ISSUE';
+      case ExternalReviewTriggerType.CHANGE_REQUEST:
+        return 'CHANGE_REQUEST';
+      default:
+        return triggerType;
+    }
   }
 
   private async resolveDocumentIdsFromTrigger(trigger: {
     submittalItemIds: string[];
+    linkedDesignPackageId: string | null;
     companyId: string;
   }): Promise<string[]> {
+    if (trigger.linkedDesignPackageId) {
+      const linkedDocumentIds =
+        await this.epcSubmittalRepository.findEngineeringDocumentIdsForPackage(
+          trigger.companyId,
+          trigger.linkedDesignPackageId,
+        );
+      if (linkedDocumentIds.length > 0) {
+        return linkedDocumentIds;
+      }
+    }
+
     const documentIds = new Set<string>();
 
     for (const itemId of trigger.submittalItemIds) {
@@ -267,7 +450,7 @@ export class RevisionOrchestratorService {
 
     if (documentIds.size === 0) {
       throw new BadRequestException(
-        'Trigger has no engineering documents in submittal snapshots',
+        'Trigger has no engineering documents to revise',
       );
     }
 

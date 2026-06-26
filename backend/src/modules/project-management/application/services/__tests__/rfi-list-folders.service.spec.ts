@@ -80,6 +80,7 @@ describe('RfisService listRfis folder batching', () => {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
       } as unknown as DisciplineScopeService,
       engineeringDocumentFolderService as unknown as EngineeringDocumentFolderService,
+      {} as never,
     );
   });
 

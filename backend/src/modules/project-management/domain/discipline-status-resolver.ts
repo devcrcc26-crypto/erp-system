@@ -14,6 +14,8 @@ const PACKAGE_TO_DISCIPLINE: Readonly<
     TaskDisciplineProjectedStatus.IN_PROGRESS,
   [DesignPackageProjectedStatus.PENDING_LEAD]:
     TaskDisciplineProjectedStatus.PENDING_LEAD,
+  [DesignPackageProjectedStatus.LOCKED]:
+    TaskDisciplineProjectedStatus.APPROVED,
   [DesignPackageProjectedStatus.APPROVED]:
     TaskDisciplineProjectedStatus.APPROVED,
 };

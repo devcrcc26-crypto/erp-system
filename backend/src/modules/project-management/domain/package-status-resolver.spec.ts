@@ -37,10 +37,18 @@ describe('package-status-resolver', () => {
     ).toBe(DesignPackageProjectedStatus.IN_PROGRESS);
   });
 
-  it('returns APPROVED when all EDV are LOCKED', () => {
+  it('returns LOCKED when all EDV are LOCKED', () => {
     expect(
       resolvePackageProjectedStatus({
         edvStatuses: [EdvStatus.LOCKED, EdvStatus.LOCKED],
+      }),
+    ).toBe(DesignPackageProjectedStatus.LOCKED);
+  });
+
+  it('returns APPROVED when EDVs are a mix of LOCKED and APPROVED', () => {
+    expect(
+      resolvePackageProjectedStatus({
+        edvStatuses: [EdvStatus.LOCKED, EdvStatus.APPROVED],
       }),
     ).toBe(DesignPackageProjectedStatus.APPROVED);
   });

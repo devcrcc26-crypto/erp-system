@@ -1022,6 +1022,7 @@ enum SubmittalItemType {
 
 enum ExternalReviewTriggerType {
   RFI
+  ISSUE
   CHANGE_REQUEST
   SUBMITTAL_REVIEW
 }
@@ -1029,6 +1030,8 @@ enum ExternalReviewTriggerType {
 enum ExternalReviewTriggerStatus {
   PENDING
   PROCESSED
+  PARTIAL
+  FAILED
   CANCELLED
 }
 
@@ -1582,6 +1585,10 @@ model DesignPackage {
   submittalItems SubmittalItem[]
   deliverables   Deliverable[]
   attachments    DesignPackageAttachment[]
+  linkedRfis                 Rfi[]                    @relation("RfiLinkedDesignPackage")
+  linkedIssues               Issue[]                  @relation("IssueLinkedDesignPackage")
+  linkedChangeRequests       ProjectChangeRequest[]   @relation("ChangeRequestLinkedDesignPackage")
+  linkedExternalReviewTriggers ExternalReviewTrigger[] @relation("TriggerLinkedDesignPackage")
 
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
@@ -1784,6 +1791,7 @@ model Rfi {
   dateRaised   DateTime?   @map("date_raised") @db.Date
   dueDate      DateTime?   @map("due_date") @db.Date
   dateAnswered DateTime?   @map("date_answered") @db.Date
+  linkedDesignPackageId String? @map("linked_design_package_id")
   createdAt    DateTime    @default(now()) @map("created_at")
   createdBy    String      @map("created_by")
   updatedAt    DateTime    @updatedAt @map("updated_at")
@@ -1793,12 +1801,14 @@ model Rfi {
 
   project        Project        @relation(fields: [projectId], references: [id])
   taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
+  linkedDesignPackage DesignPackage? @relation("RfiLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
   raiser         User           @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
   assignee  User?         @relation("RfiAssignedTo", fields: [assignedTo], references: [id])
   responses RfiResponse[]
 
   @@index([projectId], map: "idx_rfi_project_id")
   @@index([taskDisciplineId], map: "idx_rfi_task_discipline_id")
+  @@index([linkedDesignPackageId], map: "idx_rfi_linked_design_package_id")
   @@index([projectId, deletedAt], map: "idx_rfi_project_deleted")
   @@index([status], map: "idx_rfi_status")
   @@map("rfi")
@@ -1916,6 +1926,7 @@ model ExternalReviewTrigger {
   sourceEntityId   String                      @map("source_entity_id")
   submittalId      String?                     @map("submittal_id")
   submittalItemIds String[]                    @map("submittal_item_ids")
+  linkedDesignPackageId String?                @map("linked_design_package_id")
   payload          Json                        @default("{}")
   status           ExternalReviewTriggerStatus @default(PENDING)
   triggerMode      ExternalReviewTriggerMode   @default(REVISION) @map("trigger_mode")
@@ -1925,10 +1936,12 @@ model ExternalReviewTrigger {
   company   Company    @relation(fields: [companyId], references: [id])
   project   Project    @relation(fields: [projectId], references: [id])
   submittal Submittal? @relation(fields: [submittalId], references: [id])
+  linkedDesignPackage DesignPackage? @relation("TriggerLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
 
   @@index([companyId], map: "idx_external_review_trigger_company_id")
   @@index([projectId], map: "idx_external_review_trigger_project_id")
   @@index([submittalId], map: "idx_external_review_trigger_submittal_id")
+  @@index([linkedDesignPackageId], map: "idx_external_review_trigger_linked_package_id")
   @@index([status], map: "idx_external_review_trigger_status")
   @@map("external_review_trigger")
 }
@@ -1999,6 +2012,7 @@ model ProjectChangeRequest {
   sourceType              ProjectChangeRequestSource @map("source_type")
   sourceEntityId          String?                    @map("source_entity_id")
   externalReviewTriggerId String?                    @map("external_review_trigger_id")
+  linkedDesignPackageId   String?                    @map("linked_design_package_id")
   createdAt               DateTime                   @default(now()) @map("created_at")
   createdBy               String                     @map("created_by")
   updatedAt               DateTime                   @updatedAt @map("updated_at")
@@ -2008,11 +2022,13 @@ model ProjectChangeRequest {
 
   company Company @relation(fields: [companyId], references: [id])
   project Project @relation(fields: [projectId], references: [id])
+  linkedDesignPackage DesignPackage? @relation("ChangeRequestLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
 
   @@unique([companyId, changeNumber], map: "uq_project_change_request_company_number")
   @@index([companyId], map: "idx_project_change_request_company_id")
   @@index([companyId, deletedAt], map: "idx_project_change_request_company_deleted")
   @@index([projectId], map: "idx_project_change_request_project_id")
+  @@index([linkedDesignPackageId], map: "idx_project_change_request_linked_package_id")
   @@index([status], map: "idx_project_change_request_status")
   @@map("project_change_request")
 }
@@ -2329,6 +2345,7 @@ model Issue {
   dueDate      DateTime?     @map("due_date") @db.Date
   resolvedAt   DateTime?     @map("resolved_at")
   verifiedAt   DateTime?     @map("verified_at")
+  linkedDesignPackageId String? @map("linked_design_package_id")
   createdAt    DateTime      @default(now()) @map("created_at")
   createdBy    String        @map("created_by")
   updatedAt    DateTime      @updatedAt @map("updated_at")
@@ -2338,11 +2355,13 @@ model Issue {
 
   project        Project        @relation(fields: [projectId], references: [id])
   taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
+  linkedDesignPackage DesignPackage? @relation("IssueLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
   raiser         User           @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
   assignee User?   @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
 
   @@index([projectId], map: "idx_issue_project_id")
   @@index([taskDisciplineId], map: "idx_issue_task_discipline_id")
+  @@index([linkedDesignPackageId], map: "idx_issue_linked_design_package_id")
   @@index([projectId, deletedAt], map: "idx_issue_project_deleted")
   @@map("issue")
 }

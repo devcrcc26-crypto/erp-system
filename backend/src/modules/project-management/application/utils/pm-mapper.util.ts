@@ -916,6 +916,9 @@ export interface MappedTaskDiscipline {
   reviewerUserId: string | null;
   disciplineLeadUserId: string | null;
   chiefUserId: string | null;
+  isClosed: boolean;
+  closedAt: string | null;
+  closedBy: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
   createdAt: string;
@@ -1061,6 +1064,9 @@ export function mapTaskDiscipline(discipline: TaskDiscipline): MappedTaskDiscipl
     reviewerUserId: discipline.reviewerUserId,
     disciplineLeadUserId: discipline.disciplineLeadUserId,
     chiefUserId: discipline.chiefUserId,
+    isClosed: discipline.isClosed,
+    closedAt: toIsoString(discipline.closedAt),
+    closedBy: discipline.closedBy,
     actualCompletionTime: toIsoString(discipline.actualCompletionTime),
     deptReviewTime: toIsoString(discipline.deptReviewTime),
     createdAt: toIsoString(discipline.createdAt)!,

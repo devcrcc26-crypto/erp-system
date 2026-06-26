@@ -116,6 +116,7 @@ describe('RfisService', () => {
           .fn()
           .mockResolvedValue({ id: 'project-folder-1', path: '/projects/DEMO-001' }),
       } as unknown as EngineeringDocumentFolderService,
+      {} as never,
     );
   });
 

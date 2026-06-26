@@ -37,6 +37,8 @@ export const layout = {
   filterControlXl: 'w-full min-w-0 sm:w-[260px]',
   filterControlNav: 'w-full min-w-0 sm:w-[160px]',
   filterControlXs: 'w-full min-w-0 sm:w-[140px]',
+  traceabilityLinkClass:
+    'font-[family-name:var(--font-mono)] text-[12px] font-normal',
 } as const;
 
 /** Standard slide-over width (detail views). */

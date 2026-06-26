@@ -4,4 +4,5 @@ export enum DesignPackageProjectedStatus {
   PENDING_LEAD = 'PENDING_LEAD',
   APPROVED = 'APPROVED',
   REWORK_REQUIRED = 'REWORK_REQUIRED',
+  LOCKED = 'LOCKED',
 }

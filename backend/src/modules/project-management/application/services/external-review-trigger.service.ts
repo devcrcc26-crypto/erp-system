@@ -1,5 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
 import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ExternalReviewTriggerMode,
   ExternalReviewTriggerStatus,
   ExternalReviewTriggerType,
   Prisma,
@@ -11,7 +17,7 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
-import { ExternalReviewTriggerListQueryDto } from '../dtos/pm.dtos';
+import { ExternalReviewTriggerListQueryDto, ConfigureRevisionTriggerDto } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
@@ -36,6 +42,8 @@ export interface MappedExternalReviewTrigger {
   sourceEntityType: string;
   sourceEntityId: string;
   submittalId: string | null;
+  linkedDesignPackageId: string | null;
+  triggerMode: ExternalReviewTriggerMode;
   status: ExternalReviewTriggerStatus;
   createdAt: string;
 }
@@ -91,6 +99,8 @@ export class ExternalReviewTriggerService {
         sourceEntityType: row.sourceEntityType,
         sourceEntityId: row.sourceEntityId,
         submittalId: row.submittalId,
+        linkedDesignPackageId: row.linkedDesignPackageId,
+        triggerMode: row.triggerMode,
         status: row.status,
         createdAt: row.createdAt.toISOString(),
       })),
@@ -124,9 +134,76 @@ export class ExternalReviewTriggerService {
       sourceEntityType: row.sourceEntityType,
       sourceEntityId: row.sourceEntityId,
       submittalId: row.submittalId,
+      linkedDesignPackageId: row.linkedDesignPackageId,
+      triggerMode: row.triggerMode,
       status: row.status,
       createdAt: row.createdAt.toISOString(),
       payload: row.payload,
+    };
+  }
+
+  /**
+   * Configures trigger mode while trigger is still PENDING (discipline leader only).
+   */
+  async configureTriggerMode(
+    ctx: PmContext,
+    projectId: string,
+    triggerId: string,
+    dto: ConfigureRevisionTriggerDto,
+  ): Promise<MappedExternalReviewTrigger> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const trigger = await this.prisma.externalReviewTrigger.findFirst({
+      where: { id: triggerId, companyId: ctx.companyId, projectId },
+    });
+    if (!trigger) {
+      throw new NotFoundException('External review trigger not found');
+    }
+    if (trigger.status !== ExternalReviewTriggerStatus.PENDING) {
+      throw new BadRequestException('Only PENDING triggers can be configured');
+    }
+    if (!trigger.linkedDesignPackageId) {
+      throw new BadRequestException('Trigger has no linked design package');
+    }
+
+    const disciplineLeadUserId =
+      await this.epcSubmittalRepository.findPackageDisciplineLeadUserId(
+        ctx.companyId,
+        trigger.linkedDesignPackageId,
+      );
+    if (!disciplineLeadUserId) {
+      throw new NotFoundException('Linked design package discipline not found');
+    }
+    if (disciplineLeadUserId !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the discipline leader can configure a revision trigger.',
+      );
+    }
+
+    await this.epcSubmittalRepository.updateTriggerMode(
+      ctx.companyId,
+      triggerId,
+      dto.triggerMode as ExternalReviewTriggerMode,
+    );
+
+    const updated = await this.prisma.externalReviewTrigger.findFirst({
+      where: { id: triggerId, companyId: ctx.companyId, projectId },
+    });
+    if (!updated) {
+      throw new NotFoundException('External review trigger not found');
+    }
+
+    return {
+      id: updated.id,
+      projectId: updated.projectId,
+      triggerType: updated.triggerType,
+      sourceEntityType: updated.sourceEntityType,
+      sourceEntityId: updated.sourceEntityId,
+      submittalId: updated.submittalId,
+      linkedDesignPackageId: updated.linkedDesignPackageId,
+      triggerMode: updated.triggerMode,
+      status: updated.status,
+      createdAt: updated.createdAt.toISOString(),
     };
   }
 

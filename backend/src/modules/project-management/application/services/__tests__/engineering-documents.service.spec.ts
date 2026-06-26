@@ -18,7 +18,7 @@ describe('EngineeringDocumentsService registerFromUpload', () => {
   const taskDisciplineId = 'discipline-1';
 
   let engineeringDocumentRepository: {
-    create: jest.Mock;
+    createWithInitialCurrentVersion: jest.Mock;
     findById: jest.Mock;
   };
   let taskDisciplineScopeRepository: {
@@ -30,7 +30,7 @@ describe('EngineeringDocumentsService registerFromUpload', () => {
 
   beforeEach(() => {
     engineeringDocumentRepository = {
-      create: jest.fn(),
+      createWithInitialCurrentVersion: jest.fn(),
       findById: jest.fn(),
     };
     taskDisciplineScopeRepository = {
@@ -71,7 +71,9 @@ describe('EngineeringDocumentsService registerFromUpload', () => {
       ),
     );
 
-    expect(engineeringDocumentRepository.create).not.toHaveBeenCalled();
+    expect(
+      engineeringDocumentRepository.createWithInitialCurrentVersion,
+    ).not.toHaveBeenCalled();
   });
 
   it('throws BadRequestException when documentNumber is empty', async () => {
@@ -88,6 +90,8 @@ describe('EngineeringDocumentsService registerFromUpload', () => {
       ),
     );
 
-    expect(engineeringDocumentRepository.create).not.toHaveBeenCalled();
+    expect(
+      engineeringDocumentRepository.createWithInitialCurrentVersion,
+    ).not.toHaveBeenCalled();
   });
 });

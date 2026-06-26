@@ -24,7 +24,7 @@ import { EngineeringDocumentsService } from '../../application/services/engineer
 import { RevisionOrchestratorService } from '../../application/services/revision-orchestrator.service';
 import { ExternalReviewTriggerService } from '../../application/services/external-review-trigger.service';
 import { WorkflowKernelService } from '../../application/services/workflow-kernel.service';
-import { ExternalReviewTriggerListQueryDto } from '../../application/dtos/pm.dtos';
+import { ExternalReviewTriggerListQueryDto, ConfigureRevisionTriggerDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('Engineering Batch')
 @ApiBearerAuth()
@@ -150,6 +150,23 @@ export class EngineeringBatchController {
     return this.revisionOrchestrator.processExternalReviewTrigger(
       this.ctx(user),
       triggerId,
+    );
+  }
+
+  @Patch('revision-triggers/:triggerId/configure')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Configure revision trigger mode (discipline leader)' })
+  configureRevisionTrigger(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('triggerId') triggerId: string,
+    @Body() dto: ConfigureRevisionTriggerDto,
+  ): Promise<unknown> {
+    return this.externalReviewTriggerService.configureTriggerMode(
+      this.ctx(user),
+      projectId,
+      triggerId,
+      dto,
     );
   }
 }

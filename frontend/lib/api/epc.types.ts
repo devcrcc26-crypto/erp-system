@@ -21,7 +21,10 @@ export type DesignPackageProjectedStatus =
   | 'IN_PROGRESS'
   | 'PENDING_LEAD'
   | 'APPROVED'
-  | 'REWORK_REQUIRED';
+  | 'REWORK_REQUIRED'
+  | 'LOCKED';
+
+export type DesignPackageStatus = 'OPEN' | 'SUBMITTED' | 'CLOSED';
 
 export type TaskDisciplineProjectedStatus =
   | 'IN_PROGRESS'
@@ -47,7 +50,8 @@ export type ReviewTier =
   | 'DISCIPLINE_OWNER'
   | 'REVIEWER'
   | 'DISCIPLINE_LEAD'
-  | 'DEPT_CHIEF';
+  | 'DEPT_CHIEF'
+  | 'INSTITUTE_CHIEF';
 
 export type ReviewSessionStatus =
   | 'ACTIVE'
@@ -115,6 +119,13 @@ export interface DesignPackage {
   projectionPending: boolean;
   submittedAt: string | null;
   approvedAt: string | null;
+  requiredTiers: ReviewTier[];
+  briefText: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
+  packageStatus: DesignPackageStatus;
+  packageClosedAt: string | null;
+  packageClosedBy: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;

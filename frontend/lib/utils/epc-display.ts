@@ -2,6 +2,7 @@ import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge
 import type {
   CommentSeverity,
   DesignPackageProjectedStatus,
+  DesignPackageStatus,
   EdvStatus,
   TaskDisciplineProjectedStatus,
 } from '@/lib/api/epc.types';
@@ -22,6 +23,7 @@ export const PROJECTED_STATUS_VARIANTS: Record<
   PENDING_LEAD: 'orange',
   APPROVED: 'success',
   REWORK_REQUIRED: 'error',
+  LOCKED: 'warning',
 };
 
 export const PROJECTED_STATUS_LABELS: Record<
@@ -32,6 +34,20 @@ export const PROJECTED_STATUS_LABELS: Record<
   PENDING_LEAD: 'Pending Lead',
   APPROVED: 'Approved',
   REWORK_REQUIRED: 'Rework Required',
+  LOCKED: 'Locked',
+};
+
+export const PACKAGE_STATUS_VARIANTS: Record<DesignPackageStatus, StatusBadgeVariant> =
+  {
+    OPEN: 'default',
+    SUBMITTED: 'info',
+    CLOSED: 'success',
+  };
+
+export const PACKAGE_STATUS_LABELS: Record<DesignPackageStatus, string> = {
+  OPEN: 'Open',
+  SUBMITTED: 'Submitted',
+  CLOSED: 'Closed',
 };
 
 export const COMMENT_SEVERITY_VARIANTS: Record<CommentSeverity, StatusBadgeVariant> =

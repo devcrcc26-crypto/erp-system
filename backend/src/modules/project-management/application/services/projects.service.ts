@@ -9,7 +9,9 @@ import {
   RfiStatus,
   IssueStatus,
   PunchItemStatus,
+  DeliverableStatus,
   Task,
+  TaskStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -224,6 +226,65 @@ export class ProjectsService {
         if (!allowed.includes(dto.status as string)) {
           throw new BadRequestException(
             `Invalid project status transition from ${current.status} to ${dto.status}.`,
+          );
+        }
+      }
+
+      if (dto.status === 'COMPLETED') {
+        const [
+          openTasks,
+          openIssues,
+          openRfis,
+          openPunchItems,
+          openDeliverables,
+        ] = await Promise.all([
+          this.prisma.task.count({
+            where: activeOnly({
+              projectId: id,
+              status: { not: TaskStatus.COMPLETED },
+            }),
+          }),
+          this.prisma.issue.count({
+            where: activeOnly({
+              projectId: id,
+              status: {
+                notIn: [IssueStatus.VERIFIED, IssueStatus.CLOSED],
+              },
+            }),
+          }),
+          this.prisma.rfi.count({
+            where: activeOnly({
+              projectId: id,
+              status: { not: RfiStatus.CLOSED },
+            }),
+          }),
+          this.prisma.punchItem.count({
+            where: activeOnly({
+              projectId: id,
+              status: {
+                notIn: [PunchItemStatus.VERIFIED, PunchItemStatus.CLOSED],
+              },
+            }),
+          }),
+          this.prisma.deliverable.count({
+            where: activeOnly({
+              projectId: id,
+              status: {
+                notIn: [DeliverableStatus.APPROVED, DeliverableStatus.WAIVED],
+              },
+            }),
+          }),
+        ]);
+
+        if (
+          openTasks > 0 ||
+          openIssues > 0 ||
+          openRfis > 0 ||
+          openPunchItems > 0 ||
+          openDeliverables > 0
+        ) {
+          throw new BadRequestException(
+            `Project cannot be completed: ${openTasks} tasks, ${openIssues} issues, ${openRfis} RFIs, ${openPunchItems} punch items, ${openDeliverables} deliverables still open.`,
           );
         }
       }

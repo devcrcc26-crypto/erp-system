@@ -51,6 +51,7 @@ describe('ScheduleService status transitions', () => {
 
   let prisma: {
     task: { findFirst: jest.Mock; update: jest.Mock };
+    taskDiscipline: { findMany: jest.Mock };
     projectTeam: { count: jest.Mock };
   };
   let service: ScheduleService;
@@ -60,6 +61,9 @@ describe('ScheduleService status transitions', () => {
       task: {
         findFirst: jest.fn(),
         update: jest.fn(),
+      },
+      taskDiscipline: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
       projectTeam: {
         count: jest.fn(),

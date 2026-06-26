@@ -75,7 +75,7 @@ export default function RfiDetailDrawer({
   const canRespond =
     Boolean(rfi?.assignedTo) &&
     rfi?.assignedTo === currentUserId &&
-    rfi.status !== 'CLOSED';
+    rfi?.status !== 'CLOSED';
 
   async function handleStatusChange(status: RfiStatus): Promise<void> {
     if (!rfiId || !rfi) {

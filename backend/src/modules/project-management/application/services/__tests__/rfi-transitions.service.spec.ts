@@ -68,6 +68,7 @@ describe('RfisService status transitions', () => {
           .fn()
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/rfis/RFI-001' }),
       } as unknown as EngineeringDocumentFolderService,
+      {} as never,
     );
   });
 

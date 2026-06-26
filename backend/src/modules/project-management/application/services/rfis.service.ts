@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { FolderContextType, Prisma, RfiStatus } from '@prisma/client';
+import { FolderContextType, Prisma, RfiStatus, ExternalReviewTriggerType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -33,6 +33,7 @@ import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 
 const RFI_SORT_FIELDS = new Set([
   'createdAt',
@@ -54,6 +55,7 @@ export class RfisService {
     private readonly documentNumberService: DocumentNumberService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
+    private readonly epcSubmittalRepository: EpcSubmittalRepository,
   ) {}
 
   /**
@@ -290,6 +292,18 @@ export class RfisService {
             updatedBy: ctx.userId,
           },
         });
+
+        if (rfi.linkedDesignPackageId) {
+          await this.epcSubmittalRepository.createLinkedEntityTrigger(tx, {
+            companyId: ctx.companyId,
+            projectId,
+            triggerType: ExternalReviewTriggerType.RFI,
+            sourceEntityType: 'RFI',
+            sourceEntityId: rfiId,
+            linkedDesignPackageId: rfi.linkedDesignPackageId,
+            createdBy: ctx.userId,
+          });
+        }
       }
 
       return created;

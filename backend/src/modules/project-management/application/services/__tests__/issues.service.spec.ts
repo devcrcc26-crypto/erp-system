@@ -92,6 +92,7 @@ describe('IssuesService', () => {
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/issues/ISS-00001' }),
         findEntityFolder: jest.fn().mockResolvedValue(null),
       } as unknown as EngineeringDocumentFolderService,
+      {} as never,
     );
   });
 

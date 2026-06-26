@@ -19,28 +19,40 @@ export type PermissionContextInput = PermissionContext;
 
 const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
   EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
+  EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE,
+  EpcWorkflowAction.REVIEW_COMMENT_RESOLVE,
   EpcWorkflowAction.REVIEW_SESSION_APPROVE,
   EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
   EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
   EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
   EpcWorkflowAction.REVISION_TRIGGER,
+  EpcWorkflowAction.REVISION_TRIGGER_CREATE,
 ]);
 
 const PROJECT_TEAM_REQUIRED_ACTIONS: ReadonlySet<EpcWorkflowAction> =
   new Set([
     EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+    EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
     EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
     EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
     EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
+    EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE,
+    EpcWorkflowAction.REVIEW_COMMENT_RESOLVE,
     EpcWorkflowAction.REVIEW_SESSION_APPROVE,
     EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
     EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+    EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
+    EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
     EpcWorkflowAction.SUBMITTAL_CREATE,
     EpcWorkflowAction.SUBMITTAL_ISSUE,
     EpcWorkflowAction.REVISION_TRIGGER,
+    EpcWorkflowAction.REVISION_TRIGGER_CREATE,
   ]);
 
 /** Phase gates - action denied when project is in a locked phase. */
@@ -64,12 +76,26 @@ const PHASE_LOCKED_ACTIONS: Readonly<
   [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD]: [
     ProjectDesignPhase.CLOSEOUT,
   ],
+  [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER]: [
+    ProjectDesignPhase.CLOSEOUT,
+  ],
 };
 
-const DESIGNER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
+/** Primary or supporting designer may upload/register and manage package items. */
+const DESIGNER_UPLOAD_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
+]);
+
+/** Primary designer only — supporting designer cannot submit or progress comments. */
+const DESIGNER_SUBMIT_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
   EpcWorkflowAction.REVISION_TRIGGER,
+  EpcWorkflowAction.REVISION_TRIGGER_CREATE,
+  EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE,
+  EpcWorkflowAction.REVIEW_COMMENT_RESOLVE,
 ]);
 
 const REVIEW_TIER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
@@ -166,12 +192,23 @@ export function evaluateDisciplineAssignmentLayer(
 
   const { userId, action } = input;
 
-  if (DESIGNER_ACTIONS.has(action)) {
+  if (DESIGNER_UPLOAD_ACTIONS.has(action)) {
+    const isPrimary = userId === input.disciplineDesignerUserId;
+    const isSupporting = userId === input.disciplineSupportingDesignerUserId;
+    const match = isPrimary || isSupporting;
+    return {
+      layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+      verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
+      reason: match ? undefined : 'User is not a discipline designer',
+    };
+  }
+
+  if (DESIGNER_SUBMIT_ACTIONS.has(action)) {
     const match = userId === input.disciplineDesignerUserId;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
-      reason: match ? undefined : 'User is not discipline designer',
+      reason: match ? undefined : 'User is not the primary discipline designer',
     };
   }
 
@@ -189,11 +226,12 @@ export function evaluateDisciplineAssignmentLayer(
     const isReviewer = userId === input.disciplineReviewerUserId;
     const isLead = userId === input.disciplineLeadUserId;
     const isChief = userId === input.disciplineChiefUserId;
+    const isInstituteChief = userId === input.disciplineInstituteChiefUserId;
     const isSessionAssignee =
       input.currentAssigneeUserId !== undefined &&
       userId === input.currentAssigneeUserId;
     const match =
-      isOwner || isReviewer || isLead || isChief || isSessionAssignee;
+      isOwner || isReviewer || isLead || isChief || isInstituteChief || isSessionAssignee;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,

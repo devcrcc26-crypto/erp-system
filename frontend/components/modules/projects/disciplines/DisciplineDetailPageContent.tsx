@@ -4,15 +4,17 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Breadcrumb, Button, Descriptions } from 'antd';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
+import DisciplineClosureBadge from '@/components/ui/DisciplineClosureBadge/DisciplineClosureBadge';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DesignPackagePanel from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import EngineeringDocumentPanel from '@/components/modules/projects/engineering/EngineeringDocumentPanel';
 import ProjectionLagHelper from '@/components/modules/projects/workspaces/ProjectionLagHelper';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useDesignPackages } from '@/lib/query/design-packages';
+import { useDesignPackages, useCloseTaskDiscipline } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
@@ -20,6 +22,8 @@ import { layout } from '@/lib/theme/layout';
 import { parseRevisionTriggerParams } from '@/lib/utils/revision-trigger-url';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function DisciplineDetailPageContent({
   projectId,
@@ -33,9 +37,17 @@ export default function DisciplineDetailPageContent({
   const revisionTriggerContext = parseRevisionTriggerParams(searchParams);
   const messageApi = useAppMessage();
   const lens = useRoleLens();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const [closeDisciplineOpen, setCloseDisciplineOpen] = useState(false);
   const packagesQuery = useDesignPackages(projectId, taskDisciplineId);
+  const closeDiscipline = useCloseTaskDiscipline(projectId);
   const projectionPending =
     packagesQuery.data?.some((pkg) => pkg.projectionPending) ?? false;
+
+  const allPackagesClosed = useMemo(() => {
+    const packages = packagesQuery.data ?? [];
+    return packages.length > 0 && packages.every((pkg) => pkg.packageStatus === 'CLOSED');
+  }, [packagesQuery.data]);
 
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId, true, {
     refetchInterval: projectionPending ? PROJECTION_POLL_MS : false,
@@ -108,6 +120,12 @@ export default function DisciplineDetailPageContent({
     );
   }
 
+  const isDisciplineLeader =
+    Boolean(currentUserId) &&
+    discipline.disciplineLeadUserId === currentUserId;
+  const canCloseDiscipline =
+    isDisciplineLeader && allPackagesClosed && !discipline.isClosed;
+
   return (
     <div className={layout.pageStack}>
       <Breadcrumb
@@ -129,10 +147,20 @@ export default function DisciplineDetailPageContent({
       <FormLayout
         title={discipline.disciplineName}
         description={`Schedule task: ${discipline.taskName}`}
+        extra={
+          canCloseDiscipline ? (
+            <Button onClick={() => setCloseDisciplineOpen(true)}>
+              Close Discipline
+            </Button>
+          ) : undefined
+        }
       >
         <ProjectionLagHelper pending={projectionPending} />
 
         <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="mb-6">
+          <Descriptions.Item label="Closure">
+            <DisciplineClosureBadge isClosed={discipline.isClosed} />
+          </Descriptions.Item>
           <Descriptions.Item label="Projected status">
             {discipline.projectedStatus ? (
               <ProjectedStatusBadge
@@ -166,6 +194,31 @@ export default function DisciplineDetailPageContent({
       <EngineeringDocumentPanel
         projectId={projectId}
         taskDisciplineId={taskDisciplineId}
+      />
+
+      <ConfirmDialog
+        open={closeDisciplineOpen}
+        title="Close Discipline?"
+        description="This confirms all design packages are closed and the discipline workflow is complete. This cannot be undone."
+        confirmLabel="Close Discipline"
+        confirmLoading={closeDiscipline.isPending}
+        onConfirm={() => {
+          void closeDiscipline
+            .mutateAsync({
+              taskId: discipline.taskId,
+              disciplineId: discipline.id,
+            })
+            .then(() => {
+              messageApi.success('Discipline closed');
+              setCloseDisciplineOpen(false);
+              void disciplineQuery.refetch();
+              void packagesQuery.refetch();
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to close discipline', messageApi);
+            });
+        }}
+        onCancel={() => setCloseDisciplineOpen(false)}
       />
     </div>
   );

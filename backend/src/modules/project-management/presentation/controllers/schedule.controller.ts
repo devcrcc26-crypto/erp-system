@@ -240,6 +240,23 @@ export class ScheduleController {
     );
   }
 
+  @Post('tasks/:taskId/disciplines/:disciplineId/close')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Close task discipline after all packages are closed' })
+  closeTaskDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Param('disciplineId') disciplineId: string,
+  ): Promise<unknown> {
+    return this.scheduleService.closeTaskDiscipline(
+      this.ctx(user),
+      projectId,
+      taskId,
+      disciplineId,
+    );
+  }
+
   @Delete('tasks/:taskId/disciplines/:disciplineId')
   @RequirePermission('schedule', 'delete')
   @ApiOperation({ summary: 'Delete task discipline' })

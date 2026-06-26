@@ -55,6 +55,9 @@ export interface MappedDesignPackage {
   projectionPending: boolean;
   submittedAt: string | null;
   approvedAt: string | null;
+  packageStatus: DesignPackage['packageStatus'];
+  packageClosedAt: string | null;
+  packageClosedBy: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -159,6 +162,9 @@ export function mapDesignPackage(
     projectionPending: row.projectionPending,
     submittedAt: toIsoString(row.submittedAt),
     approvedAt: toIsoString(row.approvedAt),
+    packageStatus: row.packageStatus,
+    packageClosedAt: toIsoString(row.packageClosedAt),
+    packageClosedBy: row.packageClosedBy,
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,
     updatedAt: row.updatedAt.toISOString(),

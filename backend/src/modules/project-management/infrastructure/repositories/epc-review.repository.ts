@@ -10,6 +10,7 @@ import {
   ReviewComment,
   ReviewContextSnapshot,
   ReviewSession,
+  ReviewSessionAttachment,
   ReviewSessionOutcome,
   ReviewSessionStatus,
   ReviewTier,
@@ -25,6 +26,11 @@ export interface ReviewSessionWithSnapshot extends ReviewSession {
   contextSnapshot: ReviewContextSnapshot | null;
   comments: ReviewComment[];
 }
+
+export type ReviewSessionAttachmentWithRelations = ReviewSessionAttachment & {
+  attachedByUser: { id: string; firstName: string; lastName: string };
+  document: { id: string; name: string };
+};
 
 @Injectable()
 export class EpcReviewRepository {
@@ -585,5 +591,80 @@ export class EpcReviewRepository {
       reviewSession: session,
       edvDetails,
     };
+  }
+
+  /**
+   * Loads a review session scoped to company (non-transactional reads).
+   */
+  async findSessionForCompany(
+    companyId: string,
+    reviewSessionId: string,
+  ): Promise<ReviewSession | null> {
+    return this.prisma.reviewSession.findFirst({
+      where: activeOnly({ id: reviewSessionId, companyId }),
+    });
+  }
+
+  /**
+   * Creates a tier attachment on an active review session.
+   */
+  async createSessionAttachment(input: {
+    companyId: string;
+    reviewSessionId: string;
+    tier: ReviewTier;
+    attachedByUserId: string;
+    documentId: string;
+    purpose?: string;
+    note?: string;
+  }): Promise<ReviewSessionAttachmentWithRelations> {
+    return this.prisma.reviewSessionAttachment.create({
+      data: {
+        company: { connect: { id: input.companyId } },
+        reviewSession: { connect: { id: input.reviewSessionId } },
+        tier: input.tier,
+        attachedByUser: { connect: { id: input.attachedByUserId } },
+        document: { connect: { id: input.documentId } },
+        purpose: input.purpose,
+        note: input.note,
+      },
+      include: {
+        attachedByUser: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        document: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  /**
+   * Lists all attachments for a review session ordered by attachedAt ASC.
+   */
+  async listSessionAttachments(
+    companyId: string,
+    reviewSessionId: string,
+  ): Promise<ReviewSessionAttachmentWithRelations[]> {
+    return this.prisma.reviewSessionAttachment.findMany({
+      where: activeOnly({ companyId, reviewSessionId }),
+      orderBy: { attachedAt: 'asc' },
+      include: {
+        attachedByUser: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        document: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  /**
+   * Verifies a document exists for the tenant.
+   */
+  async findDocumentForCompany(
+    companyId: string,
+    documentId: string,
+  ): Promise<{ id: string } | null> {
+    return this.prisma.document.findFirst({
+      where: activeOnly({ id: documentId, companyId }),
+      select: { id: true },
+    });
   }
 }

@@ -266,6 +266,13 @@ export interface TaskDiscipline {
   reviewerUserId?: string | null;
   disciplineLeadUserId?: string | null;
   chiefUserId?: string | null;
+  supportingDesignerUserId: string | null;
+  supportingDesigner: UserSummary | null;
+  instituteChiefUserId: string | null;
+  instituteChief: UserSummary | null;
+  isClosed: boolean;
+  closedAt: string | null;
+  closedBy: string | null;
   actualCompletionTime: string | null;
   deptReviewTime: string | null;
   createdAt: string;
@@ -1127,10 +1134,16 @@ export interface UpdateDeliverableDto {
   dueDate?: string;
 }
 
-export type ExternalReviewTriggerStatus = 'PENDING' | 'PROCESSED' | 'CANCELLED';
+export type ExternalReviewTriggerStatus =
+  | 'PENDING'
+  | 'PROCESSED'
+  | 'PARTIAL'
+  | 'FAILED'
+  | 'CANCELLED';
 
 export type ExternalReviewTriggerType =
   | 'RFI'
+  | 'ISSUE'
   | 'CHANGE_REQUEST'
   | 'SUBMITTAL_REVIEW';
 
@@ -1142,6 +1155,8 @@ export interface ExternalReviewTrigger {
   sourceEntityType: string;
   sourceEntityId: string;
   submittalId: string | null;
+  linkedDesignPackageId: string | null;
+  triggerMode: 'REVISION' | 'NEW_PACKAGE';
   createdAt: string;
 }
 
@@ -1149,7 +1164,64 @@ export type ReviewTier =
   | 'DISCIPLINE_OWNER'
   | 'REVIEWER'
   | 'DISCIPLINE_LEAD'
-  | 'DEPT_CHIEF';
+  | 'DEPT_CHIEF'
+  | 'INSTITUTE_CHIEF';
+
+export type DesignPackageStatus = 'OPEN' | 'SUBMITTED' | 'CLOSED';
+
+export interface UserSummary {
+  id: string;
+  name: string;
+}
+
+export interface DesignPackage {
+  id: string;
+  companyId: string;
+  taskDisciplineId: string;
+  name: string;
+  projectedStatus: string;
+  projectionPending?: boolean;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  requiredTiers: ReviewTier[];
+  briefText: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
+  packageStatus: DesignPackageStatus;
+  packageClosedAt: string | null;
+  packageClosedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface ReviewSessionAttachment {
+  id: string;
+  reviewSessionId: string;
+  tier: ReviewTier;
+  attachedByUserId: string;
+  attachedByUser: UserSummary;
+  documentId: string;
+  document: {
+    id: string;
+    name: string;
+    downloadUrl?: string;
+  };
+  attachedAt: string;
+  purpose: string | null;
+  note: string | null;
+}
+
+export interface ConfigureRevisionTriggerRequest {
+  triggerMode: 'REVISION' | 'NEW_PACKAGE';
+}
+
+export interface AddReviewSessionAttachmentRequest {
+  documentId: string;
+  purpose?: string;
+  note?: string;
+}
 
 export type ReviewSessionStatus =
   | 'ACTIVE'

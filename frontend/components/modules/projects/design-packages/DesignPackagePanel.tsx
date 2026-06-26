@@ -36,6 +36,7 @@ import {
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
+import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -146,10 +147,13 @@ export default function DesignPackagePanel({
       title: 'Status',
       key: 'status',
       render: (_value, record) => (
-        <ProjectedStatusBadge
-          status={record.projectedStatus}
-          pending={record.projectionPending}
-        />
+        <Space size="small" wrap>
+          <ProjectedStatusBadge
+            status={record.projectedStatus}
+            pending={record.projectionPending}
+          />
+          <PackageStatusBadge status={record.packageStatus} />
+        </Space>
       ),
     },
     {

@@ -1,9 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MilestoneStatus } from '@prisma/client';
+import {
+  DesignPackageStatus,
+  MilestoneStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -357,6 +362,23 @@ export class ScheduleService {
           throw new BadRequestException(
             `Invalid task status transition from ${current!.status} to ${dto.status}.`,
           );
+        }
+      }
+
+      if (dto.status === 'COMPLETED') {
+        const disciplines = await this.prisma.taskDiscipline.findMany({
+          where: activeOnly({ taskId, companyId: ctx.companyId }),
+          select: { disciplineName: true, isClosed: true },
+        });
+        if (disciplines.length > 0) {
+          const openDisciplineNames = disciplines
+            .filter((discipline) => !discipline.isClosed)
+            .map((discipline) => discipline.disciplineName);
+          if (openDisciplineNames.length > 0) {
+            throw new BadRequestException(
+              `Task cannot be completed: ${openDisciplineNames.length} discipline(s) still open: [${openDisciplineNames.join(', ')}]`,
+            );
+          }
         }
       }
     }
@@ -743,6 +765,63 @@ export class ScheduleService {
     });
 
     return mapTaskDiscipline(discipline);
+  }
+
+  /**
+   * Closes a task discipline after all design packages are closed.
+   */
+  async closeTaskDiscipline(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+    disciplineId: string,
+  ): Promise<MappedTaskDiscipline> {
+    await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({ id: disciplineId, taskId, companyId: ctx.companyId }),
+      include: {
+        designPackages: {
+          where: activeOnly({}),
+          select: { name: true, packageStatus: true },
+        },
+      },
+    });
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+
+    if (discipline.disciplineLeadUserId !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the discipline leader can close a task discipline.',
+      );
+    }
+
+    if (discipline.isClosed) {
+      throw new ConflictException('Discipline is already closed.');
+    }
+
+    const openPackages = discipline.designPackages.filter(
+      (pkg) => pkg.packageStatus !== DesignPackageStatus.CLOSED,
+    );
+    if (openPackages.length > 0) {
+      const names = openPackages.map((pkg) => pkg.name).join(', ');
+      throw new BadRequestException(
+        `Cannot close discipline: ${openPackages.length} package(s) still open: [${names}]`,
+      );
+    }
+
+    const updated = await this.prisma.taskDiscipline.update({
+      where: { id: disciplineId },
+      data: {
+        isClosed: true,
+        closedAt: new Date(),
+        closedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return mapTaskDiscipline(updated);
   }
 
   /**

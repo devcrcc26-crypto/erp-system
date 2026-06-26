@@ -27,7 +27,7 @@ import {
   UpdateDesignPackageDto,
 } from '../../application/dtos/engineering-document.dtos';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
-import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
+import { ReviewSessionListQueryDto, AddReviewSessionAttachmentDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('Design Packages')
 @ApiBearerAuth()
@@ -257,6 +257,23 @@ export class DesignPackagesController {
     );
   }
 
+  @Post(':packageId/close')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Close design package after all EDVs are locked' })
+  closePackage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+  ): Promise<unknown> {
+    return this.designPackagesService.closeDesignPackage(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+    );
+  }
+
   @Post(':packageId/batch-approve')
   @RequirePermission('schedule', 'approve')
   @ApiOperation({ summary: 'Batch approve EDVs in package via WorkflowKernel' })
@@ -346,6 +363,46 @@ export class DesignPackagesController {
     @Param('reviewSessionId') reviewSessionId: string,
   ): Promise<unknown> {
     return this.designPackagesService.getReviewContextSnapshot(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      reviewSessionId,
+    );
+  }
+
+  @Post(':packageId/review-sessions/:reviewSessionId/attachments')
+  @RequirePermission('schedule', 'approve')
+  @ApiOperation({ summary: 'Attach a document at the current review tier' })
+  addSessionAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Param('reviewSessionId') reviewSessionId: string,
+    @Body() dto: AddReviewSessionAttachmentDto,
+  ): Promise<unknown> {
+    return this.designPackagesService.addSessionAttachment(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+      reviewSessionId,
+      dto,
+    );
+  }
+
+  @Get(':packageId/review-sessions/:reviewSessionId/attachments')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'List tier attachments for a review session' })
+  listSessionAttachments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+    @Param('reviewSessionId') reviewSessionId: string,
+  ): Promise<unknown> {
+    return this.designPackagesService.listSessionAttachments(
       this.ctx(user),
       projectId,
       taskDisciplineId,

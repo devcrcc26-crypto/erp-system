@@ -13,6 +13,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
+import DisciplineClosureBadge from '@/components/ui/DisciplineClosureBadge/DisciplineClosureBadge';
 import DisciplineDetailDrawer from '@/components/modules/projects/disciplines/DisciplineDetailDrawer';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDisciplines, type ProjectDisciplineRow } from '@/lib/query/disciplines';
@@ -102,6 +103,14 @@ export default function DisciplinesPageContent({
         ) : (
           '-'
         ),
+    },
+    {
+      title: 'Closure',
+      key: 'isClosed',
+      width: 100,
+      render: (_value, record) => (
+        <DisciplineClosureBadge isClosed={record.isClosed} />
+      ),
     },
     {
       title: 'Designer',

@@ -17,6 +17,7 @@ export const PACKAGE_STATUS_PRIORITY: readonly DesignPackageProjectedStatus[] =
     DesignPackageProjectedStatus.REWORK_REQUIRED,
     DesignPackageProjectedStatus.IN_PROGRESS,
     DesignPackageProjectedStatus.PENDING_LEAD,
+    DesignPackageProjectedStatus.LOCKED,
     DesignPackageProjectedStatus.APPROVED,
   ];
 
@@ -27,8 +28,9 @@ export const PACKAGE_STATUS_PRIORITY: readonly DesignPackageProjectedStatus[] =
  * 1. reworkRequired flag                        → REWORK_REQUIRED
  * 2. any EDV in DRAFT or IN_REVIEW              → IN_PROGRESS
  * 3. all EDV = APPROVED                         → PENDING_LEAD
- * 4. all EDV = LOCKED                           → APPROVED
- * 5. empty package                              → IN_PROGRESS
+ * 4. all EDV = LOCKED                            → LOCKED
+ * 5. all EDV = LOCKED or APPROVED (mix)         → APPROVED
+ * 6. empty package                              → IN_PROGRESS
  *
  * When activeGovernanceSession is true, premature EDV APPROVED stays IN_PROGRESS
  * until the review session closes at the final tier.
@@ -66,6 +68,14 @@ export function resolvePackageProjectedStatus(
   }
 
   if (edvStatuses.every((s) => s === EdvStatus.LOCKED)) {
+    return DesignPackageProjectedStatus.LOCKED;
+  }
+
+  if (
+    edvStatuses.every(
+      (s) => s === EdvStatus.LOCKED || s === EdvStatus.APPROVED,
+    )
+  ) {
     return DesignPackageProjectedStatus.APPROVED;
   }
 

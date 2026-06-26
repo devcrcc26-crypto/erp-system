@@ -75,7 +75,6 @@ function VersionEntryBlock({ entry }: { entry: VersionHistoryEntry }): React.Rea
         </span>
       </div>
       <Timeline
-        size="small"
         items={entry.events.map((event, index) => ({
           key: `${entry.engineeringDocumentVersionId}-${index}`,
           content: (

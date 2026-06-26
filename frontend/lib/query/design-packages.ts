@@ -19,11 +19,23 @@ import type {
   UpdateDesignPackageRequest,
   WorkflowResultSnapshot,
 } from '@/lib/api/epc.types';
+import type {
+  AddReviewSessionAttachmentRequest,
+  ConfigureRevisionTriggerRequest,
+  ExternalReviewTrigger,
+  ReviewSessionAttachment,
+  TaskDiscipline,
+} from '@/lib/api/project-management.types';
 import type { MessageResponse } from '@/lib/api/types';
 import { designPackagesPath, PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { epcWorkspaceKeys } from '@/lib/query/epc-workspace';
 import { disciplineKeys } from '@/lib/query/disciplines';
 import { projectPath } from '@/lib/query/pm-query-utils';
+import { scheduleKeys } from '@/lib/query/schedule';
+
+function scheduleBase(projectId: string): string {
+  return `${projectPath(projectId)}/schedule`;
+}
 
 export const designPackageKeys = {
   all: ['epc', 'design-packages'] as const,
@@ -51,6 +63,10 @@ export const designPackageKeys = {
       'review-context-snapshot',
       reviewSessionId,
     ] as const,
+  sessionAttachments: (reviewSessionId: string) =>
+    [...designPackageKeys.all, 'session-attachments', reviewSessionId] as const,
+  snapshot: (reviewSessionId: string) =>
+    [...designPackageKeys.all, 'snapshot', reviewSessionId] as const,
   dependencies: (
     projectId: string,
     taskDisciplineId: string,
@@ -583,12 +599,7 @@ export function useReviewContextSnapshot(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: designPackageKeys.reviewContextSnapshot(
-      projectId,
-      taskDisciplineId,
-      packageId,
-      reviewSessionId ?? '',
-    ),
+    queryKey: designPackageKeys.snapshot(reviewSessionId ?? ''),
     queryFn: () =>
       apiGet<ReviewContextSnapshot>(
         designPackagesPath(
@@ -605,5 +616,136 @@ export function useReviewContextSnapshot(
       Boolean(reviewSessionId) &&
       enabled,
     retry: false,
+  });
+}
+
+export function useCloseDesignPackage(
+  projectId: string,
+  taskDisciplineId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ packageId }: { packageId: string }) =>
+      apiPost<DesignPackage>(
+        designPackagesPath(projectId, taskDisciplineId, packageId, 'close'),
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePackageQueries(
+        queryClient,
+        projectId,
+        taskDisciplineId,
+        variables.packageId,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
+  });
+}
+
+export function useCloseTaskDiscipline(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      disciplineId,
+    }: {
+      taskId: string;
+      disciplineId: string;
+    }) =>
+      apiPost<TaskDiscipline>(
+        `${scheduleBase(projectId)}/tasks/${taskId}/disciplines/${disciplineId}/close`,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.disciplines(projectId, variables.taskId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: disciplineKeys.project(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
+  });
+}
+
+export function useSessionAttachments(
+  projectId: string,
+  taskDisciplineId: string,
+  packageId: string,
+  reviewSessionId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: designPackageKeys.sessionAttachments(reviewSessionId),
+    queryFn: () =>
+      apiGet<ReviewSessionAttachment[]>(
+        designPackagesPath(
+          projectId,
+          taskDisciplineId,
+          packageId,
+          `review-sessions/${reviewSessionId}/attachments`,
+        ),
+      ),
+    enabled:
+      Boolean(projectId) &&
+      Boolean(taskDisciplineId) &&
+      Boolean(packageId) &&
+      Boolean(reviewSessionId) &&
+      enabled,
+    retry: false,
+  });
+}
+
+export function useAddSessionAttachment(
+  projectId: string,
+  taskDisciplineId: string,
+  packageId: string,
+  reviewSessionId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: AddReviewSessionAttachmentRequest) =>
+      apiPost<ReviewSessionAttachment>(
+        designPackagesPath(
+          projectId,
+          taskDisciplineId,
+          packageId,
+          `review-sessions/${reviewSessionId}/attachments`,
+        ),
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: designPackageKeys.sessionAttachments(reviewSessionId),
+      });
+    },
+  });
+}
+
+export function useConfigureRevisionTrigger(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      triggerId,
+      body,
+    }: {
+      triggerId: string;
+      body: ConfigureRevisionTriggerRequest;
+    }) =>
+      apiPatch<ExternalReviewTrigger>(
+        `${projectPath(projectId)}/revision-triggers/${triggerId}/configure`,
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
   });
 }

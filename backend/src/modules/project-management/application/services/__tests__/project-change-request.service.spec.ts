@@ -17,6 +17,7 @@ describe('ProjectChangeRequestService status transitions', () => {
 
   let prisma: {
     projectChangeRequest: { findFirst: jest.Mock; update: jest.Mock };
+    $transaction: jest.Mock;
   };
   let service: ProjectChangeRequestService;
 
@@ -32,6 +33,7 @@ describe('ProjectChangeRequestService status transitions', () => {
       sourceType: ProjectChangeRequestSource.MANUAL,
       sourceEntityId: null,
       externalReviewTriggerId: null,
+      linkedDesignPackageId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -47,6 +49,9 @@ describe('ProjectChangeRequestService status transitions', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      $transaction: jest.fn(async (work: (tx: typeof prisma) => Promise<unknown>) =>
+        work(prisma),
+      ),
     };
 
     service = new ProjectChangeRequestService(
@@ -57,6 +62,7 @@ describe('ProjectChangeRequestService status transitions', () => {
       {
         nextChangeRequestNumber: jest.fn(),
       } as unknown as DocumentNumberService,
+      { createLinkedEntityTrigger: jest.fn() } as never,
     );
   });
 

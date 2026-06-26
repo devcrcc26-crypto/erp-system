@@ -39,10 +39,12 @@ export interface PermissionContext {
   readonly edvStatus?: EdvStatus;
   readonly grantedActions?: ReadonlySet<EpcWorkflowAction>;
   readonly disciplineDesignerUserId?: string;
+  readonly disciplineSupportingDesignerUserId?: string;
   readonly disciplineOwnerUserId?: string;
   readonly disciplineReviewerUserId?: string;
   readonly disciplineLeadUserId?: string;
   readonly disciplineChiefUserId?: string;
+  readonly disciplineInstituteChiefUserId?: string;
 }
 
 /**

@@ -2,8 +2,10 @@
 
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from 'antd';
+import { Button, Modal, Radio, Space } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -15,11 +17,14 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
   useDispatcherWorkload,
   useProjectReviewSessions,
+  epcWorkspaceKeys,
 } from '@/lib/query/epc-workspace';
 import {
   useProcessRevisionTrigger,
   useRevisionTriggers,
 } from '@/lib/query/revision-triggers';
+import { useConfigureRevisionTrigger } from '@/lib/query/design-packages';
+import { engineeringDocumentKeys } from '@/lib/query/engineering-documents';
 import type {
   ExternalReviewTrigger,
   ReviewSessionSummary,
@@ -67,6 +72,12 @@ export default function EpcWorkspacePanels({
   projectId: string;
 }): React.ReactNode {
   const messageApi = useAppMessage();
+  const queryClient = useQueryClient();
+  const [configuringTrigger, setConfiguringTrigger] =
+    useState<ExternalReviewTrigger | null>(null);
+  const [selectedTriggerMode, setSelectedTriggerMode] = useState<
+    'REVISION' | 'NEW_PACKAGE'
+  >('REVISION');
   const sessionsQuery = useProjectReviewSessions(projectId, 'ACTIVE');
   const triggersQuery = useRevisionTriggers(projectId, 'PENDING', {
     page: 1,
@@ -74,6 +85,7 @@ export default function EpcWorkspacePanels({
   });
   const workloadQuery = useDispatcherWorkload(projectId);
   const processTrigger = useProcessRevisionTrigger();
+  const configureTrigger = useConfigureRevisionTrigger(projectId);
 
   const sessions = sessionsQuery.data?.data ?? [];
   const triggers = triggersQuery.data?.data ?? [];
@@ -88,12 +100,36 @@ export default function EpcWorkspacePanels({
       messageApi.success('Revision trigger processed');
       void triggersQuery.refetch();
       void sessionsQuery.refetch();
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.reviewSessions(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.all,
+      });
     } catch (error) {
       notifyApiError(error, 'Failed to process trigger', messageApi);
     }
   }
 
+  async function handleConfigureTrigger(): Promise<void> {
+    if (!configuringTrigger) {
+      return;
+    }
+    try {
+      await configureTrigger.mutateAsync({
+        triggerId: configuringTrigger.id,
+        body: { triggerMode: selectedTriggerMode },
+      });
+      messageApi.success('Revision trigger configured');
+      setConfiguringTrigger(null);
+      void triggersQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to configure trigger', messageApi);
+    }
+  }
+
   return (
+    <>
     <div className="grid gap-4 lg:grid-cols-2">
       <PanelCard title="Active reviews">
         {sessions.length === 0 ? (
@@ -194,14 +230,25 @@ export default function EpcWorkspacePanels({
                       {formatProjectDate(trigger.createdAt)}
                     </p>
                   </div>
-                  <Button
-                    size="small"
-                    type="primary"
-                    loading={processTrigger.isPending}
-                    onClick={() => void handleProcessTrigger(trigger)}
-                  >
-                    Process
-                  </Button>
+                  <Space size="small">
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setSelectedTriggerMode(trigger.triggerMode ?? 'REVISION');
+                        setConfiguringTrigger(trigger);
+                      }}
+                    >
+                      Configure
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      loading={processTrigger.isPending}
+                      onClick={() => void handleProcessTrigger(trigger)}
+                    >
+                      Process
+                    </Button>
+                  </Space>
                 </li>
               );
             })}
@@ -263,6 +310,32 @@ export default function EpcWorkspacePanels({
         )}
       </PanelCard>
     </div>
+
+    <Modal
+      title="How should this be handled?"
+      open={Boolean(configuringTrigger)}
+      onCancel={() => setConfiguringTrigger(null)}
+      onOk={() => void handleConfigureTrigger()}
+      okText="Confirm"
+      confirmLoading={configureTrigger.isPending}
+      destroyOnHidden
+    >
+      <Radio.Group
+        className="flex flex-col gap-3"
+        value={selectedTriggerMode}
+        onChange={(event) => {
+          setSelectedTriggerMode(event.target.value as 'REVISION' | 'NEW_PACKAGE');
+        }}
+      >
+        <Radio value="REVISION">
+          Revise existing documents (creates new draft from locked version)
+        </Radio>
+        <Radio value="NEW_PACKAGE">
+          Create a new design package (blank package for leader to configure)
+        </Radio>
+      </Radio.Group>
+    </Modal>
+  </>
   );
 }
 

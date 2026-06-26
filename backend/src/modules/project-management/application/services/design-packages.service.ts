@@ -1,14 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
   DesignPackageProjectedStatus,
+  DesignPackageStatus,
   EdvStatus,
   ReviewSession,
   ReviewSessionStatus,
+  ReviewTier,
   WorkflowEntityType,
 } from '@prisma/client';
 import {
@@ -24,7 +28,7 @@ import {
   ReturnPackageForReworkDto,
   UpdateDesignPackageDto,
 } from '../dtos/engineering-document.dtos';
-import { ReviewSessionListQueryDto } from '../dtos/pm.dtos';
+import { ReviewSessionListQueryDto, AddReviewSessionAttachmentDto } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapDesignPackage,
@@ -49,6 +53,9 @@ import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { DependencyGraphService } from './dependency-graph.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
+import { computeRequiredTiers } from '../../domain/required-tiers.util';
+import { ReviewWorkflowService } from './review-workflow.service';
+import { MappedReviewSessionAttachment } from '../utils/review-session-attachment.mapper';
 
 export interface MappedReviewSessionListItem {
   id: string;
@@ -65,6 +72,8 @@ export interface MappedReviewSessionListItem {
 
 @Injectable()
 export class DesignPackagesService {
+  private readonly logger = new Logger(DesignPackagesService.name);
+
   constructor(
     private readonly designPackageRepository: DesignPackageRepository,
     private readonly engineeringDocumentVersionRepository: EngineeringDocumentVersionRepository,
@@ -73,6 +82,7 @@ export class DesignPackagesService {
     private readonly workflowKernel: WorkflowKernelService,
     private readonly dependencyGraphService: DependencyGraphService,
     private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly reviewWorkflowService: ReviewWorkflowService,
   ) {}
 
   /**
@@ -112,7 +122,7 @@ export class DesignPackagesService {
   }
 
   /**
-   * Creates a design package - projectedStatus stored only (defaults IN_PROGRESS).
+   * Creates a design package — only the discipline leader may create packages.
    */
   async create(
     ctx: PmContext,
@@ -122,14 +132,78 @@ export class DesignPackagesService {
   ): Promise<MappedDesignPackage> {
     await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
 
-    const row = await this.designPackageRepository.create({
-      company: { connect: { id: ctx.companyId } },
-      taskDiscipline: { connect: { id: taskDisciplineId } },
-      name: dto.name,
-      projectedStatus:
-        dto.projectedStatus ?? DesignPackageProjectedStatus.IN_PROGRESS,
-      createdBy: ctx.userId,
-      updatedBy: ctx.userId,
+    const discipline = await this.taskDisciplineScopeRepository.findWithReviewRoles(
+      ctx.companyId,
+      taskDisciplineId,
+      projectId,
+    );
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+
+    if (!discipline.disciplineLeadUserId) {
+      throw new BadRequestException(
+        'Assign a discipline leader before creating a design package.',
+      );
+    }
+    if (discipline.disciplineLeadUserId !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the discipline leader can create a design package.',
+      );
+    }
+
+    const requiredTiers =
+      dto.requiredTiers && dto.requiredTiers.length > 0
+        ? dto.requiredTiers
+        : computeRequiredTiers(discipline);
+
+    if (!requiredTiers.includes(ReviewTier.DISCIPLINE_LEAD)) {
+      throw new BadRequestException(
+        'Required tiers must include DISCIPLINE_LEAD.',
+      );
+    }
+
+    const hasDeptOrInstituteChief =
+      requiredTiers.includes(ReviewTier.DEPT_CHIEF) ||
+      requiredTiers.includes(ReviewTier.INSTITUTE_CHIEF);
+    if (!hasDeptOrInstituteChief) {
+      this.logger.warn(
+        `Design package "${dto.name}" has no DEPT_CHIEF or INSTITUTE_CHIEF in requiredTiers`,
+      );
+    }
+
+    if (dto.sourceEntityType && dto.sourceEntityId) {
+      const sourceExists =
+        await this.taskDisciplineScopeRepository.findSourceEntityInProject(
+          ctx.companyId,
+          projectId,
+          dto.sourceEntityType,
+          dto.sourceEntityId,
+        );
+      if (!sourceExists) {
+        throw new NotFoundException('Source entity not found in this project');
+      }
+    }
+
+    const row = await this.designPackageRepository.createWithBriefAttachments({
+      packageData: {
+        company: { connect: { id: ctx.companyId } },
+        taskDiscipline: { connect: { id: taskDisciplineId } },
+        name: dto.name,
+        projectedStatus:
+          dto.projectedStatus ?? DesignPackageProjectedStatus.IN_PROGRESS,
+        requiredTiers,
+        briefText: dto.briefText,
+        sourceEntityType: dto.sourceEntityType,
+        sourceEntityId: dto.sourceEntityId,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      briefAttachments: dto.briefDocumentIds?.map((documentId) => ({
+        companyId: ctx.companyId,
+        documentId,
+        attachedBy: ctx.userId,
+      })),
     });
 
     await this.workflowEventLogService.logCrud(
@@ -138,7 +212,11 @@ export class DesignPackagesService {
       row.id,
       'CREATED',
       {},
-      { name: row.name, projectedStatus: row.projectedStatus },
+      {
+        name: row.name,
+        projectedStatus: row.projectedStatus,
+        requiredTiers: row.requiredTiers,
+      },
     );
 
     const withItems = await this.designPackageRepository.findById(
@@ -405,6 +483,75 @@ export class DesignPackagesService {
   }
 
   /**
+   * Closes a design package after all EDVs are locked and linked items are resolved.
+   */
+  async closeDesignPackage(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+  ): Promise<MappedDesignPackage> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+
+    const pkg = await this.designPackageRepository.findForClose(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    if (pkg.taskDiscipline.disciplineLeadUserId !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the discipline leader can close a design package.',
+      );
+    }
+
+    if (pkg.packageStatus === DesignPackageStatus.CLOSED) {
+      throw new ConflictException('Package is already closed.');
+    }
+
+    const unlockedDocuments = pkg.items
+      .filter((item) => item.engineeringDocumentVersion.status !== EdvStatus.LOCKED)
+      .map((item) => item.engineeringDocumentVersion.engineeringDocument.title);
+    if (unlockedDocuments.length > 0) {
+      throw new BadRequestException(
+        `Cannot close package: ${unlockedDocuments.length} document(s) not yet locked: [${unlockedDocuments.join(', ')}]`,
+      );
+    }
+
+    const pendingTriggerCount =
+      await this.designPackageRepository.countPendingRevisionTriggersForPackage(
+        ctx.companyId,
+        packageId,
+      );
+    if (pendingTriggerCount > 0) {
+      throw new BadRequestException(
+        `Cannot close package: ${pendingTriggerCount} pending revision trigger(s) remain.`,
+      );
+    }
+
+    const { openRfis, openIssues, openChangeRequests } =
+      await this.designPackageRepository.countOpenLinkedEntitiesForPackage(
+        ctx.companyId,
+        pkg.sourceEntityType,
+        pkg.sourceEntityId,
+      );
+    if (openRfis > 0 || openIssues > 0 || openChangeRequests > 0) {
+      throw new BadRequestException(
+        `Cannot close package: Open RFIs: ${openRfis}, Open Issues: ${openIssues}, Open Change Requests: ${openChangeRequests}.`,
+      );
+    }
+
+    const closed = await this.designPackageRepository.closePackage(
+      packageId,
+      ctx.userId,
+    );
+
+    return mapDesignPackage({ ...closed, items: pkg.items });
+  }
+
+  /**
    * Batch-approves EDVs in a package via WorkflowKernel Phase A.
    */
   async batchApproveEdvs(
@@ -616,6 +763,63 @@ export class DesignPackagesService {
       query.page,
       query.limit,
     );
+  }
+
+  /**
+   * Attaches a document to the active review session at the current tier.
+   */
+  async addSessionAttachment(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    reviewSessionId: string,
+    dto: AddReviewSessionAttachmentDto,
+  ): Promise<MappedReviewSessionAttachment> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.reviewWorkflowService.addSessionAttachment({
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      designPackageId: packageId,
+      reviewSessionId,
+      documentId: dto.documentId,
+      purpose: dto.purpose,
+      note: dto.note,
+    });
+  }
+
+  /**
+   * Lists tier attachments for a review session.
+   */
+  async listSessionAttachments(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    reviewSessionId: string,
+  ): Promise<MappedReviewSessionAttachment[]> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const pkg = await this.designPackageRepository.findById(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    return this.reviewWorkflowService.listSessionAttachments({
+      companyId: ctx.companyId,
+      designPackageId: packageId,
+      reviewSessionId,
+    });
   }
 
   /**

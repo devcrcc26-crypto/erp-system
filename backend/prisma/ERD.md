@@ -740,6 +740,7 @@ erDiagram
   DateTime date_raised "nullable"
   DateTime due_date "nullable"
   DateTime date_answered "nullable"
+  String linked_design_package_id FK "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -818,6 +819,7 @@ erDiagram
   String source_entity_id
   String submittal_id FK "nullable"
   String submittal_item_ids
+  String linked_design_package_id FK "nullable"
   Json payload
   ExternalReviewTriggerStatus status
   ExternalReviewTriggerMode trigger_mode
@@ -868,6 +870,7 @@ erDiagram
   ProjectChangeRequestSource source_type
   String source_entity_id "nullable"
   String external_review_trigger_id "nullable"
+  String linked_design_package_id FK "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -1078,6 +1081,7 @@ erDiagram
   DateTime due_date "nullable"
   DateTime resolved_at "nullable"
   DateTime verified_at "nullable"
+  String linked_design_package_id FK "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -1281,6 +1285,7 @@ erDiagram
 "task_dependency" }o--|| "task" : successorTask
 "rfi" }o--|| "project" : project
 "rfi" }o--o| "task_discipline" : taskDiscipline
+"rfi" }o--o| "design_package" : linkedDesignPackage
 "rfi" }o--|| "user" : raiser
 "rfi" }o--o| "user" : assignee
 "rfi_response" }o--|| "rfi" : rfi
@@ -1298,6 +1303,7 @@ erDiagram
 "external_review_trigger" }o--|| "company" : company
 "external_review_trigger" }o--|| "project" : project
 "external_review_trigger" }o--o| "submittal" : submittal
+"external_review_trigger" }o--o| "design_package" : linkedDesignPackage
 "deliverable" }o--|| "company" : company
 "deliverable" }o--|| "project" : project
 "deliverable" }o--o| "task_discipline" : taskDiscipline
@@ -1307,6 +1313,7 @@ erDiagram
 "task_discipline_review" }o--|| "task_discipline" : taskDiscipline
 "project_change_request" }o--|| "company" : company
 "project_change_request" }o--|| "project" : project
+"project_change_request" }o--o| "design_package" : linkedDesignPackage
 "drawing" }o--|| "project" : project
 "drawing" }o--o| "document_folder" : folder
 "drawing_version" }o--|| "drawing" : drawing
@@ -1332,6 +1339,7 @@ erDiagram
 "risk" }o--|| "user" : owner
 "issue" }o--|| "project" : project
 "issue" }o--o| "task_discipline" : taskDiscipline
+"issue" }o--o| "design_package" : linkedDesignPackage
 "issue" }o--|| "user" : raiser
 "issue" }o--o| "user" : assignee
 "punch_item" }o--|| "project" : project
@@ -2221,6 +2229,7 @@ Properties as follows:
 - `date_raised`:
 - `due_date`:
 - `date_answered`:
+- `linked_design_package_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2314,6 +2323,7 @@ Properties as follows:
 - `source_entity_id`:
 - `submittal_id`:
 - `submittal_item_ids`:
+- `linked_design_package_id`:
 - `payload`:
 - `status`:
 - `trigger_mode`:
@@ -2373,6 +2383,7 @@ Properties as follows:
 - `source_type`:
 - `source_entity_id`:
 - `external_review_trigger_id`:
+- `linked_design_package_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2628,6 +2639,7 @@ Properties as follows:
 - `due_date`:
 - `resolved_at`:
 - `verified_at`:
+- `linked_design_package_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:

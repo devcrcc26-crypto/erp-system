@@ -1,7 +1,93 @@
 // Gap completion — new
 
-import type { ReviewTier } from '@/lib/api/project-management.types';
+import type {
+  ReviewTier,
+  TaskDiscipline,
+} from '@/lib/api/project-management.types';
 import { tokens } from '@/lib/theme/tokens';
+
+export const REVIEW_TIER_ORDER: readonly ReviewTier[] = [
+  'DISCIPLINE_OWNER',
+  'REVIEWER',
+  'DISCIPLINE_LEAD',
+  'DEPT_CHIEF',
+  'INSTITUTE_CHIEF',
+] as const;
+
+export type ReviewTierStepState = 'completed' | 'current' | 'upcoming';
+
+export function reviewTierStepLabel(tier: ReviewTier): string {
+  const labels: Record<ReviewTier, string> = {
+    DISCIPLINE_OWNER: 'D.Owner',
+    REVIEWER: 'Reviewer',
+    DISCIPLINE_LEAD: 'D.Lead',
+    DEPT_CHIEF: 'Dept Chief',
+    INSTITUTE_CHIEF: 'Inst. Chief',
+  };
+  return labels[tier] ?? tier;
+}
+
+export function orderedRequiredTiers(requiredTiers: readonly ReviewTier[]): ReviewTier[] {
+  const required = new Set(requiredTiers);
+  return REVIEW_TIER_ORDER.filter((tier) => required.has(tier));
+}
+
+export function getReviewTierStepState(
+  tier: ReviewTier,
+  requiredTiers: readonly ReviewTier[],
+  currentTier: ReviewTier | string | null | undefined,
+  sessionStatus: string | null | undefined,
+): ReviewTierStepState {
+  const ordered = orderedRequiredTiers(requiredTiers);
+  const tierIndex = ordered.indexOf(tier);
+  if (tierIndex < 0) {
+    return 'upcoming';
+  }
+  if (sessionStatus === 'APPROVED' || sessionStatus === 'CLOSED') {
+    return 'completed';
+  }
+  if (!currentTier) {
+    return tierIndex === 0 ? 'current' : 'upcoming';
+  }
+  const currentIndex = ordered.indexOf(currentTier as ReviewTier);
+  if (currentIndex < 0) {
+    return 'upcoming';
+  }
+  if (tierIndex < currentIndex) {
+    return 'completed';
+  }
+  if (tierIndex === currentIndex) {
+    return 'current';
+  }
+  return 'upcoming';
+}
+
+export function resolveTierActorUserId(
+  discipline: Pick<
+    TaskDiscipline,
+    | 'ownerUserId'
+    | 'reviewerUserId'
+    | 'disciplineLeadUserId'
+    | 'chiefUserId'
+    | 'instituteChiefUserId'
+  >,
+  tier: ReviewTier | string | null | undefined,
+): string | null {
+  switch (tier) {
+    case 'DISCIPLINE_OWNER':
+      return discipline.ownerUserId ?? null;
+    case 'REVIEWER':
+      return discipline.reviewerUserId ?? null;
+    case 'DISCIPLINE_LEAD':
+      return discipline.disciplineLeadUserId ?? null;
+    case 'DEPT_CHIEF':
+      return discipline.chiefUserId ?? null;
+    case 'INSTITUTE_CHIEF':
+      return discipline.instituteChiefUserId ?? null;
+    default:
+      return null;
+  }
+}
 
 export function reviewTierLabel(tier: ReviewTier): string {
   const labels: Record<ReviewTier, string> = {
@@ -9,6 +95,7 @@ export function reviewTierLabel(tier: ReviewTier): string {
     REVIEWER: 'Reviewer',
     DISCIPLINE_LEAD: 'Discipline lead',
     DEPT_CHIEF: 'Dept chief',
+    INSTITUTE_CHIEF: 'Institute chief',
   };
   return labels[tier] ?? tier;
 }
@@ -28,6 +115,7 @@ export function reviewTierColors(tier: ReviewTier): {
       text: tokens.colorAmber400,
     },
     DEPT_CHIEF: { bg: tokens.colorCoral50, text: tokens.colorCoral400 },
+    INSTITUTE_CHIEF: { bg: tokens.colorGray50, text: tokens.colorNavy },
   };
   return map[tier] ?? { bg: tokens.colorGray50, text: tokens.colorGray600 };
 }

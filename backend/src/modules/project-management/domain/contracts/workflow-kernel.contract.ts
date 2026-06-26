@@ -129,7 +129,7 @@ export interface AddSubmittalItemsCommand extends WorkflowCommandBase {
 export interface TriggerRevisionCommand extends WorkflowCommandBase {
   readonly type: 'TriggerRevision';
   readonly engineeringDocumentId: string;
-  readonly triggerSource: 'RFI' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
+  readonly triggerSource: 'RFI' | 'ISSUE' | 'CHANGE_REQUEST' | 'SUBMITTAL_REVIEW';
   readonly triggerEntityId: string;
 }
 

@@ -31,6 +31,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
+import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
 
@@ -56,6 +57,7 @@ export class ProjectChangeRequestService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly epcSubmittalRepository: EpcSubmittalRepository,
   ) {}
 
   /**
@@ -176,12 +178,28 @@ export class ProjectChangeRequestService {
 
     this.assertChangeRequestApprovable(existing.status);
 
-    const row = await this.prisma.projectChangeRequest.update({
-      where: { id: changeRequestId },
-      data: {
-        status: ProjectChangeRequestStatus.APPROVED,
-        updatedBy: ctx.userId,
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.projectChangeRequest.update({
+        where: { id: changeRequestId },
+        data: {
+          status: ProjectChangeRequestStatus.APPROVED,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (existing.linkedDesignPackageId) {
+        await this.epcSubmittalRepository.createLinkedEntityTrigger(tx, {
+          companyId: ctx.companyId,
+          projectId,
+          triggerType: ExternalReviewTriggerType.CHANGE_REQUEST,
+          sourceEntityType: 'CHANGE_REQUEST',
+          sourceEntityId: changeRequestId,
+          linkedDesignPackageId: existing.linkedDesignPackageId,
+          createdBy: ctx.userId,
+        });
+      }
+
+      return updated;
     });
 
     return mapProjectChangeRequest(row);

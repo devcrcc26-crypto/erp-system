@@ -95,7 +95,7 @@ describe('StateProjectionService', () => {
     epcWorkflowRepository.hasActiveReviewSessionForPackage.mockResolvedValue(false);
     epcWorkflowRepository.updatePackageProjection.mockResolvedValue(dirtyPkg);
     epcWorkflowRepository.findPackagesByDiscipline.mockResolvedValue([
-      { id: 'pkg-2', projectedStatus: DesignPackageProjectedStatus.APPROVED },
+      { id: 'pkg-2', projectedStatus: DesignPackageProjectedStatus.LOCKED },
     ]);
     epcWorkflowRepository.updateDisciplineProjection.mockResolvedValue({} as never);
 
@@ -104,7 +104,7 @@ describe('StateProjectionService', () => {
     expect(epcWorkflowRepository.updatePackageProjection).toHaveBeenCalledWith(
       tx,
       'pkg-2',
-      DomainPackageStatus.APPROVED,
+      DomainPackageStatus.LOCKED,
       updatedBy,
       true,
     );

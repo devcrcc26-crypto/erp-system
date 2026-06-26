@@ -22,6 +22,10 @@ import {
   CommentEdvSnapshot,
   resolveCommentRevisionContexts,
 } from '../utils/comment-revision-context.util';
+import {
+  mapReviewSessionAttachments,
+  MappedReviewSessionAttachment,
+} from '../utils/review-session-attachment.mapper';
 
 export interface ReviewInboxItem {
   readonly reviewSessionId: string;
@@ -105,6 +109,8 @@ export interface ReviewModeView {
   }[];
   /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
   readonly lastReturnedSessionComments: readonly { status: CommentStatus }[];
+  /** Tier markup attachments accumulated across the session lifecycle. */
+  readonly attachments: readonly MappedReviewSessionAttachment[];
 }
 
 export interface VersionHistoryEntry {
@@ -466,6 +472,16 @@ export class EpcWorkspaceService {
         }),
         include: {
           contextSnapshot: true,
+          reviewSessionAttachments: {
+            where: { deletedAt: null },
+            orderBy: { attachedAt: 'asc' },
+            include: {
+              attachedByUser: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+              document: { select: { id: true, name: true } },
+            },
+          },
           comments: {
             where: { deletedAt: null },
             orderBy: { createdAt: 'asc' },
@@ -569,6 +585,7 @@ export class EpcWorkspaceService {
         };
       }),
       lastReturnedSessionComments,
+      attachments: mapReviewSessionAttachments(session?.reviewSessionAttachments ?? []),
     };
   }
 

@@ -79,10 +79,13 @@ export class PermissionResolverService {
       projectTeamRole: projectTeamRole as never,
       projectDesignPhase,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
+      disciplineSupportingDesignerUserId:
+        discipline.supportingDesignerUserId ?? undefined,
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
+      disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -128,10 +131,13 @@ export class PermissionResolverService {
       projectTeamRole: projectTeamRole as never,
       projectDesignPhase,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
+      disciplineSupportingDesignerUserId:
+        discipline.supportingDesignerUserId ?? undefined,
       disciplineReviewerUserId: discipline.reviewerUserId ?? undefined,
       disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
+      disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -157,15 +163,25 @@ export class PermissionResolverService {
 
     if (schedule.canCreate) {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
+      granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER);
       granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE);
       granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+      granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
       granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     }
     if (schedule.canEdit) {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
+      granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER);
       granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE);
       granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
+      granted.add(EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE);
+      granted.add(EpcWorkflowAction.REVIEW_COMMENT_RESOLVE);
       granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+      granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
       granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
     }
     if (schedule.canApprove) {

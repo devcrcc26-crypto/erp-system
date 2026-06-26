@@ -60,6 +60,7 @@ describe('ScheduleService', () => {
       findMany: jest.Mock;
       update: jest.Mock;
     };
+    taskDiscipline: { findMany: jest.Mock };
     projectTeam: { count: jest.Mock };
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
@@ -82,6 +83,9 @@ describe('ScheduleService', () => {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn(),
+      },
+      taskDiscipline: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
       projectTeam: {
         count: jest.fn(),

@@ -6,6 +6,7 @@ import BulkReviewActionBar from '@/components/modules/projects/review/BulkReview
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ReviewCommentPanel from '@/components/modules/projects/review/ReviewCommentPanel';
+import ReviewSessionAttachmentsSection from '@/components/modules/projects/review/ReviewSessionAttachmentsSection';
 import DisciplineLeadConsole from '@/components/modules/projects/review/DisciplineLeadConsole';
 import GovernanceReviewPanel from '@/components/modules/projects/review/GovernanceReviewPanel';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
@@ -429,6 +430,14 @@ export default function ReviewModePanel({
                       currentTier={reviewMode?.currentTier ?? null}
                       comments={sessionComments}
                       onAction={refetchAll}
+                    />
+                    <ReviewSessionAttachmentsSection
+                      projectId={projectId}
+                      taskDisciplineId={taskDisciplineId}
+                      packageId={packageId}
+                      reviewSessionId={reviewSessionId}
+                      currentTier={reviewMode?.currentTier ?? null}
+                      requiredTiers={packageQuery.data?.requiredTiers ?? []}
                     />
                   </div>
                 ),
