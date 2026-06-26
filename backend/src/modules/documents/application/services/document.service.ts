@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { FolderContextType } from '@prisma/client';
+import { FolderContextType, Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -25,6 +25,7 @@ import {
 import {
   CreateDocumentFolderDto,
   DocumentFolderListQueryDto,
+  ProjectDocumentFileTypeFilter,
   ProjectDocumentListQueryDto,
   UpdateDocumentDto,
   UpdateDocumentFolderDto,
@@ -223,26 +224,27 @@ export class DocumentService {
           { path: { startsWith: `${projectFolder.path}/` } },
         ],
       }),
-      select: { id: true, name: true, path: true, contextType: true },
+      select: {
+        id: true,
+        name: true,
+        path: true,
+        contextType: true,
+        contextId: true,
+      },
     });
 
-    const folderIds = folders.map((folder) => folder.id);
-    if (folderIds.length === 0) {
+    const scopedFolderIds = this.filterProjectDocumentFolderIds(folders, query);
+
+    if (scopedFolderIds.length === 0) {
       return buildPaginatedResult([], 0, query.page, query.limit);
     }
 
     const folderById = new Map(folders.map((folder) => [folder.id, folder]));
-
-    const where = activeOnly({
-      companyId: ctx.companyId,
-      folderId: { in: folderIds },
-      isCurrent: true,
-      ...(query.search?.trim()
-        ? {
-            name: { contains: query.search.trim(), mode: 'insensitive' as const },
-          }
-        : {}),
-    });
+    const where = this.buildProjectDocumentWhere(
+      ctx.companyId,
+      scopedFolderIds,
+      query,
+    );
 
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const orderBy = buildOrderBy(
@@ -251,12 +253,56 @@ export class DocumentService {
     );
 
     const [rows, total] = await Promise.all([
-      this.prisma.document.findMany({ where, skip, take, orderBy }),
+      this.prisma.document.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          folder: {
+            select: {
+              id: true,
+              name: true,
+              path: true,
+              contextType: true,
+              contextId: true,
+            },
+          },
+          versions: {
+            orderBy: { versionNumber: 'desc' },
+            take: 1,
+            include: {
+              engineeringDocumentVersions: {
+                where: activeOnly({ companyId: ctx.companyId }),
+                take: 1,
+                include: {
+                  engineeringDocument: {
+                    select: {
+                      id: true,
+                      title: true,
+                      documentNumber: true,
+                      documentType: true,
+                      taskDisciplineId: true,
+                      taskDiscipline: {
+                        select: { id: true, disciplineName: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
       this.prisma.document.count({ where }),
     ]);
 
     const data = rows.map((document) => {
-      const folder = folderById.get(document.folderId);
+      const folder = folderById.get(document.folderId) ?? document.folder;
+      const edv =
+        document.versions[0]?.engineeringDocumentVersions[0] ?? null;
+      const engineeringDocument = edv?.engineeringDocument ?? null;
+
       return {
         id: document.id,
         folderId: document.folderId,
@@ -271,6 +317,25 @@ export class DocumentService {
         folderName: folder?.name ?? '',
         folderPath: folder?.path ?? '',
         folderContextType: folder?.contextType ?? '',
+        folderContextId: folder?.contextId ?? null,
+        taskDisciplineId:
+          engineeringDocument?.taskDisciplineId ??
+          (folder?.contextType === FolderContextType.TASK_DISCIPLINE
+            ? folder.contextId
+            : null),
+        disciplineName:
+          engineeringDocument?.taskDiscipline?.disciplineName ??
+          (folder?.contextType === FolderContextType.TASK_DISCIPLINE
+            ? folder.name
+            : null),
+        engineeringDocumentId: engineeringDocument?.id ?? null,
+        engineeringDocumentTitle: engineeringDocument?.title ?? null,
+        engineeringDocumentNumber: engineeringDocument?.documentNumber ?? null,
+        engineeringDocumentType: engineeringDocument?.documentType ?? null,
+        engineeringRevisionLabel: edv?.revisionLabel ?? null,
+        displayTitle:
+          engineeringDocument?.title?.trim() ||
+          document.name,
       };
     });
 
@@ -608,6 +673,171 @@ export class DocumentService {
     });
     const parsed = setting ? Number.parseInt(setting.value, 10) : 50;
     return Number.isFinite(parsed) ? parsed : 50;
+  }
+
+  private filterProjectDocumentFolderIds(
+    folders: Array<{
+      id: string;
+      path: string;
+      contextType: FolderContextType;
+      contextId: string | null;
+    }>,
+    query: ProjectDocumentListQueryDto,
+  ): string[] {
+    let scoped = folders;
+
+    if (query.folderContextType) {
+      scoped = scoped.filter(
+        (folder) => folder.contextType === query.folderContextType,
+      );
+    }
+
+    if (query.taskDisciplineId) {
+      const disciplineFolder = folders.find(
+        (folder) =>
+          folder.contextType === FolderContextType.TASK_DISCIPLINE &&
+          folder.contextId === query.taskDisciplineId,
+      );
+      if (!disciplineFolder) {
+        return [];
+      }
+      const disciplinePrefix = `${disciplineFolder.path}/`;
+      scoped = scoped.filter(
+        (folder) =>
+          folder.id === disciplineFolder.id ||
+          folder.path.startsWith(disciplinePrefix),
+      );
+    }
+
+    if (scoped.length === 0) {
+      return [];
+    }
+
+    return scoped.map((folder) => folder.id);
+  }
+
+  private buildProjectDocumentWhere(
+    companyId: string,
+    folderIds: string[],
+    query: ProjectDocumentListQueryDto,
+  ): Prisma.DocumentWhereInput {
+    const where: Prisma.DocumentWhereInput = activeOnly({
+      companyId,
+      folderId: { in: folderIds },
+      isCurrent: true,
+    });
+
+    if (query.uploadedFrom || query.uploadedTo) {
+      where.createdAt = {
+        ...(query.uploadedFrom
+          ? { gte: new Date(`${query.uploadedFrom}T00:00:00.000Z`) }
+          : {}),
+        ...(query.uploadedTo
+          ? { lte: new Date(`${query.uploadedTo}T23:59:59.999Z`) }
+          : {}),
+      };
+    }
+
+    if (query.fileType) {
+      const fileTypeClause = this.buildProjectDocumentFileTypeWhere(query.fileType);
+      if (fileTypeClause) {
+        where.AND = [
+          ...(Array.isArray(where.AND)
+            ? where.AND
+            : where.AND
+              ? [where.AND]
+              : []),
+          fileTypeClause,
+        ];
+      }
+    }
+
+    const searchTerm = query.search?.trim();
+    if (searchTerm) {
+      where.OR = [
+        { name: { contains: searchTerm, mode: 'insensitive' } },
+        {
+          folder: {
+            name: { contains: searchTerm, mode: 'insensitive' },
+          },
+        },
+        {
+          folder: {
+            path: { contains: searchTerm, mode: 'insensitive' },
+          },
+        },
+        {
+          versions: {
+            some: {
+              engineeringDocumentVersions: {
+                some: {
+                  ...activeOnly({ companyId }),
+                  engineeringDocument: {
+                    ...activeOnly({ companyId }),
+                    OR: [
+                      {
+                        title: {
+                          contains: searchTerm,
+                          mode: 'insensitive',
+                        },
+                      },
+                      {
+                        documentNumber: {
+                          contains: searchTerm,
+                          mode: 'insensitive',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    return where;
+  }
+
+  private buildProjectDocumentFileTypeWhere(
+    fileType: ProjectDocumentFileTypeFilter,
+  ): Prisma.DocumentWhereInput | null {
+    switch (fileType) {
+      case 'pdf':
+        return {
+          fileType: { contains: 'pdf', mode: 'insensitive' },
+        };
+      case 'image':
+        return {
+          fileType: { startsWith: 'image/', mode: 'insensitive' },
+        };
+      case 'word':
+        return {
+          fileType: { contains: 'word', mode: 'insensitive' },
+        };
+      case 'excel':
+        return {
+          OR: [
+            { fileType: { contains: 'excel', mode: 'insensitive' } },
+            { fileType: { contains: 'spreadsheet', mode: 'insensitive' } },
+          ],
+        };
+      case 'other':
+        return {
+          NOT: {
+            OR: [
+              { fileType: { contains: 'pdf', mode: 'insensitive' } },
+              { fileType: { startsWith: 'image/', mode: 'insensitive' } },
+              { fileType: { contains: 'word', mode: 'insensitive' } },
+              { fileType: { contains: 'excel', mode: 'insensitive' } },
+              { fileType: { contains: 'spreadsheet', mode: 'insensitive' } },
+            ],
+          },
+        };
+      default:
+        return null;
+    }
   }
 
   private buildFileKey(

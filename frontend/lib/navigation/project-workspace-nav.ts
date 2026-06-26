@@ -253,8 +253,8 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
     items: [
       {
         key: 'documents',
-        label: 'Documents',
-        labelKey: 'workspace.items.documents',
+        label: 'Document browser',
+        labelKey: 'workspace.items.documentBrowser',
         pathSuffix: 'documents',
         capability: 'projects',
         breadcrumbGroup: 'Project Records',

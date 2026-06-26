@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   MaxLength,
@@ -20,6 +21,34 @@ export const FOLDER_CONTEXT_TYPES = [
 ] as const;
 
 export type FolderContextType = (typeof FOLDER_CONTEXT_TYPES)[number];
+
+/** PM entity folder types exposed in the project document browser. */
+export const PROJECT_DOCUMENT_FOLDER_CONTEXT_TYPES = [
+  'PROJECT',
+  'TASK_DISCIPLINE',
+  'RFI',
+  'ISSUE',
+  'SUBMITTAL',
+  'DAILY_LOG',
+  'MEETING',
+  'CORRESPONDENCE',
+  'RISK',
+  'PUNCH_ITEM',
+] as const;
+
+export type ProjectDocumentFolderContextType =
+  (typeof PROJECT_DOCUMENT_FOLDER_CONTEXT_TYPES)[number];
+
+export const PROJECT_DOCUMENT_FILE_TYPE_FILTERS = [
+  'pdf',
+  'image',
+  'word',
+  'excel',
+  'other',
+] as const;
+
+export type ProjectDocumentFileTypeFilter =
+  (typeof PROJECT_DOCUMENT_FILE_TYPE_FILTERS)[number];
 
 export class CreateDocumentFolderDto {
   @ApiProperty()
@@ -116,8 +145,36 @@ export class DocumentFolderListQueryDto extends PaginationQueryDto {
 }
 
 export class ProjectDocumentListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Search file name, folder path, engineering document title, or document number',
+  })
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ enum: PROJECT_DOCUMENT_FOLDER_CONTEXT_TYPES })
+  @IsOptional()
+  @IsIn([...PROJECT_DOCUMENT_FOLDER_CONTEXT_TYPES])
+  folderContextType?: ProjectDocumentFolderContextType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional({ enum: PROJECT_DOCUMENT_FILE_TYPE_FILTERS })
+  @IsOptional()
+  @IsIn([...PROJECT_DOCUMENT_FILE_TYPE_FILTERS])
+  fileType?: ProjectDocumentFileTypeFilter;
+
+  @ApiPropertyOptional({ description: 'Inclusive start of upload date (ISO date)' })
+  @IsOptional()
+  @IsDateString()
+  uploadedFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive end of upload date (ISO date)' })
+  @IsOptional()
+  @IsDateString()
+  uploadedTo?: string;
 }

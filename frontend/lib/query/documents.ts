@@ -16,6 +16,7 @@ import type {
   DocumentFolder,
   DocumentRecord,
   FolderContextType,
+  ProjectDocumentListParams,
   ProjectDocumentRecord,
 } from '@/lib/api/documents.types';
 import type { PaginationMeta, PaginationParams } from '@/lib/api/types';
@@ -44,9 +45,29 @@ export const documentKeys = {
     [...documentKeys.all, 'project', projectId] as const,
   projectDocumentList: (
     projectId: string,
-    params: PaginationParams & { search?: string },
+    params: ProjectDocumentListParams,
   ) => [...documentKeys.projectDocuments(projectId), params] as const,
 };
+
+function toProjectDocumentQueryString(params: ProjectDocumentListParams): string {
+  const search = new URLSearchParams();
+  if (params.page !== undefined) search.set('page', String(params.page));
+  if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortOrder) search.set('sortOrder', params.sortOrder);
+  if (params.search?.trim()) search.set('search', params.search.trim());
+  if (params.folderContextType) {
+    search.set('folderContextType', params.folderContextType);
+  }
+  if (params.taskDisciplineId) {
+    search.set('taskDisciplineId', params.taskDisciplineId);
+  }
+  if (params.fileType) search.set('fileType', params.fileType);
+  if (params.uploadedFrom) search.set('uploadedFrom', params.uploadedFrom);
+  if (params.uploadedTo) search.set('uploadedTo', params.uploadedTo);
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
 
 function toQueryString(params: FolderListParams): string {
   const search = new URLSearchParams();
@@ -105,7 +126,7 @@ export function useProjectDocumentFolder(
 
 export function useProjectDocuments(
   projectId: string,
-  params: PaginationParams & { search?: string } = { page: 1, limit: 20 },
+  params: ProjectDocumentListParams = { page: 1, limit: 20 },
   enabled = true,
   options?: Omit<
     UseQueryOptions<PaginatedResult<ProjectDocumentRecord>>,
@@ -114,18 +135,10 @@ export function useProjectDocuments(
 ) {
   return useQuery({
     queryKey: documentKeys.projectDocumentList(projectId, params),
-    queryFn: () => {
-      const search = new URLSearchParams();
-      if (params.page !== undefined) search.set('page', String(params.page));
-      if (params.limit !== undefined) search.set('limit', String(params.limit));
-      if (params.sortBy) search.set('sortBy', params.sortBy);
-      if (params.sortOrder) search.set('sortOrder', params.sortOrder);
-      if (params.search?.trim()) search.set('search', params.search.trim());
-      const query = search.toString();
-      return apiGetPaginated<ProjectDocumentRecord>(
-        `/document-folders/project/${projectId}/documents${query ? `?${query}` : ''}`,
-      );
-    },
+    queryFn: () =>
+      apiGetPaginated<ProjectDocumentRecord>(
+        `/document-folders/project/${projectId}/documents${toProjectDocumentQueryString(params)}`,
+      ),
     enabled: Boolean(projectId) && enabled,
     retry: false,
     ...options,

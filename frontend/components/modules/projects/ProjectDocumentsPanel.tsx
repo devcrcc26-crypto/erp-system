@@ -1,26 +1,33 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  DatePicker,
   Input,
+  Select,
   Space,
   Upload,
 } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { ProjectDocumentRecord } from '@/lib/api/documents.types';
+import type {
+  ProjectDocumentFileTypeFilter,
+  ProjectDocumentFolderContextType,
+  ProjectDocumentRecord,
+} from '@/lib/api/documents.types';
 import { apiGet } from '@/lib/api/client';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
 import {
   useProjectDocumentFolder,
   useProjectDocuments,
@@ -29,6 +36,12 @@ import {
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import {
+  PROJECT_DOCUMENT_CONTEXT_OPTIONS,
+  PROJECT_DOCUMENT_FILE_TYPE_OPTIONS,
+  resolveProjectDocumentEntityHref,
+  resolveProjectDocumentSourceLabel,
+} from '@/lib/utils/project-document-browser';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 function formatFileSize(bytes: number): string {
@@ -37,10 +50,9 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatContextLabel(contextType: string): string {
-  return contextType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) =>
-    c.toUpperCase(),
-  );
+function formatMimeLabel(fileType: string): string {
+  const short = fileType.split('/').pop() ?? fileType;
+  return short.toUpperCase();
 }
 
 async function downloadDocument(document: ProjectDocumentRecord): Promise<void> {
@@ -57,63 +69,130 @@ export default function ProjectDocumentsPanel({
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
+  const [folderContextType, setFolderContextType] = useState<
+    ProjectDocumentFolderContextType | undefined
+  >(undefined);
+  const [taskDisciplineId, setTaskDisciplineId] = useState<string | undefined>(
+    undefined,
+  );
+  const [fileType, setFileType] = useState<
+    ProjectDocumentFileTypeFilter | undefined
+  >(undefined);
+  const [uploadedRange, setUploadedRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
   const messageApi = useAppMessage();
 
   const foldersQuery = useProjectDocumentFolder(projectId);
+  const disciplinesQuery = useProjectDisciplines(projectId);
   const projectFolder = foldersQuery.data?.data[0];
   const folderId = projectFolder?.id;
 
-  const documentsQuery = useProjectDocuments(projectId, {
-    ...params,
-    search: search.trim() || undefined,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  const listParams = useMemo(
+    () => ({
+      ...params,
+      search: search.trim() || undefined,
+      folderContextType,
+      taskDisciplineId,
+      fileType,
+      uploadedFrom: uploadedRange?.[0]?.format('YYYY-MM-DD'),
+      uploadedTo: uploadedRange?.[1]?.format('YYYY-MM-DD'),
+      sortBy: 'createdAt',
+      sortOrder: 'desc' as const,
+    }),
+    [
+      params,
+      search,
+      folderContextType,
+      taskDisciplineId,
+      fileType,
+      uploadedRange,
+    ],
+  );
 
+  const documentsQuery = useProjectDocuments(projectId, listParams);
   const uploadDocument = useUploadDocumentToFolder();
 
   const columns: ColumnsType<ProjectDocumentRecord> = useMemo(
     () => [
       {
-        title: 'File name',
-        dataIndex: 'name',
-        key: 'name',
-        ellipsis: true,
-      },
-      {
-        title: 'Folder',
-        key: 'folder',
+        title: 'Title',
+        key: 'displayTitle',
         ellipsis: true,
         render: (_: unknown, record) => (
           <div className="min-w-0">
             <p
-              className="truncate text-[12px]"
+              className="truncate text-[13px] font-medium"
               style={{ color: tokens.colorTextPrimary }}
             >
-              {record.folderName}
+              {record.displayTitle}
             </p>
-            <p
+            {record.engineeringDocumentNumber ? (
+              <p
+                className="truncate text-[12px]"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {record.engineeringDocumentNumber}
+                {record.engineeringRevisionLabel
+                  ? ` · Rev ${record.engineeringRevisionLabel}`
+                  : ''}
+              </p>
+            ) : record.name !== record.displayTitle ? (
+              <p
+                className="truncate text-[12px]"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {record.name}
+              </p>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        title: 'Source',
+        key: 'source',
+        width: 200,
+        ellipsis: true,
+        render: (_: unknown, record) => {
+          const href = resolveProjectDocumentEntityHref(projectId, record);
+          const label = resolveProjectDocumentSourceLabel(record);
+          if (href) {
+            return (
+              <Link
+                href={href}
+                className="truncate text-[12px] hover:underline"
+                style={{ color: tokens.colorBlue400 }}
+              >
+                {label}
+              </Link>
+            );
+          }
+          return (
+            <span
               className="truncate text-[12px]"
               style={{ color: tokens.colorTextSecondary }}
             >
-              {formatContextLabel(record.folderContextType)} · {record.folderPath}
-            </p>
-          </div>
-        ),
+              {label}
+            </span>
+          );
+        },
+      },
+      {
+        title: 'Discipline',
+        key: 'discipline',
+        width: 140,
+        ellipsis: true,
+        render: (_: unknown, record) =>
+          record.disciplineName ?? (
+            <span style={{ color: tokens.colorTextSecondary }}>—</span>
+          ),
       },
       {
         title: 'Type',
         dataIndex: 'fileType',
         key: 'fileType',
-        width: 140,
-        render: (value: string) => value.split('/').pop() ?? value,
-      },
-      {
-        title: 'Size',
-        dataIndex: 'fileSizeBytes',
-        key: 'fileSizeBytes',
         width: 100,
-        render: (value: number) => formatFileSize(value),
+        render: (value: string) => formatMimeLabel(value),
       },
       {
         title: 'Uploaded',
@@ -138,10 +217,19 @@ export default function ProjectDocumentsPanel({
         ),
       },
     ],
-    [],
+    [projectId],
   );
 
-  if (foldersQuery.isLoading || documentsQuery.isLoading) {
+  function resetFilters(): void {
+    resetPage();
+    setSearch('');
+    setFolderContextType(undefined);
+    setTaskDisciplineId(undefined);
+    setFileType(undefined);
+    setUploadedRange(null);
+  }
+
+  if (foldersQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -173,12 +261,16 @@ export default function ProjectDocumentsPanel({
 
   const documents = documentsQuery.data?.data ?? [];
   const meta = documentsQuery.data?.meta;
+  const disciplineOptions = (disciplinesQuery.data ?? []).map((row) => ({
+    value: row.id,
+    label: row.disciplineName,
+  }));
 
   return (
     <div className={layout.pageStack}>
       <FormLayout
-        title="Project documents"
-        description="All files uploaded across this project - daily logs, meetings, RFIs, punch items, and the project repository."
+        title="Document browser"
+        description="Search every file attached to this project — RFIs, submittals, daily logs, discipline drawings, and the project repository — in one place."
         extra={
           folderId ? (
             <Upload
@@ -232,29 +324,74 @@ export default function ProjectDocumentsPanel({
           />
         )}
 
-        <Space wrap className="!mb-4">
+        <Space wrap className="!mb-4" size="middle">
           <Input.Search
             allowClear
-            placeholder="Search file names"
-            className={layout.filterControl}
+            placeholder='Search title, folder, "Level 8", waterproofing…'
+            className="!w-[min(100%,320px)]"
             onSearch={(value: string) => {
               resetPage();
               setSearch(value);
             }}
           />
+          <Select
+            allowClear
+            placeholder="Source type"
+            className={layout.filterControl}
+            options={PROJECT_DOCUMENT_CONTEXT_OPTIONS}
+            value={folderContextType}
+            onChange={(value: ProjectDocumentFolderContextType | undefined) => {
+              resetPage();
+              setFolderContextType(value);
+            }}
+          />
+          <Select
+            allowClear
+            showSearch
+            placeholder="Discipline"
+            className={layout.filterControl}
+            optionFilterProp="label"
+            options={disciplineOptions}
+            value={taskDisciplineId}
+            loading={disciplinesQuery.isLoading}
+            onChange={(value: string | undefined) => {
+              resetPage();
+              setTaskDisciplineId(value);
+            }}
+          />
+          <Select
+            allowClear
+            placeholder="File type"
+            className={layout.filterControl}
+            options={[...PROJECT_DOCUMENT_FILE_TYPE_OPTIONS]}
+            value={fileType}
+            onChange={(value: ProjectDocumentFileTypeFilter | undefined) => {
+              resetPage();
+              setFileType(value);
+            }}
+          />
+          <DatePicker.RangePicker
+            value={uploadedRange}
+            onChange={(dates) => {
+              resetPage();
+              setUploadedRange(dates);
+            }}
+          />
+          <Button onClick={resetFilters}>Clear filters</Button>
         </Space>
 
         <DataTable<ProjectDocumentRecord>
           rowKey="id"
           columns={columns}
           dataSource={documents}
+          loading={documentsQuery.isLoading}
           pagination={bindMeta(meta)}
           locale={{
             emptyText: (
               <TableEmptyState
                 icon={<FileText />}
-                title="No documents yet"
-                description="Files from meetings, daily logs, correspondence, and other project records will appear here"
+                title="No documents match your search"
+                description="Try a broader keyword, remove filters, or upload a file to the project repository"
               />
             ),
           }}

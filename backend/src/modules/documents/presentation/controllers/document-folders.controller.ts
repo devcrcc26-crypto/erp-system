@@ -50,7 +50,11 @@ export class DocumentFoldersController {
 
   @Get('project/:projectId/documents')
   @RequirePermission('documents', 'view')
-  @ApiOperation({ summary: 'List all documents in a project folder tree' })
+  @ApiOperation({
+    summary: 'Search all documents in a project folder tree',
+    description:
+      'Project document browser — search by title, folder path, engineering document metadata, discipline, source type, file type, and upload date.',
+  })
   listProjectDocuments(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

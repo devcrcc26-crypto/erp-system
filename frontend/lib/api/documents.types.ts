@@ -1,3 +1,5 @@
+import type { PaginationParams } from '@/lib/api/types';
+
 export interface InAppNotification {
   id: string;
   companyId: string;
@@ -22,7 +24,43 @@ export type FolderContextType =
   | 'USER'
   | 'TASK_DISCIPLINE'
   | 'RFI'
-  | 'ISSUE';
+  | 'ISSUE'
+  | 'SUBMITTAL'
+  | 'DAILY_LOG'
+  | 'MEETING'
+  | 'CORRESPONDENCE'
+  | 'RISK'
+  | 'PUNCH_ITEM';
+
+export type ProjectDocumentFolderContextType = Extract<
+  FolderContextType,
+  | 'PROJECT'
+  | 'TASK_DISCIPLINE'
+  | 'RFI'
+  | 'ISSUE'
+  | 'SUBMITTAL'
+  | 'DAILY_LOG'
+  | 'MEETING'
+  | 'CORRESPONDENCE'
+  | 'RISK'
+  | 'PUNCH_ITEM'
+>;
+
+export type ProjectDocumentFileTypeFilter =
+  | 'pdf'
+  | 'image'
+  | 'word'
+  | 'excel'
+  | 'other';
+
+export interface ProjectDocumentListParams extends PaginationParams {
+  search?: string;
+  folderContextType?: ProjectDocumentFolderContextType;
+  taskDisciplineId?: string;
+  fileType?: ProjectDocumentFileTypeFilter;
+  uploadedFrom?: string;
+  uploadedTo?: string;
+}
 
 export interface DocumentFolder {
   id: string;
@@ -56,6 +94,15 @@ export interface ProjectDocumentRecord extends DocumentRecord {
   folderName: string;
   folderPath: string;
   folderContextType: string;
+  folderContextId: string | null;
+  taskDisciplineId: string | null;
+  disciplineName: string | null;
+  engineeringDocumentId: string | null;
+  engineeringDocumentTitle: string | null;
+  engineeringDocumentNumber: string | null;
+  engineeringDocumentType: string | null;
+  engineeringRevisionLabel: string | null;
+  displayTitle: string;
 }
 
 export interface DocumentDownloadUrl {
