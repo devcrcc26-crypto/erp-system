@@ -1185,6 +1185,16 @@ export interface DesignPackage {
   projectionPending?: boolean;
   submittedAt: string | null;
   approvedAt: string | null;
+  packageOwnerUserId?: string | null;
+  packageOwner?: UserSummary | null;
+  packageReviewerUserId?: string | null;
+  packageReviewer?: UserSummary | null;
+  packageDisciplineLeadUserId?: string | null;
+  packageDisciplineLead?: UserSummary | null;
+  packageChiefUserId?: string | null;
+  packageChief?: UserSummary | null;
+  packageInstituteChiefUserId?: string | null;
+  packageInstituteChief?: UserSummary | null;
   requiredTiers: ReviewTier[];
   briefText: string | null;
   sourceEntityType: string | null;

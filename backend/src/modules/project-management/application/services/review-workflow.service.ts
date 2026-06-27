@@ -38,6 +38,7 @@ import {
   CommentActorRole,
   transitionCommentStatus,
 } from '../../domain/comment-state-machine';
+import { getEffectiveApprovalChain } from '../../domain/approval-chain.util';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
   EdvWithDiscipline,
@@ -205,9 +206,13 @@ export class ReviewWorkflowService {
           )
         : null;
       const taskDiscipline = discipline?.taskDiscipline;
-      const assignedToUserId = taskDiscipline
-        ? this.reviewSla.resolveAssigneeForTier(firstRequiredTier, taskDiscipline)
+      const effectiveChain = discipline
+        ? getEffectiveApprovalChain(discipline, taskDiscipline!)
         : null;
+      const assignedToUserId =
+        effectiveChain && firstRequiredTier
+          ? this.reviewSla.resolveAssigneeForTier(firstRequiredTier, effectiveChain)
+          : null;
       const openedAt = new Date();
       const slaDeadlineAt = this.reviewSla.computeDeadline(openedAt, firstRequiredTier);
 
@@ -682,7 +687,7 @@ export class ReviewWorkflowService {
       this.assertActorMatchesReviewTier(
         command.actorId,
         session.currentTier,
-        approveDiscipline?.taskDiscipline,
+        approveDiscipline,
       );
 
       const commentStatuses = await this.epcReviewRepository.listCommentStatusesForSession(
@@ -707,6 +712,7 @@ export class ReviewWorkflowService {
         ),
         action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
         taskDisciplineId: session.taskDisciplineId,
+        designPackageId: session.designPackageId,
         currentAssigneeUserId: session.assignedToUserId ?? undefined,
       });
 
@@ -903,7 +909,7 @@ export class ReviewWorkflowService {
       this.assertActorMatchesReviewTier(
         command.actorId,
         session.currentTier,
-        returnDiscipline?.taskDiscipline,
+        returnDiscipline,
       );
 
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
@@ -1032,6 +1038,7 @@ export class ReviewWorkflowService {
         ),
         action: EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
         taskDisciplineId: session.taskDisciplineId,
+        designPackageId: command.designPackageId,
       });
 
       const requestedIds = command.engineeringDocumentVersionIds;
@@ -1278,8 +1285,11 @@ export class ReviewWorkflowService {
       input.companyId,
       session.designPackageId,
     );
-    const assignee = discipline
-      ? this.reviewSla.resolveAssigneeForTier(nextTier, discipline.taskDiscipline)
+    const effectiveChain = discipline
+      ? getEffectiveApprovalChain(discipline, discipline.taskDiscipline)
+      : null;
+    const assignee = effectiveChain
+      ? this.reviewSla.resolveAssigneeForTier(nextTier, effectiveChain)
       : null;
 
     if (!assignee) {
@@ -1354,21 +1364,47 @@ export class ReviewWorkflowService {
   private assertActorMatchesReviewTier(
     actorId: string,
     currentTier: ReviewTier,
-    discipline?: {
-      ownerUserId: string | null;
-      reviewerUserId: string | null;
-      disciplineLeadUserId: string | null;
-      chiefUserId: string | null;
-      instituteChiefUserId: string | null;
-    },
+    packageWithDiscipline?: {
+      packageOwnerUserId: string | null;
+      packageReviewerUserId: string | null;
+      packageDisciplineLeadUserId: string | null;
+      packageChiefUserId: string | null;
+      packageInstituteChiefUserId: string | null;
+      taskDiscipline: {
+        ownerUserId: string | null;
+        reviewerUserId: string | null;
+        disciplineLeadUserId: string | null;
+        chiefUserId: string | null;
+        instituteChiefUserId?: string | null;
+        designerUserId?: string | null;
+        supportingDesignerUserId?: string | null;
+      };
+    } | null,
   ): void {
-    if (!discipline) {
+    if (!packageWithDiscipline) {
       throw new ForbiddenException('Actor role does not match current review tier.');
     }
 
+    const effectiveChain = getEffectiveApprovalChain(
+      packageWithDiscipline,
+      {
+        ownerUserId: packageWithDiscipline.taskDiscipline.ownerUserId,
+        reviewerUserId: packageWithDiscipline.taskDiscipline.reviewerUserId,
+        disciplineLeadUserId:
+          packageWithDiscipline.taskDiscipline.disciplineLeadUserId,
+        chiefUserId: packageWithDiscipline.taskDiscipline.chiefUserId,
+        instituteChiefUserId:
+          packageWithDiscipline.taskDiscipline.instituteChiefUserId ?? null,
+        designerUserId:
+          packageWithDiscipline.taskDiscipline.designerUserId ?? null,
+        supportingDesignerUserId:
+          packageWithDiscipline.taskDiscipline.supportingDesignerUserId ?? null,
+      },
+    );
+
     const actorTiers = REVIEW_TIER_ORDER.filter(
       (tier) =>
-        this.reviewSla.resolveAssigneeForTier(tier, discipline) === actorId,
+        this.reviewSla.resolveAssigneeForTier(tier, effectiveChain) === actorId,
     );
 
     if (!actorTiers.includes(currentTier as (typeof REVIEW_TIER_ORDER)[number])) {

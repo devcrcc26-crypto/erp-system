@@ -54,6 +54,10 @@ import { WorkflowKernelService } from './workflow-kernel.service';
 import { DependencyGraphService } from './dependency-graph.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 import { computeRequiredTiers } from '../../domain/required-tiers.util';
+import {
+  EffectiveApprovalChain,
+  getEffectiveApprovalChain,
+} from '../../domain/approval-chain.util';
 import { ReviewWorkflowService } from './review-workflow.service';
 import { MappedReviewSessionAttachment } from '../utils/review-session-attachment.mapper';
 
@@ -152,10 +156,19 @@ export class DesignPackagesService {
       );
     }
 
+    const packageOverrides = {
+      packageOwnerUserId: dto.packageOwnerUserId ?? null,
+      packageReviewerUserId: dto.packageReviewerUserId ?? null,
+      packageDisciplineLeadUserId: dto.packageDisciplineLeadUserId ?? null,
+      packageChiefUserId: dto.packageChiefUserId ?? null,
+      packageInstituteChiefUserId: dto.packageInstituteChiefUserId ?? null,
+    };
+    const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
+
     const requiredTiers =
       dto.requiredTiers && dto.requiredTiers.length > 0
         ? dto.requiredTiers
-        : computeRequiredTiers(discipline);
+        : computeRequiredTiers(effectiveChain);
 
     if (!requiredTiers.includes(ReviewTier.DISCIPLINE_LEAD)) {
       throw new BadRequestException(
@@ -196,6 +209,7 @@ export class DesignPackagesService {
         briefText: dto.briefText,
         sourceEntityType: dto.sourceEntityType,
         sourceEntityId: dto.sourceEntityId,
+        ...this.buildPackageApprovalChainCreateRelations(dto),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -245,9 +259,84 @@ export class DesignPackagesService {
       throw new NotFoundException('Design package not found');
     }
 
+    const discipline = await this.taskDisciplineScopeRepository.findWithReviewRoles(
+      ctx.companyId,
+      taskDisciplineId,
+      projectId,
+    );
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+
+    const chainFkChanged =
+      dto.packageOwnerUserId !== undefined ||
+      dto.packageReviewerUserId !== undefined ||
+      dto.packageDisciplineLeadUserId !== undefined ||
+      dto.packageChiefUserId !== undefined ||
+      dto.packageInstituteChiefUserId !== undefined;
+
+    const priorEffectiveChain = this.getEffectiveApprovalChain(
+      {
+        packageOwnerUserId: existing.packageOwnerUserId,
+        packageReviewerUserId: existing.packageReviewerUserId,
+        packageDisciplineLeadUserId: existing.packageDisciplineLeadUserId,
+        packageChiefUserId: existing.packageChiefUserId,
+        packageInstituteChiefUserId: existing.packageInstituteChiefUserId,
+      },
+      discipline,
+    );
+    const wasAutoComputed = this.requiredTiersMatchAutoComputed(
+      existing.requiredTiers,
+      priorEffectiveChain,
+    );
+
+    const nextPackageOverrides = {
+      packageOwnerUserId:
+        dto.packageOwnerUserId !== undefined
+          ? dto.packageOwnerUserId
+          : existing.packageOwnerUserId,
+      packageReviewerUserId:
+        dto.packageReviewerUserId !== undefined
+          ? dto.packageReviewerUserId
+          : existing.packageReviewerUserId,
+      packageDisciplineLeadUserId:
+        dto.packageDisciplineLeadUserId !== undefined
+          ? dto.packageDisciplineLeadUserId
+          : existing.packageDisciplineLeadUserId,
+      packageChiefUserId:
+        dto.packageChiefUserId !== undefined
+          ? dto.packageChiefUserId
+          : existing.packageChiefUserId,
+      packageInstituteChiefUserId:
+        dto.packageInstituteChiefUserId !== undefined
+          ? dto.packageInstituteChiefUserId
+          : existing.packageInstituteChiefUserId,
+    };
+    const nextEffectiveChain = this.getEffectiveApprovalChain(
+      nextPackageOverrides,
+      discipline,
+    );
+
+    let requiredTiers = existing.requiredTiers;
+    if (dto.requiredTiers !== undefined && dto.requiredTiers.length > 0) {
+      requiredTiers = dto.requiredTiers;
+    } else if (chainFkChanged && wasAutoComputed) {
+      requiredTiers = computeRequiredTiers(nextEffectiveChain);
+    }
+
+    if (!requiredTiers.includes(ReviewTier.DISCIPLINE_LEAD)) {
+      throw new BadRequestException(
+        'Required tiers must include DISCIPLINE_LEAD.',
+      );
+    }
+
     await this.designPackageRepository.update(packageId, {
       name: dto.name,
       projectedStatus: dto.projectedStatus,
+      requiredTiers,
+      ...(chainFkChanged
+        ? this.buildPackageApprovalChainUpdateRelations(nextPackageOverrides)
+        : {}),
       updatedBy: ctx.userId,
     });
 
@@ -903,6 +992,97 @@ export class DesignPackagesService {
       slaOverdue,
       openedAt: row.openedAt.toISOString(),
     };
+  }
+
+  private buildPackageApprovalChainCreateRelations(dto: {
+    packageOwnerUserId?: string;
+    packageReviewerUserId?: string;
+    packageDisciplineLeadUserId?: string;
+    packageChiefUserId?: string;
+    packageInstituteChiefUserId?: string;
+  }) {
+    return {
+      ...(dto.packageOwnerUserId
+        ? { packageOwner: { connect: { id: dto.packageOwnerUserId } } }
+        : {}),
+      ...(dto.packageReviewerUserId
+        ? { packageReviewer: { connect: { id: dto.packageReviewerUserId } } }
+        : {}),
+      ...(dto.packageDisciplineLeadUserId
+        ? {
+            packageDisciplineLead: {
+              connect: { id: dto.packageDisciplineLeadUserId },
+            },
+          }
+        : {}),
+      ...(dto.packageChiefUserId
+        ? { packageChief: { connect: { id: dto.packageChiefUserId } } }
+        : {}),
+      ...(dto.packageInstituteChiefUserId
+        ? {
+            packageInstituteChief: {
+              connect: { id: dto.packageInstituteChiefUserId },
+            },
+          }
+        : {}),
+    };
+  }
+
+  private buildPackageApprovalChainUpdateRelations(overrides: {
+    packageOwnerUserId: string | null;
+    packageReviewerUserId: string | null;
+    packageDisciplineLeadUserId: string | null;
+    packageChiefUserId: string | null;
+    packageInstituteChiefUserId: string | null;
+  }) {
+    return {
+      packageOwner: overrides.packageOwnerUserId
+        ? { connect: { id: overrides.packageOwnerUserId } }
+        : { disconnect: true },
+      packageReviewer: overrides.packageReviewerUserId
+        ? { connect: { id: overrides.packageReviewerUserId } }
+        : { disconnect: true },
+      packageDisciplineLead: overrides.packageDisciplineLeadUserId
+        ? { connect: { id: overrides.packageDisciplineLeadUserId } }
+        : { disconnect: true },
+      packageChief: overrides.packageChiefUserId
+        ? { connect: { id: overrides.packageChiefUserId } }
+        : { disconnect: true },
+      packageInstituteChief: overrides.packageInstituteChiefUserId
+        ? { connect: { id: overrides.packageInstituteChiefUserId } }
+        : { disconnect: true },
+    };
+  }
+
+  private getEffectiveApprovalChain(
+    pkg: {
+      packageOwnerUserId: string | null;
+      packageReviewerUserId: string | null;
+      packageDisciplineLeadUserId: string | null;
+      packageChiefUserId: string | null;
+      packageInstituteChiefUserId: string | null;
+    },
+    discipline: {
+      ownerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplineLeadUserId: string | null;
+      chiefUserId: string | null;
+      instituteChiefUserId: string | null;
+      designerUserId: string | null;
+      supportingDesignerUserId: string | null;
+    },
+  ) {
+    return getEffectiveApprovalChain(pkg, discipline);
+  }
+
+  private requiredTiersMatchAutoComputed(
+    tiers: ReviewTier[],
+    chain: EffectiveApprovalChain,
+  ): boolean {
+    const auto = computeRequiredTiers(chain);
+    return (
+      tiers.length === auto.length && tiers.every((tier, index) => tier === auto[index])
+    );
   }
 
   private async assertDisciplineScope(

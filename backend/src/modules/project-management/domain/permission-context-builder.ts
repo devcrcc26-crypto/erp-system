@@ -14,8 +14,30 @@ import {
   evaluatePermissionLayers,
 } from './contracts/permission-evaluator';
 import { edvStatusAllowsComments } from './edv-state-machine';
+import { getEffectiveApprovalChain } from './approval-chain.util';
 
 export type PermissionContextInput = PermissionContext;
+
+function resolveEffectiveChain(input: PermissionContextInput) {
+  return getEffectiveApprovalChain(
+    {
+      packageOwnerUserId: input.packageOwnerUserId ?? null,
+      packageReviewerUserId: input.packageReviewerUserId ?? null,
+      packageDisciplineLeadUserId: input.packageDisciplineLeadUserId ?? null,
+      packageChiefUserId: input.packageChiefUserId ?? null,
+      packageInstituteChiefUserId: input.packageInstituteChiefUserId ?? null,
+    },
+    {
+      ownerUserId: input.disciplineOwnerUserId ?? null,
+      reviewerUserId: input.disciplineReviewerUserId ?? null,
+      disciplineLeadUserId: input.disciplineLeadUserId ?? null,
+      chiefUserId: input.disciplineChiefUserId ?? null,
+      instituteChiefUserId: input.disciplineInstituteChiefUserId ?? null,
+      designerUserId: input.disciplineDesignerUserId ?? null,
+      supportingDesignerUserId: input.disciplineSupportingDesignerUserId ?? null,
+    },
+  );
+}
 
 const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
@@ -115,14 +137,15 @@ const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
 
 function isDisciplineAssignee(input: PermissionContextInput): boolean {
   const { userId } = input;
+  const chain = resolveEffectiveChain(input);
   return (
-    userId === input.disciplineDesignerUserId ||
-    userId === input.disciplineSupportingDesignerUserId ||
-    userId === input.disciplineOwnerUserId ||
-    userId === input.disciplineReviewerUserId ||
-    userId === input.disciplineLeadUserId ||
-    userId === input.disciplineChiefUserId ||
-    userId === input.disciplineInstituteChiefUserId
+    userId === chain.designerUserId ||
+    userId === chain.supportingDesignerUserId ||
+    userId === chain.ownerUserId ||
+    userId === chain.reviewerUserId ||
+    userId === chain.disciplineLeadUserId ||
+    userId === chain.chiefUserId ||
+    userId === chain.instituteChiefUserId
   );
 }
 
@@ -255,7 +278,8 @@ export function evaluateDisciplineAssignmentLayer(
   }
 
   if (CHIEF_ACTIONS.has(action)) {
-    const match = userId === input.disciplineChiefUserId;
+    const chain = resolveEffectiveChain(input);
+    const match = userId === chain.chiefUserId;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
@@ -264,11 +288,12 @@ export function evaluateDisciplineAssignmentLayer(
   }
 
   if (REVIEW_TIER_ACTIONS.has(action)) {
-    const isOwner = userId === input.disciplineOwnerUserId;
-    const isReviewer = userId === input.disciplineReviewerUserId;
-    const isLead = userId === input.disciplineLeadUserId;
-    const isChief = userId === input.disciplineChiefUserId;
-    const isInstituteChief = userId === input.disciplineInstituteChiefUserId;
+    const chain = resolveEffectiveChain(input);
+    const isOwner = userId === chain.ownerUserId;
+    const isReviewer = userId === chain.reviewerUserId;
+    const isLead = userId === chain.disciplineLeadUserId;
+    const isChief = userId === chain.chiefUserId;
+    const isInstituteChief = userId === chain.instituteChiefUserId;
     const isSessionAssignee =
       input.currentAssigneeUserId !== undefined &&
       userId === input.currentAssigneeUserId;

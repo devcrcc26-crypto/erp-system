@@ -56,6 +56,11 @@ export interface MappedDesignPackage {
   submittedAt: string | null;
   approvedAt: string | null;
   requiredTiers: DesignPackage['requiredTiers'];
+  packageOwnerUserId: string | null;
+  packageReviewerUserId: string | null;
+  packageDisciplineLeadUserId: string | null;
+  packageChiefUserId: string | null;
+  packageInstituteChiefUserId: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -167,6 +172,11 @@ export function mapDesignPackage(
     submittedAt: toIsoString(row.submittedAt),
     approvedAt: toIsoString(row.approvedAt),
     requiredTiers: row.requiredTiers,
+    packageOwnerUserId: row.packageOwnerUserId,
+    packageReviewerUserId: row.packageReviewerUserId,
+    packageDisciplineLeadUserId: row.packageDisciplineLeadUserId,
+    packageChiefUserId: row.packageChiefUserId,
+    packageInstituteChiefUserId: row.packageInstituteChiefUserId,
     briefText: row.briefText,
     sourceEntityType: row.sourceEntityType,
     sourceEntityId: row.sourceEntityId,

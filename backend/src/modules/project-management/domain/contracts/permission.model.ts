@@ -45,6 +45,11 @@ export interface PermissionContext {
   readonly disciplineLeadUserId?: string;
   readonly disciplineChiefUserId?: string;
   readonly disciplineInstituteChiefUserId?: string;
+  readonly packageOwnerUserId?: string;
+  readonly packageReviewerUserId?: string;
+  readonly packageDisciplineLeadUserId?: string;
+  readonly packageChiefUserId?: string;
+  readonly packageInstituteChiefUserId?: string;
   /** System role Document Controller — logistics upload on assigned disciplines. */
   readonly isDocumentController?: boolean;
 }

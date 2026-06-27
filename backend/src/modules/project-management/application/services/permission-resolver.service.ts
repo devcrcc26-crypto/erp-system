@@ -26,6 +26,7 @@ export interface WorkflowActionPermissionInput {
   readonly projectId: string;
   readonly action: EpcWorkflowAction;
   readonly taskDisciplineId: string;
+  readonly designPackageId?: string;
   readonly currentAssigneeUserId?: string;
 }
 
@@ -121,12 +122,20 @@ export class PermissionResolverService {
       input.projectId,
     );
 
+    const packageOverrides = input.designPackageId
+      ? await this.resolvePackageApprovalOverrides(
+          input.companyId,
+          input.designPackageId,
+        )
+      : undefined;
+
     const allowed = canPerformFromContext({
       companyId: input.companyId,
       userId: input.userId,
       projectId: input.projectId,
       action: input.action,
       taskDisciplineId: input.taskDisciplineId,
+      designPackageId: input.designPackageId,
       grantedActions,
       projectTeamRole: projectTeamRole as never,
       projectDesignPhase,
@@ -138,6 +147,11 @@ export class PermissionResolverService {
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+      packageOwnerUserId: packageOverrides?.packageOwnerUserId,
+      packageReviewerUserId: packageOverrides?.packageReviewerUserId,
+      packageDisciplineLeadUserId: packageOverrides?.packageDisciplineLeadUserId,
+      packageChiefUserId: packageOverrides?.packageChiefUserId,
+      packageInstituteChiefUserId: packageOverrides?.packageInstituteChiefUserId,
       isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
@@ -250,5 +264,37 @@ export class PermissionResolverService {
       return EpcWorkflowAction.REVISION_TRIGGER;
     }
     return EpcWorkflowAction.REVISION_TRIGGER;
+  }
+
+  private async resolvePackageApprovalOverrides(
+    companyId: string,
+    designPackageId: string,
+  ): Promise<{
+    packageOwnerUserId?: string;
+    packageReviewerUserId?: string;
+    packageDisciplineLeadUserId?: string;
+    packageChiefUserId?: string;
+    packageInstituteChiefUserId?: string;
+  }> {
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: designPackageId, companyId }),
+      select: {
+        packageOwnerUserId: true,
+        packageReviewerUserId: true,
+        packageDisciplineLeadUserId: true,
+        packageChiefUserId: true,
+        packageInstituteChiefUserId: true,
+      },
+    });
+    if (!pkg) {
+      return {};
+    }
+    return {
+      packageOwnerUserId: pkg.packageOwnerUserId ?? undefined,
+      packageReviewerUserId: pkg.packageReviewerUserId ?? undefined,
+      packageDisciplineLeadUserId: pkg.packageDisciplineLeadUserId ?? undefined,
+      packageChiefUserId: pkg.packageChiefUserId ?? undefined,
+      packageInstituteChiefUserId: pkg.packageInstituteChiefUserId ?? undefined,
+    };
   }
 }

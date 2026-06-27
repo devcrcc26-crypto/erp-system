@@ -1,0 +1,364 @@
+import { ReviewTier } from '@prisma/client';
+import { EpcWorkflowAction } from '../../../domain/contracts/enums/epc-workflow-action.enum';
+import { PermissionLayerVerdict } from '../../../domain/contracts/permission.model';
+import { getEffectiveApprovalChain } from '../../../domain/approval-chain.util';
+import { evaluateDisciplineAssignmentLayer } from '../../../domain/permission-context-builder';
+import { computeRequiredTiers } from '../../../domain/required-tiers.util';
+import {
+  DesignPackage,
+  DesignPackageProjectedStatus,
+} from '@prisma/client';
+import {
+  DesignPackageRepository,
+  TaskDisciplineScopeRepository,
+  TaskDisciplineReviewRoles,
+} from '../../../infrastructure/repositories/epc-storage.repository';
+import { PmContext } from '../../types/pm-context.type';
+import { DesignPackagesService } from '../design-packages.service';
+import { WorkflowEventLogService } from '../workflow-event-log.service';
+
+describe('DesignPackagesService approval chain (design-packages-chain)', () => {
+  const projectId = 'project-1';
+  const taskDisciplineId = 'discipline-1';
+  const leaderUserId = 'user-lead';
+  const designerUserId = 'user-designer';
+  const disciplineOwnerUserId = 'user-owner-a';
+  const packageOwnerUserId = 'user-owner-b';
+  const disciplineReviewerUserId = 'user-reviewer-a';
+  const packageReviewerUserId = 'user-reviewer-b';
+
+  const baseDiscipline: TaskDisciplineReviewRoles = {
+    id: taskDisciplineId,
+    disciplineName: 'Structural',
+    taskId: 'task-1',
+    designerUserId,
+    supportingDesignerUserId: null,
+    ownerUserId: disciplineOwnerUserId,
+    reviewerUserId: disciplineReviewerUserId,
+    disciplineLeadUserId: leaderUserId,
+    chiefUserId: 'user-chief-a',
+    instituteChiefUserId: 'user-institute-a',
+  };
+
+  const leaderCtx: PmContext = { companyId: 'company-1', userId: leaderUserId };
+
+  let designPackageRepository: {
+    createWithBriefAttachments: jest.Mock;
+    findById: jest.Mock;
+    update: jest.Mock;
+  };
+  let taskDisciplineScopeRepository: {
+    findScoped: jest.Mock;
+    findWithReviewRoles: jest.Mock;
+  };
+  let service: DesignPackagesService;
+
+  function buildPackage(overrides: Partial<DesignPackage> = {}): DesignPackage {
+    return {
+      id: 'package-1',
+      companyId: leaderCtx.companyId,
+      taskDisciplineId,
+      name: 'Foundation Package',
+      projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+      projectionPending: false,
+      submittedAt: null,
+      approvedAt: null,
+      requiredTiers: [
+        ReviewTier.DISCIPLINE_OWNER,
+        ReviewTier.REVIEWER,
+        ReviewTier.DISCIPLINE_LEAD,
+        ReviewTier.DEPT_CHIEF,
+        ReviewTier.INSTITUTE_CHIEF,
+      ],
+      packageOwnerUserId: null,
+      packageReviewerUserId: null,
+      packageDisciplineLeadUserId: null,
+      packageChiefUserId: null,
+      packageInstituteChiefUserId: null,
+      briefText: null,
+      sourceEntityType: null,
+      sourceEntityId: null,
+      packageStatus: 'OPEN',
+      packageClosedAt: null,
+      packageClosedBy: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      createdBy: leaderUserId,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedBy: leaderUserId,
+      deletedAt: null,
+      deletedBy: null,
+      ...overrides,
+    } as DesignPackage;
+  }
+
+  beforeEach(() => {
+    designPackageRepository = {
+      createWithBriefAttachments: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+    };
+    taskDisciplineScopeRepository = {
+      findScoped: jest.fn().mockResolvedValue({
+        id: taskDisciplineId,
+        disciplineName: 'Structural',
+        taskId: 'task-1',
+      }),
+      findWithReviewRoles: jest.fn().mockResolvedValue(baseDiscipline),
+    };
+
+    service = new DesignPackagesService(
+      designPackageRepository as unknown as DesignPackageRepository,
+      {} as never,
+      taskDisciplineScopeRepository as unknown as TaskDisciplineScopeRepository,
+      { logCrud: jest.fn() } as unknown as WorkflowEventLogService,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+  });
+
+  it('1. create with no package-level FKs → effective chain = discipline defaults', async () => {
+    const created = buildPackage();
+    designPackageRepository.createWithBriefAttachments.mockResolvedValue(created);
+    designPackageRepository.findById.mockResolvedValue({ ...created, items: [] });
+
+    await service.create(leaderCtx, projectId, taskDisciplineId, {
+      name: 'Foundation Package',
+    });
+
+    const chain = getEffectiveApprovalChain(
+      {
+        packageOwnerUserId: null,
+        packageReviewerUserId: null,
+        packageDisciplineLeadUserId: null,
+        packageChiefUserId: null,
+        packageInstituteChiefUserId: null,
+      },
+      baseDiscipline,
+    );
+    expect(chain.ownerUserId).toBe(disciplineOwnerUserId);
+    expect(chain.reviewerUserId).toBe(disciplineReviewerUserId);
+    expect(chain.disciplineLeadUserId).toBe(leaderUserId);
+    expect(chain.chiefUserId).toBe('user-chief-a');
+    expect(chain.instituteChiefUserId).toBe('user-institute-a');
+  });
+
+  it('2. create with packageOwnerUserId set → effectiveOwner = packageOwnerUserId', async () => {
+    const created = buildPackage({ packageOwnerUserId });
+    designPackageRepository.createWithBriefAttachments.mockResolvedValue(created);
+    designPackageRepository.findById.mockResolvedValue({ ...created, items: [] });
+
+    await service.create(leaderCtx, projectId, taskDisciplineId, {
+      name: 'Foundation Package',
+      packageOwnerUserId,
+    });
+
+    const chain = getEffectiveApprovalChain(
+      {
+        packageOwnerUserId,
+        packageReviewerUserId: null,
+        packageDisciplineLeadUserId: null,
+        packageChiefUserId: null,
+        packageInstituteChiefUserId: null,
+      },
+      baseDiscipline,
+    );
+    expect(chain.ownerUserId).toBe(packageOwnerUserId);
+    expect(chain.ownerUserId).not.toBe(disciplineOwnerUserId);
+  });
+
+  it('3. packageOwnerUserId set → DISCIPLINE_OWNER tier check uses package owner', () => {
+    const result = evaluateDisciplineAssignmentLayer({
+      companyId: 'company-1',
+      userId: packageOwnerUserId,
+      projectId: 'project-1',
+      action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+      taskDisciplineId,
+      disciplineOwnerUserId: disciplineOwnerUserId,
+      disciplineReviewerUserId: disciplineReviewerUserId,
+      disciplineLeadUserId: leaderUserId,
+      disciplineChiefUserId: 'user-chief-a',
+      disciplineInstituteChiefUserId: 'user-institute-a',
+      packageOwnerUserId,
+      currentAssigneeUserId: packageOwnerUserId,
+      grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+    });
+
+    expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+
+    const disciplineOwnerResult = evaluateDisciplineAssignmentLayer({
+      companyId: 'company-1',
+      userId: disciplineOwnerUserId,
+      projectId: 'project-1',
+      action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+      taskDisciplineId,
+      disciplineOwnerUserId: disciplineOwnerUserId,
+      disciplineReviewerUserId: disciplineReviewerUserId,
+      disciplineLeadUserId: leaderUserId,
+      disciplineChiefUserId: 'user-chief-a',
+      disciplineInstituteChiefUserId: 'user-institute-a',
+      packageOwnerUserId,
+      currentAssigneeUserId: packageOwnerUserId,
+      grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+    });
+
+    expect(disciplineOwnerResult.verdict).toBe(PermissionLayerVerdict.DENY);
+  });
+
+  it('4. packageOwnerUserId = designerUserId → DISCIPLINE_OWNER auto-skipped', async () => {
+    const created = buildPackage({
+      packageOwnerUserId: designerUserId,
+      requiredTiers: [
+        ReviewTier.REVIEWER,
+        ReviewTier.DISCIPLINE_LEAD,
+        ReviewTier.DEPT_CHIEF,
+        ReviewTier.INSTITUTE_CHIEF,
+      ],
+    });
+    designPackageRepository.createWithBriefAttachments.mockResolvedValue(created);
+    designPackageRepository.findById.mockResolvedValue({ ...created, items: [] });
+
+    await service.create(leaderCtx, projectId, taskDisciplineId, {
+      name: 'Foundation Package',
+      packageOwnerUserId: designerUserId,
+    });
+
+    expect(
+      designPackageRepository.createWithBriefAttachments,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        packageData: expect.objectContaining({
+          requiredTiers: [
+            ReviewTier.REVIEWER,
+            ReviewTier.DISCIPLINE_LEAD,
+            ReviewTier.DEPT_CHIEF,
+            ReviewTier.INSTITUTE_CHIEF,
+          ],
+        }),
+      }),
+    );
+    expect(
+      designPackageRepository.createWithBriefAttachments.mock.calls[0][0]
+        .packageData.requiredTiers,
+    ).not.toContain(ReviewTier.DISCIPLINE_OWNER);
+  });
+
+  it('5. update packageChiefUserId → effective chain updates', async () => {
+    const existing = buildPackage();
+    const updatedChiefUserId = 'user-chief-b';
+    designPackageRepository.findById
+      .mockResolvedValueOnce({ ...existing, items: [] })
+      .mockResolvedValueOnce({
+        ...existing,
+        packageChiefUserId: updatedChiefUserId,
+        items: [],
+      });
+    designPackageRepository.update.mockResolvedValue(undefined);
+
+    await service.update(leaderCtx, projectId, taskDisciplineId, existing.id, {
+      packageChiefUserId: updatedChiefUserId,
+    });
+
+    const chain = getEffectiveApprovalChain(
+      {
+        packageOwnerUserId: null,
+        packageReviewerUserId: null,
+        packageDisciplineLeadUserId: null,
+        packageChiefUserId: updatedChiefUserId,
+        packageInstituteChiefUserId: null,
+      },
+      baseDiscipline,
+    );
+    expect(chain.chiefUserId).toBe(updatedChiefUserId);
+    expect(designPackageRepository.update).toHaveBeenCalledWith(
+      existing.id,
+      expect.objectContaining({
+        packageChief: { connect: { id: updatedChiefUserId } },
+      }),
+    );
+  });
+
+  it('6. all five package-level FKs set → all five override discipline defaults', async () => {
+    const overrides = {
+      packageOwnerUserId: 'pkg-owner',
+      packageReviewerUserId: 'pkg-reviewer',
+      packageDisciplineLeadUserId: 'pkg-lead',
+      packageChiefUserId: 'pkg-chief',
+      packageInstituteChiefUserId: 'pkg-institute',
+    };
+    const created = buildPackage(overrides);
+    designPackageRepository.createWithBriefAttachments.mockResolvedValue(created);
+    designPackageRepository.findById.mockResolvedValue({ ...created, items: [] });
+
+    await service.create(leaderCtx, projectId, taskDisciplineId, {
+      name: 'Foundation Package',
+      ...overrides,
+    });
+
+    const chain = getEffectiveApprovalChain(
+      {
+        packageOwnerUserId: overrides.packageOwnerUserId,
+        packageReviewerUserId: overrides.packageReviewerUserId,
+        packageDisciplineLeadUserId: overrides.packageDisciplineLeadUserId,
+        packageChiefUserId: overrides.packageChiefUserId,
+        packageInstituteChiefUserId: overrides.packageInstituteChiefUserId,
+      },
+      baseDiscipline,
+    );
+    expect(chain.ownerUserId).toBe('pkg-owner');
+    expect(chain.reviewerUserId).toBe('pkg-reviewer');
+    expect(chain.disciplineLeadUserId).toBe('pkg-lead');
+    expect(chain.chiefUserId).toBe('pkg-chief');
+    expect(chain.instituteChiefUserId).toBe('pkg-institute');
+  });
+
+  it('7. REVIEWER tier permission uses packageReviewerUserId when set', () => {
+    const result = evaluateDisciplineAssignmentLayer({
+      companyId: 'company-1',
+      userId: packageReviewerUserId,
+      projectId: 'project-1',
+      action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+      taskDisciplineId,
+      disciplineOwnerUserId: disciplineOwnerUserId,
+      disciplineReviewerUserId: disciplineReviewerUserId,
+      disciplineLeadUserId: leaderUserId,
+      packageReviewerUserId,
+      currentAssigneeUserId: packageReviewerUserId,
+      grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+    });
+
+    expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+  });
+
+  it('8. REVIEWER tier falls back to discipline.reviewerUserId when package FK is null', () => {
+    const result = evaluateDisciplineAssignmentLayer({
+      companyId: 'company-1',
+      userId: disciplineReviewerUserId,
+      projectId: 'project-1',
+      action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+      taskDisciplineId,
+      disciplineOwnerUserId: disciplineOwnerUserId,
+      disciplineReviewerUserId: disciplineReviewerUserId,
+      disciplineLeadUserId: leaderUserId,
+      currentAssigneeUserId: disciplineReviewerUserId,
+      grantedActions: new Set([EpcWorkflowAction.REVIEW_SESSION_APPROVE]),
+    });
+
+    expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    expect(
+      computeRequiredTiers(
+        getEffectiveApprovalChain(
+          {
+            packageOwnerUserId: null,
+            packageReviewerUserId: null,
+            packageDisciplineLeadUserId: null,
+            packageChiefUserId: null,
+            packageInstituteChiefUserId: null,
+          },
+          { ...baseDiscipline, reviewerUserId: null },
+        ),
+      ),
+    ).not.toContain(ReviewTier.REVIEWER);
+  });
+});

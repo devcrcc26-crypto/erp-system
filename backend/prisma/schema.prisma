@@ -460,6 +460,11 @@ model User {
   supportingDesignerDisciplines     TaskDiscipline[]          @relation("DisciplineSupportingDesigner")
   packageAttachments                DesignPackageAttachment[] @relation("PackageAttachmentAuthor")
   sessionAttachments                ReviewSessionAttachment[] @relation("SessionAttachmentAuthor")
+  packageOwnerDesignPackages          DesignPackage[] @relation("PackageOwner")
+  packageReviewerDesignPackages       DesignPackage[] @relation("PackageReviewer")
+  packageDisciplineLeadDesignPackages DesignPackage[] @relation("PackageDisciplineLead")
+  packageChiefDesignPackages          DesignPackage[] @relation("PackageChief")
+  packageInstituteChiefDesignPackages DesignPackage[] @relation("PackageInstituteChief")
   workflowEventLogs        WorkflowEventLog[]
   assignedReviewSessions   ReviewSession[]  @relation("ReviewSessionAssignee")
   authoredReviewComments   ReviewComment[] @relation("ReviewCommentAuthor")
@@ -1563,6 +1568,11 @@ model DesignPackage {
   submittedAt       DateTime?                    @map("submitted_at")
   approvedAt        DateTime?                    @map("approved_at")
   requiredTiers     ReviewTier[]                 @map("required_tiers")
+  packageOwnerUserId          String?                      @map("package_owner_user_id")
+  packageReviewerUserId       String?                      @map("package_reviewer_user_id")
+  packageDisciplineLeadUserId String?                      @map("package_discipline_lead_user_id")
+  packageChiefUserId          String?                      @map("package_chief_user_id")
+  packageInstituteChiefUserId String?                      @map("package_institute_chief_user_id")
   briefText         String?                      @map("brief_text")
   sourceEntityType  String?                      @map("source_entity_type")
   sourceEntityId    String?                      @map("source_entity_id")
@@ -1578,6 +1588,11 @@ model DesignPackage {
 
   company        Company                   @relation(fields: [companyId], references: [id])
   taskDiscipline TaskDiscipline            @relation(fields: [taskDisciplineId], references: [id])
+  packageOwner          User? @relation("PackageOwner", fields: [packageOwnerUserId], references: [id])
+  packageReviewer       User? @relation("PackageReviewer", fields: [packageReviewerUserId], references: [id])
+  packageDisciplineLead User? @relation("PackageDisciplineLead", fields: [packageDisciplineLeadUserId], references: [id])
+  packageChief          User? @relation("PackageChief", fields: [packageChiefUserId], references: [id])
+  packageInstituteChief User? @relation("PackageInstituteChief", fields: [packageInstituteChiefUserId], references: [id])
   items          DesignPackageItem[]
   dependencies   DesignPackageDependency[] @relation("DependentPackage")
   dependedOnBy   DesignPackageDependency[] @relation("PrerequisitePackage")
@@ -1593,6 +1608,11 @@ model DesignPackage {
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
   @@index([taskDisciplineId], map: "idx_design_package_task_discipline_id")
+  @@index([packageOwnerUserId], map: "idx_design_package_package_owner_user_id")
+  @@index([packageReviewerUserId], map: "idx_design_package_package_reviewer_user_id")
+  @@index([packageDisciplineLeadUserId], map: "idx_design_package_package_discipline_lead_user_id")
+  @@index([packageChiefUserId], map: "idx_design_package_package_chief_user_id")
+  @@index([packageInstituteChiefUserId], map: "idx_design_package_package_institute_chief_user_id")
   @@map("design_package")
 }
 

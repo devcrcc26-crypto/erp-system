@@ -616,6 +616,11 @@ erDiagram
   DateTime submitted_at "nullable"
   DateTime approved_at "nullable"
   ReviewTier required_tiers
+  String package_owner_user_id FK "nullable"
+  String package_reviewer_user_id FK "nullable"
+  String package_discipline_lead_user_id FK "nullable"
+  String package_chief_user_id FK "nullable"
+  String package_institute_chief_user_id FK "nullable"
   String brief_text "nullable"
   String source_entity_type "nullable"
   String source_entity_id "nullable"
@@ -1259,6 +1264,11 @@ erDiagram
 "engineering_document_version" }o--|| "document_version" : documentVersion
 "design_package" }o--|| "company" : company
 "design_package" }o--|| "task_discipline" : taskDiscipline
+"design_package" }o--o| "user" : packageOwner
+"design_package" }o--o| "user" : packageReviewer
+"design_package" }o--o| "user" : packageDisciplineLead
+"design_package" }o--o| "user" : packageChief
+"design_package" }o--o| "user" : packageInstituteChief
 "design_package_item" }o--|| "company" : company
 "design_package_item" }o--|| "design_package" : designPackage
 "design_package_item" }o--|| "engineering_document_version" : engineeringDocumentVersion
@@ -2081,6 +2091,11 @@ Properties as follows:
 - `submitted_at`:
 - `approved_at`:
 - `required_tiers`:
+- `package_owner_user_id`:
+- `package_reviewer_user_id`:
+- `package_discipline_lead_user_id`:
+- `package_chief_user_id`:
+- `package_institute_chief_user_id`:
 - `brief_text`:
 - `source_entity_type`:
 - `source_entity_id`:

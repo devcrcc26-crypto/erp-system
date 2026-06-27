@@ -348,6 +348,31 @@ export class CreateDesignPackageDto {
   @IsArray()
   @IsEntityUuid({ each: true })
   briefDocumentIds?: string[];
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  packageOwnerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  packageReviewerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  packageDisciplineLeadUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  packageChiefUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  packageInstituteChiefUserId?: string;
 }
 
 export class UpdateDesignPackageDto extends PartialType(CreateDesignPackageDto) {}
