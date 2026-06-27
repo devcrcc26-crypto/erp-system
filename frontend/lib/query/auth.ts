@@ -4,14 +4,10 @@ import { useEffect } from 'react';
 import {
   useMutation,
   useQuery,
-  useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { apiPost } from '@/lib/api/client';
-import {
-  completeLocalSignIn,
-  signOutLocally,
-} from '@/lib/auth/sign-out-locally';
+import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { fetchCapabilities } from '@/lib/permissions/capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import type {
@@ -61,10 +57,6 @@ export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabil
 }
 
 export function useLogin() {
-  const queryClient = useQueryClient();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const setCapabilities = useAuthStore((state) => state.setCapabilities);
-
   return useMutation({
     mutationFn: async (credentials: LoginRequest): Promise<AuthTokens> => {
       signOutLocally({ broadcast: false });
@@ -75,16 +67,6 @@ export function useLogin() {
           credentials.deviceInfo ??
           (typeof navigator !== 'undefined' ? navigator.userAgent : undefined),
       });
-    },
-    onSuccess: async (tokens) => {
-      setAuth(tokens);
-      completeLocalSignIn();
-      const capabilities = await queryClient.fetchQuery({
-        queryKey: sessionCapabilitiesQueryKey,
-        queryFn: loadSessionCapabilities,
-        staleTime: SESSION_CAPABILITIES_STALE_MS,
-      });
-      setCapabilities(capabilities);
     },
   });
 }

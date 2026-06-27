@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Form, Input, Spin } from 'antd';
 import Card from '@/components/ui/Card/Card';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
-import { signOutLocally } from '@/lib/auth/sign-out-locally';
+import { signOutLocally, completeLocalSignIn } from '@/lib/auth/sign-out-locally';
+import { useAuthStore } from '@/stores/auth.store';
 import { ApiRequestError } from '@/lib/api/errors';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface LoginFormValues {
   email: string;
@@ -20,6 +22,9 @@ function LoginForm(): React.ReactNode {
   const login = useLogin();
   const resendActivation = useResendActivation();
   const [form] = Form.useForm<LoginFormValues>();
+  const queryClient = useQueryClient();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setCapabilities = useAuthStore((state) => state.setCapabilities);
 
   const activated = searchParams.get('activated') === '1';
   const reset = searchParams.get('reset') === '1';
@@ -53,7 +58,17 @@ function LoginForm(): React.ReactNode {
     setShowResendActivation(false);
 
     try {
-      await login.mutateAsync(values);
+      const tokens = await login.mutateAsync(values);
+      // Set auth and capabilities synchronously before navigating so the
+      // dashboard never mounts with stale or empty identity state.
+      setAuth(tokens);
+      completeLocalSignIn();
+      // const capabilities = await queryClient.fetchQuery({
+      //   queryKey: sessionCapabilitiesQueryKey,
+      //   queryFn: fetchCapabilities,
+      //   staleTime: SESSION_CAPABILITIES_STALE_MS,
+      // });
+      // setCapabilities(capabilities);
       const redirectTo = searchParams.get('from') ?? '/';
       router.replace(redirectTo);
     } catch (error) {

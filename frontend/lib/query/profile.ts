@@ -21,9 +21,11 @@ export const profileKeys = {
 };
 
 export function useCurrentUser() {
+  const accessToken = useAuthStore((state) => state.accessToken);
   return useQuery({
     queryKey: profileKeys.me(),
     queryFn: (): Promise<UserProfile> => apiGet<UserProfile>('/auth/me'),
+    enabled: Boolean(accessToken),
   });
 }
 
