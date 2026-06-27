@@ -19,6 +19,10 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import {
+  buildSourceEntitySummary,
+  validateSourceEntity,
+} from '../utils/source-entity.util';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -119,6 +123,15 @@ export class IssuesService {
       );
     }
 
+    if (dto.sourceEntityType && dto.sourceEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        dto.sourceEntityId,
+      );
+    }
+
     const issueNumber = await this.documentNumberService.getNextNumber(
       ctx,
       'ISSUE',
@@ -136,19 +149,21 @@ export class IssuesService {
         location: dto.location,
         severity: dto.severity,
         dueDate: parseOptionalDate(dto.dueDate),
+        sourceEntityType: dto.sourceEntityType,
+        sourceEntityId: dto.sourceEntityId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
     });
 
-    const folder = await this.engineeringDocumentFolderService.ensureIssueFolder(
+    await this.engineeringDocumentFolderService.ensureIssueFolder(
       ctx,
       projectId,
       issue.id,
       issue.issueNumber,
     );
 
-    return { ...mapIssue(issue), attachmentFolderId: folder.id };
+    return this.enrichIssue(ctx, issue);
   }
 
   /**
@@ -172,6 +187,15 @@ export class IssuesService {
         ctx,
         projectId,
         dto.taskDisciplineId,
+      );
+    }
+
+    if (dto.sourceEntityType && dto.sourceEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        dto.sourceEntityId,
       );
     }
 
@@ -200,6 +224,8 @@ export class IssuesService {
           taskDisciplineId: dto.taskDisciplineId,
           dueDate: parseOptionalDate(dto.dueDate),
           status: dto.status,
+          sourceEntityType: dto.sourceEntityType,
+          sourceEntityId: dto.sourceEntityId,
           updatedBy: ctx.userId,
         },
       });
@@ -300,6 +326,12 @@ export class IssuesService {
     return {
       ...mapIssue(issue),
       attachmentFolderId: folder?.id ?? null,
+      sourceEntitySummary: await buildSourceEntitySummary(
+        this.prisma,
+        issue.projectId,
+        issue.sourceEntityType,
+        issue.sourceEntityId,
+      ),
     };
   }
 

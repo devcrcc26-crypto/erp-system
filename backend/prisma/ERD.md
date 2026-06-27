@@ -747,6 +747,8 @@ erDiagram
   DateTime due_date "nullable"
   DateTime date_answered "nullable"
   String linked_design_package_id FK "nullable"
+  String source_entity_type "nullable"
+  String source_entity_id "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -877,6 +879,8 @@ erDiagram
   String source_entity_id "nullable"
   String external_review_trigger_id "nullable"
   String linked_design_package_id FK "nullable"
+  String origin_entity_type "nullable"
+  String origin_entity_id "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -1088,6 +1092,8 @@ erDiagram
   DateTime resolved_at "nullable"
   DateTime verified_at "nullable"
   String linked_design_package_id FK "nullable"
+  String source_entity_type "nullable"
+  String source_entity_id "nullable"
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -2247,6 +2253,8 @@ Properties as follows:
 - `due_date`:
 - `date_answered`:
 - `linked_design_package_id`:
+- `source_entity_type`:
+- `source_entity_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2401,6 +2409,8 @@ Properties as follows:
 - `source_entity_id`:
 - `external_review_trigger_id`:
 - `linked_design_package_id`:
+- `origin_entity_type`:
+- `origin_entity_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:
@@ -2657,6 +2667,8 @@ Properties as follows:
 - `resolved_at`:
 - `verified_at`:
 - `linked_design_package_id`:
+- `source_entity_type`:
+- `source_entity_id`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:

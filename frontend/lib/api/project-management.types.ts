@@ -310,9 +310,46 @@ export interface Rfi {
   dateRaised: string | null;
   dueDate: string | null;
   dateAnswered: string | null;
+  sourceEntityType?:
+    | 'MEETING'
+    | 'CORRESPONDENCE'
+    | 'DAILY_LOG'
+    | 'SUBMITTAL_REVIEW'
+    | null;
+  sourceEntityId?: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   createdAt: string;
   updatedAt: string;
   attachmentFolderId?: string | null;
+}
+
+export interface SourceEntitySummary {
+  type: string;
+  id: string;
+  label: string;
+}
+
+export interface RfiSummary {
+  id: string;
+  rfiNumber: string;
+  subject: string;
+  status: string;
+  priority: string;
+}
+
+export interface IssueSummary {
+  id: string;
+  issueNumber: string;
+  title: string;
+  status: string;
+  severity: string;
+}
+
+export interface ChangeRequestSummary {
+  id: string;
+  changeNumber: string;
+  title: string;
+  status: string;
 }
 
 export interface RfiResponse {
@@ -483,6 +520,9 @@ export interface Meeting {
   minutesIssuedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  raisedRfis?: RfiSummary[];
+  raisedIssues?: IssueSummary[];
+  raisedChangeRequests?: ChangeRequestSummary[];
 }
 
 export interface MeetingAgendaItem {
@@ -536,6 +576,9 @@ export interface Correspondence {
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
+  raisedRfis?: RfiSummary[];
+  raisedIssues?: IssueSummary[];
+  raisedChangeRequests?: ChangeRequestSummary[];
 }
 
 export interface Risk {
@@ -573,6 +616,14 @@ export interface Issue {
   dueDate: string | null;
   resolvedAt: string | null;
   verifiedAt: string | null;
+  sourceEntityType?:
+    | 'MEETING'
+    | 'CORRESPONDENCE'
+    | 'DAILY_LOG'
+    | 'SUBMITTAL_REVIEW'
+    | null;
+  sourceEntityId?: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   createdAt: string;
   updatedAt: string;
   attachmentFolderId?: string | null;
@@ -1077,6 +1128,14 @@ export interface ProjectChangeRequest {
   status: ChangeRequestStatus;
   sourceType: string;
   sourceEntityId: string | null;
+  sourceEntityType?:
+    | 'MEETING'
+    | 'CORRESPONDENCE'
+    | 'DAILY_LOG'
+    | 'SUBMITTAL_REVIEW'
+    | null;
+  originEntityId?: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   externalReviewTriggerId: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
@@ -1089,12 +1148,16 @@ export interface CreateChangeRequestDto {
   description?: string;
   sourceType?: string;
   sourceEntityId?: string;
+  sourceEntityType?: string;
+  originEntityId?: string;
 }
 
 export interface UpdateChangeRequestDto {
   title?: string;
   description?: string;
   status?: ChangeRequestStatus;
+  sourceEntityType?: string;
+  originEntityId?: string;
 }
 
 export interface RejectChangeRequestDto {

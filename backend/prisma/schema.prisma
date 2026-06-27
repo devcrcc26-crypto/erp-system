@@ -1813,6 +1813,8 @@ model Rfi {
   dueDate      DateTime?   @map("due_date") @db.Date
   dateAnswered DateTime?   @map("date_answered") @db.Date
   linkedDesignPackageId String? @map("linked_design_package_id")
+  sourceEntityType      String? @map("source_entity_type")
+  sourceEntityId        String? @map("source_entity_id")
   createdAt    DateTime    @default(now()) @map("created_at")
   createdBy    String      @map("created_by")
   updatedAt    DateTime    @updatedAt @map("updated_at")
@@ -2034,6 +2036,8 @@ model ProjectChangeRequest {
   sourceEntityId          String?                    @map("source_entity_id")
   externalReviewTriggerId String?                    @map("external_review_trigger_id")
   linkedDesignPackageId   String?                    @map("linked_design_package_id")
+  originEntityType        String?                    @map("origin_entity_type")
+  originEntityId          String?                    @map("origin_entity_id")
   createdAt               DateTime                   @default(now()) @map("created_at")
   createdBy               String                     @map("created_by")
   updatedAt               DateTime                   @updatedAt @map("updated_at")
@@ -2367,6 +2371,8 @@ model Issue {
   resolvedAt   DateTime?     @map("resolved_at")
   verifiedAt   DateTime?     @map("verified_at")
   linkedDesignPackageId String? @map("linked_design_package_id")
+  sourceEntityType      String? @map("source_entity_type")
+  sourceEntityId        String? @map("source_entity_id")
   createdAt    DateTime      @default(now()) @map("created_at")
   createdBy    String        @map("created_by")
   updatedAt    DateTime      @updatedAt @map("updated_at")

@@ -32,6 +32,8 @@ describe('ProjectChangeRequestService status transitions', () => {
       status: status as ProjectChangeRequestStatus,
       sourceType: ProjectChangeRequestSource.MANUAL,
       sourceEntityId: null,
+      originEntityType: null,
+      originEntityId: null,
       externalReviewTriggerId: null,
       linkedDesignPackageId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),

@@ -33,6 +33,12 @@ import {
   TaskDiscipline,
   Warranty,
 } from '@prisma/client';
+import {
+  RaisedChangeRequestSummary,
+  RaisedIssueSummary,
+  RaisedRfiSummary,
+  SourceEntitySummary,
+} from './source-entity.util';
 
 /**
  * Formats a date as an ISO date string (YYYY-MM-DD).
@@ -375,6 +381,9 @@ export interface MappedMeetingDetail extends MappedMeeting {
   agendaItems: MappedMeetingAgendaItem[];
   attendees: MappedMeetingAttendee[];
   actionItems: MappedActionItem[];
+  raisedRfis?: RaisedRfiSummary[];
+  raisedIssues?: RaisedIssueSummary[];
+  raisedChangeRequests?: RaisedChangeRequestSummary[];
 }
 
 export interface MappedCorrespondence {
@@ -391,6 +400,9 @@ export interface MappedCorrespondence {
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
+  raisedRfis?: RaisedRfiSummary[];
+  raisedIssues?: RaisedIssueSummary[];
+  raisedChangeRequests?: RaisedChangeRequestSummary[];
 }
 
 export interface MappedRisk {
@@ -720,6 +732,11 @@ export function mapMeetingDetail(
     actionItems: ActionItem[];
   },
   attachmentFolderId: string | null = null,
+  raisedItems?: {
+    raisedRfis: RaisedRfiSummary[];
+    raisedIssues: RaisedIssueSummary[];
+    raisedChangeRequests: RaisedChangeRequestSummary[];
+  },
 ): MappedMeetingDetail {
   return {
     ...mapMeeting(row),
@@ -727,12 +744,20 @@ export function mapMeetingDetail(
     agendaItems: row.agendaItems.map(mapMeetingAgendaItem),
     attendees: row.attendees.map(mapMeetingAttendee),
     actionItems: row.actionItems.map(mapActionItem),
+    raisedRfis: raisedItems?.raisedRfis ?? [],
+    raisedIssues: raisedItems?.raisedIssues ?? [],
+    raisedChangeRequests: raisedItems?.raisedChangeRequests ?? [],
   };
 }
 
 export function mapCorrespondence(
   row: Correspondence,
   attachmentFolderId: string | null = null,
+  raisedItems?: {
+    raisedRfis: RaisedRfiSummary[];
+    raisedIssues: RaisedIssueSummary[];
+    raisedChangeRequests: RaisedChangeRequestSummary[];
+  },
 ): MappedCorrespondence {
   return {
     id: row.id,
@@ -748,6 +773,9 @@ export function mapCorrespondence(
     attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+    raisedRfis: raisedItems?.raisedRfis ?? [],
+    raisedIssues: raisedItems?.raisedIssues ?? [],
+    raisedChangeRequests: raisedItems?.raisedChangeRequests ?? [],
   };
 }
 
@@ -961,6 +989,9 @@ export interface MappedRfi {
   dateRaised: string | null;
   dueDate: string | null;
   dateAnswered: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   createdAt: string;
   updatedAt: string;
   attachmentFolderId?: string | null;
@@ -990,6 +1021,9 @@ export interface MappedIssue {
   dueDate: string | null;
   resolvedAt: string | null;
   verifiedAt: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   createdAt: string;
   updatedAt: string;
   attachmentFolderId?: string | null;
@@ -1144,6 +1178,8 @@ export function mapRfi(rfi: Rfi): MappedRfi {
     dateRaised: toDateString(rfi.dateRaised),
     dueDate: toDateString(rfi.dueDate),
     dateAnswered: toDateString(rfi.dateAnswered),
+    sourceEntityType: rfi.sourceEntityType,
+    sourceEntityId: rfi.sourceEntityId,
     createdAt: toIsoString(rfi.createdAt)!,
     updatedAt: toIsoString(rfi.updatedAt)!,
   };
@@ -1182,6 +1218,8 @@ export function mapIssue(issue: Issue): MappedIssue {
     dueDate: toDateString(issue.dueDate),
     resolvedAt: toIsoString(issue.resolvedAt),
     verifiedAt: toIsoString(issue.verifiedAt),
+    sourceEntityType: issue.sourceEntityType,
+    sourceEntityId: issue.sourceEntityId,
     createdAt: toIsoString(issue.createdAt)!,
     updatedAt: toIsoString(issue.updatedAt)!,
   };
@@ -1197,6 +1235,9 @@ export interface MappedProjectChangeRequest {
   status: string;
   sourceType: string;
   sourceEntityId: string | null;
+  sourceEntityType?: string | null;
+  originEntityId?: string | null;
+  sourceEntitySummary?: SourceEntitySummary | null;
   externalReviewTriggerId: string | null;
   createdAt: string;
   updatedAt: string;

@@ -18,6 +18,7 @@ import {
   MappedCorrespondence,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { loadRaisedItemsForSource } from '../utils/source-entity.util';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -216,7 +217,14 @@ export class CorrespondenceService {
       );
     }
 
-    return mapCorrespondence(row, attachmentFolderId);
+    const raisedItems = await loadRaisedItemsForSource(
+      this.prisma,
+      projectId,
+      'CORRESPONDENCE',
+      row.id,
+    );
+
+    return mapCorrespondence(row, attachmentFolderId, raisedItems);
   }
 
   private async getCorrespondenceOrThrow(

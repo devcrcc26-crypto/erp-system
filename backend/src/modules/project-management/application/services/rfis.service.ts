@@ -29,6 +29,10 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import {
+  buildSourceEntitySummary,
+  validateSourceEntity,
+} from '../utils/source-entity.util';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -129,6 +133,15 @@ export class RfisService {
       );
     }
 
+    if (dto.sourceEntityType && dto.sourceEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        dto.sourceEntityId,
+      );
+    }
+
     const rfiNumber = await this.documentNumberService.getNextNumber(
       ctx,
       'RFI',
@@ -147,19 +160,14 @@ export class RfisService {
         priority: dto.priority,
         dueDate: parseOptionalDate(dto.dueDate),
         dateRaised: this.todayDate(),
+        sourceEntityType: dto.sourceEntityType,
+        sourceEntityId: dto.sourceEntityId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
     });
 
-    const folder = await this.engineeringDocumentFolderService.ensureRfiFolder(
-      ctx,
-      projectId,
-      rfi.id,
-      rfi.rfiNumber,
-    );
-
-    return { ...mapRfi(rfi), attachmentFolderId: folder.id };
+    return this.enrichRfi(ctx, rfi);
   }
 
   /**
@@ -183,6 +191,15 @@ export class RfisService {
         ctx,
         projectId,
         dto.taskDisciplineId,
+      );
+    }
+
+    if (dto.sourceEntityType && dto.sourceEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        dto.sourceEntityId,
       );
     }
 
@@ -219,6 +236,8 @@ export class RfisService {
         taskDisciplineId: dto.taskDisciplineId,
         dueDate: parseOptionalDate(dto.dueDate),
         status: dto.status,
+        sourceEntityType: dto.sourceEntityType,
+        sourceEntityId: dto.sourceEntityId,
         updatedBy: ctx.userId,
       },
     });
@@ -384,6 +403,12 @@ export class RfisService {
     return {
       ...mapRfi(rfi),
       attachmentFolderId,
+      sourceEntitySummary: await buildSourceEntitySummary(
+        this.prisma,
+        rfi.projectId,
+        rfi.sourceEntityType,
+        rfi.sourceEntityId,
+      ),
     };
   }
 

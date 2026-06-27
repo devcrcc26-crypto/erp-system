@@ -30,6 +30,7 @@ import {
   UrgencyLevel,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { SOURCE_ENTITY_TYPES } from '../utils/source-entity.util';
 import {
   IsArray,
   IsBoolean,
@@ -512,6 +513,17 @@ export class CreateRfiDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiPropertyOptional({ enum: SOURCE_ENTITY_TYPES })
+  @IsOptional()
+  @IsString()
+  @IsIn([...SOURCE_ENTITY_TYPES])
+  sourceEntityType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sourceEntityId?: string;
 }
 
 export class UpdateRfiDto extends PartialType(CreateRfiDto) {
@@ -1193,6 +1205,17 @@ export class CreateIssueDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiPropertyOptional({ enum: SOURCE_ENTITY_TYPES })
+  @IsOptional()
+  @IsString()
+  @IsIn([...SOURCE_ENTITY_TYPES])
+  sourceEntityType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sourceEntityId?: string;
 }
 
 export class UpdateIssueDto extends PartialType(CreateIssueDto) {
@@ -1370,6 +1393,17 @@ export class CreateChangeRequestDto {
   @IsOptional()
   @IsEntityUuid()
   sourceEntityId?: string;
+
+  @ApiPropertyOptional({ enum: SOURCE_ENTITY_TYPES })
+  @IsOptional()
+  @IsString()
+  @IsIn([...SOURCE_ENTITY_TYPES])
+  sourceEntityType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  originEntityId?: string;
 }
 
 export class UpdateChangeRequestDto {
@@ -1387,6 +1421,17 @@ export class UpdateChangeRequestDto {
   @IsOptional()
   @IsEnum(ProjectChangeRequestStatus)
   status?: ProjectChangeRequestStatus;
+
+  @ApiPropertyOptional({ enum: SOURCE_ENTITY_TYPES })
+  @IsOptional()
+  @IsString()
+  @IsIn([...SOURCE_ENTITY_TYPES])
+  sourceEntityType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  originEntityId?: string;
 }
 
 export class RejectChangeRequestDto {

@@ -30,6 +30,10 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import {
+  buildSourceEntitySummary,
+  validateSourceEntity,
+} from '../utils/source-entity.util';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import { DocumentNumberService } from './document-number.service';
@@ -101,7 +105,7 @@ export class ProjectChangeRequestService {
   ): Promise<MappedProjectChangeRequest> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
     const row = await this.getChangeRequestOrThrow(ctx, projectId, changeRequestId);
-    return mapProjectChangeRequest(row);
+    return this.enrichChangeRequest(row);
   }
 
   /**
@@ -113,6 +117,16 @@ export class ProjectChangeRequestService {
     dto: CreateChangeRequestDto,
   ): Promise<MappedProjectChangeRequest> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const originEntityId = this.resolveOriginEntityId(dto);
+    if (dto.sourceEntityType && originEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        originEntityId,
+      );
+    }
 
     const changeNumber = await this.documentNumberService.nextChangeRequestNumber(
       ctx.companyId,
@@ -128,12 +142,14 @@ export class ProjectChangeRequestService {
         status: ProjectChangeRequestStatus.DRAFT,
         sourceType: dto.sourceType ?? ProjectChangeRequestSource.MANUAL,
         sourceEntityId: dto.sourceEntityId,
+        originEntityType: dto.sourceEntityType,
+        originEntityId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
     });
 
-    return mapProjectChangeRequest(row);
+    return this.enrichChangeRequest(row);
   }
 
   /**
@@ -148,17 +164,29 @@ export class ProjectChangeRequestService {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
     await this.getChangeRequestOrThrow(ctx, projectId, changeRequestId);
 
+    const originEntityId = this.resolveOriginEntityId(dto);
+    if (dto.sourceEntityType && originEntityId) {
+      await validateSourceEntity(
+        this.prisma,
+        projectId,
+        dto.sourceEntityType,
+        originEntityId,
+      );
+    }
+
     const row = await this.prisma.projectChangeRequest.update({
       where: { id: changeRequestId },
       data: {
         title: dto.title,
         description: dto.description,
         status: dto.status,
+        originEntityType: dto.sourceEntityType,
+        originEntityId,
         updatedBy: ctx.userId,
       },
     });
 
-    return mapProjectChangeRequest(row);
+    return this.enrichChangeRequest(row);
   }
 
   /**
@@ -307,6 +335,33 @@ export class ProjectChangeRequestService {
         updatedBy: input.actorId,
       },
     });
+  }
+
+  private async enrichChangeRequest(
+    row: ProjectChangeRequest,
+  ): Promise<MappedProjectChangeRequest> {
+    const mapped = mapProjectChangeRequest(row);
+    return {
+      ...mapped,
+      sourceEntityType: row.originEntityType,
+      originEntityId: row.originEntityId,
+      sourceEntitySummary: await buildSourceEntitySummary(
+        this.prisma,
+        row.projectId,
+        row.originEntityType,
+        row.originEntityId,
+      ),
+    };
+  }
+
+  private resolveOriginEntityId(dto: {
+    sourceEntityType?: string;
+    originEntityId?: string;
+  }): string | undefined {
+    if (!dto.sourceEntityType) {
+      return undefined;
+    }
+    return dto.originEntityId;
   }
 
   private buildListWhere(

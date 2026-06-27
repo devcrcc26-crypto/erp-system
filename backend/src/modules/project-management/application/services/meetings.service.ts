@@ -33,6 +33,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { loadRaisedItemsForSource } from '../utils/source-entity.util';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -147,7 +148,11 @@ export class MeetingsService {
         row.meetingNumber,
       );
 
-    return mapMeetingDetail(row, folder.id);
+    return mapMeetingDetail(
+      row,
+      folder.id,
+      await this.loadMeetingRaisedItems(projectId, row.id),
+    );
   }
 
   /**
@@ -467,7 +472,21 @@ export class MeetingsService {
       );
     }
 
-    return mapMeetingDetail(row, attachmentFolderId);
+    const raisedItems = await this.loadMeetingRaisedItems(projectId, row.id);
+
+    return mapMeetingDetail(row, attachmentFolderId, raisedItems);
+  }
+
+  private async loadMeetingRaisedItems(
+    projectId: string,
+    meetingId: string,
+  ): Promise<Awaited<ReturnType<typeof loadRaisedItemsForSource>>> {
+    return loadRaisedItemsForSource(
+      this.prisma,
+      projectId,
+      'MEETING',
+      meetingId,
+    );
   }
 
   private async nextAgendaItemOrder(meetingId: string): Promise<number> {
