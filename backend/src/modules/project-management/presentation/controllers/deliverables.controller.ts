@@ -20,10 +20,13 @@ import {
   UpdateDeliverableDto,
 } from '../../application/dtos/pm.dtos';
 import { DeliverableService } from '../../application/services/deliverable.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Deliverables')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('deliverables')
 @Controller('projects/:projectId/deliverables')
 export class DeliverablesController {
   constructor(private readonly deliverableService: DeliverableService) {}

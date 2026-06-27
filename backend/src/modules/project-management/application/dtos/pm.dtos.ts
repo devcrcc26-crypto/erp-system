@@ -42,6 +42,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
@@ -187,11 +188,37 @@ export class UpdateProjectDto extends PartialType(CreateProjectDto) {
   actualFinishDate?: string;
 }
 
+export class SetProjectTeamMemberDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  userId!: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Empty array means full access to all PM modules',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  visibleModules?: string[];
+}
+
 export class SetProjectTeamDto {
-  @ApiProperty({ type: [String], description: 'User ids that form the project team' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Legacy: user ids that form the project team (full module access)',
+  })
+  @IsOptional()
   @IsArray()
   @IsEntityUuid({ each: true })
-  userIds!: string[];
+  userIds?: string[];
+
+  @ApiPropertyOptional({ type: [SetProjectTeamMemberDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SetProjectTeamMemberDto)
+  members?: SetProjectTeamMemberDto[];
 }
 
 export class CreateMilestoneDto {

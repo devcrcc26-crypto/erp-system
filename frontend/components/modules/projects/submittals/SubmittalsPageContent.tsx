@@ -32,6 +32,7 @@ import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensPr
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import Link from 'next/link';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 export default function SubmittalsPageContent({
   projectId,
@@ -157,6 +158,7 @@ export default function SubmittalsPageContent({
   const meta = submittalsQuery.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="submittals">
     <>
       <FormLayout
         title="Construction submittals"
@@ -257,5 +259,6 @@ export default function SubmittalsPageContent({
         onUpdated={() => void submittalsQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

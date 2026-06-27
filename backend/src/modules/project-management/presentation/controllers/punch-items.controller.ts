@@ -20,10 +20,13 @@ import {
   UpdatePunchItemDto,
 } from '../../application/dtos/pm.dtos';
 import { PunchItemsService } from '../../application/services/punch-items.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Punch Items')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('punch_items')
 @Controller('projects/:projectId/punch-items')
 export class PunchItemsController {
   constructor(private readonly punchItemsService: PunchItemsService) {}

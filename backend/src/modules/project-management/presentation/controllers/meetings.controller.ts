@@ -26,10 +26,13 @@ import {
   UpdateMeetingDto,
 } from '../../application/dtos/pm.dtos';
 import { MeetingsService } from '../../application/services/meetings.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Meetings')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('meetings')
 @Controller('projects/:projectId/meetings')
 export class MeetingsController {
   constructor(private readonly meetingsService: MeetingsService) {}

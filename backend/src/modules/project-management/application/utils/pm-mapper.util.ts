@@ -120,6 +120,7 @@ export interface MappedProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
+  visibleModules: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -177,6 +178,7 @@ export function mapProjectTeamMember(member: ProjectTeam): MappedProjectTeamMemb
     id: member.id,
     projectId: member.projectId,
     userId: member.userId,
+    visibleModules: member.visibleModules,
     createdAt: toIsoString(member.createdAt)!,
     updatedAt: toIsoString(member.updatedAt)!,
   };

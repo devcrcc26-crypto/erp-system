@@ -20,10 +20,13 @@ import {
   UpdateCorrespondenceDto,
 } from '../../application/dtos/pm.dtos';
 import { CorrespondenceService } from '../../application/services/correspondence.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Correspondence')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('correspondence')
 @Controller('projects/:projectId/correspondence')
 export class CorrespondenceController {
   constructor(private readonly correspondenceService: CorrespondenceService) {}

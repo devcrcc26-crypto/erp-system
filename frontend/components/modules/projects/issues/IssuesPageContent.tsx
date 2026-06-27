@@ -47,6 +47,7 @@ import {
   isOverdue,
 } from '@/lib/utils/pm-status-display';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -307,6 +308,7 @@ export default function IssuesPageContent({
   const meta = issuesQuery.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="issues">
     <>
       <FormLayout
         title="Issues & defects"
@@ -405,5 +407,6 @@ export default function IssuesPageContent({
         onUpdated={() => void issuesQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

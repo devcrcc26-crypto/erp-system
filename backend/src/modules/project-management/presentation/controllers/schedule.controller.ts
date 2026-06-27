@@ -26,10 +26,13 @@ import {
   UpdateTaskDto,
 } from '../../application/dtos/pm.dtos';
 import { ScheduleService } from '../../application/services/schedule.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Schedule')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('schedule')
 @Controller('projects/:projectId/schedule')
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}

@@ -21,10 +21,13 @@ import {
   UpdateRfiDto,
 } from '../../application/dtos/pm.dtos';
 import { RfisService } from '../../application/services/rfis.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('RFIs')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('rfis')
 @Controller('projects/:projectId/rfis')
 export class RfisController {
   constructor(private readonly rfisService: RfisService) {}

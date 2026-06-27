@@ -17,6 +17,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 interface DeliverableRow {
   id: string;
@@ -128,6 +129,7 @@ export default function DeliverablesPageContent({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="deliverables">
     <FormLayout
       title="Deliverables"
       description="Derived from design packages and EDV statuses until full Deliverable API ships."
@@ -148,5 +150,6 @@ export default function DeliverablesPageContent({
         locale={{ emptyText: 'No deliverable packages found' }}
       />
     </FormLayout>
+    </ProjectModuleGate>
   );
 }

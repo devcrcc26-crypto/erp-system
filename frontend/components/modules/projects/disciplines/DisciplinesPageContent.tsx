@@ -24,6 +24,7 @@ import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 function DisciplinePackageCount({
   projectId,
@@ -177,6 +178,7 @@ export default function DisciplinesPageContent({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="design_packages">
     <FormLayout
       title={t('pages.disciplines.title')}
       description={t('pages.disciplines.description')}
@@ -274,5 +276,6 @@ export default function DisciplinesPageContent({
         onCancel={() => setDeleting(null)}
       />
     </FormLayout>
+    </ProjectModuleGate>
   );
 }

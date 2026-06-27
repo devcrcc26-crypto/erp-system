@@ -54,6 +54,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { layout } from '@/lib/theme/layout';
 
 export default function DesignPackageDetailPageContent({
@@ -252,6 +253,7 @@ export default function DesignPackageDetailPageContent({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="design_packages">
     <div className={layout.pageStack}>
       <Breadcrumb
         items={[
@@ -559,5 +561,6 @@ export default function DesignPackageDetailPageContent({
         </Form>
       </Modal>
     </div>
+    </ProjectModuleGate>
   );
 }

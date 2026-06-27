@@ -35,6 +35,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import MeetingDetailDrawer from '@/components/modules/projects/meetings/MeetingDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 const MEETING_TYPE_OPTIONS: { value: MeetingType; label: string }[] = [
   { value: 'PROGRESS', label: 'Progress' },
@@ -229,6 +230,7 @@ export default function MeetingsPageContent({
   const meta = meetingsQuery.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="meetings">
     <>
       <FormLayout
         title="Meetings"
@@ -312,5 +314,6 @@ export default function MeetingsPageContent({
         onUpdated={() => void meetingsQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

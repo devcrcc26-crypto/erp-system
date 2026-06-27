@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Project } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  canAccessModule,
+  PmModuleKey,
+} from '../../domain/project-modules.const';
 import { PmContext } from '../types/pm-context.type';
 
 @Injectable()
@@ -28,6 +32,33 @@ export class ProjectScopeService {
     }
 
     return project;
+  }
+
+  /**
+   * Asserts the caller's project team membership allows access to a PM module.
+   */
+  async assertModuleAccess(
+    ctx: PmContext,
+    projectId: string,
+    module: PmModuleKey,
+  ): Promise<void> {
+    const membership = await this.prisma.projectTeam.findFirst({
+      where: activeOnly({
+        projectId,
+        userId: ctx.userId,
+      }),
+      select: { visibleModules: true },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('Project not found');
+    }
+
+    if (!canAccessModule(membership.visibleModules, module)) {
+      throw new ForbiddenException(
+        `You do not have access to the ${module} module on this project.`,
+      );
+    }
   }
 
   /**

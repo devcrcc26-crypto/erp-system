@@ -64,6 +64,7 @@ import {
 import { EpcReviewRepository } from './infrastructure/repositories/epc-review.repository';
 import { EpcSubmittalRepository } from './infrastructure/repositories/epc-submittal.repository';
 import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflow.repository';
+import { PmModuleAccessGuard } from './presentation/guards/pm-module-access.guard';
 import { CloseoutController } from './presentation/controllers/closeout.controller';
 import { ChangeRequestsController } from './presentation/controllers/change-requests.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
@@ -183,6 +184,7 @@ const workflowBullProcessors = redisEnabled
     RisksService,
     PunchItemsService,
     CloseoutService,
+    PmModuleAccessGuard,
     ...workflowBullProcessors,
   ],
   exports: [

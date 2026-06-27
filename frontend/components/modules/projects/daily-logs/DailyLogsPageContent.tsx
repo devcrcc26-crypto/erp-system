@@ -37,6 +37,7 @@ import {
   formatDailyLogStatus,
 } from '@/lib/utils/pm-status-display';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -245,6 +246,7 @@ export default function DailyLogsPageContent({
   const meta = logsQuery.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="daily_logs">
     <>
       <FormLayout
         title="Daily site logs"
@@ -344,5 +346,6 @@ export default function DailyLogsPageContent({
         onUpdated={() => void logsQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

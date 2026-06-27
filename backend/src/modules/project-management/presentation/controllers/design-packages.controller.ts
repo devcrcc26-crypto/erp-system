@@ -28,10 +28,13 @@ import {
 } from '../../application/dtos/engineering-document.dtos';
 import { DesignPackagesService } from '../../application/services/design-packages.service';
 import { ReviewSessionListQueryDto, AddReviewSessionAttachmentDto } from '../../application/dtos/pm.dtos';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Design Packages')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('design_packages')
 @Controller('projects/:projectId/task-disciplines/:taskDisciplineId/design-packages')
 export class DesignPackagesController {
   constructor(private readonly designPackagesService: DesignPackagesService) {}

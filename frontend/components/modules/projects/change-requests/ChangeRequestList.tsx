@@ -27,6 +27,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 const STATUS_OPTIONS: Array<{ value: ChangeRequestStatus; label: string }> = [
   { value: 'DRAFT', label: 'Draft' },
@@ -119,6 +120,7 @@ export default function ChangeRequestList({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="change_requests">
     <>
       <FormLayout
         title="Change requests"
@@ -217,5 +219,6 @@ export default function ChangeRequestList({
         onUpdated={() => void listQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

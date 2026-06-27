@@ -53,6 +53,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 interface CloseoutFormValues {
   practicalCompletionDate?: Dayjs;
@@ -336,6 +337,7 @@ export default function CloseoutPageContent({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="closeout">
     <div className={layout.pageStack}>
       {projectNotFound && (
         <Alert
@@ -664,5 +666,6 @@ export default function CloseoutPageContent({
         </>
       )}
     </div>
+    </ProjectModuleGate>
   );
 }

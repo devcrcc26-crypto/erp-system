@@ -47,6 +47,7 @@ import {
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -291,6 +292,7 @@ export default function RfisPageContent({
   const meta = rfisQuery.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="rfis">
     <>
       <FormLayout
         title="RFIs"
@@ -389,5 +391,6 @@ export default function RfisPageContent({
         onUpdated={() => void rfisQuery.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

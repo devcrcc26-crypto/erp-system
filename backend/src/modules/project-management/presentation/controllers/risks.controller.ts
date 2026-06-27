@@ -20,10 +20,13 @@ import {
   UpdateRiskDto,
 } from '../../application/dtos/pm.dtos';
 import { RisksService } from '../../application/services/risks.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Risks')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('risks')
 @Controller('projects/:projectId/risks')
 export class RisksController {
   constructor(private readonly risksService: RisksService) {}

@@ -1350,6 +1350,7 @@ model ProjectTeam {
   projectId      String    @map("project_id")
   userId         String    @map("user_id")
   roleOnProject  String?   @map("role_on_project")
+  visibleModules String[]  @default([]) @map("visible_modules")
   createdAt      DateTime  @default(now()) @map("created_at")
   createdBy String    @map("created_by")
   updatedAt DateTime  @updatedAt @map("updated_at")

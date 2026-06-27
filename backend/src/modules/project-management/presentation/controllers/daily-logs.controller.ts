@@ -24,10 +24,13 @@ import {
   UpdateDailyLogDto,
 } from '../../application/dtos/pm.dtos';
 import { DailyLogsService } from '../../application/services/daily-logs.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Daily Logs')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('daily_logs')
 @Controller('projects/:projectId/daily-logs')
 export class DailyLogsController {
   constructor(private readonly dailyLogsService: DailyLogsService) {}

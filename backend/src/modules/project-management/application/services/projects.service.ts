@@ -427,10 +427,15 @@ export class ProjectsService {
   ): Promise<MappedProjectTeamMember[]> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const uniqueUserIds = [...new Set(dto.userIds)];
+    const resolvedMembers = this.resolveSetTeamMembers(dto);
+    const uniqueUserIds = [...new Set(resolvedMembers.map((member) => member.userId))];
     for (const userId of uniqueUserIds) {
       await this.assertUserInCompany(ctx, userId);
     }
+
+    const visibleModulesByUserId = new Map(
+      resolvedMembers.map((member) => [member.userId, member.visibleModules]),
+    );
 
     await this.prisma.$transaction(async (tx) => {
       const existing = await tx.projectTeam.findMany({
@@ -449,9 +454,17 @@ export class ProjectsService {
         const activeRows = rows.filter((row) => row.deletedAt === null);
         const inactiveRows = rows.filter((row) => row.deletedAt !== null);
         const shouldBeActive = desired.has(userId);
+        const visibleModules = visibleModulesByUserId.get(userId) ?? [];
 
         if (shouldBeActive) {
           if (activeRows.length > 0) {
+            await tx.projectTeam.update({
+              where: { id: activeRows[0].id },
+              data: {
+                visibleModules,
+                updatedBy: ctx.userId,
+              },
+            });
             for (let index = 1; index < activeRows.length; index += 1) {
               await tx.projectTeam.update({
                 where: { id: activeRows[index].id },
@@ -464,6 +477,7 @@ export class ProjectsService {
               data: {
                 deletedAt: null,
                 deletedBy: null,
+                visibleModules,
                 updatedBy: ctx.userId,
               },
             });
@@ -486,6 +500,7 @@ export class ProjectsService {
               data: {
                 projectId,
                 userId,
+                visibleModules: visibleModulesByUserId.get(userId) ?? [],
                 createdBy: ctx.userId,
                 updatedBy: ctx.userId,
               },
@@ -506,6 +521,26 @@ export class ProjectsService {
     });
 
     return this.listTeam(ctx, projectId);
+  }
+
+  private resolveSetTeamMembers(
+    dto: SetProjectTeamDto,
+  ): Array<{ userId: string; visibleModules: string[] }> {
+    if (dto.members && dto.members.length > 0) {
+      return dto.members.map((member) => ({
+        userId: member.userId,
+        visibleModules: member.visibleModules ?? [],
+      }));
+    }
+
+    if (dto.userIds && dto.userIds.length > 0) {
+      return dto.userIds.map((userId) => ({
+        userId,
+        visibleModules: [],
+      }));
+    }
+
+    throw new BadRequestException('Provide userIds or members for the project team.');
   }
 
   /**
@@ -653,6 +688,7 @@ export class ProjectsService {
       data: {
         projectId,
         userId,
+        visibleModules: [],
         createdBy: actorId,
         updatedBy: actorId,
       },

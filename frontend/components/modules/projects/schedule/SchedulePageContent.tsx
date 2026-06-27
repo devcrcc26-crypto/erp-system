@@ -11,6 +11,7 @@ import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPanel';
 import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 export default function SchedulePageContent({
   projectId,
@@ -41,6 +42,7 @@ export default function SchedulePageContent({
   }
 
   return (
+    <ProjectModuleGate projectId={projectId} module="schedule">
     <div className="flex min-h-0 flex-col gap-3">
       {apiUnavailable && (
         <Alert
@@ -100,5 +102,6 @@ export default function SchedulePageContent({
         ]}
       />
     </div>
+    </ProjectModuleGate>
   );
 }

@@ -20,10 +20,13 @@ import {
   UpdateWarrantyDto,
 } from '../../application/dtos/pm.dtos';
 import { CloseoutService } from '../../application/services/closeout.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Closeout')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('closeout')
 @Controller('projects/:projectId/closeout')
 export class CloseoutController {
   constructor(private readonly closeoutService: CloseoutService) {}

@@ -42,6 +42,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import CorrespondenceDetailDrawer from '@/components/modules/projects/correspondence/CorrespondenceDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'LETTER', label: 'Letter' },
@@ -288,6 +289,7 @@ export default function CorrespondencePageContent({
   const meta = query.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="correspondence">
     <>
       <FormLayout
         title="Correspondence"
@@ -377,5 +379,6 @@ export default function CorrespondencePageContent({
         onUpdated={() => void query.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

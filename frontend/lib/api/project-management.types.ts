@@ -194,6 +194,7 @@ export interface ProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
+  visibleModules: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -746,7 +747,11 @@ export function createEmptyPmCapabilities(): PmCapabilities {
 }
 
 export interface SetProjectTeamRequest {
-  userIds: string[];
+  userIds?: string[];
+  members?: Array<{
+    userId: string;
+    visibleModules?: string[];
+  }>;
 }
 
 export interface CreateMilestoneRequest {

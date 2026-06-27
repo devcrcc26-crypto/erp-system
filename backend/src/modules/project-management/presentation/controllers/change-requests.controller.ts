@@ -21,10 +21,13 @@ import {
   UpdateChangeRequestDto,
 } from '../../application/dtos/pm.dtos';
 import { ProjectChangeRequestService } from '../../application/services/project-change-request.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Change Requests')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('change_requests')
 @Controller('projects/:projectId/change-requests')
 export class ChangeRequestsController {
   constructor(

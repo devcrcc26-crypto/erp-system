@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import PunchItemDetailDrawer from '@/components/modules/projects/punch-items/PunchItemDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 const SEVERITY_OPTIONS: { value: PunchItemSeverity; label: string }[] = [
   { value: 'MINOR', label: 'Minor' },
@@ -272,6 +273,7 @@ export default function PunchItemsPageContent({
   const meta = query.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="punch_items">
     <>
       <FormLayout
         title="Punch list"
@@ -358,5 +360,6 @@ export default function PunchItemsPageContent({
         onUpdated={() => void query.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

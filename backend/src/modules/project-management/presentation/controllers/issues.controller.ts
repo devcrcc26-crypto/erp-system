@@ -20,10 +20,13 @@ import {
   UpdateIssueDto,
 } from '../../application/dtos/pm.dtos';
 import { IssuesService } from '../../application/services/issues.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Issues')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('issues')
 @Controller('projects/:projectId/issues')
 export class IssuesController {
   constructor(private readonly issuesService: IssuesService) {}

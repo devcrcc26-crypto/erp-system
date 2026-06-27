@@ -43,6 +43,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import RiskDetailDrawer from '@/components/modules/projects/risks/RiskDetailDrawer';
+import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
 const CATEGORY_OPTIONS: { value: RiskCategory; label: string }[] = [
   { value: 'COST', label: 'Cost' },
@@ -300,6 +301,7 @@ export default function RisksPageContent({
   const meta = query.data?.meta;
 
   return (
+    <ProjectModuleGate projectId={projectId} module="risks">
     <>
       <FormLayout
         title="Risk register"
@@ -383,5 +385,6 @@ export default function RisksPageContent({
         onUpdated={() => void query.refetch()}
       />
     </>
+    </ProjectModuleGate>
   );
 }

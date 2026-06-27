@@ -488,6 +488,7 @@ erDiagram
   String project_id FK
   String user_id FK
   String role_on_project "nullable"
+  String visible_modules
   DateTime created_at
   String created_by
   DateTime updated_at
@@ -1945,6 +1946,7 @@ Properties as follows:
 - `project_id`:
 - `user_id`:
 - `role_on_project`:
+- `visible_modules`:
 - `created_at`:
 - `created_by`:
 - `updated_at`:

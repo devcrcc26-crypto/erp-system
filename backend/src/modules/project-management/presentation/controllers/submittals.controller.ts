@@ -27,10 +27,13 @@ import {
   UpdateSubmittalDto,
 } from '../../application/dtos/pm.dtos';
 import { SubmittalsService } from '../../application/services/submittals.service';
+import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
+import { RequirePmModule } from '../guards/require-pm-module.decorator';
 
 @ApiTags('Submittals')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(PermissionsGuard, PmModuleAccessGuard)
+@RequirePmModule('submittals')
 @Controller('projects/:projectId/submittals')
 export class SubmittalsController {
   constructor(private readonly submittalsService: SubmittalsService) {}
