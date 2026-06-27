@@ -77,7 +77,9 @@ export default function EngineeringDocumentPanel({
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canRegister =
-    lens.canCreateEngineering || lens.canEditEngineering;
+    lens.canCreateEngineering ||
+    lens.canEditEngineering ||
+    lens.canUploadEngineeringDocuments;
   const [registerOpen, setRegisterOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [form] = Form.useForm<EdvMetadataFormValues>();

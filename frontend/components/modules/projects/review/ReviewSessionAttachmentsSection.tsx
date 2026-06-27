@@ -18,6 +18,7 @@ import {
   orderedRequiredTiers,
   resolveTierActorUserId,
   reviewTierLabel,
+  REVIEW_TIER_ORDER,
 } from '@/lib/utils/review-tier-display';
 import { downloadDocument } from '@/lib/utils/document-download';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -178,7 +179,13 @@ export default function ReviewSessionAttachmentsSection({
     [documentsQuery.data],
   );
 
-  const visibleTiers = orderedRequiredTiers(requiredTiers);
+  const visibleTiers = useMemo(() => {
+    const tiers = new Set(orderedRequiredTiers(requiredTiers));
+    for (const attachment of attachmentsQuery.data ?? []) {
+      tiers.add(attachment.tier as ReviewTier);
+    }
+    return REVIEW_TIER_ORDER.filter((tier) => tiers.has(tier));
+  }, [attachmentsQuery.data, requiredTiers]);
 
   return (
     <FormLayout

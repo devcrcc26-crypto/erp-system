@@ -916,6 +916,10 @@ export interface MappedTaskDiscipline {
   reviewerUserId: string | null;
   disciplineLeadUserId: string | null;
   chiefUserId: string | null;
+  instituteChiefUserId: string | null;
+  supportingDesignerUserId: string | null;
+  instituteChief: { id: string; name: string } | null;
+  supportingDesigner: { id: string; name: string } | null;
   isClosed: boolean;
   closedAt: string | null;
   closedBy: string | null;
@@ -1044,10 +1048,33 @@ export function mapTask(task: Task): MappedTask {
   };
 }
 
+type TaskDisciplineUserSummary = {
+  id: string;
+  firstName: string;
+  lastName: string;
+};
+
+type TaskDisciplineWithUsers = TaskDiscipline & {
+  instituteChiefUser?: TaskDisciplineUserSummary | null;
+  supportingDesignerUser?: TaskDisciplineUserSummary | null;
+};
+
+function mapDisciplineUserSummary(
+  user: TaskDisciplineUserSummary | null | undefined,
+): { id: string; name: string } | null {
+  if (!user) {
+    return null;
+  }
+  const name = `${user.firstName} ${user.lastName}`.trim();
+  return { id: user.id, name: name.length > 0 ? name : user.id };
+}
+
 /**
  * Maps a Prisma TaskDiscipline row to the API response shape.
  */
-export function mapTaskDiscipline(discipline: TaskDiscipline): MappedTaskDiscipline {
+export function mapTaskDiscipline(
+  discipline: TaskDisciplineWithUsers,
+): MappedTaskDiscipline {
   return {
     id: discipline.id,
     taskId: discipline.taskId,
@@ -1064,6 +1091,10 @@ export function mapTaskDiscipline(discipline: TaskDiscipline): MappedTaskDiscipl
     reviewerUserId: discipline.reviewerUserId,
     disciplineLeadUserId: discipline.disciplineLeadUserId,
     chiefUserId: discipline.chiefUserId,
+    instituteChiefUserId: discipline.instituteChiefUserId,
+    supportingDesignerUserId: discipline.supportingDesignerUserId,
+    instituteChief: mapDisciplineUserSummary(discipline.instituteChiefUser),
+    supportingDesigner: mapDisciplineUserSummary(discipline.supportingDesignerUser),
     isClosed: discipline.isClosed,
     closedAt: toIsoString(discipline.closedAt),
     closedBy: discipline.closedBy,

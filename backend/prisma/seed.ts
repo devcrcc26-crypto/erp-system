@@ -338,15 +338,21 @@ function documentsPermissionFlags(
   const fullAccessRoles = new Set([
     'Project Manager',
     'Managing Director',
-    'Document Controller',
     'Project Director',
   ]);
 
   if (fullAccessRoles.has(roleName)) {
-    if (action === 'delete' && roleName === 'Document Controller') {
-      return null;
-    }
     return fullPermissionFlags();
+  }
+
+  if (roleName === 'Document Controller') {
+    if (action === 'view') {
+      return viewOnlyFlags();
+    }
+    if (action === 'create') {
+      return singleActionFlags(action);
+    }
+    return null;
   }
 
   const engineeringUploadRoles = new Set([
@@ -428,6 +434,15 @@ function extendedPmModulePermissionFlags(
       }
       return null;
     }
+    if (roleName === 'Document Controller') {
+      if (action === 'view') {
+        return viewOnlyFlags();
+      }
+      if (action === 'create') {
+        return singleActionFlags(action);
+      }
+      return null;
+    }
     if (CHIEF_ROLES.has(roleName) && action === 'approve') {
       return singleActionFlags(action);
     }
@@ -446,6 +461,9 @@ function extendedPmModulePermissionFlags(
         return singleActionFlags(action);
       }
       return null;
+    }
+    if (roleName === 'Document Controller' && action === 'view') {
+      return viewOnlyFlags();
     }
     return null;
   }
@@ -944,6 +962,11 @@ async function main(): Promise<void> {
     for (const permission of permissions) {
       const flags =
         pmPermissionFlags(roleName, permission.module, permission.action) ??
+        extendedPmModulePermissionFlags(
+          roleName,
+          permission.module,
+          permission.action,
+        ) ??
         reportsPermissionFlags(roleName, permission.module, permission.action);
       if (!flags) {
         continue;

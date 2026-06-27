@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
@@ -106,6 +107,7 @@ export class DocumentFoldersController {
   }
 
   @Get(':id/documents')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List documents in a folder' })
   async listDocuments(
     @CurrentUser() user: AuthenticatedUser,

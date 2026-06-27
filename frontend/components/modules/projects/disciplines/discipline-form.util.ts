@@ -12,6 +12,8 @@ export interface DisciplineFormValues {
   reviewerUserId?: string;
   disciplineLeadUserId?: string;
   chiefUserId?: string;
+  instituteChiefUserId?: string;
+  supportingDesignerUserId?: string;
   actualCompletionTime?: Dayjs;
   deptReviewTime?: Dayjs;
 }
@@ -33,6 +35,8 @@ export function toDisciplinePayload(
     reviewerUserId: values.reviewerUserId,
     disciplineLeadUserId: values.disciplineLeadUserId,
     chiefUserId: values.chiefUserId,
+    instituteChiefUserId: values.instituteChiefUserId,
+    supportingDesignerUserId: values.supportingDesignerUserId,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     deptReviewTime: values.deptReviewTime?.toISOString(),
   };
@@ -48,6 +52,8 @@ export function toDisciplineFormValues(
     reviewerUserId: discipline.reviewerUserId ?? undefined,
     disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
     chiefUserId: discipline.chiefUserId ?? undefined,
+    instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+    supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
     actualCompletionTime: discipline.actualCompletionTime
       ? dayjs(discipline.actualCompletionTime)
       : undefined,

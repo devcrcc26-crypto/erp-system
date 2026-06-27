@@ -14,6 +14,7 @@ import { WorkflowEntityType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
@@ -76,7 +77,10 @@ export class EngineeringDocumentsController {
   }
 
   @Post('register')
-  @RequirePermission('schedule', 'edit')
+  @RequireAnyPermission(
+    { module: 'schedule', action: 'edit' },
+    { module: 'engineering_documents', action: 'create' },
+  )
   @ApiOperation({ summary: 'Register uploaded file as engineering document Rev 0' })
   register(
     @CurrentUser() user: AuthenticatedUser,
@@ -110,7 +114,10 @@ export class EngineeringDocumentsController {
   }
 
   @Patch(':id')
-  @RequirePermission('schedule', 'edit')
+  @RequireAnyPermission(
+    { module: 'schedule', action: 'edit' },
+    { module: 'engineering_documents', action: 'edit' },
+  )
   @ApiOperation({ summary: 'Update engineering document metadata' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -147,7 +154,10 @@ export class EngineeringDocumentsController {
   }
 
   @Post(':id/versions')
-  @RequirePermission('schedule', 'create')
+  @RequireAnyPermission(
+    { module: 'schedule', action: 'create' },
+    { module: 'engineering_documents', action: 'create' },
+  )
   @ApiOperation({ summary: 'Link new core document version as EDV row' })
   uploadVersion(
     @CurrentUser() user: AuthenticatedUser,

@@ -797,6 +797,8 @@ export interface CreateTaskDisciplineRequest {
   reviewerUserId?: string;
   disciplineLeadUserId?: string;
   chiefUserId?: string;
+  instituteChiefUserId?: string;
+  supportingDesignerUserId?: string;
   actualCompletionTime?: string;
   deptReviewTime?: string;
 }

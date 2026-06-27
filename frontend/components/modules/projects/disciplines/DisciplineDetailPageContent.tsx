@@ -180,6 +180,12 @@ export default function DisciplineDetailPageContent({
           <Descriptions.Item label="Discipline owner">
             {discipline.disciplineOwnerName ?? '-'}
           </Descriptions.Item>
+          <Descriptions.Item label="Institute chief">
+            {discipline.instituteChief?.name ?? '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Supporting designer">
+            {discipline.supportingDesigner?.name ?? '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Dept review">
             {formatDisciplineDateTime(discipline.deptReviewTime)}
           </Descriptions.Item>

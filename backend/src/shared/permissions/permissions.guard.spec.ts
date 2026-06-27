@@ -39,6 +39,8 @@ describe('PermissionsGuard', () => {
   it('throws when endpoint has no @RequirePermission decorator', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(undefined)
       .mockReturnValueOnce(undefined);
 
     await expect(guard.canActivate(buildContext())).rejects.toMatchObject({
@@ -49,9 +51,34 @@ describe('PermissionsGuard', () => {
     expect(permissionService.hasPermission).not.toHaveBeenCalled();
   });
 
+  it('allows @DelegatePermissionCheck when authenticated', async () => {
+    reflector.getAllAndOverride
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+
+    await expect(
+      guard.canActivate(
+        buildContext({ userId: 'user-1', companyId: 'company-1' }),
+      ),
+    ).resolves.toBe(true);
+    expect(permissionService.hasPermission).not.toHaveBeenCalled();
+  });
+
+  it('throws when @DelegatePermissionCheck is used without auth', async () => {
+    reflector.getAllAndOverride
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+
+    await expect(guard.canActivate(buildContext())).rejects.toMatchObject({
+      response: { message: 'Authentication required' },
+    });
+  });
+
   it('throws ForbiddenException when permission is missing', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(undefined)
       .mockReturnValueOnce({ module: 'users', action: 'create' });
     permissionService.hasPermission.mockResolvedValue(false);
 
@@ -62,9 +89,31 @@ describe('PermissionsGuard', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('passes when any @RequireAnyPermission alternative matches', async () => {
+    reflector.getAllAndOverride
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce([
+        { module: 'schedule', action: 'edit' },
+        { module: 'engineering_documents', action: 'create' },
+      ])
+      .mockReturnValueOnce(undefined);
+    permissionService.hasPermission
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+
+    await expect(
+      guard.canActivate(
+        buildContext({ userId: 'user-1', companyId: 'company-1' }),
+      ),
+    ).resolves.toBe(true);
+  });
+
   it('passes when @RequirePermission is present and role matches', async () => {
     reflector.getAllAndOverride
       .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(undefined)
       .mockReturnValueOnce({ module: 'users', action: 'view' });
     permissionService.hasPermission.mockResolvedValue(true);
 

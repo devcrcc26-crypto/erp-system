@@ -64,6 +64,12 @@ export class EpcCapabilitiesDto {
 
   @ApiProperty({
     description:
+      'Upload and register engineering document files on assigned disciplines (Document Controller logistics).',
+  })
+  canUploadEngineeringDocuments!: boolean;
+
+  @ApiProperty({
+    description:
       'When true, user sees all project disciplines (PM / admin bypass).',
   })
   disciplineScopeBypass!: boolean;

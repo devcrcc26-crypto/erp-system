@@ -98,10 +98,10 @@ export class PermissionResolverService {
    * Asserts user may perform a workflow action - deny wins.
    */
   async assertActionAllowed(input: WorkflowActionPermissionInput): Promise<void> {
-    const grantedActions = await this.resolveGrantedActions(
-      input.userId,
-      input.companyId,
-    );
+    const [grantedActions, roleNames] = await Promise.all([
+      this.resolveGrantedActions(input.userId, input.companyId),
+      this.permissionService.getUserRoleNames(input.userId, input.companyId),
+    ]);
 
     const discipline = await this.epcWorkflowRepository.findTaskDisciplineContext(
       input.companyId,
@@ -138,6 +138,7 @@ export class PermissionResolverService {
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+      isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -153,11 +154,14 @@ export class PermissionResolverService {
     userId: string,
     companyId: string,
   ): Promise<ReadonlySet<EpcWorkflowAction>> {
-    const schedule = await this.permissionService.getUserModulePermissions(
-      userId,
-      companyId,
-      'schedule',
-    );
+    const [schedule, engineeringDocuments] = await Promise.all([
+      this.permissionService.getUserModulePermissions(userId, companyId, 'schedule'),
+      this.permissionService.getUserModulePermissions(
+        userId,
+        companyId,
+        'engineering_documents',
+      ),
+    ]);
 
     const granted = new Set<EpcWorkflowAction>();
 
@@ -188,6 +192,11 @@ export class PermissionResolverService {
       this.grantReviewApprovalActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
       granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
+    }
+
+    if (engineeringDocuments.canCreate) {
+      granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
+      granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER);
     }
 
     return granted;

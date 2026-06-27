@@ -39,7 +39,8 @@ export class SessionCapabilitiesService {
    * Resolves UI capability flags for the authenticated session from RBAC.
    */
   async resolve(userId: string, companyId: string): Promise<CapabilitiesDto> {
-    const [users, roles, notifications, audit, pm, schedule] = await Promise.all([
+    const [users, roles, notifications, audit, pm, schedule, engineeringDocuments] =
+      await Promise.all([
       this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
       this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
       this.permissionService.getUserModulePermissions(
@@ -54,6 +55,11 @@ export class SessionCapabilitiesService {
         companyId,
         'schedule',
       ),
+      this.permissionService.getUserModulePermissions(
+        userId,
+        companyId,
+        'engineering_documents',
+      ),
     ]);
 
     return {
@@ -64,7 +70,12 @@ export class SessionCapabilitiesService {
       canViewNotifications: notifications.canView,
       canViewAuditLogs: audit.canView,
       pm,
-      epc: await this.resolveEpcCapabilities(userId, companyId, schedule),
+      epc: await this.resolveEpcCapabilities(
+        userId,
+        companyId,
+        schedule,
+        engineeringDocuments,
+      ),
     };
   }
 
@@ -94,6 +105,7 @@ export class SessionCapabilitiesService {
     userId: string,
     companyId: string,
     schedule: PermissionFlags,
+    engineeringDocuments: PermissionFlags,
   ): Promise<EpcCapabilitiesDto> {
     const roleNames = await this.permissionService.getUserRoleNames(
       userId,
@@ -110,6 +122,9 @@ export class SessionCapabilitiesService {
         schedule.canApprove ||
         schedule.canView);
 
+    const canUploadEngineeringDocuments =
+      schedule.canView && engineeringDocuments.canCreate;
+
     return {
       // Review inbox and approve/return actions require explicit approve permission.
       canViewReviewInbox: schedule.canView && schedule.canApprove,
@@ -119,6 +134,7 @@ export class SessionCapabilitiesService {
         (schedule.canCreate || schedule.canEdit) &&
         !schedule.canApprove,
       canViewEngineering,
+      canUploadEngineeringDocuments,
       disciplineScopeBypass,
     };
   }

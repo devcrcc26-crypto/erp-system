@@ -10,6 +10,8 @@ export interface RoleLens {
   canViewEngineering: boolean;
   canCreateEngineering: boolean;
   canEditEngineering: boolean;
+  /** Register EDVs and upload file versions only — no package or metadata edits. */
+  canUploadEngineeringDocuments: boolean;
   /** Matches schedule create permission used by submit-for-review API. */
   canSubmitDesignPackage: boolean;
   canApproveReview: boolean;
@@ -45,6 +47,7 @@ function buildRoleLens(
     canViewReviewInbox: boolean;
     canViewMyComments: boolean;
     canViewEngineering: boolean;
+    canUploadEngineeringDocuments: boolean;
     disciplineScopeBypass: boolean;
   },
 ): RoleLens {
@@ -54,6 +57,8 @@ function buildRoleLens(
       epc.canViewReviewInbox ||
       epc.canViewMyComments ||
       schedule.canView);
+  const canUploadEngineeringDocuments =
+    engineeringView && epc.canUploadEngineeringDocuments;
   const canSubmitDesignPackage =
     engineeringView && (schedule.canCreate || schedule.canEdit);
   const canViewReviewInbox = epc.canViewReviewInbox && schedule.canView;
@@ -64,6 +69,7 @@ function buildRoleLens(
     canCreateEngineering:
       engineeringView && (schedule.canCreate || schedule.canEdit),
     canEditEngineering: engineeringView && schedule.canEdit,
+    canUploadEngineeringDocuments,
     canSubmitDesignPackage,
     canApproveReview: canViewReviewInbox,
     canResolveAssignedComments: canViewMyComments,

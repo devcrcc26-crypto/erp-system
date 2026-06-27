@@ -170,6 +170,9 @@ export async function clearAllProjectData(
 
   // ── EPC workflow ───────────────────────────────────────────────────────────
   if (sessionIds.length > 0) {
+    await prisma.reviewSessionAttachment.deleteMany({
+      where: { reviewSessionId: { in: sessionIds } },
+    });
     await prisma.reviewComment.deleteMany({
       where: { reviewSessionId: { in: sessionIds } },
     });
@@ -213,6 +216,9 @@ export async function clearAllProjectData(
   }
 
   if (packageIds.length > 0) {
+    await prisma.designPackageAttachment.deleteMany({
+      where: { designPackageId: { in: packageIds } },
+    });
     await prisma.submittalItem.deleteMany({
       where: { designPackageId: { in: packageIds } },
     });

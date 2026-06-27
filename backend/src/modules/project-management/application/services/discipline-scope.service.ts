@@ -17,6 +17,8 @@ const ASSIGNEE_OR = (userId: string) => [
   { reviewerUserId: userId },
   { disciplineLeadUserId: userId },
   { chiefUserId: userId },
+  { instituteChiefUserId: userId },
+  { supportingDesignerUserId: userId },
 ];
 
 /**

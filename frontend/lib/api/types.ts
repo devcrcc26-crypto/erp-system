@@ -371,6 +371,7 @@ export interface EpcCapabilities {
   canViewReviewInbox: boolean;
   canViewMyComments: boolean;
   canViewEngineering: boolean;
+  canUploadEngineeringDocuments: boolean;
   disciplineScopeBypass: boolean;
 }
 
@@ -378,6 +379,7 @@ export const EMPTY_EPC_CAPABILITIES: EpcCapabilities = {
   canViewReviewInbox: false,
   canViewMyComments: false,
   canViewEngineering: false,
+  canUploadEngineeringDocuments: false,
   disciplineScopeBypass: false,
 };
 

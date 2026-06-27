@@ -416,6 +416,16 @@ export class CreateTaskDisciplineDto {
   @IsOptional()
   @IsEntityUuid()
   chiefUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  instituteChiefUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  supportingDesignerUserId?: string;
 }
 
 export class UpdateTaskDisciplineDto extends PartialType(CreateTaskDisciplineDto) {}

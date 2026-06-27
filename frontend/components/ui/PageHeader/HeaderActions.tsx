@@ -1,5 +1,3 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import Link from 'next/link';
@@ -8,7 +6,7 @@ import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPan
 import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
-import { useUser } from '@/lib/query/users';
+import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
@@ -21,19 +19,15 @@ export default function HeaderActions({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
-  const canManageUsers = useAuthStore(
-    (state) => state.capabilities.canManageUsers,
-  );
-  const { data: userDetail } = useUser(
-    user?.id ?? '',
-    Boolean(user?.id) && canManageUsers,
-  );
+  const { data: profile } = useCurrentUser();
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
     : t('common.defaultUser');
   const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
-  const roleName = userDetail?.userRoles?.[0]?.role?.name ?? t('common.defaultUser');
+  const roleName =
+    profile?.roles.map((role) => role.name).join(', ') ??
+    t('common.defaultUser');
 
   return (
     <div
@@ -44,6 +38,18 @@ export default function HeaderActions({
     >
       <FontSizeControl compact={compact} />
       <NotificationPanel />
+      {profile?.roles.length ? (
+        <span
+          className="max-w-[140px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium"
+          style={{
+            backgroundColor: tokens.colorPrimaryLight,
+            color: tokens.colorPrimary,
+          }}
+          title={roleName}
+        >
+          {roleName}
+        </span>
+      ) : null}
       <Link
         href="/profile"
         className={[
@@ -63,22 +69,25 @@ export default function HeaderActions({
         >
           {avatarInitial}
         </Avatar>
-        {!compact && (
-          <div className="hidden text-[13px] md:block">
-            <p
-              className="font-medium leading-[1.4]"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {displayName}
-            </p>
-            <p
-              className="text-[10px] font-normal leading-[1.4]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {roleName}
-            </p>
-          </div>
-        )}
+        <div
+          className={[
+            'text-[13px]',
+            compact ? 'hidden' : 'hidden md:block',
+          ].join(' ')}
+        >
+          <p
+            className="font-medium leading-[1.4]"
+            style={{ color: tokens.colorTextPrimary }}
+          >
+            {displayName}
+          </p>
+          <p
+            className="text-[10px] font-normal leading-[1.4]"
+            style={{ color: tokens.colorTextTertiary }}
+          >
+            {roleName}
+          </p>
+        </div>
       </Link>
     </div>
   );

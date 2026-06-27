@@ -142,6 +142,64 @@ describe('designer-upload rights', () => {
         ),
       ).toBe(true);
     });
+
+    it('8. document controller assigned on discipline uploads EDV → allowed', () => {
+      const documentControllerId = 'user-doc-controller';
+      expect(
+        canPerformFromContext({
+          ...permissionContext(
+            documentControllerId,
+            EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+          ),
+          isDocumentController: true,
+          disciplineDesignerUserId: undefined,
+          disciplineSupportingDesignerUserId: undefined,
+          disciplineOwnerUserId: documentControllerId,
+        }),
+      ).toBe(true);
+    });
+
+    it('9. document controller not assigned on discipline uploads EDV → denied', () => {
+      expect(
+        canPerformFromContext({
+          ...permissionContext(
+            'user-doc-controller',
+            EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+          ),
+          isDocumentController: true,
+          disciplineDesignerUserId: primaryDesignerId,
+          disciplineOwnerUserId: 'other-user',
+        }),
+      ).toBe(false);
+    });
+
+    it('10. document controller cannot submit package for review', () => {
+      const documentControllerId = 'user-doc-controller';
+      expect(
+        canPerformFromContext({
+          ...permissionContext(
+            documentControllerId,
+            EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+          ),
+          isDocumentController: true,
+          disciplineOwnerUserId: documentControllerId,
+        }),
+      ).toBe(false);
+    });
+
+    it('11. document controller cannot add EDV to package', () => {
+      const documentControllerId = 'user-doc-controller';
+      expect(
+        canPerformFromContext({
+          ...permissionContext(
+            documentControllerId,
+            EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
+          ),
+          isDocumentController: true,
+          disciplineOwnerUserId: documentControllerId,
+        }),
+      ).toBe(false);
+    });
   });
 
   describe('isCurrent flag on EDV upload', () => {
@@ -344,6 +402,7 @@ function buildPermissionResolver(discipline: {
         canDelete: false,
         canApprove: false,
       }),
+      getUserRoleNames: jest.fn().mockResolvedValue([]),
     } as unknown as PermissionService,
     {
       findProjectTeamRole: jest.fn().mockResolvedValue('OTHER'),

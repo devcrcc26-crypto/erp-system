@@ -65,6 +65,15 @@ const TASK_SORT_FIELDS = new Set([
   'status',
 ]);
 
+const TASK_DISCIPLINE_USER_INCLUDE = {
+  instituteChiefUser: {
+    select: { id: true, firstName: true, lastName: true },
+  },
+  supportingDesignerUser: {
+    select: { id: true, firstName: true, lastName: true },
+  },
+} as const;
+
 const MILESTONE_STATUS_TRANSITIONS: Record<
   MilestoneStatus,
   MilestoneStatus[]
@@ -599,6 +608,7 @@ export class ScheduleService {
         task: {
           select: { name: true },
         },
+        ...TASK_DISCIPLINE_USER_INCLUDE,
       },
       orderBy: [{ task: { name: 'asc' } }, { createdAt: 'asc' }],
     });
@@ -634,6 +644,7 @@ export class ScheduleService {
         task: {
           select: { name: true },
         },
+        ...TASK_DISCIPLINE_USER_INCLUDE,
       },
     });
 
@@ -663,6 +674,7 @@ export class ScheduleService {
 
     const disciplines = await this.prisma.taskDiscipline.findMany({
       where: activeOnly({ taskId, companyId: ctx.companyId, ...scopeFilter }),
+      include: TASK_DISCIPLINE_USER_INCLUDE,
       orderBy: { createdAt: 'asc' },
     });
 
@@ -686,6 +698,8 @@ export class ScheduleService {
       dto.reviewerUserId,
       dto.disciplineLeadUserId,
       dto.chiefUserId,
+      dto.instituteChiefUserId,
+      dto.supportingDesignerUserId,
     ]);
 
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
@@ -705,11 +719,14 @@ export class ScheduleService {
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
         chiefUserId: dto.chiefUserId,
+        instituteChiefUserId: dto.instituteChiefUserId,
+        supportingDesignerUserId: dto.supportingDesignerUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
+      include: TASK_DISCIPLINE_USER_INCLUDE,
     });
 
     await this.engineeringDocumentFolderService.ensureDisciplineFolder(
@@ -740,6 +757,8 @@ export class ScheduleService {
       dto.reviewerUserId,
       dto.disciplineLeadUserId,
       dto.chiefUserId,
+      dto.instituteChiefUserId,
+      dto.supportingDesignerUserId,
     ]);
 
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
@@ -758,10 +777,13 @@ export class ScheduleService {
         reviewerUserId: dto.reviewerUserId,
         disciplineLeadUserId: dto.disciplineLeadUserId,
         chiefUserId: dto.chiefUserId,
+        instituteChiefUserId: dto.instituteChiefUserId,
+        supportingDesignerUserId: dto.supportingDesignerUserId,
         actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
         deptReviewTime: parseOptionalDate(dto.deptReviewTime),
         updatedBy: ctx.userId,
       },
+      include: TASK_DISCIPLINE_USER_INCLUDE,
     });
 
     return mapTaskDiscipline(discipline);
@@ -819,6 +841,7 @@ export class ScheduleService {
         closedBy: ctx.userId,
         updatedBy: ctx.userId,
       },
+      include: TASK_DISCIPLINE_USER_INCLUDE,
     });
 
     return mapTaskDiscipline(updated);

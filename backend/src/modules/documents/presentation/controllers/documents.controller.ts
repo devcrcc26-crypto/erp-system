@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
@@ -44,6 +45,7 @@ export class DocumentsController {
   }
 
   @Get('versions/:versionId/download-url')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get presigned download URL for a document version' })
   async getVersionDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
@@ -58,6 +60,7 @@ export class DocumentsController {
   }
 
   @Get(':id/download-url')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get presigned download URL' })
   async getDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,6 +75,7 @@ export class DocumentsController {
   }
 
   @Get(':id/versions')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List document versions' })
   async listVersions(
     @CurrentUser() user: AuthenticatedUser,
@@ -109,6 +113,7 @@ export class DocumentsController {
   }
 
   @Get(':id')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get document metadata' })
   async get(
     @CurrentUser() user: AuthenticatedUser,
@@ -154,6 +159,7 @@ export class DocumentUploadController {
   ) {}
 
   @Post(':folderId/documents')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Upload a document to a folder' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

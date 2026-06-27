@@ -55,6 +55,10 @@ export interface MappedDesignPackage {
   projectionPending: boolean;
   submittedAt: string | null;
   approvedAt: string | null;
+  requiredTiers: DesignPackage['requiredTiers'];
+  briefText: string | null;
+  sourceEntityType: string | null;
+  sourceEntityId: string | null;
   packageStatus: DesignPackage['packageStatus'];
   packageClosedAt: string | null;
   packageClosedBy: string | null;
@@ -162,6 +166,10 @@ export function mapDesignPackage(
     projectionPending: row.projectionPending,
     submittedAt: toIsoString(row.submittedAt),
     approvedAt: toIsoString(row.approvedAt),
+    requiredTiers: row.requiredTiers,
+    briefText: row.briefText,
+    sourceEntityType: row.sourceEntityType,
+    sourceEntityId: row.sourceEntityId,
     packageStatus: row.packageStatus,
     packageClosedAt: toIsoString(row.packageClosedAt),
     packageClosedBy: row.packageClosedBy,

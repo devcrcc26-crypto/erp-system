@@ -81,10 +81,13 @@ const PHASE_LOCKED_ACTIONS: Readonly<
   ],
 };
 
-/** Primary or supporting designer may upload/register and manage package items. */
-const DESIGNER_UPLOAD_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
+/** Primary or supporting designer may upload/register files and manage package items. */
+const ENGINEERING_FILE_UPLOAD_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
+]);
+
+const DESIGN_PACKAGE_ITEM_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
   EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
 ]);
@@ -109,6 +112,19 @@ const REVIEW_TIER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
 const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
 ]);
+
+function isDisciplineAssignee(input: PermissionContextInput): boolean {
+  const { userId } = input;
+  return (
+    userId === input.disciplineDesignerUserId ||
+    userId === input.disciplineSupportingDesignerUserId ||
+    userId === input.disciplineOwnerUserId ||
+    userId === input.disciplineReviewerUserId ||
+    userId === input.disciplineLeadUserId ||
+    userId === input.disciplineChiefUserId ||
+    userId === input.disciplineInstituteChiefUserId
+  );
+}
 
 /**
  * Layer 1 - system role action flags.
@@ -192,7 +208,33 @@ export function evaluateDisciplineAssignmentLayer(
 
   const { userId, action } = input;
 
-  if (DESIGNER_UPLOAD_ACTIONS.has(action)) {
+  if (ENGINEERING_FILE_UPLOAD_ACTIONS.has(action)) {
+    const isPrimary = userId === input.disciplineDesignerUserId;
+    const isSupporting = userId === input.disciplineSupportingDesignerUserId;
+    if (isPrimary || isSupporting) {
+      return {
+        layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+        verdict: PermissionLayerVerdict.ALLOW,
+      };
+    }
+
+    if (input.isDocumentController && isDisciplineAssignee(input)) {
+      return {
+        layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+        verdict: PermissionLayerVerdict.ALLOW,
+      };
+    }
+
+    return {
+      layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+      verdict: PermissionLayerVerdict.DENY,
+      reason: input.isDocumentController
+        ? 'User is not assigned to this discipline'
+        : 'User is not a discipline designer',
+    };
+  }
+
+  if (DESIGN_PACKAGE_ITEM_ACTIONS.has(action)) {
     const isPrimary = userId === input.disciplineDesignerUserId;
     const isSupporting = userId === input.disciplineSupportingDesignerUserId;
     const match = isPrimary || isSupporting;

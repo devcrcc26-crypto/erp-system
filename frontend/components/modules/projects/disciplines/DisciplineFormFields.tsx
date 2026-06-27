@@ -42,6 +42,14 @@ export default function DisciplineFormFields({
         <ProjectTeamUserSelect projectId={projectId} />
       </Form.Item>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+        <Form.Item label="Institute chief" name="instituteChiefUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
+        </Form.Item>
+        <Form.Item label="Supporting designer" name="supportingDesignerUserId">
+          <ProjectTeamUserSelect projectId={projectId} />
+        </Form.Item>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
         <Form.Item label="Actual completion" name="actualCompletionTime">
           <DatePicker className="w-full" showTime />
         </Form.Item>
