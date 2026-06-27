@@ -109,6 +109,7 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'projects', action: 'create', description: 'Create projects' },
   { module: 'projects', action: 'edit', description: 'Edit projects' },
   { module: 'projects', action: 'delete', description: 'Delete projects' },
+  { module: 'projects', action: 'export', description: 'Export projects' },
 
   { module: 'schedule', action: 'view', description: 'View project schedule' },
   { module: 'schedule', action: 'create', description: 'Create schedule items' },

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -11,7 +11,7 @@ import {
   Select,
   Space,
 } from 'antd';
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, FilePdfOutlined, PlusOutlined } from '@ant-design/icons';
 import { Network } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -22,10 +22,11 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
-import { useProjects } from '@/lib/query/projects';
+import { fetchAllProjects, useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAuthStore } from '@/stores/auth.store';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatProjectBudget,
@@ -34,17 +35,21 @@ import {
   formatProjectType,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
+import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
 export default function ProjectsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const messageApi = useAppMessage();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | undefined>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const authUser = useAuthStore((state) => state.user);
   const canFetchProjects = authHydrated && isAuthenticated;
 
   const projectsQuery = useProjects(
@@ -57,6 +62,40 @@ export default function ProjectsPageContent(): React.ReactNode {
     },
     canFetchProjects,
   );
+
+  const handleExportPdf = useCallback(async (): Promise<void> => {
+    const trimmedSearch = search.trim();
+    setExportingPdf(true);
+
+    try {
+      const allProjects = await fetchAllProjects({
+        search: trimmedSearch || undefined,
+        status: statusFilter,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
+      const generatedAt = new Date().toISOString();
+      const preparedBy = authUser
+        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
+        : 'User';
+
+      exportProjectsPdf({
+        companyName: authUser?.companyName ?? 'Company',
+        generatedAt,
+        preparedBy,
+        projects: allProjects,
+        filters: {
+          search: trimmedSearch || undefined,
+          status: statusFilter,
+        },
+      });
+      messageApi.success('Project export generated.');
+    } catch {
+      messageApi.error('Unable to export projects. Please try again.');
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [authUser, messageApi, search, statusFilter]);
 
   const columns: ColumnsType<Project> = useMemo(
     () => [
@@ -204,16 +243,25 @@ export default function ProjectsPageContent(): React.ReactNode {
         title="Project register"
         description="Search and manage construction projects across your portfolio."
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingProject(null);
-              setDrawerOpen(true);
-            }}
-          >
-            New project
-          </Button>
+          <Space wrap>
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={() => void handleExportPdf()}
+            >
+              Export PDF
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingProject(null);
+                setDrawerOpen(true);
+              }}
+            >
+              New project
+            </Button>
+          </Space>
         }
       >
         <Space wrap className="!mb-4">

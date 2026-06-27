@@ -115,6 +115,32 @@ export function useAllProjects(
   });
 }
 
+/**
+ * Loads every project matching the supplied filters for exports.
+ */
+export async function fetchAllProjects(
+  params: Omit<ProjectListParams, 'page' | 'limit'> = {},
+): Promise<Project[]> {
+  let page = 1;
+  let pages = 1;
+  const projects: Project[] = [];
+
+  do {
+    const result = await apiGetPaginated<Project>(
+      `/projects${toQueryString({
+        ...params,
+        page,
+        limit: PROJECT_LIST_PAGE_SIZE,
+      })}`,
+    );
+    projects.push(...result.data);
+    pages = result.meta.pages;
+    page += 1;
+  } while (page <= pages);
+
+  return projects;
+}
+
 export function useProject(id: string, enabled = true) {
   return useQuery({
     queryKey: projectKeys.detail(id),
