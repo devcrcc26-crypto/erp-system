@@ -9,6 +9,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DispatcherWorkloadItem } from '@/lib/api/epc.types';
 import { useProjectWorkload } from '@/lib/query/epc-workspace';
+import { useCanViewEpcEngineering, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
 
 export default function DispatcherWorkloadTable({
@@ -16,7 +17,12 @@ export default function DispatcherWorkloadTable({
 }: {
   projectId: string;
 }): React.ReactNode {
-  const workloadQuery = useProjectWorkload(projectId);
+  const permLoading = usePermissionsLoading();
+  const canViewEpcEngineering = useCanViewEpcEngineering();
+  const workloadQuery = useProjectWorkload(
+    projectId,
+    !permLoading && canViewEpcEngineering,
+  );
 
   const apiUnavailable =
     workloadQuery.isError &&
@@ -58,8 +64,12 @@ export default function DispatcherWorkloadTable({
     },
   ];
 
-  if (workloadQuery.isLoading) {
+  if (permLoading || workloadQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!canViewEpcEngineering) {
+    return null;
   }
 
   return (

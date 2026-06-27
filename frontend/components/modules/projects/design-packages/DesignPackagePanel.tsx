@@ -16,7 +16,7 @@ import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -35,6 +35,7 @@ import {
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
@@ -66,6 +67,7 @@ export default function DesignPackagePanel({
   compact?: boolean;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
@@ -79,13 +81,13 @@ export default function DesignPackagePanel({
   const packagesQuery = useDesignPackages(
     projectId,
     taskDisciplineId,
-    lens.canViewEngineering,
+    !permLoading && lens.canViewEngineering,
   );
   const documentsQuery = useEngineeringDocuments(
     projectId,
     taskDisciplineId,
     { page: 1, limit: 100 },
-    lens.canViewEngineering,
+    !permLoading && lens.canViewEngineering,
   );
 
   const addItem = useAddDesignPackageItem();
@@ -125,6 +127,10 @@ export default function DesignPackagePanel({
     packagesQuery.isError &&
     packagesQuery.error instanceof ApiRequestError &&
     (packagesQuery.error.status === 404 || packagesQuery.error.status === 0);
+
+  if (permLoading || packagesQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
 
   if (!lens.canViewEngineering) {
     return null;

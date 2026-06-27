@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button, Modal, Radio, Space } from 'antd';
+import { Button, Modal, Radio, Skeleton, Space } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircleOutlined,
@@ -38,6 +38,10 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  useCanViewEpcEngineering,
+  usePermissionsLoading,
+} from '@/hooks/use-pm-capabilities';
 
 function slaDeadlineStyle(
   session: ReviewSessionSummary,
@@ -73,23 +77,53 @@ export default function EpcWorkspacePanels({
 }): React.ReactNode {
   const messageApi = useAppMessage();
   const queryClient = useQueryClient();
+  const permLoading = usePermissionsLoading();
+  const canViewEpcEngineering = useCanViewEpcEngineering();
+  const queriesEnabled = !permLoading && canViewEpcEngineering;
   const [configuringTrigger, setConfiguringTrigger] =
     useState<ExternalReviewTrigger | null>(null);
   const [selectedTriggerMode, setSelectedTriggerMode] = useState<
     'REVISION' | 'NEW_PACKAGE'
   >('REVISION');
-  const sessionsQuery = useProjectReviewSessions(projectId, 'ACTIVE');
-  const triggersQuery = useRevisionTriggers(projectId, 'PENDING', {
-    page: 1,
-    limit: 20,
-  });
-  const workloadQuery = useDispatcherWorkload(projectId);
+  const sessionsQuery = useProjectReviewSessions(
+    projectId,
+    'ACTIVE',
+    { page: 1, limit: 50 },
+    queriesEnabled,
+  );
+  const triggersQuery = useRevisionTriggers(
+    projectId,
+    'PENDING',
+    { page: 1, limit: 20 },
+    queriesEnabled,
+  );
+  const workloadQuery = useDispatcherWorkload(projectId, queriesEnabled);
   const processTrigger = useProcessRevisionTrigger();
   const configureTrigger = useConfigureRevisionTrigger(projectId);
 
   const sessions = sessionsQuery.data?.data ?? [];
   const triggers = triggersQuery.data?.data ?? [];
   const workload = workloadQuery.data ?? [];
+
+  if (permLoading) {
+    return (
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PanelCard title="Active reviews">
+          <PanelSkeleton />
+        </PanelCard>
+        <PanelCard title="Pending revision triggers">
+          <PanelSkeleton />
+        </PanelCard>
+        <PanelCard title="Workload" className="lg:col-span-2">
+          <PanelSkeleton />
+        </PanelCard>
+      </div>
+    );
+  }
+
+  if (!canViewEpcEngineering) {
+    return null;
+  }
 
   async function handleProcessTrigger(trigger: ExternalReviewTrigger): Promise<void> {
     try {
@@ -132,7 +166,9 @@ export default function EpcWorkspacePanels({
     <>
     <div className="grid gap-4 lg:grid-cols-2">
       <PanelCard title="Active reviews">
-        {sessions.length === 0 ? (
+        {sessionsQuery.isLoading ? (
+          <PanelSkeleton />
+        ) : sessions.length === 0 ? (
           <TableEmptyState
             icon={<CheckCircleOutlined style={{ color: tokens.colorGreen600 }} />}
             title="No active review sessions"
@@ -195,7 +231,9 @@ export default function EpcWorkspacePanels({
       </PanelCard>
 
       <PanelCard title="Pending revision triggers">
-        {triggers.length === 0 ? (
+        {triggersQuery.isLoading ? (
+          <PanelSkeleton />
+        ) : triggers.length === 0 ? (
           <TableEmptyState
             icon={<CheckCircleOutlined style={{ color: tokens.colorGreen600 }} />}
             title="No pending revision triggers"
@@ -257,7 +295,9 @@ export default function EpcWorkspacePanels({
       </PanelCard>
 
       <PanelCard title="Workload" className="lg:col-span-2">
-        {workload.length === 0 ? (
+        {workloadQuery.isLoading ? (
+          <PanelSkeleton />
+        ) : workload.length === 0 ? (
           <TableEmptyState
             icon={<CheckCircleOutlined style={{ color: tokens.colorGreen600 }} />}
             title="No bottlenecks detected"
@@ -336,6 +376,16 @@ export default function EpcWorkspacePanels({
       </Radio.Group>
     </Modal>
   </>
+  );
+}
+
+function PanelSkeleton(): React.ReactNode {
+  return (
+    <div className="space-y-3 py-2">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Skeleton key={index} active paragraph={{ rows: 2 }} title={false} />
+      ))}
+    </div>
   );
 }
 

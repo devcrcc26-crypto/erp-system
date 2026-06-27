@@ -2,12 +2,11 @@
 
 'use client';
 
-import { Spin } from 'antd';
 import { Network } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProject } from '@/lib/query/projects';
-import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Project route wrapper - loading/error gates; layout lives in AppShell.
@@ -22,14 +21,7 @@ export default function ProjectShell({
   const projectQuery = useProject(projectId);
 
   if (projectQuery.isLoading) {
-    return (
-      <div
-        className="flex justify-center rounded-[12px] bg-white p-8 sm:p-16"
-        style={{ border: `0.5px solid ${tokens.colorBorder}` }}
-      >
-        <Spin />
-      </div>
-    );
+    return <PageLoadingSkeleton />;
   }
 
   if (projectQuery.isError || !projectQuery.data) {
@@ -38,15 +30,21 @@ export default function ProjectShell({
         ? projectQuery.error.status
         : 0;
 
+    if (status === 404) {
+      return (
+        <PlaceholderPage
+          icon={Network}
+          title="Project not found"
+          description="This project does not exist or the API is not available yet."
+        />
+      );
+    }
+
     return (
       <PlaceholderPage
         icon={Network}
-        title="Project not found"
-        description={
-          status === 404
-            ? 'This project does not exist or the API is not available yet.'
-            : 'Unable to load project details.'
-        }
+        title="Unable to load project"
+        description="Project details could not be loaded. Try again later."
       />
     );
   }

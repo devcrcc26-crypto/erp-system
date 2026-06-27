@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { RcFile } from 'antd/es/upload';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import type { VersionHistoryEntry } from '@/lib/api/epc.types';
 import { apiGet } from '@/lib/api/client';
@@ -60,10 +61,14 @@ export default function DraftRevisionUploadPanel({
   taskDisciplineId?: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
-  const historyQuery = useEngineeringDocumentVersionHistory(engineeringDocumentId);
+  const historyQuery = useEngineeringDocumentVersionHistory(
+    engineeringDocumentId,
+    !permLoading && lens.canViewEngineering,
+  );
   const decisionTraceQuery = useDecisionTrace(projectId, engineeringDocumentId);
   const replaceDraftFile = useReplaceDraftVersionFile();
   const uploadDocument = useUploadDocumentToFolder();
@@ -74,7 +79,7 @@ export default function DraftRevisionUploadPanel({
   const uploadFolderQuery = useDisciplineUploadFolder(
     projectId,
     resolvedDisciplineId ?? '',
-    Boolean(resolvedDisciplineId) && lens.canEditEngineering,
+    !permLoading && Boolean(resolvedDisciplineId) && lens.canEditEngineering,
   );
 
   const draftRevision = useMemo(
@@ -125,6 +130,10 @@ export default function DraftRevisionUploadPanel({
     } catch (error) {
       notifyApiError(error, 'Failed to upload revised file', messageApi);
     }
+  }
+
+  if (permLoading || historyQuery.isLoading) {
+    return <PageLoadingSkeleton />;
   }
 
   if (!lens.canViewEngineering || !draftRevision) {

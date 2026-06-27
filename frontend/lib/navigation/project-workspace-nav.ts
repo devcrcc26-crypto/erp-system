@@ -137,7 +137,7 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         labelKey: 'workspace.items.changeRequests',
         iconKey: 'change-requests',
         pathSuffix: 'change-requests',
-        capability: 'projects',
+        capability: 'change_requests',
         breadcrumbGroup: 'Review & Release',
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
       },

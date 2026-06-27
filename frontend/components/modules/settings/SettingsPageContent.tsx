@@ -18,6 +18,7 @@ import {
 } from '@/lib/query/roles';
 import type { Permission, Role, RolePermissionItem } from '@/lib/api/types';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -271,7 +272,9 @@ function RoleList({
 
 export default function SettingsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const permLoading = usePermissionsLoading();
   const canEditRoles = useAuthStore((state) => state.capabilities.canEditRoles);
+  const rolesEditable = !permLoading && canEditRoles;
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -424,7 +427,7 @@ export default function SettingsPageContent(): React.ReactNode {
                 : t('settings.permissionsSelectRole')
             }
             extra={
-              selectedRole && canEditRoles ? (
+              selectedRole && rolesEditable ? (
                 <Button
                   type="primary"
                   onClick={() => void handleSave()}
@@ -484,7 +487,7 @@ export default function SettingsPageContent(): React.ReactNode {
                       return (
                         <Checkbox
                           checked={checked}
-                          disabled={!canEditRoles}
+                          disabled={!rolesEditable}
                           onChange={(event: { target: { checked: boolean } }) =>
                             handleToggle(record.module, action, event.target.checked)
                           }
@@ -496,7 +499,7 @@ export default function SettingsPageContent(): React.ReactNode {
               />
             )}
 
-            {!canEditRoles && selectedRole && (
+            {!permLoading && !canEditRoles && selectedRole && (
               <p className="mt-4 text-sm text-slate-500">
                 {t('settings.viewOnlyRoles')}
               </p>

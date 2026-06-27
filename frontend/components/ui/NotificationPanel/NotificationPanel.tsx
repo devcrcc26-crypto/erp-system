@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Badge, Button, Dropdown, Empty, Spin, Typography } from 'antd';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -14,8 +14,8 @@ import {
   useUnreadNotificationCount,
 } from '@/lib/query/notifications';
 import type { InAppNotification } from '@/lib/api/documents.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
 
 dayjs.extend(relativeTime);
@@ -74,14 +74,11 @@ function NotificationItem({
  */
 export default function NotificationPanel(): React.ReactNode {
   const [open, setOpen] = useState(false);
+  const permLoading = usePermissionsLoading();
   const canViewNotifications = useAuthStore(
     (state) => state.capabilities.canViewNotifications,
   );
-  const [allowed, setAllowed] = useState(canViewNotifications);
-
-  useEffect(() => {
-    setAllowed(canViewNotifications);
-  }, [canViewNotifications]);
+  const allowed = !permLoading && canViewNotifications;
 
   const unreadQuery = useUnreadNotificationCount(allowed);
   const notificationsQuery = useNotifications(
@@ -90,21 +87,6 @@ export default function NotificationPanel(): React.ReactNode {
   );
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-
-  useEffect(() => {
-    if (!unreadQuery.isError || !allowed) {
-      return;
-    }
-
-    const status =
-      unreadQuery.error instanceof ApiRequestError
-        ? unreadQuery.error.status
-        : 0;
-
-    if (status === 403 || status === 401) {
-      setAllowed(false);
-    }
-  }, [allowed, unreadQuery.isError, unreadQuery.error]);
 
   const unreadCount = allowed ? (unreadQuery.data?.count ?? 0) : 0;
   const notifications = allowed ? (notificationsQuery.data?.data ?? []) : [];
@@ -139,13 +121,13 @@ export default function NotificationPanel(): React.ReactNode {
         )}
       </div>
 
-      {!allowed ? (
+      {!permLoading && !allowed ? (
         <Empty
           className="py-8"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description="Notifications are not available for your account"
         />
-      ) : notificationsQuery.isLoading ? (
+      ) : permLoading || (open && notificationsQuery.isLoading) ? (
         <div className="flex justify-center py-8">
           <Spin />
         </div>

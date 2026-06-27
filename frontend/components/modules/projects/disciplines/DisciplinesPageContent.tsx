@@ -9,7 +9,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
@@ -20,6 +20,7 @@ import { useProjectDisciplines, type ProjectDisciplineRow } from '@/lib/query/di
 import { useDesignPackages } from '@/lib/query/design-packages';
 import { useDeleteTaskDiscipline } from '@/lib/query/schedule';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
@@ -44,13 +45,17 @@ export default function DisciplinesPageContent({
   projectId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const { t } = useEpcTranslation();
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<ProjectDisciplineRow | null>(null);
   const [deleting, setDeleting] = useState<ProjectDisciplineRow | null>(null);
 
-  const disciplinesQuery = useProjectDisciplines(projectId, lens.canViewEngineering);
+  const disciplinesQuery = useProjectDisciplines(
+    projectId,
+    !permLoading && lens.canViewEngineering,
+  );
   const deleteDiscipline = useDeleteTaskDiscipline();
 
   const apiUnavailable =
@@ -160,6 +165,10 @@ export default function DisciplinesPageContent({
       ),
     },
   ];
+
+  if (permLoading || disciplinesQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
 
   if (!lens.canViewEngineering) {
     return (

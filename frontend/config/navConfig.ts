@@ -43,14 +43,28 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/audit-logs': 'nav.auditLogs',
 };
 
+export interface IconRailVisibility {
+  canViewReviewInbox: boolean;
+  canViewMyComments: boolean;
+  canViewAuditLogs: boolean;
+  canManageUsers: boolean;
+  canManageRoles: boolean;
+  canViewProjects: boolean;
+}
+
 /**
  * Top-level icon rail navigation items.
  */
-export function buildIconRailItems(
-  canViewReviewInbox: boolean,
-  canViewMyComments: boolean,
-  canViewAuditLogs: boolean,
-): IconRailItem[] {
+export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem[] {
+  const {
+    canViewReviewInbox,
+    canViewMyComments,
+    canViewAuditLogs,
+    canManageUsers,
+    canManageRoles,
+    canViewProjects,
+  } = visibility;
+
   return [
     {
       key: '/',
@@ -64,7 +78,7 @@ export function buildIconRailItems(
       labelKey: 'nav.projects',
       href: '/projects',
       iconKey: 'projects',
-      visible: true,
+      visible: canViewProjects,
     },
     {
       key: '/review-inbox',
@@ -85,14 +99,14 @@ export function buildIconRailItems(
       labelKey: 'nav.kanbanBoard',
       href: '/kanban-board',
       iconKey: 'kanban',
-      visible: true,
+      visible: canViewProjects,
     },
     {
       key: '/users',
       labelKey: 'nav.users',
       href: '/users',
       iconKey: 'users',
-      visible: true,
+      visible: canManageUsers,
     },
     {
       key: '/audit-logs',
@@ -106,21 +120,21 @@ export function buildIconRailItems(
       labelKey: 'nav.reports',
       href: '/reports',
       iconKey: 'reports',
-      visible: true,
+      visible: canViewProjects,
     },
     {
       key: '/messages',
       labelKey: 'nav.messages',
       href: '/messages',
       iconKey: 'messages',
-      visible: true,
+      visible: false,
     },
     {
       key: '/settings',
       labelKey: 'nav.settings',
       href: '/settings',
       iconKey: 'settings',
-      visible: true,
+      visible: canManageRoles,
     },
   ];
 }

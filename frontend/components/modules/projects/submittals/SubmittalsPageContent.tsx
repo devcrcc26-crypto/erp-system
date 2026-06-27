@@ -29,6 +29,7 @@ import ConstructionSubmittalDrawer from '@/components/modules/projects/submittal
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import Link from 'next/link';
 
@@ -45,14 +46,19 @@ export default function SubmittalsPageContent({
     null,
   );
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const resolveUserName = useUserNameLookup();
 
-  const submittalsQuery = useSubmittals(projectId, {
-    ...params,
-    search: search.trim() || undefined,
-    status: statusFilter,
-    submittalPurpose: 'IN_CONSTRUCTION',
-  });
+  const submittalsQuery = useSubmittals(
+    projectId,
+    {
+      ...params,
+      search: search.trim() || undefined,
+      status: statusFilter,
+      submittalPurpose: 'IN_CONSTRUCTION',
+    },
+    !permLoading && lens.canViewSubmittals,
+  );
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -134,8 +140,12 @@ export default function SubmittalsPageContent({
     [resolveUserName],
   );
 
-  if (submittalsQuery.isLoading) {
+  if (permLoading || submittalsQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!lens.canViewSubmittals) {
+    return null;
   }
 
   const apiUnavailable =

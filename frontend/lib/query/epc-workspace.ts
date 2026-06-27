@@ -3,6 +3,7 @@
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { apiGet, apiGetPaginated } from '@/lib/api/client';
 import {
+  useCanViewMyComments,
   useCanViewReviewInbox,
   useCapabilitiesReady,
 } from '@/hooks/use-pm-capabilities';
@@ -80,13 +81,16 @@ export function useMyComments(
   enabled = true,
   options?: Omit<UseQueryOptions<MyCommentItem[]>, 'queryKey' | 'queryFn'>,
 ) {
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewMyComments = useCanViewMyComments();
+
   return useQuery({
     queryKey: epcWorkspaceKeys.myComments(projectId),
     queryFn: () =>
       projectId
         ? apiGet<MyCommentItem[]>(`${projectPath(projectId)}/my-comments`)
         : apiGet<MyCommentItem[]>('/my-comments'),
-    enabled,
+    enabled: enabled && capabilitiesReady && canViewMyComments,
     retry: false,
     ...options,
   });

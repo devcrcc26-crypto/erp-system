@@ -30,6 +30,7 @@ import SubmittalDetailDrawer from '@/components/modules/projects/submittals/Subm
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
 const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
   'DISCIPLINE_SITE',
@@ -62,12 +63,17 @@ export default function ExternalReleasePageContent({
     null,
   );
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
 
-  const submittalsQuery = useSubmittals(projectId, {
-    ...params,
-    search: search.trim() || undefined,
-    status: statusFilter,
-  });
+  const submittalsQuery = useSubmittals(
+    projectId,
+    {
+      ...params,
+      search: search.trim() || undefined,
+      status: statusFilter,
+    },
+    !permLoading && lens.canViewSubmittals,
+  );
 
   const submittals = (submittalsQuery.data?.data ?? []).filter((row) =>
     EXTERNAL_PURPOSES.includes(row.submittalPurpose as SubmittalPurpose),
@@ -143,8 +149,12 @@ export default function ExternalReleasePageContent({
     [],
   );
 
-  if (submittalsQuery.isLoading) {
+  if (permLoading || submittalsQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!lens.canViewSubmittals) {
+    return null;
   }
 
   const apiUnavailable =

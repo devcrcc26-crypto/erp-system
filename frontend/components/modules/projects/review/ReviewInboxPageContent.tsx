@@ -9,7 +9,7 @@ import ReviewInboxTable from '@/components/modules/projects/review/ReviewInboxTa
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanViewReviewInbox,
-  useCapabilitiesReady,
+  usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
 
 const TIER_KEYS = [
@@ -27,7 +27,7 @@ export default function ReviewInboxPageContent({
 } = {}): React.ReactNode {
   const [tierFilter, setTierFilter] = useState<string>('ALL');
   const { t } = useEpcTranslation();
-  const capabilitiesReady = useCapabilitiesReady();
+  const capabilitiesReady = !usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
 
   if (!capabilitiesReady) {

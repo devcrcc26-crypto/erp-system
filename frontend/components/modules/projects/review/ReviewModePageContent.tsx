@@ -5,8 +5,9 @@
 import Link from 'next/link';
 import { Alert, Breadcrumb, Button } from 'antd';
 import ReviewModePanel from '@/components/modules/projects/review/ReviewModePanel';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { useDesignPackage } from '@/lib/query/design-packages';
-import { useCanViewReviewInbox, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
+import { useCanViewReviewInbox, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -19,19 +20,22 @@ export default function ReviewModePageContent({
   projectId: string;
   taskDisciplineId: string;
 }): React.ReactNode {
+  const permLoading = usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
-  const capabilitiesReady = useCapabilitiesReady();
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
     packageId,
-    Boolean(projectId) && Boolean(taskDisciplineId),
+    !permLoading &&
+      canViewReviewInbox &&
+      Boolean(projectId) &&
+      Boolean(taskDisciplineId),
   );
 
   const packageName = packageQuery.data?.name ?? 'Review mode';
 
-  if (!capabilitiesReady) {
-    return null;
+  if (permLoading) {
+    return <PageLoadingSkeleton />;
   }
 
   if (!canViewReviewInbox) {

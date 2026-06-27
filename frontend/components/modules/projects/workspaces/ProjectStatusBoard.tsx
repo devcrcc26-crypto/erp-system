@@ -12,6 +12,7 @@ import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectStatusBoard } from '@/lib/query/epc-workspace';
+import { useCanViewEpcEngineering, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatProjectedStatus } from '@/lib/utils/epc-display';
 import {
@@ -28,7 +29,12 @@ export default function ProjectStatusBoard({
   projectId: string;
   compact?: boolean;
 }): React.ReactNode {
-  const boardQuery = useProjectStatusBoard(projectId);
+  const permLoading = usePermissionsLoading();
+  const canViewEpcEngineering = useCanViewEpcEngineering();
+  const boardQuery = useProjectStatusBoard(
+    projectId,
+    !permLoading && canViewEpcEngineering,
+  );
   const { t } = useEpcTranslation();
 
   const apiUnavailable =
@@ -36,8 +42,12 @@ export default function ProjectStatusBoard({
     boardQuery.error instanceof ApiRequestError &&
     (boardQuery.error.status === 404 || boardQuery.error.status === 0);
 
-  if (boardQuery.isLoading) {
+  if (permLoading || boardQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!canViewEpcEngineering) {
+    return null;
   }
 
   const board = boardQuery.data;

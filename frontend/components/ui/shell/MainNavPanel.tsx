@@ -19,8 +19,10 @@ import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
 import {
   useCanViewMyComments,
   useCanViewReviewInbox,
+  usePermissionsLoading,
+  usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
-import { useCanViewAuditLogs } from '@/hooks/use-auth-capabilities';
+import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
@@ -171,15 +173,22 @@ export default function MainNavPanel({
   const router = useRouter();
   const logout = useLogout();
   const { t } = useEpcTranslation();
+  const permLoading = usePermissionsLoading();
+  const pm = usePmCapabilities();
   const canViewReviewInbox = useCanViewReviewInbox();
   const canViewMyComments = useCanViewMyComments();
   const canViewAuditLogs = useCanViewAuditLogs();
+  const canManageUsers = useCanManageUsers();
+  const canManageRoles = useCanManageRoles();
 
-  const navItems = buildIconRailItems(
-    canViewReviewInbox,
-    canViewMyComments,
-    canViewAuditLogs,
-  );
+  const navItems = buildIconRailItems({
+    canViewReviewInbox: !permLoading && canViewReviewInbox,
+    canViewMyComments: !permLoading && canViewMyComments,
+    canViewAuditLogs: !permLoading && canViewAuditLogs,
+    canManageUsers: !permLoading && canManageUsers,
+    canManageRoles: !permLoading && canManageRoles,
+    canViewProjects: !permLoading && pm.projects.canView,
+  });
   const visibleNavItems = navItems.filter((item) => item.visible);
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';
@@ -246,16 +255,28 @@ export default function MainNavPanel({
       <hr style={{ border: 'none', borderTop: `0.5px solid ${tokens.colorBorder}` }} />
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
-        {visibleNavItems.map((item) => (
-          <RailNavButton
-            key={item.key}
-            item={item}
-            label={t(item.labelKey)}
-            isActive={selectedKey === item.key}
-            isExpanded={isExpanded}
-            onNavigate={onNavigate}
-          />
-        ))}
+        {permLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className={[
+                'erp-page-skeleton rounded-lg',
+                isExpanded ? 'h-9 w-full' : 'mx-auto h-8 w-8',
+              ].join(' ')}
+            />
+          ))
+        ) : (
+          visibleNavItems.map((item) => (
+            <RailNavButton
+              key={item.key}
+              item={item}
+              label={t(item.labelKey)}
+              isActive={selectedKey === item.key}
+              isExpanded={isExpanded}
+              onNavigate={onNavigate}
+            />
+          ))
+        )}
       </nav>
 
       <div

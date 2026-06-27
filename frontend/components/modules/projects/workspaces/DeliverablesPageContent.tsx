@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client';
@@ -15,6 +15,7 @@ import type { DesignPackage } from '@/lib/api/epc.types';
 import { designPackagesPath } from '@/lib/query/epc-query-utils';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
 
 interface DeliverableRow {
@@ -33,7 +34,11 @@ export default function DeliverablesPageContent({
   projectId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
-  const disciplinesQuery = useProjectDisciplines(projectId, lens.canViewEngineering);
+  const permLoading = usePermissionsLoading();
+  const disciplinesQuery = useProjectDisciplines(
+    projectId,
+    !permLoading && lens.canViewEngineering,
+  );
 
   const deliverablesQuery = useQuery({
     queryKey: ['epc', 'deliverables', projectId],
@@ -60,7 +65,11 @@ export default function DeliverablesPageContent({
 
       return rows;
     },
-    enabled: Boolean(projectId) && lens.canViewEngineering && Boolean(disciplinesQuery.data),
+    enabled:
+      !permLoading &&
+      Boolean(projectId) &&
+      lens.canViewEngineering &&
+      Boolean(disciplinesQuery.data),
     retry: false,
   });
 
@@ -107,6 +116,10 @@ export default function DeliverablesPageContent({
     ],
     [projectId],
   );
+
+  if (permLoading || disciplinesQuery.isLoading || deliverablesQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
 
   if (!lens.canViewEngineering) {
     return (

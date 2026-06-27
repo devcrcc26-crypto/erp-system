@@ -7,8 +7,13 @@ import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import type { ReviewInboxItem } from '@/lib/api/epc.types';
 import { useReviewInbox } from '@/lib/query/epc-workspace';
+import {
+  useCanViewReviewInbox,
+  usePermissionsLoading,
+} from '@/hooks/use-pm-capabilities';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function ReviewInboxTable({
@@ -18,6 +23,8 @@ export default function ReviewInboxTable({
   projectId?: string;
   tierFilter?: string;
 }): React.ReactNode {
+  const permLoading = usePermissionsLoading();
+  const canViewReviewInbox = useCanViewReviewInbox();
   const inboxQuery = useReviewInbox(projectId);
 
   const filtered = useMemo(() => {
@@ -27,6 +34,14 @@ export default function ReviewInboxTable({
     }
     return items.filter((item) => item.currentTier === tierFilter);
   }, [inboxQuery.data, tierFilter]);
+
+  if (permLoading || inboxQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
+
+  if (!canViewReviewInbox) {
+    return null;
+  }
 
   const columns: ColumnsType<ReviewInboxItem> = [
     {
@@ -103,7 +118,6 @@ export default function ReviewInboxTable({
       rowKey="reviewSessionId"
       columns={columns}
       dataSource={filtered}
-      loading={inboxQuery.isLoading}
       locale={{
         emptyText: (
           <TableEmptyState

@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import EdvStatusBadge from '@/components/ui/EdvStatusBadge/EdvStatusBadge';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   EngineeringDocument,
@@ -33,6 +33,7 @@ import {
   useRegisterEngineeringDocument,
 } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -72,6 +73,7 @@ export default function EngineeringDocumentPanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const searchParams = useSearchParams();
   const revisionTriggerContext = parseRevisionTriggerParams(searchParams);
   const { t } = useEpcTranslation();
@@ -89,12 +91,14 @@ export default function EngineeringDocumentPanel({
     projectId,
     taskDisciplineId,
     params,
-    lens.canViewEngineering,
+    !permLoading && lens.canViewEngineering,
   );
   const uploadFolderQuery = useDisciplineUploadFolder(
     projectId,
     taskDisciplineId,
-    lens.canViewEngineering && (canRegister || registerOpen),
+    !permLoading &&
+      lens.canViewEngineering &&
+      (canRegister || registerOpen),
   );
 
   const uploadDocument = useUploadDocumentToFolder();
@@ -216,6 +220,10 @@ export default function EngineeringDocumentPanel({
   const documentType = Form.useWatch('documentType', form) as
     | EngineeringDocumentType
     | undefined;
+
+  if (permLoading || documentsQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
 
   if (!lens.canViewEngineering) {
     return null;

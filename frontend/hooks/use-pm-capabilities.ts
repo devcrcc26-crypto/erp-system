@@ -32,6 +32,13 @@ export function useCapabilitiesReady(): boolean {
 }
 
 /**
+ * True while session capabilities are still loading.
+ */
+export function usePermissionsLoading(): boolean {
+  return !useCapabilitiesReady();
+}
+
+/**
  * Checks whether the user can view a project workspace nav item (PM module only).
  */
 export function useCanViewProjectNav(

@@ -18,7 +18,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanViewMyComments,
-  useCapabilitiesReady,
+  usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -43,16 +43,16 @@ export default function MyCommentsPageContent({
 }: {
   projectId?: string;
 } = {}): React.ReactNode {
+  const permLoading = usePermissionsLoading();
+  const canViewMyComments = useCanViewMyComments();
   const commentsQuery = useMyComments(projectId);
   const transitionComment = useTransitionReviewComment();
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const canViewMyComments = useCanViewMyComments();
-  const capabilitiesReady = useCapabilitiesReady();
 
-  if (!capabilitiesReady) {
+  if (permLoading || commentsQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -216,7 +216,6 @@ export default function MyCommentsPageContent({
           size="middle"
           columns={columns}
           dataSource={commentsQuery.data ?? []}
-          loading={commentsQuery.isLoading}
           scroll={{ x: 960 }}
           locale={{ emptyText: t('empty.noComments') }}
         />

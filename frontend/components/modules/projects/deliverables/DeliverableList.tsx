@@ -8,7 +8,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Package } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { layout } from '@/lib/theme/layout';
@@ -16,7 +16,7 @@ import type {
   Deliverable,
   DeliverableStatus,
 } from '@/lib/api/project-management.types';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { usePmCapabilities, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useDeliverables } from '@/lib/query/deliverables';
@@ -42,6 +42,7 @@ export default function DeliverableList({
   projectId: string;
 }): React.ReactNode {
   const pm = usePmCapabilities();
+  const permLoading = usePermissionsLoading();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [statusFilter, setStatusFilter] = useState<
     DeliverableStatus | undefined
@@ -50,14 +51,18 @@ export default function DeliverableList({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const disciplinesQuery = useProjectDisciplines(projectId, true);
-  const listQuery = useDeliverables(projectId, {
-    ...params,
-    status: statusFilter,
-    disciplineId: disciplineFilter,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  const disciplinesQuery = useProjectDisciplines(projectId, !permLoading && pm.schedule.canView);
+  const listQuery = useDeliverables(
+    projectId,
+    {
+      ...params,
+      status: statusFilter,
+      disciplineId: disciplineFilter,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    },
+    !permLoading && pm.schedule.canView,
+  );
 
   const disciplineOptions = useMemo(
     () =>
@@ -105,6 +110,14 @@ export default function DeliverableList({
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+
+  if (permLoading || listQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
+
+  if (!pm.schedule.canView) {
+    return null;
+  }
 
   return (
     <>

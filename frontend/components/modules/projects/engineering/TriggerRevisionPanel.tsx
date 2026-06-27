@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Modal, Select } from 'antd';
 import { useSearchParams } from 'next/navigation';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import type { EdvStatus } from '@/lib/api/epc.types';
 import { useChangeRequests } from '@/lib/query/change-requests';
@@ -78,6 +79,7 @@ export default function TriggerRevisionPanel({
   engineeringDocumentId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const searchParams = useSearchParams();
   const urlContext = parseRevisionTriggerParams(searchParams);
@@ -86,7 +88,10 @@ export default function TriggerRevisionPanel({
   const [autoOpened, setAutoOpened] = useState(false);
   const [form] = Form.useForm<TriggerRevisionFormValues>();
 
-  const historyQuery = useEngineeringDocumentVersionHistory(engineeringDocumentId);
+  const historyQuery = useEngineeringDocumentVersionHistory(
+    engineeringDocumentId,
+    !permLoading && lens.canViewEngineering,
+  );
   const triggerRevision = useTriggerRevision();
 
   const triggerSource = Form.useWatch('triggerSource', form) as
@@ -193,6 +198,10 @@ export default function TriggerRevisionPanel({
     } catch (error) {
       notifyApiError(error, 'Failed to trigger revision', messageApi);
     }
+  }
+
+  if (permLoading || historyQuery.isLoading) {
+    return <PageLoadingSkeleton />;
   }
 
   if (!lens.canViewEngineering) {

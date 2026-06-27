@@ -8,7 +8,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { layout } from '@/lib/theme/layout';
@@ -17,7 +17,7 @@ import type {
   ChangeRequestStatus,
   ProjectChangeRequest,
 } from '@/lib/api/project-management.types';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { usePmCapabilities, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useChangeRequests } from '@/lib/query/change-requests';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -42,6 +42,7 @@ export default function ChangeRequestList({
   projectId: string;
 }): React.ReactNode {
   const pm = usePmCapabilities();
+  const permLoading = usePermissionsLoading();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<
@@ -50,13 +51,17 @@ export default function ChangeRequestList({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const listQuery = useChangeRequests(projectId, {
-    ...params,
-    search: search.trim() || undefined,
-    status: statusFilter,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  const listQuery = useChangeRequests(
+    projectId,
+    {
+      ...params,
+      search: search.trim() || undefined,
+      status: statusFilter,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    },
+    !permLoading && pm.projects.canView,
+  );
 
   const columns: ColumnsType<ProjectChangeRequest> = useMemo(
     () => [
@@ -104,6 +109,14 @@ export default function ChangeRequestList({
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+
+  if (permLoading || listQuery.isLoading) {
+    return <PageLoadingSkeleton />;
+  }
+
+  if (!pm.projects.canView) {
+    return null;
+  }
 
   return (
     <>

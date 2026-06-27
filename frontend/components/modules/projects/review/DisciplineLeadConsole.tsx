@@ -8,6 +8,7 @@ import {
   useReturnPackageForRework,
 } from '@/lib/query/design-packages';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import type { ReviewModeComment } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -31,9 +32,14 @@ export default function DisciplineLeadConsole({
   onAction: () => void;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const approveSession = useApproveReviewSession();
   const returnPackage = useReturnPackageForRework();
+
+  if (permLoading) {
+    return null;
+  }
 
   if (!lens.canApproveReview || !reviewSessionId) {
     return null;

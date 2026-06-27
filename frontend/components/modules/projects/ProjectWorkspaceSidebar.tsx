@@ -5,17 +5,22 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import { Badge, Menu } from 'antd';
 import type { MenuProps } from 'antd';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import {
   PROJECT_WORKSPACE_NAV,
   projectNavHref,
   resolveProjectNavKey,
-  type ProjectWorkspaceNavItem,
 } from '@/lib/navigation/project-workspace-nav';
+import {
+  canViewProjectNavItem,
+  isProjectNavReady,
+} from '@/lib/navigation/project-nav-visibility';
 import { getNavIcon, resolveNavIconKey } from '@/lib/navigation/nav-icons';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import {
   useEpcCapabilities,
+  usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -23,42 +28,6 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useChangeRequestOpenCount } from '@/lib/query/change-requests';
 import { useDeliverableActiveCount } from '@/lib/query/deliverables';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import type { PmModuleKey } from '@/lib/api/project-management.types';
-
-function canViewNavItem(
-  item: ProjectWorkspaceNavItem,
-  pm: ReturnType<typeof usePmCapabilities>,
-  epc: ReturnType<typeof useEpcCapabilities>,
-  hasAssignedDisciplines: boolean,
-  disciplineScopeBypass: boolean,
-): boolean {
-  const cap = pm[item.capability as PmModuleKey];
-  if (!cap?.canView) {
-    return false;
-  }
-
-  if (item.epcSurface === 'engineering' && !epc.canViewEngineering) {
-    return false;
-  }
-
-  if (item.epcCapability === 'reviewInbox' && !epc.canViewReviewInbox) {
-    return false;
-  }
-
-  if (item.epcCapability === 'myComments' && !epc.canViewMyComments) {
-    return false;
-  }
-
-  if (
-    item.requiresDisciplineAssignment &&
-    !disciplineScopeBypass &&
-    !hasAssignedDisciplines
-  ) {
-    return false;
-  }
-
-  return true;
-}
 
 export default function ProjectWorkspaceSidebar({
   projectId,
@@ -68,49 +37,51 @@ export default function ProjectWorkspaceSidebar({
   onNavigate?: () => void;
 }): React.ReactNode {
   const pathname = usePathname();
+  const permLoading = usePermissionsLoading();
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const lens = useRoleLens();
   const disciplinesQuery = useProjectDisciplines(
     projectId,
-    !lens.disciplineScopeBypass,
+    !permLoading && !lens.disciplineScopeBypass,
   );
   const hasAssignedDisciplines = (disciplinesQuery.data?.length ?? 0) > 0;
+  const navReady = isProjectNavReady(
+    !permLoading,
+    lens.disciplineScopeBypass,
+    disciplinesQuery.isLoading,
+  );
   const { t } = useEpcTranslation();
   const selectedKey = resolveProjectNavKey(pathname, projectId);
   const changeRequestCount = useChangeRequestOpenCount(
     projectId,
-    pm.projects.canView,
+    navReady && pm.change_requests.canView,
   );
   const deliverableCount = useDeliverableActiveCount(
     projectId,
-    pm.schedule.canView,
+    navReady && pm.schedule.canView,
   );
 
-  const navBadgeCount = (key: string): number | undefined => {
-    if (key === 'change-requests') {
-      const count = changeRequestCount.data ?? 0;
-      return count > 0 ? count : undefined;
-    }
-    if (key === 'deliverables') {
-      const count = deliverableCount.data ?? 0;
-      return count > 0 ? count : undefined;
-    }
-    return undefined;
-  };
+  const navContext = useMemo(
+    () => ({
+      pm,
+      epc,
+      hasAssignedDisciplines,
+      disciplineScopeBypass: lens.disciplineScopeBypass,
+    }),
+    [pm, epc, hasAssignedDisciplines, lens.disciplineScopeBypass],
+  );
 
   const menuItems: MenuProps['items'] = useMemo(() => {
+    if (!navReady) {
+      return [];
+    }
+
     const groups: MenuProps['items'] = [];
 
     for (const group of PROJECT_WORKSPACE_NAV) {
       const visibleItems = group.items.filter((item) =>
-        canViewNavItem(
-          item,
-          pm,
-          epc,
-          hasAssignedDisciplines,
-          lens.disciplineScopeBypass,
-        ),
+        canViewProjectNavItem(item, navContext),
       );
       if (visibleItems.length === 0) {
         continue;
@@ -121,7 +92,18 @@ export default function ProjectWorkspaceSidebar({
         type: 'group',
         label: t(group.labelKey),
         children: visibleItems.map((item) => {
-          const badge = navBadgeCount(item.key);
+          const badge =
+            item.key === 'change-requests'
+              ? (() => {
+                  const count = changeRequestCount.data ?? 0;
+                  return count > 0 ? count : undefined;
+                })()
+              : item.key === 'deliverables'
+                ? (() => {
+                    const count = deliverableCount.data ?? 0;
+                    return count > 0 ? count : undefined;
+                  })()
+                : undefined;
           const labelText = t(item.labelKey);
           return {
             key: item.key,
@@ -156,14 +138,16 @@ export default function ProjectWorkspaceSidebar({
   }, [
     changeRequestCount.data,
     deliverableCount.data,
-    epc,
-    hasAssignedDisciplines,
-    lens.disciplineScopeBypass,
+    navContext,
+    navReady,
     onNavigate,
-    pm,
     projectId,
     t,
   ]);
+
+  if (!navReady) {
+    return <PageLoadingSkeleton />;
+  }
 
   if (!menuItems || menuItems.length === 0) {
     return (

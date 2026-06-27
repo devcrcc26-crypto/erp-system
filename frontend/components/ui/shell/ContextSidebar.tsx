@@ -12,52 +12,20 @@ import {
   resolveProjectNavKey,
 } from '@/config/navConfig';
 import { getNavIcon, navIconClassName, resolveNavIconKey } from '@/lib/navigation/nav-icons';
-import type { ProjectWorkspaceNavItem } from '@/lib/navigation/project-workspace-nav';
+import {
+  canViewProjectNavItem,
+  isProjectNavReady,
+} from '@/lib/navigation/project-nav-visibility';
 import {
   useEpcCapabilities,
+  usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useOptionalRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
-import type { PmModuleKey } from '@/lib/api/project-management.types';
 import { tokens } from '@/lib/theme/tokens';
 import { CONTEXT_SIDEBAR_WIDTH } from '@/components/ui/shell/shell-layout';
-
-function canViewNavItem(
-  item: ProjectWorkspaceNavItem,
-  pm: ReturnType<typeof usePmCapabilities>,
-  epc: ReturnType<typeof useEpcCapabilities>,
-  hasAssignedDisciplines: boolean,
-  disciplineScopeBypass: boolean,
-): boolean {
-  const cap = pm[item.capability as PmModuleKey];
-  if (!cap?.canView) {
-    return false;
-  }
-
-  if (item.epcSurface === 'engineering' && !epc.canViewEngineering) {
-    return false;
-  }
-
-  if (item.epcCapability === 'reviewInbox' && !epc.canViewReviewInbox) {
-    return false;
-  }
-
-  if (item.epcCapability === 'myComments' && !epc.canViewMyComments) {
-    return false;
-  }
-
-  if (
-    item.requiresDisciplineAssignment &&
-    !disciplineScopeBypass &&
-    !hasAssignedDisciplines
-  ) {
-    return false;
-  }
-
-  return true;
-}
 
 /**
  * Project context sidebar - grouped nav driven by config.
@@ -75,37 +43,51 @@ export default function ContextSidebar({
 }): React.ReactNode {
   const pathname = usePathname();
   const { t } = useEpcTranslation();
+  const permLoading = usePermissionsLoading();
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const lens = useOptionalRoleLens();
   const disciplineScopeBypass = lens?.disciplineScopeBypass ?? epc.disciplineScopeBypass;
   const disciplinesQuery = useProjectDisciplines(
     projectId,
-    !disciplineScopeBypass,
+    !permLoading && !disciplineScopeBypass,
   );
   const hasAssignedDisciplines = (disciplinesQuery.data?.length ?? 0) > 0;
+  const navReady = isProjectNavReady(
+    !permLoading,
+    disciplineScopeBypass,
+    disciplinesQuery.isLoading,
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   const selectedKey = resolveProjectNavKey(pathname, projectId);
 
+  const navContext = useMemo(
+    () => ({
+      pm,
+      epc,
+      hasAssignedDisciplines,
+      disciplineScopeBypass,
+    }),
+    [pm, epc, hasAssignedDisciplines, disciplineScopeBypass],
+  );
+
   const visibleSections = useMemo(
-    () =>
-      contextNavSections
+    () => {
+      if (!navReady) {
+        return [];
+      }
+      return contextNavSections
         .map((group) => ({
           ...group,
           items: group.items.filter((item) =>
-            canViewNavItem(
-              item,
-              pm,
-              epc,
-              hasAssignedDisciplines,
-              disciplineScopeBypass,
-            ),
+            canViewProjectNavItem(item, navContext),
           ),
         }))
-        .filter((group) => group.items.length > 0),
-    [pm, epc, hasAssignedDisciplines, disciplineScopeBypass],
+        .filter((group) => group.items.length > 0);
+    },
+    [navContext, navReady],
   );
 
   const updateScrollHint = useCallback((): void => {
@@ -163,7 +145,13 @@ export default function ContextSidebar({
           onScroll={updateScrollHint}
           className="shell-context-scroll h-full overflow-y-auto px-2 py-3"
         >
-          {visibleSections.length === 0 ? (
+          {!navReady ? (
+            <div className="space-y-2 px-2">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="erp-page-skeleton h-9 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : visibleSections.length === 0 ? (
             <p
               className="px-2.5 py-2 text-[13px]"
               style={{ color: tokens.colorTextSecondary }}

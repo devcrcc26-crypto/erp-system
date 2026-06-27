@@ -42,6 +42,7 @@ import {
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { getPackageLockGuidance, getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
@@ -65,6 +66,7 @@ export default function DesignPackageDetailPageContent({
   packageId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [returnOpen, setReturnOpen] = useState(false);
@@ -73,9 +75,13 @@ export default function DesignPackageDetailPageContent({
   const [returnForm] = Form.useForm<{ reason: string }>();
 
   const canViewPackage =
-    lens.canViewEngineering || lens.canViewReviewInbox;
+    !permLoading && (lens.canViewEngineering || lens.canViewReviewInbox);
 
-  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
+  const disciplineQuery = useProjectDiscipline(
+    projectId,
+    taskDisciplineId,
+    !permLoading && canViewPackage,
+  );
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
@@ -122,8 +128,12 @@ export default function DesignPackageDetailPageContent({
     (comment) => comment.status === 'OPEN' || comment.status === 'IN_PROGRESS',
   );
 
-  if (packageQuery.isLoading || disciplineQuery.isLoading) {
+  if (permLoading || packageQuery.isLoading || disciplineQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!lens.canViewEngineering && !lens.canViewReviewInbox) {
+    return null;
   }
 
   if (!pkg || !disciplineQuery.data) {
