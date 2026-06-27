@@ -28,9 +28,12 @@ import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ActionItem,
+  ChangeRequestSummary,
+  IssueSummary,
   MeetingAgendaItem,
   MeetingAttendee,
   MeetingStatus,
+  RfiSummary,
 } from '@/lib/api/project-management.types';
 import { MEETING_WORKFLOW } from '@/lib/api/workflow';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
@@ -618,6 +621,88 @@ export default function MeetingDetailDrawer({
                       title="Meeting documents"
                       description="Minutes, presentations, and supporting files."
                     />
+                  ),
+                },
+                {
+                  key: 'raised',
+                  label: (
+                    <span className="inline-flex items-center gap-2">
+                      Raised items
+                      {((meeting.raisedRfis?.length ?? 0) +
+                        (meeting.raisedIssues?.length ?? 0) +
+                        (meeting.raisedChangeRequests?.length ?? 0)) > 0 && (
+                        <Badge
+                          count={
+                            (meeting.raisedRfis?.length ?? 0) +
+                            (meeting.raisedIssues?.length ?? 0) +
+                            (meeting.raisedChangeRequests?.length ?? 0)
+                          }
+                          size="small"
+                          color="#F47B20"
+                        />
+                      )}
+                    </span>
+                  ),
+                  children: (
+                    <div className={layout.drawerStack}>
+                      {(meeting.raisedRfis?.length ?? 0) > 0 && (
+                        <section>
+                          <p className={`mb-2 ${layout.drawerHeading}`}>RFIs</p>
+                          <DataTable<RfiSummary>
+                            size="small"
+                            rowKey="id"
+                            pagination={false}
+                            dataSource={meeting.raisedRfis ?? []}
+                            columns={[
+                              { title: 'RFI #', dataIndex: 'rfiNumber', key: 'rfiNumber', width: 90 },
+                              { title: 'Subject', dataIndex: 'subject', key: 'subject', ellipsis: true },
+                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
+                              { title: 'Priority', dataIndex: 'priority', key: 'priority', width: 90 },
+                            ]}
+                          />
+                        </section>
+                      )}
+                      {(meeting.raisedIssues?.length ?? 0) > 0 && (
+                        <section>
+                          <p className={`mb-2 ${layout.drawerHeading}`}>Issues</p>
+                          <DataTable<IssueSummary>
+                            size="small"
+                            rowKey="id"
+                            pagination={false}
+                            dataSource={meeting.raisedIssues ?? []}
+                            columns={[
+                              { title: 'Issue #', dataIndex: 'issueNumber', key: 'issueNumber', width: 90 },
+                              { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true },
+                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
+                              { title: 'Severity', dataIndex: 'severity', key: 'severity', width: 90 },
+                            ]}
+                          />
+                        </section>
+                      )}
+                      {(meeting.raisedChangeRequests?.length ?? 0) > 0 && (
+                        <section>
+                          <p className={`mb-2 ${layout.drawerHeading}`}>Change Requests</p>
+                          <DataTable<ChangeRequestSummary>
+                            size="small"
+                            rowKey="id"
+                            pagination={false}
+                            dataSource={meeting.raisedChangeRequests ?? []}
+                            columns={[
+                              { title: 'CR #', dataIndex: 'changeNumber', key: 'changeNumber', width: 90 },
+                              { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true },
+                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
+                            ]}
+                          />
+                        </section>
+                      )}
+                      {(meeting.raisedRfis?.length ?? 0) === 0 &&
+                        (meeting.raisedIssues?.length ?? 0) === 0 &&
+                        (meeting.raisedChangeRequests?.length ?? 0) === 0 && (
+                          <p className={layout.drawerMutedText}>
+                            No RFIs, issues, or change requests have been raised from this meeting.
+                          </p>
+                        )}
+                    </div>
                   ),
                 },
               ]}

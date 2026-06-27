@@ -878,6 +878,8 @@ export interface CreateRfiRequest {
   assignedTo?: string;
   taskDisciplineId?: string;
   dueDate?: string;
+  sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
+  sourceEntityId?: string;
 }
 
 export type UpdateRfiRequest = Partial<CreateRfiRequest> & {
@@ -1061,6 +1063,8 @@ export interface CreateIssueRequest {
   assignedTo?: string;
   taskDisciplineId?: string;
   dueDate?: string;
+  sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
+  sourceEntityId?: string;
 }
 
 export type UpdateIssueRequest = Partial<CreateIssueRequest> & {

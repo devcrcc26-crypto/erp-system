@@ -180,6 +180,11 @@ export default function RfiDetailDrawer({
             <Descriptions.Item label="Description">
               {rfi.description ?? '-'}
             </Descriptions.Item>
+            {rfi.sourceEntitySummary && (
+              <Descriptions.Item label="Source">
+                {rfi.sourceEntitySummary.type.replace(/_/g, ' ')} — {rfi.sourceEntitySummary.label}
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           <section className={layout.drawerSection}>

@@ -125,6 +125,11 @@ export default function IssueDetailDrawer({
             <Descriptions.Item label="Description">
               {issue.description}
             </Descriptions.Item>
+            {issue.sourceEntitySummary && (
+              <Descriptions.Item label="Source">
+                {issue.sourceEntitySummary.type.replace(/_/g, ' ')} — {issue.sourceEntitySummary.label}
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           <section className={layout.drawerSection}>

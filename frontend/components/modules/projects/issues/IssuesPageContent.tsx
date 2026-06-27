@@ -39,6 +39,8 @@ import {
   useIssues,
   useUpdateIssue,
 } from '@/lib/query/issues';
+import { useMeetings } from '@/lib/query/meetings';
+import { useCorrespondence } from '@/lib/query/correspondence';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatIssueStatus,
@@ -59,6 +61,13 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
+const SOURCE_TYPE_OPTIONS = [
+  { value: 'MEETING', label: 'Meeting' },
+  { value: 'CORRESPONDENCE', label: 'Correspondence' },
+  { value: 'DAILY_LOG', label: 'Daily Log' },
+  { value: 'SUBMITTAL_REVIEW', label: 'Submittal Review' },
+];
+
 interface IssueFormValues {
   issueType: string;
   description: string;
@@ -67,6 +76,8 @@ interface IssueFormValues {
   severity: IssueSeverity;
   assignedTo?: string;
   dueDate?: Dayjs;
+  sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
+  sourceEntityId?: string;
 }
 
 function IssueFormDrawer({
@@ -84,6 +95,9 @@ function IssueFormDrawer({
   const createIssue = useCreateIssue();
   const messageApi = useAppMessage();
   const disciplinesQuery = useProjectDisciplines(projectId, open);
+  const sourceEntityType = Form.useWatch('sourceEntityType', form);
+  const meetingsQuery = useMeetings(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'MEETING');
+  const correspondenceQuery = useCorrespondence(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'CORRESPONDENCE');
 
   const disciplineOptions = useMemo(
     () =>
@@ -103,6 +117,8 @@ function IssueFormDrawer({
       severity: values.severity,
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
+      sourceEntityType: values.sourceEntityType || undefined,
+      sourceEntityId: values.sourceEntityId || undefined,
     };
     try {
       await createIssue.mutateAsync({ projectId, body });
@@ -170,6 +186,41 @@ function IssueFormDrawer({
         <Form.Item label="Assigned to" name="assignedTo">
           <UserSelect placeholder="Assign responsible person" />
         </Form.Item>
+        <Form.Item label="Source type" name="sourceEntityType">
+          <Select
+            allowClear
+            placeholder="Select source of this issue (optional)"
+            options={SOURCE_TYPE_OPTIONS}
+            onChange={() => form.setFieldValue('sourceEntityId', undefined)}
+          />
+        </Form.Item>
+        {sourceEntityType && (
+          <Form.Item label="Source entity" name="sourceEntityId">
+            {sourceEntityType === 'MEETING' ? (
+              <Select
+                allowClear
+                placeholder="Select meeting"
+                loading={meetingsQuery.isLoading}
+                options={(meetingsQuery.data?.data ?? []).map((m) => ({
+                  value: m.id,
+                  label: m.title,
+                }))}
+              />
+            ) : sourceEntityType === 'CORRESPONDENCE' ? (
+              <Select
+                allowClear
+                placeholder="Select correspondence"
+                loading={correspondenceQuery.isLoading}
+                options={(correspondenceQuery.data?.data ?? []).map((c) => ({
+                  value: c.id,
+                  label: c.subject,
+                }))}
+              />
+            ) : (
+              <Input placeholder="Paste entity ID" />
+            )}
+          </Form.Item>
+        )}
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button

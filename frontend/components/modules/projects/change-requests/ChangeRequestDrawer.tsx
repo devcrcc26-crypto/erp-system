@@ -197,17 +197,29 @@ export default function ChangeRequestDrawer({
                 <Descriptions.Item label="Description">
                   {cr.description ?? '-'}
                 </Descriptions.Item>
-                {cr.sourceEntityId && (
+                {(cr.sourceEntitySummary || cr.sourceEntityId) && (
                   <Descriptions.Item label="Source reference">
-                    <span
-                      className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      style={{
-                        backgroundColor: tokens.colorAmber50,
-                        color: tokens.colorAmber400,
-                      }}
-                    >
-                      {cr.sourceType} · {cr.sourceEntityId}
-                    </span>
+                    {cr.sourceEntitySummary ? (
+                      <span
+                        className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{
+                          backgroundColor: tokens.colorAmber50,
+                          color: tokens.colorAmber400,
+                        }}
+                      >
+                        {cr.sourceEntitySummary.type.replace(/_/g, ' ')} — {cr.sourceEntitySummary.label}
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{
+                          backgroundColor: tokens.colorAmber50,
+                          color: tokens.colorAmber400,
+                        }}
+                      >
+                        {cr.sourceType} · {cr.sourceEntityId}
+                      </span>
+                    )}
                   </Descriptions.Item>
                 )}
               </Descriptions>

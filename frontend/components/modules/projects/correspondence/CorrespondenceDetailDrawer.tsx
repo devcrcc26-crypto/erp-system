@@ -288,6 +288,65 @@ export default function CorrespondenceDetailDrawer({
                   : 'Closed correspondence is read-only — attachments cannot be changed.'
               }
             />
+
+            {((item.raisedRfis?.length ?? 0) > 0 ||
+              (item.raisedIssues?.length ?? 0) > 0 ||
+              (item.raisedChangeRequests?.length ?? 0) > 0) && (
+              <section>
+                <p className={`mb-3 ${layout.drawerHeading}`}>Raised items</p>
+                {(item.raisedRfis?.length ?? 0) > 0 && (
+                  <div className="mb-4">
+                    <p className={`mb-2 text-xs font-medium uppercase tracking-wide ${layout.drawerMetaLabel}`}>
+                      RFIs
+                    </p>
+                    <ul className="erp-drawer-list">
+                      {(item.raisedRfis ?? []).map((rfi) => (
+                        <li key={rfi.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                          <span className="font-mono text-xs">{rfi.rfiNumber}</span>
+                          <span className="flex-1 truncate">{rfi.subject}</span>
+                          <span className={layout.drawerMetaLabel}>{rfi.status}</span>
+                          <span className={layout.drawerMetaLabel}>{rfi.priority}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(item.raisedIssues?.length ?? 0) > 0 && (
+                  <div className="mb-4">
+                    <p className={`mb-2 text-xs font-medium uppercase tracking-wide ${layout.drawerMetaLabel}`}>
+                      Issues
+                    </p>
+                    <ul className="erp-drawer-list">
+                      {(item.raisedIssues ?? []).map((issue) => (
+                        <li key={issue.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                          <span className="font-mono text-xs">{issue.issueNumber}</span>
+                          <span className="flex-1 truncate">{issue.title}</span>
+                          <span className={layout.drawerMetaLabel}>{issue.status}</span>
+                          <span className={layout.drawerMetaLabel}>{issue.severity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(item.raisedChangeRequests?.length ?? 0) > 0 && (
+                  <div className="mb-2">
+                    <p className={`mb-2 text-xs font-medium uppercase tracking-wide ${layout.drawerMetaLabel}`}>
+                      Change Requests
+                    </p>
+                    <ul className="erp-drawer-list">
+                      {(item.raisedChangeRequests ?? []).map((cr) => (
+                        <li key={cr.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                          <span className="font-mono text-xs">{cr.changeNumber}</span>
+                          <span className="flex-1 truncate">{cr.title}</span>
+                          <span className={layout.drawerMetaLabel}>{cr.status}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
             <Divider className="!my-0" />
           </div>
         )}

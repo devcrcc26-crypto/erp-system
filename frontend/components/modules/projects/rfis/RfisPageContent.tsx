@@ -39,6 +39,8 @@ import {
   useRfis,
   useUpdateRfi,
 } from '@/lib/query/rfis';
+import { useMeetings } from '@/lib/query/meetings';
+import { useCorrespondence } from '@/lib/query/correspondence';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatRfiStatus,
@@ -59,6 +61,13 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
+const SOURCE_TYPE_OPTIONS = [
+  { value: 'MEETING', label: 'Meeting' },
+  { value: 'CORRESPONDENCE', label: 'Correspondence' },
+  { value: 'DAILY_LOG', label: 'Daily Log' },
+  { value: 'SUBMITTAL_REVIEW', label: 'Submittal Review' },
+];
+
 interface RfiFormValues {
   title: string;
   description?: string;
@@ -67,6 +76,8 @@ interface RfiFormValues {
   priority: RfiPriority;
   assignedTo?: string;
   dueDate?: Dayjs;
+  sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
+  sourceEntityId?: string;
 }
 
 function RfiFormDrawer({
@@ -84,6 +95,9 @@ function RfiFormDrawer({
   const createRfi = useCreateRfi();
   const messageApi = useAppMessage();
   const disciplinesQuery = useProjectDisciplines(projectId, open);
+  const sourceEntityType = Form.useWatch('sourceEntityType', form);
+  const meetingsQuery = useMeetings(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'MEETING');
+  const correspondenceQuery = useCorrespondence(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'CORRESPONDENCE');
 
   const disciplineOptions = useMemo(
     () =>
@@ -103,6 +117,8 @@ function RfiFormDrawer({
       priority: values.priority,
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
+      sourceEntityType: values.sourceEntityType || undefined,
+      sourceEntityId: values.sourceEntityId || undefined,
     };
     try {
       await createRfi.mutateAsync({ projectId, body });
@@ -168,6 +184,41 @@ function RfiFormDrawer({
         <Form.Item label="Due date" name="dueDate">
           <DatePicker className="w-full" />
         </Form.Item>
+        <Form.Item label="Source type" name="sourceEntityType">
+          <Select
+            allowClear
+            placeholder="Select source of this RFI (optional)"
+            options={SOURCE_TYPE_OPTIONS}
+            onChange={() => form.setFieldValue('sourceEntityId', undefined)}
+          />
+        </Form.Item>
+        {sourceEntityType && (
+          <Form.Item label="Source entity" name="sourceEntityId">
+            {sourceEntityType === 'MEETING' ? (
+              <Select
+                allowClear
+                placeholder="Select meeting"
+                loading={meetingsQuery.isLoading}
+                options={(meetingsQuery.data?.data ?? []).map((m) => ({
+                  value: m.id,
+                  label: m.title,
+                }))}
+              />
+            ) : sourceEntityType === 'CORRESPONDENCE' ? (
+              <Select
+                allowClear
+                placeholder="Select correspondence"
+                loading={correspondenceQuery.isLoading}
+                options={(correspondenceQuery.data?.data ?? []).map((c) => ({
+                  value: c.id,
+                  label: c.subject,
+                }))}
+              />
+            ) : (
+              <Input placeholder="Paste entity ID" />
+            )}
+          </Form.Item>
+        )}
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button type="primary" htmlType="submit" loading={createRfi.isPending}>
