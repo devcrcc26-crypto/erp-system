@@ -43,6 +43,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import CorrespondenceDetailDrawer from '@/components/modules/projects/correspondence/CorrespondenceDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
 const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'LETTER', label: 'Letter' },
@@ -224,11 +225,12 @@ export default function CorrespondencePageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const permLoading = usePermissionsLoading();
   const query = useCorrespondence(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
-  });
+  }, !permLoading);
 
   const columns: ColumnsType<Correspondence> = useMemo(
     () => [

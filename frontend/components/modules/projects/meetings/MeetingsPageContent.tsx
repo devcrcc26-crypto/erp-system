@@ -27,6 +27,7 @@ import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateMeeting, useMeetings } from '@/lib/query/meetings';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -161,11 +162,12 @@ export default function MeetingsPageContent({
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
   const resolveUserName = useUserNameLookup();
+  const permLoading = usePermissionsLoading();
   const meetingsQuery = useMeetings(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
-  });
+  }, !permLoading);
 
   const columns: ColumnsType<Meeting> = useMemo(
     () => [

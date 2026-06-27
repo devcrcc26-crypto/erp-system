@@ -12,6 +12,7 @@ import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPa
 import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
 export default function SchedulePageContent({
   projectId,
@@ -22,10 +23,11 @@ export default function SchedulePageContent({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [milestonesOpen, setMilestonesOpen] = useState(false);
 
-  const tasksQuery = useAllTasks(projectId);
-  const dependenciesQuery = useTaskDependencies(projectId);
+  const permLoading = usePermissionsLoading();
+  const tasksQuery = useAllTasks(projectId, !permLoading);
+  const dependenciesQuery = useTaskDependencies(projectId, !permLoading);
 
-  const isLoading = tasksQuery.isLoading || dependenciesQuery.isLoading;
+  const isLoading = permLoading || tasksQuery.isLoading || dependenciesQuery.isLoading;
 
   const apiUnavailable =
     tasksQuery.isError &&

@@ -51,6 +51,7 @@ import {
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -243,12 +244,13 @@ export default function RfisPageContent({
   const [selectedRfiId, setSelectedRfiId] = useState<string | null>(null);
 
   const resolveUserName = useUserNameLookup();
+  const permLoading = usePermissionsLoading();
   const rfisQuery = useRfis(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
     priority: priorityFilter,
-  });
+  }, !permLoading);
 
   const columns: ColumnsType<Rfi> = useMemo(
     () => [

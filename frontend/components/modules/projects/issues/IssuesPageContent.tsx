@@ -51,6 +51,7 @@ import {
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -251,12 +252,13 @@ export default function IssuesPageContent({
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
   const resolveUserName = useUserNameLookup();
+  const permLoading = usePermissionsLoading();
   const issuesQuery = useIssues(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
     severity: severityFilter,
-  });
+  }, !permLoading);
 
   const columns: ColumnsType<Issue> = useMemo(
     () => [

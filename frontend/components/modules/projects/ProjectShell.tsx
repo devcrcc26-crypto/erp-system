@@ -7,6 +7,7 @@ import PlaceholderPage from '@/components/PlaceholderPage';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProject } from '@/lib/query/projects';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
 /**
  * Project route wrapper - loading/error gates; layout lives in AppShell.
@@ -19,8 +20,9 @@ export default function ProjectShell({
   children: React.ReactNode;
 }): React.ReactNode {
   const projectQuery = useProject(projectId);
+  const permLoading = usePermissionsLoading();
 
-  if (projectQuery.isLoading) {
+  if (projectQuery.isLoading || permLoading) {
     return <PageLoadingSkeleton />;
   }
 

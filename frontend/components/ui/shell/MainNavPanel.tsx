@@ -197,8 +197,11 @@ export default function MainNavPanel({
     try {
       await logout.mutateAsync();
     } catch {
-      signOutLocally();
+      // swallowed; cleared below
     }
+    // TanStack Query v5 global onSettled is not awaited by mutateAsync, so
+    // call explicitly here to guarantee cache + auth are cleared before navigation.
+    signOutLocally();
     onNavigate?.();
     router.replace('/login');
   }
