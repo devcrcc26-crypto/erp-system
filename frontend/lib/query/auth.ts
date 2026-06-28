@@ -22,8 +22,9 @@ import type {
   ResetPasswordRequest,
 } from '@/lib/api/types';
 
-/** TanStack Query key for session capabilities - shared across login and session sync. */
-export const sessionCapabilitiesQueryKey = ['auth', 'capabilities'] as const;
+/** TanStack Query key for session capabilities - scoped per session to avoid stale user data. */
+export const sessionCapabilitiesQueryKey = (sessionId: string | null) =>
+  ['auth', 'capabilities', sessionId] as const;
 
 /** Capabilities rarely change mid-session; cache 60s to avoid duplicate /auth/capabilities calls. */
 export const SESSION_CAPABILITIES_STALE_MS = 60_000;
@@ -37,21 +38,27 @@ async function loadSessionCapabilities(): Promise<Capabilities> {
  */
 export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabilities> {
   const setCapabilities = useAuthStore((state) => state.setCapabilities);
+  const sessionId = useAuthStore((state) => state.sessionId);
+  const sessionEnabled = enabled && Boolean(sessionId);
 
   const query = useQuery({
-    queryKey: sessionCapabilitiesQueryKey,
+    queryKey: sessionCapabilitiesQueryKey(sessionId),
     queryFn: loadSessionCapabilities,
-    enabled,
+    enabled: sessionEnabled,
     staleTime: SESSION_CAPABILITIES_STALE_MS,
     retry: 1,
     refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
-    if (query.data) {
-      setCapabilities(query.data);
+    if (!query.data || !sessionId) {
+      return;
     }
-  }, [query.data, setCapabilities]);
+    if (useAuthStore.getState().sessionId !== sessionId) {
+      return;
+    }
+    setCapabilities(query.data);
+  }, [query.data, sessionId, setCapabilities]);
 
   return query;
 }

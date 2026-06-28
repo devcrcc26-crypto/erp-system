@@ -17,27 +17,32 @@ import type {
 
 export const profileKeys = {
   all: ['profile'] as const,
-  me: () => [...profileKeys.all, 'me'] as const,
+  me: (sessionId: string | null) =>
+    [...profileKeys.all, 'me', sessionId] as const,
 };
 
 export function useCurrentUser() {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const sessionId = useAuthStore((state) => state.sessionId);
   return useQuery({
-    queryKey: profileKeys.me(),
+    queryKey: profileKeys.me(sessionId),
     queryFn: (): Promise<UserProfile> => apiGet<UserProfile>('/auth/me'),
-    enabled: Boolean(accessToken),
+    enabled: Boolean(accessToken && sessionId),
   });
 }
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const updateUser = useAuthStore((state) => state.updateUser);
+  const sessionId = useAuthStore((state) => state.sessionId);
 
   return useMutation({
     mutationFn: (body: UpdateProfileRequest): Promise<UserProfile> =>
       apiPatch<UserProfile>('/auth/me', body),
     onSuccess: (profile) => {
-      queryClient.setQueryData(profileKeys.me(), profile);
+      if (sessionId) {
+        queryClient.setQueryData(profileKeys.me(sessionId), profile);
+      }
       updateUser({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -58,12 +63,15 @@ export function useChangePassword() {
 
 export function useChangeEmail() {
   const queryClient = useQueryClient();
+  const sessionId = useAuthStore((state) => state.sessionId);
 
   return useMutation({
     mutationFn: (body: ChangeEmailRequest): Promise<MessageResponse> =>
       apiPost<MessageResponse>('/auth/change-email', body),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: profileKeys.me() });
+      if (sessionId) {
+        void queryClient.invalidateQueries({ queryKey: profileKeys.me(sessionId) });
+      }
     },
   });
 }

@@ -75,7 +75,18 @@ export function AuthSessionSync(): React.ReactNode {
 
     const handleBroadcast = (event: MessageEvent<{ event: AuthSessionEvent }>): void => {
       if (event.data?.event === 'signed-out') {
+        // Ignore stale sign-out events when this tab has already signed in again.
+        if (useAuthStore.getState().accessToken) {
+          return;
+        }
         syncSession();
+        return;
+      }
+
+      if (event.data?.event === 'signed-in') {
+        syncSession();
+        getQueryClient()?.removeQueries({ queryKey: ['profile'] });
+        getQueryClient()?.removeQueries({ queryKey: ['auth', 'capabilities'] });
       }
     };
 

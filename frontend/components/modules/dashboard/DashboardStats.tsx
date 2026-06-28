@@ -92,23 +92,45 @@ function StatsSection({
   );
 }
 
-function LiveStats(): React.ReactNode {
+function LiveStats({
+  completionRateOverride,
+  completionLoading = false,
+}: {
+  completionRateOverride?: number;
+  completionLoading?: boolean;
+}): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => Boolean(s.accessToken));
   const canFetch = authHydrated && isAuthenticated;
   const { data, isLoading, isFetching, isFetched } = useDashboardStats(canFetch);
   const loading = !isFetched || isLoading || isFetching;
 
+  const completionRate =
+    completionRateOverride != null
+      ? formatPercent(completionRateOverride, completionLoading)
+      : formatPercent(data?.completionRate, loading);
+
   return (
     <StatsSection
       projects={formatCount(data?.projects, loading)}
       activeProjects={formatCount(data?.activeProjects, loading)}
       teamMembers={formatCount(data?.teamMembers, loading)}
-      completionRate={formatPercent(data?.completionRate, loading)}
+      completionRate={completionRate}
     />
   );
 }
 
-export default function DashboardStats(): React.ReactNode {
-  return <LiveStats />;
+export default function DashboardStats({
+  completionRateOverride,
+  completionLoading = false,
+}: {
+  completionRateOverride?: number;
+  completionLoading?: boolean;
+} = {}): React.ReactNode {
+  return (
+    <LiveStats
+      completionRateOverride={completionRateOverride}
+      completionLoading={completionLoading}
+    />
+  );
 }

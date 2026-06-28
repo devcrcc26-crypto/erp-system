@@ -2,6 +2,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { getQueryClient } from '@/lib/query/query-client-ref';
 import { broadcastAuthSessionChange } from '@/lib/auth/auth-session-channel';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session';
+import { profileKeys } from '@/lib/query/profile';
 
 interface SignOutLocallyOptions {
   broadcast?: boolean;
@@ -27,5 +28,12 @@ export function signOutLocally(options?: SignOutLocallyOptions): void {
 /** Marks the client as authenticated after a successful login. */
 export function completeLocalSignIn(): void {
   setAuthCookie();
-  // Other tabs pick up the new session via the storage event on persist write.
+
+  const queryClient = getQueryClient();
+  if (queryClient) {
+    void queryClient.removeQueries({ queryKey: profileKeys.all });
+    void queryClient.removeQueries({ queryKey: ['auth', 'capabilities'] });
+  }
+
+  broadcastAuthSessionChange('signed-in');
 }

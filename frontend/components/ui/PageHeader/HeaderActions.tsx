@@ -19,15 +19,19 @@ export default function HeaderActions({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
-  const { data: profile } = useCurrentUser();
+  const { data: profile, isLoading: profileLoading } = useCurrentUser();
+  const sessionProfile =
+    profile && user && profile.id === user.id ? profile : undefined;
 
   const displayName = user
     ? `${user.firstName} ${user.lastName}`
     : t('common.defaultUser');
   const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
-  const roleName =
-    profile?.roles.map((role) => role.name).join(', ') ??
-    t('common.defaultUser');
+  const roleName = sessionProfile
+    ? sessionProfile.roles.map((role) => role.name).join(', ')
+    : profileLoading
+      ? '…'
+      : t('common.defaultUser');
 
   return (
     <div
@@ -38,7 +42,7 @@ export default function HeaderActions({
     >
       <FontSizeControl compact={compact} />
       <NotificationPanel />
-      {profile?.roles.length ? (
+      {sessionProfile?.roles.length ? (
         <span
           className="max-w-[140px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium"
           style={{

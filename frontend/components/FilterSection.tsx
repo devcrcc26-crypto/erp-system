@@ -1,18 +1,61 @@
 // UI polish pass - styles only, no logic changes
 
-"use client";
+'use client';
 
+import { Input, Select, Space } from 'antd';
+import type {
+  TaskStatus,
+  UrgencyLevel,
+} from '@/lib/api/project-management.types';
+import {
+  DEFAULT_DASHBOARD_FILTERS,
+  type DashboardDateRange,
+  type DashboardFilters,
+} from '@/lib/dashboard/types';
+import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
+import { formatTaskStatus } from '@/lib/utils/pm-status-display';
 
-const filters = [
-  { label: "Status", defaultValue: "All Statuses" },
-  { label: "Date Range", defaultValue: "All Time" },
-  { label: "Priority", defaultValue: "All Priorities" },
-  { label: "Project", defaultValue: "All Projects" },
-  { label: "Discipline", defaultValue: "All Disciplines" },
+const TASK_STATUS_OPTIONS: TaskStatus[] = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'DELAYED',
+  'COMPLETED',
 ];
 
-export default function FilterSection() {
+const URGENCY_OPTIONS: Array<{ value: UrgencyLevel; label: string }> = [
+  { value: 'CRITICAL', label: 'Critical' },
+  { value: 'URGENT', label: 'Urgent' },
+  { value: 'NORMAL', label: 'Normal' },
+];
+
+const DATE_RANGE_OPTIONS: Array<{ value: DashboardDateRange; label: string }> = [
+  { value: 'ALL_TIME', label: 'All Time' },
+  { value: 'THIS_WEEK', label: 'This Week' },
+  { value: 'THIS_MONTH', label: 'This Month' },
+  { value: 'LAST_30_DAYS', label: 'Last 30 Days' },
+  { value: 'LAST_90_DAYS', label: 'Last 90 Days' },
+];
+
+export default function FilterSection({
+  filters,
+  onChange,
+  projectOptions,
+  disciplineOptions,
+}: {
+  filters: DashboardFilters;
+  onChange: (next: DashboardFilters) => void;
+  projectOptions: Array<{ value: string; label: string }>;
+  disciplineOptions: string[];
+}): React.ReactNode {
+  function updateFilters(partial: Partial<DashboardFilters>): void {
+    onChange({ ...filters, ...partial });
+  }
+
+  function handleClear(): void {
+    onChange({ ...DEFAULT_DASHBOARD_FILTERS });
+  }
+
   return (
     <section
       style={{
@@ -36,31 +79,81 @@ export default function FilterSection() {
             border: `0.5px solid ${tokens.colorBorderSecondary}`,
             color: tokens.colorTextSecondary,
           }}
+          onClick={handleClear}
         >
           Clear Filters
         </button>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-        {filters.map((filter) => (
-          <label key={filter.label} className="flex flex-col">
-            <span
-              className="mb-1.5 text-[12px] font-medium leading-[1.5]"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {filter.label}
-            </span>
-            <select
-              className="h-9 rounded-lg bg-white px-3 text-[13px] font-normal outline-none"
-              style={{
-                border: `0.5px solid ${tokens.colorBorderSecondary}`,
-                color: tokens.colorTextPrimary,
-              }}
-            >
-              <option value={filter.defaultValue}>{filter.defaultValue}</option>
-            </select>
-          </label>
-        ))}
-      </div>
+
+      <Space wrap className="w-full">
+        <Input.Search
+          allowClear
+          placeholder="Search tasks or projects"
+          className={layout.filterControlLg}
+          value={filters.search}
+          onChange={(event) => updateFilters({ search: event.target.value })}
+          onSearch={(value: string) => updateFilters({ search: value })}
+        />
+        <Select
+          allowClear
+          placeholder="Status"
+          className={layout.filterControlMd}
+          value={filters.status}
+          onChange={(value: TaskStatus | undefined) =>
+            updateFilters({ status: value })
+          }
+          options={TASK_STATUS_OPTIONS.map((status) => ({
+            value: status,
+            label: formatTaskStatus(status),
+          }))}
+        />
+        <Select
+          placeholder="Date Range"
+          className={layout.filterControlMd}
+          value={filters.dateRange}
+          onChange={(value: DashboardDateRange) =>
+            updateFilters({ dateRange: value })
+          }
+          options={DATE_RANGE_OPTIONS}
+        />
+        <Select
+          allowClear
+          placeholder="Priority"
+          className={layout.filterControlSm}
+          value={filters.priority}
+          onChange={(value: UrgencyLevel | undefined) =>
+            updateFilters({ priority: value })
+          }
+          options={URGENCY_OPTIONS}
+        />
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          placeholder="Project"
+          className={layout.filterControlLg}
+          value={filters.projectId}
+          onChange={(value: string | undefined) =>
+            updateFilters({ projectId: value, discipline: undefined })
+          }
+          options={projectOptions}
+        />
+        <Select
+          allowClear
+          showSearch
+          placeholder="Discipline"
+          className={layout.filterControlMd}
+          value={filters.discipline}
+          onChange={(value: string | undefined) =>
+            updateFilters({ discipline: value })
+          }
+          options={disciplineOptions.map((name) => ({
+            value: name,
+            label: name,
+          }))}
+          disabled={disciplineOptions.length === 0}
+        />
+      </Space>
     </section>
   );
 }

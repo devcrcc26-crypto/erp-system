@@ -1,8 +1,12 @@
 // UI polish pass - styles only, no logic changes
 
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
+import { Spin } from 'antd';
+import { BarChart3 } from 'lucide-react';
+import TableEmptyState from '@/components/ui/TableEmptyState';
+import type { DashboardChartData, DashboardChartDatum } from '@/lib/dashboard/types';
 import { tokens } from '@/lib/theme/tokens';
 import {
   Bar,
@@ -14,23 +18,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from "recharts";
-
-const taskStatusData = [
-  { name: "Current Week", value: 72, color: tokens.colorTeal400 },
-  { name: "Planned (Future)", value: 28, color: tokens.colorBlue400 },
-];
-
-const disciplineData = [
-  { name: "Architecture", value: 42 },
-  { name: "Management", value: 0 },
-];
-
-const priorityData = [
-  { name: "High", value: 57, color: tokens.colorRed400 },
-  { name: "Medium", value: 34, color: tokens.colorAmber400 },
-  { name: "Low", value: 12, color: tokens.colorGreen400 },
-];
+} from 'recharts';
 
 const CHART_HEIGHT = 200;
 
@@ -42,7 +30,7 @@ function ChartCard({
   title: string;
   subtitle: string;
   children: React.ReactNode;
-}) {
+}): React.ReactNode {
   return (
     <div
       className="flex h-full flex-col overflow-hidden"
@@ -70,13 +58,27 @@ function ChartCard({
         </p>
       </div>
       <div className="flex flex-1 flex-col px-[18px] py-4">
-        <div style={{ width: "100%", height: CHART_HEIGHT }}>{children}</div>
+        <div style={{ width: '100%', height: CHART_HEIGHT }}>{children}</div>
       </div>
     </div>
   );
 }
 
-function CompletionGauge({ value }: { value: number }) {
+function ChartEmpty({ description }: { description: string }): React.ReactNode {
+  return (
+    <TableEmptyState
+      icon={<BarChart3 />}
+      title="No data"
+      description={description}
+    />
+  );
+}
+
+function hasChartData(data: DashboardChartDatum[]): boolean {
+  return data.length > 0 && data.some((entry) => entry.value > 0);
+}
+
+function CompletionGauge({ value }: { value: number }): React.ReactNode {
   const r = 90;
   const cx = 110;
   const cy = 125;
@@ -138,14 +140,32 @@ function CompletionGauge({ value }: { value: number }) {
   );
 }
 
-function DisciplineDumbbell() {
-  const [tip, setTip] = useState<{ label: string; value: number; y: number } | null>(null);
+function DisciplineDumbbell({
+  data,
+}: {
+  data: DashboardChartDatum[];
+}): React.ReactNode {
+  const [tip, setTip] = useState<{
+    label: string;
+    value: number;
+    y: number;
+  } | null>(null);
+
+  const topTwo = data.slice(0, 2);
+  if (topTwo.length === 0) {
+    return (
+      <ChartEmpty description="Active disciplines will appear when schedule data exists" />
+    );
+  }
 
   const W = 120;
   const cx = W / 2;
   const GAP = 8;
   const R = 5;
   const L = 62;
+
+  const first = topTwo[0];
+  const second = topTwo[1];
 
   const archLabelY = 13;
   const archDotY = archLabelY + 14;
@@ -172,7 +192,7 @@ function DisciplineDumbbell() {
           fill={tokens.colorTextPrimary}
           fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
         >
-          {disciplineData[0].name}
+          {first.name}
         </text>
 
         <circle
@@ -180,9 +200,9 @@ function DisciplineDumbbell() {
           cy={archDotY}
           r={R + 4}
           fill="transparent"
-          style={{ cursor: "pointer" }}
+          style={{ cursor: 'pointer' }}
           onMouseEnter={() =>
-            setTip({ label: disciplineData[0].name, value: disciplineData[0].value, y: archDotY })
+            setTip({ label: first.name, value: first.value, y: archDotY })
           }
           onMouseLeave={() => setTip(null)}
         />
@@ -191,7 +211,7 @@ function DisciplineDumbbell() {
           cy={archDotY}
           r={R}
           fill={tokens.colorBlue400}
-          style={{ pointerEvents: "none" }}
+          style={{ pointerEvents: 'none' }}
         />
 
         <line
@@ -204,46 +224,50 @@ function DisciplineDumbbell() {
           strokeLinecap="round"
         />
 
-        <circle
-          cx={cx}
-          cy={mgmtDotY}
-          r={R + 4}
-          fill="transparent"
-          style={{ cursor: "pointer" }}
-          onMouseEnter={() =>
-            setTip({ label: disciplineData[1].name, value: disciplineData[1].value, y: mgmtDotY })
-          }
-          onMouseLeave={() => setTip(null)}
-        />
-        <circle
-          cx={cx}
-          cy={mgmtDotY}
-          r={R}
-          fill={tokens.colorBlue400}
-          style={{ pointerEvents: "none" }}
-        />
+        {second ? (
+          <>
+            <circle
+              cx={cx}
+              cy={mgmtDotY}
+              r={R + 4}
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() =>
+                setTip({ label: second.name, value: second.value, y: mgmtDotY })
+              }
+              onMouseLeave={() => setTip(null)}
+            />
+            <circle
+              cx={cx}
+              cy={mgmtDotY}
+              r={R}
+              fill={tokens.colorBlue400}
+              style={{ pointerEvents: 'none' }}
+            />
 
-        <line
-          x1={cx}
-          y1={grayTopY}
-          x2={cx}
-          y2={grayBotY}
-          stroke={tokens.colorGray100}
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
+            <line
+              x1={cx}
+              y1={grayTopY}
+              x2={cx}
+              y2={grayBotY}
+              stroke={tokens.colorGray100}
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
 
-        <text
-          x={cx}
-          y={mgmtLabelY}
-          textAnchor="middle"
-          fontSize="11"
-          fontWeight="500"
-          fill={tokens.colorTextPrimary}
-          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
-        >
-          {disciplineData[1].name}
-        </text>
+            <text
+              x={cx}
+              y={mgmtLabelY}
+              textAnchor="middle"
+              fontSize="11"
+              fontWeight="500"
+              fill={tokens.colorTextPrimary}
+              fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
+            >
+              {second.name}
+            </text>
+          </>
+        ) : null}
 
         {tip && (
           <g>
@@ -272,77 +296,118 @@ function DisciplineDumbbell() {
   );
 }
 
-export default function DashboardCharts() {
+function ChartLoading(): React.ReactNode {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Spin size="small" />
+    </div>
+  );
+}
+
+export default function DashboardCharts({
+  data,
+  loading = false,
+  taskCount = 0,
+}: {
+  data: DashboardChartData;
+  loading?: boolean;
+  taskCount?: number;
+}): React.ReactNode {
+  const emptyDescription =
+    taskCount === 0
+      ? 'Adjust filters or add schedule tasks to populate charts'
+      : 'No chart data for the current filter selection';
+
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <ChartCard title="Task Status" subtitle="Current vs Planned">
-        <ResponsiveContainer width="100%" height={CHART_HEIGHT - 30}>
-          <PieChart>
-            <Pie
-              data={taskStatusData}
-              dataKey="value"
-              innerRadius={50}
-              outerRadius={75}
-              paddingAngle={2}
-              startAngle={90}
-              endAngle={-270}
+        {loading ? (
+          <ChartLoading />
+        ) : hasChartData(data.taskTimeline) ? (
+          <>
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT - 30}>
+              <PieChart>
+                <Pie
+                  data={data.taskTimeline}
+                  dataKey="value"
+                  innerRadius={50}
+                  outerRadius={75}
+                  paddingAngle={2}
+                  startAngle={90}
+                  endAngle={-270}
+                >
+                  {data.taskTimeline.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color ?? tokens.colorTeal400} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `${value}%`} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div
+              className="mt-1 flex justify-center gap-4 text-[11px] font-normal"
+              style={{ color: tokens.colorTextSecondary }}
             >
-              {taskStatusData.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
+              {data.taskTimeline.map((item) => (
+                <div key={item.name} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: item.color ?? tokens.colorTeal400 }}
+                  />
+                  {item.name}
+                </div>
               ))}
-            </Pie>
-            <Tooltip formatter={(v) => `${v}%`} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div
-          className="mt-1 flex justify-center gap-4 text-[11px] font-normal"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {taskStatusData.map((item) => (
-            <div key={item.name} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              {item.name}
             </div>
-          ))}
-        </div>
+          </>
+        ) : (
+          <ChartEmpty description={emptyDescription} />
+        )}
       </ChartCard>
 
       <ChartCard title="Discipline Workload" subtitle="Active tasks by discipline">
-        <DisciplineDumbbell />
+        {loading ? <ChartLoading /> : <DisciplineDumbbell data={data.disciplineWorkload} />}
       </ChartCard>
 
       <ChartCard title="Priority Breakdown" subtitle="Tasks by priority level">
-        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart
-            data={priorityData}
-            margin={{ left: -16, right: 8, top: 4, bottom: 4 }}
-          >
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 11, fill: tokens.colorTextSecondary }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: tokens.colorTextTertiary }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={36}>
-              {priorityData.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {loading ? (
+          <ChartLoading />
+        ) : hasChartData(data.priorityBreakdown) ? (
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+            <BarChart
+              data={data.priorityBreakdown}
+              margin={{ left: -16, right: 8, top: 4, bottom: 4 }}
+            >
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: tokens.colorTextSecondary }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: tokens.colorTextTertiary }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={36}>
+                {data.priorityBreakdown.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color ?? tokens.colorTeal400} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <ChartEmpty description={emptyDescription} />
+        )}
       </ChartCard>
 
       <ChartCard title="Overall Completion" subtitle="% of tasks completed">
-        <CompletionGauge value={63} />
+        {loading ? (
+          <ChartLoading />
+        ) : taskCount > 0 ? (
+          <CompletionGauge value={data.completionRate} />
+        ) : (
+          <ChartEmpty description={emptyDescription} />
+        )}
       </ChartCard>
     </section>
   );
