@@ -13,6 +13,8 @@ interface AuthState {
   capabilities: Capabilities;
   capabilitiesReady: boolean;
   setAuth: (tokens: AuthTokens) => void;
+  /** Updates tokens after refresh without clearing loaded capabilities. */
+  updateSessionTokens: (tokens: AuthTokens) => void;
   updateUser: (partial: Partial<AuthUser>) => void;
   setCapabilities: (capabilities: Capabilities) => void;
   clearAuth: () => void;
@@ -41,6 +43,16 @@ export const useAuthStore = create<AuthState>()(
           capabilities: initialCapabilities,
           capabilitiesReady: false,
         });
+      },
+      updateSessionTokens: (tokens: AuthTokens) => {
+        set((state) => ({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          sessionId: tokens.sessionId,
+          user: tokens.user,
+          capabilities: state.capabilities,
+          capabilitiesReady: state.capabilitiesReady,
+        }));
       },
       updateUser: (partial: Partial<AuthUser>) => {
         set((state) => ({

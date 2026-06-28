@@ -43,7 +43,7 @@ function unwrapPaginated<T>(
 }
 
 async function refreshAccessToken(): Promise<AuthTokens> {
-  const { sessionId, refreshToken, setAuth } = useAuthStore.getState();
+  const { sessionId, refreshToken, updateSessionTokens } = useAuthStore.getState();
 
   if (!sessionId || !refreshToken) {
     throw new Error('No refresh token available');
@@ -56,7 +56,7 @@ async function refreshAccessToken(): Promise<AuthTokens> {
   );
 
   const tokens = response.data.data;
-  setAuth(tokens);
+  updateSessionTokens(tokens);
   return tokens;
 }
 

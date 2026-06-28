@@ -10,6 +10,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { ReviewCommentDetail, ReviewModeComment } from '@/lib/api/epc.types';
 import { useReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 
 function mergeFallbackComment(
@@ -83,7 +84,7 @@ export default function ReviewCommentDetailDrawer({
     (comment?.commentedOn
       ? `${comment.commentedOn.documentTitle} · Rev ${comment.commentedOn.revisionLabel}`
       : comment
-        ? `${comment.engineeringDocumentVersionId.slice(0, 8)}…`
+        ? resolveEdvDisplayLabel(comment.engineeringDocumentVersionId, [])
         : '-');
 
   const drawerTitle =

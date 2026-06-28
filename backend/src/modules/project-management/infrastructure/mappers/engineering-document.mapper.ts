@@ -79,6 +79,7 @@ export interface MappedDesignPackageDependency {
   companyId: string;
   designPackageId: string;
   dependsOnPackageId: string;
+  dependsOnPackageName: string | null;
   dependencyType: DesignPackageDependency['dependencyType'];
   createdAt: string;
   createdBy: string;
@@ -192,13 +193,16 @@ export function mapDesignPackage(
 }
 
 export function mapDesignPackageDependency(
-  row: DesignPackageDependency,
+  row: DesignPackageDependency & {
+    dependsOnPackage?: { name: string } | null;
+  },
 ): MappedDesignPackageDependency {
   return {
     id: row.id,
     companyId: row.companyId,
     designPackageId: row.designPackageId,
     dependsOnPackageId: row.dependsOnPackageId,
+    dependsOnPackageName: row.dependsOnPackage?.name ?? null,
     dependencyType: row.dependencyType,
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,

@@ -138,6 +138,7 @@ export interface DesignPackageDependency {
   companyId: string;
   designPackageId: string;
   dependsOnPackageId: string;
+  dependsOnPackageName?: string | null;
   dependencyType: DesignPackageDependencyType;
   createdAt: string;
   createdBy: string;

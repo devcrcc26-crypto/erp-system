@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 
 interface CommentFormValues {
   engineeringDocumentVersionId: string;
@@ -42,12 +43,14 @@ function canMutateOwnOpenComment(
 export default function ReviewCommentPanel({
   reviewMode,
   edvOptions,
+  snapshotEdvLabels = [],
   projectId,
   taskDisciplineId,
   onCommentAdded,
 }: {
   reviewMode: ReviewModeView | null | undefined;
   edvOptions: readonly { value: string; label: string }[];
+  snapshotEdvLabels?: readonly { id: string; engineeringDocumentName: string; revisionLabel: string }[];
   projectId: string;
   taskDisciplineId: string;
   onCommentAdded: () => void;
@@ -73,12 +76,13 @@ export default function ReviewCommentPanel({
 
   const edvLabelById = new Map(edvOptions.map((option) => [option.value, option.label]));
 
-  const edvSelectOptions = edvOptions.length > 0
-    ? [...edvOptions]
-    : (reviewMode?.packageEdvIds ?? []).map((id) => ({
-        value: id,
-        label: id.slice(0, 8) + '…',
-      }));
+  const edvSelectOptions =
+    edvOptions.length > 0
+      ? [...edvOptions]
+      : (reviewMode?.packageEdvIds ?? []).map((id) => ({
+          value: id,
+          label: resolveEdvDisplayLabel(id, [], snapshotEdvLabels),
+        }));
 
   async function handleSubmit(values: CommentFormValues): Promise<void> {
     if (!reviewMode?.reviewSessionId) {
@@ -313,8 +317,14 @@ export default function ReviewCommentPanel({
                     {comment.commentedOn
                       ? `${comment.commentedOn.documentTitle} · Rev ${comment.commentedOn.revisionLabel}`
                       : edvLabelById.get(comment.engineeringDocumentVersionId) ??
-                        'Document'}{' '}
-                    · {comment.authorName} · {formatProjectDate(comment.createdAt)}
+                        resolveEdvDisplayLabel(
+                          comment.engineeringDocumentVersionId,
+                          [],
+                          snapshotEdvLabels,
+                        )}{' '}
+                    · {comment.authorName}
+                    {comment.assigneeName ? ` → ${comment.assigneeName}` : ''} ·{' '}
+                    {formatProjectDate(comment.createdAt)}
                   </p>
                 </div>
               );

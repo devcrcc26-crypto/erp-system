@@ -4,8 +4,11 @@ import { useMemo } from 'react';
 import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
 import { useProjectTeam } from '@/lib/query/projects';
-import { useUsersDirectory } from '@/lib/query/users';
-import { formatUserPickerLabel } from '@/lib/utils/user-display';
+import { useFullUsersDirectory, useUser } from '@/lib/query/users';
+import {
+  formatUserPickerLabel,
+} from '@/lib/utils/user-display';
+import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 /**
  * User picker limited to active members of the project team.
@@ -30,19 +33,29 @@ export default function ProjectTeamUserSelect({
   className?: string;
 }): React.ReactNode {
   const teamQuery = useProjectTeam(projectId, Boolean(projectId) && !disabled);
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100, sortBy: 'firstName', sortOrder: 'asc' },
-    { enabled: !disabled && Boolean(projectId) },
-  );
+  const usersQuery = useFullUsersDirectory({
+    enabled: !disabled && Boolean(projectId),
+  });
+  const valueUserQuery = useUser(value ?? '', Boolean(value) && !disabled);
 
   const teamUserIds = useMemo(
     () => new Set((teamQuery.data ?? []).map((member) => member.userId)),
     [teamQuery.data],
   );
 
+  const teamNameByUserId = useMemo(
+    () =>
+      new Map(
+        (teamQuery.data ?? [])
+          .filter((member) => member.userName)
+          .map((member) => [member.userId, member.userName as string]),
+      ),
+    [teamQuery.data],
+  );
+
   const options = useMemo(() => {
-    const users = usersQuery.data?.data ?? [];
-    return users
+    const users = usersQuery.data ?? [];
+    const baseOptions = users
       .filter(
         (user) =>
           user.isActive &&
@@ -53,13 +66,41 @@ export default function ProjectTeamUserSelect({
         value: user.id,
         label: formatUserPickerLabel(user),
       }));
-  }, [usersQuery.data?.data, teamUserIds, excludeUserIds]);
+
+    for (const [userId, userName] of teamNameByUserId) {
+      if (
+        teamUserIds.has(userId) &&
+        !excludeUserIds.includes(userId) &&
+        !baseOptions.some((option) => option.value === userId)
+      ) {
+        baseOptions.push({ value: userId, label: userName });
+      }
+    }
+
+    return withSelectedUserOption(
+      baseOptions,
+      value,
+      valueUserQuery.data,
+      formatUserPickerLabel,
+      value ? teamNameByUserId.get(value) : undefined,
+    );
+  }, [
+    usersQuery.data,
+    teamUserIds,
+    teamNameByUserId,
+    excludeUserIds,
+    value,
+    valueUserQuery.data,
+  ]);
 
   const handleChange: SelectProps['onChange'] = (nextValue) => {
     onChange?.(typeof nextValue === 'string' ? nextValue : undefined);
   };
 
-  const isLoading = teamQuery.isLoading || usersQuery.isLoading;
+  const isLoading =
+    teamQuery.isLoading ||
+    usersQuery.isLoading ||
+    (Boolean(value) && valueUserQuery.isLoading);
 
   return (
     <Select

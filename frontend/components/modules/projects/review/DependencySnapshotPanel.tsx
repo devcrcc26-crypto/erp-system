@@ -6,20 +6,7 @@ import type {
   DesignPackageDependency,
   EngineeringDocument,
 } from '@/lib/api/epc.types';
-
-function resolveEdvLabel(
-  edvId: string,
-  documents: readonly EngineeringDocument[],
-): string {
-  for (const doc of documents) {
-    for (const version of doc.versions ?? []) {
-      if (version.id === edvId) {
-        return `${doc.title} · Rev ${version.revisionLabel}`;
-      }
-    }
-  }
-  return edvId;
-}
+import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 
 /**
  * Shows upstream package dependencies and frozen locked EDVs at session open.
@@ -53,8 +40,9 @@ export default function DependencySnapshotPanel({
         {dependencies.map((dependency) => (
           <li key={dependency.id} className="px-3 py-2 text-sm">
             <span className="font-medium text-slate-900">
-              {packageNameById.get(dependency.dependsOnPackageId) ??
-                dependency.dependsOnPackageId}
+              {dependency.dependsOnPackageName ??
+                packageNameById.get(dependency.dependsOnPackageId) ??
+                'Upstream package'}
             </span>
             <span className="ml-2 text-xs text-slate-500">
               {dependency.dependencyType.replace(/_/g, ' ')}
@@ -83,7 +71,7 @@ export default function DependencySnapshotPanel({
           <ul className="divide-y divide-slate-100 rounded border border-slate-200">
             {snapshotEdvIds.map((edvId) => (
               <li key={edvId} className="px-3 py-2 text-sm text-slate-800">
-                {resolveEdvLabel(edvId, documents)}
+                {resolveEdvDisplayLabel(edvId, documents)}
               </li>
             ))}
           </ul>

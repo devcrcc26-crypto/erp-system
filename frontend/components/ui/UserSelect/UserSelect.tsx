@@ -3,8 +3,9 @@
 import { useMemo } from 'react';
 import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
-import { useUsersDirectory } from '@/lib/query/users';
+import { useFullUsersDirectory, useUser } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
+import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 function formatUserLabel(user: User): string {
   return `${user.firstName} ${user.lastName} (${user.email})`;
@@ -30,24 +31,34 @@ export default function UserSelect({
   excludeUserIds?: string[];
   className?: string;
 }): React.ReactNode {
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100, sortBy: 'firstName', sortOrder: 'asc' },
-    { enabled: !disabled },
-  );
+  const usersQuery = useFullUsersDirectory({
+    enabled: !disabled,
+  });
+  const valueUserQuery = useUser(value ?? '', Boolean(value) && !disabled);
 
   const options = useMemo(() => {
-    const users = usersQuery.data?.data ?? [];
-    return users
+    const users = usersQuery.data ?? [];
+    const baseOptions = users
       .filter((user) => user.isActive && !excludeUserIds.includes(user.id))
       .map((user) => ({
         value: user.id,
         label: formatUserLabel(user),
       }));
-  }, [usersQuery.data?.data, excludeUserIds]);
+
+    return withSelectedUserOption(
+      baseOptions,
+      value,
+      valueUserQuery.data,
+      formatUserLabel,
+    );
+  }, [usersQuery.data, excludeUserIds, value, valueUserQuery.data]);
 
   const handleChange: SelectProps['onChange'] = (nextValue) => {
     onChange?.(typeof nextValue === 'string' ? nextValue : undefined);
   };
+
+  const isLoading =
+    usersQuery.isLoading || (Boolean(value) && valueUserQuery.isLoading);
 
   return (
     <Select
@@ -56,8 +67,8 @@ export default function UserSelect({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      disabled={disabled || usersQuery.isLoading}
-      loading={usersQuery.isLoading}
+      disabled={disabled || isLoading}
+      loading={isLoading}
       options={options}
       className={className}
       filterOption={(input: string, option?: { label?: unknown }) =>
@@ -66,7 +77,7 @@ export default function UserSelect({
           .includes(input.toLowerCase())
       }
       notFoundContent={
-        usersQuery.isLoading ? <Spin size="small" /> : 'No users found'
+        isLoading ? <Spin size="small" /> : 'No users found'
       }
     />
   );

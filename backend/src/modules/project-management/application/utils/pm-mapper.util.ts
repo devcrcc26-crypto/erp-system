@@ -1123,7 +1123,7 @@ function mapDisciplineUserSummary(
     return null;
   }
   const name = `${user.firstName} ${user.lastName}`.trim();
-  return { id: user.id, name: name.length > 0 ? name : user.id };
+  return { id: user.id, name: name.length > 0 ? name : 'Unknown user' };
 }
 
 /**

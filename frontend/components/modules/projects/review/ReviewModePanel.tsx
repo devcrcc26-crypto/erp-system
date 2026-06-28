@@ -29,6 +29,7 @@ import {
 } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import type { EngineeringDocument } from '@/lib/api/epc.types';
 
 export default function ReviewModePanel({
@@ -200,19 +201,19 @@ export default function ReviewModePanel({
     [packageDocumentRows],
   );
 
+  const snapshotEdvs = contextSnapshotQuery.data?.edvs ?? [];
+
   const edvCommentOptions = useMemo(
     () =>
-      packageEdvIds.map((edvId) => {
-        const info = edvMap.get(edvId);
-        const title = info?.doc.title;
-        const revision = info?.revisionLabel;
-        const label =
-          title && revision
-            ? `${title} · Rev ${revision}`
-            : title ?? `${edvId.slice(0, 8)}…`;
-        return { value: edvId, label };
-      }),
-    [packageEdvIds, edvMap],
+      packageEdvIds.map((edvId) => ({
+        value: edvId,
+        label: resolveEdvDisplayLabel(
+          edvId,
+          documentsQuery.data?.data ?? [],
+          snapshotEdvs,
+        ),
+      })),
+    [packageEdvIds, documentsQuery.data?.data, snapshotEdvs],
   );
 
   const sessionComments = reviewMode?.comments ?? [];
@@ -350,7 +351,15 @@ export default function ReviewModePanel({
                       />
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium text-slate-900">
-                          {info?.doc.title ?? row.displayEdvId}
+                          {info
+                            ? info.doc.title?.trim() ||
+                              info.doc.documentNumber?.trim() ||
+                              'Engineering document'
+                            : resolveEdvDisplayLabel(
+                                row.displayEdvId,
+                                documentsQuery.data?.data ?? [],
+                                snapshotEdvs,
+                              )}
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           {info?.revisionLabel && (
@@ -395,6 +404,7 @@ export default function ReviewModePanel({
                   <ReviewCommentPanel
                     reviewMode={reviewMode}
                     edvOptions={edvCommentOptions}
+                    snapshotEdvLabels={snapshotEdvs}
                     projectId={projectId}
                     taskDisciplineId={taskDisciplineId}
                     onCommentAdded={refetchAll}

@@ -450,9 +450,18 @@ export class DesignPackageRepository {
   async listDependencies(
     companyId: string,
     designPackageId: string,
-  ): Promise<DesignPackageDependency[]> {
+  ): Promise<
+    Array<
+      DesignPackageDependency & {
+        dependsOnPackage: { name: string };
+      }
+    >
+  > {
     return this.prisma.designPackageDependency.findMany({
       where: { companyId, designPackageId },
+      include: {
+        dependsOnPackage: { select: { name: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
   }

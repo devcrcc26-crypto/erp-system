@@ -646,7 +646,10 @@ export function DesignPackageDependenciesTable({
       title: 'Depends on',
       dataIndex: 'dependsOnPackageId',
       key: 'dependsOnPackageId',
-      render: (id: string) => nameById.get(id) ?? id,
+      render: (_id: string, record: DesignPackageDependency) =>
+        record.dependsOnPackageName ??
+        nameById.get(record.dependsOnPackageId) ??
+        'Upstream package',
     },
     {
       title: 'Type',

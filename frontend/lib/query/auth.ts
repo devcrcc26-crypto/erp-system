@@ -39,6 +39,7 @@ async function loadSessionCapabilities(): Promise<Capabilities> {
 export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabilities> {
   const setCapabilities = useAuthStore((state) => state.setCapabilities);
   const sessionId = useAuthStore((state) => state.sessionId);
+  const capabilitiesReady = useAuthStore((state) => state.capabilitiesReady);
   const sessionEnabled = enabled && Boolean(sessionId);
 
   const query = useQuery({
@@ -58,7 +59,7 @@ export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabil
       return;
     }
     setCapabilities(query.data);
-  }, [query.data, sessionId, setCapabilities]);
+  }, [query.data, sessionId, capabilitiesReady, setCapabilities]);
 
   return query;
 }
