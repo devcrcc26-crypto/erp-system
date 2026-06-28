@@ -30,7 +30,7 @@ import SubmittalDetailDrawer from '@/components/modules/projects/submittals/Subm
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import Link from 'next/link';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
@@ -48,7 +48,7 @@ export default function SubmittalsPageContent({
   );
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
 
   const submittalsQuery = useSubmittals(
     projectId,
@@ -110,8 +110,8 @@ export default function SubmittalsPageContent({
         title: 'Assigned to',
         dataIndex: 'assignedTo',
         key: 'assignedTo',
-        render: (value: string | null) =>
-          value ? resolveUserName(value) : '-',
+        render: (_: unknown, record: Submittal) =>
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',
@@ -138,7 +138,7 @@ export default function SubmittalsPageContent({
         render: (value: string | null) => value ?? '-',
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (permLoading || submittalsQuery.isLoading) {

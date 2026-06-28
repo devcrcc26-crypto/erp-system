@@ -28,7 +28,7 @@ import type {
   PunchItemSeverity,
   PunchItemStatus,
 } from '@/lib/api/project-management.types';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
@@ -178,7 +178,7 @@ export default function PunchItemsPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const query = usePunchItems(projectId, {
     ...params,
     search: search.trim() || undefined,
@@ -234,8 +234,8 @@ export default function PunchItemsPageContent({
         title: 'Assigned',
         dataIndex: 'assignedTo',
         key: 'assignedTo',
-        render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '-',
+        render: (_: unknown, record: PunchItem) =>
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',
@@ -262,7 +262,7 @@ export default function PunchItemsPageContent({
         ),
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (query.isLoading) {

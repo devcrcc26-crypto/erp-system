@@ -21,7 +21,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { RfiStatus } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import {
   useAddRfiResponse,
   useRfi,
@@ -60,7 +60,7 @@ export default function RfiDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<ResponseFormValues>();
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const open = Boolean(rfiId);
 
   const rfiQuery = useRfi(projectId, rfiId ?? '', open);
@@ -169,10 +169,10 @@ export default function RfiDetailDrawer({
               {rfi.discipline ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Raised by">
-              {resolveUserName(rfi.raisedBy)}
+              {resolveUserDisplay(rfi.raisedBy, rfi.raisedByName)}
             </Descriptions.Item>
             <Descriptions.Item label="Assigned to">
-              {rfi.assignedTo ? resolveUserName(rfi.assignedTo) : '-'}
+              {resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '-')}
             </Descriptions.Item>
             <Descriptions.Item label="Due date">
               {formatProjectDate(rfi.dueDate)}
@@ -229,7 +229,7 @@ export default function RfiDetailDrawer({
                   <li key={item.id} className="px-4 py-3">
                     <div className="mb-1 flex items-baseline justify-between gap-2">
                       <span className={layout.drawerHeading}>
-                        {resolveUserName(item.respondedBy)}
+                        {resolveUserDisplay(item.respondedBy, item.respondedByName)}
                       </span>
                       <span className={layout.drawerMetaLabel}>
                         {formatProjectDate(item.respondedAt)}

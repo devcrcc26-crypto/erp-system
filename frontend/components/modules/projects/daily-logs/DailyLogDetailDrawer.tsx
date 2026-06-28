@@ -33,7 +33,7 @@ import type {
   DailyLogWorkforce,
 } from '@/lib/api/project-management.types';
 import { DAILY_LOG_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useAddDailyLogEquipment,
@@ -171,7 +171,7 @@ export default function DailyLogDetailDrawer({
   const [incidentForm] = Form.useForm<IncidentFormValues>();
 
   const open = Boolean(dailyLogId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
 
   const logQuery = useDailyLog(projectId, dailyLogId ?? '', open);
@@ -546,7 +546,7 @@ export default function DailyLogDetailDrawer({
                 Site engineer
               </dt>
               <dd className={`mt-1 ${layout.drawerMutedText}`}>
-                {resolveUserName(currentLog.siteEngineerId)}
+                {resolveUserDisplay(currentLog.siteEngineerId, currentLog.siteEngineerName)}
               </dd>
             </div>
             <div>

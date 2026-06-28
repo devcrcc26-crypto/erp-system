@@ -155,6 +155,7 @@ export interface Project {
   budget: string | null;
   currency: string | null;
   projectManagerId: string | null;
+  projectManagerName?: string | null;
   client: string | null;
   commissioningMethod: string | null;
   responsibleDepartmentId: string | null;
@@ -194,6 +195,8 @@ export interface ProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
+  userName?: string | null;
+  userEmail?: string | null;
   visibleModules: string[];
   createdAt: string;
   updatedAt: string;
@@ -300,7 +303,9 @@ export interface Rfi {
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   rfiNumber: string;
   title: string;
   description: string | null;
@@ -356,6 +361,7 @@ export interface RfiResponse {
   id: string;
   rfiId: string;
   respondedBy: string;
+  respondedByName?: string | null;
   responseText: string;
   respondedAt: string;
   createdAt: string;
@@ -367,8 +373,11 @@ export interface Submittal {
   taskDisciplineId: string | null;
   disciplineLeadUserId?: string | null;
   submittedBy: string;
+  submittedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   reviewedBy: string | null;
+  reviewedByName?: string | null;
   submittalNumber: string;
   category: string;
   title: string;
@@ -409,6 +418,7 @@ export interface SubmittalReview {
   id: string;
   submittalId: string;
   reviewedBy: string;
+  reviewedByName?: string | null;
   revisionNumber: number;
   status: SubmittalStatus;
   comments: string | null;
@@ -435,6 +445,7 @@ export interface DrawingVersion {
   id: string;
   drawingId: string;
   uploadedBy: string;
+  uploadedByName?: string | null;
   revision: string;
   fileKey: string;
   status: string;
@@ -454,6 +465,7 @@ export interface DailyLog {
   id: string;
   projectId: string;
   siteEngineerId: string;
+  siteEngineerName?: string | null;
   logDate: string;
   shift: string | null;
   weatherCondition: string | null;
@@ -511,6 +523,7 @@ export interface Meeting {
   id: string;
   projectId: string;
   organizerId: string;
+  organizerName?: string | null;
   meetingNumber: string;
   meetingType: MeetingType;
   title: string;
@@ -529,6 +542,7 @@ export interface MeetingAgendaItem {
   id: string;
   meetingId: string;
   presenterId: string | null;
+  presenterName?: string | null;
   itemOrder: number;
   topic: string;
   discussionNotes: string | null;
@@ -539,6 +553,7 @@ export interface MeetingAttendee {
   id: string;
   meetingId: string;
   userId: string | null;
+  userName?: string | null;
   externalName: string | null;
   organization: string | null;
   roleAtMeeting: string | null;
@@ -549,6 +564,7 @@ export interface ActionItem {
   id: string;
   meetingId: string;
   ownerId: string;
+  ownerName?: string | null;
   description: string;
   dueDate: string | null;
   status: string;
@@ -585,6 +601,7 @@ export interface Risk {
   id: string;
   projectId: string;
   ownerId: string;
+  ownerName?: string | null;
   riskIdCode: string;
   title: string;
   description: string | null;
@@ -606,7 +623,9 @@ export interface Issue {
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   issueNumber: string;
   issueType: string;
   description: string;
@@ -633,7 +652,9 @@ export interface PunchItem {
   id: string;
   projectId: string;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   punchNumber: string;
   description: string;
   roomOrArea: string | null;
@@ -1228,6 +1249,7 @@ export interface ExternalReviewTrigger {
   triggerType: ExternalReviewTriggerType;
   sourceEntityType: string;
   sourceEntityId: string;
+  sourceEntityLabel?: string;
   submittalId: string | null;
   linkedDesignPackageId: string | null;
   triggerMode: 'REVISION' | 'NEW_PACKAGE';

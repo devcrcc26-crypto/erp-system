@@ -109,6 +109,7 @@ export interface MappedProject {
   budget: string | null;
   currency: string | null;
   projectManagerId: string | null;
+  projectManagerName?: string | null;
   client: string | null;
   commissioningMethod: string | null;
   responsibleDepartmentId: string | null;
@@ -126,6 +127,8 @@ export interface MappedProjectTeamMember {
   id: string;
   projectId: string;
   userId: string;
+  userName?: string | null;
+  userEmail?: string | null;
   visibleModules: string[];
   createdAt: string;
   updatedAt: string;
@@ -196,8 +199,11 @@ export interface MappedSubmittal {
   taskDisciplineId: string | null;
   disciplineLeadUserId: string | null;
   submittedBy: string;
+  submittedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   reviewedBy: string | null;
+  reviewedByName?: string | null;
   submittalNumber: string;
   category: string;
   title: string;
@@ -233,6 +239,7 @@ export interface MappedSubmittalReview {
   id: string;
   submittalId: string;
   reviewedBy: string;
+  reviewedByName?: string | null;
   revisionNumber: number;
   status: SubmittalReview['status'];
   comments: string | null;
@@ -259,6 +266,7 @@ export interface MappedDrawingVersion {
   id: string;
   drawingId: string;
   uploadedBy: string;
+  uploadedByName?: string | null;
   revision: string;
   fileKey: string;
   status: string;
@@ -278,6 +286,7 @@ export interface MappedDailyLog {
   id: string;
   projectId: string;
   siteEngineerId: string;
+  siteEngineerName?: string | null;
   logDate: string;
   shift: string | null;
   weatherCondition: string | null;
@@ -335,6 +344,7 @@ export interface MappedMeeting {
   id: string;
   projectId: string;
   organizerId: string;
+  organizerName?: string | null;
   meetingNumber: string;
   meetingType: Meeting['meetingType'];
   title: string;
@@ -350,6 +360,7 @@ export interface MappedMeetingAgendaItem {
   id: string;
   meetingId: string;
   presenterId: string | null;
+  presenterName?: string | null;
   itemOrder: number;
   topic: string;
   discussionNotes: string | null;
@@ -360,6 +371,7 @@ export interface MappedMeetingAttendee {
   id: string;
   meetingId: string;
   userId: string | null;
+  userName?: string | null;
   externalName: string | null;
   organization: string | null;
   roleAtMeeting: string | null;
@@ -370,6 +382,7 @@ export interface MappedActionItem {
   id: string;
   meetingId: string;
   ownerId: string;
+  ownerName?: string | null;
   description: string;
   dueDate: string | null;
   status: string;
@@ -409,6 +422,7 @@ export interface MappedRisk {
   id: string;
   projectId: string;
   ownerId: string;
+  ownerName?: string | null;
   riskIdCode: string;
   title: string;
   description: string | null;
@@ -429,7 +443,9 @@ export interface MappedPunchItem {
   id: string;
   projectId: string;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   punchNumber: string;
   description: string;
   roomOrArea: string | null;
@@ -979,7 +995,9 @@ export interface MappedRfi {
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   rfiNumber: string;
   title: string;
   description: string | null;
@@ -1001,6 +1019,7 @@ export interface MappedRfiResponse {
   id: string;
   rfiId: string;
   respondedBy: string;
+  respondedByName?: string | null;
   responseText: string;
   respondedAt: string;
   createdAt: string;
@@ -1011,7 +1030,9 @@ export interface MappedIssue {
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
+  raisedByName?: string | null;
   assignedTo: string | null;
+  assignedToName?: string | null;
   issueNumber: string;
   issueType: string;
   description: string;

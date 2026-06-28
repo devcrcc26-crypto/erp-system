@@ -32,7 +32,7 @@ import type {
   RfiStatus,
 } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateRfi,
@@ -243,7 +243,7 @@ export default function RfisPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRfiId, setSelectedRfiId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();
   const rfisQuery = useRfis(projectId, {
     ...params,
@@ -304,8 +304,8 @@ export default function RfisPageContent({
         title: 'Assigned to',
         dataIndex: 'assignedTo',
         key: 'assignedTo',
-        render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '-',
+        render: (_: unknown, record: Rfi) =>
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',
@@ -329,7 +329,7 @@ export default function RfisPageContent({
         ),
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (rfisQuery.isLoading) {

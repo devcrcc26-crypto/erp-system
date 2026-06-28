@@ -19,6 +19,8 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
+import { PM_RAISED_ASSIGNED_NAMES } from '../utils/pm-user-name-fields.const';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -67,12 +69,14 @@ export class PunchItemsService {
       this.prisma.punchItem.count({ where }),
     ]);
 
-    return buildPaginatedResult(
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
       rows.map((row) => mapPunchItem(row)),
-      total,
-      query.page,
-      query.limit,
+      PM_RAISED_ASSIGNED_NAMES,
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -202,7 +206,12 @@ export class PunchItemsService {
       );
     }
 
-    return mapPunchItem(row, attachmentFolderId);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapPunchItem(row, attachmentFolderId),
+      PM_RAISED_ASSIGNED_NAMES,
+    );
   }
 
   private buildListWhere(

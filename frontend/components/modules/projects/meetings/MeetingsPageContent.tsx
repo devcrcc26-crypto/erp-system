@@ -23,7 +23,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { Meeting, MeetingStatus, MeetingType } from '@/lib/api/project-management.types';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateMeeting, useMeetings } from '@/lib/query/meetings';
@@ -161,7 +161,7 @@ export default function MeetingsPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();
   const meetingsQuery = useMeetings(projectId, {
     ...params,
@@ -207,7 +207,8 @@ export default function MeetingsPageContent({
         title: 'Organizer',
         dataIndex: 'organizerId',
         key: 'organizerId',
-        render: (userId: string) => resolveUserName(userId),
+        render: (_: unknown, record: Meeting) =>
+          resolveUserDisplay(record.organizerId, record.organizerName),
       },
       {
         title: 'Status',
@@ -221,7 +222,7 @@ export default function MeetingsPageContent({
         ),
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (meetingsQuery.isLoading) {

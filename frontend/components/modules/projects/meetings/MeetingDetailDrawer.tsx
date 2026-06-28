@@ -36,7 +36,7 @@ import type {
   RfiSummary,
 } from '@/lib/api/project-management.types';
 import { MEETING_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useAddMeetingActionItem,
@@ -100,7 +100,7 @@ export default function MeetingDetailDrawer({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const open = Boolean(meetingId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
 
   const meetingQuery = useMeeting(projectId, meetingId ?? '', open);
@@ -150,7 +150,8 @@ export default function MeetingDetailDrawer({
       title: 'Presenter',
       dataIndex: 'presenterId',
       key: 'presenterId',
-      render: (id: string | null) => (id ? resolveUserName(id) : '-'),
+      render: (id: string | null, record: MeetingAgendaItem) =>
+        id ? resolveUserDisplay(id, record.presenterName) : '-',
     },
     ...(isEditable
       ? [
@@ -188,7 +189,9 @@ export default function MeetingDetailDrawer({
       title: 'Name',
       key: 'name',
       render: (_: unknown, r: MeetingAttendee) =>
-        r.userId ? resolveUserName(r.userId) : (r.externalName ?? '-'),
+        r.userId
+          ? resolveUserDisplay(r.userId, r.userName)
+          : (r.externalName ?? '-'),
     },
     {
       title: 'Organization',
@@ -262,7 +265,8 @@ export default function MeetingDetailDrawer({
       title: 'Owner',
       dataIndex: 'ownerId',
       key: 'ownerId',
-      render: (id: string) => resolveUserName(id),
+      render: (id: string, record: ActionItem) =>
+        resolveUserDisplay(id, record.ownerName),
     },
     {
       title: 'Due',
@@ -366,7 +370,7 @@ export default function MeetingDetailDrawer({
                     {meeting.location ? ` · ${meeting.location}` : ''}
                   </p>
                   <p className={`mt-1 ${layout.drawerMutedText}`}>
-                    Organizer: {resolveUserName(meeting.organizerId)}
+                    Organizer: {resolveUserDisplay(meeting.organizerId, meeting.organizerName)}
                   </p>
                 </div>
                 <div className="w-full max-w-xs">

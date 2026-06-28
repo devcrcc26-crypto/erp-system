@@ -1,22 +1,63 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useUsersDirectory } from '@/lib/query/users';
+import { useCallback, useMemo } from 'react';
+import { useFullUsersDirectory } from '@/lib/query/users';
+import { displayUserLabel, formatUserPickerLabel } from '@/lib/utils/user-display';
 import { useAuthStore } from '@/stores/auth.store';
 
-/** Resolves user IDs to display names from the company user directory. */
+function buildUserNameMap(users: { id: string; firstName: string; lastName: string }[]): Map<string, string> {
+  return new Map(
+    users.map((user) => [user.id, `${user.firstName} ${user.lastName}`.trim()]),
+  );
+}
+
+/** Resolves user IDs to display names from the full company user directory. */
 export function useUserNameLookup(): (userId: string) => string {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: isAuthenticated },
-  );
-  const users = usersQuery.data?.data ?? [];
+  const usersQuery = useFullUsersDirectory({ enabled: isAuthenticated });
+  const users = usersQuery.data ?? [];
 
   return useMemo(() => {
-    const map = new Map(
-      users.map((user) => [user.id, `${user.firstName} ${user.lastName}`]),
-    );
-    return (userId: string) => map.get(userId) ?? userId;
+    const map = buildUserNameMap(users);
+    return (userId: string) => displayUserLabel(userId, map.get(userId));
+  }, [users]);
+}
+
+/**
+ * Prefers API-provided display names, then directory lookup — never raw UUIDs.
+ */
+export function useUserDisplayResolver(): (
+  userId: string | null | undefined,
+  apiName?: string | null,
+  emptyLabel?: string,
+) => string {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const usersQuery = useFullUsersDirectory({ enabled: isAuthenticated });
+  const users = usersQuery.data ?? [];
+
+  return useCallback(
+    (userId, apiName, emptyLabel = 'Unassigned') => {
+      if (apiName?.trim()) {
+        return apiName;
+      }
+      if (!userId) {
+        return emptyLabel;
+      }
+      const map = buildUserNameMap(users);
+      return displayUserLabel(userId, map.get(userId), emptyLabel);
+    },
+    [users],
+  );
+}
+
+/** Resolves user IDs to picker-style labels (name, roles, email). */
+export function useUserPickerLabelLookup(): (userId: string) => string {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const usersQuery = useFullUsersDirectory({ enabled: isAuthenticated });
+  const users = usersQuery.data ?? [];
+
+  return useMemo(() => {
+    const map = new Map(users.map((user) => [user.id, formatUserPickerLabel(user)]));
+    return (userId: string) => displayUserLabel(userId, map.get(userId));
   }, [users]);
 }

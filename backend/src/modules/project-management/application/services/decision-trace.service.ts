@@ -6,7 +6,9 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { PmContext } from '../types/pm-context.type';
+import { loadUserDisplayNameMap } from '../utils/pm-user-names.util';
 
 export interface DecisionTraceEntry {
   readonly id: string;
@@ -17,6 +19,7 @@ export interface DecisionTraceEntry {
   readonly action: string;
   readonly phase: WorkflowEventPhase;
   readonly actorId: string;
+  readonly actorName: string | null;
   readonly beforeState: Record<string, unknown>;
   readonly afterState: Record<string, unknown>;
   readonly reason: string | null;
@@ -97,13 +100,23 @@ export class DecisionTraceService {
             orderBy: { createdAt: 'asc' },
           });
 
+    const actorNameMap = await loadUserDisplayNameMap(
+      this.prisma,
+      ctx.companyId,
+      events.map((event) => event.actorId),
+    );
+
     return {
       engineeringDocumentId: document.id,
       taskDisciplineId: document.taskDisciplineId,
       documentNumber: document.documentNumber,
       title: document.title,
       entries: events.map((event) =>
-        this.mapEvent(event, revisionByEdvId.get(event.entityId) ?? null),
+        this.mapEvent(
+          event,
+          revisionByEdvId.get(event.entityId) ?? null,
+          actorNameMap.get(event.actorId) ?? null,
+        ),
       ),
     };
   }
@@ -111,6 +124,7 @@ export class DecisionTraceService {
   private mapEvent(
     event: WorkflowEventLog,
     revisionLabel: string | null,
+    actorName: string | null,
   ): DecisionTraceEntry {
     const loop = this.resolveLoop(event.action);
     return {
@@ -125,6 +139,7 @@ export class DecisionTraceService {
       action: event.action,
       phase: event.phase,
       actorId: event.actorId,
+      actorName,
       beforeState: event.beforeState as Record<string, unknown>,
       afterState: event.afterState as Record<string, unknown>,
       reason: event.reason,

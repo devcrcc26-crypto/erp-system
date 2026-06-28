@@ -33,6 +33,16 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import {
+  enrichRowsWithUserDisplayNames,
+  enrichWithUserDisplayNames,
+} from '../utils/pm-user-names.util';
+import {
+  PM_ACTION_ITEM_OWNER_NAME,
+  PM_AGENDA_PRESENTER_NAME,
+  PM_MEETING_ATTENDEE_NAMES,
+  PM_ORGANIZER_NAME,
+} from '../utils/pm-user-name-fields.const';
 import { loadRaisedItemsForSource } from '../utils/source-entity.util';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -90,12 +100,14 @@ export class MeetingsService {
       this.prisma.meeting.count({ where }),
     ]);
 
-    return buildPaginatedResult(
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
       rows.map(mapMeeting),
-      total,
-      query.page,
-      query.limit,
+      PM_ORGANIZER_NAME,
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -474,7 +486,40 @@ export class MeetingsService {
 
     const raisedItems = await this.loadMeetingRaisedItems(projectId, row.id);
 
-    return mapMeetingDetail(row, attachmentFolderId, raisedItems);
+    const detail = mapMeetingDetail(row, attachmentFolderId, raisedItems);
+    const withOrganizer = await enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      detail,
+      PM_ORGANIZER_NAME,
+    );
+    const [agendaItems, attendees, actionItems] = await Promise.all([
+      enrichRowsWithUserDisplayNames(
+        this.prisma,
+        ctx.companyId,
+        withOrganizer.agendaItems,
+        PM_AGENDA_PRESENTER_NAME,
+      ),
+      enrichRowsWithUserDisplayNames(
+        this.prisma,
+        ctx.companyId,
+        withOrganizer.attendees,
+        PM_MEETING_ATTENDEE_NAMES,
+      ),
+      enrichRowsWithUserDisplayNames(
+        this.prisma,
+        ctx.companyId,
+        withOrganizer.actionItems,
+        PM_ACTION_ITEM_OWNER_NAME,
+      ),
+    ]);
+
+    return {
+      ...withOrganizer,
+      agendaItems,
+      attendees,
+      actionItems,
+    };
   }
 
   private async loadMeetingRaisedItems(

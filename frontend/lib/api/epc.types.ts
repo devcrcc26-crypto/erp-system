@@ -336,6 +336,7 @@ export interface DecisionTraceEntry {
   action: string;
   phase: WorkflowEventPhase;
   actorId: string;
+  actorName?: string | null;
   beforeState: Record<string, unknown>;
   afterState: Record<string, unknown>;
   reason: string | null;

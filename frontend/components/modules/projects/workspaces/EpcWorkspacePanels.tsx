@@ -256,10 +256,10 @@ export default function EpcWorkspacePanels({
                       {trigger.triggerType.replace(/_/g, ' ')}
                     </span>
                     <p
-                      className="mt-1 font-mono text-[12px]"
+                      className="mt-1 text-[12px]"
                       style={{ color: tokens.colorTextPrimary }}
                     >
-                      {trigger.sourceEntityId}
+                      {trigger.sourceEntityLabel ?? trigger.sourceEntityId}
                     </p>
                     <p
                       className="text-[10px]"

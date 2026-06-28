@@ -37,6 +37,8 @@ import {
   parseOptionalDecimal,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -95,12 +97,14 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
-    return buildPaginatedResult(
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
       rows.map(mapProject),
-      total,
-      query.page,
-      query.limit,
+      [['projectManagerId', 'projectManagerName']],
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -116,7 +120,12 @@ export class ProjectsService {
       project.name,
     );
 
-    return mapProject(project);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapProject(project),
+      [['projectManagerId', 'projectManagerName']],
+    );
   }
 
   /**
@@ -191,7 +200,12 @@ export class ProjectsService {
       project.name,
     );
 
-    return mapProject(project);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapProject(project),
+      [['projectManagerId', 'projectManagerName']],
+    );
   }
 
   /**
@@ -320,7 +334,12 @@ export class ProjectsService {
       },
     });
 
-    return mapProject(project);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapProject(project),
+      [['projectManagerId', 'projectManagerName']],
+    );
   }
 
   /**
@@ -414,7 +433,23 @@ export class ProjectsService {
       return true;
     });
 
-    return uniqueMembers.map(mapProjectTeamMember);
+    const userIds = uniqueMembers.map((member) => member.userId);
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds }, companyId: ctx.companyId },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        })
+      : [];
+    const userById = new Map(users.map((user) => [user.id, user]));
+
+    return uniqueMembers.map((member) => {
+      const user = userById.get(member.userId);
+      return {
+        ...mapProjectTeamMember(member),
+        userName: user ? formatUserDisplayName(user) : null,
+        userEmail: user?.email ?? null,
+      };
+    });
   }
 
   /**

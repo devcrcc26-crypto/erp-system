@@ -217,7 +217,7 @@ export default function ChangeRequestDrawer({
                           color: tokens.colorAmber400,
                         }}
                       >
-                        {cr.sourceType} · {cr.sourceEntityId}
+                        {cr.sourceType?.replace(/_/g, ' ') ?? 'Source'}
                       </span>
                     )}
                   </Descriptions.Item>

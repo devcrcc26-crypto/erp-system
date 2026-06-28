@@ -18,7 +18,7 @@ import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { SubmittalStatus } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -75,7 +75,7 @@ export default function SubmittalDetailDrawer({
 }): React.ReactNode {
   const [form] = Form.useForm<ReviewFormValues>();
   const open = Boolean(submittalId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const { submittals: submittalsCap } = usePmCapabilities();
@@ -287,17 +287,13 @@ export default function SubmittalDetailDrawer({
               {submittal.supplier ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Submitted by">
-              {resolveUserName(submittal.submittedBy)}
+              {resolveUserDisplay(submittal.submittedBy, submittal.submittedByName)}
             </Descriptions.Item>
             <Descriptions.Item label="Assigned to">
-              {submittal.assignedTo
-                ? resolveUserName(submittal.assignedTo)
-                : '-'}
+              {resolveUserDisplay(submittal.assignedTo, submittal.assignedToName, '-')}
             </Descriptions.Item>
             <Descriptions.Item label="Reviewed by">
-              {submittal.reviewedBy
-                ? resolveUserName(submittal.reviewedBy)
-                : '-'}
+              {resolveUserDisplay(submittal.reviewedBy, submittal.reviewedByName, '-')}
             </Descriptions.Item>
             <Descriptions.Item label="Submission date">
               {formatProjectDate(submittal.submissionDate)}
@@ -466,7 +462,7 @@ export default function SubmittalDetailDrawer({
                         </span>
                       </div>
                       <p className={`mt-1 ${layout.drawerMutedText}`}>
-                        {resolveUserName(review.reviewedBy)}
+                        {resolveUserDisplay(review.reviewedBy, review.reviewedByName)}
                       </p>
                       {review.comments && (
                         <p className={`mt-2 whitespace-pre-wrap ${layout.drawerMutedText}`}>

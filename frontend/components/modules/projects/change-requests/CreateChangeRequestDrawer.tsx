@@ -52,7 +52,7 @@ export default function CreateChangeRequestDrawer({
 
   const triggerOptions = (triggersQuery.data?.data ?? []).map((trigger) => ({
     value: trigger.id,
-    label: `${trigger.triggerType} · ${trigger.sourceEntityId}`,
+    label: `${trigger.triggerType.replace(/_/g, ' ')} · ${trigger.sourceEntityLabel ?? 'Linked item'}`,
   }));
 
   async function handleSubmit(values: FormValues): Promise<void> {

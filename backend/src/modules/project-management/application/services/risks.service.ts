@@ -19,6 +19,8 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
+import { PM_OWNER_NAME } from '../utils/pm-user-name-fields.const';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DocumentNumberService } from './document-number.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -67,12 +69,14 @@ export class RisksService {
       this.prisma.risk.count({ where }),
     ]);
 
-    return buildPaginatedResult(
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
       rows.map((row) => mapRisk(row)),
-      total,
-      query.page,
-      query.limit,
+      PM_OWNER_NAME,
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -201,7 +205,12 @@ export class RisksService {
       );
     }
 
-    return mapRisk(row, attachmentFolderId);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapRisk(row, attachmentFolderId),
+      PM_OWNER_NAME,
+    );
   }
 
   private buildListWhere(

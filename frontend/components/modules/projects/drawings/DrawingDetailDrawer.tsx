@@ -24,7 +24,7 @@ import {
   useDrawingLinks,
   useDrawingVersions,
 } from '@/lib/query/drawings';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import {
   drawingLinkToEntityLink,
   entityLinkToDrawingLinkPayload,
@@ -44,7 +44,7 @@ export default function DrawingDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const open = Boolean(drawingId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
 
   const drawingQuery = useDrawing(projectId, drawingId ?? '', open);
   const versionsQuery = useDrawingVersions(projectId, drawingId ?? '', open);
@@ -201,7 +201,7 @@ export default function DrawingDetailDrawer({
                         Revision {version.revision}
                       </p>
                       <p className={layout.drawerMetaLabel}>
-                        {resolveUserName(version.uploadedBy)} ·{' '}
+                        {resolveUserDisplay(version.uploadedBy, version.uploadedByName)} ·{' '}
                         {formatProjectDate(version.createdAt)}
                       </p>
                       {version.changeNote && (

@@ -30,6 +30,8 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
+import { PM_SUBMITTAL_USER_NAMES, PM_REVIEWED_BY_NAME } from '../utils/pm-user-name-fields.const';
 import { DocumentNumberService } from './document-number.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -109,12 +111,14 @@ export class SubmittalsService {
       this.prisma.submittal.count({ where }),
     ]);
 
-    return buildPaginatedResult(
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
       rows.map(mapSubmittal),
-      total,
-      query.page,
-      query.limit,
+      PM_SUBMITTAL_USER_NAMES,
     );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -147,12 +151,17 @@ export class SubmittalsService {
       submittalId,
     );
 
-    return {
-      ...mapSubmittal(row),
-      disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
-      items: row.items.map(mapSubmittalItem),
-      attachmentFolderId: folder?.id ?? null,
-    };
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      {
+        ...mapSubmittal(row),
+        disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
+        items: row.items.map(mapSubmittalItem),
+        attachmentFolderId: folder?.id ?? null,
+      },
+      PM_SUBMITTAL_USER_NAMES,
+    );
   }
 
   /**
@@ -633,7 +642,12 @@ export class SubmittalsService {
       orderBy: { reviewedAt: 'asc' },
     });
 
-    return rows.map(mapSubmittalReview);
+    return enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map(mapSubmittalReview),
+      PM_REVIEWED_BY_NAME,
+    );
   }
 
   /**
@@ -698,7 +712,12 @@ export class SubmittalsService {
       return created;
     });
 
-    return mapSubmittalReview(review);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapSubmittalReview(review),
+      PM_REVIEWED_BY_NAME,
+    );
   }
 
   private buildListWhere(

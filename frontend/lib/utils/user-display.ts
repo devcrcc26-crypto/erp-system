@@ -1,5 +1,32 @@
 import type { User } from '@/lib/api/types';
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * True when the value looks like a UUID (raw ids should not be shown in UI).
+ */
+export function isUuidLike(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
+/**
+ * Prefer API-resolved name, then directory lookup, never raw UUIDs.
+ */
+export function displayUserLabel(
+  userId: string | null | undefined,
+  resolvedName?: string | null,
+  emptyLabel = 'Unassigned',
+): string {
+  if (resolvedName?.trim()) {
+    return resolvedName;
+  }
+  if (!userId) {
+    return emptyLabel;
+  }
+  return 'Unknown user';
+}
+
 /**
  * Comma-separated system role names for a user.
  */

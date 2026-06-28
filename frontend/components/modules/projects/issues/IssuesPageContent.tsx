@@ -32,7 +32,7 @@ import type {
   IssueStatus,
 } from '@/lib/api/project-management.types';
 import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateIssue,
@@ -251,7 +251,7 @@ export default function IssuesPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();
   const issuesQuery = useIssues(projectId, {
     ...params,
@@ -320,8 +320,8 @@ export default function IssuesPageContent({
         title: 'Assigned to',
         dataIndex: 'assignedTo',
         key: 'assignedTo',
-        render: (userId: string | null) =>
-          userId ? resolveUserName(userId) : '-',
+        render: (_: unknown, record: Issue) =>
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',
@@ -345,7 +345,7 @@ export default function IssuesPageContent({
         ),
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (issuesQuery.isLoading) {

@@ -13,10 +13,7 @@ import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import {
-  formatUserPickerLabel,
-  formatUserRoleNames,
-} from '@/lib/utils/user-display';
+import { displayUserLabel, formatUserPickerLabel, formatUserRoleNames } from '@/lib/utils/user-display';
 
 const EMPTY_TEAM: ProjectTeamMember[] = [];
 
@@ -31,13 +28,13 @@ function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
 function useUserDirectoryLookup(): (
   userId: string,
 ) => { name: string; roles: string } {
-  const usersQuery = useUsersDirectory({ page: 1, limit: 100 });
+  const usersQuery = useUsersDirectory({ page: 1, limit: 200 });
   const users = usersQuery.data?.data ?? [];
 
   return (userId: string) => {
     const user = users.find((item) => item.id === userId);
     if (!user) {
-      return { name: userId, roles: '-' };
+      return { name: displayUserLabel(userId), roles: '-' };
     }
     return {
       name: `${user.firstName} ${user.lastName}`,
@@ -100,7 +97,8 @@ export default function ProjectTeamPanel({
       title: 'Name',
       dataIndex: 'userId',
       key: 'userId',
-      render: (userId: string) => resolveUser(userId).name,
+      render: (userId: string, record: ProjectTeamMember) =>
+        record.userName ?? resolveUser(userId).name,
     },
     {
       title: 'Role',

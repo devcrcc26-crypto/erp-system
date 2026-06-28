@@ -60,9 +60,10 @@ export default function KanbanColumn({
               key={project.id}
               project={project}
               projectManagerName={
-                project.projectManagerId
+                project.projectManagerName ??
+                (project.projectManagerId
                   ? projectManagerNames[project.projectManagerId]
-                  : undefined
+                  : undefined)
               }
               stats={projectStats[project.id]}
               dragEnabled={dragEnabled}

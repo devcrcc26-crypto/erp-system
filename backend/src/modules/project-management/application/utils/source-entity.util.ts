@@ -115,6 +115,39 @@ export async function resolveSourceEntityLabel(
     return `Submittal Review — ${record.submittal.submittalNumber}`;
   }
 
+  if (type === 'RFI') {
+    const record = await prisma.rfi.findFirst({
+      where: activeOnly({ id, projectId }),
+      select: { rfiNumber: true, title: true },
+    });
+    if (!record) {
+      return id;
+    }
+    return `RFI ${record.rfiNumber} — ${record.title}`;
+  }
+
+  if (type === 'ISSUE') {
+    const record = await prisma.issue.findFirst({
+      where: activeOnly({ id, projectId }),
+      select: { issueNumber: true, issueType: true },
+    });
+    if (!record) {
+      return id;
+    }
+    return `Issue ${record.issueNumber} — ${record.issueType}`;
+  }
+
+  if (type === 'CHANGE_REQUEST') {
+    const record = await prisma.projectChangeRequest.findFirst({
+      where: activeOnly({ id, projectId }),
+      select: { changeNumber: true, title: true },
+    });
+    if (!record) {
+      return id;
+    }
+    return `CR ${record.changeNumber} — ${record.title}`;
+  }
+
   return id;
 }
 

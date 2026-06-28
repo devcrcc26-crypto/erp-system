@@ -29,7 +29,7 @@ import type {
   RiskCategory,
   RiskStatus,
 } from '@/lib/api/project-management.types';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateRisk, useRisks } from '@/lib/query/risks';
@@ -220,7 +220,7 @@ export default function RisksPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const query = useRisks(projectId, {
     ...params,
     search: search.trim() || undefined,
@@ -270,7 +270,8 @@ export default function RisksPageContent({
         title: 'Owner',
         dataIndex: 'ownerId',
         key: 'ownerId',
-        render: (userId: string) => resolveUserName(userId),
+        render: (_: unknown, record: Risk) =>
+          resolveUserDisplay(record.ownerId, record.ownerName),
       },
       {
         title: 'Review',
@@ -290,7 +291,7 @@ export default function RisksPageContent({
         ),
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (query.isLoading) {

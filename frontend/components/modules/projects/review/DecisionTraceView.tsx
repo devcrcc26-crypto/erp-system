@@ -4,7 +4,7 @@ import { Spin, Timeline } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useDecisionTrace } from '@/lib/query/engineering-documents';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function DecisionTraceView({
@@ -17,7 +17,7 @@ export default function DecisionTraceView({
   title?: string;
 }): React.ReactNode {
   const traceQuery = useDecisionTrace(projectId, engineeringDocumentId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
 
   if (traceQuery.isLoading) {
     return (
@@ -55,7 +55,7 @@ export default function DecisionTraceView({
               </div>
               <p className="text-xs text-slate-500">
                 {formatProjectDate(entry.createdAt)} -{' '}
-                {resolveUserName(entry.actorId)}
+                {resolveUserDisplay(entry.actorId, entry.actorName)}
               </p>
               {entry.reason && (
                 <p className="mt-1 text-slate-600">{entry.reason}</p>

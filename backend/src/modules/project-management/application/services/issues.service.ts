@@ -23,6 +23,10 @@ import {
   buildSourceEntitySummary,
   validateSourceEntity,
 } from '../utils/source-entity.util';
+import {
+  enrichWithUserDisplayNames,
+} from '../utils/pm-user-names.util';
+import { PM_RAISED_ASSIGNED_NAMES } from '../utils/pm-user-name-fields.const';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -323,16 +327,21 @@ export class IssuesService {
       FolderContextType.ISSUE,
       issue.id,
     );
-    return {
-      ...mapIssue(issue),
-      attachmentFolderId: folder?.id ?? null,
-      sourceEntitySummary: await buildSourceEntitySummary(
-        this.prisma,
-        issue.projectId,
-        issue.sourceEntityType,
-        issue.sourceEntityId,
-      ),
-    };
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      {
+        ...mapIssue(issue),
+        attachmentFolderId: folder?.id ?? null,
+        sourceEntitySummary: await buildSourceEntitySummary(
+          this.prisma,
+          issue.projectId,
+          issue.sourceEntityType,
+          issue.sourceEntityId,
+        ),
+      },
+      PM_RAISED_ASSIGNED_NAMES,
+    );
   }
 
   private async assertIssueVisible(

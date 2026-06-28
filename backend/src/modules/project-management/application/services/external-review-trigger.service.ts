@@ -23,6 +23,7 @@ import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-su
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
 import { ProjectScopeService } from './project-scope.service';
 import { ProjectChangeRequestService } from './project-change-request.service';
+import { resolveSourceEntityLabel } from '../utils/source-entity.util';
 
 export interface ExternalReviewTriggerInput {
   readonly companyId: string;
@@ -41,6 +42,7 @@ export interface MappedExternalReviewTrigger {
   triggerType: ExternalReviewTriggerType;
   sourceEntityType: string;
   sourceEntityId: string;
+  sourceEntityLabel: string;
   submittalId: string | null;
   linkedDesignPackageId: string | null;
   triggerMode: ExternalReviewTriggerMode;
@@ -91,23 +93,28 @@ export class ExternalReviewTriggerService {
       this.prisma.externalReviewTrigger.count({ where }),
     ]);
 
-    return buildPaginatedResult(
-      rows.map((row) => ({
+    const mapped = await Promise.all(
+      rows.map(async (row) => ({
         id: row.id,
         projectId: row.projectId,
         triggerType: row.triggerType,
         sourceEntityType: row.sourceEntityType,
         sourceEntityId: row.sourceEntityId,
+        sourceEntityLabel: await resolveSourceEntityLabel(
+          this.prisma,
+          projectId,
+          row.sourceEntityType,
+          row.sourceEntityId,
+        ),
         submittalId: row.submittalId,
         linkedDesignPackageId: row.linkedDesignPackageId,
         triggerMode: row.triggerMode,
         status: row.status,
         createdAt: row.createdAt.toISOString(),
       })),
-      total,
-      query.page,
-      query.limit,
     );
+
+    return buildPaginatedResult(mapped, total, query.page, query.limit);
   }
 
   /**
@@ -133,6 +140,12 @@ export class ExternalReviewTriggerService {
       triggerType: row.triggerType,
       sourceEntityType: row.sourceEntityType,
       sourceEntityId: row.sourceEntityId,
+      sourceEntityLabel: await resolveSourceEntityLabel(
+        this.prisma,
+        projectId,
+        row.sourceEntityType,
+        row.sourceEntityId,
+      ),
       submittalId: row.submittalId,
       linkedDesignPackageId: row.linkedDesignPackageId,
       triggerMode: row.triggerMode,
@@ -199,6 +212,12 @@ export class ExternalReviewTriggerService {
       triggerType: updated.triggerType,
       sourceEntityType: updated.sourceEntityType,
       sourceEntityId: updated.sourceEntityId,
+      sourceEntityLabel: await resolveSourceEntityLabel(
+        this.prisma,
+        projectId,
+        updated.sourceEntityType,
+        updated.sourceEntityId,
+      ),
       submittalId: updated.submittalId,
       linkedDesignPackageId: updated.linkedDesignPackageId,
       triggerMode: updated.triggerMode,

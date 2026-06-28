@@ -65,6 +65,27 @@ export function useUsers(
 }
 
 /**
+ * Loads every user in the company directory (paginates until complete).
+ */
+export async function fetchAllUsersDirectory(): Promise<User[]> {
+  const limit = 200;
+  let page = 1;
+  let pages = 1;
+  const users: User[] = [];
+
+  do {
+    const result = await apiGetPaginated<User>(
+      `/users/directory${toQueryString({ page, limit, sortBy: 'lastName', sortOrder: 'asc' })}`,
+    );
+    users.push(...result.data);
+    pages = result.meta.pages;
+    page += 1;
+  } while (page <= pages);
+
+  return users;
+}
+
+/**
  * Company user directory for assignment pickers - available with projects.view.
  */
 export function useUsersDirectory(
@@ -78,6 +99,21 @@ export function useUsersDirectory(
     queryKey: userKeys.directory(params),
     queryFn: () =>
       apiGetPaginated<User>(`/users/directory${toQueryString(params)}`),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+/**
+ * Full company directory for name resolution in tables and drawers.
+ */
+export function useFullUsersDirectory(
+  options?: Omit<UseQueryOptions<User[]>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: [...userKeys.directories(), 'all'] as const,
+    queryFn: fetchAllUsersDirectory,
     retry: false,
     staleTime: 5 * 60 * 1000,
     ...options,

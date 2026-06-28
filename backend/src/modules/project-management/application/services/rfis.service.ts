@@ -33,6 +33,11 @@ import {
   buildSourceEntitySummary,
   validateSourceEntity,
 } from '../utils/source-entity.util';
+import {
+  enrichRowsWithUserDisplayNames,
+  enrichWithUserDisplayNames,
+} from '../utils/pm-user-names.util';
+import { PM_RAISED_ASSIGNED_NAMES, PM_RESPONDED_BY_NAME } from '../utils/pm-user-name-fields.const';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -90,10 +95,15 @@ export class RfisService {
       projectId,
       rows,
     );
-    const data = rows.map((row) => ({
-      ...mapRfi(row),
-      attachmentFolderId: folderIds.get(row.id) ?? null,
-    }));
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map((row) => ({
+        ...mapRfi(row),
+        attachmentFolderId: folderIds.get(row.id) ?? null,
+      })),
+      PM_RAISED_ASSIGNED_NAMES,
+    );
 
     return buildPaginatedResult(data, total, query.page, query.limit);
   }
@@ -277,7 +287,12 @@ export class RfisService {
       orderBy: { respondedAt: 'asc' },
     });
 
-    return responses.map(mapRfiResponse);
+    return enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      responses.map(mapRfiResponse),
+      PM_RESPONDED_BY_NAME,
+    );
   }
 
   /**
@@ -328,7 +343,12 @@ export class RfisService {
       return created;
     });
 
-    return mapRfiResponse(response);
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      mapRfiResponse(response),
+      PM_RESPONDED_BY_NAME,
+    );
   }
 
   private async buildRfiListWhere(
@@ -400,16 +420,21 @@ export class RfisService {
       );
     }
 
-    return {
-      ...mapRfi(rfi),
-      attachmentFolderId,
-      sourceEntitySummary: await buildSourceEntitySummary(
-        this.prisma,
-        rfi.projectId,
-        rfi.sourceEntityType,
-        rfi.sourceEntityId,
-      ),
-    };
+    return enrichWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      {
+        ...mapRfi(rfi),
+        attachmentFolderId,
+        sourceEntitySummary: await buildSourceEntitySummary(
+          this.prisma,
+          rfi.projectId,
+          rfi.sourceEntityType,
+          rfi.sourceEntityId,
+        ),
+      },
+      PM_RAISED_ASSIGNED_NAMES,
+    );
   }
 
   /**

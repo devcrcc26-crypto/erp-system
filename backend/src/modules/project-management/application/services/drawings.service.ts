@@ -24,6 +24,8 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { enrichRowsWithUserDisplayNames } from '../utils/pm-user-names.util';
+import { PM_UPLOADED_BY_NAME } from '../utils/pm-user-name-fields.const';
 import { ProjectScopeService } from './project-scope.service';
 
 const DRAWING_SORT_FIELDS = new Set([
@@ -193,7 +195,12 @@ export class DrawingsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return rows.map(mapDrawingVersion);
+    return enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map(mapDrawingVersion),
+      PM_UPLOADED_BY_NAME,
+    );
   }
 
   /**

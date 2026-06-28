@@ -25,7 +25,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DailyLog } from '@/lib/api/project-management.types';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateDailyLog,
@@ -167,7 +167,7 @@ export default function DailyLogsPageContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const logsQuery = useDailyLogs(projectId, {
     ...params,
     search: search.trim() || undefined,
@@ -202,7 +202,8 @@ export default function DailyLogsPageContent({
         title: 'Site engineer',
         dataIndex: 'siteEngineerId',
         key: 'siteEngineerId',
-        render: (userId: string) => resolveUserName(userId),
+        render: (_: unknown, record: DailyLog) =>
+          resolveUserDisplay(record.siteEngineerId, record.siteEngineerName),
       },
       {
         title: 'Weather',
@@ -235,7 +236,7 @@ export default function DailyLogsPageContent({
         render: (value: string | null) => value ?? '-',
       },
     ],
-    [resolveUserName],
+    [resolveUserDisplay],
   );
 
   if (logsQuery.isLoading) {

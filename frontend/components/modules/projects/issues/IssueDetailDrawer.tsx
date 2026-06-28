@@ -14,7 +14,7 @@ import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { IssueStatus } from '@/lib/api/project-management.types';
 import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useIssue, useUpdateIssue } from '@/lib/query/issues';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -35,7 +35,7 @@ export default function IssueDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const open = Boolean(issueId);
   const issueQuery = useIssue(projectId, issueId ?? '', open);
   const updateIssue = useUpdateIssue();
@@ -108,10 +108,10 @@ export default function IssueDetailDrawer({
               {issue.location ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Raised by">
-              {resolveUserName(issue.raisedBy)}
+              {resolveUserDisplay(issue.raisedBy, issue.raisedByName)}
             </Descriptions.Item>
             <Descriptions.Item label="Assigned to">
-              {issue.assignedTo ? resolveUserName(issue.assignedTo) : '-'}
+              {resolveUserDisplay(issue.assignedTo, issue.assignedToName, '-')}
             </Descriptions.Item>
             <Descriptions.Item label="Due date">
               {formatProjectDate(issue.dueDate)}

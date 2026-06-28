@@ -27,7 +27,7 @@ import type {
   RiskStatus,
 } from '@/lib/api/project-management.types';
 import { RISK_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useDeleteRisk,
@@ -81,7 +81,7 @@ export default function RiskDetailDrawer({
   const [activeTab, setActiveTab] = useState('details');
   const [form] = Form.useForm<RiskEditValues>();
   const open = Boolean(riskId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
 
   const riskQuery = useRisk(projectId, riskId ?? '', open);
@@ -202,7 +202,7 @@ export default function RiskDetailDrawer({
                     {formatRiskCategory(risk.category)}
                   </p>
                   <p className={`mt-1 ${layout.drawerMutedText}`}>
-                    Owner: {resolveUserName(risk.ownerId)}
+                    Owner: {resolveUserDisplay(risk.ownerId, risk.ownerName)}
                   </p>
                   <p className={`mt-1 ${layout.drawerMutedText}`}>
                     Review: {formatProjectDate(risk.reviewDate)}

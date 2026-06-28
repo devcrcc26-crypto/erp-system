@@ -38,7 +38,7 @@ import {
 
 function useProjectManagerNames(enabled: boolean): Record<string, string> {
   const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
+    { page: 1, limit: 200 },
     { enabled },
   );
   const users = usersQuery.data?.data ?? [];
@@ -247,9 +247,10 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
                 <ProjectKanbanCardPreview
                   project={activeProject}
                   projectManagerName={
-                    activeProject.projectManagerId
+                    activeProject.projectManagerName ??
+                    (activeProject.projectManagerId
                       ? projectManagerNames[activeProject.projectManagerId]
-                      : undefined
+                      : undefined)
                   }
                 />
               ) : null}

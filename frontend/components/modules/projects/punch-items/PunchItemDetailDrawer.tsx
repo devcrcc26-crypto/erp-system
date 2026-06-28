@@ -26,7 +26,7 @@ import type {
   PunchItemStatus,
 } from '@/lib/api/project-management.types';
 import { PUNCH_ITEM_WORKFLOW } from '@/lib/api/workflow';
-import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useDeletePunchItem,
@@ -73,7 +73,7 @@ export default function PunchItemDetailDrawer({
   const [activeTab, setActiveTab] = useState('details');
   const [form] = Form.useForm<PunchItemEditValues>();
   const open = Boolean(punchItemId);
-  const resolveUserName = useUserNameLookup();
+  const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
 
   const itemQuery = usePunchItem(projectId, punchItemId ?? '', open);
@@ -190,9 +190,9 @@ export default function PunchItemDetailDrawer({
                     {item.roomOrArea ? `Area: ${item.roomOrArea}` : 'No area specified'}
                   </p>
                   <p className={`mt-1 ${layout.drawerMutedText}`}>
-                    Raised by {resolveUserName(item.raisedBy)}
+                    Raised by {resolveUserDisplay(item.raisedBy, item.raisedByName)}
                     {item.assignedTo
-                      ? ` · Assigned to ${resolveUserName(item.assignedTo)}`
+                      ? ` · Assigned to ${resolveUserDisplay(item.assignedTo, item.assignedToName)}`
                       : ''}
                   </p>
                   <p className={`mt-1 ${layout.drawerMutedText}`}>
