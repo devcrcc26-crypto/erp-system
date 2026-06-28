@@ -376,22 +376,29 @@ export async function seedProjectBundle(
     },
   });
 
-  const docNames = [
-    'Contract Agreement.pdf',
-    'Site Safety Plan.pdf',
-    'Project Execution Plan.pdf',
+  const docDefs: Array<{ name: string; fileKey: string }> = [
+    { name: 'Contract Agreement.pdf', fileKey: 'Contract-Agreement.pdf' },
+    { name: 'Site Safety Plan.pdf', fileKey: 'Site-Safety-Plan.pdf' },
+    { name: 'Project Execution Plan.pdf', fileKey: 'Project-Execution-Plan.pdf' },
   ];
-  for (let i = 0; i < docNames.length; i += 1) {
+  for (let i = 0; i < docDefs.length; i += 1) {
+    const doc = docDefs[i];
     const docId = sid(p, 11 + i);
+    const storageKey = `demo/${def.code}/${doc.fileKey}`;
     await prisma.document.upsert({
       where: { id: docId },
-      update: {},
+      update: {
+        name: doc.name,
+        fileKey: storageKey,
+        fileType: 'application/pdf',
+        updatedBy: adminUserId,
+      },
       create: {
         id: docId,
         folderId,
         companyId,
-        name: docNames[i],
-        fileKey: `demo/${def.code}/${docNames[i]}`,
+        name: doc.name,
+        fileKey: storageKey,
         fileType: 'application/pdf',
         fileSizeBytes: 256_000 + i * 10_000,
         version: 1,
@@ -671,16 +678,34 @@ export async function seedProjectBundle(
   });
   await prisma.drawingVersion.upsert({
     where: { id: sid(p, 62) },
-    update: {},
+    update: {
+      fileKey: `demo/${def.code}/Drawing-A-101-revC.pdf`,
+    },
     create: {
       id: sid(p, 62),
       drawingId: drawing1Id,
       uploadedBy: users.docsUserId,
       revision: 'C',
-      fileKey: `drawings/${def.code}/A-101-revC.pdf`,
+      fileKey: `demo/${def.code}/Drawing-A-101-revC.pdf`,
       status: 'CURRENT',
       changeNote: 'Updated lobby dimensions per client instruction.',
       createdAt: d('2026-02-01'),
+    },
+  });
+  await prisma.drawingVersion.upsert({
+    where: { id: sid(p, 635) },
+    update: {
+      fileKey: `demo/${def.code}/Drawing-S-201-revB.pdf`,
+    },
+    create: {
+      id: sid(p, 635),
+      drawingId: drawing2Id,
+      uploadedBy: users.docsUserId,
+      revision: 'B',
+      fileKey: `demo/${def.code}/Drawing-S-201-revB.pdf`,
+      status: 'CURRENT',
+      changeNote: 'Foundation layout issued for construction.',
+      createdAt: d('2026-01-20'),
     },
   });
   await prisma.drawingLink.upsert({

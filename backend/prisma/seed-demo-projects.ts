@@ -36,6 +36,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { clearAllProjectData } from './clear-pm-data';
 import { createSeedPdfFiles, type SeedPdfEntry } from './seed-files/create-seed-pdfs';
+import { uploadAllSeedFilesToMinio } from './seed-files/upload-seed-files-to-storage';
 import { sid } from './seed-epc-demo';
 import {
   type DemoProjectDef,
@@ -2338,6 +2339,9 @@ export async function seedDemoProjects(): Promise<void> {
   await seedProject1(ctx, users);
   await seedProject2(ctx, users);
   await seedProject3(ctx, users);
+
+  console.log('\nUploading seed files to MinIO...');
+  await uploadAllSeedFilesToMinio(prisma, pdfRegistry);
 
   await verifySeed(ctx);
 

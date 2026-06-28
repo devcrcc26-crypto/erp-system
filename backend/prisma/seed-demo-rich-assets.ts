@@ -1007,7 +1007,7 @@ async function seedDrawingFileAttachments(input: RichAssetsInput): Promise<void>
 
   const drawingUpdates: Array<{ versionId: string; drawingId: string; fileName: string; revision: string }> = [
     { versionId: sid(p, 62), drawingId: sid(p, 60), fileName: 'Drawing-A-101-revC.pdf', revision: 'C' },
-    { versionId: sid(p, 63), drawingId: sid(p, 61), fileName: 'Drawing-S-201-revB.pdf', revision: 'B' },
+    { versionId: sid(p, 635), drawingId: sid(p, 61), fileName: 'Drawing-S-201-revB.pdf', revision: 'B' },
   ];
 
   for (const row of drawingUpdates) {

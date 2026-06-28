@@ -125,11 +125,12 @@ export function createSeedPdfFiles(): Map<string, SeedPdfEntry> {
   const engineeringDir = path.join(__dirname);
   for (const fileName of ENGINEERING_SEED_FILES) {
     const absolutePath = path.join(engineeringDir, fileName);
+    const fileKey = `demo/engineering/${fileName}`;
     const title = `Engineering seed — ${fileName}`;
     const buffer = minimalPdfBuffer(title);
     fs.writeFileSync(absolutePath, buffer);
-    registry.set(absolutePath, {
-      fileKey: absolutePath,
+    registry.set(fileKey, {
+      fileKey,
       absolutePath,
       fileSizeBytes: buffer.length,
     });
