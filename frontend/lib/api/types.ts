@@ -365,6 +365,7 @@ export interface AuthCapabilities {
   canEditRoles: boolean;
   canViewNotifications: boolean;
   canViewAuditLogs: boolean;
+  isSystemAdministrator: boolean;
 }
 
 export interface EpcCapabilities {
@@ -395,6 +396,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canEditRoles: false,
   canViewNotifications: false,
   canViewAuditLogs: false,
+  isSystemAdministrator: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },
 };

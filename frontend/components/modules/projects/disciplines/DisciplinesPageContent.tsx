@@ -4,11 +4,12 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Button, Input } from 'antd';
+import { Alert, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -205,11 +206,12 @@ export default function DisciplinesPageContent({
         />
       )}
 
-      <Input.Search
-        allowClear
+      <ListSearchInput
+        live
         placeholder="Search disciplines or tasks…"
         className="mb-4 max-w-xs"
-        onSearch={setSearch}
+        committedValue={search}
+        onCommit={setSearch}
       />
 
       <DataTable<ProjectDisciplineRow>

@@ -80,6 +80,7 @@ describe('Source entity links (source-entity-links)', () => {
 
     const projectScopeService = new ProjectScopeService(
       prisma as unknown as PrismaService,
+      { getUserRoleNames: jest.fn().mockResolvedValue(['Employee']) } as never,
     );
 
     const disciplineScopeService = {

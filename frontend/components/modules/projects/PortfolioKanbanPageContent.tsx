@@ -24,7 +24,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { useAllProjects, useUpdateProject } from '@/lib/query/projects';
-import { useUsersDirectory } from '@/lib/query/users';
+import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatProjectStatus } from '@/lib/utils/project-display';
@@ -38,7 +38,7 @@ import {
 
 function useProjectManagerNames(enabled: boolean): Record<string, string> {
   const usersQuery = useUsersDirectory(
-    { page: 1, limit: 200 },
+    { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
     { enabled },
   );
   const users = usersQuery.data?.data ?? [];
@@ -205,6 +205,7 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
             prefix={<SearchOutlined className="text-slate-400" />}
             placeholder="Search projects"
             className={layout.filterControlXl}
+            value={search}
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               setSearch(event.target.value)
             }

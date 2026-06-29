@@ -26,7 +26,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useCreateConstructionSubmittal } from '@/lib/query/submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useQuery } from '@tanstack/react-query';
-import { wideDetailDrawerProps } from '@/lib/theme/layout';
+import { submittalDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface ConstructionSubmittalFormValues {
@@ -130,7 +130,7 @@ export default function ConstructionSubmittalDrawer({
 
   return (
     <Drawer
-      {...wideDetailDrawerProps}
+      {...submittalDrawerProps}
       title="New construction submittal"
       open={open}
       onClose={onClose}

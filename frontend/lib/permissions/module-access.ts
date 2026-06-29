@@ -12,10 +12,18 @@ export function useProjectModuleAccess(
   module: PmModuleKey,
 ): { canAccess: boolean; isLoading: boolean } {
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const isSystemAdministrator = useAuthStore(
+    (state) => state.capabilities.isSystemAdministrator,
+  );
+  const capabilitiesReady = useAuthStore((state) => state.capabilitiesReady);
   const teamQuery = useProjectTeam(projectId, Boolean(projectId) && Boolean(currentUserId));
 
-  if (teamQuery.isLoading) {
+  if (!capabilitiesReady || teamQuery.isLoading) {
     return { canAccess: false, isLoading: true };
+  }
+
+  if (isSystemAdministrator) {
+    return { canAccess: true, isLoading: false };
   }
 
   const myMembership = teamQuery.data?.find(

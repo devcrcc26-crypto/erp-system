@@ -47,6 +47,9 @@ export const DRAWER_WIDTH_STANDARD = 480;
 /** Wide slide-over width (complex forms, multi-tab detail). */
 export const DRAWER_WIDTH_WIDE = 640;
 
+/** Extra-wide slide-over for submittal workflows with long status steppers. */
+export const DRAWER_WIDTH_SUBMITTAL = 900;
+
 export const detailDrawerClassName = 'erp-detail-drawer';
 export const responsiveDetailDrawerClassName =
   'erp-detail-drawer erp-responsive-drawer';
@@ -90,6 +93,15 @@ export const wideDetailDrawerProps: Pick<
   'size' | 'className' | 'styles'
 > = {
   size: DRAWER_WIDTH_WIDE,
+  className: responsiveDetailDrawerClassName,
+  styles: detailDrawerStyles,
+};
+
+export const submittalDrawerProps: Pick<
+  DrawerProps,
+  'size' | 'className' | 'styles'
+> = {
+  size: DRAWER_WIDTH_SUBMITTAL,
   className: responsiveDetailDrawerClassName,
   styles: detailDrawerStyles,
 };

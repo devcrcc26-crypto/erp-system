@@ -26,6 +26,39 @@ describe('PermissionService', () => {
     ).resolves.toBe(false);
   });
 
+  it('grants all permissions to System Administrator', async () => {
+    prisma.userRole.findMany.mockResolvedValue([
+      {
+        roleId: 'admin-role',
+        role: {
+          companyId: 'company-1',
+          isActive: true,
+          name: 'System Administrator',
+        },
+      },
+    ]);
+
+    await expect(
+      service.hasPermission('user-1', 'company-1', 'users', 'delete'),
+    ).resolves.toBe(true);
+
+    const flags = await service.getUserModulePermissions(
+      'user-1',
+      'company-1',
+      'users',
+    );
+
+    expect(flags).toEqual({
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+      canDelete: true,
+      canApprove: true,
+      canExport: true,
+    });
+    expect(prisma.rolePermission.findMany).not.toHaveBeenCalled();
+  });
+
   it('merges permissions from role inheritance chain', async () => {
     prisma.userRole.findMany.mockResolvedValue([
       {

@@ -7,6 +7,10 @@ import {
   PermissionAction,
   PermissionFlags,
 } from './permission.types';
+import {
+  FULL_PERMISSION_FLAGS,
+  isSystemAdministrator,
+} from './system-admin.util';
 
 @Injectable()
 export class PermissionService {
@@ -21,6 +25,10 @@ export class PermissionService {
     module: string,
     action: PermissionAction,
   ): Promise<boolean> {
+    if (await this.userIsSystemAdministrator(userId, companyId)) {
+      return true;
+    }
+
     const flags = await this.getUserModulePermissions(userId, companyId, module);
     const flagKey = ACTION_TO_FLAG[action];
     return flags[flagKey];
@@ -34,6 +42,10 @@ export class PermissionService {
     companyId: string,
     module: string,
   ): Promise<PermissionFlags> {
+    if (await this.userIsSystemAdministrator(userId, companyId)) {
+      return { ...FULL_PERMISSION_FLAGS };
+    }
+
     const userRoles = await this.prisma.userRole.findMany({
       where: activeOnly({ userId }),
       include: { role: true },
@@ -113,5 +125,13 @@ export class PermissionService {
     }
 
     return ids;
+  }
+
+  private async userIsSystemAdministrator(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const roleNames = await this.getUserRoleNames(userId, companyId);
+    return isSystemAdministrator(roleNames);
   }
 }

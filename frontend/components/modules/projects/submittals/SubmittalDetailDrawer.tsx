@@ -30,7 +30,7 @@ import {
 } from '@/lib/query/submittals';
 import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
 import { useIssueSubmittal } from '@/lib/query/epc-submittals';
-import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { layout, submittalDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -225,7 +225,7 @@ export default function SubmittalDetailDrawer({
 
   return (
     <Drawer
-      {...wideDetailDrawerProps}
+      {...submittalDrawerProps}
       open={open}
       onClose={onClose}
       title={

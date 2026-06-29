@@ -50,6 +50,24 @@ export class PmCapabilitiesDto {
 
   @ApiProperty({ type: ModuleCapabilitiesDto })
   closeout!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  deliverables!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  change_requests!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  engineering_documents!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  design_packages!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  review_sessions!: ModuleCapabilitiesDto;
+
+  @ApiProperty({ type: ModuleCapabilitiesDto })
+  review_comments!: ModuleCapabilitiesDto;
 }
 
 export class EpcCapabilitiesDto {
@@ -93,6 +111,12 @@ export class CapabilitiesDto {
 
   @ApiProperty({ description: 'Can view company audit logs' })
   canViewAuditLogs!: boolean;
+
+  @ApiProperty({
+    description:
+      'System Administrator — bypasses project team module gates and receives full RBAC.',
+  })
+  isSystemAdministrator!: boolean;
 
   @ApiProperty({ type: PmCapabilitiesDto })
   pm!: PmCapabilitiesDto;

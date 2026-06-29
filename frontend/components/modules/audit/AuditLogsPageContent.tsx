@@ -24,7 +24,7 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { useAuditLogs } from '@/lib/query/audit-logs';
-import { useUsersDirectory } from '@/lib/query/users';
+import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { layout } from '@/lib/theme/layout';
 
 function formatTimestamp(value: string): string {
@@ -78,7 +78,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
 
   const auditLogsQuery = useAuditLogs(queryParams);
   const usersDirectoryQuery = useUsersDirectory(
-    { page: 1, limit: 200 },
+    { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
     { enabled: auditLogsQuery.isSuccess },
   );
 

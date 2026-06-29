@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Input, Select, Space } from 'antd';
+import { Select, Space } from 'antd';
 import type {
   TaskStatus,
   UrgencyLevel,
@@ -12,6 +12,7 @@ import {
   type DashboardDateRange,
   type DashboardFilters,
 } from '@/lib/dashboard/types';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatTaskStatus } from '@/lib/utils/pm-status-display';
@@ -86,13 +87,12 @@ export default function FilterSection({
       </div>
 
       <Space wrap className="w-full">
-        <Input.Search
-          allowClear
+        <ListSearchInput
+          live
           placeholder="Search tasks or projects"
           className={layout.filterControlLg}
-          value={filters.search}
-          onChange={(event) => updateFilters({ search: event.target.value })}
-          onSearch={(value: string) => updateFilters({ search: value })}
+          committedValue={filters.search}
+          onCommit={(value: string) => updateFilters({ search: value })}
         />
         <Select
           allowClear

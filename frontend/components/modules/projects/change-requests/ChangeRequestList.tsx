@@ -8,6 +8,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -138,11 +139,11 @@ export default function ChangeRequestList({
         }
       >
         <Space wrap className="!mb-4">
-          <Input.Search
-            allowClear
+          <ListSearchInput
             placeholder="Search change requests"
             className={layout.filterControl}
-            onSearch={(value: string) => {
+            committedValue={search}
+            onCommit={(value) => {
               resetPage();
               setSearch(value);
             }}

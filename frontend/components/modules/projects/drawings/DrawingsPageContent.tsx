@@ -17,6 +17,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { FileStack } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -267,11 +268,11 @@ export default function DrawingsPageContent({
         )}
 
         <Space wrap className="!mb-4">
-          <Input.Search
-            allowClear
+          <ListSearchInput
             placeholder="Search drawings"
             className={layout.filterControl}
-            onSearch={(value: string) => {
+            committedValue={search}
+            onCommit={(value) => {
               resetPage();
               setSearch(value);
             }}

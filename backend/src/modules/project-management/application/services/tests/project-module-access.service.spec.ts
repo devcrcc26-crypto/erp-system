@@ -43,6 +43,7 @@ describe('Project module access (project-module-access)', () => {
 
     projectScopeService = new ProjectScopeService(
       prisma as unknown as PrismaService,
+      { getUserRoleNames: jest.fn().mockResolvedValue(['Employee']) } as never,
     );
 
     projectsService = new ProjectsService(

@@ -28,6 +28,9 @@ import type {
   UserDetail,
 } from '@/lib/api/types';
 
+/** Must match backend PaginationQueryDto @Max(100) on /users/directory. */
+export const USER_DIRECTORY_PAGE_LIMIT = 100;
+
 export const userKeys = {
   all: ['users'] as const,
   lists: () => [...userKeys.all, 'list'] as const,
@@ -68,7 +71,7 @@ export function useUsers(
  * Loads every user in the company directory (paginates until complete).
  */
 export async function fetchAllUsersDirectory(): Promise<User[]> {
-  const limit = 200;
+  const limit = USER_DIRECTORY_PAGE_LIMIT;
   let page = 1;
   let pages = 1;
   const users: User[] = [];

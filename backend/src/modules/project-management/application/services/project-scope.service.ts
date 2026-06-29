@@ -2,6 +2,8 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Project } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { isSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
   canAccessModule,
   PmModuleKey,
@@ -10,7 +12,10 @@ import { PmContext } from '../types/pm-context.type';
 
 @Injectable()
 export class ProjectScopeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   /**
    * Loads an active project scoped to the caller's company or throws 404.
@@ -21,6 +26,10 @@ export class ProjectScopeService {
     });
     if (!project) {
       throw new NotFoundException('Project not found');
+    }
+
+    if (await this.hasSystemAdministratorBypass(ctx)) {
+      return project;
     }
 
     const teamMembership = await this.prisma.projectTeam.findFirst({
@@ -42,6 +51,10 @@ export class ProjectScopeService {
     projectId: string,
     module: PmModuleKey,
   ): Promise<void> {
+    if (await this.hasSystemAdministratorBypass(ctx)) {
+      return;
+    }
+
     const membership = await this.prisma.projectTeam.findFirst({
       where: activeOnly({
         projectId,
@@ -90,5 +103,13 @@ export class ProjectScopeService {
       projectId,
       project: { companyId: ctx.companyId, deletedAt: null },
     };
+  }
+
+  private async hasSystemAdministratorBypass(ctx: PmContext): Promise<boolean> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    return isSystemAdministrator(roleNames);
   }
 }

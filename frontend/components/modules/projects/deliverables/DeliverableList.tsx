@@ -8,6 +8,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Package } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -44,6 +45,7 @@ export default function DeliverableList({
   const pm = usePmCapabilities();
   const permLoading = usePermissionsLoading();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     DeliverableStatus | undefined
   >();
@@ -56,6 +58,7 @@ export default function DeliverableList({
     projectId,
     {
       ...params,
+      search: search.trim() || undefined,
       status: statusFilter,
       disciplineId: disciplineFilter,
       sortBy: 'createdAt',
@@ -137,6 +140,15 @@ export default function DeliverableList({
         }
       >
         <Space wrap className="!mb-4">
+          <ListSearchInput
+            placeholder="Search deliverables"
+            className={layout.filterControl}
+            committedValue={search}
+            onCommit={(value) => {
+              resetPage();
+              setSearch(value);
+            }}
+          />
           <Select
             allowClear
             placeholder="Status"

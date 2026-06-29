@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
-import {
-  PermissionFlags,
-} from '../../../../shared/permissions/permission.types';
+import { PermissionFlags } from '../../../../shared/permissions/permission.types';
+import { isSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
   CapabilitiesDto,
   EpcCapabilitiesDto,
@@ -23,9 +22,15 @@ const PM_MODULE_BINDINGS = [
   { key: 'issues', module: 'issues' },
   { key: 'punchItems', module: 'punch_items' },
   { key: 'closeout', module: 'closeout' },
+  { key: 'deliverables', module: 'deliverables' },
+  { key: 'change_requests', module: 'change_requests' },
+  { key: 'engineering_documents', module: 'engineering_documents' },
+  { key: 'design_packages', module: 'design_packages' },
+  { key: 'review_sessions', module: 'review_sessions' },
+  { key: 'review_comments', module: 'review_comments' },
 ] as const;
 
-const BYPASS_ROLE_NAMES = new Set([
+const DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES = new Set([
   'System Administrator',
   'Managing Director',
   'Project Manager',
@@ -39,28 +44,34 @@ export class SessionCapabilitiesService {
    * Resolves UI capability flags for the authenticated session from RBAC.
    */
   async resolve(userId: string, companyId: string): Promise<CapabilitiesDto> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      userId,
+      companyId,
+    );
+    const systemAdministrator = isSystemAdministrator(roleNames);
+
     const [users, roles, notifications, audit, pm, schedule, engineeringDocuments] =
       await Promise.all([
-      this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
-      this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'notifications',
-      ),
-      this.permissionService.getUserModulePermissions(userId, companyId, 'audit'),
-      this.resolvePmCapabilities(userId, companyId),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'schedule',
-      ),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'engineering_documents',
-      ),
-    ]);
+        this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
+        this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
+        this.permissionService.getUserModulePermissions(
+          userId,
+          companyId,
+          'notifications',
+        ),
+        this.permissionService.getUserModulePermissions(userId, companyId, 'audit'),
+        this.resolvePmCapabilities(userId, companyId),
+        this.permissionService.getUserModulePermissions(
+          userId,
+          companyId,
+          'schedule',
+        ),
+        this.permissionService.getUserModulePermissions(
+          userId,
+          companyId,
+          'engineering_documents',
+        ),
+      ]);
 
     return {
       canManageUsers: users.canView,
@@ -69,10 +80,10 @@ export class SessionCapabilitiesService {
       canEditRoles: roles.canEdit,
       canViewNotifications: notifications.canView,
       canViewAuditLogs: audit.canView,
+      isSystemAdministrator: systemAdministrator,
       pm,
-      epc: await this.resolveEpcCapabilities(
-        userId,
-        companyId,
+      epc: this.resolveEpcCapabilities(
+        roleNames,
         schedule,
         engineeringDocuments,
       ),
@@ -101,18 +112,13 @@ export class SessionCapabilitiesService {
     return pm;
   }
 
-  private async resolveEpcCapabilities(
-    userId: string,
-    companyId: string,
+  private resolveEpcCapabilities(
+    roleNames: string[],
     schedule: PermissionFlags,
     engineeringDocuments: PermissionFlags,
-  ): Promise<EpcCapabilitiesDto> {
-    const roleNames = await this.permissionService.getUserRoleNames(
-      userId,
-      companyId,
-    );
+  ): EpcCapabilitiesDto {
     const disciplineScopeBypass = roleNames.some((name) =>
-      BYPASS_ROLE_NAMES.has(name),
+      DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES.has(name),
     );
 
     const canViewEngineering =
@@ -126,9 +132,7 @@ export class SessionCapabilitiesService {
       schedule.canView && engineeringDocuments.canCreate;
 
     return {
-      // Review inbox and approve/return actions require explicit approve permission.
       canViewReviewInbox: schedule.canView && schedule.canApprove,
-      // Designer queue - edit/create on schedule without approve (pure designers).
       canViewMyComments:
         schedule.canView &&
         (schedule.canCreate || schedule.canEdit) &&

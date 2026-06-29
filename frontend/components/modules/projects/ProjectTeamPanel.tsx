@@ -10,7 +10,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ProjectTeamMember } from '@/lib/api/project-management.types';
 import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
-import { useUsersDirectory } from '@/lib/query/users';
+import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { displayUserLabel, formatUserPickerLabel, formatUserRoleNames } from '@/lib/utils/user-display';
@@ -28,7 +28,7 @@ function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
 function useUserDirectoryLookup(): (
   userId: string,
 ) => { name: string; roles: string } {
-  const usersQuery = useUsersDirectory({ page: 1, limit: 200 });
+  const usersQuery = useUsersDirectory({ page: 1, limit: USER_DIRECTORY_PAGE_LIMIT });
   const users = usersQuery.data?.data ?? [];
 
   return (userId: string) => {
