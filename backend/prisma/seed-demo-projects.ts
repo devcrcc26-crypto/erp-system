@@ -1071,6 +1071,7 @@ async function seedTaskDisciplineReviews(
     reviewedAt?: string;
     notes?: string;
   }>,
+  idEntityBase = 270,
 ): Promise<void> {
   const { prisma: db, companyId, adminUserId } = ctx;
 
@@ -1090,7 +1091,7 @@ async function seedTaskDisciplineReviews(
         updatedBy: adminUserId,
       },
       create: {
-        id: sid(p, 270 + index),
+        id: sid(p, idEntityBase + index),
         companyId,
         taskDisciplineId: disciplineId,
         reviewTier: tierRow.tier,
@@ -1975,6 +1976,232 @@ async function seedProject2Epc(ctx: PmSeedContext): Promise<void> {
   ]);
 
   console.log(`✓ Created EPC scenarios (5 packages: Civil/Structural/MEP/Architecture/MEP2) for ${code}`);
+  await seedLjzTierReviewInboxes(ctx, p, code, taskId);
+}
+
+interface LjzTierInboxPackageSpec {
+  name: string;
+  docNumber: string;
+  fileName: string;
+  title: string;
+}
+
+interface LjzTierInboxTierSpec {
+  tier: ReviewTier;
+  assigneeId: string;
+  disciplineName: string;
+  packages: [LjzTierInboxPackageSpec, LjzTierInboxPackageSpec];
+}
+
+const LJZ_TIER_INBOX_SPECS: LjzTierInboxTierSpec[] = [
+  {
+    tier: ReviewTier.DISCIPLINE_OWNER,
+    assigneeId: U.owner,
+    disciplineName: 'Podium Envelope',
+    packages: [
+      {
+        name: 'Podium Envelope — Curtain Wall Stack',
+        docNumber: 'LJZ-INB-O-01',
+        fileName: 'Session-Tier1-Owner-Markup.pdf',
+        title: 'Curtain Wall Stack — Owner Review',
+      },
+      {
+        name: 'Podium Envelope — Lobby Atrium',
+        docNumber: 'LJZ-INB-O-02',
+        fileName: 'Package-Brief-Coordination-Supplement.pdf',
+        title: 'Lobby Atrium — Owner Review',
+      },
+    ],
+  },
+  {
+    tier: ReviewTier.REVIEWER,
+    assigneeId: U.reviewer,
+    disciplineName: 'Steel Connections',
+    packages: [
+      {
+        name: 'Steel Connections — Transfer Truss',
+        docNumber: 'LJZ-INB-R-01',
+        fileName: 'Session-Tier2-Reviewer-Redlines.pdf',
+        title: 'Transfer Truss — Reviewer Redlines',
+      },
+      {
+        name: 'Steel Connections — Core Bracing',
+        docNumber: 'LJZ-INB-R-02',
+        fileName: 'Reviewer-Markup-Grid-B4.pdf',
+        title: 'Core Bracing — Reviewer Redlines',
+      },
+    ],
+  },
+  {
+    tier: ReviewTier.DISCIPLINE_LEAD,
+    assigneeId: U.lead,
+    disciplineName: 'MEP Coordination',
+    packages: [
+      {
+        name: 'MEP Coordination — Level 18 Risers',
+        docNumber: 'LJZ-INB-L-01',
+        fileName: 'Session-Tier3-Lead-Approval.pdf',
+        title: 'Level 18 Risers — Lead Review',
+      },
+      {
+        name: 'MEP Coordination — Plant Room Layout',
+        docNumber: 'LJZ-INB-L-02',
+        fileName: 'Drawing-Markup-MEP-Level12.pdf',
+        title: 'Plant Room Layout — Lead Review',
+      },
+    ],
+  },
+  {
+    tier: ReviewTier.DEPT_CHIEF,
+    assigneeId: U.deptChief,
+    disciplineName: 'Structural Systems',
+    packages: [
+      {
+        name: 'Structural Systems — Outrigger Level',
+        docNumber: 'LJZ-INB-C-01',
+        fileName: 'MEP-Coordination-Rev-A.pdf',
+        title: 'Outrigger Level — Dept Chief Review',
+      },
+      {
+        name: 'Structural Systems — Mega Column',
+        docNumber: 'LJZ-INB-C-02',
+        fileName: 'Structural-Steel-Rev-A.pdf',
+        title: 'Mega Column — Dept Chief Review',
+      },
+    ],
+  },
+  {
+    tier: ReviewTier.INSTITUTE_CHIEF,
+    assigneeId: U.instituteChief,
+    disciplineName: 'Tower Crown',
+    packages: [
+      {
+        name: 'Tower Crown — Architectural Crown',
+        docNumber: 'LJZ-INB-I-01',
+        fileName: 'External-Release-Consultant-Cover.pdf',
+        title: 'Architectural Crown — Institute Chief Review',
+      },
+      {
+        name: 'Tower Crown — MEP Penthouse',
+        docNumber: 'LJZ-INB-I-02',
+        fileName: 'Electrical-SLD-Rev-A.pdf',
+        title: 'MEP Penthouse — Institute Chief Review',
+      },
+    ],
+  },
+];
+
+/**
+ * Seeds two active review inbox sessions per governance tier on LJZ-2024-001.
+ */
+export async function seedLjzTierReviewInboxes(
+  ctx: PmSeedContext,
+  p: number,
+  projectCode: string,
+  taskId: string,
+): Promise<void> {
+  const tiers = computeRequiredTiers({
+    designerUserId: U.designer,
+    supportingDesignerUserId: U.supportingDesigner,
+    ownerUserId: U.owner,
+    reviewerUserId: U.reviewer,
+    disciplineLeadUserId: U.lead,
+    chiefUserId: U.deptChief,
+    instituteChiefUserId: U.instituteChief,
+  });
+
+  const workflowEvents: Array<{
+    id: string;
+    entityType: WorkflowEntityType;
+    entityId: string;
+    actorId: string;
+    action: string;
+    phase: WorkflowEventPhase;
+    createdAt: string;
+  }> = [];
+
+  for (const [tierIndex, tierSpec] of LJZ_TIER_INBOX_SPECS.entries()) {
+    const disciplineId = sid(p, 800 + tierIndex);
+    await seedTaskDisciplineRow(ctx, {
+      id: disciplineId,
+      taskId,
+      disciplineName: tierSpec.disciplineName,
+      projectedStatus: TaskDisciplineProjectedStatus.IN_PROGRESS,
+    });
+
+    for (const [packageIndex, packageSpec] of tierSpec.packages.entries()) {
+      const offset = tierIndex * 2 + packageIndex;
+      const packageId = sid(p, 810 + offset);
+      const sessionId = sid(p, 820 + offset);
+      const snapshotId = sid(p, 830 + offset);
+      const edvId = sid(p, 560 + offset);
+      const engDocId = sid(p, 570 + offset);
+      const docVersionId = sid(p, 590 + offset);
+      const documentId = sid(p, 710 + offset);
+      const month = String(3 + tierIndex).padStart(2, '0');
+      const day = String(10 + packageIndex * 3).padStart(2, '0');
+      const openedAt = `2026-${month}-${day}T09:00:00Z`;
+
+      await seedEdvChain(ctx, p, disciplineId, {
+        edvId,
+        engDocId,
+        docVersionId,
+        documentId,
+        projectCode,
+        fileName: packageSpec.fileName,
+        docNumber: packageSpec.docNumber,
+        title: packageSpec.title,
+        revisionLabel: 'A',
+        status: EdvStatus.IN_REVIEW,
+        versionNumber: 1,
+        isCurrent: true,
+      });
+
+      await seedDesignPackageRow(ctx, p, projectCode, {
+        packageId,
+        disciplineId,
+        name: packageSpec.name,
+        projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+        packageStatus: DesignPackageStatus.OPEN,
+        requiredTiers: tiers,
+        edvIds: [edvId],
+        itemEntityStart: 900 + offset,
+        submittedAt: openedAt.slice(0, 10),
+        briefText: `${packageSpec.name} — active ${tierSpec.tier.replace(/_/g, ' ').toLowerCase()} inbox item.`,
+      });
+
+      await seedReviewSessionRow(ctx, {
+        sessionId,
+        snapshotId,
+        packageId,
+        disciplineId,
+        status: ReviewSessionStatus.ACTIVE,
+        outcome: ReviewSessionOutcome.PENDING,
+        currentTier: tierSpec.tier,
+        assignedToUserId: tierSpec.assigneeId,
+        edvIds: [edvId],
+        openedAt,
+        slaDays: 14 - tierIndex,
+        createdBy: U.designer,
+        updatedBy: U.designer,
+      });
+
+      workflowEvents.push({
+        id: sid(p, 400 + offset),
+        entityType: WorkflowEntityType.ReviewSession,
+        entityId: sessionId,
+        actorId: U.designer,
+        action: 'SUBMIT_FOR_REVIEW',
+        phase: WorkflowEventPhase.INTENT,
+        createdAt: openedAt,
+      });
+    }
+  }
+
+  await seedWorkflowEvents(ctx, workflowEvents);
+  console.log(
+    `✓ Created ${LJZ_TIER_INBOX_SPECS.length * 2} tier review inbox sessions for ${projectCode}`,
+  );
 }
 
 async function seedDesignPackageDependency(
