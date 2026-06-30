@@ -20,6 +20,8 @@ describe('ScheduleService', () => {
       dispatcherUserId,
       taskIdCode: 'TASK-00001',
       name: 'Foundation work',
+      nameEn: 'Foundation work',
+      nameZh: '基础工程',
       description: null,
       startDate: null,
       finishDate: null,
@@ -113,7 +115,8 @@ describe('ScheduleService', () => {
 
       await expect(
         service.createTask(ctx, projectId, {
-          name: 'Foundation work',
+          nameEn: 'Foundation work',
+          nameZh: '基础工程',
           dispatcherUserId,
         }),
       ).rejects.toThrow(

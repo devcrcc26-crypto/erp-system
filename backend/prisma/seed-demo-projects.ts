@@ -41,6 +41,7 @@ import { sid } from './seed-epc-demo';
 import {
   type DemoProjectDef,
   type PmSeedContext,
+  seedBilingualNames,
   seedDemoUsers,
   seedProjectBundle,
 } from './seed-pm-demo';
@@ -76,6 +77,8 @@ const PROJECT_1_DEF: DemoProjectDef = {
   index: 10,
   code: 'ZMC-2023-002',
   name: 'Zhongshan Medical Centre — Phase 2 Expansion',
+  nameEn: 'Zhongshan Medical Centre — Phase 2 Expansion',
+  nameZh: '中山医疗中心二期扩建',
   location: 'Zhongshan, Guangdong',
   projectType: ProjectType.COMMERCIAL,
   status: ProjectStatus.CLOSED,
@@ -90,6 +93,8 @@ const PROJECT_2_DEF: DemoProjectDef = {
   index: 11,
   code: 'LJZ-2024-001',
   name: 'Lujiazui Mixed-Use Tower',
+  nameEn: 'Lujiazui Mixed-Use Tower',
+  nameZh: '陆家嘴综合用途塔楼',
   location: 'Lujiazui, Shanghai',
   projectType: ProjectType.COMMERCIAL,
   status: ProjectStatus.ACTIVE,
@@ -103,6 +108,8 @@ const PROJECT_3_DEF: DemoProjectDef = {
   index: 12,
   code: 'PDR-2025-003',
   name: 'Pudong Residential Complex — Block C',
+  nameEn: 'Pudong Residential Complex — Block C',
+  nameZh: '浦东住宅综合体C栋',
   location: 'Pudong, Shanghai',
   projectType: ProjectType.RESIDENTIAL,
   status: ProjectStatus.MOBILIZATION,
@@ -329,7 +336,7 @@ async function seedExtendedProjectData(
       milestoneId: sid(p, 22),
       dispatcherUserId: U.dispatcher,
       taskIdCode: `${prefix}-T300`,
-      name: 'Design coordination package',
+      ...seedBilingualNames('Design coordination package', '设计协调包'),
       description: 'Parent task grouping all discipline design deliverables.',
       startDate: d('2025-01-15'),
       finishDate: d('2026-12-31'),
@@ -364,6 +371,19 @@ async function seedExtendedProjectData(
         ? ['COMPLETED', 'COMPLETED', 'COMPLETED', 'IN_PROGRESS', 'IN_PROGRESS', 'IN_PROGRESS', 'IN_PROGRESS', 'IN_PROGRESS', 'NOT_STARTED', 'NOT_STARTED']
         : ['NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'NOT_STARTED', 'IN_PROGRESS'];
 
+  const childNamesZh = [
+    '岩土勘察',
+    '地下室开挖',
+    '核心筒施工',
+    '幕墙安装',
+    '十层机电预埋',
+    '消防系统测试',
+    '大堂室内装修',
+    '景观硬质铺装',
+    '一期调试',
+    '竣工图编制',
+  ];
+
   const childNames = [
     'Geotechnical investigation',
     'Basement excavation',
@@ -393,7 +413,7 @@ async function seedExtendedProjectData(
         milestoneId: i < 3 ? sid(p, 20) : sid(p, 21),
         dispatcherUserId: U.dispatcher,
         taskIdCode: `${prefix}-T${310 + i}`,
-        name: childNames[i],
+        ...seedBilingualNames(childNames[i], childNamesZh[i]),
         description: `${childNames[i]} for ${projectCode}.`,
         startDate: d('2025-03-01'),
         finishDate: d('2027-06-30'),

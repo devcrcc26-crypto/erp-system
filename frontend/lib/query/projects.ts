@@ -242,6 +242,8 @@ export function toProjectSummary(project: Project): ProjectSummary {
     id: project.id,
     projectCode: project.projectCode,
     name: project.name,
+    nameEn: project.nameEn,
+    nameZh: project.nameZh,
     status: project.status,
     projectManagerId: project.projectManagerId,
     plannedFinishDate: project.plannedFinishDate,

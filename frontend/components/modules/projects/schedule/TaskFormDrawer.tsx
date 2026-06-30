@@ -78,7 +78,8 @@ const COMPLETION_STATUS_OPTIONS: Array<{
 
 interface TaskFormValues {
   taskIdCode?: string;
-  name: string;
+  nameEn: string;
+  nameZh: string;
   description?: string;
   milestoneId?: string;
   dispatcherUserId?: string;
@@ -149,7 +150,8 @@ function toExtendedPayload(
 function toFormValues(task: Task): TaskFormValues {
   return {
     taskIdCode: task.taskIdCode,
-    name: task.name,
+    nameEn: task.nameEn,
+    nameZh: task.nameZh,
     description: task.description ?? undefined,
     milestoneId: task.milestoneId ?? undefined,
     dispatcherUserId: task.dispatcherUserId ?? undefined,
@@ -265,7 +267,8 @@ export default function TaskFormDrawer({
     const durationDays = durationFromFormDates(values.startDate, values.finishDate);
 
     const base = {
-      name: values.name.trim(),
+      nameEn: values.nameEn.trim(),
+      nameZh: values.nameZh.trim(),
       description: values.description?.trim() || undefined,
       milestoneId: values.milestoneId,
       startDate: values.startDate?.toISOString(),
@@ -356,13 +359,22 @@ export default function TaskFormDrawer({
           </Form.Item>
         )}
 
-        <Form.Item
-          label="Name"
-          name="name"
-          rules={[{ required: true, message: 'Name is required' }]}
-        >
-          <Input />
-        </Form.Item>
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          <Form.Item
+            label="English name"
+            name="nameEn"
+            rules={[{ required: true, message: 'English name is required' }]}
+          >
+            <Input placeholder="Task name in English" />
+          </Form.Item>
+          <Form.Item
+            label="Chinese name"
+            name="nameZh"
+            rules={[{ required: true, message: 'Chinese name is required' }]}
+          >
+            <Input placeholder="任务中文名称" />
+          </Form.Item>
+        </div>
         <Form.Item label="Description" name="description">
           <Input.TextArea rows={2} />
         </Form.Item>

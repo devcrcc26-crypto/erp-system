@@ -115,9 +115,15 @@ export default function ProjectsPageContent(): React.ReactNode {
         ),
       },
       {
-        title: 'Name',
-        dataIndex: 'name',
-        key: 'name',
+        title: 'English name',
+        dataIndex: 'nameEn',
+        key: 'nameEn',
+        ellipsis: true,
+      },
+      {
+        title: 'Chinese name',
+        dataIndex: 'nameZh',
+        key: 'nameZh',
         ellipsis: true,
       },
       {

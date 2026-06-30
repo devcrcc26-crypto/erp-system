@@ -39,6 +39,7 @@ import {
   RaisedRfiSummary,
   SourceEntitySummary,
 } from './source-entity.util';
+import { formatBilingualName } from '../../../../shared/utils/bilingual-name.util';
 
 /**
  * Formats a date as an ISO date string (YYYY-MM-DD).
@@ -99,6 +100,8 @@ export interface MappedProject {
   branchId: string | null;
   projectCode: string;
   name: string;
+  nameEn: string;
+  nameZh: string;
   location: string | null;
   projectType: Project['projectType'];
   contractType: string | null;
@@ -154,7 +157,9 @@ export function mapProject(project: Project): MappedProject {
     clientCompanyId: project.clientCompanyId,
     branchId: project.branchId,
     projectCode: project.projectCode,
-    name: project.name,
+    name: formatBilingualName(project.nameEn, project.nameZh),
+    nameEn: project.nameEn,
+    nameZh: project.nameZh,
     location: project.location,
     projectType: project.projectType,
     contractType: project.contractType,
@@ -920,6 +925,8 @@ export interface MappedTask {
   dispatcherUserId: string | null;
   taskIdCode: string;
   name: string;
+  nameEn: string;
+  nameZh: string;
   description: string | null;
   startDate: string | null;
   finishDate: string | null;
@@ -1077,7 +1084,9 @@ export function mapTask(task: Task): MappedTask {
     parentTaskId: task.parentTaskId,
     dispatcherUserId: task.dispatcherUserId,
     taskIdCode: task.taskIdCode,
-    name: task.name,
+    name: formatBilingualName(task.nameEn, task.nameZh),
+    nameEn: task.nameEn,
+    nameZh: task.nameZh,
     description: task.description,
     startDate: toDateString(task.startDate),
     finishDate: toDateString(task.finishDate),

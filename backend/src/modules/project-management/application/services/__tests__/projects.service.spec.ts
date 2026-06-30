@@ -100,6 +100,8 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'DEMO-002',
         name: 'Airport Expansion',
+        nameEn: 'Airport Expansion',
+        nameZh: '机场扩建',
         projectManagerId,
       };
       const teamCreate = jest.fn().mockResolvedValue({});
@@ -131,7 +133,8 @@ describe('ProjectsService', () => {
 
       await service.createProject(ctx, {
         projectCode: 'DEMO-002',
-        name: 'Airport Expansion',
+        nameEn: 'Airport Expansion',
+        nameZh: '机场扩建',
         projectManagerId,
       });
 

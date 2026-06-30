@@ -155,10 +155,33 @@ function mapProjectTeamRole(label: string): ProjectTeamRole {
   return ProjectTeamRole.OTHER;
 }
 
+export function seedBilingualNames(
+  nameEn: string,
+  nameZh?: string,
+): { name: string; nameEn: string; nameZh: string } {
+  const english = nameEn.trim();
+  const chinese = (nameZh ?? nameEn).trim();
+  return {
+    name: english || chinese,
+    nameEn: english || chinese,
+    nameZh: chinese || english,
+  };
+}
+
+function resolveProjectNames(def: DemoProjectDef): {
+  name: string;
+  nameEn: string;
+  nameZh: string;
+} {
+  return seedBilingualNames(def.nameEn ?? def.name, def.nameZh ?? def.name);
+}
+
 export interface DemoProjectDef {
   index: number;
   code: string;
   name: string;
+  nameEn?: string;
+  nameZh?: string;
   location: string;
   projectType: ProjectType;
   status: ProjectStatus;
@@ -287,12 +310,14 @@ export async function seedProjectBundle(
   const p = def.index;
   const prefix = def.code.replace('DEMO-', '');
 
+  const projectNames = resolveProjectNames(def);
+
   const project = await prisma.project.upsert({
     where: {
       companyId_projectCode: { companyId, projectCode: def.code },
     },
     update: {
-      name: def.name,
+      ...projectNames,
       status: def.status,
       updatedBy: adminUserId,
     },
@@ -301,7 +326,7 @@ export async function seedProjectBundle(
       companyId,
       branchId,
       projectCode: def.code,
-      name: def.name,
+      ...projectNames,
       location: def.location,
       projectType: def.projectType,
       contractType: def.contractType,
@@ -468,7 +493,7 @@ export async function seedProjectBundle(
       milestoneId: milestone1Id,
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T100`,
-      name: 'Foundation and piling',
+      ...seedBilingualNames('Foundation and piling', '基础与桩基工程'),
       description: 'Pile caps, ground beams - blinding concrete.',
       startDate: d(def.startDate),
       finishDate: d('2026-05-31'),
@@ -491,7 +516,7 @@ export async function seedProjectBundle(
       milestoneId: milestone2Id,
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T200`,
-      name: 'Superstructure and envelope',
+      ...seedBilingualNames('Superstructure and envelope', '上部结构与围护'),
       description: 'Structural frame, cladding - MEP rough-in.',
       startDate: d('2026-06-01'),
       finishDate: d(def.plannedFinishDate),

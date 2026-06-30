@@ -30,6 +30,7 @@ import {
   scheduleKeys,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatBilingualName } from '@/lib/utils/bilingual-name';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
@@ -126,14 +127,14 @@ export default function TasksPanel({
   const taskLabelById = useMemo(() => {
     const labels = new Map<string, string>();
     for (const task of allTasks) {
-      labels.set(task.id, `${task.taskIdCode} - ${task.name}`);
+      labels.set(task.id, `${task.taskIdCode} - ${formatBilingualName(task)}`);
     }
     return labels;
   }, [allTasks]);
 
   const taskOptions = allTasks.map((task) => ({
     value: task.id,
-    label: taskLabelById.get(task.id) ?? task.name,
+    label: taskLabelById.get(task.id) ?? formatBilingualName(task),
   }));
 
   const dependencySaving = createDependency.isPending || updateDependency.isPending;
@@ -146,9 +147,15 @@ export default function TasksPanel({
       width: 90,
     },
     {
-      title: 'Task',
-      dataIndex: 'name',
-      key: 'name',
+      title: 'English name',
+      dataIndex: 'nameEn',
+      key: 'nameEn',
+      ellipsis: true,
+    },
+    {
+      title: 'Chinese name',
+      dataIndex: 'nameZh',
+      key: 'nameZh',
       ellipsis: true,
     },
     {

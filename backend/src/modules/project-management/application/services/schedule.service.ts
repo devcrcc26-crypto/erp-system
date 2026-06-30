@@ -43,6 +43,7 @@ import {
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { DocumentNumberService } from './document-number.service';
+import { formatBilingualName, syncLegacyNameField } from '../../../../shared/utils/bilingual-name.util';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -59,6 +60,8 @@ const TASK_SORT_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'name',
+  'nameEn',
+  'nameZh',
   'taskIdCode',
   'startDate',
   'finishDate',
@@ -300,7 +303,9 @@ export class ScheduleService {
         parentTaskId: dto.parentTaskId,
         dispatcherUserId: dto.dispatcherUserId,
         taskIdCode,
-        name: dto.name,
+        nameEn: dto.nameEn,
+        nameZh: dto.nameZh,
+        name: syncLegacyNameField(dto.nameEn, dto.nameZh),
         description: dto.description,
         startDate: parseOptionalDate(dto.startDate),
         finishDate: parseOptionalDate(dto.finishDate),
@@ -392,6 +397,25 @@ export class ScheduleService {
       }
     }
 
+    let bilingualNameUpdate: {
+      nameEn?: string;
+      nameZh?: string;
+      name?: string;
+    } = {};
+    if (dto.nameEn !== undefined || dto.nameZh !== undefined) {
+      const current = await this.prisma.task.findFirst({
+        where: activeOnly({ id: taskId, projectId }),
+        select: { nameEn: true, nameZh: true },
+      });
+      const nameEn = dto.nameEn ?? current?.nameEn ?? '';
+      const nameZh = dto.nameZh ?? current?.nameZh ?? '';
+      bilingualNameUpdate = {
+        ...(dto.nameEn !== undefined ? { nameEn: dto.nameEn } : {}),
+        ...(dto.nameZh !== undefined ? { nameZh: dto.nameZh } : {}),
+        name: syncLegacyNameField(nameEn, nameZh),
+      };
+    }
+
     const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {
@@ -399,7 +423,7 @@ export class ScheduleService {
         parentTaskId: dto.parentTaskId,
         dispatcherUserId: dto.dispatcherUserId,
         taskIdCode: dto.taskIdCode,
-        name: dto.name,
+        ...bilingualNameUpdate,
         description: dto.description,
         startDate: parseOptionalDate(dto.startDate),
         finishDate: parseOptionalDate(dto.finishDate),
@@ -606,16 +630,19 @@ export class ScheduleService {
       }),
       include: {
         task: {
-          select: { name: true },
+          select: { nameEn: true, nameZh: true },
         },
         ...TASK_DISCIPLINE_USER_INCLUDE,
       },
-      orderBy: [{ task: { name: 'asc' } }, { createdAt: 'asc' }],
+      orderBy: [{ task: { nameEn: 'asc' } }, { createdAt: 'asc' }],
     });
 
     return disciplines.map((discipline) => ({
       ...mapTaskDiscipline(discipline),
-      taskName: discipline.task.name,
+      taskName: formatBilingualName(
+        discipline.task.nameEn,
+        discipline.task.nameZh,
+      ),
     }));
   }
 
@@ -642,7 +669,7 @@ export class ScheduleService {
       }),
       include: {
         task: {
-          select: { name: true },
+          select: { nameEn: true, nameZh: true },
         },
         ...TASK_DISCIPLINE_USER_INCLUDE,
       },
@@ -654,7 +681,10 @@ export class ScheduleService {
 
     return {
       ...mapTaskDiscipline(discipline),
-      taskName: discipline.task.name,
+      taskName: formatBilingualName(
+        discipline.task.nameEn,
+        discipline.task.nameZh,
+      ),
     };
   }
 
