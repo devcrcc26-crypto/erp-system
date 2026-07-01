@@ -248,6 +248,149 @@ describe('ProjectsService', () => {
     });
   });
 
+  describe('project type-specific fields', () => {
+    function mockCreateTransaction(projectCreate: jest.Mock): void {
+      prisma.$transaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            project: { create: projectCreate },
+            projectTeam: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn(),
+              update: jest.fn(),
+            },
+          }),
+      );
+    }
+
+    it('persists railwayLengthKm for RAILWAY project', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'RWY-001',
+        name: 'High-speed rail',
+        projectManagerId: ctx.userId,
+      });
+      mockCreateTransaction(projectCreate);
+
+      await service.createProject(ctx, {
+        projectCode: 'RWY-001',
+        name: 'High-speed rail',
+        projectType: 'RAILWAY',
+        railwayLengthKm: 120.5,
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectType: 'RAILWAY',
+          railwayLengthKm: 120.5,
+        }),
+      });
+    });
+
+    it('persists roadLengthKm for ROAD project', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'RD-001',
+        name: 'Highway extension',
+        projectManagerId: ctx.userId,
+      });
+      mockCreateTransaction(projectCreate);
+
+      await service.createProject(ctx, {
+        projectCode: 'RD-001',
+        name: 'Highway extension',
+        projectType: 'ROAD',
+        roadLengthKm: 45,
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectType: 'ROAD',
+          roadLengthKm: 45,
+        }),
+      });
+    });
+
+    it('persists grossFloorAreaM2 for BUILDING project', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'BLD-001',
+        name: 'Office tower',
+        projectManagerId: ctx.userId,
+      });
+      mockCreateTransaction(projectCreate);
+
+      await service.createProject(ctx, {
+        projectCode: 'BLD-001',
+        name: 'Office tower',
+        projectType: 'BUILDING',
+        grossFloorAreaM2: 85000,
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectType: 'BUILDING',
+          grossFloorAreaM2: 85000,
+        }),
+      });
+    });
+
+    it('creates OTHER project with all type-specific fields null', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'OTH-001',
+        name: 'Misc project',
+        projectManagerId: ctx.userId,
+      });
+      mockCreateTransaction(projectCreate);
+
+      await service.createProject(ctx, {
+        projectCode: 'OTH-001',
+        name: 'Misc project',
+        projectType: 'OTHER',
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectType: 'OTHER',
+          railwayLengthKm: undefined,
+          urbanRailLengthKm: undefined,
+          roadLengthKm: undefined,
+          grossFloorAreaM2: undefined,
+        }),
+      });
+    });
+
+    it('allows type-specific field that does not match project type (intentional)', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'RD-002',
+        name: 'Road with area',
+        projectManagerId: ctx.userId,
+      });
+      mockCreateTransaction(projectCreate);
+
+      await service.createProject(ctx, {
+        projectCode: 'RD-002',
+        name: 'Road with area',
+        projectType: 'ROAD',
+        grossFloorAreaM2: 1200,
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          projectType: 'ROAD',
+          grossFloorAreaM2: 1200,
+        }),
+      });
+    });
+  });
+
   describe('setTeam', () => {
     it('validates all userIds are in the company', async () => {
       prisma.user.findFirst.mockResolvedValue(null);

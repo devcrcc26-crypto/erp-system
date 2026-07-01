@@ -1,0 +1,20 @@
+-- Part 2: extend ProjectType enum and add type-specific nullable columns.
+
+ALTER TYPE "ProjectType" ADD VALUE 'ROAD';
+ALTER TYPE "ProjectType" ADD VALUE 'RAILWAY';
+ALTER TYPE "ProjectType" ADD VALUE 'URBAN_RAIL_TRANSIT';
+ALTER TYPE "ProjectType" ADD VALUE 'BUILDING';
+ALTER TYPE "ProjectType" ADD VALUE 'BRIDGE';
+ALTER TYPE "ProjectType" ADD VALUE 'TUNNEL';
+ALTER TYPE "ProjectType" ADD VALUE 'WATER_SUPPLY_DRAINAGE';
+ALTER TYPE "ProjectType" ADD VALUE 'PORT_HARBOR';
+ALTER TYPE "ProjectType" ADD VALUE 'AIRPORT';
+ALTER TYPE "ProjectType" ADD VALUE 'POWER_ENERGY';
+ALTER TYPE "ProjectType" ADD VALUE 'MIXED_USE';
+ALTER TYPE "ProjectType" ADD VALUE 'OTHER';
+
+ALTER TABLE "project"
+  ADD COLUMN "railway_length_km" DOUBLE PRECISION,
+  ADD COLUMN "urban_rail_length_km" DOUBLE PRECISION,
+  ADD COLUMN "road_length_km" DOUBLE PRECISION,
+  ADD COLUMN "gross_floor_area_m2" DOUBLE PRECISION;

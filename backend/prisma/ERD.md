@@ -460,6 +460,10 @@ erDiagram
   String name_zh "nullable"
   String location "nullable"
   ProjectType project_type "nullable"
+  Float railway_length_km "nullable"
+  Float urban_rail_length_km "nullable"
+  Float road_length_km "nullable"
+  Float gross_floor_area_m2 "nullable"
   String contract_type "nullable"
   ProjectStatus status
   DateTime start_date "nullable"
@@ -1923,6 +1927,10 @@ Properties as follows:
 - `name_zh`:
 - `location`:
 - `project_type`:
+- `railway_length_km`:
+- `urban_rail_length_km`:
+- `road_length_km`:
+- `gross_floor_area_m2`:
 - `contract_type`:
 - `status`:
 - `start_date`:

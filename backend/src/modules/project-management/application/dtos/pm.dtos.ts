@@ -104,6 +104,26 @@ export class CreateProjectDto {
   @IsEnum(ProjectType)
   projectType?: ProjectType;
 
+  @ApiPropertyOptional({ description: 'Length of Railway (km)' })
+  @IsOptional()
+  @IsNumber()
+  railwayLengthKm?: number;
+
+  @ApiPropertyOptional({ description: 'Length of Urban Rail Transit (km)' })
+  @IsOptional()
+  @IsNumber()
+  urbanRailLengthKm?: number;
+
+  @ApiPropertyOptional({ description: 'Length of Road (km)' })
+  @IsOptional()
+  @IsNumber()
+  roadLengthKm?: number;
+
+  @ApiPropertyOptional({ description: 'Gross Floor Area (m²)' })
+  @IsOptional()
+  @IsNumber()
+  grossFloorAreaM2?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

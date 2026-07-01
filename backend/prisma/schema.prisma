@@ -941,6 +941,18 @@ enum ProjectType {
   COMMERCIAL
   INFRASTRUCTURE
   INDUSTRIAL
+  ROAD // Length of Road (km) — roadLengthKm
+  RAILWAY // Length of Railway (km) — railwayLengthKm
+  URBAN_RAIL_TRANSIT // Length of Urban Rail Transit (km) — urbanRailLengthKm
+  BUILDING // Gross Floor Area (m²) — grossFloorAreaM2
+  BRIDGE // Type-specific fields not yet defined — confirm with client before adding
+  TUNNEL // Type-specific fields not yet defined — confirm with client before adding
+  WATER_SUPPLY_DRAINAGE // Type-specific fields not yet defined — confirm with client before adding
+  PORT_HARBOR // Type-specific fields not yet defined — confirm with client before adding
+  AIRPORT // Type-specific fields not yet defined — confirm with client before adding
+  POWER_ENERGY // Type-specific fields not yet defined — confirm with client before adding
+  MIXED_USE // Gross Floor Area (m²) — grossFloorAreaM2
+  OTHER
 }
 
 enum ProjectStatus {
@@ -1290,6 +1302,10 @@ model Project {
   nameZh            String?       @map("name_zh")
   location          String?
   projectType       ProjectType?  @map("project_type")
+  railwayLengthKm   Float?        @map("railway_length_km")
+  urbanRailLengthKm Float?        @map("urban_rail_length_km")
+  roadLengthKm      Float?        @map("road_length_km")
+  grossFloorAreaM2  Float?        @map("gross_floor_area_m2")
   contractType      String?       @map("contract_type")
   status            ProjectStatus @default(PLANNING)
   startDate         DateTime?     @map("start_date") @db.Date

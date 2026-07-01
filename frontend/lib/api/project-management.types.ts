@@ -7,7 +7,19 @@ export type ProjectType =
   | 'RESIDENTIAL'
   | 'COMMERCIAL'
   | 'INFRASTRUCTURE'
-  | 'INDUSTRIAL';
+  | 'INDUSTRIAL'
+  | 'ROAD'
+  | 'RAILWAY'
+  | 'URBAN_RAIL_TRANSIT'
+  | 'BUILDING'
+  | 'BRIDGE'
+  | 'TUNNEL'
+  | 'WATER_SUPPLY_DRAINAGE'
+  | 'PORT_HARBOR'
+  | 'AIRPORT'
+  | 'POWER_ENERGY'
+  | 'MIXED_USE'
+  | 'OTHER';
 
 export type ProjectStatus =
   | 'PLANNING'
@@ -148,6 +160,10 @@ export interface Project {
   nameZh: string | null;
   location: string | null;
   projectType: ProjectType | null;
+  railwayLengthKm: number | null;
+  urbanRailLengthKm: number | null;
+  roadLengthKm: number | null;
+  grossFloorAreaM2: number | null;
   contractType: string | null;
   status: ProjectStatus;
   startDate: string | null;
@@ -719,6 +735,10 @@ export interface CreateProjectRequest {
   branchId?: string;
   location?: string;
   projectType?: ProjectType;
+  railwayLengthKm?: number;
+  urbanRailLengthKm?: number;
+  roadLengthKm?: number;
+  grossFloorAreaM2?: number;
   contractType?: string;
   status?: ProjectStatus;
   startDate?: string;

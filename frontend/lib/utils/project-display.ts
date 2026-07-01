@@ -11,7 +11,23 @@ const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   COMMERCIAL: 'Commercial',
   INFRASTRUCTURE: 'Infrastructure',
   INDUSTRIAL: 'Industrial',
+  ROAD: 'Road',
+  RAILWAY: 'Railway',
+  URBAN_RAIL_TRANSIT: 'Urban Rail Transit',
+  BUILDING: 'Building',
+  BRIDGE: 'Bridge',
+  TUNNEL: 'Tunnel',
+  WATER_SUPPLY_DRAINAGE: 'Water Supply & Drainage',
+  PORT_HARBOR: 'Port & Harbor',
+  AIRPORT: 'Airport',
+  POWER_ENERGY: 'Power & Energy',
+  MIXED_USE: 'Mixed Use',
+  OTHER: 'Other',
 };
+
+export const PROJECT_TYPE_OPTIONS = (
+  Object.entries(PROJECT_TYPE_LABELS) as [ProjectType, string][]
+).map(([value, label]) => ({ value, label }));
 
 const PROJECT_TEAM_ROLE_LABELS: Record<ProjectTeamRole, string> = {
   PROJECT_MANAGER: 'Project manager',

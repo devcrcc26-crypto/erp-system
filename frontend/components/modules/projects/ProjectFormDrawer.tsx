@@ -26,15 +26,12 @@ import type {
 } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
+import {
+  PROJECT_TYPE_OPTIONS,
+} from '@/lib/utils/project-display';
+import { getFieldsForProjectType } from '@/lib/constants/project-type-fields';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useCreateProject, useUpdateProject } from '@/lib/query/projects';
-
-const PROJECT_TYPE_OPTIONS: Array<{ value: ProjectType; label: string }> = [
-  { value: 'RESIDENTIAL', label: 'Residential' },
-  { value: 'COMMERCIAL', label: 'Commercial' },
-  { value: 'INFRASTRUCTURE', label: 'Infrastructure' },
-  { value: 'INDUSTRIAL', label: 'Industrial' },
-];
 
 interface ProjectFormValues {
   projectCode: string;
@@ -42,6 +39,10 @@ interface ProjectFormValues {
   nameZh?: string;
   location?: string;
   projectType?: ProjectType;
+  railwayLengthKm?: number;
+  urbanRailLengthKm?: number;
+  roadLengthKm?: number;
+  grossFloorAreaM2?: number;
   contractType?: string;
   status?: ProjectStatus;
   startDate?: Dayjs;
@@ -68,6 +69,10 @@ function toFormValues(project: Project): ProjectFormValues {
     nameZh: project.nameZh ?? undefined,
     location: project.location ?? undefined,
     projectType: project.projectType ?? undefined,
+    railwayLengthKm: project.railwayLengthKm ?? undefined,
+    urbanRailLengthKm: project.urbanRailLengthKm ?? undefined,
+    roadLengthKm: project.roadLengthKm ?? undefined,
+    grossFloorAreaM2: project.grossFloorAreaM2 ?? undefined,
     contractType: project.contractType ?? undefined,
     status: project.status,
     startDate: project.startDate ? dayjs(project.startDate) : undefined,
@@ -99,6 +104,10 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     nameZh: values.nameZh?.trim() || undefined,
     location: values.location?.trim() || undefined,
     projectType: values.projectType,
+    railwayLengthKm: values.railwayLengthKm,
+    urbanRailLengthKm: values.urbanRailLengthKm,
+    roadLengthKm: values.roadLengthKm,
+    grossFloorAreaM2: values.grossFloorAreaM2,
     contractType: values.contractType?.trim() || undefined,
     status: values.status,
     startDate: values.startDate?.toISOString(),
@@ -139,6 +148,8 @@ export default function ProjectFormDrawer({
   const [form] = Form.useForm<ProjectFormValues>();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
+  const selectedProjectType = Form.useWatch('projectType', form);
+  const typeSpecificFields = getFieldsForProjectType(selectedProjectType);
   const isEditing = Boolean(project);
   const isSubmitting = createProject.isPending || updateProject.isPending;
 
@@ -249,6 +260,20 @@ export default function ProjectFormDrawer({
             <Input placeholder="e.g. Lump sum" />
           </Form.Item>
         </div>
+
+        {typeSpecificFields.map((field) => (
+          <Form.Item
+            key={field.key}
+            label={`${field.label} (${field.unit})`}
+            name={field.key}
+          >
+            <InputNumber
+              className="!w-full"
+              min={0}
+              placeholder={`Optional — ${field.unit}`}
+            />
+          </Form.Item>
+        ))}
 
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label="Start date" name="startDate">

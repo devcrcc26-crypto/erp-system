@@ -102,6 +102,10 @@ export interface MappedProject {
   nameZh: string | null;
   location: string | null;
   projectType: Project['projectType'];
+  railwayLengthKm: number | null;
+  urbanRailLengthKm: number | null;
+  roadLengthKm: number | null;
+  grossFloorAreaM2: number | null;
   contractType: string | null;
   status: Project['status'];
   startDate: string | null;
@@ -159,6 +163,10 @@ export function mapProject(project: Project): MappedProject {
     nameZh: project.nameZh,
     location: project.location,
     projectType: project.projectType,
+    railwayLengthKm: project.railwayLengthKm,
+    urbanRailLengthKm: project.urbanRailLengthKm,
+    roadLengthKm: project.roadLengthKm,
+    grossFloorAreaM2: project.grossFloorAreaM2,
     contractType: project.contractType,
     status: project.status,
     startDate: toDateString(project.startDate),
