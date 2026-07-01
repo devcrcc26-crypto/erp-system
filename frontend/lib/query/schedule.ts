@@ -2,6 +2,7 @@
 
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type UseQueryOptions,
@@ -13,6 +14,13 @@ import {
   apiPatch,
   apiPost,
 } from '@/lib/api/client';
+import type { DesignPackage } from '@/lib/api/epc.types';
+import { designPackageKeys } from '@/lib/query/design-packages';
+import { designPackagesPath } from '@/lib/query/epc-query-utils';
+import {
+  useProjectDisciplines,
+  type ProjectDisciplineRow,
+} from '@/lib/query/disciplines';
 import type {
   CreateMilestoneRequest,
   CreateTaskDependencyRequest,
@@ -30,6 +38,7 @@ import type {
 import { ApiRequestError } from '@/lib/api/errors';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
+import { useMemo } from 'react';
 
 const SCHEDULE_STALE_MS = 60_000;
 
@@ -66,7 +75,90 @@ export const scheduleKeys = {
     [...scheduleKeys.all, projectId, 'dependencies'] as const,
   disciplines: (projectId: string, taskId: string) =>
     [...scheduleKeys.all, projectId, 'tasks', taskId, 'disciplines'] as const,
+  subtasks: (projectId: string) =>
+    [...scheduleKeys.all, projectId, 'subtasks'] as const,
 };
+
+/** Design package shown as a schedule subtask under a parent task. */
+export interface ScheduleSubtaskEntry {
+  package: DesignPackage;
+  taskId: string;
+  taskDisciplineId: string;
+  disciplineName: string;
+  documentCount: number;
+}
+
+/**
+ * Loads design packages for all project disciplines and groups them by parent task.
+ * Secondary fetch — does not block the task list from rendering.
+ */
+export function useScheduleSubtasks(projectId: string, enabled = true): {
+  byTaskId: Map<string, ScheduleSubtaskEntry[]>;
+  disciplines: ProjectDisciplineRow[];
+  isLoading: boolean;
+  isSubtasksLoading: boolean;
+  isFetching: boolean;
+} {
+  const disciplinesQuery = useProjectDisciplines(projectId, enabled);
+  const disciplines = disciplinesQuery.data ?? [];
+
+  const packageQueries = useQueries({
+    queries: disciplines.map((discipline) => ({
+      queryKey: designPackageKeys.lists(projectId, discipline.id),
+      queryFn: () =>
+        apiGet<DesignPackage[]>(designPackagesPath(projectId, discipline.id)),
+      enabled:
+        enabled && Boolean(projectId) && disciplinesQuery.isSuccess,
+      staleTime: SCHEDULE_STALE_MS,
+      retry: scheduleReadRetry,
+    })),
+  });
+
+  const byTaskId = useMemo(() => {
+    const map = new Map<string, ScheduleSubtaskEntry[]>();
+
+    disciplines.forEach((discipline, index) => {
+      const packages = packageQueries[index]?.data ?? [];
+      for (const pkg of packages) {
+        const entry: ScheduleSubtaskEntry = {
+          package: pkg,
+          taskId: discipline.taskId,
+          taskDisciplineId: discipline.id,
+          disciplineName: discipline.disciplineName,
+          documentCount: pkg.items?.length ?? 0,
+        };
+        const existing = map.get(discipline.taskId) ?? [];
+        existing.push(entry);
+        map.set(discipline.taskId, existing);
+      }
+    });
+
+    for (const [taskId, entries] of map) {
+      map.set(
+        taskId,
+        [...entries].sort((a, b) =>
+          a.package.name.localeCompare(b.package.name),
+        ),
+      );
+    }
+
+    return map;
+  }, [disciplines, packageQueries]);
+
+  const isSubtasksLoading =
+    disciplinesQuery.isSuccess &&
+    packageQueries.some((query) => query.isLoading);
+
+  const isPackagesFetching = packageQueries.some((query) => query.isFetching);
+
+  return {
+    byTaskId,
+    disciplines,
+    isLoading: disciplinesQuery.isLoading,
+    isSubtasksLoading,
+    isFetching: disciplinesQuery.isFetching || isPackagesFetching,
+  };
+}
 
 export function useMilestones(
   projectId: string,

@@ -43,6 +43,8 @@ import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
+import TaskSubtasksSection from '@/components/modules/projects/schedule/TaskSubtasksSection';
+import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
 
 const TASK_STATUS_OPTIONS: Array<{ value: TaskStatus; label: string }> = [
   { value: 'NOT_STARTED', label: 'Not started' },
@@ -220,12 +222,16 @@ export default function TaskFormDrawer({
   open,
   projectId,
   task,
+  subtasks,
+  subtasksLoading,
   onClose,
   onSaved,
 }: {
   open: boolean;
   projectId: string;
   task?: Task;
+  subtasks?: ScheduleSubtaskEntry[];
+  subtasksLoading?: boolean;
   onClose: () => void;
   onSaved?: () => void;
 }): React.ReactNode {
@@ -528,6 +534,14 @@ export default function TaskFormDrawer({
           </Button>
         </div>
         </Form>
+
+        {isEditing && task && (
+          <TaskSubtasksSection
+            projectId={projectId}
+            subtasks={subtasks ?? []}
+            loading={subtasksLoading}
+          />
+        )}
       </div>
     </Drawer>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -17,6 +18,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
+import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
 import type {
   Task,
   TaskDependency,
@@ -28,9 +30,17 @@ import {
   useDeleteTaskDependency,
   useUpdateTaskDependency,
   scheduleKeys,
+  useScheduleSubtasks,
+  type ScheduleSubtaskEntry,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatBilingualName } from '@/lib/utils/bilingual-name';
+import {
+  computeScheduleSubtaskRollup,
+  getScheduleSubtaskDisplayStatus,
+  scheduleSubtaskWorkspaceHref,
+} from '@/lib/utils/schedule-subtasks';
+import { tokens } from '@/lib/theme/tokens';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
@@ -54,6 +64,31 @@ interface DependencyFormValues {
   successorTaskId: string;
   dependencyType: TaskDependencyType;
   lagDays?: number;
+}
+
+type ScheduleTaskTableRow =
+  | { rowType: 'task'; key: string; task: Task }
+  | { rowType: 'subtask'; key: string; subtask: ScheduleSubtaskEntry };
+
+function buildScheduleTableRows(
+  tasks: Task[],
+  subtasksByTaskId: Map<string, ScheduleSubtaskEntry[]>,
+): ScheduleTaskTableRow[] {
+  const rows: ScheduleTaskTableRow[] = [];
+
+  for (const task of tasks) {
+    rows.push({ rowType: 'task', key: task.id, task });
+    const subtasks = subtasksByTaskId.get(task.id) ?? [];
+    for (const subtask of subtasks) {
+      rows.push({
+        rowType: 'subtask',
+        key: `subtask-${subtask.package.id}`,
+        subtask,
+      });
+    }
+  }
+
+  return rows;
 }
 
 export default function TasksPanel({
@@ -117,6 +152,8 @@ export default function TasksPanel({
   const updateDependency = useUpdateTaskDependency();
   const deleteDependency = useDeleteTaskDependency();
   const deleteTask = useDeleteTask();
+  const { byTaskId: subtasksByTaskId, isSubtasksLoading } =
+    useScheduleSubtasks(projectId);
 
   const tasks = useMemo(
     () =>
@@ -139,84 +176,158 @@ export default function TasksPanel({
 
   const dependencySaving = createDependency.isPending || updateDependency.isPending;
 
-  const columns: ColumnsType<Task> = [
+  const tableRows = useMemo(
+    () => buildScheduleTableRows(tasks, subtasksByTaskId),
+    [tasks, subtasksByTaskId],
+  );
+
+  const columns: ColumnsType<ScheduleTaskTableRow> = [
     {
       title: 'ID',
-      dataIndex: 'taskIdCode',
       key: 'taskIdCode',
       width: 90,
+      render: (_value, record) =>
+        record.rowType === 'task' ? record.task.taskIdCode : null,
     },
     {
       title: 'English name',
-      dataIndex: 'nameEn',
       key: 'nameEn',
       ellipsis: true,
+      render: (_value, record) => {
+        if (record.rowType === 'task') {
+          const subtasks = subtasksByTaskId.get(record.task.id) ?? [];
+          const rollup = computeScheduleSubtaskRollup(
+            subtasks.map((entry) => entry.package),
+          );
+
+          return (
+            <div>
+              <span>{record.task.nameEn}</span>
+              {rollup && (
+                <p
+                  className="mt-0.5 text-[11px]"
+                  style={{ color: tokens.colorTextSecondary }}
+                >
+                  Subtasks: {rollup.closed}/{rollup.total} closed
+                </p>
+              )}
+            </div>
+          );
+        }
+
+        const { subtask } = record;
+        const displayStatus = getScheduleSubtaskDisplayStatus(subtask.package);
+
+        return (
+          <div className="pl-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge label="Subtask" variant="orange" />
+              <span className="text-[12px] font-medium">
+                {subtask.package.name}
+              </span>
+              <ScheduleSubtaskStatusBadge status={displayStatus} />
+            </div>
+            <p
+              className="mt-0.5 text-[11px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {subtask.disciplineName}
+            </p>
+          </div>
+        );
+      },
     },
     {
       title: 'Chinese name',
-      dataIndex: 'nameZh',
       key: 'nameZh',
       ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task' ? record.task.nameZh : null,
     },
     {
       title: 'Start',
-      dataIndex: 'startDate',
       key: 'startDate',
-      render: (value: string | null) => formatProjectDate(value),
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatProjectDate(record.task.startDate)
+          : null,
     },
     {
       title: 'Finish',
-      dataIndex: 'finishDate',
       key: 'finishDate',
-      render: (value: string | null) => formatProjectDate(value),
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatProjectDate(record.task.finishDate)
+          : null,
     },
     {
       title: 'Progress',
-      dataIndex: 'progressPct',
       key: 'progressPct',
       width: 140,
       align: 'right',
-      render: (value: number) => (
-        <Progress percent={value} size="small" strokeColor="#f97316" />
-      ),
+      render: (_value, record) =>
+        record.rowType === 'task' ? (
+          <Progress
+            percent={record.task.progressPct}
+            size="small"
+            strokeColor="#f97316"
+          />
+        ) : null,
     },
     {
       title: 'Status',
-      dataIndex: 'status',
       key: 'status',
-      render: (status: Task['status']) => (
-        <StatusBadge
-          label={formatTaskStatus(status)}
-          variant={taskStatusVariant(status)}
-        />
-      ),
+      render: (_value, record) =>
+        record.rowType === 'task' ? (
+          <StatusBadge
+            label={formatTaskStatus(record.task.status)}
+            variant={taskStatusVariant(record.task.status)}
+          />
+        ) : null,
     },
     {
       title: '',
       key: 'actions',
-      width: 120,
-      render: (_value, record) => (
-        <div className="flex gap-2">
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => {
-              setEditing(record);
-              setDrawerOpen(true);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            danger
-            className="!px-0"
-            onClick={() => setDeleting(record)}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
+      width: 140,
+      render: (_value, record) => {
+        if (record.rowType === 'subtask') {
+          const href = scheduleSubtaskWorkspaceHref(
+            projectId,
+            record.subtask.taskDisciplineId,
+            record.subtask.package.id,
+          );
+          return (
+            <Link href={href}>
+              <Button type="link" className="!px-0 text-[12px]">
+                EPC Workspace
+              </Button>
+            </Link>
+          );
+        }
+
+        return (
+          <div className="flex gap-2">
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                setEditing(record.task);
+                setDrawerOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              type="link"
+              danger
+              className="!px-0"
+              onClick={() => setDeleting(record.task)}
+            >
+              Delete
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -343,11 +454,19 @@ export default function TasksPanel({
           Add task
         </Button>
       </div>
-      <DataTable<Task>
-        rowKey="id"
+      <DataTable<ScheduleTaskTableRow>
+        rowKey="key"
         columns={columns}
-        dataSource={tasks}
+        dataSource={tableRows}
+        pagination={false}
+        loading={isSubtasksLoading ? { spinning: true, tip: 'Loading subtasks…' } : false}
         locale={{ emptyText: 'No tasks defined' }}
+        onRow={(record) => ({
+          className:
+            record.rowType === 'task'
+              ? 'schedule-task-row border-l-4 !border-l-[#3b82f6]'
+              : 'schedule-subtask-row border-l-4 !border-l-amber-400 bg-[#fffbeb]/40',
+        })}
       />
 
       <Collapse
@@ -387,6 +506,10 @@ export default function TasksPanel({
         open={drawerOpen}
         projectId={projectId}
         task={editing ?? undefined}
+        subtasks={
+          editing ? (subtasksByTaskId.get(editing.id) ?? []) : undefined
+        }
+        subtasksLoading={isSubtasksLoading}
         onClose={() => {
           setDrawerOpen(false);
           setEditing(null);

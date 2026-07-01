@@ -23,8 +23,8 @@ const QUICK_LINKS = [
   {
     href: 'disciplines',
     navIconKey: 'disciplines',
-    label: 'Disciplines & Packages',
-    description: 'Engineering design packages and documents',
+    label: 'Disciplines & Subtasks',
+    description: 'Engineering subtasks and documents',
   },
   {
     href: 'overview/status',
