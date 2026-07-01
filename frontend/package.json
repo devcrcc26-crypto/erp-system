@@ -32,6 +32,10 @@
     "recharts": "^3.8.1",
     "zustand": "^5.0.14"
   },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.0",
+    "lightningcss-linux-x64-gnu": "1.32.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4",
