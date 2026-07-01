@@ -1,7 +1,17 @@
 # Render Blueprint — Construction ERP backend API
 # Docs: https://render.com/docs/blueprint-spec
 #
-# Stack: Render (this service) + Neon (Postgres) + Vercel (frontend) + Resend (email)
+# Stack: Render (this service) + Supabase/Neon (Postgres) + Vercel (frontend) + Resend (email)
+#
+# Render dashboard (if not using Blueprint):
+#   Root Directory     — leave EMPTY (repo root, not backend/)
+#   Build Command      — npm ci && npm run build --workspace=backend
+#   Pre-Deploy Command — npm run db:migrate:deploy --workspace=backend
+#   Start Command      — npm run start:prod --workspace=backend
+#   Health Check Path  — /api/health
+#
+# Supabase DATABASE_URL: use session pooler on port 5432 (not transaction pooler :6543).
+#   postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres?sslmode=require
 #
 # Setup:
 #   1. Connect this repo in Render → New → Blueprint → use this file
@@ -53,7 +63,8 @@ services:
       - key: THROTTLE_LIMIT
         value: "300"
 
-      # Neon pooled connection string (?sslmode=require recommended)
+      # Postgres connection string (?sslmode=require recommended).
+      # Supabase: session pooler port 5432 — NOT transaction pooler :6543 (migrations hang).
       - key: DATABASE_URL
         sync: false
 
