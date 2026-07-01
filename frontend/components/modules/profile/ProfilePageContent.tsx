@@ -5,6 +5,7 @@ import { Alert, Avatar, Button, Form, Input, Select, Spin } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
+import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -88,6 +89,7 @@ export default function ProfilePageContent(): React.ReactNode {
   const [prefsForm] = Form.useForm<PreferencesFormValues>();
   const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [emailForm] = Form.useForm<{ newEmail: string }>();
+  const watchedNewEmail = Form.useWatch('newEmail', emailForm) ?? '';
 
   const profileQuery = useCurrentUser();
   const updateProfile = useUpdateProfile();
@@ -275,6 +277,7 @@ export default function ProfilePageContent(): React.ReactNode {
           description={
             <div>
               <p>{t('profile.emailNotVerifiedBody')}</p>
+              <DemoEmailWarning email={profile.email} />
               <Button
                 type="primary"
                 size="small"
@@ -451,6 +454,7 @@ export default function ProfilePageContent(): React.ReactNode {
                   >
                     <Input type="email" />
                   </Form.Item>
+                  <DemoEmailWarning email={watchedNewEmail} />
                   {emailError && (
                     <Alert type="error" showIcon title={emailError} className="!mb-4" />
                   )}

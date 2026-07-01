@@ -1,9 +1,9 @@
-import { MailerService } from '@nestjs-modules/mailer';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { NotificationStatus } from '@prisma/client';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { ResendEmailService } from '../../../../shared/mail/resend-email.service';
 import {
   NOTIFICATION_QUEUE,
   SEND_NOTIFICATION_JOB,
@@ -16,7 +16,7 @@ export class SendNotificationProcessor extends WorkerHost {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mailerService: MailerService,
+    private readonly resendEmailService: ResendEmailService,
   ) {
     super();
   }
@@ -42,18 +42,17 @@ export class SendNotificationProcessor extends WorkerHost {
     }
 
     try {
-      await this.mailerService.sendMail({
+      const sent = await this.resendEmailService.send({
         to: notification.recipient.email,
         subject: notification.subject,
-        text: notification.body,
         html: `<p>${notification.body.replace(/\n/g, '<br>')}</p>`,
       });
 
       await this.prisma.notification.update({
         where: { id: notification.id },
         data: {
-          status: NotificationStatus.SENT,
-          sentAt: new Date(),
+          status: sent ? NotificationStatus.SENT : NotificationStatus.FAILED,
+          ...(sent ? { sentAt: new Date() } : {}),
         },
       });
     } catch (error: unknown) {
@@ -66,8 +65,6 @@ export class SendNotificationProcessor extends WorkerHost {
         where: { id: notification.id },
         data: { status: NotificationStatus.FAILED },
       });
-
-      throw error;
     }
   }
 }

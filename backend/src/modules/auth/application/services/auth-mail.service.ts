@@ -1,6 +1,6 @@
-import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ResendEmailService } from '../../../../shared/mail/resend-email.service';
 
 @Injectable()
 export class AuthMailService {
@@ -8,20 +8,19 @@ export class AuthMailService {
   private readonly frontendUrl: string;
   private readonly mailEnabled: boolean;
   private readonly isDevelopment: boolean;
-  private readonly isLocalMailCatcher: boolean;
 
   constructor(
-    private readonly mailerService: MailerService,
+    private readonly resendEmailService: ResendEmailService,
     private readonly configService: ConfigService,
   ) {
     this.frontendUrl =
       this.configService.get<string>('FRONTEND_URL') ??
       'http://localhost:3000';
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY') ?? '';
     const mailHost = this.configService.get<string>('MAIL_HOST') ?? '';
-    this.mailEnabled = Boolean(mailHost);
+    this.mailEnabled = Boolean(resendApiKey || mailHost);
     this.isDevelopment =
       this.configService.get<string>('NODE_ENV') === 'development';
-    this.isLocalMailCatcher = ['localhost', '127.0.0.1'].includes(mailHost);
   }
 
   /**
@@ -92,7 +91,7 @@ export class AuthMailService {
   }
 
   /**
-   * Attempts SMTP delivery; in development logs the link if delivery fails.
+   * Attempts delivery via Resend or SMTP; logs the link in development on failure.
    */
   private async deliverMail(input: {
     to: string;
@@ -101,19 +100,12 @@ export class AuthMailService {
     fallbackUrl: string;
   }): Promise<void> {
     try {
-      await this.mailerService.sendMail({
+      await this.resendEmailService.send({
         to: input.to,
         subject: input.subject,
         html: input.html,
       });
-
-      if (this.isDevelopment && this.isLocalMailCatcher) {
-        this.logger.log(
-          `Email queued to local mail catcher for ${input.to}. ` +
-            'Real inboxes (e.g. Gmail) will not receive it - use the link logged above or open Mailpit at http://localhost:8025',
-        );
-      }
-    } catch (error) {
+    } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
       this.logger.warn(
         `Failed to send email to ${input.to} (${reason}). Use this link: ${input.fallbackUrl}`,

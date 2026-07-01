@@ -23,6 +23,7 @@ import {
   UpsertNotificationPreferenceDto,
 } from '../dtos/notification.dtos';
 import { TemplateRendererService } from './template-renderer.service';
+import { ResendEmailService } from '../../../../shared/mail/resend-email.service';
 
 type AuditContext = { companyId: string; userId: string };
 
@@ -33,6 +34,7 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly templateRenderer: TemplateRendererService,
+    private readonly resendEmailService: ResendEmailService,
     @Optional()
     @InjectQueue(NOTIFICATION_QUEUE)
     private readonly notificationQueue?: Queue<SendNotificationJobData>,
@@ -95,9 +97,50 @@ export class NotificationService {
     }
 
     if (emailEnabled && !this.notificationQueue) {
-      this.logger.warn(
-        'Email notification skipped: enable Redis (REDIS_ENABLED=true) and run npm run db:up',
+      const { subject, body, templateId } = await this.resolveContent(
+        ctx.companyId,
+        dto.eventType,
+        NotificationChannel.EMAIL,
+        dto.subject,
+        dto.body,
+        variables,
       );
+
+      const notification = await this.prisma.notification.create({
+        data: {
+          companyId: ctx.companyId,
+          recipientId: dto.recipientId,
+          templateId,
+          channel: NotificationChannel.EMAIL,
+          subject,
+          body,
+          status: NotificationStatus.PENDING,
+        },
+      });
+
+      try {
+        const sent = await this.resendEmailService.send({
+          to: recipient.email,
+          subject,
+          html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+        });
+        await this.prisma.notification.update({
+          where: { id: notification.id },
+          data: {
+            status: sent ? NotificationStatus.SENT : NotificationStatus.FAILED,
+            ...(sent ? { sentAt: new Date() } : {}),
+          },
+        });
+      } catch (error: unknown) {
+        this.logger.error(
+          `Failed to send email notification ${notification.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        await this.prisma.notification.update({
+          where: { id: notification.id },
+          data: { status: NotificationStatus.FAILED },
+        });
+      }
     }
 
     if (emailEnabled && this.notificationQueue) {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PriorSessionNotice } from '@/components/auth/PriorSessionNotice';
+import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
 import { useResetPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -71,6 +72,7 @@ function ResetPasswordForm(): React.ReactNode {
           priorUserEmail={priorUserEmail}
           message="You have been signed out so this password reset can continue."
         />
+        <DemoEmailWarning email={emailFromUrl} />
 
         <div>
           <label

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { useForgotPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
+import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 
 export default function ForgotPasswordPage(): React.ReactNode {
   const forgotPassword = useForgotPassword();
@@ -60,6 +61,7 @@ export default function ForgotPasswordPage(): React.ReactNode {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
           />
+          <DemoEmailWarning email={email} />
         </div>
 
         {successMessage && (

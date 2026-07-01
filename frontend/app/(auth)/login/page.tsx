@@ -9,6 +9,7 @@ import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { signOutLocally, completeLocalSignIn } from '@/lib/auth/sign-out-locally';
 import { useAuthStore } from '@/stores/auth.store';
 import { ApiRequestError } from '@/lib/api/errors';
+import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 
 interface LoginFormValues {
   email: string;
@@ -42,6 +43,7 @@ function LoginForm(): React.ReactNode {
     return null;
   });
   const [showResendActivation, setShowResendActivation] = useState(false);
+  const watchedEmail = Form.useWatch('email', form) ?? '';
 
   useEffect(() => {
     if (hasExplicitLoginIntent) {
@@ -126,6 +128,7 @@ function LoginForm(): React.ReactNode {
         >
           <Input placeholder="admin@company.local" autoComplete="email" />
         </Form.Item>
+        <DemoEmailWarning email={watchedEmail} />
 
         <Form.Item
           label={

@@ -2,6 +2,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { buildMailerOptions } from './mail.config';
+import { ResendEmailService } from './resend-email.service';
 
 @Global()
 @Module({
@@ -12,6 +13,7 @@ import { buildMailerOptions } from './mail.config';
       useFactory: (config: ConfigService) => buildMailerOptions(config),
     }),
   ],
-  exports: [MailerModule],
+  providers: [ResendEmailService],
+  exports: [MailerModule, ResendEmailService],
 })
 export class MailModule {}
