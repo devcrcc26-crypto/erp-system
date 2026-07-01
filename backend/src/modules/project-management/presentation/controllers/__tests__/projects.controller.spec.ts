@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { ProjectsController } from '../projects.controller';
+import { ProjectExportService } from '../../../application/services/project-export.service';
 import { ProjectsService } from '../../../application/services/projects.service';
 import { PermissionsGuard } from '../../../../../shared/permissions/permissions.guard';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
@@ -46,6 +47,10 @@ describe('ProjectsController', () => {
       controllers: [ProjectsController],
       providers: [
         { provide: ProjectsService, useValue: projectsService },
+        {
+          provide: ProjectExportService,
+          useValue: { exportProjectList: jest.fn(), exportProjectListForProject: jest.fn() },
+        },
         PermissionsGuard,
         {
           provide: PermissionService,

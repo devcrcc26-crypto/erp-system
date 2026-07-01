@@ -29,7 +29,7 @@ import {
   TaskStatus,
   UrgencyLevel,
 } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { SOURCE_ENTITY_TYPES } from '../utils/source-entity.util';
 import {
   IsArray,
@@ -68,6 +68,44 @@ export class ProjectListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEntityUuid()
   projectManagerId?: string;
+}
+
+export class ProjectExportListQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ enum: ProjectStatus })
+  @IsOptional()
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
+
+  @ApiPropertyOptional({ enum: ProjectType })
+  @IsOptional()
+  @IsEnum(ProjectType)
+  projectType?: ProjectType;
+
+  @ApiPropertyOptional({ type: [String], description: 'Optional project id filter' })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value == null || value === '') {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+    return undefined;
+  })
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  projectIds?: string[];
 }
 
 export class CreateProjectDto {

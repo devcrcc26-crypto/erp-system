@@ -116,6 +116,7 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'schedule', action: 'edit', description: 'Edit schedule items' },
   { module: 'schedule', action: 'delete', description: 'Delete schedule items' },
   { module: 'schedule', action: 'approve', description: 'Approve design packages and EDVs' },
+  { module: 'schedule', action: 'export', description: 'Export schedule tasks' },
 
   { module: 'rfis', action: 'view', description: 'View RFIs' },
   { module: 'rfis', action: 'create', description: 'Create RFIs' },

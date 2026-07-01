@@ -30,6 +30,7 @@ import { PermissionResolverService } from './application/services/permission-res
 import { ProjectChangeRequestService } from './application/services/project-change-request.service';
 import { ProjectScopeService } from './application/services/project-scope.service';
 import { ProjectsService } from './application/services/projects.service';
+import { ProjectExportService } from './application/services/project-export.service';
 import { PunchItemsService } from './application/services/punch-items.service';
 import { ReviewBatchService } from './application/services/review-batch.service';
 import { ReviewCommentsService } from './application/services/review-comments.service';
@@ -129,6 +130,7 @@ const workflowBullProcessors = redisEnabled
   ],
   providers: [
     ProjectsService,
+    ProjectExportService,
     ProjectScopeService,
     DisciplineScopeService,
     DocumentNumberService,

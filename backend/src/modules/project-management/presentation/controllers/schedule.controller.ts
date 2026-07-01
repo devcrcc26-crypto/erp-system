@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -25,6 +26,7 @@ import {
   UpdateTaskDependencyDto,
   UpdateTaskDto,
 } from '../../application/dtos/pm.dtos';
+import { ProjectExportService } from '../../application/services/project-export.service';
 import { ScheduleService } from '../../application/services/schedule.service';
 import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
 import { RequirePmModule } from '../guards/require-pm-module.decorator';
@@ -35,10 +37,30 @@ import { RequirePmModule } from '../guards/require-pm-module.decorator';
 @RequirePmModule('schedule')
 @Controller('projects/:projectId/schedule')
 export class ScheduleController {
-  constructor(private readonly scheduleService: ScheduleService) {}
+  constructor(
+    private readonly scheduleService: ScheduleService,
+    private readonly projectExportService: ProjectExportService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('export/task-list')
+  @RequirePermission('schedule', 'export')
+  @ApiOperation({ summary: 'Export project task list as Excel' })
+  async exportTaskList(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<StreamableFile> {
+    const buffer = await this.projectExportService.exportTaskList(
+      this.ctx(user),
+      projectId,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="task-list.xlsx"',
+    });
   }
 
   @Get('milestones')

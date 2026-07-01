@@ -9,6 +9,7 @@ import {
   Post,
   Put,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -19,9 +20,11 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   SetProjectTeamDto,
   CreateProjectDto,
+  ProjectExportListQueryDto,
   ProjectListQueryDto,
   UpdateProjectDto,
 } from '../../application/dtos/pm.dtos';
+import { ProjectExportService } from '../../application/services/project-export.service';
 import { ProjectsService } from '../../application/services/projects.service';
 
 @ApiTags('Projects')
@@ -29,7 +32,10 @@ import { ProjectsService } from '../../application/services/projects.service';
 @UseGuards(PermissionsGuard)
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly projectExportService: ProjectExportService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
@@ -43,6 +49,40 @@ export class ProjectsController {
     @Query() query: ProjectListQueryDto,
   ): Promise<unknown> {
     return this.projectsService.listProjects(this.ctx(user), query);
+  }
+
+  @Get('export/project-list')
+  @RequirePermission('projects', 'export')
+  @ApiOperation({ summary: 'Export project list as Excel (company-scoped)' })
+  async exportProjectList(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ProjectExportListQueryDto,
+  ): Promise<StreamableFile> {
+    const buffer = await this.projectExportService.exportProjectList(
+      this.ctx(user),
+      query,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="project-list.xlsx"',
+    });
+  }
+
+  @Get(':projectId/export/project-list')
+  @RequirePermission('projects', 'export')
+  @ApiOperation({ summary: 'Export single project row as Excel' })
+  async exportProjectListForProject(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<StreamableFile> {
+    const buffer = await this.projectExportService.exportProjectListForProject(
+      this.ctx(user),
+      projectId,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: `attachment; filename="project-list-${projectId}.xlsx"`,
+    });
   }
 
   @Get(':projectId/dashboard')

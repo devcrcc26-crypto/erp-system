@@ -3,8 +3,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Alert } from 'antd';
-import { CalendarOutlined, BranchesOutlined, InboxOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Alert, Button } from 'antd';
+import { CalendarOutlined, BranchesOutlined, FileExcelOutlined, InboxOutlined } from '@ant-design/icons';
 import { getNavIcon, getNavIconComponent, navIconClassName } from '@/lib/navigation/nav-icons';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import KPICard from '@/components/ui/KPICard/KPICard';
@@ -18,6 +19,8 @@ import { useDeliverables } from '@/lib/query/deliverables';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ProjectStatusBoard from '@/components/modules/projects/workspaces/ProjectStatusBoard';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { downloadTaskListExcel } from '@/lib/query/project-exports';
 
 const QUICK_LINKS = [
   {
@@ -65,6 +68,8 @@ export default function ProjectDashboard({
   projectId: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
+  const [exportingTasks, setExportingTasks] = useState(false);
   const statsQuery = useProjectDashboardStats(projectId);
 
   const statsApiUnavailable =
@@ -131,6 +136,18 @@ export default function ProjectDashboard({
     stats?.scheduleVariancePct ?? scheduleFallback?.scheduleVariancePct ?? null;
 
   const scheduleLoading = statsApiUnavailable && tasksQuery.isLoading;
+
+  async function handleExportTaskList(): Promise<void> {
+    setExportingTasks(true);
+    try {
+      await downloadTaskListExcel(projectId);
+      messageApi.success('Task list export downloaded.');
+    } catch {
+      messageApi.error('Unable to export task list. Please try again.');
+    } finally {
+      setExportingTasks(false);
+    }
+  }
 
   return (
     <div className={layout.pageStack}>
@@ -211,7 +228,18 @@ export default function ProjectDashboard({
       </FormLayout>
 
       <div className={`${layout.cardGrid} lg:grid-cols-2`}>
-        <FormLayout title="Schedule snapshot">
+        <FormLayout
+          title="Schedule snapshot"
+          extra={
+            <Button
+              icon={<FileExcelOutlined />}
+              loading={exportingTasks}
+              onClick={() => void handleExportTaskList()}
+            >
+              Export task list
+            </Button>
+          }
+        >
           {scheduleLoading ? (
             <div className="space-y-3 py-2">
               <div className="erp-page-skeleton h-10 w-full rounded" />

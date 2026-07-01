@@ -11,7 +11,7 @@ import {
   Select,
   Space,
 } from 'antd';
-import { EditOutlined, FilePdfOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, FileExcelOutlined, FilePdfOutlined, PlusOutlined } from '@ant-design/icons';
 import { Network } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -38,6 +38,7 @@ import {
 } from '@/lib/utils/project-display';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
+import { downloadProjectListExcel } from '@/lib/query/project-exports';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
 export default function ProjectsPageContent(): React.ReactNode {
@@ -48,6 +49,7 @@ export default function ProjectsPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
@@ -98,6 +100,21 @@ export default function ProjectsPageContent(): React.ReactNode {
       setExportingPdf(false);
     }
   }, [authUser, messageApi, search, statusFilter]);
+
+  const handleExportExcel = useCallback(async (): Promise<void> => {
+    setExportingExcel(true);
+    try {
+      await downloadProjectListExcel({
+        search: search.trim() || undefined,
+        status: statusFilter,
+      });
+      messageApi.success('Project list export downloaded.');
+    } catch {
+      messageApi.error('Unable to export project list. Please try again.');
+    } finally {
+      setExportingExcel(false);
+    }
+  }, [messageApi, search, statusFilter]);
 
   const columns: ColumnsType<Project> = useMemo(
     () => [
@@ -246,6 +263,13 @@ export default function ProjectsPageContent(): React.ReactNode {
         description="Search and manage construction projects across your portfolio."
         extra={
           <Space wrap>
+            <Button
+              icon={<FileExcelOutlined />}
+              loading={exportingExcel}
+              onClick={() => void handleExportExcel()}
+            >
+              Export Excel
+            </Button>
             <Button
               icon={<FilePdfOutlined />}
               loading={exportingPdf}
