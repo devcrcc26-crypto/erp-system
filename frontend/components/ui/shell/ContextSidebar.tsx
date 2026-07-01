@@ -18,12 +18,14 @@ import {
 } from '@/lib/navigation/project-nav-visibility';
 import {
   useEpcCapabilities,
+  useCapabilitiesReady,
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useOptionalRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 import { CONTEXT_SIDEBAR_WIDTH } from '@/components/ui/shell/shell-layout';
 
@@ -44,13 +46,18 @@ export default function ContextSidebar({
   const pathname = usePathname();
   const { t } = useEpcTranslation();
   const permLoading = usePermissionsLoading();
+  const capabilitiesReady = useCapabilitiesReady();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const lens = useOptionalRoleLens();
   const disciplineScopeBypass = lens?.disciplineScopeBypass ?? epc.disciplineScopeBypass;
   const disciplinesQuery = useProjectDisciplines(
     projectId,
-    !permLoading && !disciplineScopeBypass,
+    capabilitiesReady &&
+      Boolean(accessToken) &&
+      !permLoading &&
+      !disciplineScopeBypass,
   );
   const hasAssignedDisciplines = (disciplinesQuery.data?.length ?? 0) > 0;
   const navReady = isProjectNavReady(

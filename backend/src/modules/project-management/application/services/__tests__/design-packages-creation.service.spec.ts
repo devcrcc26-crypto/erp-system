@@ -107,6 +107,11 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       findSourceEntityInProject: jest.fn().mockResolvedValue(true),
     };
     workflowEventLogService = { logCrud: jest.fn() };
+    const prisma = {
+      projectTeam: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
+      },
+    };
 
     service = new DesignPackagesService(
       designPackageRepository as unknown as DesignPackageRepository,
@@ -117,17 +122,21 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       {} as never,
       {} as never,
       {} as never,
+      prisma as never,
     );
   });
 
-  it('1. non-leader creates package → ForbiddenException', async () => {
+  it('1. non-member creates package → ForbiddenException', async () => {
+    const prisma = (service as unknown as { prisma: { projectTeam: { findFirst: jest.Mock } } }).prisma;
+    prisma.projectTeam.findFirst.mockResolvedValueOnce(null);
+
     await expect(
       service.create(nonLeaderCtx, projectId, taskDisciplineId, {
         name: 'Foundation Package',
       }),
     ).rejects.toThrow(
       new ForbiddenException(
-        'Only the discipline leader can create a design package.',
+        'You must be a project team member to create a design package.',
       ),
     );
 

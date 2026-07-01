@@ -39,8 +39,14 @@ function SessionCapabilitiesSync({
 export function AuthSessionSync(): React.ReactNode {
   const [hydrated, setHydrated] = useState(false);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const sessionId = useAuthStore((state) => state.sessionId);
 
   useEffect(() => {
+    if (useAuthStore.getState().accessToken) {
+      setHydrated(true);
+      return;
+    }
+
     void Promise.resolve(useAuthStore.persist.rehydrate()).then(() => {
       setHydrated(true);
     });
@@ -106,6 +112,8 @@ export function AuthSessionSync(): React.ReactNode {
   }, [hydrated]);
 
   return (
-    <SessionCapabilitiesSync enabled={hydrated && Boolean(accessToken)} />
+    <SessionCapabilitiesSync
+      enabled={hydrated && Boolean(accessToken) && Boolean(sessionId)}
+    />
   );
 }

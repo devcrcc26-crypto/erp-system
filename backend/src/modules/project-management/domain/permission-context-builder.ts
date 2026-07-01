@@ -16,7 +16,22 @@ import {
 import { edvStatusAllowsComments } from './edv-state-machine';
 import { getEffectiveApprovalChain } from './approval-chain.util';
 
-export type PermissionContextInput = PermissionContext;
+export type PermissionContextInput = PermissionContext & {
+  /** DEMO BYPASS — remove after demo */
+  demoMemberBypass?: boolean;
+};
+
+// DEMO BYPASS — remove after demo
+const DEMO_NON_REVIEW_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
+  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
+  EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+  EpcWorkflowAction.REVISION_TRIGGER,
+  EpcWorkflowAction.REVISION_TRIGGER_CREATE,
+]);
+// END DEMO BYPASS
 
 function resolveEffectiveChain(input: PermissionContextInput) {
   return getEffectiveApprovalChain(
@@ -214,6 +229,16 @@ export function evaluateProjectTeamLayer(
 export function evaluateDisciplineAssignmentLayer(
   input: PermissionContextInput,
 ): PermissionLayerResult {
+  // DEMO BYPASS — remove after demo
+  if (DEMO_NON_REVIEW_ACTIONS.has(input.action) && input.demoMemberBypass) {
+    return {
+      layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+      verdict: PermissionLayerVerdict.ALLOW,
+      reason: 'demo-member-bypass',
+    };
+  }
+  // END DEMO BYPASS
+
   if (!DISCIPLINE_SCOPED_ACTIONS.has(input.action)) {
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,

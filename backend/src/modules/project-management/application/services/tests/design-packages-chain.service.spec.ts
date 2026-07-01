@@ -115,6 +115,11 @@ describe('DesignPackagesService approval chain (design-packages-chain)', () => {
       {} as never,
       {} as never,
       {} as never,
+      {
+        projectTeam: {
+          findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
+        },
+      } as never,
     );
   });
 

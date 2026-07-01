@@ -14,7 +14,9 @@ import {
   shouldShowContextSidebar,
 } from '@/config/navConfig';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useProject, toProjectSummary } from '@/lib/query/projects';
+import { useAuthStore } from '@/stores/auth.store';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { useProjectContextStore } from '@/stores/project-context.store';
 
@@ -32,6 +34,9 @@ export default function AppShell({
   const { t } = useEpcTranslation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  const capabilitiesReady = useCapabilitiesReady();
+  const accessToken = useAuthStore((state) => state.accessToken);
+
   const projectId = extractProjectId(pathname);
   const showContextSidebar =
     showContextSidebarProp ?? (projectId !== null && shouldShowContextSidebar(pathname));
@@ -42,7 +47,10 @@ export default function AppShell({
   );
   const activeProject = useProjectContextStore((state) => state.activeProject);
 
-  const projectQuery = useProject(projectId ?? '', Boolean(projectId));
+  const projectQuery = useProject(
+    projectId ?? '',
+    Boolean(projectId) && capabilitiesReady && Boolean(accessToken),
+  );
 
   useEffect(() => {
     if (!projectId) {

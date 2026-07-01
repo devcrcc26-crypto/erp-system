@@ -60,6 +60,8 @@ import {
 } from '../../domain/approval-chain.util';
 import { ReviewWorkflowService } from './review-workflow.service';
 import { MappedReviewSessionAttachment } from '../utils/review-session-attachment.mapper';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 
 export interface MappedReviewSessionListItem {
   id: string;
@@ -87,6 +89,7 @@ export class DesignPackagesService {
     private readonly dependencyGraphService: DependencyGraphService,
     private readonly epcReviewRepository: EpcReviewRepository,
     private readonly reviewWorkflowService: ReviewWorkflowService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -150,11 +153,20 @@ export class DesignPackagesService {
         'Assign a discipline leader before creating a design package.',
       );
     }
-    if (discipline.disciplineLeadUserId !== ctx.userId) {
+    // DEMO BYPASS — remove after demo
+    const isMember = await this.prisma.projectTeam.findFirst({
+      where: activeOnly({
+        projectId,
+        userId: ctx.userId,
+      }),
+      select: { id: true },
+    });
+    if (!isMember) {
       throw new ForbiddenException(
-        'Only the discipline leader can create a design package.',
+        'You must be a project team member to create a design package.',
       );
     }
+    // END DEMO BYPASS
 
     const packageOverrides = {
       packageOwnerUserId: dto.packageOwnerUserId ?? null,
@@ -590,11 +602,20 @@ export class DesignPackagesService {
       throw new NotFoundException('Design package not found');
     }
 
-    if (pkg.taskDiscipline.disciplineLeadUserId !== ctx.userId) {
+    // DEMO BYPASS — remove after demo
+    const isMember = await this.prisma.projectTeam.findFirst({
+      where: activeOnly({
+        projectId,
+        userId: ctx.userId,
+      }),
+      select: { id: true },
+    });
+    if (!isMember) {
       throw new ForbiddenException(
-        'Only the discipline leader can close a design package.',
+        'You must be a project team member to close a design package.',
       );
     }
+    // END DEMO BYPASS
 
     if (pkg.packageStatus === DesignPackageStatus.CLOSED) {
       throw new ConflictException('Package is already closed.');

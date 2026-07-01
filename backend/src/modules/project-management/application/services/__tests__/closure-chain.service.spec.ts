@@ -109,6 +109,11 @@ describe('Closure chain (closure-chain)', () => {
         {} as never,
         {} as never,
         {} as never,
+        {
+          projectTeam: {
+            findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
+          },
+        } as never,
       );
     });
 

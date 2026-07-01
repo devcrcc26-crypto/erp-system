@@ -7,6 +7,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { apiPost } from '@/lib/api/client';
+import { ApiRequestError } from '@/lib/api/errors';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { fetchCapabilities } from '@/lib/permissions/capabilities';
 import { useAuthStore } from '@/stores/auth.store';
@@ -47,7 +48,12 @@ export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabil
     queryFn: loadSessionCapabilities,
     enabled: sessionEnabled,
     staleTime: SESSION_CAPABILITIES_STALE_MS,
-    retry: 1,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false,
   });
 
