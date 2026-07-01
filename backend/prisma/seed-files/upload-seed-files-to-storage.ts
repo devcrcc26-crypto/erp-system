@@ -40,6 +40,7 @@ function createMinioClient(): Minio.Client {
     useSSL: process.env.MINIO_USE_SSL === 'true',
     accessKey: process.env.MINIO_ACCESS_KEY ?? 'erp_minio',
     secretKey: process.env.MINIO_SECRET_KEY ?? 'erp_minio_dev_password',
+    pathStyle: true,
   });
 }
 

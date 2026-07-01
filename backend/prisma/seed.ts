@@ -864,11 +864,38 @@ async function deduplicateRolePermissions(): Promise<void> {
   `);
 }
 
+/** Retries until Supabase pooler is awake (free-tier cold starts can take 30–60s). */
+async function waitForDatabase(maxAttempts = 6, delayMs = 10_000): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      if (attempt > 1) {
+        console.log('Database connection established.');
+      }
+      return;
+    } catch {
+      if (attempt === maxAttempts) {
+        throw new Error(
+          `Database unreachable after ${maxAttempts} attempts. ` +
+            'Check Supabase project is not paused and DATABASE_URL uses session pooler :5432 with ?sslmode=require.',
+        );
+      }
+      console.log(
+        `Database not ready (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs / 1000}s...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const adminEmail =
     process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
   const adminPassword =
     process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
+
+  console.log('Waiting for database connection...');
+  await waitForDatabase();
 
   console.log('Seeding Core Foundation data...');
 
@@ -891,17 +918,18 @@ async function main(): Promise<void> {
   });
 
   // ── Permissions (global) ─────────────────────────────────────────────────
-  const permissions = await Promise.all(
-    PERMISSION_DEFINITIONS.map((perm) =>
-      prisma.permission.upsert({
+  const permissions = [];
+  for (const perm of PERMISSION_DEFINITIONS) {
+    permissions.push(
+      await prisma.permission.upsert({
         where: {
           module_action: { module: perm.module, action: perm.action },
         },
         update: { description: perm.description },
         create: perm,
       }),
-    ),
-  );
+    );
+  }
 
   // ── Roles ────────────────────────────────────────────────────────────────
   const roleMap = new Map<string, string>();
