@@ -8,11 +8,11 @@ datasource db {
 }
 
 
-generator markdown {
-  provider = "prisma-markdown"
-  title    = "Shopping Mall"
-  output   = "./ERD.md"
-}
+//generator markdown {
+//  provider = "prisma-markdown"
+//  title    = "Shopping Mall"
+//  output   = "./ERD.md"
+//}
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
