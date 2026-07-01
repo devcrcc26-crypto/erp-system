@@ -26,29 +26,59 @@ export class MinioStorageService implements IStorageService, OnModuleInit {
   async onModuleInit(): Promise<void> {
     try {
       this.client = new Minio.Client({
-        endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'localhost'),
-        port: this.configService.get<number>('MINIO_PORT', 9000),
-        useSSL: this.configService.get<boolean>('MINIO_USE_SSL', false),
-        accessKey: this.configService.get<string>(
-          'MINIO_ACCESS_KEY',
-          'erp_minio',
-        ),
-        secretKey: this.configService.get<string>(
-          'MINIO_SECRET_KEY',
-          'erp_minio_dev_password',
-        ),
+        endPoint:  this.configService.get<string>('MINIO_ENDPOINT', 'localhost'),
+        port:      parseInt(this.configService.get<string>('MINIO_PORT', '9000'), 10),
+        useSSL:    this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
+        accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'erp_minio'),
+        secretKey: this.configService.get<string>('MINIO_SECRET_KEY', 'erp_minio_dev_password'),
         pathStyle: true,
       });
 
-      for (const bucket of Object.values(STORAGE_BUCKETS)) {
-        await this.ensureBucket(bucket);
-      }
+      this.logger.log(
+        `Minio config: endpoint=${this.configService.get('MINIO_ENDPOINT')} ` +
+        `port=${this.configService.get('MINIO_PORT')} ` +
+        `ssl=${this.configService.get('MINIO_USE_SSL')} ` +
+        `bucket check starting...`
+      );
 
-      this.logger.log('Minio storage ready');
+      try {
+        for (const bucket of Object.values(STORAGE_BUCKETS)) {
+          this.logger.log(`Checking bucket: ${bucket}`);
+          await this.ensureBucket(bucket);
+          this.logger.log(`Bucket ready: ${bucket}`);
+        }
+        this.logger.log('Minio storage ready');
+      } catch (bucketError: unknown) {
+        this.logger.warn('Minio client connected but bucket setup failed');
+        if (bucketError instanceof Error) {
+          this.logger.warn(`Bucket error name: ${bucketError.name}`);
+          this.logger.warn(`Bucket error message: ${bucketError.message}`);
+          this.logger.warn(`Bucket error stack: ${bucketError.stack ?? 'no stack'}`);
+        } else {
+          this.logger.warn(`Bucket raw error: ${JSON.stringify(bucketError)}`);
+        }
+        // Still mark client as null if buckets cannot be verified
+        this.client = null;
+      }
     } catch (error: unknown) {
       this.logger.warn(
-        'Minio unavailable - document upload/download disabled until storage is running',
-        error instanceof Error ? error.message : String(error),
+        'Minio unavailable - document upload/download disabled until storage is running'
+      );
+      if (error instanceof Error) {
+        this.logger.warn(`Error name: ${error.name}`);
+        this.logger.warn(`Error message: ${error.message}`);
+        this.logger.warn(`Error stack: ${error.stack ?? 'no stack'}`);
+      } else {
+        this.logger.warn(`Raw error: ${JSON.stringify(error)}`);
+        this.logger.warn(`Error string: ${String(error)}`);
+      }
+      // Log the exact config that was used so we can confirm env vars
+      this.logger.warn(
+        `Config used — endpoint: ${this.configService.get('MINIO_ENDPOINT')}, ` +
+        `port: ${this.configService.get('MINIO_PORT')}, ` +
+        `ssl: ${this.configService.get('MINIO_USE_SSL')}, ` +
+        `accessKey length: ${(this.configService.get<string>('MINIO_ACCESS_KEY') ?? '').length} chars, ` +
+        `secretKey length: ${(this.configService.get<string>('MINIO_SECRET_KEY') ?? '').length} chars`
       );
       this.client = null;
     }
