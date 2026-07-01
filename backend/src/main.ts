@@ -62,7 +62,7 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(`Backend running on http://localhost:${port}/${apiPrefix}`, 'Bootstrap');
   Logger.log(`Swagger docs at http://localhost:${port}/${apiPrefix}/docs`, 'Bootstrap');
 }
