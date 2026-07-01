@@ -13,6 +13,7 @@ import {
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { averageProjectProgressPct } from '../../../project-management/application/utils/project-progress.util';
 import {
   buildOrderBy,
   buildPaginatedResult,
@@ -319,7 +320,7 @@ export class ReportingService {
       planningProjects,
       completedProjects,
       closedProjects,
-      progressAgg,
+      taskProgressGroups,
       budgetRows,
       usersTotal,
       usersActive,
@@ -366,9 +367,10 @@ export class ReportingService {
       this.prisma.project.count({
         where: { ...companyProjects, status: ProjectStatus.CLOSED },
       }),
-      this.prisma.project.aggregate({
-        where: companyProjects,
-        _avg: { overallProgressPct: true },
+      this.prisma.task.groupBy({
+        by: ['projectId'],
+        where: activeOnly({ project: companyProjects }),
+        _avg: { progressPct: true },
       }),
       this.prisma.project.findMany({
         where: companyProjects,
@@ -440,10 +442,11 @@ export class ReportingService {
       return sum + Number(row.budget);
     }, 0);
 
-    const averageProgressPct =
-      progressAgg._avg?.overallProgressPct != null
-        ? Math.round(progressAgg._avg.overallProgressPct)
-        : null;
+    const averageProgressPct = averageProjectProgressPct(
+      taskProgressGroups
+        .map((group) => group._avg.progressPct)
+        .filter((value): value is number => value != null),
+    );
 
     const topModules = auditModuleGroups
       .sort((a, b) => b._count._all - a._count._all)

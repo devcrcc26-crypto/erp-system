@@ -37,6 +37,9 @@ import {
   parseOptionalDecimal,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import {
+  resolveProjectProgressPct,
+} from '../utils/project-progress.util';
 import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
@@ -98,10 +101,18 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
+    const taskProgressByProjectId = await this.loadTaskProgressByProjectId(
+      rows.map((row) => row.id),
+    );
+
+    const mapped = rows.map((row) =>
+      this.mapProjectWithTaskProgress(row, taskProgressByProjectId),
+    );
+
     const data = await enrichRowsWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
-      rows.map(mapProject),
+      mapped,
       [['projectManagerId', 'projectManagerName']],
     );
 
@@ -121,10 +132,14 @@ export class ProjectsService {
       project.name,
     );
 
+    const taskProgressByProjectId = await this.loadTaskProgressByProjectId([
+      project.id,
+    ]);
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
-      mapProject(project),
+      this.mapProjectWithTaskProgress(project, taskProgressByProjectId),
       [['projectManagerId', 'projectManagerName']],
     );
   }
@@ -740,6 +755,43 @@ export class ProjectsService {
         updatedBy: actorId,
       },
     });
+  }
+
+  private async loadTaskProgressByProjectId(
+    projectIds: readonly string[],
+  ): Promise<Map<string, number>> {
+    if (projectIds.length === 0) {
+      return new Map();
+    }
+
+    const groups = await this.prisma.task.groupBy({
+      by: ['projectId'],
+      where: activeOnly({ projectId: { in: [...projectIds] } }),
+      _avg: { progressPct: true },
+    });
+
+    const progressByProjectId = new Map<string, number>();
+    for (const group of groups) {
+      if (group._avg.progressPct != null) {
+        progressByProjectId.set(group.projectId, group._avg.progressPct);
+      }
+    }
+
+    return progressByProjectId;
+  }
+
+  private mapProjectWithTaskProgress(
+    project: Parameters<typeof mapProject>[0],
+    taskProgressByProjectId: ReadonlyMap<string, number>,
+  ): MappedProject {
+    const mapped = mapProject(project);
+    return {
+      ...mapped,
+      overallProgressPct: resolveProjectProgressPct(
+        mapped.overallProgressPct,
+        taskProgressByProjectId.get(project.id),
+      ),
+    };
   }
 
   private computeScheduleMetrics(tasks: Task[]): {

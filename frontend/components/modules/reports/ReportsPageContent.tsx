@@ -441,6 +441,14 @@ function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
   const active = projects.filter((p) => p.status === 'ACTIVE').length;
   const completed = (byStatus.COMPLETED ?? 0) + (byStatus.CLOSED ?? 0);
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const progressValues = projects.map((project) => project.overallProgressPct);
+  const averageProgressPct =
+    progressValues.length > 0
+      ? Math.round(
+          progressValues.reduce((sum, value) => sum + value, 0) /
+            progressValues.length,
+        )
+      : null;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -452,7 +460,7 @@ function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
       planning: (byStatus.PLANNING ?? 0) + (byStatus.TENDER ?? 0),
       completed: byStatus.COMPLETED ?? 0,
       closed: byStatus.CLOSED ?? 0,
-      averageProgressPct: null,
+      averageProgressPct,
       totalBudget: null,
       byStatus,
       byType,
@@ -827,6 +835,19 @@ export default function ReportsPageContent(): React.ReactNode {
               icon={RiseOutlined}
               iconBg={tokens.colorAmber50}
               iconColor={tokens.colorAmber400}
+            />
+          </Col>
+          <Col xs={12} lg={6}>
+            <KPICard
+              label={t('pages.systemReports.metrics.averageProgress')}
+              value={
+                summary.projects.averageProgressPct != null
+                  ? `${summary.projects.averageProgressPct}%`
+                  : '-'
+              }
+              icon={RiseOutlined}
+              iconBg={tokens.colorGreen50}
+              iconColor={tokens.colorGreen600}
             />
           </Col>
         </Row>
