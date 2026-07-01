@@ -37,6 +37,7 @@ export class MinioStorageService implements IStorageService, OnModuleInit {
           'MINIO_SECRET_KEY',
           'erp_minio_dev_password',
         ),
+        pathStyle: true,
       });
 
       for (const bucket of Object.values(STORAGE_BUCKETS)) {
