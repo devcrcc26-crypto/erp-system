@@ -19,7 +19,6 @@ const projectResponse = {
   id: 'project-1',
   projectCode: 'PRJ-00001',
   name: 'Marina Tower',
-  nameEn: 'Marina Tower',
   nameZh: '滨海大厦',
   status: 'ACTIVE',
 };
@@ -78,7 +77,7 @@ describe('ProjectsController', () => {
       .post('/projects')
       .send({
         projectCode: 'PRJ-00001',
-        nameEn: 'Marina Tower',
+        name: 'Marina Tower',
         nameZh: '滨海大厦',
         projectType: 'COMMERCIAL',
         status: 'PLANNING',
@@ -97,7 +96,7 @@ describe('ProjectsController', () => {
       .post('/projects')
       .send({
         projectCode: 'PRJ-00002',
-        nameEn: 'Blocked Project',
+        name: 'Blocked Project',
         nameZh: '受阻项目',
         projectType: 'COMMERCIAL',
         status: 'PLANNING',

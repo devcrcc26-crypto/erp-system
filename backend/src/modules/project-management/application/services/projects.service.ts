@@ -39,7 +39,6 @@ import {
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
-import { syncLegacyNameField } from '../../../../shared/utils/bilingual-name.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -58,7 +57,6 @@ const PROJECT_SORT_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'name',
-  'nameEn',
   'nameZh',
   'projectCode',
   'status',
@@ -157,9 +155,8 @@ export class ProjectsService {
         data: {
           companyId: ctx.companyId,
           projectCode: dto.projectCode,
-          nameEn: dto.nameEn,
+          name: dto.name,
           nameZh: dto.nameZh,
-          name: syncLegacyNameField(dto.nameEn, dto.nameZh),
           clientCompanyId: dto.clientCompanyId,
           branchId: dto.branchId,
           location: dto.location,
@@ -309,30 +306,12 @@ export class ProjectsService {
       }
     }
 
-    let bilingualNameUpdate: {
-      nameEn?: string;
-      nameZh?: string;
-      name?: string;
-    } = {};
-    if (dto.nameEn !== undefined || dto.nameZh !== undefined) {
-      const current = await this.prisma.project.findFirst({
-        where: activeOnly({ id, companyId: ctx.companyId }),
-        select: { nameEn: true, nameZh: true },
-      });
-      const nameEn = dto.nameEn ?? current?.nameEn ?? '';
-      const nameZh = dto.nameZh ?? current?.nameZh ?? '';
-      bilingualNameUpdate = {
-        ...(dto.nameEn !== undefined ? { nameEn: dto.nameEn } : {}),
-        ...(dto.nameZh !== undefined ? { nameZh: dto.nameZh } : {}),
-        name: syncLegacyNameField(nameEn, nameZh),
-      };
-    }
-
     const project = await this.prisma.project.update({
       where: { id },
       data: {
         projectCode: dto.projectCode,
-        ...bilingualNameUpdate,
+        name: dto.name,
+        nameZh: dto.nameZh,
         clientCompanyId: dto.clientCompanyId,
         branchId: dto.branchId,
         location: dto.location,
@@ -665,7 +644,6 @@ export class ProjectsService {
       const term = query.search.trim();
       where.OR = [
         { name: { contains: term, mode: 'insensitive' } },
-        { nameEn: { contains: term, mode: 'insensitive' } },
         { nameZh: { contains: term, mode: 'insensitive' } },
         { projectCode: { contains: term, mode: 'insensitive' } },
         { location: { contains: term, mode: 'insensitive' } },

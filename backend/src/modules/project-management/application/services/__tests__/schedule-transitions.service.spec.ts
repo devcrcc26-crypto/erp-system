@@ -18,7 +18,6 @@ describe('ScheduleService status transitions', () => {
       dispatcherUserId: null,
       taskIdCode: 'TASK-001',
       name: 'Foundation work',
-      nameEn: 'Foundation work',
       nameZh: '基础工程',
       description: null,
       startDate: null,
@@ -152,17 +151,18 @@ describe('ScheduleService status transitions', () => {
     it('skips transition check when status is not in DTO', async () => {
       prisma.task.findFirst
         .mockResolvedValueOnce({ id: taskId })
-        .mockResolvedValueOnce({ nameEn: 'Foundation work', nameZh: '基础工程' });
+        .mockResolvedValueOnce({ name: 'Foundation work', nameZh: '基础工程' });
       prisma.task.update.mockResolvedValue(buildTask('NOT_STARTED'));
 
       const result = await service.updateTask(ctx, projectId, taskId, {
-        nameEn: 'Updated name',
+        name: 'Updated name',
         nameZh: '更新名称',
       });
 
-      expect(prisma.task.findFirst).toHaveBeenCalledTimes(2);
+      expect(prisma.task.findFirst).toHaveBeenCalledTimes(1);
       expect(prisma.task.update).toHaveBeenCalled();
-      expect(result.name).toBe('Foundation work / 基础工程');
+      expect(result.name).toBe('Foundation work');
+      expect(result.nameZh).toBe('基础工程');
     });
 
     it('allows update when status is unchanged (IN_PROGRESS → IN_PROGRESS)', async () => {
@@ -173,7 +173,7 @@ describe('ScheduleService status transitions', () => {
 
       const result = await service.updateTask(ctx, projectId, taskId, {
         status: 'IN_PROGRESS' as TaskStatus,
-        nameEn: 'Updated foundation work',
+        name: 'Updated foundation work',
         nameZh: '更新基础工程',
       });
 

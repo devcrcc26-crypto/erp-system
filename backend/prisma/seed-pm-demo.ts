@@ -155,32 +155,29 @@ function mapProjectTeamRole(label: string): ProjectTeamRole {
   return ProjectTeamRole.OTHER;
 }
 
-export function seedBilingualNames(
-  nameEn: string,
+export function seedLocalizedNames(
+  name: string,
   nameZh?: string,
-): { name: string; nameEn: string; nameZh: string } {
-  const english = nameEn.trim();
-  const chinese = (nameZh ?? nameEn).trim();
+): { name: string; nameZh: string | null } {
+  const english = name.trim();
+  const chinese = nameZh?.trim();
   return {
-    name: english || chinese,
-    nameEn: english || chinese,
-    nameZh: chinese || english,
+    name: english,
+    nameZh: chinese && chinese.length > 0 ? chinese : null,
   };
 }
 
 function resolveProjectNames(def: DemoProjectDef): {
   name: string;
-  nameEn: string;
-  nameZh: string;
+  nameZh: string | null;
 } {
-  return seedBilingualNames(def.nameEn ?? def.name, def.nameZh ?? def.name);
+  return seedLocalizedNames(def.name, def.nameZh);
 }
 
 export interface DemoProjectDef {
   index: number;
   code: string;
   name: string;
-  nameEn?: string;
   nameZh?: string;
   location: string;
   projectType: ProjectType;
@@ -493,7 +490,7 @@ export async function seedProjectBundle(
       milestoneId: milestone1Id,
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T100`,
-      ...seedBilingualNames('Foundation and piling', '基础与桩基工程'),
+      ...seedLocalizedNames('Foundation and piling', '基础与桩基工程'),
       description: 'Pile caps, ground beams - blinding concrete.',
       startDate: d(def.startDate),
       finishDate: d('2026-05-31'),
@@ -516,7 +513,7 @@ export async function seedProjectBundle(
       milestoneId: milestone2Id,
       dispatcherUserId: users.pmUserId,
       taskIdCode: `${prefix}-T200`,
-      ...seedBilingualNames('Superstructure and envelope', '上部结构与围护'),
+      ...seedLocalizedNames('Superstructure and envelope', '上部结构与围护'),
       description: 'Structural frame, cladding - MEP rough-in.',
       startDate: d('2026-06-01'),
       finishDate: d(def.plannedFinishDate),

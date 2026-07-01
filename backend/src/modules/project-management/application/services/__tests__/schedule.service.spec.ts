@@ -20,7 +20,6 @@ describe('ScheduleService', () => {
       dispatcherUserId,
       taskIdCode: 'TASK-00001',
       name: 'Foundation work',
-      nameEn: 'Foundation work',
       nameZh: '基础工程',
       description: null,
       startDate: null,
@@ -115,7 +114,7 @@ describe('ScheduleService', () => {
 
       await expect(
         service.createTask(ctx, projectId, {
-          nameEn: 'Foundation work',
+          name: 'Foundation work',
           nameZh: '基础工程',
           dispatcherUserId,
         }),
@@ -124,6 +123,23 @@ describe('ScheduleService', () => {
       );
 
       expect(prisma.task.create).not.toHaveBeenCalled();
+    });
+
+    it('persists nameZh when provided on create', async () => {
+      prisma.projectTeam.count.mockResolvedValue(1);
+      prisma.task.create.mockResolvedValue(buildTask('NOT_STARTED'));
+
+      await service.createTask(ctx, projectId, {
+        name: 'Foundation work',
+        nameZh: '基础工程',
+      });
+
+      expect(prisma.task.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: 'Foundation work',
+          nameZh: '基础工程',
+        }),
+      });
     });
   });
 

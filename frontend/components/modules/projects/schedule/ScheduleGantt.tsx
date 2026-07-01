@@ -17,6 +17,7 @@ import {
   formatScheduleVariance,
 } from '@/lib/utils/schedule-metrics';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import {
   formatTaskStatus,
   taskStatusVariant,
@@ -109,7 +110,7 @@ function TaskTimelineBar({
     <Tooltip
       title={
         <div className="space-y-1 text-xs">
-          <p className="font-medium">{task.name}</p>
+          <p className="font-medium">{formatLocalizedName(task)}</p>
           <p>
             {formatProjectDate(task.startDate)} →{' '}
             {formatProjectDate(task.finishDate)}
@@ -267,7 +268,7 @@ export default function ScheduleGantt({
                         <p className="text-sm font-semibold text-slate-900">
                           {task.taskIdCode}
                         </p>
-                        <p className="text-xs text-slate-500">{task.name}</p>
+                        <p className="text-xs text-slate-500">{formatLocalizedName(task)}</p>
                       </div>
                       <StatusBadge
                         label={formatTaskStatus(task.status)}
@@ -361,7 +362,7 @@ export default function ScheduleGantt({
                             {task.taskIdCode}
                           </p>
                           <p className="truncate text-xs text-slate-500">
-                            {task.name}
+                            {formatLocalizedName(task)}
                           </p>
                         </div>
                         <StatusBadge

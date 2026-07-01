@@ -24,7 +24,6 @@ const taskResponse = {
   projectId,
   taskIdCode: 'TASK-00001',
   name: 'Foundation work',
-  nameEn: 'Foundation work',
   nameZh: '基础工程',
   status: 'NOT_STARTED',
 };

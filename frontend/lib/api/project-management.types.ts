@@ -145,8 +145,7 @@ export interface Project {
   branchId: string | null;
   projectCode: string;
   name: string;
-  nameEn: string;
-  nameZh: string;
+  nameZh: string | null;
   location: string | null;
   projectType: ProjectType | null;
   contractType: string | null;
@@ -176,7 +175,6 @@ export interface ProjectSummary extends Pick<
   | 'id'
   | 'projectCode'
   | 'name'
-  | 'nameEn'
   | 'nameZh'
   | 'status'
   | 'projectManagerId'
@@ -232,8 +230,7 @@ export interface Task {
   dispatcherUserId: string | null;
   taskIdCode: string;
   name: string;
-  nameEn: string;
-  nameZh: string;
+  nameZh: string | null;
   description: string | null;
   startDate: string | null;
   finishDate: string | null;
@@ -716,8 +713,8 @@ export interface CloseoutDetail extends Closeout {
 
 export interface CreateProjectRequest {
   projectCode: string;
-  nameEn: string;
-  nameZh: string;
+  name: string;
+  nameZh?: string;
   clientCompanyId?: string;
   branchId?: string;
   location?: string;
@@ -847,8 +844,8 @@ export interface CreateTaskRequest {
   parentTaskId?: string;
   dispatcherUserId?: string;
   taskIdCode?: string;
-  nameEn: string;
-  nameZh: string;
+  name: string;
+  nameZh?: string;
   description?: string;
   startDate?: string;
   finishDate?: string;

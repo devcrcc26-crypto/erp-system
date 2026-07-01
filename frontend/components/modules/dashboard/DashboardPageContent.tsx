@@ -8,6 +8,7 @@ import DashboardCharts from '@/components/charts/DashboardCharts';
 import DashboardStats from '@/components/modules/dashboard/DashboardStats';
 import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilters } from '@/lib/dashboard/types';
 import { usePortfolioDashboard } from '@/lib/query/dashboard';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 
 export default function DashboardPageContent(): React.ReactNode {
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_DASHBOARD_FILTERS);
@@ -19,7 +20,7 @@ export default function DashboardPageContent(): React.ReactNode {
 
   const projectOptions = dashboard.projects.map((project) => ({
     value: project.id,
-    label: `${project.projectCode} — ${project.name}`,
+    label: `${project.projectCode} — ${formatLocalizedName(project)}`,
   }));
 
   return (

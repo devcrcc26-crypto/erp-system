@@ -457,8 +457,7 @@ erDiagram
   String branch_id FK "nullable"
   String project_code
   String name
-  String name_en
-  String name_zh
+  String name_zh "nullable"
   String location "nullable"
   ProjectType project_type "nullable"
   String contract_type "nullable"
@@ -520,8 +519,7 @@ erDiagram
   String dispatcher_user_id FK "nullable"
   String task_id_code
   String name
-  String name_en
-  String name_zh
+  String name_zh "nullable"
   String description "nullable"
   DateTime start_date "nullable"
   DateTime finish_date "nullable"
@@ -1922,7 +1920,6 @@ Properties as follows:
 - `branch_id`:
 - `project_code`:
 - `name`:
-- `name_en`:
 - `name_zh`:
 - `location`:
 - `project_type`:
@@ -1994,7 +1991,6 @@ Properties as follows:
 - `dispatcher_user_id`:
 - `task_id_code`:
 - `name`:
-- `name_en`:
 - `name_zh`:
 - `description`:
 - `start_date`:

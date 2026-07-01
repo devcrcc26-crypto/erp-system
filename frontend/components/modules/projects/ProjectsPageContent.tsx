@@ -36,6 +36,7 @@ import {
   formatProjectType,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 
@@ -115,16 +116,10 @@ export default function ProjectsPageContent(): React.ReactNode {
         ),
       },
       {
-        title: 'English name',
-        dataIndex: 'nameEn',
-        key: 'nameEn',
+        title: 'Name',
+        key: 'name',
         ellipsis: true,
-      },
-      {
-        title: 'Chinese name',
-        dataIndex: 'nameZh',
-        key: 'nameZh',
-        ellipsis: true,
+        render: (_value, record) => formatLocalizedName(record),
       },
       {
         title: 'Type',

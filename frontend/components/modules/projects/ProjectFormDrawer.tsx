@@ -38,8 +38,8 @@ const PROJECT_TYPE_OPTIONS: Array<{ value: ProjectType; label: string }> = [
 
 interface ProjectFormValues {
   projectCode: string;
-  nameEn: string;
-  nameZh: string;
+  name: string;
+  nameZh?: string;
   location?: string;
   projectType?: ProjectType;
   contractType?: string;
@@ -64,8 +64,8 @@ interface ProjectFormValues {
 function toFormValues(project: Project): ProjectFormValues {
   return {
     projectCode: project.projectCode,
-    nameEn: project.nameEn,
-    nameZh: project.nameZh,
+    name: project.name,
+    nameZh: project.nameZh ?? undefined,
     location: project.location ?? undefined,
     projectType: project.projectType ?? undefined,
     contractType: project.contractType ?? undefined,
@@ -95,8 +95,8 @@ function toFormValues(project: Project): ProjectFormValues {
 function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
   return {
     projectCode: values.projectCode.trim(),
-    nameEn: values.nameEn.trim(),
-    nameZh: values.nameZh.trim(),
+    name: values.name.trim(),
+    nameZh: values.nameZh?.trim() || undefined,
     location: values.location?.trim() || undefined,
     projectType: values.projectType,
     contractType: values.contractType?.trim() || undefined,
@@ -173,7 +173,7 @@ export default function ProjectFormDrawer({
         error instanceof ApiRequestError
           ? error.message
           : 'Failed to save project.';
-      form.setFields([{ name: 'nameEn', errors: [message] }]);
+      form.setFields([{ name: 'name', errors: [message] }]);
     }
   }
 
@@ -221,22 +221,17 @@ export default function ProjectFormDrawer({
           </Form.Item>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label="English name"
-            name="nameEn"
-            rules={[{ required: true, message: 'English name is required' }]}
-          >
-            <Input placeholder="Project name in English" />
-          </Form.Item>
-          <Form.Item
-            label="Chinese name"
-            name="nameZh"
-            rules={[{ required: true, message: 'Chinese name is required' }]}
-          >
-            <Input placeholder="项目中文名称" />
-          </Form.Item>
-        </div>
+        <Form.Item
+          label="Name"
+          name="name"
+          rules={[{ required: true, message: 'Project name is required' }]}
+        >
+          <Input placeholder="Project name" />
+        </Form.Item>
+
+        <Form.Item label="Chinese Name (optional)" name="nameZh">
+          <Input placeholder="项目中文名称" />
+        </Form.Item>
 
         <Form.Item label="Location" name="location">
           <Input placeholder="Site location" />

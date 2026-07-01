@@ -77,11 +77,12 @@ export class CreateProjectDto {
 
   @ApiProperty()
   @IsString()
-  nameEn!: string;
+  name!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  nameZh!: string;
+  nameZh?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -272,11 +273,12 @@ export class CreateTaskDto {
 
   @ApiProperty()
   @IsString()
-  nameEn!: string;
+  name!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  nameZh!: string;
+  nameZh?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

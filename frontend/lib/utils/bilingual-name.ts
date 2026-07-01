@@ -1,46 +1,27 @@
-export interface BilingualNameFields {
-  name?: string;
-  nameEn: string;
-  nameZh: string;
+export interface LocalizedNameFields {
+  name: string;
+  nameZh?: string | null;
 }
 
 /**
- * Formats bilingual entity names for compact display.
+ * Formats an English name with an optional Chinese name for display.
  */
-export function formatBilingualName(
-  entity: BilingualNameFields,
-  locale?: string | null,
+export function formatLocalizedName(
+  entity: LocalizedNameFields,
 ): string {
-  const english = entity.nameEn.trim();
-  const chinese = entity.nameZh.trim();
+  const english = entity.name.trim();
+  const chinese = (entity.nameZh ?? '').trim();
 
-  if (locale === 'zh' || locale === 'zh-CN') {
-    return chinese || english || entity.name?.trim() || '';
+  if (chinese) {
+    return `${english} · ${chinese}`;
   }
 
-  if (english && chinese) {
-    if (english === chinese) {
-      return english;
-    }
-    return `${english} / ${chinese}`;
-  }
-
-  return english || chinese || entity.name?.trim() || '';
+  return english;
 }
 
 /**
- * Returns the primary localized name for a single-language context.
+ * Returns the English name only.
  */
-export function primaryLocalizedName(
-  entity: BilingualNameFields,
-  locale?: string | null,
-): string {
-  const english = entity.nameEn.trim();
-  const chinese = entity.nameZh.trim();
-
-  if (locale === 'zh' || locale === 'zh-CN') {
-    return chinese || english || entity.name?.trim() || '';
-  }
-
-  return english || chinese || entity.name?.trim() || '';
+export function primaryName(entity: LocalizedNameFields): string {
+  return entity.name.trim() || (entity.nameZh ?? '').trim();
 }

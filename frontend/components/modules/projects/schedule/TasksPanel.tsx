@@ -34,7 +34,7 @@ import {
   type ScheduleSubtaskEntry,
 } from '@/lib/query/schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatBilingualName } from '@/lib/utils/bilingual-name';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import {
   computeScheduleSubtaskRollup,
   getScheduleSubtaskDisplayStatus,
@@ -164,14 +164,14 @@ export default function TasksPanel({
   const taskLabelById = useMemo(() => {
     const labels = new Map<string, string>();
     for (const task of allTasks) {
-      labels.set(task.id, `${task.taskIdCode} - ${formatBilingualName(task)}`);
+      labels.set(task.id, `${task.taskIdCode} - ${formatLocalizedName(task)}`);
     }
     return labels;
   }, [allTasks]);
 
   const taskOptions = allTasks.map((task) => ({
     value: task.id,
-    label: taskLabelById.get(task.id) ?? formatBilingualName(task),
+    label: taskLabelById.get(task.id) ?? formatLocalizedName(task),
   }));
 
   const dependencySaving = createDependency.isPending || updateDependency.isPending;
@@ -190,8 +190,8 @@ export default function TasksPanel({
         record.rowType === 'task' ? record.task.taskIdCode : null,
     },
     {
-      title: 'English name',
-      key: 'nameEn',
+      title: 'Name',
+      key: 'name',
       ellipsis: true,
       render: (_value, record) => {
         if (record.rowType === 'task') {
@@ -202,7 +202,7 @@ export default function TasksPanel({
 
           return (
             <div>
-              <span>{record.task.nameEn}</span>
+              <span>{formatLocalizedName(record.task)}</span>
               {rollup && (
                 <p
                   className="mt-0.5 text-[11px]"
@@ -236,13 +236,6 @@ export default function TasksPanel({
           </div>
         );
       },
-    },
-    {
-      title: 'Chinese name',
-      key: 'nameZh',
-      ellipsis: true,
-      render: (_value, record) =>
-        record.rowType === 'task' ? record.task.nameZh : null,
     },
     {
       title: 'Start',

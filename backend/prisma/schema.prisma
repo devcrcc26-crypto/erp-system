@@ -1287,8 +1287,7 @@ model Project {
   branchId          String?       @map("branch_id")
   projectCode       String        @map("project_code")
   name              String
-  nameEn            String        @map("name_en")
-  nameZh            String        @map("name_zh")
+  nameZh            String?       @map("name_zh")
   location          String?
   projectType       ProjectType?  @map("project_type")
   contractType      String?       @map("contract_type")
@@ -1401,8 +1400,7 @@ model Task {
   dispatcherUserId String? @map("dispatcher_user_id")
   taskIdCode       String  @map("task_id_code")
   name         String
-  nameEn       String  @map("name_en")
-  nameZh       String  @map("name_zh")
+  nameZh       String? @map("name_zh")
   description  String?
   startDate    DateTime?  @map("start_date") @db.Date
   finishDate   DateTime?  @map("finish_date") @db.Date

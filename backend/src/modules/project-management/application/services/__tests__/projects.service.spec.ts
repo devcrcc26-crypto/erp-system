@@ -31,7 +31,7 @@ describe('ProjectsService', () => {
       create: jest.Mock;
       update: jest.Mock;
     };
-    user: { findFirst: jest.Mock };
+    user: { findFirst: jest.Mock; findMany: jest.Mock };
     rfi: { count: jest.Mock };
     issue: { count: jest.Mock };
     punchItem: { count: jest.Mock };
@@ -56,6 +56,7 @@ describe('ProjectsService', () => {
       },
       user: {
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       rfi: {
         count: jest.fn(),
@@ -100,7 +101,6 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'DEMO-002',
         name: 'Airport Expansion',
-        nameEn: 'Airport Expansion',
         nameZh: '机场扩建',
         projectManagerId,
       };
@@ -133,7 +133,7 @@ describe('ProjectsService', () => {
 
       await service.createProject(ctx, {
         projectCode: 'DEMO-002',
-        nameEn: 'Airport Expansion',
+        name: 'Airport Expansion',
         nameZh: '机场扩建',
         projectManagerId,
       });
@@ -149,6 +149,100 @@ describe('ProjectsService', () => {
         data: expect.objectContaining({
           projectId,
           userId: projectManagerId,
+        }),
+      });
+    });
+  });
+
+  describe('chinese name fields', () => {
+    it('persists nameZh when provided on create', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'DEMO-003',
+        name: 'Marina Tower',
+        nameZh: '滨海大厦',
+        projectManagerId: ctx.userId,
+      });
+
+      prisma.$transaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            project: { create: projectCreate },
+            projectTeam: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn(),
+              update: jest.fn(),
+            },
+          }),
+      );
+
+      await service.createProject(ctx, {
+        projectCode: 'DEMO-003',
+        name: 'Marina Tower',
+        nameZh: '滨海大厦',
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: 'Marina Tower',
+          nameZh: '滨海大厦',
+        }),
+      });
+    });
+
+    it('creates project without nameZh when omitted', async () => {
+      const projectCreate = jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'DEMO-004',
+        name: 'Riverside Complex',
+        nameZh: null,
+        projectManagerId: ctx.userId,
+      });
+
+      prisma.$transaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({
+            project: { create: projectCreate },
+            projectTeam: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn(),
+              update: jest.fn(),
+            },
+          }),
+      );
+
+      await service.createProject(ctx, {
+        projectCode: 'DEMO-004',
+        name: 'Riverside Complex',
+      });
+
+      expect(projectCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: 'Riverside Complex',
+          nameZh: undefined,
+        }),
+      });
+    });
+
+    it('updates project to add nameZh later', async () => {
+      prisma.project.update.mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'DEMO-005',
+        name: 'Office Tower',
+        nameZh: '办公大楼',
+      });
+
+      await service.updateProject(ctx, projectId, {
+        nameZh: '办公大楼',
+      });
+
+      expect(prisma.project.update).toHaveBeenCalledWith({
+        where: { id: projectId },
+        data: expect.objectContaining({
+          nameZh: '办公大楼',
         }),
       });
     });

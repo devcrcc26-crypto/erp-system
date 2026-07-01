@@ -43,6 +43,7 @@ import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import TaskSubtasksSection from '@/components/modules/projects/schedule/TaskSubtasksSection';
 import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
 
@@ -80,8 +81,8 @@ const COMPLETION_STATUS_OPTIONS: Array<{
 
 interface TaskFormValues {
   taskIdCode?: string;
-  nameEn: string;
-  nameZh: string;
+  name: string;
+  nameZh?: string;
   description?: string;
   milestoneId?: string;
   dispatcherUserId?: string;
@@ -152,8 +153,8 @@ function toExtendedPayload(
 function toFormValues(task: Task): TaskFormValues {
   return {
     taskIdCode: task.taskIdCode,
-    nameEn: task.nameEn,
-    nameZh: task.nameZh,
+    name: task.name,
+    nameZh: task.nameZh ?? undefined,
     description: task.description ?? undefined,
     milestoneId: task.milestoneId ?? undefined,
     dispatcherUserId: task.dispatcherUserId ?? undefined,
@@ -273,8 +274,8 @@ export default function TaskFormDrawer({
     const durationDays = durationFromFormDates(values.startDate, values.finishDate);
 
     const base = {
-      nameEn: values.nameEn.trim(),
-      nameZh: values.nameZh.trim(),
+      name: values.name.trim(),
+      nameZh: values.nameZh?.trim() || undefined,
       description: values.description?.trim() || undefined,
       milestoneId: values.milestoneId,
       startDate: values.startDate?.toISOString(),
@@ -316,7 +317,7 @@ export default function TaskFormDrawer({
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
-      title={isEditing ? 'Edit task' : 'Add task'}
+      title={isEditing && task ? formatLocalizedName(task) : isEditing ? 'Edit task' : 'Add task'}
       onClose={onClose}
     >
       <div className="flex flex-col gap-6">
@@ -365,22 +366,16 @@ export default function TaskFormDrawer({
           </Form.Item>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label="English name"
-            name="nameEn"
-            rules={[{ required: true, message: 'English name is required' }]}
-          >
-            <Input placeholder="Task name in English" />
-          </Form.Item>
-          <Form.Item
-            label="Chinese name"
-            name="nameZh"
-            rules={[{ required: true, message: 'Chinese name is required' }]}
-          >
-            <Input placeholder="任务中文名称" />
-          </Form.Item>
-        </div>
+        <Form.Item
+          label="Name"
+          name="name"
+          rules={[{ required: true, message: 'Name is required' }]}
+        >
+          <Input placeholder="Task name" />
+        </Form.Item>
+        <Form.Item label="Chinese Name (optional)" name="nameZh">
+          <Input placeholder="任务中文名称" />
+        </Form.Item>
         <Form.Item label="Description" name="description">
           <Input.TextArea rows={2} />
         </Form.Item>

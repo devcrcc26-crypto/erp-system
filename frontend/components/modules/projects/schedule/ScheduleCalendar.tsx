@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type { Task } from '@/lib/api/project-management.types';
 import { tokens } from '@/lib/theme/tokens';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 
 type CalendarViewMode = 'month' | 'year';
 
@@ -116,7 +117,7 @@ export default function ScheduleCalendar({
               key={`${key}-${task.id}`}
               className="truncate rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
               style={{ backgroundColor: taskAccentColor(task) }}
-              title={`${task.taskIdCode} - ${task.name}`}
+              title={`${task.taskIdCode} - ${formatLocalizedName(task)}`}
             >
               {task.taskIdCode}
             </li>
@@ -151,7 +152,7 @@ export default function ScheduleCalendar({
               <li
                 key={`${key}-${task.id}`}
                 className="truncate text-[11px] text-slate-600"
-                title={task.name}
+                title={formatLocalizedName(task)}
               >
                 <span
                   className="mr-1 inline-block h-2 w-2 rounded-full"

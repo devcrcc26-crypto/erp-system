@@ -15,6 +15,7 @@ import {
 } from '@/config/navConfig';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useProject, toProjectSummary } from '@/lib/query/projects';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { useProjectContextStore } from '@/stores/project-context.store';
 
 /**
@@ -66,8 +67,11 @@ export default function AppShell({
   }, [pathname]);
 
   const projectName =
-    activeProject?.name ??
-    projectQuery.data?.name ??
+    (activeProject
+      ? formatLocalizedName(activeProject)
+      : projectQuery.data
+        ? formatLocalizedName(projectQuery.data)
+        : null) ??
     (projectQuery.isLoading ? '…' : t('nav.projects'));
 
   const routeMeta = resolveRouteMeta(pathname, projectName, t);
