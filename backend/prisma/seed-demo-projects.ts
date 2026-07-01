@@ -86,6 +86,9 @@ const PROJECT_1_DEF: DemoProjectDef = {
   plannedFinishDate: '2025-06-30',
   actualFinishDate: '2025-05-28',
   contractType: 'LUMP_SUM',
+  grossFloorAreaM2: 112_000,
+  designProperties: 'EPC',
+  designStage: 'As-Built',
 };
 
 const PROJECT_2_DEF: DemoProjectDef = {
@@ -100,6 +103,9 @@ const PROJECT_2_DEF: DemoProjectDef = {
   startDate: '2024-04-15',
   plannedFinishDate: '2027-12-31',
   contractType: 'COST_PLUS',
+  grossFloorAreaM2: 198_500,
+  designProperties: 'Design-Build',
+  designStage: 'Detailed Design',
 };
 
 const PROJECT_3_DEF: DemoProjectDef = {
@@ -114,6 +120,9 @@ const PROJECT_3_DEF: DemoProjectDef = {
   startDate: '2025-11-01',
   plannedFinishDate: '2028-04-30',
   contractType: 'LUMP_SUM',
+  grossFloorAreaM2: 48_200,
+  designProperties: 'Design-Bid-Build',
+  designStage: 'Preliminary Design',
 };
 
 let pdfRegistry: Map<string, SeedPdfEntry> = new Map();
@@ -2390,7 +2399,7 @@ async function seedProject2(
   const def = PROJECT_2_DEF;
   const { projectId, projectCode } = await seedProjectBundle(ctx, def, users);
 
-  await prisma.task.update({
+  await ctx.prisma.task.update({
     where: { id: sid(def.index, 30) },
     data: { dispatcherUserId: U.dispatcher, progressPct: 58, updatedBy: ctx.adminUserId },
   });
@@ -2425,11 +2434,11 @@ async function seedProject3(
 
   await removeCloseoutAndPunch(ctx, projectId);
 
-  await prisma.project.update({
+  await ctx.prisma.project.update({
     where: { id: projectId },
     data: { status: ProjectStatus.MOBILIZATION, updatedBy: ctx.adminUserId },
   });
-  await prisma.task.updateMany({
+  await ctx.prisma.task.updateMany({
     where: { projectId },
     data: { progressPct: 8, status: 'IN_PROGRESS', updatedBy: ctx.adminUserId },
   });
@@ -2555,6 +2564,39 @@ async function verifySeed(ctx: PmSeedContext): Promise<void> {
 
   console.log('\n=== Demo Projects Seed Verification ===');
   console.table(rows);
+}
+
+/**
+ * Appends ZMC / LJZ / PDR rich demo projects without clearing existing DEMO-* data.
+ */
+export async function appendRichDemoProjects(ctx: PmSeedContext): Promise<void> {
+  console.log('Appending rich demo projects (ZMC-2023-002, LJZ-2024-001, PDR-2025-003)...');
+
+  await ensureExtraUsers(ctx);
+
+  pdfRegistry = createSeedPdfFiles();
+  console.log(`  Created ${pdfRegistry.size} seed PDF files on disk`);
+
+  const users = await seedDemoUsers(ctx);
+  const userIds = {
+    pmUserId: U.pm,
+    engineerUserId: U.engineer,
+    safetyUserId: U.safety,
+    docsUserId: U.docs,
+  };
+
+  await seedProject1(ctx, users);
+  await seedProject2(ctx, users);
+  await seedProject3(ctx, users);
+
+  try {
+    console.log('  Uploading seed files to object storage...');
+    await uploadAllSeedFilesToMinio(ctx.prisma, pdfRegistry);
+    console.log('  Seed file upload complete');
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.warn(`  Seed file upload skipped or failed: ${reason}`);
+  }
 }
 
 /**

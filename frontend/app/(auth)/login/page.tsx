@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Form, Input, Spin } from 'antd';
 import Card from '@/components/ui/Card/Card';
+import { DemoLoginCredentials } from '@/components/auth/DemoLoginCredentials';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { signOutLocally, completeLocalSignIn } from '@/lib/auth/sign-out-locally';
 import { useAuthStore } from '@/stores/auth.store';
@@ -51,6 +52,12 @@ function LoginForm(): React.ReactNode {
     }
   }, [hasExplicitLoginIntent]);
 
+  function handleSelectDemoAccount(email: string, password: string): void {
+    form.setFieldsValue({ email, password });
+    setErrorMessage(null);
+    setInfoMessage(null);
+  }
+
   async function handleSubmit(values: LoginFormValues): Promise<void> {
     setErrorMessage(null);
     setInfoMessage(null);
@@ -58,9 +65,6 @@ function LoginForm(): React.ReactNode {
 
     try {
       const tokens = await login.mutateAsync(values);
-      // Guarantee identity is in Zustand before navigation; the dashboard must
-      // never mount with a stale or empty user. Capabilities load asynchronously
-      // via SessionCapabilitiesSync after the token is present.
       setAuth(tokens);
       completeLocalSignIn();
       const redirectTo = searchParams.get('from') ?? '/';
@@ -89,9 +93,7 @@ function LoginForm(): React.ReactNode {
 
     try {
       const result = await resendActivation.mutateAsync({ email });
-      setInfoMessage(
-        `${result.message} In local development, check the backend terminal for the activation link.`,
-      );
+      setInfoMessage(result.message);
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
@@ -102,90 +104,94 @@ function LoginForm(): React.ReactNode {
   }
 
   return (
-    <Card
-      className="w-full max-w-md shadow-sm"
-      styles={{ body: { padding: 32 } }}
-      style={{ borderRadius: 6 }}
-    >
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">CCECC PWF</h1>
-        <p className="mt-2 text-sm text-slate-500">Sign in to your account</p>
-      </div>
-
-      <Form<LoginFormValues>
-        form={form}
-        layout="vertical"
-        requiredMark={false}
-        onFinish={(values: LoginFormValues) => void handleSubmit(values)}
+    <div className="flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start lg:justify-center">
+      <Card
+        className="w-full shadow-sm lg:max-w-md"
+        styles={{ body: { padding: 32 } }}
+        style={{ borderRadius: 6 }}
       >
-        <Form.Item
-          label="Email"
-          name="email"
-          rules={[
-            { required: true, message: 'Email is required' },
-            { type: 'email', message: 'Enter a valid email' },
-          ]}
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-slate-900">CCECC PWF</h1>
+          <p className="mt-2 text-sm text-slate-500">Sign in to your account</p>
+        </div>
+
+        <Form<LoginFormValues>
+          form={form}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values: LoginFormValues) => void handleSubmit(values)}
         >
-          <Input placeholder="admin@company.local" autoComplete="email" />
-        </Form.Item>
-        <DemoEmailWarning email={watchedEmail} />
-
-        <Form.Item
-          label={
-            <div className="flex w-full items-center justify-between">
-              <span>Password</span>
-              <Link
-                href="/forgot-password"
-                className="text-xs font-medium text-orange-600 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-          }
-          name="password"
-          rules={[
-            { required: true, message: 'Password is required' },
-            { min: 8, message: 'Password must be at least 8 characters' },
-          ]}
-        >
-          <Input.Password autoComplete="current-password" />
-        </Form.Item>
-
-        {hasExplicitLoginIntent && (
-          <Alert
-            type="warning"
-            showIcon
-            className="!mb-4"
-            title="Sign in with the account you just updated. Any previous session in this browser has been cleared."
-          />
-        )}
-
-        {infoMessage && (
-          <Alert type="success" showIcon className="!mb-4" title={infoMessage} />
-        )}
-
-        {errorMessage && (
-          <Alert type="error" showIcon className="!mb-4" title={errorMessage} />
-        )}
-
-        {showResendActivation && (
-          <Button
-            block
-            className="!mb-4"
-            onClick={() => void handleResendActivation()}
-            loading={resendActivation.isPending}
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[
+              { required: true, message: 'Email is required' },
+              { type: 'email', message: 'Enter a valid email' },
+            ]}
           >
-            Resend activation email
-          </Button>
-        )}
+            <Input placeholder="pm@company.local" autoComplete="email" />
+          </Form.Item>
+          <DemoEmailWarning email={watchedEmail} />
 
-        <Form.Item className="!mb-0">
-          <Button type="primary" htmlType="submit" block loading={login.isPending}>
-            {login.isPending ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </Form.Item>
-      </Form>
-    </Card>
+          <Form.Item
+            label={
+              <div className="flex w-full items-center justify-between">
+                <span>Password</span>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-orange-600 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            }
+            name="password"
+            rules={[
+              { required: true, message: 'Password is required' },
+              { min: 8, message: 'Password must be at least 8 characters' },
+            ]}
+          >
+            <Input.Password autoComplete="current-password" />
+          </Form.Item>
+
+          {hasExplicitLoginIntent && (
+            <Alert
+              type="warning"
+              showIcon
+              className="!mb-4"
+              title="Sign in with the account you just updated. Any previous session in this browser has been cleared."
+            />
+          )}
+
+          {infoMessage && (
+            <Alert type="success" showIcon className="!mb-4" title={infoMessage} />
+          )}
+
+          {errorMessage && (
+            <Alert type="error" showIcon className="!mb-4" title={errorMessage} />
+          )}
+
+          {showResendActivation && (
+            <Button
+              block
+              className="!mb-4"
+              onClick={() => void handleResendActivation()}
+              loading={resendActivation.isPending}
+            >
+              Resend activation email
+            </Button>
+          )}
+
+          <Form.Item className="!mb-0">
+            <Button type="primary" htmlType="submit" block loading={login.isPending}>
+              {login.isPending ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <DemoLoginCredentials onSelectAccount={handleSelectDemoAccount} />
+    </div>
   );
 }
 

@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { seedPmDemoData } from './seed-pm-demo';
+import { seedAllProjectTypes } from './seed-all-project-types';
+import { appendRichDemoProjects } from './seed-demo-projects';
 
 const prisma = new PrismaClient();
 
@@ -1456,7 +1458,7 @@ async function main(): Promise<void> {
   if (process.env.SEED_PM_DEMO === 'false') {
     console.log('  PM demo skipped (SEED_PM_DEMO=false)');
   } else {
-    await seedPmDemoData({
+    const pmCtx = {
       prisma,
       companyId: company.id,
       branchId: branch.id,
@@ -1465,7 +1467,11 @@ async function main(): Promise<void> {
       adminUserId: adminUser.id,
       roleMap,
       defaultPassword: adminPassword,
-    });
+    };
+    await seedPmDemoData(pmCtx);
+    await seedAllProjectTypes(pmCtx);
+    await appendRichDemoProjects(pmCtx);
+    console.log('  Demo password for all seeded accounts: Admin@12345 (or SEED_ADMIN_PASSWORD)');
   }
 }
 

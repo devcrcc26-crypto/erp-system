@@ -187,6 +187,12 @@ export interface DemoProjectDef {
   plannedFinishDate: string;
   actualFinishDate?: string;
   contractType: string;
+  roadLengthKm?: number;
+  railwayLengthKm?: number;
+  urbanRailLengthKm?: number;
+  grossFloorAreaM2?: number;
+  designProperties?: string;
+  designStage?: string;
 }
 
 const DEMO_PROJECTS: DemoProjectDef[] = [
@@ -198,9 +204,12 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     projectType: 'COMMERCIAL',
     status: 'ACTIVE',
     budget: 12_500_000,
-    startDate: '2026-01-15',
-    plannedFinishDate: '2027-06-30',
+    startDate: '2024-01-15',
+    plannedFinishDate: '2026-12-31',
     contractType: 'LUMP_SUM',
+    grossFloorAreaM2: 78_500,
+    designProperties: 'Design-Build',
+    designStage: 'Construction Documents',
   },
   {
     index: 2,
@@ -213,6 +222,10 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     startDate: '2025-06-01',
     plannedFinishDate: '2028-12-31',
     contractType: 'COST_PLUS',
+    railwayLengthKm: 4.2,
+    urbanRailLengthKm: 2.1,
+    designProperties: 'EPC',
+    designStage: 'Detailed Design',
   },
   {
     index: 3,
@@ -225,6 +238,9 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     startDate: '2026-04-01',
     plannedFinishDate: '2027-09-30',
     contractType: 'LUMP_SUM',
+    grossFloorAreaM2: 34_800,
+    designProperties: 'Design-Bid-Build',
+    designStage: 'Preliminary Design',
   },
 ];
 
@@ -316,6 +332,12 @@ export async function seedProjectBundle(
     update: {
       ...projectNames,
       status: def.status,
+      roadLengthKm: def.roadLengthKm,
+      railwayLengthKm: def.railwayLengthKm,
+      urbanRailLengthKm: def.urbanRailLengthKm,
+      grossFloorAreaM2: def.grossFloorAreaM2,
+      designProperties: def.designProperties,
+      designStage: def.designStage,
       updatedBy: adminUserId,
     },
     create: {
@@ -333,6 +355,12 @@ export async function seedProjectBundle(
       actualFinishDate: def.actualFinishDate ? d(def.actualFinishDate) : undefined,
       budget: def.budget,
       currency: 'USD',
+      roadLengthKm: def.roadLengthKm,
+      railwayLengthKm: def.railwayLengthKm,
+      urbanRailLengthKm: def.urbanRailLengthKm,
+      grossFloorAreaM2: def.grossFloorAreaM2,
+      designProperties: def.designProperties,
+      designStage: def.designStage,
       projectManagerId: users.pmUserId,
       createdBy: adminUserId,
       updatedBy: adminUserId,

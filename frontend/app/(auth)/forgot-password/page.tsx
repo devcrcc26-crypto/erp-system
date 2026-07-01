@@ -23,7 +23,7 @@ export default function ForgotPasswordPage(): React.ReactNode {
         email: email.trim().toLowerCase(),
       });
       setSuccessMessage(
-        `${result.message} If you do not see an email, double-check the address and that the account is still active. In local development, open Mailpit at http://localhost:8025 or check the backend terminal for a line starting with [DEV Password reset]. Emails are not delivered to real Gmail inboxes.`,
+        `${result.message} If you do not see an email, double-check the address and that the account is still active.`,
       );
     } catch (error) {
       if (error instanceof ApiRequestError) {
