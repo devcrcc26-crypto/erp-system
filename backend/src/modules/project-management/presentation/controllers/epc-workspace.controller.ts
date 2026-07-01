@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/co
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { EpcWorkspaceService } from '../../application/services/epc-workspace.service';
@@ -19,7 +20,11 @@ export class EpcWorkspaceController {
   }
 
   @Get('review-inbox')
-  @RequirePermission('schedule', 'approve')
+  @RequireAnyPermission(
+    { module: 'schedule', action: 'approve' },
+    { module: 'schedule', action: 'view' },
+    { module: 'review_sessions', action: 'approve' },
+  )
   @ApiOperation({ summary: 'Review inbox for current user' })
   reviewInbox(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
     return this.epcWorkspaceService.getReviewInbox(this.ctx(user));
@@ -33,7 +38,11 @@ export class EpcWorkspaceController {
   }
 
   @Get('projects/:projectId/review-inbox')
-  @RequirePermission('schedule', 'approve')
+  @RequireAnyPermission(
+    { module: 'schedule', action: 'approve' },
+    { module: 'schedule', action: 'view' },
+    { module: 'review_sessions', action: 'approve' },
+  )
   @ApiOperation({ summary: 'Review inbox for current user scoped to a project' })
   projectReviewInbox(
     @CurrentUser() user: AuthenticatedUser,

@@ -32,15 +32,19 @@ export function canViewProjectNavItem(
   ctx: ProjectNavVisibilityContext,
 ): boolean {
   const cap: ModuleCapabilities | undefined = ctx.pm[item.capability as PmModuleKey];
+
+  if (item.epcCapability === 'reviewInbox') {
+    if (!ctx.epc.canViewReviewInbox) {
+      return false;
+    }
+    return Boolean(cap?.canView || cap?.canEdit);
+  }
+
   if (!cap?.canView) {
     return false;
   }
 
   if (item.epcSurface === 'engineering' && !ctx.epc.canViewEngineering) {
-    return false;
-  }
-
-  if (item.epcCapability === 'reviewInbox' && !ctx.epc.canViewReviewInbox) {
     return false;
   }
 

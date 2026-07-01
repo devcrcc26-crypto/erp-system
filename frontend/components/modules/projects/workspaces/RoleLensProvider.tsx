@@ -61,7 +61,8 @@ function buildRoleLens(
     engineeringView && epc.canUploadEngineeringDocuments;
   const canSubmitDesignPackage =
     engineeringView && (schedule.canCreate || schedule.canEdit);
-  const canViewReviewInbox = epc.canViewReviewInbox && schedule.canView;
+  const canViewReviewInbox =
+    epc.canViewReviewInbox && (schedule.canView || schedule.canEdit);
   const canViewMyComments = epc.canViewMyComments && schedule.canView;
 
   return {

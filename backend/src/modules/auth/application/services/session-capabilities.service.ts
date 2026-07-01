@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ReviewSessionStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionFlags } from '../../../../shared/permissions/permission.types';
 import { isSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   CapabilitiesDto,
   EpcCapabilitiesDto,
@@ -38,7 +41,10 @@ const DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES = new Set([
 
 @Injectable()
 export class SessionCapabilitiesService {
-  constructor(private readonly permissionService: PermissionService) {}
+  constructor(
+    private readonly permissionService: PermissionService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * Resolves UI capability flags for the authenticated session from RBAC.
@@ -50,7 +56,7 @@ export class SessionCapabilitiesService {
     );
     const systemAdministrator = isSystemAdministrator(roleNames);
 
-    const [users, roles, notifications, audit, pm, schedule, engineeringDocuments] =
+    const [users, roles, notifications, audit, pm, schedule, engineeringDocuments, reviewSessions] =
       await Promise.all([
         this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
         this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
@@ -71,7 +77,17 @@ export class SessionCapabilitiesService {
           companyId,
           'engineering_documents',
         ),
+        this.permissionService.getUserModulePermissions(
+          userId,
+          companyId,
+          'review_sessions',
+        ),
       ]);
+
+    const hasAssignedReviewInbox = await this.hasActiveReviewInboxAssignment(
+      userId,
+      companyId,
+    );
 
     return {
       canManageUsers: users.canView,
@@ -86,6 +102,8 @@ export class SessionCapabilitiesService {
         roleNames,
         schedule,
         engineeringDocuments,
+        reviewSessions,
+        hasAssignedReviewInbox,
       ),
     };
   }
@@ -116,6 +134,8 @@ export class SessionCapabilitiesService {
     roleNames: string[],
     schedule: PermissionFlags,
     engineeringDocuments: PermissionFlags,
+    reviewSessions: PermissionFlags,
+    hasAssignedReviewInbox: boolean,
   ): EpcCapabilitiesDto {
     const disciplineScopeBypass = roleNames.some((name) =>
       DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES.has(name),
@@ -131,8 +151,15 @@ export class SessionCapabilitiesService {
     const canUploadEngineeringDocuments =
       schedule.canView && engineeringDocuments.canCreate;
 
+    const scheduleReviewAccess =
+      schedule.canApprove || schedule.canView || schedule.canEdit;
+
     return {
-      canViewReviewInbox: schedule.canView && schedule.canApprove,
+      canViewReviewInbox:
+        scheduleReviewAccess &&
+        (schedule.canApprove ||
+          reviewSessions.canApprove ||
+          hasAssignedReviewInbox),
       canViewMyComments:
         schedule.canView &&
         (schedule.canCreate || schedule.canEdit) &&
@@ -142,6 +169,22 @@ export class SessionCapabilitiesService {
       disciplineScopeBypass,
     };
   }
+
+  // DEMO BYPASS — remove after demo
+  private async hasActiveReviewInboxAssignment(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.reviewSession.count({
+      where: activeOnly({
+        companyId,
+        assignedToUserId: userId,
+        status: ReviewSessionStatus.ACTIVE,
+      }),
+    });
+    return count > 0;
+  }
+  // END DEMO BYPASS
 
   private toModuleCapabilities(flags: PermissionFlags): ModuleCapabilitiesDto {
     return {
