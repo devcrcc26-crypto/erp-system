@@ -296,7 +296,11 @@ export default function UserImportModal({
                 key: 'chineseName',
                 render: (_, row) => row.chineseName || '-',
               },
-              { title: t('common.role'), dataIndex: 'role' },
+              {
+                title: t('common.role'),
+                key: 'role',
+                render: (_, row) => row.role?.trim() || '-',
+              },
               {
                 title: t('common.status'),
                 key: 'status',

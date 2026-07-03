@@ -258,6 +258,47 @@ describe('UserImportService', () => {
     expect(result.invitationsSent).toBe(0);
   });
 
+  it('accepts rows without a role', async () => {
+    const file = buildFile(
+      await buildWorkbookBuffer([
+        {
+          email: '',
+          firstName: 'Li',
+          lastName: 'Ming',
+          chineseName: '李明',
+          role: '',
+        },
+      ]),
+    );
+
+    const preview = await service.previewImport(ctx, file);
+    expect(preview.valid).toBe(1);
+    expect(preview.rows[0]).toMatchObject({
+      status: 'ok',
+      role: '',
+      message: 'Record-only user (no login access)',
+    });
+    expect(preview.rows[0].roleId).toBeUndefined();
+
+    const result = await service.commitImport(ctx, file, false);
+    expect(result.created).toBe(1);
+    expect(userManagementService.assignUserRole).not.toHaveBeenCalled();
+  });
+
+  it('accepts spreadsheets without a role column', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Users');
+    sheet.addRow(['email', 'firstName', 'lastName', 'chineseName']);
+    sheet.addRow(['', 'Li', 'Ming', '李明']);
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+    const file = buildFile(buffer);
+
+    const preview = await service.previewImport(ctx, file);
+    expect(preview.valid).toBe(1);
+    expect(preview.rows[0].role).toBe('');
+    expect(preview.rows[0].roleId).toBeUndefined();
+  });
+
   it('rejects files without required columns', async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Users');

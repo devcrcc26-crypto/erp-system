@@ -121,8 +121,8 @@ export class UserImportService {
     ]);
     instructions.addRow([
       'role',
-      'Yes',
-      'Must match an existing role name exactly (e.g. Employee)',
+      'No',
+      'Optional — must match an existing role name exactly (e.g. Employee) when provided',
     ]);
     instructions.addRow(['phone', 'No', 'Optional contact number']);
     instructions.addRow([]);
@@ -250,7 +250,6 @@ export class UserImportService {
     const requiredFields: Array<keyof ParsedImportRow> = [
       'firstName',
       'lastName',
-      'role',
     ];
     const mappedFields = new Set(columnMap.values());
     for (const field of requiredFields) {
@@ -374,29 +373,36 @@ export class UserImportService {
       phone: row.phone,
     };
 
-    if (!row.firstName || !row.lastName || !row.role) {
+    if (!row.firstName || !row.lastName) {
       return {
         ...base,
         status: 'error',
-        message: 'firstName, lastName, and role are required',
+        message: 'firstName and lastName are required',
       };
     }
 
-    const role = roleByNormalizedName.get(this.normalizeRoleName(row.role));
-    if (!role) {
-      return {
-        ...base,
-        status: 'error',
-        message: `Unknown role: ${row.role}`,
-      };
+    let roleId: string | undefined;
+    const roleName = row.role.trim();
+    if (roleName) {
+      const role = roleByNormalizedName.get(this.normalizeRoleName(roleName));
+      if (!role) {
+        return {
+          ...base,
+          status: 'error',
+          message: `Unknown role: ${roleName}`,
+        };
+      }
+      roleId = role.id;
     }
+
+    const roleAssignment = roleId ? { roleId } : {};
 
     const trimmedEmail = row.email.trim();
     if (!trimmedEmail) {
       return {
         ...base,
         status: 'ok',
-        roleId: role.id,
+        ...roleAssignment,
         message: 'Record-only user (no login access)',
       };
     }
@@ -431,7 +437,7 @@ export class UserImportService {
         ...base,
         email: normalizedEmail,
         status: 'ok',
-        roleId: role.id,
+        ...roleAssignment,
         message: 'Previously deleted user will be restored',
       };
     }
@@ -451,7 +457,7 @@ export class UserImportService {
       ...base,
       email: normalizedEmail,
       status: 'ok',
-      roleId: role.id,
+      ...roleAssignment,
     };
   }
 

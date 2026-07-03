@@ -154,14 +154,12 @@ function InviteEmployeeModal({
   onClose,
   roles,
   rolesLoading,
-  employeeRoleId,
   onInvited,
 }: {
   open: boolean;
   onClose: () => void;
   roles: Role[];
   rolesLoading: boolean;
-  employeeRoleId?: string;
   onInvited: (email: string | null) => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -176,9 +174,6 @@ function InviteEmployeeModal({
 
   function resetForm(): void {
     form.resetFields();
-    if (employeeRoleId) {
-      form.setFieldsValue({ roleId: employeeRoleId });
-    }
     setError(null);
   }
 
@@ -241,7 +236,6 @@ function InviteEmployeeModal({
       <Form<InviteFormValues>
         form={form}
         layout="vertical"
-        initialValues={{ roleId: employeeRoleId }}
         onFinish={(values: InviteFormValues) => void handleSubmit(values)}
       >
         <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
@@ -272,7 +266,11 @@ function InviteEmployeeModal({
         >
           <Input placeholder={t('users.emailOptionalPlaceholder')} />
         </Form.Item>
-        <Form.Item label={t('common.role')} name="roleId">
+        <Form.Item
+          label={t('users.roleOptional')}
+          name="roleId"
+          extra={t('users.roleOptionalHint')}
+        >
           <Select
             allowClear
             loading={rolesLoading}
@@ -418,7 +416,11 @@ function EditEmployeeModal({
         <Form.Item label={t('common.phone')} name="phone">
           <Input type="tel" />
         </Form.Item>
-        <Form.Item label={t('common.role')} name="roleId">
+        <Form.Item
+          label={t('users.roleOptional')}
+          name="roleId"
+          extra={t('users.roleOptionalHint')}
+        >
           <Select
             allowClear
             loading={userQuery.isLoading}
@@ -464,7 +466,6 @@ export default function UsersPageContent(): React.ReactNode {
   const resendInvitation = useResendInvitation();
 
   const roles = rolesQuery.data?.data ?? [];
-  const employeeRole = roles.find((role) => role.name === 'Employee');
   const companyName = authUser?.companyName ?? 'Company';
 
   const handleExportPdf = useCallback(async (): Promise<void> => {
@@ -630,7 +631,6 @@ export default function UsersPageContent(): React.ReactNode {
         onClose={() => setInviteOpen(false)}
         roles={roles}
         rolesLoading={rolesQuery.isLoading}
-        employeeRoleId={employeeRole?.id}
         onInvited={(email) => {
           if (email) {
             setInvitedEmail(email);
