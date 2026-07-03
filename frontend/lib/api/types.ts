@@ -141,7 +141,8 @@ export interface User {
   positionId: string | null;
   firstName: string;
   lastName: string;
-  email: string;
+  chineseName: string | null;
+  email: string | null;
   phone: string | null;
   preferredLanguage: string | null;
   preferredTimezone: string | null;
@@ -173,9 +174,10 @@ export interface UserDetail extends User {
 }
 
 export interface CreateUserRequest {
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
+  chineseName?: string;
   password?: string;
   phone?: string;
   branchId?: string;
@@ -190,6 +192,7 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
+  chineseName?: string;
   phone?: string;
   branchId?: string;
   departmentId?: string;

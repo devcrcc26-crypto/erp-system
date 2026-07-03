@@ -51,15 +51,17 @@ import { useAuthStore } from '@/stores/auth.store';
 interface InviteFormValues {
   firstName: string;
   lastName: string;
-  email: string;
-  roleId: string;
+  chineseName?: string;
+  email?: string;
+  roleId?: string;
 }
 
 interface EditFormValues {
   firstName: string;
   lastName: string;
+  chineseName?: string;
   phone?: string;
-  roleId: string;
+  roleId?: string;
   isActive: boolean;
 }
 
@@ -71,6 +73,9 @@ function formatUserRoleNames(user: User): string {
 
 function userStatusVariant(user: User): 'default' | 'warning' | 'success' {
   if (!user.isActive) {
+    return 'default';
+  }
+  if (!user.email) {
     return 'default';
   }
   if (!user.emailVerifiedAt) {
@@ -85,6 +90,9 @@ function userStatusLabel(
 ): string {
   if (!user.isActive) {
     return t('users.statusInactive');
+  }
+  if (!user.email) {
+    return t('users.statusNoLogin');
   }
   if (!user.emailVerifiedAt) {
     return t('users.statusPending');
@@ -137,11 +145,13 @@ function InviteEmployeeModal({
   roles: Role[];
   rolesLoading: boolean;
   employeeRoleId?: string;
-  onInvited: (email: string) => void;
+  onInvited: (email: string | null) => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const [form] = Form.useForm<InviteFormValues>();
   const [error, setError] = useState<string | null>(null);
+  const emailValue = Form.useWatch('email', form);
+  const hasEmail = Boolean(emailValue?.trim());
   const createUser = useCreateUser();
   const assignRole = useAssignRole();
 
@@ -157,20 +167,23 @@ function InviteEmployeeModal({
 
   async function handleSubmit(values: InviteFormValues): Promise<void> {
     setError(null);
-    const invitedAddress = values.email.trim().toLowerCase();
+    const invitedAddress = values.email?.trim().toLowerCase() || undefined;
 
     try {
       const user = await createUser.mutateAsync({
         email: invitedAddress,
         firstName: values.firstName,
         lastName: values.lastName,
+        chineseName: values.chineseName?.trim() || undefined,
         isActive: true,
       });
 
-      await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
+      if (values.roleId) {
+        await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
+      }
 
       resetForm();
-      onInvited(invitedAddress);
+      onInvited(invitedAddress ?? null);
       onClose();
     } catch (err) {
       setError(
@@ -186,10 +199,13 @@ function InviteEmployeeModal({
       onCancel={onClose}
       onOk={() => form.submit()}
       okText={
-        isSubmitting ? t('users.sendingInvitation') : t('users.sendInvitation')
+        isSubmitting
+          ? t('users.savingUser')
+          : hasEmail
+            ? t('users.sendInvitation')
+            : t('users.createUser')
       }
       confirmLoading={isSubmitting}
-      okButtonProps={{ disabled: roles.length === 0 }}
       className="erp-responsive-modal"
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {
@@ -221,22 +237,20 @@ function InviteEmployeeModal({
             <Input />
           </Form.Item>
         </div>
+        <Form.Item label={t('common.chineseName')} name="chineseName">
+          <Input placeholder={t('users.chineseNamePlaceholder')} />
+        </Form.Item>
         <Form.Item
-          label={t('common.email')}
+          label={t('common.emailOptional')}
           name="email"
-          rules={[
-            { required: true, message: t('common.requiredEmail') },
-            { type: 'email', message: t('common.invalidEmail') },
-          ]}
+          rules={[{ type: 'email', message: t('common.invalidEmail') }]}
+          extra={t('users.emailOptionalHint')}
         >
           <Input type="email" />
         </Form.Item>
-        <Form.Item
-          label={t('common.role')}
-          name="roleId"
-          rules={[{ required: true, message: t('common.requiredRole') }]}
-        >
+        <Form.Item label={t('common.role')} name="roleId">
           <Select
+            allowClear
             loading={rolesLoading}
             options={roles.map((role) => ({ value: role.id, label: role.name }))}
             placeholder={
@@ -284,6 +298,7 @@ function EditEmployeeModal({
     form.setFieldsValue({
       firstName: user.firstName,
       lastName: user.lastName,
+      chineseName: user.chineseName ?? '',
       phone: user.phone ?? '',
       isActive: user.isActive,
       roleId: currentRoleId || undefined,
@@ -306,16 +321,19 @@ function EditEmployeeModal({
         body: {
           firstName: values.firstName,
           lastName: values.lastName,
+          chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
           isActive: values.isActive,
         },
       });
 
-      if (values.roleId !== currentRoleId) {
+      if ((values.roleId ?? '') !== currentRoleId) {
         if (currentRoleId) {
           await revokeRole.mutateAsync({ userId: user.id, roleId: currentRoleId });
         }
-        await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
+        if (values.roleId) {
+          await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
+        }
       }
 
       onSaved();
@@ -346,7 +364,9 @@ function EditEmployeeModal({
         resetFormValues();
       }}
     >
-      <p className="mb-4 text-sm text-slate-500">{user.email}</p>
+      <p className="mb-4 text-sm text-slate-500">
+        {user.email ?? t('users.noEmailNoLogin')}
+      </p>
       <Form<EditFormValues>
         form={form}
         layout="vertical"
@@ -368,15 +388,15 @@ function EditEmployeeModal({
             <Input />
           </Form.Item>
         </div>
+        <Form.Item label={t('common.chineseName')} name="chineseName">
+          <Input placeholder={t('users.chineseNamePlaceholder')} />
+        </Form.Item>
         <Form.Item label={t('common.phone')} name="phone">
           <Input type="tel" />
         </Form.Item>
-        <Form.Item
-          label={t('common.role')}
-          name="roleId"
-          rules={[{ required: true, message: t('common.requiredRole') }]}
-        >
+        <Form.Item label={t('common.role')} name="roleId">
           <Select
+            allowClear
             loading={userQuery.isLoading}
             options={roles.map((role) => ({ value: role.id, label: role.name }))}
             placeholder={
@@ -529,7 +549,7 @@ export default function UsersPageContent(): React.ReactNode {
   }
 
   function buildActionMenu(user: User): MenuProps['items'] {
-    const showResend = user.isActive && !user.emailVerifiedAt;
+    const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
     const items: MenuProps['items'] = [
       {
         key: 'update',
@@ -589,7 +609,16 @@ export default function UsersPageContent(): React.ReactNode {
         roles={roles}
         rolesLoading={rolesQuery.isLoading}
         employeeRoleId={employeeRole?.id}
-        onInvited={setInvitedEmail}
+        onInvited={(email) => {
+          if (email) {
+            setInvitedEmail(email);
+          } else {
+            setActionMessage({
+              type: 'success',
+              text: t('users.recordOnlyCreated'),
+            });
+          }
+        }}
       />
 
       {editingUser && (
@@ -617,7 +646,7 @@ export default function UsersPageContent(): React.ReactNode {
           deletingUser
             ? t('users.deleteDescription', {
                 name: `${deletingUser.firstName} ${deletingUser.lastName}`,
-                email: deletingUser.email,
+                email: deletingUser.email ?? t('users.noEmailNoLogin'),
               })
             : undefined
         }
@@ -691,10 +720,16 @@ export default function UsersPageContent(): React.ReactNode {
               ),
             },
             {
+              title: t('common.chineseName'),
+              key: 'chineseName',
+              ellipsis: { showTitle: true },
+              render: (_, record) => record.chineseName || '-',
+            },
+            {
               title: t('common.email'),
-              dataIndex: 'email',
               key: 'email',
               ellipsis: { showTitle: true },
+              render: (_, record) => record.email || '-',
             },
             {
               title: t('common.status'),

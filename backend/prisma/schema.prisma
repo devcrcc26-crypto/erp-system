@@ -396,7 +396,8 @@ model User {
   positionId          String?   @map("position_id")
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
-  email               String
+  chineseName         String?   @map("chinese_name")
+  email               String?
   pendingEmail        String?   @map("pending_email")
   phone               String?
   passwordHash        String    @map("password_hash")

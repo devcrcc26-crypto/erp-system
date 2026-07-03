@@ -18,6 +18,9 @@ export class AuthRepository implements IAuthRepository {
 
   async findActiveUserByEmail(email: string): Promise<UserWithCompany | null> {
     const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return null;
+    }
 
     return this.prisma.user.findFirst({
       where: {
@@ -34,6 +37,9 @@ export class AuthRepository implements IAuthRepository {
 
   async findUserForPasswordReset(email: string): Promise<UserWithCompany | null> {
     const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return null;
+    }
 
     return this.prisma.user.findFirst({
       where: {

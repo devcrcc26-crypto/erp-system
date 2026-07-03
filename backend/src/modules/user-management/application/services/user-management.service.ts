@@ -100,25 +100,39 @@ export class UserManagementService {
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
-    const { password, email, firstName, lastName, ...rest } = dto;
+    const { password, email, firstName, lastName, chineseName, ...rest } = dto;
+
+    const sharedInput = {
+      firstName,
+      lastName,
+      chineseName,
+      phone: rest.phone,
+      branchId: rest.branchId,
+      departmentId: rest.departmentId,
+      positionId: rest.positionId,
+      preferredLanguage: rest.preferredLanguage,
+      preferredTimezone: rest.preferredTimezone,
+      preferredDateFormat: rest.preferredDateFormat,
+      isActive: rest.isActive,
+    };
+
+    // Record-only user (no email): no authentication, no invitation email.
+    if (!email) {
+      const user = await this.userProvisioningService.provisionRecordOnlyUser(
+        ctx,
+        sharedInput,
+      );
+
+      return this.prisma.user.findFirst({
+        where: activeOnly({ id: user.id, companyId: ctx.companyId }),
+        select: this.userSelect(),
+      });
+    }
 
     if (password) {
       const user = await this.userProvisioningService.provisionWithPassword(
         ctx,
-        {
-          email,
-          firstName,
-          lastName,
-          password,
-          phone: rest.phone,
-          branchId: rest.branchId,
-          departmentId: rest.departmentId,
-          positionId: rest.positionId,
-          preferredLanguage: rest.preferredLanguage,
-          preferredTimezone: rest.preferredTimezone,
-          preferredDateFormat: rest.preferredDateFormat,
-          isActive: rest.isActive,
-        },
+        { email, password, ...sharedInput },
       );
 
       return this.prisma.user.findFirst({
@@ -129,16 +143,7 @@ export class UserManagementService {
 
     const user = await this.userProvisioningService.provisionInvitedUser(ctx, {
       email,
-      firstName,
-      lastName,
-      phone: rest.phone,
-      branchId: rest.branchId,
-      departmentId: rest.departmentId,
-      positionId: rest.positionId,
-      preferredLanguage: rest.preferredLanguage,
-      preferredTimezone: rest.preferredTimezone,
-      preferredDateFormat: rest.preferredDateFormat,
-      isActive: rest.isActive,
+      ...sharedInput,
     });
 
     await this.userProvisioningService.sendActivationInvite(user);
@@ -171,6 +176,12 @@ export class UserManagementService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!user.email) {
+      throw new BadRequestException(
+        'User has no email address and cannot receive an activation invite',
+      );
     }
 
     if (user.emailVerifiedAt) {
@@ -486,6 +497,7 @@ export class UserManagementService {
       positionId: true,
       firstName: true,
       lastName: true,
+      chineseName: true,
       email: true,
       phone: true,
       preferredLanguage: true,
@@ -513,6 +525,7 @@ export class UserManagementService {
       id: true,
       firstName: true,
       lastName: true,
+      chineseName: true,
       email: true,
       isActive: true,
       userRoles: this.userRolesListSelect(),

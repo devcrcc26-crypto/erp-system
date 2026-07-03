@@ -120,7 +120,7 @@ export class NotificationService {
 
       try {
         const sent = await this.resendEmailService.send({
-          to: recipient.email,
+          to: recipient.email ?? '',
           subject,
           html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
         });

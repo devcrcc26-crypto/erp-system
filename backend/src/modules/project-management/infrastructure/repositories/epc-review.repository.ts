@@ -210,12 +210,17 @@ export class EpcReviewRepository {
     reviewCommentId: string,
   ): Promise<
     | (ReviewComment & {
-        author: { id: string; firstName: string; lastName: string; email: string };
+        author: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string | null;
+        };
         assignedToUser: {
           id: string;
           firstName: string;
           lastName: string;
-          email: string;
+          email: string | null;
         };
         reviewSession: { id: string; designPackageId: string; status: ReviewSessionStatus };
       })

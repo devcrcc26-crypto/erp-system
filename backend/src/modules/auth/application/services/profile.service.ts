@@ -123,6 +123,12 @@ export class ProfileService {
       throw new NotFoundException('User not found');
     }
 
+    if (!user.email) {
+      throw new ConflictException(
+        'This account has no email address and cannot use email change',
+      );
+    }
+
     if (user.email.toLowerCase() === newEmail.toLowerCase()) {
       throw new ConflictException('New email must differ from the current email');
     }
@@ -211,7 +217,7 @@ export class ProfileService {
 
   private mapProfile(user: {
     id: string;
-    email: string;
+    email: string | null;
     pendingEmail: string | null;
     firstName: string;
     lastName: string;
@@ -226,7 +232,7 @@ export class ProfileService {
   }): ProfileResponseDto {
     return {
       id: user.id,
-      email: user.email,
+      email: user.email ?? '',
       pendingEmail: user.pendingEmail,
       firstName: user.firstName,
       lastName: user.lastName,

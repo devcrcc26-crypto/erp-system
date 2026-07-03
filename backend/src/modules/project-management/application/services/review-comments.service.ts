@@ -177,10 +177,10 @@ export class ReviewCommentsService {
 function formatUserName(user: {
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
 }): string {
   const name = `${user.firstName} ${user.lastName}`.trim();
-  return name || user.email;
+  return name || user.email || 'Unknown user';
 }
 
 function mapReviewCommentDetail(

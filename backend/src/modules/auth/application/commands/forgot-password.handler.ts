@@ -46,7 +46,9 @@ export class ForgotPasswordHandler
         expiresAt: this.tokenService.getPasswordResetExpiryDate(),
       });
 
-      await this.authMailService.sendPasswordResetEmail(user.email, token);
+      if (user.email) {
+        await this.authMailService.sendPasswordResetEmail(user.email, token);
+      }
     }
 
     return {

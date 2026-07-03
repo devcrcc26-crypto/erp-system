@@ -12,6 +12,7 @@ export interface ProvisionInvitedUserInput {
   email: string;
   firstName: string;
   lastName: string;
+  chineseName?: string;
   phone?: string;
   branchId?: string;
   departmentId?: string;
@@ -22,9 +23,15 @@ export interface ProvisionInvitedUserInput {
   isActive?: boolean;
 }
 
+/** Record-only user (no email) — cannot authenticate or use email flows. */
+export type ProvisionRecordOnlyUserInput = Omit<
+  ProvisionInvitedUserInput,
+  'email'
+>;
+
 export interface ProvisionedUser {
   id: string;
-  email: string;
+  email: string | null;
   firstName: string;
   lastName: string;
 }
@@ -65,6 +72,52 @@ export class UserProvisioningService {
         email,
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
+        chineseName: input.chineseName?.trim() || null,
+        phone: input.phone?.trim() || null,
+        branchId: input.branchId ?? null,
+        departmentId: input.departmentId ?? null,
+        positionId: input.positionId ?? null,
+        preferredLanguage: input.preferredLanguage ?? null,
+        preferredTimezone: input.preferredTimezone ?? null,
+        preferredDateFormat: input.preferredDateFormat ?? null,
+        isActive: input.isActive ?? true,
+        passwordHash,
+        emailVerifiedAt: null,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    return user;
+  }
+
+  /**
+   * Creates a record-only user without an email address. These users cannot
+   * authenticate and are excluded from every email-dependent flow (login,
+   * password reset, activation, email change). A random unusable password hash
+   * is stored so the account can never be logged into.
+   */
+  async provisionRecordOnlyUser(
+    ctx: AuditContext,
+    input: ProvisionRecordOnlyUserInput,
+  ): Promise<ProvisionedUser> {
+    const passwordHash = await this.passwordService.hash(
+      randomBytes(32).toString('hex'),
+    );
+
+    const user = await this.prisma.user.create({
+      data: {
+        companyId: ctx.companyId,
+        email: null,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        chineseName: input.chineseName?.trim() || null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
@@ -107,6 +160,7 @@ export class UserProvisioningService {
         email,
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
+        chineseName: input.chineseName?.trim() || null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
@@ -135,6 +189,9 @@ export class UserProvisioningService {
    * Sends the standard account activation invite email.
    */
   async sendActivationInvite(user: ProvisionedUser): Promise<void> {
+    if (!user.email) {
+      return;
+    }
     await this.accountActivationService.sendInvitation({
       id: user.id,
       email: user.email,
@@ -183,6 +240,7 @@ export class UserProvisioningService {
         deletedBy: null,
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
+        chineseName: input.chineseName?.trim() || null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,

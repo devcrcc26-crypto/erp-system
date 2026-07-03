@@ -75,7 +75,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
   ): AuthTokensDto {
     const accessToken = this.tokenService.generateAccessToken({
       sub: user.id,
-      email: user.email,
+      email: user.email ?? '',
       companyId: user.companyId,
       sessionId,
     });
@@ -87,7 +87,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
       expiresIn: this.tokenService.getAccessExpiresInSeconds(),
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email ?? '',
         firstName: user.firstName,
         lastName: user.lastName,
         companyId: user.companyId,

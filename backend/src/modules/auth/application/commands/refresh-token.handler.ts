@@ -66,7 +66,7 @@ export class RefreshTokenHandler
   ): AuthTokensDto {
     const accessToken = this.tokenService.generateAccessToken({
       sub: user.id,
-      email: user.email,
+      email: user.email ?? '',
       companyId: user.companyId,
       sessionId,
     });
@@ -78,7 +78,7 @@ export class RefreshTokenHandler
       expiresIn: this.tokenService.getAccessExpiresInSeconds(),
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email ?? '',
         firstName: user.firstName,
         lastName: user.lastName,
         companyId: user.companyId,

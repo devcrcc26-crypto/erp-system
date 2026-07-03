@@ -43,7 +43,7 @@ export class SendNotificationProcessor extends WorkerHost {
 
     try {
       const sent = await this.resendEmailService.send({
-        to: notification.recipient.email,
+        to: notification.recipient.email ?? '',
         subject: notification.subject,
         html: `<p>${notification.body.replace(/\n/g, '<br>')}</p>`,
       });

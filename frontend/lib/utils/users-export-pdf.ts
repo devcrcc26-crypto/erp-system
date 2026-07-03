@@ -246,7 +246,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     })
     .map((user) => [
       `${user.firstName} ${user.lastName}`,
-      user.email,
+      user.email?.trim() || '-',
       user.phone?.trim() || '-',
       formatUserStatus(user),
       formatUserRoles(user),

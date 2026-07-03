@@ -8,7 +8,8 @@ import type { User } from '@/lib/api/types';
 import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 function formatUserLabel(user: User): string {
-  return `${user.firstName} ${user.lastName} (${user.email})`;
+  const contact = user.email ? ` (${user.email})` : '';
+  return `${user.firstName} ${user.lastName}${contact}`;
 }
 
 /**

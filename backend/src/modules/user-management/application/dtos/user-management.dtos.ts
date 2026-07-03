@@ -13,12 +13,21 @@ import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
 export class CreateUserDto {
-  @ApiProperty()
-  @Transform(({ value }) =>
-    typeof value === 'string' ? normalizeEmail(value) : value,
-  )
+  @ApiPropertyOptional({
+    description:
+      'Optional. Leave blank for record-only users (e.g. Chinese site workers) who will never log in. ' +
+      'Such users have no authentication or password reset access.',
+  })
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : normalizeEmail(trimmed);
+  })
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @ApiProperty()
   @IsString()
@@ -27,6 +36,11 @@ export class CreateUserDto {
   @ApiProperty()
   @IsString()
   lastName!: string;
+
+  @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)' })
+  @IsOptional()
+  @IsString()
+  chineseName?: string;
 
   @ApiPropertyOptional({ description: 'Omit to send an email activation invite instead' })
   @IsOptional()

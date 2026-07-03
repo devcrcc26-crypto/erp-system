@@ -44,5 +44,6 @@ export function formatUserRoleNames(user: User): string {
  */
 export function formatUserPickerLabel(user: User): string {
   const roles = formatUserRoleNames(user);
-  return `${user.firstName} ${user.lastName} — ${roles} (${user.email})`;
+  const contact = user.email ? ` (${user.email})` : '';
+  return `${user.firstName} ${user.lastName} — ${roles}${contact}`;
 }
