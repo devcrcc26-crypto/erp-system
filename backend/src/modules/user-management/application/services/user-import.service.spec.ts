@@ -13,7 +13,9 @@ describe('UserImportService', () => {
   let userProvisioningService: jest.Mocked<
     Pick<
       UserProvisioningService,
-      'findExistingUserByEmail' | 'provisionInvitedUser'
+      | 'findExistingUserByEmail'
+      | 'provisionInvitedUser'
+      | 'provisionRecordOnlyUser'
     >
   >;
   let userManagementService: jest.Mocked<
@@ -42,6 +44,12 @@ describe('UserImportService', () => {
         firstName: 'Jane',
         lastName: 'Doe',
       }),
+      provisionRecordOnlyUser: jest.fn().mockResolvedValue({
+        id: 'user-2',
+        email: null,
+        firstName: 'Wei',
+        lastName: 'Zhang',
+      }),
     };
     userManagementService = {
       assignUserRole: jest.fn().mockResolvedValue(undefined),
@@ -63,12 +71,20 @@ describe('UserImportService', () => {
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Users');
-    sheet.addRow(['email', 'firstName', 'lastName', 'role', 'phone']);
+    sheet.addRow([
+      'email',
+      'firstName',
+      'lastName',
+      'chineseName',
+      'role',
+      'phone',
+    ]);
     for (const row of rows) {
       sheet.addRow([
-        row.email,
+        row.email ?? '',
         row.firstName,
         row.lastName,
+        row.chineseName ?? '',
         row.role,
         row.phone ?? '',
       ]);
@@ -209,6 +225,37 @@ describe('UserImportService', () => {
     );
     expect(userInvitationDispatchService.dispatchInvitations).toHaveBeenCalled();
     expect(result.invitationsSent).toBe(1);
+  });
+
+  it('creates record-only users when email is blank', async () => {
+    const file = buildFile(
+      await buildWorkbookBuffer([
+        {
+          email: '',
+          firstName: 'Wei',
+          lastName: 'Zhang',
+          chineseName: '张伟',
+          role: 'Employee',
+        },
+      ]),
+    );
+
+    const preview = await service.previewImport(ctx, file);
+    expect(preview.valid).toBe(1);
+    expect(preview.rows[0]).toMatchObject({
+      status: 'ok',
+      chineseName: '张伟',
+      message: 'Record-only user (no login access)',
+    });
+
+    const result = await service.commitImport(ctx, file, true);
+    expect(result.created).toBe(1);
+    expect(userProvisioningService.provisionRecordOnlyUser).toHaveBeenCalled();
+    expect(userProvisioningService.provisionInvitedUser).not.toHaveBeenCalled();
+    expect(
+      userInvitationDispatchService.dispatchInvitations,
+    ).not.toHaveBeenCalled();
+    expect(result.invitationsSent).toBe(0);
   });
 
   it('rejects files without required columns', async () => {

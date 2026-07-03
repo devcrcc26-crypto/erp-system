@@ -125,6 +125,7 @@ export class ReportExecutorService {
             email: true,
             firstName: true,
             lastName: true,
+            chineseName: true,
             isActive: true,
             createdAt: true,
           },

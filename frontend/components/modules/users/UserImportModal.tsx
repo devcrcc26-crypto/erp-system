@@ -176,6 +176,8 @@ export default function UserImportModal({
 
   const isBusy = importPreview.isPending || importUsers.isPending;
   const validCount = preview?.valid ?? 0;
+  const inviteableCount =
+    preview?.rows.filter((row) => row.status === 'ok' && row.email).length ?? 0;
 
   const footer =
     step === 'result'
@@ -279,11 +281,20 @@ export default function UserImportModal({
             scroll={{ x: true }}
             columns={[
               { title: t('users.import.line'), dataIndex: 'line', width: 70 },
-              { title: t('common.email'), dataIndex: 'email' },
+              {
+                title: t('common.email'),
+                key: 'email',
+                render: (_, row) => row.email || '-',
+              },
               {
                 title: t('users.import.name'),
                 key: 'name',
                 render: (_, row) => `${row.firstName} ${row.lastName}`,
+              },
+              {
+                title: t('common.chineseName'),
+                key: 'chineseName',
+                render: (_, row) => row.chineseName || '-',
               },
               { title: t('common.role'), dataIndex: 'role' },
               {
@@ -300,6 +311,7 @@ export default function UserImportModal({
 
           <Checkbox
             checked={sendInvitations}
+            disabled={inviteableCount === 0}
             onChange={(event: { target: { checked: boolean } }) =>
               setSendInvitations(event.target.checked)
             }
@@ -307,9 +319,14 @@ export default function UserImportModal({
             {t('users.import.sendInvitationsNow')}
           </Checkbox>
 
-          {sendInvitations && (
+          {sendInvitations && inviteableCount > 0 && (
             <p className="text-xs text-slate-500">
-              {t('users.import.devMailpitHint')}
+              {t('users.import.invitationHint', { count: inviteableCount })}
+            </p>
+          )}
+          {inviteableCount === 0 && validCount > 0 && (
+            <p className="text-xs text-slate-500">
+              {t('users.import.recordOnlyHint')}
             </p>
           )}
         </div>
@@ -373,10 +390,10 @@ export default function UserImportModal({
               description={
                 <ul className="mt-1 list-disc pl-5">
                   {result.errors.map((error) => (
-                    <li key={`${error.line}-${error.email}`}>
+                    <li key={`${error.line}-${error.email ?? 'no-email'}`}>
                       {t('users.import.errorLine', {
                         line: error.line,
-                        email: error.email,
+                        email: error.email ?? t('users.noEmailNoLogin'),
                         message: error.message,
                       })}
                     </li>

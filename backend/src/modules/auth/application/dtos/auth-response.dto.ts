@@ -13,6 +13,9 @@ export class AuthUserDto {
   @ApiProperty()
   lastName!: string;
 
+  @ApiProperty({ nullable: true })
+  chineseName!: string | null;
+
   @ApiProperty()
   companyId!: string;
 

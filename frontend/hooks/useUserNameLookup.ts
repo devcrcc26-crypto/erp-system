@@ -2,13 +2,16 @@
 
 import { useCallback, useMemo } from 'react';
 import { useFullUsersDirectory } from '@/lib/query/users';
-import { displayUserLabel, formatUserPickerLabel } from '@/lib/utils/user-display';
+import {
+  displayUserLabel,
+  formatUserName,
+  formatUserPickerLabel,
+} from '@/lib/utils/user-display';
+import type { User } from '@/lib/api/types';
 import { useAuthStore } from '@/stores/auth.store';
 
-function buildUserNameMap(users: { id: string; firstName: string; lastName: string }[]): Map<string, string> {
-  return new Map(
-    users.map((user) => [user.id, `${user.firstName} ${user.lastName}`.trim()]),
-  );
+function buildUserNameMap(users: User[]): Map<string, string> {
+  return new Map(users.map((user) => [user.id, formatUserName(user)]));
 }
 
 /** Resolves user IDs to display names from the full company user directory. */

@@ -221,6 +221,7 @@ export class ProfileService {
     pendingEmail: string | null;
     firstName: string;
     lastName: string;
+    chineseName: string | null;
     phone: string | null;
     companyId: string;
     preferredLanguage: string | null;
@@ -236,6 +237,7 @@ export class ProfileService {
       pendingEmail: user.pendingEmail,
       firstName: user.firstName,
       lastName: user.lastName,
+      chineseName: user.chineseName,
       phone: user.phone,
       companyId: user.companyId,
       companyName: user.company.legalName,

@@ -37,6 +37,7 @@ import {
   projectStatusVariant,
 } from '@/lib/utils/project-display';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
+import { formatUserName } from '@/lib/utils/user-display';
 import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
 import { downloadProjectListExcel } from '@/lib/query/project-exports';
 import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
@@ -79,9 +80,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         sortOrder: 'desc',
       });
       const generatedAt = new Date().toISOString();
-      const preparedBy = authUser
-        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
-        : 'User';
+      const preparedBy = authUser ? formatUserName(authUser) : 'User';
 
       exportProjectsPdf({
         companyName: authUser?.companyName ?? 'Company',

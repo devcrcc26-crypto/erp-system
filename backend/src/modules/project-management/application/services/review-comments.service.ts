@@ -177,10 +177,15 @@ export class ReviewCommentsService {
 function formatUserName(user: {
   firstName: string;
   lastName: string;
+  chineseName?: string | null;
   email: string | null;
 }): string {
-  const name = `${user.firstName} ${user.lastName}`.trim();
-  return name || user.email || 'Unknown user';
+  const english = `${user.firstName} ${user.lastName}`.trim();
+  const chinese = user.chineseName?.trim();
+  if (english && chinese) {
+    return `${english} (${chinese})`;
+  }
+  return english || chinese || user.email || 'Unknown user';
 }
 
 function mapReviewCommentDetail(

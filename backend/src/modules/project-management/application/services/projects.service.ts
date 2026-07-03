@@ -463,7 +463,13 @@ export class ProjectsService {
     const users = userIds.length
       ? await this.prisma.user.findMany({
           where: { id: { in: userIds }, companyId: ctx.companyId },
-          select: { id: true, firstName: true, lastName: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
         })
       : [];
     const userById = new Map(users.map((user) => [user.id, user]));

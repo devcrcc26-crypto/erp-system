@@ -28,7 +28,13 @@ export async function loadUserDisplayNameMap(
 
   const users = await prisma.user.findMany({
     where: { id: { in: ids }, companyId },
-    select: { id: true, firstName: true, lastName: true, email: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      chineseName: true,
+      email: true,
+    },
   });
 
   return new Map(users.map((user) => [user.id, formatUserDisplayName(user)]));

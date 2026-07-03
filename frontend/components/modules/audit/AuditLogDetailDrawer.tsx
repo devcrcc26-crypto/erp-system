@@ -7,16 +7,17 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { formatUserName } from '@/lib/utils/user-display';
 
 function formatTimestamp(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-function formatUserName(log: AuditLog): string {
+function formatLogUserName(log: AuditLog): string {
   if (!log.user) {
     return '-';
   }
-  return `${log.user.firstName} ${log.user.lastName}`.trim() || log.user.email;
+  return formatUserName(log.user);
 }
 
 function sourceVariant(
@@ -93,7 +94,7 @@ export default function AuditLogDetailDrawer({
               {formatTimestamp(log.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.user')}>
-              {formatUserName(log)}
+              {formatLogUserName(log)}
               {log.user?.email ? (
                 <span className={`block ${layout.drawerMetaLabel} normal-case tracking-normal`}>
                   {log.user.email}

@@ -40,7 +40,8 @@ import {
   useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { Role, User } from '@/lib/api/types';
+import type { CreateUserRequest, Role, User } from '@/lib/api/types';
+import { formatUserName } from '@/lib/utils/user-display';
 import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
 import {
   computeUsersExportSummary,
@@ -132,6 +133,22 @@ function buildUsersExportPdfLabels(
   };
 }
 
+function optionalEmailRule(
+  invalidMessage: string,
+): { validator: (_: unknown, value: string | undefined) => Promise<void> } {
+  return {
+    validator: async (_rule, value) => {
+      const trimmed = value?.trim() ?? '';
+      if (!trimmed) {
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        throw new Error(invalidMessage);
+      }
+    },
+  };
+}
+
 function InviteEmployeeModal({
   open,
   onClose,
@@ -169,14 +186,18 @@ function InviteEmployeeModal({
     setError(null);
     const invitedAddress = values.email?.trim().toLowerCase() || undefined;
 
+    const body: CreateUserRequest = {
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      chineseName: values.chineseName?.trim() || undefined,
+      isActive: true,
+    };
+    if (invitedAddress) {
+      body.email = invitedAddress;
+    }
+
     try {
-      const user = await createUser.mutateAsync({
-        email: invitedAddress,
-        firstName: values.firstName,
-        lastName: values.lastName,
-        chineseName: values.chineseName?.trim() || undefined,
-        isActive: true,
-      });
+      const user = await createUser.mutateAsync(body);
 
       if (values.roleId) {
         await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
@@ -214,7 +235,9 @@ function InviteEmployeeModal({
         }
       }}
     >
-      <p className="mb-4 text-sm text-slate-500">{t('users.inviteHelp')}</p>
+      <p className="mb-4 text-sm text-slate-500">
+        {hasEmail ? t('users.inviteHelp') : t('users.recordOnlyHelp')}
+      </p>
       <Form<InviteFormValues>
         form={form}
         layout="vertical"
@@ -243,10 +266,11 @@ function InviteEmployeeModal({
         <Form.Item
           label={t('common.emailOptional')}
           name="email"
-          rules={[{ type: 'email', message: t('common.invalidEmail') }]}
+          normalize={(value: string) => value?.trim() ?? ''}
+          rules={[optionalEmailRule(t('common.invalidEmail'))]}
           extra={t('users.emailOptionalHint')}
         >
-          <Input type="email" />
+          <Input placeholder={t('users.emailOptionalPlaceholder')} />
         </Form.Item>
         <Form.Item label={t('common.role')} name="roleId">
           <Select
@@ -448,9 +472,7 @@ export default function UsersPageContent(): React.ReactNode {
     try {
       const allUsers = await fetchAllUsers();
       const generatedAt = new Date().toISOString();
-      const preparedBy = authUser
-        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
-        : 'User';
+      const preparedBy = authUser ? formatUserName(authUser) : 'User';
 
       exportUsersPdf({
         companyName,

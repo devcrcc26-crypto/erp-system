@@ -25,17 +25,18 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { useAuditLogs } from '@/lib/query/audit-logs';
 import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
+import { formatUserName } from '@/lib/utils/user-display';
 import { layout } from '@/lib/theme/layout';
 
 function formatTimestamp(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-function formatUserName(log: AuditLog): string {
+function formatLogUserName(log: AuditLog): string {
   if (!log.user) {
     return '-';
   }
-  return `${log.user.firstName} ${log.user.lastName}`.trim() || log.user.email;
+  return formatUserName(log.user);
 }
 
 function sourceVariant(
@@ -86,7 +87,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
     () =>
       (usersDirectoryQuery.data?.data ?? []).map((user) => ({
         value: user.id,
-        label: `${user.firstName} ${user.lastName}`.trim() || user.email,
+        label: formatUserName(user),
       })),
     [usersDirectoryQuery.data?.data],
   );
@@ -104,7 +105,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         title: t('auditLogs.columns.user'),
         key: 'user',
         ellipsis: true,
-        render: (_value, record) => formatUserName(record),
+        render: (_value, record) => formatLogUserName(record),
       },
       {
         title: t('auditLogs.columns.module'),

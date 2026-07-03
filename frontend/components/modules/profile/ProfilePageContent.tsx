@@ -65,6 +65,11 @@ function ProfileSummaryCard({ profile }: { profile: UserProfile }): React.ReactN
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
             {profile.firstName} {profile.lastName}
+            {profile.chineseName ? (
+              <span className="ml-2 font-semibold text-slate-500">
+                {profile.chineseName}
+              </span>
+            ) : null}
           </h2>
           <p className="mt-1 truncate text-sm text-slate-600">{profile.email}</p>
           <p className="mt-1 text-sm text-slate-500">{profile.companyName}</p>

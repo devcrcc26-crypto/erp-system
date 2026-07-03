@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { User } from '@/lib/api/types';
+import { formatUserName } from '@/lib/utils/user-display';
 
 const TEAL: [number, number, number] = [16, 152, 138];
 const NAVY: [number, number, number] = [27, 43, 75];
@@ -245,7 +246,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
       return a.firstName.localeCompare(b.firstName);
     })
     .map((user) => [
-      `${user.firstName} ${user.lastName}`,
+      formatUserName(user),
       user.email?.trim() || '-',
       user.phone?.trim() || '-',
       formatUserStatus(user),

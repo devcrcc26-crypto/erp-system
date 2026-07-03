@@ -11,9 +11,27 @@ export interface MappedReviewSessionAttachment {
 }
 
 type ReviewSessionAttachmentRow = ReviewSessionAttachment & {
-  attachedByUser: { id: string; firstName: string; lastName: string };
+  attachedByUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    chineseName?: string | null;
+  };
   document: { id: string; name: string };
 };
+
+function formatAttachmentUserName(user: {
+  firstName: string;
+  lastName: string;
+  chineseName?: string | null;
+}): string {
+  const english = `${user.firstName} ${user.lastName}`.trim();
+  const chinese = user.chineseName?.trim();
+  if (english && chinese) {
+    return `${english} (${chinese})`;
+  }
+  return english || chinese || 'Unknown user';
+}
 
 /**
  * Maps a review session attachment row to the API response shape.
@@ -29,7 +47,7 @@ export function mapReviewSessionAttachment(
     attachedAt: row.attachedAt.toISOString(),
     attachedByUser: {
       id: row.attachedByUser.id,
-      name: `${row.attachedByUser.firstName} ${row.attachedByUser.lastName}`.trim(),
+      name: formatAttachmentUserName(row.attachedByUser),
     },
     document: {
       id: row.document.id,

@@ -7,6 +7,7 @@ import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useCurrentUser } from '@/lib/query/profile';
+import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
@@ -24,7 +25,7 @@ export default function HeaderActions({
     profile && user && profile.id === user.id ? profile : undefined;
 
   const displayName = user
-    ? `${user.firstName} ${user.lastName}`
+    ? formatUserName(user)
     : t('common.defaultUser');
   const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
   const roleName = sessionProfile

@@ -227,7 +227,12 @@ export class EpcWorkspaceService {
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
-          select: { firstName: true, lastName: true, email: true },
+          select: {
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
         },
         engineeringDocumentVersion: {
           include: {
@@ -399,7 +404,7 @@ export class EpcWorkspaceService {
         assignedToUserId: true,
         slaDeadlineAt: true,
         assignedToUser: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, chineseName: true },
         },
       },
     });
@@ -425,7 +430,7 @@ export class EpcWorkspaceService {
       }
       const existing = map.get(s.assignedToUserId) ?? {
         userId: s.assignedToUserId,
-        displayName: `${s.assignedToUser.firstName} ${s.assignedToUser.lastName}`,
+        displayName: formatReviewerName({ ...s.assignedToUser, email: null }),
         assignedReviewSessions: 0,
         openComments: 0,
         slaOverdue: 0,
@@ -477,7 +482,12 @@ export class EpcWorkspaceService {
             orderBy: { attachedAt: 'asc' },
             include: {
               attachedByUser: {
-                select: { id: true, firstName: true, lastName: true },
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  chineseName: true,
+                },
               },
               document: { select: { id: true, name: true } },
             },
@@ -491,6 +501,7 @@ export class EpcWorkspaceService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  chineseName: true,
                   email: true,
                 },
               },
@@ -499,6 +510,7 @@ export class EpcWorkspaceService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  chineseName: true,
                   email: true,
                 },
               },
@@ -679,6 +691,7 @@ export class EpcWorkspaceService {
         id: string;
         firstName: string;
         lastName: string;
+        chineseName?: string | null;
       } | null;
     },
   ): MappedReviewSessionListItem {
@@ -694,7 +707,7 @@ export class EpcWorkspaceService {
       status: row.status,
       currentTier: row.currentTier,
       assigneeName: row.assignedToUser
-        ? `${row.assignedToUser.firstName} ${row.assignedToUser.lastName}`.trim()
+        ? formatReviewerName({ ...row.assignedToUser, email: null })
         : null,
       slaDeadlineAt: row.slaDeadlineAt?.toISOString() ?? null,
       slaOverdue,
@@ -706,8 +719,13 @@ export class EpcWorkspaceService {
 function formatReviewerName(user: {
   firstName: string;
   lastName: string;
+  chineseName?: string | null;
   email: string | null;
 }): string {
-  const name = `${user.firstName} ${user.lastName}`.trim();
-  return name || user.email || 'Unknown user';
+  const english = `${user.firstName} ${user.lastName}`.trim();
+  const chinese = user.chineseName?.trim();
+  if (english && chinese) {
+    return `${english} (${chinese})`;
+  }
+  return english || chinese || user.email || 'Unknown user';
 }

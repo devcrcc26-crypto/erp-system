@@ -36,6 +36,7 @@ import type { Project, ProjectStatus, ProjectType } from '@/lib/api/project-mana
 import type { PortfolioSummary, SystemReportPdfLabels } from '@/lib/api/reporting.types';
 import { usePortfolioSummary } from '@/lib/query/reports';
 import { useAllProjects } from '@/lib/query/projects';
+import { formatUserName } from '@/lib/utils/user-display';
 import { normalizePortfolioSummary } from '@/lib/utils/portfolio-summary';
 import { exportSystemReportPdf } from '@/lib/utils/system-report-pdf';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
@@ -654,9 +655,7 @@ export default function ReportsPageContent(): React.ReactNode {
 
     setExportingPdf(true);
     try {
-      const preparedBy = authUser
-        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
-        : 'User';
+      const preparedBy = authUser ? formatUserName(authUser) : 'User';
 
       exportSystemReportPdf({
         summary,

@@ -13,7 +13,7 @@ import { useProjectTeam, useSetProjectTeam } from '@/lib/query/projects';
 import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { displayUserLabel, formatUserPickerLabel, formatUserRoleNames } from '@/lib/utils/user-display';
+import { displayUserLabel, formatUserName, formatUserPickerLabel, formatUserRoleNames } from '@/lib/utils/user-display';
 
 const EMPTY_TEAM: ProjectTeamMember[] = [];
 
@@ -37,7 +37,7 @@ function useUserDirectoryLookup(): (
       return { name: displayUserLabel(userId), roles: '-' };
     }
     return {
-      name: `${user.firstName} ${user.lastName}`,
+      name: formatUserName(user),
       roles: formatUserRoleNames(user),
     };
   };

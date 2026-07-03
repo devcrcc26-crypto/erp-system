@@ -476,7 +476,13 @@ export class DocumentService {
       orderBy: { versionNumber: 'desc' },
       include: {
         uploader: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
         },
       },
     });

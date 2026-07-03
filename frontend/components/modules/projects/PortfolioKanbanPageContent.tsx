@@ -28,6 +28,7 @@ import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users'
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatProjectStatus } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { groupProjectsByStatus } from '@/lib/utils/portfolio-kanban';
@@ -46,7 +47,7 @@ function useProjectManagerNames(enabled: boolean): Record<string, string> {
   return useMemo(() => {
     const map: Record<string, string> = {};
     for (const user of users) {
-      map[user.id] = `${user.firstName} ${user.lastName}`;
+      map[user.id] = formatUserName(user);
     }
     return map;
   }, [users]);

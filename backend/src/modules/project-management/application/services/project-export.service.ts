@@ -94,10 +94,10 @@ export class ProjectExportService {
       include: {
         responsibleDepartment: { select: { name: true } },
         projectManager: {
-          select: { firstName: true, lastName: true, email: true },
+          select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
         responsiblePerson: {
-          select: { firstName: true, lastName: true, email: true },
+          select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -169,10 +169,10 @@ export class ProjectExportService {
       include: {
         responsibleDepartment: { select: { name: true } },
         projectManager: {
-          select: { firstName: true, lastName: true, email: true },
+          select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
         responsiblePerson: {
-          select: { firstName: true, lastName: true, email: true },
+          select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
       },
     });

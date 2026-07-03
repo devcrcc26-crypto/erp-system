@@ -28,6 +28,31 @@ export function displayUserLabel(
 }
 
 /**
+ * Full display name including the Chinese name when present, e.g. "Wei Zhang (张伟)".
+ * Falls back to the Chinese name alone, then email, then "Unknown user".
+ */
+export function formatUserName(user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  chineseName?: string | null;
+  email?: string | null;
+}): string {
+  const english = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+  const chinese = user.chineseName?.trim();
+
+  if (english && chinese) {
+    return `${english} (${chinese})`;
+  }
+  if (english) {
+    return english;
+  }
+  if (chinese) {
+    return chinese;
+  }
+  return user.email?.trim() || 'Unknown user';
+}
+
+/**
  * Comma-separated system role names for a user.
  */
 export function formatUserRoleNames(user: User): string {
@@ -45,5 +70,5 @@ export function formatUserRoleNames(user: User): string {
 export function formatUserPickerLabel(user: User): string {
   const roles = formatUserRoleNames(user);
   const contact = user.email ? ` (${user.email})` : '';
-  return `${user.firstName} ${user.lastName} — ${roles}${contact}`;
+  return `${formatUserName(user)} — ${roles}${contact}`;
 }

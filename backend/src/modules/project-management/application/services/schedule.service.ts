@@ -69,10 +69,10 @@ const TASK_SORT_FIELDS = new Set([
 
 const TASK_DISCIPLINE_USER_INCLUDE = {
   instituteChiefUser: {
-    select: { id: true, firstName: true, lastName: true },
+    select: { id: true, firstName: true, lastName: true, chineseName: true },
   },
   supportingDesignerUser: {
-    select: { id: true, firstName: true, lastName: true },
+    select: { id: true, firstName: true, lastName: true, chineseName: true },
   },
 } as const;
 
@@ -988,12 +988,21 @@ export class ScheduleService {
   }
 
   private formatUserDisplayName(
-    user: { firstName: string; lastName: string } | null,
+    user: {
+      firstName: string;
+      lastName: string;
+      chineseName?: string | null;
+    } | null,
   ): string | null {
     if (!user) {
       return null;
     }
-    return `${user.firstName} ${user.lastName}`.trim();
+    const english = `${user.firstName} ${user.lastName}`.trim();
+    const chinese = user.chineseName?.trim();
+    if (english && chinese) {
+      return `${english} (${chinese})`;
+    }
+    return english || chinese || null;
   }
 
   private async resolveDisciplineRoleNames(
@@ -1042,7 +1051,7 @@ export class ScheduleService {
   ): Promise<string> {
     const user = await this.prisma.user.findFirst({
       where: activeOnly({ id: userId, companyId: ctx.companyId }),
-      select: { firstName: true, lastName: true },
+      select: { firstName: true, lastName: true, chineseName: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');

@@ -35,6 +35,11 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   lastname: 'lastName',
   'last name': 'lastName',
   last_name: 'lastName',
+  chinesename: 'chineseName',
+  'chinese name': 'chineseName',
+  chinese_name: 'chineseName',
+  name_zh: 'chineseName',
+  'chinese full name': 'chineseName',
   role: 'role',
   'role name': 'role',
   rolename: 'role',
@@ -48,6 +53,7 @@ interface ParsedImportRow {
   email: string;
   firstName: string;
   lastName: string;
+  chineseName?: string;
   role: string;
   phone?: string;
 }
@@ -77,6 +83,7 @@ export class UserImportService {
       { header: 'email', key: 'email', width: 32 },
       { header: 'firstName', key: 'firstName', width: 18 },
       { header: 'lastName', key: 'lastName', width: 18 },
+      { header: 'chineseName', key: 'chineseName', width: 18 },
       { header: 'role', key: 'role', width: 22 },
       { header: 'phone', key: 'phone', width: 16 },
     ];
@@ -85,15 +92,33 @@ export class UserImportService {
       email: 'user@company.local',
       firstName: 'Jane',
       lastName: 'Doe',
+      chineseName: '',
+      role: 'Employee',
+      phone: '',
+    });
+    sheet.addRow({
+      email: '',
+      firstName: 'Wei',
+      lastName: 'Zhang',
+      chineseName: '张伟',
       role: 'Employee',
       phone: '',
     });
 
     const instructions = workbook.addWorksheet('Instructions');
     instructions.addRow(['Column', 'Required', 'Notes']);
-    instructions.addRow(['email', 'Yes', 'Must be unique per company']);
+    instructions.addRow([
+      'email',
+      'No',
+      'Optional. Leave blank for record-only users who will not log in.',
+    ]);
     instructions.addRow(['firstName', 'Yes', '']);
     instructions.addRow(['lastName', 'Yes', '']);
+    instructions.addRow([
+      'chineseName',
+      'No',
+      'Chinese full name (中文姓名) — recommended when email is blank',
+    ]);
     instructions.addRow([
       'role',
       'Yes',
@@ -104,7 +129,7 @@ export class UserImportService {
     instructions.addRow([
       'Note',
       '',
-      'Imported users receive an activation email to verify their address and set a password.',
+      'Rows with an email receive an activation email. Rows without an email are record-only (no login).',
     ]);
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -141,16 +166,23 @@ export class UserImportService {
 
     for (const row of validRows) {
       try {
-        const user = await this.userProvisioningService.provisionInvitedUser(
-          ctx,
-          {
-            email: row.email,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            phone: row.phone,
-            isActive: true,
-          },
-        );
+        const shared = {
+          firstName: row.firstName,
+          lastName: row.lastName,
+          chineseName: row.chineseName,
+          phone: row.phone,
+          isActive: true,
+        };
+
+        const user = row.email
+          ? await this.userProvisioningService.provisionInvitedUser(ctx, {
+              email: row.email,
+              ...shared,
+            })
+          : await this.userProvisioningService.provisionRecordOnlyUser(
+              ctx,
+              shared,
+            );
 
         if (row.roleId) {
           await this.userManagementService.assignUserRole(ctx, user.id, {
@@ -162,7 +194,7 @@ export class UserImportService {
       } catch (error) {
         errors.push({
           line: row.line,
-          email: row.email,
+          email: row.email || undefined,
           message: this.formatImportError(error),
         });
       }
@@ -172,12 +204,15 @@ export class UserImportService {
     let invitationsFailed = 0;
 
     if (sendInvitations && createdUsers.length > 0) {
-      const result =
-        await this.userInvitationDispatchService.dispatchInvitations(
-          createdUsers,
-        );
-      invitationsSent = result.sent;
-      invitationsFailed = result.failed;
+      const invitees = createdUsers.filter((user) => Boolean(user.email));
+      if (invitees.length > 0) {
+        const result =
+          await this.userInvitationDispatchService.dispatchInvitations(
+            invitees,
+          );
+        invitationsSent = result.sent;
+        invitationsFailed = result.failed;
+      }
     }
 
     return {
@@ -213,7 +248,6 @@ export class UserImportService {
     });
 
     const requiredFields: Array<keyof ParsedImportRow> = [
-      'email',
       'firstName',
       'lastName',
       'role',
@@ -254,6 +288,9 @@ export class UserImportService {
             break;
           case 'lastName':
             parsed.lastName = value;
+            break;
+          case 'chineseName':
+            parsed.chineseName = value || undefined;
             break;
           case 'role':
             parsed.role = value;
@@ -302,7 +339,7 @@ export class UserImportService {
         emailsInFile,
       );
       previewRows.push(preview);
-      if (preview.status === 'ok') {
+      if (preview.status === 'ok' && preview.email) {
         emailsInFile.add(normalizeEmail(preview.email));
       }
     }
@@ -329,31 +366,51 @@ export class UserImportService {
   ): Promise<ImportRowPreviewDto> {
     const base = {
       line: row.line,
-      email: row.email,
+      email: row.email.trim() || undefined,
       firstName: row.firstName,
       lastName: row.lastName,
+      chineseName: row.chineseName,
       role: row.role,
       phone: row.phone,
     };
 
-    if (!row.email || !row.firstName || !row.lastName || !row.role) {
+    if (!row.firstName || !row.lastName || !row.role) {
       return {
         ...base,
         status: 'error',
-        message: 'email, firstName, lastName, and role are required',
+        message: 'firstName, lastName, and role are required',
       };
     }
 
-    if (!this.isValidEmail(row.email)) {
+    const role = roleByNormalizedName.get(this.normalizeRoleName(row.role));
+    if (!role) {
       return {
         ...base,
-        email: row.email,
+        status: 'error',
+        message: `Unknown role: ${row.role}`,
+      };
+    }
+
+    const trimmedEmail = row.email.trim();
+    if (!trimmedEmail) {
+      return {
+        ...base,
+        status: 'ok',
+        roleId: role.id,
+        message: 'Record-only user (no login access)',
+      };
+    }
+
+    if (!this.isValidEmail(trimmedEmail)) {
+      return {
+        ...base,
+        email: trimmedEmail,
         status: 'error',
         message: 'Invalid email address',
       };
     }
 
-    const normalizedEmail = normalizeEmail(row.email);
+    const normalizedEmail = normalizeEmail(trimmedEmail);
 
     if (emailsInFile.has(normalizedEmail)) {
       return {
@@ -370,16 +427,6 @@ export class UserImportService {
     );
 
     if (existing?.deletedAt) {
-      const role = roleByNormalizedName.get(this.normalizeRoleName(row.role));
-      if (!role) {
-        return {
-          ...base,
-          email: normalizedEmail,
-          status: 'error',
-          message: `Unknown role: ${row.role}`,
-        };
-      }
-
       return {
         ...base,
         email: normalizedEmail,
@@ -397,16 +444,6 @@ export class UserImportService {
         message: existing.emailVerifiedAt
           ? 'User with this email already exists'
           : 'User already exists and is pending activation',
-      };
-    }
-
-    const role = roleByNormalizedName.get(this.normalizeRoleName(row.role));
-    if (!role) {
-      return {
-        ...base,
-        email: normalizedEmail,
-        status: 'error',
-        message: `Unknown role: ${row.role}`,
       };
     }
 

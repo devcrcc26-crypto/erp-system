@@ -26,6 +26,9 @@ export class ProfileResponseDto {
   lastName!: string;
 
   @ApiProperty({ nullable: true })
+  chineseName!: string | null;
+
+  @ApiProperty({ nullable: true })
   phone!: string | null;
 
   @ApiProperty()

@@ -1121,6 +1121,7 @@ type TaskDisciplineUserSummary = {
   id: string;
   firstName: string;
   lastName: string;
+  chineseName?: string | null;
 };
 
 type TaskDisciplineWithUsers = TaskDiscipline & {
@@ -1134,8 +1135,13 @@ function mapDisciplineUserSummary(
   if (!user) {
     return null;
   }
-  const name = `${user.firstName} ${user.lastName}`.trim();
-  return { id: user.id, name: name.length > 0 ? name : 'Unknown user' };
+  const english = `${user.firstName} ${user.lastName}`.trim();
+  const chinese = user.chineseName?.trim();
+  const name =
+    english && chinese
+      ? `${english} (${chinese})`
+      : english || chinese || 'Unknown user';
+  return { id: user.id, name };
 }
 
 /**

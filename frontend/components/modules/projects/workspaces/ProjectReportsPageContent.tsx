@@ -50,6 +50,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { exportProjectReportPdf } from '@/lib/utils/project-report-pdf';
+import { formatUserName } from '@/lib/utils/user-display';
 import { BarChart3 } from 'lucide-react';
 
 const CHART_HEIGHT = 220;
@@ -572,9 +573,7 @@ export default function ProjectReportsPageContent({
 
     setExportingPdf(true);
     try {
-      const preparedBy = authUser
-        ? `${authUser.firstName} ${authUser.lastName}`.trim() || authUser.email
-        : 'User';
+      const preparedBy = authUser ? formatUserName(authUser) : 'User';
       const generatedAt = new Date().toISOString();
 
       exportProjectReportPdf({

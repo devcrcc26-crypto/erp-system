@@ -41,6 +41,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
+  chineseName: string | null;
   companyId: string;
   companyName: string;
   preferredLanguage: string | null;
@@ -105,6 +106,7 @@ export interface UserProfile {
   pendingEmail: string | null;
   firstName: string;
   lastName: string;
+  chineseName: string | null;
   phone: string | null;
   companyId: string;
   companyName: string;
@@ -215,9 +217,10 @@ export type ImportRowStatus =
 
 export interface ImportRowPreview {
   line: number;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
+  chineseName?: string;
   role: string;
   phone?: string;
   status: ImportRowStatus;
@@ -234,7 +237,7 @@ export interface ImportPreviewResult {
 
 export interface ImportCommitError {
   line: number;
-  email: string;
+  email?: string;
   message: string;
 }
 
@@ -327,7 +330,8 @@ export interface AuditLogUser {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  chineseName: string | null;
+  email: string | null;
 }
 
 export interface AuditLog {

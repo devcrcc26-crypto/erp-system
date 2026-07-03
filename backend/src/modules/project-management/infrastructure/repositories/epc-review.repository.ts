@@ -28,7 +28,12 @@ export interface ReviewSessionWithSnapshot extends ReviewSession {
 }
 
 export type ReviewSessionAttachmentWithRelations = ReviewSessionAttachment & {
-  attachedByUser: { id: string; firstName: string; lastName: string };
+  attachedByUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    chineseName: string | null;
+  };
   document: { id: string; name: string };
 };
 
@@ -214,12 +219,14 @@ export class EpcReviewRepository {
           id: string;
           firstName: string;
           lastName: string;
+          chineseName: string | null;
           email: string | null;
         };
         assignedToUser: {
           id: string;
           firstName: string;
           lastName: string;
+          chineseName: string | null;
           email: string | null;
         };
         reviewSession: { id: string; designPackageId: string; status: ReviewSessionStatus };
@@ -230,10 +237,22 @@ export class EpcReviewRepository {
       where: activeOnly({ id: reviewCommentId, companyId }),
       include: {
         author: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
         },
         assignedToUser: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
         },
         reviewSession: {
           select: { id: true, designPackageId: true, status: true },
@@ -472,6 +491,7 @@ export class EpcReviewRepository {
           id: string;
           firstName: string;
           lastName: string;
+          chineseName: string | null;
         } | null;
       }
     >;
@@ -492,7 +512,12 @@ export class EpcReviewRepository {
         include: {
           designPackage: { select: { id: true, name: true } },
           assignedToUser: {
-            select: { id: true, firstName: true, lastName: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+            },
           },
         },
       }),
@@ -516,6 +541,7 @@ export class EpcReviewRepository {
           id: string;
           firstName: string;
           lastName: string;
+          chineseName: string | null;
         } | null;
       }
     >;
@@ -536,7 +562,12 @@ export class EpcReviewRepository {
         include: {
           designPackage: { select: { id: true, name: true } },
           assignedToUser: {
-            select: { id: true, firstName: true, lastName: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+            },
           },
         },
       }),
@@ -634,7 +665,7 @@ export class EpcReviewRepository {
       },
       include: {
         attachedByUser: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, chineseName: true },
         },
         document: { select: { id: true, name: true } },
       },
@@ -653,7 +684,7 @@ export class EpcReviewRepository {
       orderBy: { attachedAt: 'asc' },
       include: {
         attachedByUser: {
-          select: { id: true, firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true, chineseName: true },
         },
         document: { select: { id: true, name: true } },
       },

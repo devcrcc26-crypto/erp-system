@@ -20,14 +20,17 @@ export class ImportRowPreviewDto {
   @ApiProperty()
   line!: number;
 
-  @ApiProperty()
-  email!: string;
+  @ApiPropertyOptional({ description: 'Blank for record-only users' })
+  email?: string;
 
   @ApiProperty()
   firstName!: string;
 
   @ApiProperty()
   lastName!: string;
+
+  @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)' })
+  chineseName?: string;
 
   @ApiProperty()
   role!: string;
@@ -63,8 +66,8 @@ export class ImportCommitErrorDto {
   @ApiProperty()
   line!: number;
 
-  @ApiProperty()
-  email!: string;
+  @ApiPropertyOptional()
+  email?: string;
 
   @ApiProperty()
   message!: string;
