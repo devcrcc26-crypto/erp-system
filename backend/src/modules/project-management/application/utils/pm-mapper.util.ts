@@ -118,7 +118,7 @@ export interface MappedProject {
   client: string | null;
   responsibleDepartment: Project['responsibleDepartment'];
   designProperties: Project['designProperties'];
-  designStage: string | null;
+  designStage: Project['designStage'];
   description: string | null;
   overallProgressPct: number;
   isOutsourced: boolean;
@@ -940,7 +940,7 @@ export interface MappedTask {
   onSiteReceivingTime: string | null;
   assignmentToHqTime: string | null;
   contactFormNumber: string | null;
-  designStage: string | null;
+  designStage: Task['designStage'];
   urgencyLevel: Task['urgencyLevel'];
   hasCustomSchedule: boolean;
   language: Task['language'];

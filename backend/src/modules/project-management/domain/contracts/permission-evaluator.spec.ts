@@ -28,7 +28,7 @@ const allAllow: PermissionLayerResult[] = [
     PermissionLayerVerdict.ALLOW,
   ),
   layerResult(
-    PermissionLayerId.PROJECT_DESIGN_PHASE,
+    PermissionLayerId.PROJECT_DESIGN_STAGE,
     PermissionLayerVerdict.ALLOW,
   ),
   layerResult(PermissionLayerId.WORKFLOW_STATE, PermissionLayerVerdict.ALLOW),
@@ -92,7 +92,7 @@ describe('permission-evaluator (deny-wins contract)', () => {
           PermissionLayerVerdict.ALLOW,
         ),
         layerResult(
-          PermissionLayerId.PROJECT_DESIGN_PHASE,
+          PermissionLayerId.PROJECT_DESIGN_STAGE,
           PermissionLayerVerdict.ALLOW,
         ),
         layerResult(PermissionLayerId.WORKFLOW_STATE, PermissionLayerVerdict.ALLOW),

@@ -16,7 +16,7 @@ const DEMO_NON_REVIEW_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVISION_TRIGGER_CREATE,
 ]);
 // END DEMO BYPASS
-import { ProjectDesignPhase } from '../../domain/contracts/enums/project-design-phase.enum';
+import { ProjectDesignStage } from '../../domain/contracts/enums/project-design-stage.enum';
 import { canPerformFromContext } from '../../domain/permission-context-builder';
 import {
   EdvWithDiscipline,
@@ -89,7 +89,7 @@ export class PermissionResolverService {
       input.projectId,
       input.userId,
     );
-    const projectDesignPhase = await this.resolveProjectDesignPhase(
+    const projectDesignStage = await this.resolveProjectDesignStage(
       input.companyId,
       input.projectId,
     );
@@ -110,7 +110,7 @@ export class PermissionResolverService {
       edvStatus: input.edv.status as never,
       grantedActions,
       projectTeamRole: projectTeamRole as never,
-      projectDesignPhase,
+      projectDesignStage,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
       disciplineSupportingDesignerUserId:
         discipline.supportingDesignerUserId ?? undefined,
@@ -150,7 +150,7 @@ export class PermissionResolverService {
       input.projectId,
       input.userId,
     );
-    const projectDesignPhase = await this.resolveProjectDesignPhase(
+    const projectDesignStage = await this.resolveProjectDesignStage(
       input.companyId,
       input.projectId,
     );
@@ -190,7 +190,7 @@ export class PermissionResolverService {
       designPackageId: input.designPackageId,
       grantedActions,
       projectTeamRole: projectTeamRole as never,
-      projectDesignPhase,
+      projectDesignStage,
       disciplineDesignerUserId: discipline.designerUserId ?? undefined,
       disciplineSupportingDesignerUserId:
         discipline.supportingDesignerUserId ?? undefined,
@@ -279,22 +279,22 @@ export class PermissionResolverService {
   }
 
   /**
-   * Loads the tenant-scoped project design phase used by workflow permission gates.
+   * Loads the tenant-scoped project design stage used by workflow permission gates.
    */
-  private async resolveProjectDesignPhase(
+  private async resolveProjectDesignStage(
     companyId: string,
     projectId: string,
-  ): Promise<ProjectDesignPhase> {
+  ): Promise<ProjectDesignStage> {
     const project = await this.prisma.project.findFirst({
       where: activeOnly({ id: projectId, companyId }),
       select: { designStage: true },
     });
 
     if (!project?.designStage) {
-      throw new BadRequestException('Project design phase is not set.');
+      throw new BadRequestException('Project design stage is not set.');
     }
 
-    return project.designStage as ProjectDesignPhase;
+    return project.designStage as ProjectDesignStage;
   }
 
   private mapTransitionToAction(

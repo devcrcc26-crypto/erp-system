@@ -5,7 +5,7 @@ import { EdvStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { EpcWorkflowAction } from '../../../domain/contracts/enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from '../../../domain/contracts/enums/project-design-phase.enum';
+import { ProjectDesignStage } from '../../../domain/contracts/enums/project-design-stage.enum';
 import * as permissionContextBuilder from '../../../domain/permission-context-builder';
 import { EpcWorkflowRepository } from '../../../infrastructure/repositories/epc-workflow.repository';
 import { PermissionResolverService } from '../permission-resolver.service';
@@ -64,9 +64,9 @@ describe('PermissionResolverService project design phase', () => {
     canPerformSpy.mockRestore();
   });
 
-  it('passes DETAILED_DESIGN from the project record to the evaluator', async () => {
+  it('passes DETAILED_DESIGN_DD from the project record to the evaluator', async () => {
     prisma.project.findFirst.mockResolvedValue({
-      designStage: ProjectDesignPhase.DETAILED_DESIGN,
+      designStage: 'DETAILED_DESIGN_DD',
     });
 
     await service.assertActionAllowed({
@@ -83,14 +83,14 @@ describe('PermissionResolverService project design phase', () => {
     });
     expect(canPerformSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+        projectDesignStage: ProjectDesignStage.DETAILED_DESIGN_DD,
       }),
     );
   });
 
-  it('passes SCHEMATIC from the project record to the evaluator', async () => {
+  it('passes SCHEMATIC_DESIGN_SD from the project record to the evaluator', async () => {
     prisma.project.findFirst.mockResolvedValue({
-      designStage: ProjectDesignPhase.SCHEMATIC,
+      designStage: 'SCHEMATIC_DESIGN_SD',
     });
 
     await service.assertActionAllowed({
@@ -103,13 +103,13 @@ describe('PermissionResolverService project design phase', () => {
 
     expect(canPerformSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectDesignPhase: ProjectDesignPhase.SCHEMATIC,
+        projectDesignStage: ProjectDesignStage.SCHEMATIC_DESIGN_SD,
       }),
     );
   });
 
-  it('throws BadRequestException when the project design phase is null', async () => {
-    prisma.project.findFirst.mockResolvedValue({ designStage: null });
+  it('throws BadRequestException when the project design stage is missing', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
 
     await expect(
       service.assertActionAllowed({
@@ -120,26 +120,26 @@ describe('PermissionResolverService project design phase', () => {
         taskDisciplineId,
       }),
     ).rejects.toThrow(
-      new BadRequestException('Project design phase is not set.'),
+      new BadRequestException('Project design stage is not set.'),
     );
 
     expect(canPerformSpy).not.toHaveBeenCalled();
   });
 
-  it('does not hardcode DETAILED_DESIGN in permission resolver methods', () => {
+  it('does not hardcode DETAILED_DESIGN_DD in permission resolver methods', () => {
     const source = readFileSync(
       join(__dirname, '../permission-resolver.service.ts'),
       'utf8',
     );
 
     expect(source).not.toMatch(
-      /projectDesignPhase:\s*ProjectDesignPhase\.DETAILED_DESIGN/,
+      /projectDesignStage:\s*ProjectDesignStage\.DETAILED_DESIGN_DD/,
     );
   });
 
-  it('loads project design phase for EDV transition checks', async () => {
+  it('loads project design stage for EDV transition checks', async () => {
     prisma.project.findFirst.mockResolvedValue({
-      designStage: ProjectDesignPhase.SCHEMATIC,
+      designStage: 'SCHEMATIC_DESIGN_SD',
     });
 
     await service.assertEdvTransitionAllowed({
@@ -158,7 +158,7 @@ describe('PermissionResolverService project design phase', () => {
 
     expect(canPerformSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectDesignPhase: ProjectDesignPhase.SCHEMATIC,
+        projectDesignStage: ProjectDesignStage.SCHEMATIC_DESIGN_SD,
       }),
     );
   });

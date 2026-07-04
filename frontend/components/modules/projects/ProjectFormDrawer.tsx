@@ -21,7 +21,6 @@ import type {
   CreateProjectRequest,
   Project,
   ProjectContractType,
-  ProjectDesignPhase,
   ProjectType,
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
@@ -43,7 +42,11 @@ import type { ProjectDesignProperties } from '@/lib/constants/project-design-pro
 import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
 import { PROJECT_CLIENT_PRESET_OPTIONS } from '@/lib/constants/project-client-presets';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
-import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
+import {
+  PROJECT_DESIGN_STAGE_DEFAULT,
+  PROJECT_DESIGN_STAGE_OPTIONS,
+} from '@/lib/constants/project-design-stage';
+import type { ProjectDesignStage } from '@/lib/constants/project-design-stage';
 import {
   PROJECT_TYPE_OPTIONS,
 } from '@/lib/utils/project-display';
@@ -71,7 +74,7 @@ interface ProjectFormValues {
   client?: string;
   responsibleDepartment?: ProjectResponsibleDepartment;
   designProperties?: ProjectDesignProperties;
-  designStage?: ProjectDesignPhase;
+  designStage?: ProjectDesignStage;
   responsiblePersonId?: string;
   description?: string;
   overallProgressPct?: number;
@@ -103,7 +106,7 @@ function toFormValues(project: Project): ProjectFormValues {
     client: project.client ?? undefined,
     responsibleDepartment: project.responsibleDepartment,
     designProperties: project.designProperties,
-    designStage: project.designStage ?? undefined,
+    designStage: project.designStage,
     responsiblePersonId: project.responsiblePersonId ?? undefined,
     description: project.description ?? undefined,
     overallProgressPct: project.overallProgressPct,
@@ -178,6 +181,7 @@ export default function ProjectFormDrawer({
       contractType: PROJECT_CONTRACT_TYPE_DEFAULT,
       responsibleDepartment: PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
       designProperties: PROJECT_DESIGN_PROPERTIES_DEFAULT,
+      designStage: PROJECT_DESIGN_STAGE_DEFAULT,
       currency: 'USD',
       overallProgressPct: 0,
       isOutsourced: false,
@@ -337,16 +341,8 @@ export default function ProjectFormDrawer({
         <Form.Item label="Design properties" name="designProperties">
           <Select options={PROJECT_DESIGN_PROPERTIES_OPTIONS} />
         </Form.Item>
-        <Form.Item
-          label="Design stage"
-          name="designStage"
-          extra="Required for EPC engineering workflows such as revision triggers and submittals."
-        >
-          <Select
-            allowClear
-            placeholder="Select design stage"
-            options={PROJECT_DESIGN_PHASE_OPTIONS}
-          />
+        <Form.Item label="Design stage" name="designStage">
+          <Select options={PROJECT_DESIGN_STAGE_OPTIONS} />
         </Form.Item>
         <Form.Item label="Responsible person" name="responsiblePersonId">
           <UserSelect placeholder="Assign responsible person" />

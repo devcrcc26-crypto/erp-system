@@ -26,7 +26,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2025-01-10',
     plannedFinishDate: '2027-06-30',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Detailed Design',
+    designStage: 'DETAILED_DESIGN_DD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -42,7 +42,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2028-03-31',
     contractType: ProjectContractType.CONTRACT,
     roadLengthKm: 42.6,
-    designStage: 'Construction Documents',
+    designStage: 'CONSTRUCTION_DRAWING_DESIGN_CD_IFC',
     designProperties: 'IMPLEMENTATION_DBB',
   },
   {
@@ -58,7 +58,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2029-12-31',
     contractType: ProjectContractType.CONTRACT,
     railwayLengthKm: 68.4,
-    designStage: 'Preliminary Design',
+    designStage: 'PRELIMINARY_DESIGN_PD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -74,7 +74,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2028-09-30',
     contractType: ProjectContractType.CONTRACT,
     urbanRailLengthKm: 12.8,
-    designStage: 'Detailed Design',
+    designStage: 'DETAILED_DESIGN_DD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -90,7 +90,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2026-11-30',
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 92_400,
-    designStage: 'Construction Documents',
+    designStage: 'CONSTRUCTION_DRAWING_DESIGN_CD_IFC',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -105,7 +105,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2026-01-01',
     plannedFinishDate: '2030-06-30',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Scheme Design',
+    designStage: 'SCHEMATIC_DESIGN_SD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -120,7 +120,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2026-06-01',
     plannedFinishDate: '2031-12-31',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Feasibility',
+    designStage: 'TENDER',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -135,7 +135,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2024-05-01',
     plannedFinishDate: '2027-04-30',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Detailed Design',
+    designStage: 'DETAILED_DESIGN_DD',
     designProperties: 'IMPLEMENTATION_DBB',
   },
   {
@@ -150,7 +150,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2025-09-01',
     plannedFinishDate: '2028-12-31',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Preliminary Design',
+    designStage: 'PRELIMINARY_DESIGN_PD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -166,7 +166,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2030-09-30',
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 124_000,
-    designStage: 'Scheme Design',
+    designStage: 'SCHEMATIC_DESIGN_SD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -181,7 +181,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2025-02-15',
     plannedFinishDate: '2027-08-31',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Construction Documents',
+    designStage: 'CONSTRUCTION_DRAWING_DESIGN_CD_IFC',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -197,7 +197,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2028-05-31',
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 156_200,
-    designStage: 'Detailed Design',
+    designStage: 'DETAILED_DESIGN_DD',
     designProperties: 'IMPLEMENTATION_DB',
   },
   {
@@ -212,7 +212,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     startDate: '2026-01-15',
     plannedFinishDate: '2028-06-30',
     contractType: ProjectContractType.CONTRACT,
-    designStage: 'Feasibility',
+    designStage: 'TENDER',
     designProperties: 'PRELIMINARY',
   },
 ];

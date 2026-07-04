@@ -11,6 +11,7 @@ import {
   MeetingType,
   ProjectContractType,
   ProjectDesignProperties,
+  ProjectDesignStage,
   ProjectResponsibleDepartment,
   ProjectStatus,
   ProjectTeamRole,
@@ -82,6 +83,11 @@ export class ProjectListQueryDto extends PaginationQueryDto {
   @IsEnum(ProjectDesignProperties)
   designProperties?: ProjectDesignProperties;
 
+  @ApiPropertyOptional({ enum: ProjectDesignStage })
+  @IsOptional()
+  @IsEnum(ProjectDesignStage)
+  designStage?: ProjectDesignStage;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
@@ -113,6 +119,11 @@ export class ProjectExportListQueryDto {
   @IsOptional()
   @IsEnum(ProjectDesignProperties)
   designProperties?: ProjectDesignProperties;
+
+  @ApiPropertyOptional({ enum: ProjectDesignStage })
+  @IsOptional()
+  @IsEnum(ProjectDesignStage)
+  designStage?: ProjectDesignStage;
 
   @ApiPropertyOptional({ type: [String], description: 'Optional project id filter' })
   @IsOptional()
@@ -245,10 +256,10 @@ export class CreateProjectDto {
   @IsEnum(ProjectDesignProperties)
   designProperties?: ProjectDesignProperties;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ProjectDesignStage })
   @IsOptional()
-  @IsString()
-  designStage?: string;
+  @IsEnum(ProjectDesignStage)
+  designStage?: ProjectDesignStage;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -456,10 +467,10 @@ export class CreateTaskDto {
   @IsString()
   contactFormNumber?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ProjectDesignStage })
   @IsOptional()
-  @IsString()
-  designStage?: string;
+  @IsEnum(ProjectDesignStage)
+  designStage?: ProjectDesignStage;
 
   @ApiPropertyOptional({ enum: UrgencyLevel })
   @IsOptional()

@@ -9,7 +9,7 @@ export * from './enums/task-discipline-projected-status.enum';
 export * from './enums/comment-status.enum';
 export * from './enums/workflow-event-phase.enum';
 export * from './enums/epc-workflow-action.enum';
-export * from './enums/project-design-phase.enum';
+export * from './enums/project-design-stage.enum';
 export * from './enums/project-team-role.enum';
 export * from './enums/design-package-dependency-type.enum';
 export * from './enums/engineering-document-type.enum';

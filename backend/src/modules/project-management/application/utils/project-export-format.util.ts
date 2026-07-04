@@ -9,10 +9,12 @@ import {
 } from '@prisma/client';
 import { formatProjectContractTypeLabel } from '@/shared/project-contract-type';
 import { formatProjectDesignPropertiesLabel } from '@/shared/project-design-properties';
+import { formatProjectDesignStageLabel } from '@/shared/project-design-stage';
 import { formatProjectResponsibleDepartmentLabel } from '@/shared/project-responsible-department';
 import { formatProjectStatusLabel } from '@/shared/project-status';
 import type {
   ProjectDesignProperties,
+  ProjectDesignStage,
   ProjectResponsibleDepartment,
 } from '@prisma/client';
 
@@ -202,6 +204,16 @@ export function formatExportDesignProperties(
     return formatProjectDesignPropertiesLabel('PRELIMINARY');
   }
   return formatProjectDesignPropertiesLabel(value);
+}
+
+/** Human-readable design stage label for Excel export. */
+export function formatExportDesignStage(
+  value: ProjectDesignStage | null | undefined,
+): string {
+  if (value == null) {
+    return formatProjectDesignStageLabel('TENDER');
+  }
+  return formatProjectDesignStageLabel(value);
 }
 
 /**

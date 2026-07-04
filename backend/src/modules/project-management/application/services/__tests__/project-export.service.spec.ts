@@ -76,7 +76,7 @@ describe('ProjectExportService', () => {
         startDate: new Date('2026-01-15'),
         projectType: 'RAILWAY',
         designProperties: 'IMPLEMENTATION_DB',
-        designStage: 'DETAILED_DESIGN',
+        designStage: 'DETAILED_DESIGN_DD',
         status: 'IN_PROGRESS',
         railwayLengthKm: 120.5,
         urbanRailLengthKm: null,
@@ -103,6 +103,7 @@ describe('ProjectExportService', () => {
     expect(dataRow.getCell(6).value).toBe('Email');
     expect(dataRow.getCell(9).value).toBe('Municipal Transportation Department');
     expect(dataRow.getCell(10).value).toBe('Implementation（DB）');
+    expect(dataRow.getCell(11).value).toBe('Detailed Design (DD)');
     expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
     expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
     expect(dataRow.getCell(14).value).toBe(120.5);
@@ -127,7 +128,7 @@ describe('ProjectExportService', () => {
         startDate: null,
         projectType: 'BUILDING',
         designProperties: 'PRELIMINARY',
-        designStage: null,
+        designStage: 'TENDER',
         railwayLengthKm: null,
         urbanRailLengthKm: null,
         roadLengthKm: null,
@@ -157,7 +158,7 @@ describe('ProjectExportService', () => {
         assignmentToHqTime: new Date('2026-02-02T09:00:00.000Z'),
         finishDate: new Date('2026-06-30'),
         contactFormNumber: 'CF-001',
-        designStage: 'DETAILED_DESIGN',
+        designStage: 'DETAILED_DESIGN_DD',
         urgencyLevel: 'URGENT',
         hasCustomSchedule: true,
         language: 'CHINESE',
@@ -294,7 +295,7 @@ describe('ProjectExportService', () => {
         assignmentToHqTime: null,
         finishDate: null,
         contactFormNumber: null,
-        designStage: null,
+        designStage: 'TENDER',
         urgencyLevel: 'NORMAL',
         hasCustomSchedule: false,
         language: 'ENGLISH',

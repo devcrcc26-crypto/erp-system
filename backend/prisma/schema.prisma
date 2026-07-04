@@ -974,6 +974,17 @@ enum ProjectDesignProperties {
   IMPLEMENTATION_DBB
 }
 
+enum ProjectDesignStage {
+  TENDER
+  CONCEPT_DESIGN_CD
+  PRELIMINARY_DESIGN_PD
+  SCHEMATIC_DESIGN_SD
+  DETAILED_DESIGN_DD
+  CONSTRUCTION_DRAWING_DESIGN_CD_IFC
+  CONSTRUCTION_SUPPORT
+  AS_BUILT_DRAWINGS
+}
+
 enum ProjectStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -1333,7 +1344,7 @@ model Project {
   client                  String?
   responsibleDepartment   ProjectResponsibleDepartment @default(MUNICIPAL_TRANSPORTATION_DEPARTMENT) @map("responsible_department")
   designProperties        ProjectDesignProperties      @default(PRELIMINARY) @map("design_properties")
-  designStage             String?       @map("design_stage")
+  designStage             ProjectDesignStage           @default(TENDER) @map("design_stage")
   responsiblePersonId     String?       @map("responsible_person_id")
   description             String?
   overallProgressPct      Int           @default(0) @map("overall_progress_pct")
@@ -1442,7 +1453,7 @@ model Task {
   onSiteReceivingTime   DateTime?         @map("on_site_receiving_time")
   assignmentToHqTime    DateTime?         @map("assignment_to_hq_time")
   contactFormNumber     String?           @map("contact_form_number")
-  designStage           String?           @map("design_stage")
+  designStage           ProjectDesignStage? @map("design_stage")
   urgencyLevel          UrgencyLevel      @default(NORMAL) @map("urgency_level")
   hasCustomSchedule     Boolean           @default(false) @map("has_custom_schedule")
   language              TaskLanguage      @default(CHINESE)

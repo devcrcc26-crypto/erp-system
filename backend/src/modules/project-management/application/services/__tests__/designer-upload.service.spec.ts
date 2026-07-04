@@ -3,7 +3,7 @@ import { EdvStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { EpcWorkflowAction } from '../../../domain/contracts/enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from '../../../domain/contracts/enums/project-design-phase.enum';
+import { ProjectDesignStage } from '../../../domain/contracts/enums/project-design-stage.enum';
 import { canPerformFromContext } from '../../../domain/permission-context-builder';
 import {
   EngineeringDocumentRepository,
@@ -45,7 +45,7 @@ function permissionContext(
     action,
     taskDisciplineId,
     projectTeamRole: 'OTHER' as never,
-    projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+    projectDesignStage: ProjectDesignStage.DETAILED_DESIGN_DD,
     grantedActions: grantedUploadActions,
     disciplineDesignerUserId: primaryDesignerId,
     disciplineSupportingDesignerUserId: supportingDesignerId,
@@ -420,7 +420,7 @@ function buildPermissionResolver(discipline: {
     {
       project: {
         findFirst: jest.fn().mockResolvedValue({
-          designStage: ProjectDesignPhase.DETAILED_DESIGN,
+          designStage: 'DETAILED_DESIGN_DD',
         }),
       },
     } as unknown as PrismaService,

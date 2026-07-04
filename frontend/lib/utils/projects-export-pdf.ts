@@ -5,11 +5,11 @@ import {
   formatProjectBudget,
   formatProjectDate,
   formatProjectDesignProperties,
+  formatProjectDesignStage,
   formatProjectResponsibleDepartment,
   formatProjectStatus,
   formatProjectType,
 } from '@/lib/utils/project-display';
-import { formatProjectDesignPhase } from '@/lib/utils/project-design-phase';
 
 const TEAL: [number, number, number] = [16, 152, 138];
 const NAVY: [number, number, number] = [27, 43, 75];
@@ -156,7 +156,7 @@ export function exportProjectsPdf(input: ProjectsExportPdfInput): void {
       project.client ?? '-',
       formatProjectResponsibleDepartment(project.responsibleDepartment),
       formatProjectDesignProperties(project.designProperties),
-      formatProjectDesignPhase(project.designStage),
+      formatProjectDesignStage(project.designStage),
       project.location ?? '-',
       formatProjectDate(project.startDate),
       formatProjectDate(project.plannedFinishDate),

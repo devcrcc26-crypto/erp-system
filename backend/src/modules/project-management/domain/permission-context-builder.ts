@@ -1,5 +1,5 @@
 import { EpcWorkflowAction } from './contracts/enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from './contracts/enums/project-design-phase.enum';
+import { ProjectDesignStage } from './contracts/enums/project-design-stage.enum';
 import { ProjectTeamRole } from './contracts/enums/project-team-role.enum';
 import { EdvStatus } from './contracts/enums/edv-status.enum';
 import {
@@ -92,29 +92,29 @@ const PROJECT_TEAM_REQUIRED_ACTIONS: ReadonlySet<EpcWorkflowAction> =
     EpcWorkflowAction.REVISION_TRIGGER_CREATE,
   ]);
 
-/** Phase gates - action denied when project is in a locked phase. */
-const PHASE_LOCKED_ACTIONS: Readonly<
-  Partial<Record<EpcWorkflowAction, readonly ProjectDesignPhase[]>>
+/** Stage gates — action denied when project is in a locked design stage. */
+const STAGE_LOCKED_ACTIONS: Readonly<
+  Partial<Record<EpcWorkflowAction, readonly ProjectDesignStage[]>>
 > = {
   [EpcWorkflowAction.SUBMITTAL_ISSUE]: [
-    ProjectDesignPhase.INITIATION,
-    ProjectDesignPhase.PLANNING,
-    ProjectDesignPhase.CONCEPT_DESIGN,
-    ProjectDesignPhase.SCHEMATIC,
-    ProjectDesignPhase.DETAILED_DESIGN,
+    ProjectDesignStage.TENDER,
+    ProjectDesignStage.CONCEPT_DESIGN_CD,
+    ProjectDesignStage.PRELIMINARY_DESIGN_PD,
+    ProjectDesignStage.SCHEMATIC_DESIGN_SD,
+    ProjectDesignStage.DETAILED_DESIGN_DD,
   ],
   [EpcWorkflowAction.SUBMITTAL_CREATE]: [
-    ProjectDesignPhase.INITIATION,
-    ProjectDesignPhase.PLANNING,
-    ProjectDesignPhase.CONCEPT_DESIGN,
-    ProjectDesignPhase.SCHEMATIC,
-    ProjectDesignPhase.DETAILED_DESIGN,
+    ProjectDesignStage.TENDER,
+    ProjectDesignStage.CONCEPT_DESIGN_CD,
+    ProjectDesignStage.PRELIMINARY_DESIGN_PD,
+    ProjectDesignStage.SCHEMATIC_DESIGN_SD,
+    ProjectDesignStage.DETAILED_DESIGN_DD,
   ],
   [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD]: [
-    ProjectDesignPhase.CLOSEOUT,
+    ProjectDesignStage.AS_BUILT_DRAWINGS,
   ],
   [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER]: [
-    ProjectDesignPhase.CLOSEOUT,
+    ProjectDesignStage.AS_BUILT_DRAWINGS,
   ],
 };
 
@@ -338,31 +338,31 @@ export function evaluateDisciplineAssignmentLayer(
 }
 
 /**
- * Layer 4 - project design phase gates.
+ * Layer 4 — project design stage gates.
  */
-export function evaluateProjectDesignPhaseLayer(
+export function evaluateProjectDesignStageLayer(
   input: PermissionContextInput,
 ): PermissionLayerResult {
-  const phase = input.projectDesignPhase;
-  if (phase === undefined) {
+  const stage = input.projectDesignStage;
+  if (stage === undefined) {
     return {
-      layer: PermissionLayerId.PROJECT_DESIGN_PHASE,
+      layer: PermissionLayerId.PROJECT_DESIGN_STAGE,
       verdict: PermissionLayerVerdict.DENY,
-      reason: 'Project design phase unknown',
+      reason: 'Project design stage unknown',
     };
   }
 
-  const lockedPhases = PHASE_LOCKED_ACTIONS[input.action];
-  if (lockedPhases !== undefined && lockedPhases.includes(phase)) {
+  const lockedStages = STAGE_LOCKED_ACTIONS[input.action];
+  if (lockedStages !== undefined && lockedStages.includes(stage)) {
     return {
-      layer: PermissionLayerId.PROJECT_DESIGN_PHASE,
+      layer: PermissionLayerId.PROJECT_DESIGN_STAGE,
       verdict: PermissionLayerVerdict.DENY,
-      reason: `Action blocked in phase ${phase}`,
+      reason: `Action blocked in stage ${stage}`,
     };
   }
 
   return {
-    layer: PermissionLayerId.PROJECT_DESIGN_PHASE,
+    layer: PermissionLayerId.PROJECT_DESIGN_STAGE,
     verdict: PermissionLayerVerdict.ALLOW,
   };
 }
@@ -422,7 +422,7 @@ export function buildPermissionLayerResults(
     evaluateSystemRoleLayer(input),
     evaluateProjectTeamLayer(input),
     evaluateDisciplineAssignmentLayer(input),
-    evaluateProjectDesignPhaseLayer(input),
+    evaluateProjectDesignStageLayer(input),
     evaluateWorkflowStateLayer(input),
   ];
 }

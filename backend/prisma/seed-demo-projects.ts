@@ -89,7 +89,7 @@ const PROJECT_1_DEF: DemoProjectDef = {
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 112_000,
   designProperties: 'IMPLEMENTATION_DB' as const,
-  designStage: 'As-Built',
+  designStage: 'AS_BUILT_DRAWINGS',
 };
 
 const PROJECT_2_DEF: DemoProjectDef = {
@@ -106,7 +106,7 @@ const PROJECT_2_DEF: DemoProjectDef = {
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 198_500,
   designProperties: 'IMPLEMENTATION_DB' as const,
-  designStage: 'Detailed Design',
+  designStage: 'DETAILED_DESIGN_DD',
 };
 
 const PROJECT_3_DEF: DemoProjectDef = {
@@ -123,7 +123,7 @@ const PROJECT_3_DEF: DemoProjectDef = {
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 48_200,
   designProperties: 'IMPLEMENTATION_DBB' as const,
-  designStage: 'Preliminary Design',
+  designStage: 'PRELIMINARY_DESIGN_PD',
 };
 
 let pdfRegistry: Map<string, SeedPdfEntry> = new Map();
@@ -357,7 +357,7 @@ async function seedExtendedProjectData(
       onSiteReceivingTime: d('2025-02-01'),
       assignmentToHqTime: d('2025-02-05'),
       contactFormNumber: `CF-${prefix}-001`,
-      designStage: 'Detailed Design',
+      designStage: 'DETAILED_DESIGN_DD',
       urgencyLevel: 'NORMAL',
       hasCustomSchedule: true,
       language: 'ENGLISH',
@@ -432,7 +432,7 @@ async function seedExtendedProjectData(
         requiresArchiving: i > 8,
         taskAttributes: `phase-${Math.floor(i / 3) + 1}`,
         contactFormNumber: `CF-${prefix}-${String(i + 2).padStart(3, '0')}`,
-        designStage: i < 4 ? 'Construction' : 'Closeout',
+        designStage: i < 4 ? 'CONSTRUCTION_SUPPORT' : 'AS_BUILT_DRAWINGS',
         urgencyLevel: i === 3 ? 'URGENT' : 'NORMAL',
         hasCustomSchedule: i % 2 === 0,
         language: i % 3 === 0 ? 'ENGLISH' : 'CHINESE',

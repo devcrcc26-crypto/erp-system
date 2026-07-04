@@ -2,7 +2,6 @@ import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { EpcWorkflowAction } from '../../../domain/contracts/enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from '../../../domain/contracts/enums/project-design-phase.enum';
 import { EpcWorkflowRepository } from '../../../infrastructure/repositories/epc-workflow.repository';
 import { PermissionResolverService } from '../permission-resolver.service';
 
@@ -34,7 +33,7 @@ describe('PermissionResolverService review approval grants', () => {
     prisma = {
       project: {
         findFirst: jest.fn().mockResolvedValue({
-          designStage: ProjectDesignPhase.DETAILED_DESIGN,
+          designStage: 'DETAILED_DESIGN_DD',
         }),
       },
     };

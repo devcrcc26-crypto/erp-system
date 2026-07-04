@@ -11,7 +11,7 @@ export const PERMISSION_LAYER_ORDER: readonly PermissionLayerId[] = [
   PermissionLayerId.SYSTEM_ROLE,
   PermissionLayerId.PROJECT_TEAM_ROLE,
   PermissionLayerId.DISCIPLINE_ASSIGNMENT,
-  PermissionLayerId.PROJECT_DESIGN_PHASE,
+  PermissionLayerId.PROJECT_DESIGN_STAGE,
   PermissionLayerId.WORKFLOW_STATE,
 ];
 

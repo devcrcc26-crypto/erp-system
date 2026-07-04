@@ -1,5 +1,5 @@
 import { EpcWorkflowAction } from './enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from './enums/project-design-phase.enum';
+import { ProjectDesignStage } from './enums/project-design-stage.enum';
 import { ProjectTeamRole } from './enums/project-team-role.enum';
 import { EdvStatus } from './enums/edv-status.enum';
 
@@ -13,7 +13,7 @@ export enum PermissionLayerId {
   SYSTEM_ROLE = 'SYSTEM_ROLE',
   PROJECT_TEAM_ROLE = 'PROJECT_TEAM_ROLE',
   DISCIPLINE_ASSIGNMENT = 'DISCIPLINE_ASSIGNMENT',
-  PROJECT_DESIGN_PHASE = 'PROJECT_DESIGN_PHASE',
+  PROJECT_DESIGN_STAGE = 'PROJECT_DESIGN_STAGE',
   WORKFLOW_STATE = 'WORKFLOW_STATE',
 }
 
@@ -35,7 +35,7 @@ export interface PermissionContext {
   readonly reviewSessionId?: string;
   readonly currentAssigneeUserId?: string;
   readonly projectTeamRole?: ProjectTeamRole;
-  readonly projectDesignPhase?: ProjectDesignPhase;
+  readonly projectDesignStage?: ProjectDesignStage;
   readonly edvStatus?: EdvStatus;
   readonly grantedActions?: ReadonlySet<EpcWorkflowAction>;
   readonly disciplineDesignerUserId?: string;

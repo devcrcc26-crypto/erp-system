@@ -9,6 +9,7 @@ import {
   Prisma,
   PrismaClient,
   ProjectContractType,
+  ProjectDesignStage,
   ProjectStatus,
   ProjectTeamRole,
   ProjectType,
@@ -193,7 +194,7 @@ export interface DemoProjectDef {
   urbanRailLengthKm?: number;
   grossFloorAreaM2?: number;
   designProperties?: string;
-  designStage?: string;
+  designStage?: ProjectDesignStage;
 }
 
 const DEMO_PROJECTS: DemoProjectDef[] = [
@@ -210,7 +211,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 78_500,
     designProperties: 'IMPLEMENTATION_DB',
-    designStage: 'Construction Documents',
+    designStage: 'CONSTRUCTION_DRAWING_DESIGN_CD_IFC',
   },
   {
     index: 2,
@@ -226,7 +227,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     railwayLengthKm: 4.2,
     urbanRailLengthKm: 2.1,
     designProperties: 'IMPLEMENTATION_DB',
-    designStage: 'Detailed Design',
+    designStage: 'DETAILED_DESIGN_DD',
   },
   {
     index: 3,
@@ -241,7 +242,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 34_800,
     designProperties: 'IMPLEMENTATION_DBB',
-    designStage: 'Preliminary Design',
+    designStage: 'PRELIMINARY_DESIGN_PD',
   },
 ];
 

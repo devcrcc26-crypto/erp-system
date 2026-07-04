@@ -18,6 +18,11 @@ import {
   formatProjectDesignPropertiesLabel,
   projectDesignPropertiesBadgeVariant,
 } from '@/lib/constants/project-design-properties';
+import type { ProjectDesignStage } from '@/lib/constants/project-design-stage';
+import {
+  formatProjectDesignStageLabel,
+  projectDesignStageBadgeVariant,
+} from '@/lib/constants/project-design-stage';
 
 export type { ProjectStatus } from '@/lib/constants/project-status';
 
@@ -85,6 +90,16 @@ export function projectDesignPropertiesVariant(
   value: ProjectDesignProperties,
 ): StatusBadgeVariant {
   return projectDesignPropertiesBadgeVariant(value);
+}
+
+export function formatProjectDesignStage(value: ProjectDesignStage): string {
+  return formatProjectDesignStageLabel(value);
+}
+
+export function projectDesignStageVariant(
+  value: ProjectDesignStage,
+): StatusBadgeVariant {
+  return projectDesignStageBadgeVariant(value);
 }
 
 export function formatProjectType(type: ProjectType | null): string {

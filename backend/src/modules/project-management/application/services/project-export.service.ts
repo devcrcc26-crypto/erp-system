@@ -26,6 +26,7 @@ import {
   formatExportCompletionStatus,
   formatExportContractType,
   formatExportDesignProperties,
+  formatExportDesignStage,
   formatExportDate,
   formatExportDateTime,
   formatExportLanguage,
@@ -86,6 +87,9 @@ export class ProjectExportService {
     }
     if (query.designProperties) {
       where.designProperties = query.designProperties;
+    }
+    if (query.designStage) {
+      where.designStage = query.designStage;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -206,7 +210,7 @@ export class ProjectExportService {
         formatExportProjectType(project.projectType),
         formatExportResponsibleDepartment(project.responsibleDepartment),
         formatExportDesignProperties(project.designProperties),
-        project.designStage ?? '',
+        formatExportDesignStage(project.designStage),
         '',
         onSitePerson,
         formatExportNumber(project.railwayLengthKm),
@@ -273,7 +277,7 @@ export class ProjectExportService {
       formatExportDateTime(task.assignmentToHqTime),
       formatExportDate(task.finishDate),
       task.contactFormNumber ?? '',
-      task.designStage ?? '',
+      task.designStage != null ? formatExportDesignStage(task.designStage) : '',
       formatExportUrgency(task.urgencyLevel),
       formatExportYesNo(task.hasCustomSchedule),
       formatExportLanguage(task.language),

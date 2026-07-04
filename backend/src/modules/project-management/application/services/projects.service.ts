@@ -661,6 +661,9 @@ export class ProjectsService {
     if (query.designProperties) {
       where.designProperties = query.designProperties;
     }
+    if (query.designStage) {
+      where.designStage = query.designStage;
+    }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [

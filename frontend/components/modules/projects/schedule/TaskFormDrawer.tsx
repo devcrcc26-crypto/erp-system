@@ -21,7 +21,7 @@ import type {
   ApprovalLevel,
   CompletionStatus,
   CreateTaskRequest,
-  ProjectDesignPhase,
+  ProjectDesignStage,
   Task,
   TaskLanguage,
   TaskStatus,
@@ -42,7 +42,7 @@ import { formatTaskStatus } from '@/lib/utils/pm-status-display';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
+import { PROJECT_DESIGN_STAGE_OPTIONS } from '@/lib/constants/project-design-stage';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import TaskSubtasksSection from '@/components/modules/projects/schedule/TaskSubtasksSection';
 import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
@@ -95,7 +95,7 @@ interface TaskFormValues {
   urgencyLevel: UrgencyLevel;
   language: TaskLanguage;
   approvalLevel?: ApprovalLevel;
-  designStage?: ProjectDesignPhase;
+  designStage?: ProjectDesignStage;
   commissioningMethod?: string;
   onSiteReceivingTime?: Dayjs;
   assignmentToHqTime?: Dayjs;
@@ -461,7 +461,7 @@ export default function TaskFormDrawer({
                       <Select
                         allowClear
                         placeholder="Select design stage"
-                        options={PROJECT_DESIGN_PHASE_OPTIONS}
+                        options={PROJECT_DESIGN_STAGE_OPTIONS}
                       />
                     </Form.Item>
                     <Form.Item label="Commissioning method" name="commissioningMethod">

@@ -25,18 +25,15 @@ import type { ProjectStatus } from '@/lib/constants/project-status';
 import type { ProjectContractType } from '@/lib/constants/project-contract-type';
 import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
 import type { ProjectDesignProperties } from '@/lib/constants/project-design-properties';
+import type { ProjectDesignStage } from '@/lib/constants/project-design-stage';
 
-export type { ProjectStatus, ProjectContractType, ProjectResponsibleDepartment, ProjectDesignProperties };
-export type ProjectDesignPhase =
-  | 'INITIATION'
-  | 'PLANNING'
-  | 'CONCEPT_DESIGN'
-  | 'SCHEMATIC'
-  | 'DETAILED_DESIGN'
-  | 'IFC'
-  | 'SUBMITTAL'
-  | 'CONSTRUCTION_SUPPORT'
-  | 'CLOSEOUT';
+export type {
+  ProjectStatus,
+  ProjectContractType,
+  ProjectResponsibleDepartment,
+  ProjectDesignProperties,
+  ProjectDesignStage,
+};
 
 export type TaskStatus =
   | 'NOT_STARTED'
@@ -172,7 +169,7 @@ export interface Project {
   client: string | null;
   responsibleDepartment: ProjectResponsibleDepartment;
   designProperties: ProjectDesignProperties;
-  designStage: ProjectDesignPhase | null;
+  designStage: ProjectDesignStage;
   description: string | null;
   overallProgressPct: number;
   isOutsourced: boolean;
@@ -254,7 +251,7 @@ export interface Task {
   onSiteReceivingTime: string | null;
   assignmentToHqTime: string | null;
   contactFormNumber: string | null;
-  designStage: ProjectDesignPhase | null;
+  designStage: ProjectDesignStage | null;
   urgencyLevel: UrgencyLevel;
   hasCustomSchedule: boolean;
   language: TaskLanguage;
@@ -742,7 +739,7 @@ export interface CreateProjectRequest {
   client?: string;
   responsibleDepartment?: ProjectResponsibleDepartment;
   designProperties?: ProjectDesignProperties;
-  designStage?: ProjectDesignPhase;
+  designStage?: ProjectDesignStage;
   responsiblePersonId?: string;
   description?: string;
   overallProgressPct?: number;
@@ -763,6 +760,7 @@ export interface ProjectListFilters {
   responsiblePersonId?: string;
   responsibleDepartment?: ProjectResponsibleDepartment;
   designProperties?: ProjectDesignProperties;
+  designStage?: ProjectDesignStage;
 }
 
 export interface ProjectDashboardStats {
@@ -876,7 +874,7 @@ export interface CreateTaskRequest {
   onSiteReceivingTime?: string;
   assignmentToHqTime?: string;
   contactFormNumber?: string;
-  designStage?: ProjectDesignPhase;
+  designStage?: ProjectDesignStage;
   urgencyLevel?: UrgencyLevel;
   hasCustomSchedule?: boolean;
   language?: TaskLanguage;

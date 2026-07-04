@@ -1,5 +1,5 @@
 import { EpcWorkflowAction } from './contracts/enums/epc-workflow-action.enum';
-import { ProjectDesignPhase } from './contracts/enums/project-design-phase.enum';
+import { ProjectDesignStage } from './contracts/enums/project-design-stage.enum';
 import { ProjectTeamRole } from './contracts/enums/project-team-role.enum';
 import { EdvStatus } from './contracts/enums/edv-status.enum';
 import { PermissionLayerVerdict } from './contracts/permission.model';
@@ -7,7 +7,7 @@ import {
   buildPermissionLayerResults,
   canPerformFromContext,
   evaluateDisciplineAssignmentLayer,
-  evaluateProjectDesignPhaseLayer,
+  evaluateProjectDesignStageLayer,
   evaluateSystemRoleLayer,
   evaluateWorkflowStateLayer,
 } from './permission-context-builder';
@@ -24,7 +24,7 @@ function baseContext(
     action: EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
     taskDisciplineId: 'td-1',
     projectTeamRole: ProjectTeamRole.OTHER,
-    projectDesignPhase: ProjectDesignPhase.DETAILED_DESIGN,
+    projectDesignStage: ProjectDesignStage.DETAILED_DESIGN_DD,
     grantedActions: granted,
     disciplineDesignerUserId: 'designer-1',
     disciplineReviewerUserId: 'reviewer-1',
@@ -49,12 +49,12 @@ describe('permission-context-builder', () => {
     });
   });
 
-  describe('evaluateProjectDesignPhaseLayer', () => {
-    it('DENY submittal issue in PLANNING', () => {
-      const result = evaluateProjectDesignPhaseLayer(
+  describe('evaluateProjectDesignStageLayer', () => {
+    it('DENY submittal issue in TENDER', () => {
+      const result = evaluateProjectDesignStageLayer(
         baseContext({
           action: EpcWorkflowAction.SUBMITTAL_ISSUE,
-          projectDesignPhase: ProjectDesignPhase.PLANNING,
+          projectDesignStage: ProjectDesignStage.TENDER,
           projectTeamRole: ProjectTeamRole.DEPUTY_CHIEF,
           grantedActions: new Set([EpcWorkflowAction.SUBMITTAL_ISSUE]),
         }),
@@ -62,11 +62,11 @@ describe('permission-context-builder', () => {
       expect(result.verdict).toBe(PermissionLayerVerdict.DENY);
     });
 
-    it('DENY upload in CLOSEOUT', () => {
-      const result = evaluateProjectDesignPhaseLayer(
+    it('DENY upload in AS_BUILT_DRAWINGS', () => {
+      const result = evaluateProjectDesignStageLayer(
         baseContext({
           action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
-          projectDesignPhase: ProjectDesignPhase.CLOSEOUT,
+          projectDesignStage: ProjectDesignStage.AS_BUILT_DRAWINGS,
           grantedActions: new Set([
             EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
           ]),
