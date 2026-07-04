@@ -72,7 +72,7 @@ describe('ProjectExportService', () => {
         name: 'Rail corridor',
         nameZh: null,
         client: 'Client A',
-        contractType: 'Email commission',
+        contractType: 'EMAIL',
         commissioningMethod: null,
         startDate: new Date('2026-01-15'),
         projectType: 'RAILWAY',
@@ -102,6 +102,7 @@ describe('ProjectExportService', () => {
     expect(sheet.getRow(1).getCell(4).value).toBe('项目状态');
     expect(sheet.getRow(2).getCell(4).value).toBe('Project Status');
     expect(dataRow.getCell(4).value).toBe('In Progress');
+    expect(dataRow.getCell(6).value).toBe('Email');
     expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
     expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
     expect(dataRow.getCell(14).value).toBe(120.5);
@@ -121,7 +122,8 @@ describe('ProjectExportService', () => {
         name: 'Marina Tower',
         nameZh: '滨海大厦',
         client: null,
-        contractType: null,
+        contractType: 'NO_ASSIGNMENT',
+        status: 'NOT_STARTED',
         commissioningMethod: null,
         startDate: null,
         projectType: 'BUILDING',
@@ -171,7 +173,7 @@ describe('ProjectExportService', () => {
           name: 'Highway project',
           nameZh: null,
           projectCode: 'PRJ-HWY',
-          contractType: 'Lump sum',
+          contractType: 'CONTRACT',
           commissioningMethod: null,
         },
         disciplines: [
@@ -309,7 +311,8 @@ describe('ProjectExportService', () => {
           name: 'Office',
           nameZh: null,
           projectCode: 'PRJ-OFF',
-          contractType: null,
+          contractType: 'NO_ASSIGNMENT',
+        status: 'NOT_STARTED',
           commissioningMethod: null,
         },
         disciplines: [],

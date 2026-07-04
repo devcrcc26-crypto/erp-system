@@ -10,6 +10,7 @@ import {
   PrismaClient,
   ProjectChangeRequestSource,
   ProjectChangeRequestStatus,
+  ProjectContractType,
   ProjectStatus,
   ProjectType,
   ReviewSessionOutcome,
@@ -45,7 +46,7 @@ export const FULL_PROJECT_DEF: DemoProjectDef = {
   budget: 25_000_000,
   startDate: '2026-02-01',
   plannedFinishDate: '2028-03-31',
-  contractType: 'LUMP_SUM',
+  contractType: ProjectContractType.CONTRACT,
 };
 
 const DOCS_USER_ID = '00000000-0000-4000-8000-000000000083';

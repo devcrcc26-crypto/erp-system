@@ -21,7 +21,10 @@ export type ProjectType =
   | 'MIXED_USE'
   | 'OTHER';
 
-export type { ProjectStatus } from '@erp/shared/project-status';
+import type { ProjectStatus } from '@/lib/constants/project-status';
+import type { ProjectContractType } from '@/lib/constants/project-contract-type';
+
+export type { ProjectStatus, ProjectContractType };
 export type ProjectDesignPhase =
   | 'INITIATION'
   | 'PLANNING'
@@ -155,7 +158,7 @@ export interface Project {
   urbanRailLengthKm: number | null;
   roadLengthKm: number | null;
   grossFloorAreaM2: number | null;
-  contractType: string | null;
+  contractType: ProjectContractType;
   status: ProjectStatus;
   startDate: string | null;
   plannedFinishDate: string | null;
@@ -730,7 +733,7 @@ export interface CreateProjectRequest {
   urbanRailLengthKm?: number;
   roadLengthKm?: number;
   grossFloorAreaM2?: number;
-  contractType?: string;
+  contractType?: ProjectContractType;
   status?: ProjectStatus;
   startDate?: string;
   plannedFinishDate?: string;

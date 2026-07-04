@@ -1,4 +1,5 @@
-import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
+import type { Project } from '@/lib/api/project-management.types';
+import type { ProjectStatus } from '@/lib/constants/project-status';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 
 export function groupProjectsByStatus(

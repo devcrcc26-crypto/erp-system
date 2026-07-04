@@ -17,7 +17,6 @@ const config: Config = {
   testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@erp/shared/(.*)$': '<rootDir>/shared/$1',
   },
   transformIgnorePatterns: ['node_modules/'],
 };

@@ -49,7 +49,7 @@ import { ProjectScopeService } from './project-scope.service';
 import {
   PROJECT_STATUS_TRANSITIONS,
   type ProjectStatus,
-} from '@erp/shared/project-status';
+} from '@/shared/project-status';
 
 const PROJECT_SORT_FIELDS = new Set([
   'createdAt',

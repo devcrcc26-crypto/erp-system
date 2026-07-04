@@ -106,7 +106,7 @@ export interface MappedProject {
   urbanRailLengthKm: number | null;
   roadLengthKm: number | null;
   grossFloorAreaM2: number | null;
-  contractType: string | null;
+  contractType: Project['contractType'];
   status: Project['status'];
   startDate: string | null;
   plannedFinishDate: string | null;

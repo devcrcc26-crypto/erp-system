@@ -9,6 +9,7 @@ import {
   IssueStatus,
   MeetingStatus,
   MeetingType,
+  ProjectContractType,
   ProjectStatus,
   ProjectTeamRole,
   ProjectType,
@@ -162,10 +163,10 @@ export class CreateProjectDto {
   @IsNumber()
   grossFloorAreaM2?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ProjectContractType })
   @IsOptional()
-  @IsString()
-  contractType?: string;
+  @IsEnum(ProjectContractType)
+  contractType?: ProjectContractType;
 
   @ApiPropertyOptional({ enum: ProjectStatus })
   @IsOptional()

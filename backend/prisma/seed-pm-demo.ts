@@ -8,6 +8,7 @@ import {
   MeetingType,
   Prisma,
   PrismaClient,
+  ProjectContractType,
   ProjectStatus,
   ProjectTeamRole,
   ProjectType,
@@ -186,7 +187,7 @@ export interface DemoProjectDef {
   startDate: string;
   plannedFinishDate: string;
   actualFinishDate?: string;
-  contractType: string;
+  contractType: ProjectContractType;
   roadLengthKm?: number;
   railwayLengthKm?: number;
   urbanRailLengthKm?: number;
@@ -206,7 +207,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     budget: 12_500_000,
     startDate: '2024-01-15',
     plannedFinishDate: '2026-12-31',
-    contractType: 'LUMP_SUM',
+    contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 78_500,
     designProperties: 'Design-Build',
     designStage: 'Construction Documents',
@@ -221,7 +222,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     budget: 45_000_000,
     startDate: '2025-06-01',
     plannedFinishDate: '2028-12-31',
-    contractType: 'COST_PLUS',
+    contractType: ProjectContractType.CONTRACT,
     railwayLengthKm: 4.2,
     urbanRailLengthKm: 2.1,
     designProperties: 'EPC',
@@ -237,7 +238,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     budget: 8_200_000,
     startDate: '2026-04-01',
     plannedFinishDate: '2027-09-30',
-    contractType: 'LUMP_SUM',
+    contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 34_800,
     designProperties: 'Design-Bid-Build',
     designStage: 'Preliminary Design',

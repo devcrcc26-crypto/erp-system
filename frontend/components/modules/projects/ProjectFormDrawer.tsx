@@ -19,12 +19,17 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateProjectRequest,
   Project,
+  ProjectContractType,
   ProjectDesignPhase,
   ProjectType,
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
-import type { ProjectStatus } from '@erp/shared/project-status';
-import { PROJECT_STATUS_DEFAULT } from '@erp/shared/project-status';
+import type { ProjectStatus } from '@/lib/constants/project-status';
+import { PROJECT_STATUS_DEFAULT } from '@/lib/constants/project-status';
+import {
+  PROJECT_CONTRACT_TYPE_DEFAULT,
+  PROJECT_CONTRACT_TYPE_OPTIONS,
+} from '@/lib/constants/project-contract-type';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
 import {
@@ -44,7 +49,7 @@ interface ProjectFormValues {
   urbanRailLengthKm?: number;
   roadLengthKm?: number;
   grossFloorAreaM2?: number;
-  contractType?: string;
+  contractType?: ProjectContractType;
   status?: ProjectStatus;
   startDate?: Dayjs;
   plannedFinishDate?: Dayjs;
@@ -109,7 +114,7 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     urbanRailLengthKm: values.urbanRailLengthKm,
     roadLengthKm: values.roadLengthKm,
     grossFloorAreaM2: values.grossFloorAreaM2,
-    contractType: values.contractType?.trim() || undefined,
+    contractType: values.contractType,
     status: values.status,
     startDate: values.startDate?.toISOString(),
     plannedFinishDate: values.plannedFinishDate?.toISOString(),
@@ -162,6 +167,7 @@ export default function ProjectFormDrawer({
     form.resetFields();
     form.setFieldsValue({
       status: PROJECT_STATUS_DEFAULT,
+      contractType: PROJECT_CONTRACT_TYPE_DEFAULT,
       currency: 'USD',
       overallProgressPct: 0,
       isOutsourced: false,
@@ -258,7 +264,7 @@ export default function ProjectFormDrawer({
             />
           </Form.Item>
           <Form.Item label="Contract type" name="contractType">
-            <Input placeholder="e.g. Lump sum" />
+            <Select options={PROJECT_CONTRACT_TYPE_OPTIONS} />
           </Form.Item>
         </div>
 

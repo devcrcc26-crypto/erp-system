@@ -3,13 +3,13 @@ import type {
   ProjectType,
 } from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
-import type { ProjectStatus } from '@erp/shared/project-status';
+import type { ProjectStatus } from '@/lib/constants/project-status';
 import {
   formatProjectStatusLabel,
   projectStatusBadgeVariant,
-} from '@erp/shared/project-status';
+} from '@/lib/constants/project-status';
 
-export type { ProjectStatus } from '@erp/shared/project-status';
+export type { ProjectStatus } from '@/lib/constants/project-status';
 
 const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   RESIDENTIAL: 'Residential',

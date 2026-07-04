@@ -25,6 +25,7 @@ import {
 import {
   formatExportApprovalLevel,
   formatExportCompletionStatus,
+  formatExportContractType,
   formatExportDate,
   formatExportDateTime,
   formatExportLanguage,
@@ -206,7 +207,7 @@ export class ProjectExportService {
         project.projectCode,
         formatExportProjectStatus(project.status),
         project.client ?? '',
-        project.contractType ?? project.commissioningMethod ?? '',
+        formatExportContractType(project.contractType),
         formatExportDate(project.startDate),
         formatExportProjectType(project.projectType),
         project.responsibleDepartment?.name ?? '',
@@ -264,8 +265,7 @@ export class ProjectExportService {
           disciplineIds.has(change.originEntityId)),
     );
 
-    const commissionMode =
-      task.project.contractType ?? task.project.commissioningMethod ?? '';
+    const commissionMode = formatExportContractType(task.project.contractType);
 
     const row: Array<string | number> = [
       task.taskIdCode,

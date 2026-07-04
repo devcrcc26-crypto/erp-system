@@ -1,11 +1,11 @@
-import type { ProjectStatus } from '@erp/shared/project-status';
+import type { ProjectStatus } from '@/lib/constants/project-status';
 import {
   PROJECT_STATUS_DEFINITIONS,
   PROJECT_STATUS_DEFAULT,
   PROJECT_STATUS_VALUES,
   formatProjectStatusLabel,
   projectStatusBadgeVariant,
-} from '@erp/shared/project-status';
+} from '@/lib/constants/project-status';
 
 export type { ProjectStatus };
 export { PROJECT_STATUS_DEFAULT, PROJECT_STATUS_VALUES };
@@ -114,5 +114,4 @@ export function getWorkflowStepLabel(
   return steps.find((step) => step.key === normalized)?.label ?? currentStatus;
 }
 
-/** Re-export for components that import display helpers from workflow. */
 export { formatProjectStatusLabel, projectStatusBadgeVariant };

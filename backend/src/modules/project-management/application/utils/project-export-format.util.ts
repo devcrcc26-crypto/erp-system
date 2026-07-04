@@ -1,12 +1,14 @@
 import {
   ApprovalLevel,
   CompletionStatus,
+  ProjectContractType,
   ProjectStatus,
   ProjectType,
   TaskLanguage,
   UrgencyLevel,
 } from '@prisma/client';
-import { formatProjectStatusLabel } from '@erp/shared/project-status';
+import { formatProjectContractTypeLabel } from '@/shared/project-contract-type';
+import { formatProjectStatusLabel } from '@/shared/project-status';
 
 /**
  * Formats project/task name for export: "English (Chinese)" when Chinese is set.
@@ -162,6 +164,16 @@ export function formatExportProjectStatus(
     return '';
   }
   return formatProjectStatusLabel(value);
+}
+
+/** Human-readable project contract type label for Excel export. */
+export function formatExportContractType(
+  value: ProjectContractType | null | undefined,
+): string {
+  if (value == null) {
+    return formatProjectContractTypeLabel('NO_ASSIGNMENT');
+  }
+  return formatProjectContractTypeLabel(value);
 }
 
 /**

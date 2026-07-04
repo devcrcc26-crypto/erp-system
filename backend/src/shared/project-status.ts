@@ -1,6 +1,5 @@
 /**
- * Canonical project status definition — single source of truth for backend,
- * frontend, and Excel export. DB enum keys match these values exactly.
+ * Project status — backend source of truth; keys must match Prisma ProjectStatus enum.
  */
 export const PROJECT_STATUS_VALUES = [
   'NOT_STARTED',

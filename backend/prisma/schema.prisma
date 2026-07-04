@@ -956,6 +956,13 @@ enum ProjectType {
   OTHER
 }
 
+enum ProjectContractType {
+  CONTRACT
+  EMAIL
+  INFORMAL_ASSIGNMENT
+  NO_ASSIGNMENT
+}
+
 enum ProjectStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -1305,7 +1312,7 @@ model Project {
   urbanRailLengthKm Float?        @map("urban_rail_length_km")
   roadLengthKm      Float?        @map("road_length_km")
   grossFloorAreaM2  Float?        @map("gross_floor_area_m2")
-  contractType      String?       @map("contract_type")
+  contractType      ProjectContractType @default(NO_ASSIGNMENT) @map("contract_type")
   status            ProjectStatus @default(NOT_STARTED)
   startDate         DateTime?     @map("start_date") @db.Date
   plannedFinishDate DateTime?     @map("planned_finish_date") @db.Date
