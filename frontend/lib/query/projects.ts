@@ -244,7 +244,7 @@ export function toProjectSummary(project: Project): ProjectSummary {
     name: project.name,
     nameZh: project.nameZh,
     status: project.status,
-    projectManagerId: project.projectManagerId,
+    responsiblePersonId: project.responsiblePersonId,
     plannedFinishDate: project.plannedFinishDate,
     budget: project.budget,
     currency: project.currency,

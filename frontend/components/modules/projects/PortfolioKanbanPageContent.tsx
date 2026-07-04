@@ -24,11 +24,9 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { useAllProjects, useUpdateProject } from '@/lib/query/projects';
-import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatProjectStatus } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { groupProjectsByStatus } from '@/lib/utils/portfolio-kanban';
@@ -36,22 +34,6 @@ import KanbanColumn from '@/components/modules/projects/KanbanColumn';
 import {
   ProjectKanbanCardPreview,
 } from '@/components/modules/projects/ProjectKanbanCard';
-
-function useProjectManagerNames(enabled: boolean): Record<string, string> {
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
-    { enabled },
-  );
-  const users = usersQuery.data?.data ?? [];
-
-  return useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const user of users) {
-      map[user.id] = formatUserName(user);
-    }
-    return map;
-  }, [users]);
-}
 
 interface PendingStatusMove {
   project: Project;
@@ -70,7 +52,6 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
   const updateProject = useUpdateProject();
   const messageApi = useAppMessage();
   const canFetchProjects = authHydrated && isAuthenticated;
-  const projectManagerNames = useProjectManagerNames(canFetchProjects);
 
   const projectsQuery = useAllProjects(
     {
@@ -236,7 +217,6 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
                       key={status}
                       status={status}
                       projects={groupedProjects[status]}
-                      projectManagerNames={projectManagerNames}
                       dragEnabled
                     />
                   );
@@ -248,11 +228,8 @@ export default function PortfolioKanbanPageContent(): React.ReactNode {
               {activeProject ? (
                 <ProjectKanbanCardPreview
                   project={activeProject}
-                  projectManagerName={
-                    activeProject.projectManagerName ??
-                    (activeProject.projectManagerId
-                      ? projectManagerNames[activeProject.projectManagerId]
-                      : undefined)
+                  responsiblePersonName={
+                    activeProject.responsiblePersonName ?? undefined
                   }
                 />
               ) : null}

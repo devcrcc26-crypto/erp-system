@@ -50,9 +50,9 @@ export class DisciplineScopeService {
     if (projectId !== undefined) {
       const project = await this.prisma.project.findFirst({
         where: activeOnly({ id: projectId, companyId: ctx.companyId }),
-        select: { projectManagerId: true },
+        select: { responsiblePersonId: true },
       });
-      if (project?.projectManagerId === ctx.userId) {
+      if (project?.responsiblePersonId === ctx.userId) {
         return true;
       }
     }

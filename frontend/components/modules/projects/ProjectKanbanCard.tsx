@@ -17,13 +17,13 @@ import { tokens } from '@/lib/theme/tokens';
 
 export default function ProjectKanbanCard({
   project,
-  projectManagerName,
+  responsiblePersonName,
   stats,
   isDragging = false,
   dragEnabled = true,
 }: {
   project: Project;
-  projectManagerName?: string;
+  responsiblePersonName?: string;
   stats?: ProjectDashboardStats;
   isDragging?: boolean;
   dragEnabled?: boolean;
@@ -73,7 +73,7 @@ export default function ProjectKanbanCard({
         <div className="flex items-center gap-2">
           <UserOutlined />
           <span className="truncate">
-            {projectManagerName ?? 'Unassigned'}
+            {responsiblePersonName ?? 'Unassigned'}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -156,17 +156,17 @@ export default function ProjectKanbanCard({
 
 export function ProjectKanbanCardPreview({
   project,
-  projectManagerName,
+  responsiblePersonName,
   stats,
 }: {
   project: Project;
-  projectManagerName?: string;
+  responsiblePersonName?: string;
   stats?: ProjectDashboardStats;
 }): React.ReactNode {
   return (
     <ProjectKanbanCard
       project={project}
-      projectManagerName={projectManagerName}
+      responsiblePersonName={responsiblePersonName}
       stats={stats}
       isDragging
       dragEnabled={false}

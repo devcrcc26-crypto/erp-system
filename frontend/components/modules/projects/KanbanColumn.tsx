@@ -13,13 +13,11 @@ import ProjectKanbanCard from '@/components/modules/projects/ProjectKanbanCard';
 export default function KanbanColumn({
   status,
   projects,
-  projectManagerNames,
   projectStats = {},
   dragEnabled,
 }: {
   status: ProjectStatus;
   projects: Project[];
-  projectManagerNames: Record<string, string>;
   projectStats?: Record<string, ProjectDashboardStats | undefined>;
   dragEnabled: boolean;
 }): React.ReactNode {
@@ -59,12 +57,7 @@ export default function KanbanColumn({
             <ProjectKanbanCard
               key={project.id}
               project={project}
-              projectManagerName={
-                project.projectManagerName ??
-                (project.projectManagerId
-                  ? projectManagerNames[project.projectManagerId]
-                  : undefined)
-              }
+              responsiblePersonName={project.responsiblePersonName ?? undefined}
               stats={projectStats[project.id]}
               dragEnabled={dragEnabled}
             />

@@ -43,14 +43,13 @@ import { PmContext } from '../types/pm-context.type';
 
 type ProjectExportRow = Project & {
   responsibleDepartment: Pick<Department, 'name'> | null;
-  projectManager: Pick<User, 'firstName' | 'lastName' | 'email'> | null;
   responsiblePerson: Pick<User, 'firstName' | 'lastName' | 'email'> | null;
 };
 
 type TaskExportRow = Task & {
   project: Pick<
     Project,
-    'name' | 'nameZh' | 'projectCode' | 'contractType' | 'commissioningMethod'
+    'name' | 'nameZh' | 'projectCode' | 'contractType'
   >;
   disciplines: TaskDiscipline[];
 };
@@ -95,9 +94,6 @@ export class ProjectExportService {
       where,
       include: {
         responsibleDepartment: { select: { name: true } },
-        projectManager: {
-          select: { firstName: true, lastName: true, chineseName: true, email: true },
-        },
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
@@ -134,7 +130,6 @@ export class ProjectExportService {
             nameZh: true,
             projectCode: true,
             contractType: true,
-            commissioningMethod: true,
           },
         },
         disciplines: {
@@ -170,9 +165,6 @@ export class ProjectExportService {
       where: activeOnly({ id: projectId, companyId: ctx.companyId }),
       include: {
         responsibleDepartment: { select: { name: true } },
-        projectManager: {
-          select: { firstName: true, lastName: true, chineseName: true, email: true },
-        },
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
@@ -197,9 +189,7 @@ export class ProjectExportService {
       const onSitePerson =
         project.responsiblePerson != null
           ? formatUserDisplayName(project.responsiblePerson)
-          : project.projectManager != null
-            ? formatUserDisplayName(project.projectManager)
-            : '';
+          : '';
 
       sheet.addRow([
         index + 1,

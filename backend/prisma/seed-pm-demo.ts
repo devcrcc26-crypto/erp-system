@@ -362,7 +362,7 @@ export async function seedProjectBundle(
       grossFloorAreaM2: def.grossFloorAreaM2,
       designProperties: def.designProperties,
       designStage: def.designStage,
-      projectManagerId: users.pmUserId,
+      responsiblePersonId: users.pmUserId,
       createdBy: adminUserId,
       updatedBy: adminUserId,
     },

@@ -169,13 +169,13 @@ export class ReviewSlaService {
     session: ReviewSession,
     hoursOverdue: number,
   ): Promise<void> {
-    const projectManagerId = await this.resolveProjectManagerId(
+    const responsiblePersonId = await this.resolveResponsiblePersonId(
       companyId,
       session.id,
     );
-    if (!projectManagerId) {
+    if (!responsiblePersonId) {
       this.logger.warn(
-        `No project manager found for SLA overdue session ${session.id}`,
+        `No responsible person found for SLA overdue session ${session.id}`,
       );
       return;
     }
@@ -191,7 +191,7 @@ export class ReviewSlaService {
       await this.notificationService.send(
         { companyId, userId: session.updatedBy },
         {
-          recipientId: projectManagerId,
+          recipientId: responsiblePersonId,
           eventType: 'review.sla_overdue',
           subject: 'Review session SLA overdue',
           body: JSON.stringify(payload),
@@ -213,7 +213,7 @@ export class ReviewSlaService {
     await this.prisma.notification.create({
       data: {
         companyId,
-        recipientId: projectManagerId,
+        recipientId: responsiblePersonId,
         channel: NotificationChannel.IN_APP,
         subject: 'Review session SLA overdue',
         body: JSON.stringify(payload),
@@ -223,7 +223,7 @@ export class ReviewSlaService {
     });
   }
 
-  private async resolveProjectManagerId(
+  private async resolveResponsiblePersonId(
     companyId: string,
     reviewSessionId: string,
   ): Promise<string | null> {
@@ -241,7 +241,7 @@ export class ReviewSlaService {
                 task: {
                   select: {
                     project: {
-                      select: { projectManagerId: true },
+                      select: { responsiblePersonId: true },
                     },
                   },
                 },
@@ -253,7 +253,7 @@ export class ReviewSlaService {
     });
 
     return (
-      row?.designPackage.taskDiscipline.task.project.projectManagerId ?? null
+      row?.designPackage.taskDiscipline.task.project.responsiblePersonId ?? null
     );
   }
 }

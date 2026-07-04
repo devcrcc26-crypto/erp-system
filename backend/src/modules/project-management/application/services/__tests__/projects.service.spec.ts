@@ -15,7 +15,7 @@ import { ProjectScopeService } from '../project-scope.service';
 
 describe('ProjectsService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
-  const projectManagerId = 'user-pm';
+  const responsiblePersonId = 'user-pm';
   const memberUserId = 'user-2';
   const projectId = 'project-1';
 
@@ -95,14 +95,14 @@ describe('ProjectsService', () => {
   });
 
   describe('createProject', () => {
-    it('auto-seeds two ProjectTeam rows for creator and project manager', async () => {
+    it('auto-seeds two ProjectTeam rows for creator and responsible person', async () => {
       const createdProject = {
         id: projectId,
         companyId: ctx.companyId,
         projectCode: 'DEMO-002',
         name: 'Airport Expansion',
         nameZh: '机场扩建',
-        projectManagerId,
+        responsiblePersonId,
       };
       const teamCreate = jest.fn().mockResolvedValue({});
 
@@ -129,13 +129,13 @@ describe('ProjectsService', () => {
           }),
       );
 
-      prisma.user.findFirst.mockResolvedValue({ id: projectManagerId });
+      prisma.user.findFirst.mockResolvedValue({ id: responsiblePersonId });
 
       await service.createProject(ctx, {
         projectCode: 'DEMO-002',
         name: 'Airport Expansion',
         nameZh: '机场扩建',
-        projectManagerId,
+        responsiblePersonId,
       });
 
       expect(teamCreate).toHaveBeenCalledTimes(2);
@@ -148,7 +148,7 @@ describe('ProjectsService', () => {
       expect(teamCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({
           projectId,
-          userId: projectManagerId,
+          userId: responsiblePersonId,
         }),
       });
     });
@@ -162,7 +162,7 @@ describe('ProjectsService', () => {
         projectCode: 'DEMO-003',
         name: 'Marina Tower',
         nameZh: '滨海大厦',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
 
       prisma.$transaction.mockImplementation(
@@ -198,7 +198,7 @@ describe('ProjectsService', () => {
         projectCode: 'DEMO-004',
         name: 'Riverside Complex',
         nameZh: null,
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
 
       prisma.$transaction.mockImplementation(
@@ -269,7 +269,7 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'RWY-001',
         name: 'High-speed rail',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
       mockCreateTransaction(projectCreate);
 
@@ -294,7 +294,7 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'RD-001',
         name: 'Highway extension',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
       mockCreateTransaction(projectCreate);
 
@@ -319,7 +319,7 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'BLD-001',
         name: 'Office tower',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
       mockCreateTransaction(projectCreate);
 
@@ -344,7 +344,7 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'OTH-001',
         name: 'Misc project',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
       mockCreateTransaction(projectCreate);
 
@@ -371,7 +371,7 @@ describe('ProjectsService', () => {
         companyId: ctx.companyId,
         projectCode: 'RD-002',
         name: 'Road with area',
-        projectManagerId: ctx.userId,
+        responsiblePersonId: ctx.userId,
       });
       mockCreateTransaction(projectCreate);
 

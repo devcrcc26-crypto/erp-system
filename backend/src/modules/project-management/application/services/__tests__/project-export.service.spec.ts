@@ -73,7 +73,6 @@ describe('ProjectExportService', () => {
         nameZh: null,
         client: 'Client A',
         contractType: 'EMAIL',
-        commissioningMethod: null,
         startDate: new Date('2026-01-15'),
         projectType: 'RAILWAY',
         designProperties: 'Design-build',
@@ -86,12 +85,11 @@ describe('ProjectExportService', () => {
         budget: { toString: () => '5000000' },
         description: 'Main note',
         responsibleDepartment: { name: 'Transport Dept' },
-        projectManager: {
+        responsiblePerson: {
           firstName: 'Alex',
-          lastName: 'PM',
+          lastName: 'Lead',
           email: 'alex@example.com',
         },
-        responsiblePerson: null,
       },
     ]);
 
@@ -124,7 +122,6 @@ describe('ProjectExportService', () => {
         client: null,
         contractType: 'NO_ASSIGNMENT',
         status: 'NOT_STARTED',
-        commissioningMethod: null,
         startDate: null,
         projectType: 'BUILDING',
         designProperties: null,
@@ -136,7 +133,6 @@ describe('ProjectExportService', () => {
         budget: null,
         description: null,
         responsibleDepartment: null,
-        projectManager: null,
         responsiblePerson: null,
       },
     ]);
@@ -174,7 +170,6 @@ describe('ProjectExportService', () => {
           nameZh: null,
           projectCode: 'PRJ-HWY',
           contractType: 'CONTRACT',
-          commissioningMethod: null,
         },
         disciplines: [
           {

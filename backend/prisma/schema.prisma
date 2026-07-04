@@ -428,7 +428,6 @@ model User {
   notificationPreferences NotificationPreference[]
   documentVersions       DocumentVersion[]
   reportDefinitions      ReportDefinition[]
-  managedProjects        Project[]              @relation("ProjectManager")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
@@ -1319,9 +1318,7 @@ model Project {
   actualFinishDate  DateTime?     @map("actual_finish_date") @db.Date
   budget            Decimal?      @db.Decimal(18, 2)
   currency                String?
-  projectManagerId        String?       @map("project_manager_id")
   client                  String?
-  commissioningMethod     String?       @map("commissioning_method")
   responsibleDepartmentId String?       @map("responsible_department_id")
   designProperties        String?       @map("design_properties")
   designStage             String?       @map("design_stage")
@@ -1338,7 +1335,6 @@ model Project {
 
   company               Company     @relation(fields: [companyId], references: [id])
   branch                Branch?     @relation(fields: [branchId], references: [id])
-  projectManager        User?       @relation("ProjectManager", fields: [projectManagerId], references: [id])
   responsibleDepartment Department? @relation(fields: [responsibleDepartmentId], references: [id])
   responsiblePerson     User?       @relation("ProjectResponsiblePerson", fields: [responsiblePersonId], references: [id])
   teamMembers    ProjectTeam[]
@@ -1362,7 +1358,6 @@ model Project {
   @@index([companyId], map: "idx_project_company_id")
   @@index([companyId, deletedAt], map: "idx_project_company_deleted")
   @@index([status], map: "idx_project_status")
-  @@index([projectManagerId], map: "idx_project_manager_id")
   @@index([responsibleDepartmentId], map: "idx_project_responsible_department_id")
   @@index([responsiblePersonId], map: "idx_project_responsible_person_id")
   @@map("project")

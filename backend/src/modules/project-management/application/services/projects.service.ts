@@ -109,7 +109,7 @@ export class ProjectsService {
       this.prisma,
       ctx.companyId,
       mapped,
-      [['projectManagerId', 'projectManagerName']],
+      [['responsiblePersonId', 'responsiblePersonName']],
     );
 
     return buildPaginatedResult(data, total, query.page, query.limit);
@@ -136,7 +136,7 @@ export class ProjectsService {
       this.prisma,
       ctx.companyId,
       this.mapProjectWithTaskProgress(project, taskProgressByProjectId),
-      [['projectManagerId', 'projectManagerName']],
+      [['responsiblePersonId', 'responsiblePersonName']],
     );
   }
 
@@ -149,16 +149,13 @@ export class ProjectsService {
   ): Promise<MappedProject> {
     await this.assertProjectCodeAvailable(ctx, dto.projectCode);
 
-    const projectManagerId = dto.projectManagerId ?? ctx.userId;
+    const responsiblePersonId = dto.responsiblePersonId ?? ctx.userId;
 
-    if (dto.responsiblePersonId) {
-      await this.assertUserInCompany(ctx, dto.responsiblePersonId);
+    if (responsiblePersonId !== ctx.userId) {
+      await this.assertUserInCompany(ctx, responsiblePersonId);
     }
     if (dto.responsibleDepartmentId) {
       await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
-    }
-    if (projectManagerId !== ctx.userId) {
-      await this.assertUserInCompany(ctx, projectManagerId);
     }
 
     const project = await this.prisma.$transaction(async (tx) => {
@@ -182,13 +179,11 @@ export class ProjectsService {
           plannedFinishDate: parseOptionalDate(dto.plannedFinishDate),
           budget: parseOptionalDecimal(dto.budget),
           currency: dto.currency,
-          projectManagerId,
           client: normalizeProjectClientInput(dto.client) ?? null,
-          commissioningMethod: dto.commissioningMethod,
           responsibleDepartmentId: dto.responsibleDepartmentId,
           designProperties: dto.designProperties,
           designStage: dto.designStage,
-          responsiblePersonId: dto.responsiblePersonId,
+          responsiblePersonId,
           description: dto.description,
           overallProgressPct: dto.overallProgressPct ?? 0,
           isOutsourced: dto.isOutsourced ?? false,
@@ -198,11 +193,11 @@ export class ProjectsService {
       });
 
       await this.ensureActiveTeamMember(tx, created.id, ctx.userId, ctx.userId);
-      if (projectManagerId !== ctx.userId) {
+      if (responsiblePersonId !== ctx.userId) {
         await this.ensureActiveTeamMember(
           tx,
           created.id,
-          projectManagerId,
+          responsiblePersonId,
           ctx.userId,
         );
       }
@@ -221,7 +216,7 @@ export class ProjectsService {
       this.prisma,
       ctx.companyId,
       mapProject(project),
-      [['projectManagerId', 'projectManagerName']],
+      [['responsiblePersonId', 'responsiblePersonName']],
     );
   }
 
@@ -342,12 +337,10 @@ export class ProjectsService {
         actualFinishDate: parseOptionalDate(dto.actualFinishDate),
         budget: parseOptionalDecimal(dto.budget),
         currency: dto.currency,
-        projectManagerId: dto.projectManagerId,
         client:
           dto.client !== undefined
             ? (normalizeProjectClientInput(dto.client ?? undefined) ?? null)
             : undefined,
-        commissioningMethod: dto.commissioningMethod,
         responsibleDepartmentId: dto.responsibleDepartmentId,
         designProperties: dto.designProperties,
         designStage: dto.designStage,
@@ -363,7 +356,7 @@ export class ProjectsService {
       this.prisma,
       ctx.companyId,
       mapProject(project),
-      [['projectManagerId', 'projectManagerName']],
+      [['responsiblePersonId', 'responsiblePersonName']],
     );
   }
 
@@ -665,8 +658,8 @@ export class ProjectsService {
     if (query.projectType) {
       where.projectType = query.projectType;
     }
-    if (query.projectManagerId) {
-      where.projectManagerId = query.projectManagerId;
+    if (query.responsiblePersonId) {
+      where.responsiblePersonId = query.responsiblePersonId;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();

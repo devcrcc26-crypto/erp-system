@@ -165,14 +165,12 @@ export interface Project {
   actualFinishDate: string | null;
   budget: string | null;
   currency: string | null;
-  projectManagerId: string | null;
-  projectManagerName?: string | null;
+  responsiblePersonId: string | null;
+  responsiblePersonName?: string | null;
   client: string | null;
-  commissioningMethod: string | null;
   responsibleDepartmentId: string | null;
   designProperties: string | null;
   designStage: ProjectDesignPhase | null;
-  responsiblePersonId: string | null;
   description: string | null;
   overallProgressPct: number;
   isOutsourced: boolean;
@@ -187,7 +185,7 @@ export interface ProjectSummary extends Pick<
   | 'name'
   | 'nameZh'
   | 'status'
-  | 'projectManagerId'
+  | 'responsiblePersonId'
   | 'plannedFinishDate'
   | 'budget'
   | 'currency'
@@ -739,9 +737,7 @@ export interface CreateProjectRequest {
   plannedFinishDate?: string;
   budget?: number;
   currency?: string;
-  projectManagerId?: string;
   client?: string;
-  commissioningMethod?: string;
   responsibleDepartmentId?: string;
   designProperties?: string;
   designStage?: ProjectDesignPhase;
@@ -762,7 +758,7 @@ export interface ProjectListFilters {
   status?: ProjectStatus;
   projectType?: ProjectType;
   search?: string;
-  projectManagerId?: string;
+  responsiblePersonId?: string;
 }
 
 export interface ProjectDashboardStats {

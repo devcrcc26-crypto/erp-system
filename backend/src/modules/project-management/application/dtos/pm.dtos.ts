@@ -73,7 +73,7 @@ export class ProjectListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
-  projectManagerId?: string;
+  responsiblePersonId?: string;
 }
 
 export class ProjectExportListQueryDto {
@@ -198,11 +198,6 @@ export class CreateProjectDto {
   @IsString()
   currency?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEntityUuid()
-  projectManagerId?: string;
-
   @ApiPropertyOptional({
     description:
       'Client name — suggested presets: CCECC Ethiopia, CCECC Djibouti, CCECC Kenya; custom names allowed.',
@@ -217,11 +212,6 @@ export class CreateProjectDto {
     ),
   )
   client?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  commissioningMethod?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

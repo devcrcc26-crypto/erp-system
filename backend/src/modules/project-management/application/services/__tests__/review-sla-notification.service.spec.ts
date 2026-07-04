@@ -7,7 +7,7 @@ import { ReviewSlaService } from '../review-sla.service';
 
 describe('ReviewSlaService SLA notifications', () => {
   const companyId = 'company-1';
-  const projectManagerId = 'pm-1';
+  const responsiblePersonId = 'pm-1';
   const sessionId = 'session-1';
 
   const overdueSession = {
@@ -55,7 +55,7 @@ describe('ReviewSlaService SLA notifications', () => {
             taskDiscipline: {
               task: {
                 project: {
-                  projectManagerId,
+                  responsiblePersonId,
                 },
               },
             },
@@ -72,7 +72,7 @@ describe('ReviewSlaService SLA notifications', () => {
     );
   });
 
-  it('dispatches a notification to the project manager for an overdue session', async () => {
+  it('dispatches a notification to the responsible person for an overdue session', async () => {
     const now = new Date('2026-06-24T12:00:00.000Z');
     jest.useFakeTimers().setSystemTime(now);
 
@@ -86,7 +86,7 @@ describe('ReviewSlaService SLA notifications', () => {
     expect(notificationService.send).toHaveBeenCalledWith(
       { companyId, userId: overdueSession.updatedBy },
       expect.objectContaining({
-        recipientId: projectManagerId,
+        recipientId: responsiblePersonId,
         eventType: 'review.sla_overdue',
         variables: expect.objectContaining({
           reviewSessionId: sessionId,

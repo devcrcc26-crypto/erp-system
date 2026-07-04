@@ -58,9 +58,7 @@ interface ProjectFormValues {
   actualFinishDate?: Dayjs;
   budget?: number;
   currency?: string;
-  projectManagerId?: string;
   client?: string;
-  commissioningMethod?: string;
   responsibleDepartmentId?: string;
   designProperties?: string;
   designStage?: ProjectDesignPhase;
@@ -92,9 +90,7 @@ function toFormValues(project: Project): ProjectFormValues {
       : undefined,
     budget: project.budget ? Number(project.budget) : undefined,
     currency: project.currency ?? undefined,
-    projectManagerId: project.projectManagerId ?? undefined,
     client: project.client ?? undefined,
-    commissioningMethod: project.commissioningMethod ?? undefined,
     responsibleDepartmentId: project.responsibleDepartmentId ?? undefined,
     designProperties: project.designProperties ?? undefined,
     designStage: project.designStage ?? undefined,
@@ -122,9 +118,7 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     plannedFinishDate: values.plannedFinishDate?.toISOString(),
     budget: values.budget,
     currency: values.currency?.trim() || undefined,
-    projectManagerId: values.projectManagerId,
     client: values.client?.trim() || undefined,
-    commissioningMethod: values.commissioningMethod?.trim() || undefined,
     responsibleDepartmentId: values.responsibleDepartmentId?.trim() || undefined,
     designProperties: values.designProperties?.trim() || undefined,
     designStage: values.designStage,
@@ -310,10 +304,6 @@ export default function ProjectFormDrawer({
           </Form.Item>
         </div>
 
-        <Form.Item label="Project manager" name="projectManagerId">
-          <UserSelect placeholder="Assign project manager" />
-        </Form.Item>
-
         <Divider titlePlacement="left">Project Details</Divider>
 
         <Form.Item label="Client" name="client">
@@ -328,9 +318,6 @@ export default function ProjectFormDrawer({
                 .includes(input.toLowerCase())
             }
           />
-        </Form.Item>
-        <Form.Item label="Commissioning method" name="commissioningMethod">
-          <Input />
         </Form.Item>
         <Form.Item
           label="Responsible department ID"

@@ -113,14 +113,12 @@ export interface MappedProject {
   actualFinishDate: string | null;
   budget: string | null;
   currency: string | null;
-  projectManagerId: string | null;
-  projectManagerName?: string | null;
+  responsiblePersonId: string | null;
+  responsiblePersonName?: string | null;
   client: string | null;
-  commissioningMethod: string | null;
   responsibleDepartmentId: string | null;
   designProperties: string | null;
   designStage: string | null;
-  responsiblePersonId: string | null;
   description: string | null;
   overallProgressPct: number;
   isOutsourced: boolean;
@@ -174,13 +172,11 @@ export function mapProject(project: Project): MappedProject {
     actualFinishDate: toDateString(project.actualFinishDate),
     budget: decimalToString(project.budget),
     currency: project.currency,
-    projectManagerId: project.projectManagerId,
+    responsiblePersonId: project.responsiblePersonId,
     client: project.client,
-    commissioningMethod: project.commissioningMethod,
     responsibleDepartmentId: project.responsibleDepartmentId,
     designProperties: project.designProperties,
     designStage: project.designStage,
-    responsiblePersonId: project.responsiblePersonId,
     description: project.description,
     overallProgressPct: project.overallProgressPct,
     isOutsourced: project.isOutsourced,
