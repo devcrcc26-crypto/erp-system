@@ -253,7 +253,6 @@ model Department {
   costCentres        CostCentre[]
   positions          Position[]
   users              User[]
-  responsibleProjects Project[]
 
   @@unique([companyId, code], map: "uq_department_company_code")
   @@index([companyId], map: "idx_department_company_id")
@@ -962,6 +961,11 @@ enum ProjectContractType {
   NO_ASSIGNMENT
 }
 
+enum ProjectResponsibleDepartment {
+  MUNICIPAL_TRANSPORTATION_DEPARTMENT
+  ARCHITECTURAL_DESIGN_DEPARTMENT
+}
+
 enum ProjectStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -1319,7 +1323,7 @@ model Project {
   budget            Decimal?      @db.Decimal(18, 2)
   currency                String?
   client                  String?
-  responsibleDepartmentId String?       @map("responsible_department_id")
+  responsibleDepartment   ProjectResponsibleDepartment @default(MUNICIPAL_TRANSPORTATION_DEPARTMENT) @map("responsible_department")
   designProperties        String?       @map("design_properties")
   designStage             String?       @map("design_stage")
   responsiblePersonId     String?       @map("responsible_person_id")
@@ -1335,7 +1339,6 @@ model Project {
 
   company               Company     @relation(fields: [companyId], references: [id])
   branch                Branch?     @relation(fields: [branchId], references: [id])
-  responsibleDepartment Department? @relation(fields: [responsibleDepartmentId], references: [id])
   responsiblePerson     User?       @relation("ProjectResponsiblePerson", fields: [responsiblePersonId], references: [id])
   teamMembers    ProjectTeam[]
   milestones     Milestone[]
@@ -1358,7 +1361,7 @@ model Project {
   @@index([companyId], map: "idx_project_company_id")
   @@index([companyId, deletedAt], map: "idx_project_company_deleted")
   @@index([status], map: "idx_project_status")
-  @@index([responsibleDepartmentId], map: "idx_project_responsible_department_id")
+  @@index([responsibleDepartment], map: "idx_project_responsible_department")
   @@index([responsiblePersonId], map: "idx_project_responsible_person_id")
   @@map("project")
 }

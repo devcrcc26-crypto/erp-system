@@ -116,7 +116,7 @@ export interface MappedProject {
   responsiblePersonId: string | null;
   responsiblePersonName?: string | null;
   client: string | null;
-  responsibleDepartmentId: string | null;
+  responsibleDepartment: Project['responsibleDepartment'];
   designProperties: string | null;
   designStage: string | null;
   description: string | null;
@@ -174,7 +174,7 @@ export function mapProject(project: Project): MappedProject {
     currency: project.currency,
     responsiblePersonId: project.responsiblePersonId,
     client: project.client,
-    responsibleDepartmentId: project.responsibleDepartmentId,
+    responsibleDepartment: project.responsibleDepartment,
     designProperties: project.designProperties,
     designStage: project.designStage,
     description: project.description,

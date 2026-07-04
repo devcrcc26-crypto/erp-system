@@ -4,6 +4,7 @@ import type { Project, ProjectStatus } from '@/lib/api/project-management.types'
 import {
   formatProjectBudget,
   formatProjectDate,
+  formatProjectResponsibleDepartment,
   formatProjectStatus,
   formatProjectType,
 } from '@/lib/utils/project-display';
@@ -152,6 +153,7 @@ export function exportProjectsPdf(input: ProjectsExportPdfInput): void {
       formatProjectType(project.projectType),
       formatProjectStatus(project.status),
       project.client ?? '-',
+      formatProjectResponsibleDepartment(project.responsibleDepartment),
       formatProjectDesignPhase(project.designStage),
       project.location ?? '-',
       formatProjectDate(project.startDate),
@@ -174,6 +176,7 @@ export function exportProjectsPdf(input: ProjectsExportPdfInput): void {
         'Type',
         'Status',
         'Client',
+        'Department',
         'Design stage',
         'Location',
         'Start',

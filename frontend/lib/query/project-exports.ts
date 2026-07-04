@@ -4,7 +4,7 @@ import { projectPath } from '@/lib/query/pm-query-utils';
 
 type ProjectExportFilters = Pick<
   ProjectListFilters,
-  'search' | 'status' | 'projectType'
+  'search' | 'status' | 'projectType' | 'responsibleDepartment'
 >;
 
 /**
@@ -22,6 +22,9 @@ export async function downloadProjectListExcel(
   }
   if (filters.projectType) {
     search.set('projectType', filters.projectType);
+  }
+  if (filters.responsibleDepartment) {
+    search.set('responsibleDepartment', filters.responsibleDepartment);
   }
   const query = search.toString();
   await downloadApiFile(

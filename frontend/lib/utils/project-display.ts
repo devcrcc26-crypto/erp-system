@@ -8,6 +8,11 @@ import {
   formatProjectStatusLabel,
   projectStatusBadgeVariant,
 } from '@/lib/constants/project-status';
+import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
+import {
+  formatProjectResponsibleDepartmentLabel,
+  projectResponsibleDepartmentBadgeVariant,
+} from '@/lib/constants/project-responsible-department';
 
 export type { ProjectStatus } from '@/lib/constants/project-status';
 
@@ -51,6 +56,18 @@ export const PROJECT_TEAM_ROLE_OPTIONS = (
 
 export function formatProjectTeamRole(role: ProjectTeamRole): string {
   return PROJECT_TEAM_ROLE_LABELS[role] ?? role;
+}
+
+export function formatProjectResponsibleDepartment(
+  value: ProjectResponsibleDepartment,
+): string {
+  return formatProjectResponsibleDepartmentLabel(value);
+}
+
+export function projectResponsibleDepartmentVariant(
+  value: ProjectResponsibleDepartment,
+): StatusBadgeVariant {
+  return projectResponsibleDepartmentBadgeVariant(value);
 }
 
 export function formatProjectType(type: ProjectType | null): string {

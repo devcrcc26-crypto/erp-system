@@ -31,6 +31,11 @@ import {
   PROJECT_CONTRACT_TYPE_DEFAULT,
   PROJECT_CONTRACT_TYPE_OPTIONS,
 } from '@/lib/constants/project-contract-type';
+import {
+  PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
+  PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS,
+} from '@/lib/constants/project-responsible-department';
+import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
 import { PROJECT_CLIENT_PRESET_OPTIONS } from '@/lib/constants/project-client-presets';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
@@ -59,7 +64,7 @@ interface ProjectFormValues {
   budget?: number;
   currency?: string;
   client?: string;
-  responsibleDepartmentId?: string;
+  responsibleDepartment?: ProjectResponsibleDepartment;
   designProperties?: string;
   designStage?: ProjectDesignPhase;
   responsiblePersonId?: string;
@@ -91,7 +96,7 @@ function toFormValues(project: Project): ProjectFormValues {
     budget: project.budget ? Number(project.budget) : undefined,
     currency: project.currency ?? undefined,
     client: project.client ?? undefined,
-    responsibleDepartmentId: project.responsibleDepartmentId ?? undefined,
+    responsibleDepartment: project.responsibleDepartment,
     designProperties: project.designProperties ?? undefined,
     designStage: project.designStage ?? undefined,
     responsiblePersonId: project.responsiblePersonId ?? undefined,
@@ -119,7 +124,7 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     budget: values.budget,
     currency: values.currency?.trim() || undefined,
     client: values.client?.trim() || undefined,
-    responsibleDepartmentId: values.responsibleDepartmentId?.trim() || undefined,
+    responsibleDepartment: values.responsibleDepartment,
     designProperties: values.designProperties?.trim() || undefined,
     designStage: values.designStage,
     responsiblePersonId: values.responsiblePersonId,
@@ -166,6 +171,7 @@ export default function ProjectFormDrawer({
     form.setFieldsValue({
       status: PROJECT_STATUS_DEFAULT,
       contractType: PROJECT_CONTRACT_TYPE_DEFAULT,
+      responsibleDepartment: PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
       currency: 'USD',
       overallProgressPct: 0,
       isOutsourced: false,
@@ -319,12 +325,8 @@ export default function ProjectFormDrawer({
             }
           />
         </Form.Item>
-        <Form.Item
-          label="Responsible department ID"
-          name="responsibleDepartmentId"
-          extra="Enter department UUID until department picker is available."
-        >
-          <Input placeholder="Department UUID" />
+        <Form.Item label="Responsible department" name="responsibleDepartment">
+          <Select options={PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS} />
         </Form.Item>
         <Form.Item label="Design properties" name="designProperties">
           <Input />

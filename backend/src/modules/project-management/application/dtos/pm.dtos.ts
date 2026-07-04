@@ -10,6 +10,7 @@ import {
   MeetingStatus,
   MeetingType,
   ProjectContractType,
+  ProjectResponsibleDepartment,
   ProjectStatus,
   ProjectTeamRole,
   ProjectType,
@@ -70,6 +71,11 @@ export class ProjectListQueryDto extends PaginationQueryDto {
   @IsString()
   search?: string;
 
+  @ApiPropertyOptional({ enum: ProjectResponsibleDepartment })
+  @IsOptional()
+  @IsEnum(ProjectResponsibleDepartment)
+  responsibleDepartment?: ProjectResponsibleDepartment;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
@@ -91,6 +97,11 @@ export class ProjectExportListQueryDto {
   @IsOptional()
   @IsEnum(ProjectType)
   projectType?: ProjectType;
+
+  @ApiPropertyOptional({ enum: ProjectResponsibleDepartment })
+  @IsOptional()
+  @IsEnum(ProjectResponsibleDepartment)
+  responsibleDepartment?: ProjectResponsibleDepartment;
 
   @ApiPropertyOptional({ type: [String], description: 'Optional project id filter' })
   @IsOptional()
@@ -213,10 +224,10 @@ export class CreateProjectDto {
   )
   client?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ProjectResponsibleDepartment })
   @IsOptional()
-  @IsEntityUuid()
-  responsibleDepartmentId?: string;
+  @IsEnum(ProjectResponsibleDepartment)
+  responsibleDepartment?: ProjectResponsibleDepartment;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -8,7 +8,9 @@ import {
   UrgencyLevel,
 } from '@prisma/client';
 import { formatProjectContractTypeLabel } from '@/shared/project-contract-type';
+import { formatProjectResponsibleDepartmentLabel } from '@/shared/project-responsible-department';
 import { formatProjectStatusLabel } from '@/shared/project-status';
+import type { ProjectResponsibleDepartment } from '@prisma/client';
 
 /**
  * Formats project/task name for export: "English (Chinese)" when Chinese is set.
@@ -174,6 +176,18 @@ export function formatExportContractType(
     return formatProjectContractTypeLabel('NO_ASSIGNMENT');
   }
   return formatProjectContractTypeLabel(value);
+}
+
+/** Human-readable responsible department label for Excel export. */
+export function formatExportResponsibleDepartment(
+  value: ProjectResponsibleDepartment | null | undefined,
+): string {
+  if (value == null) {
+    return formatProjectResponsibleDepartmentLabel(
+      'MUNICIPAL_TRANSPORTATION_DEPARTMENT',
+    );
+  }
+  return formatProjectResponsibleDepartmentLabel(value);
 }
 
 /**

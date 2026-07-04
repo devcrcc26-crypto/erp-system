@@ -21,7 +21,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { Project, ProjectStatus } from '@/lib/api/project-management.types';
+import type { Project, ProjectStatus, ProjectResponsibleDepartment } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { fetchAllProjects, useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
@@ -30,10 +30,15 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { tokens } from '@/lib/theme/tokens';
 import {
+  PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS,
+} from '@/lib/constants/project-responsible-department';
+import {
   formatProjectBudget,
   formatProjectDate,
+  formatProjectResponsibleDepartment,
   formatProjectStatus,
   formatProjectType,
+  projectResponsibleDepartmentVariant,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
@@ -47,6 +52,9 @@ export default function ProjectsPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | undefined>();
+  const [departmentFilter, setDepartmentFilter] = useState<
+    ProjectResponsibleDepartment | undefined
+  >();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -62,6 +70,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       ...params,
       search: search.trim() || undefined,
       status: statusFilter,
+      responsibleDepartment: departmentFilter,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     },
@@ -76,6 +85,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       const allProjects = await fetchAllProjects({
         search: trimmedSearch || undefined,
         status: statusFilter,
+        responsibleDepartment: departmentFilter,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
@@ -98,7 +108,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingPdf(false);
     }
-  }, [authUser, messageApi, search, statusFilter]);
+  }, [authUser, departmentFilter, messageApi, search, statusFilter]);
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingExcel(true);
@@ -106,6 +116,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       await downloadProjectListExcel({
         search: search.trim() || undefined,
         status: statusFilter,
+        responsibleDepartment: departmentFilter,
       });
       messageApi.success('Project list export downloaded.');
     } catch {
@@ -113,7 +124,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingExcel(false);
     }
-  }, [messageApi, search, statusFilter]);
+  }, [departmentFilter, messageApi, search, statusFilter]);
 
   const columns: ColumnsType<Project> = useMemo(
     () => [
@@ -151,6 +162,17 @@ export default function ProjectsPageContent(): React.ReactNode {
           <StatusBadge
             label={formatProjectStatus(status)}
             variant={projectStatusVariant(status)}
+          />
+        ),
+      },
+      {
+        title: 'Department',
+        dataIndex: 'responsibleDepartment',
+        key: 'responsibleDepartment',
+        render: (value: ProjectResponsibleDepartment) => (
+          <StatusBadge
+            label={formatProjectResponsibleDepartment(value)}
+            variant={projectResponsibleDepartmentVariant(value)}
           />
         ),
       },
@@ -312,6 +334,17 @@ export default function ProjectsPageContent(): React.ReactNode {
               value: step.key,
               label: step.label,
             }))}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by department"
+            className={layout.filterControlMd}
+            value={departmentFilter}
+            onChange={(value: ProjectResponsibleDepartment | undefined) => {
+              resetPage();
+              setDepartmentFilter(value);
+            }}
+            options={PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS}
           />
         </Space>
 

@@ -23,8 +23,9 @@ export type ProjectType =
 
 import type { ProjectStatus } from '@/lib/constants/project-status';
 import type { ProjectContractType } from '@/lib/constants/project-contract-type';
+import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
 
-export type { ProjectStatus, ProjectContractType };
+export type { ProjectStatus, ProjectContractType, ProjectResponsibleDepartment };
 export type ProjectDesignPhase =
   | 'INITIATION'
   | 'PLANNING'
@@ -168,7 +169,7 @@ export interface Project {
   responsiblePersonId: string | null;
   responsiblePersonName?: string | null;
   client: string | null;
-  responsibleDepartmentId: string | null;
+  responsibleDepartment: ProjectResponsibleDepartment;
   designProperties: string | null;
   designStage: ProjectDesignPhase | null;
   description: string | null;
@@ -738,7 +739,7 @@ export interface CreateProjectRequest {
   budget?: number;
   currency?: string;
   client?: string;
-  responsibleDepartmentId?: string;
+  responsibleDepartment?: ProjectResponsibleDepartment;
   designProperties?: string;
   designStage?: ProjectDesignPhase;
   responsiblePersonId?: string;
@@ -759,6 +760,7 @@ export interface ProjectListFilters {
   projectType?: ProjectType;
   search?: string;
   responsiblePersonId?: string;
+  responsibleDepartment?: ProjectResponsibleDepartment;
 }
 
 export interface ProjectDashboardStats {

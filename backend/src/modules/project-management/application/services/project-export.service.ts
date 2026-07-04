@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import {
-  Department,
   Prisma,
   Project,
   ProjectChangeRequest,
@@ -33,6 +32,7 @@ import {
   formatExportNumber,
   formatExportProjectStatus,
   formatExportProjectType,
+  formatExportResponsibleDepartment,
   formatExportUrgency,
   formatExportYesNo,
   normalizeDisciplineName,
@@ -42,7 +42,6 @@ import { ProjectScopeService } from './project-scope.service';
 import { PmContext } from '../types/pm-context.type';
 
 type ProjectExportRow = Project & {
-  responsibleDepartment: Pick<Department, 'name'> | null;
   responsiblePerson: Pick<User, 'firstName' | 'lastName' | 'email'> | null;
 };
 
@@ -81,6 +80,9 @@ export class ProjectExportService {
     if (query.projectType) {
       where.projectType = query.projectType;
     }
+    if (query.responsibleDepartment) {
+      where.responsibleDepartment = query.responsibleDepartment;
+    }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [
@@ -93,7 +95,6 @@ export class ProjectExportService {
     const projects = await this.prisma.project.findMany({
       where,
       include: {
-        responsibleDepartment: { select: { name: true } },
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
@@ -164,7 +165,6 @@ export class ProjectExportService {
     const project = await this.prisma.project.findFirst({
       where: activeOnly({ id: projectId, companyId: ctx.companyId }),
       include: {
-        responsibleDepartment: { select: { name: true } },
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
@@ -200,7 +200,7 @@ export class ProjectExportService {
         formatExportContractType(project.contractType),
         formatExportDate(project.startDate),
         formatExportProjectType(project.projectType),
-        project.responsibleDepartment?.name ?? '',
+        formatExportResponsibleDepartment(project.responsibleDepartment),
         project.designProperties ?? '',
         project.designStage ?? '',
         '',

@@ -154,9 +154,6 @@ export class ProjectsService {
     if (responsiblePersonId !== ctx.userId) {
       await this.assertUserInCompany(ctx, responsiblePersonId);
     }
-    if (dto.responsibleDepartmentId) {
-      await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
-    }
 
     const project = await this.prisma.$transaction(async (tx) => {
       const created = await tx.project.create({
@@ -180,7 +177,7 @@ export class ProjectsService {
           budget: parseOptionalDecimal(dto.budget),
           currency: dto.currency,
           client: normalizeProjectClientInput(dto.client) ?? null,
-          responsibleDepartmentId: dto.responsibleDepartmentId,
+          responsibleDepartment: dto.responsibleDepartment,
           designProperties: dto.designProperties,
           designStage: dto.designStage,
           responsiblePersonId,
@@ -236,9 +233,6 @@ export class ProjectsService {
 
     if (dto.responsiblePersonId) {
       await this.assertUserInCompany(ctx, dto.responsiblePersonId);
-    }
-    if (dto.responsibleDepartmentId) {
-      await this.assertDepartmentInCompany(ctx, dto.responsibleDepartmentId);
     }
 
     if (dto.status !== undefined) {
@@ -341,7 +335,7 @@ export class ProjectsService {
           dto.client !== undefined
             ? (normalizeProjectClientInput(dto.client ?? undefined) ?? null)
             : undefined,
-        responsibleDepartmentId: dto.responsibleDepartmentId,
+        responsibleDepartment: dto.responsibleDepartment,
         designProperties: dto.designProperties,
         designStage: dto.designStage,
         responsiblePersonId: dto.responsiblePersonId,
@@ -661,6 +655,9 @@ export class ProjectsService {
     if (query.responsiblePersonId) {
       where.responsiblePersonId = query.responsiblePersonId;
     }
+    if (query.responsibleDepartment) {
+      where.responsibleDepartment = query.responsibleDepartment;
+    }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [
@@ -702,19 +699,6 @@ export class ProjectsService {
     });
     if (!user) {
       throw new NotFoundException('User not found');
-    }
-  }
-
-  private async assertDepartmentInCompany(
-    ctx: PmContext,
-    departmentId: string,
-  ): Promise<void> {
-    const department = await this.prisma.department.findFirst({
-      where: activeOnly({ id: departmentId, companyId: ctx.companyId }),
-      select: { id: true },
-    });
-    if (!department) {
-      throw new NotFoundException('Department not found');
     }
   }
 

@@ -84,7 +84,7 @@ describe('ProjectExportService', () => {
         grossFloorAreaM2: null,
         budget: { toString: () => '5000000' },
         description: 'Main note',
-        responsibleDepartment: { name: 'Transport Dept' },
+        responsibleDepartment: 'MUNICIPAL_TRANSPORTATION_DEPARTMENT',
         responsiblePerson: {
           firstName: 'Alex',
           lastName: 'Lead',
@@ -101,6 +101,7 @@ describe('ProjectExportService', () => {
     expect(sheet.getRow(2).getCell(4).value).toBe('Project Status');
     expect(dataRow.getCell(4).value).toBe('In Progress');
     expect(dataRow.getCell(6).value).toBe('Email');
+    expect(dataRow.getCell(9).value).toBe('Municipal Transportation Department');
     expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
     expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
     expect(dataRow.getCell(14).value).toBe(120.5);
@@ -132,7 +133,7 @@ describe('ProjectExportService', () => {
         grossFloorAreaM2: 85000,
         budget: null,
         description: null,
-        responsibleDepartment: null,
+        responsibleDepartment: 'ARCHITECTURAL_DESIGN_DEPARTMENT',
         responsiblePerson: null,
       },
     ]);
