@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserDiscipline } from '@prisma/client';
 import { AccountActivationService } from '../../../auth/application/services/account-activation.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -17,6 +17,7 @@ export interface ProvisionInvitedUserInput {
   branchId?: string;
   departmentId?: string;
   positionId?: string;
+  discipline?: UserDiscipline;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;
@@ -77,6 +78,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        discipline: input.discipline ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -122,6 +124,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        discipline: input.discipline ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -165,6 +168,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        discipline: input.discipline ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -245,6 +249,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        discipline: input.discipline ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,

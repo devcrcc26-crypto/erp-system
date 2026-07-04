@@ -16,6 +16,22 @@ datasource db {
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
+enum UserDiscipline {
+  HIGHWAY
+  HYDROLOGY
+  STRUCTURE_ROAD
+  GEOLOGICAL
+  PAVEMENT_MATERIAL
+  SURVEY
+  ARCHITECTURE
+  INTERIOR_DESIGN
+  LANDSCAPE_DESIGN
+  STRUCTURE_BUILDING
+  SANITARY
+  ELECTRICAL_ICT
+  MECHANICAL
+}
+
 enum AuditLogSource {
   USER_ACTION
   SYSTEM_JOB
@@ -393,6 +409,7 @@ model User {
   branchId            String?   @map("branch_id")
   departmentId        String?   @map("department_id")
   positionId          String?   @map("position_id")
+  discipline          UserDiscipline? @map("discipline")
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
   chineseName         String?   @map("chinese_name")
@@ -475,6 +492,7 @@ model User {
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
   @@index([branchId], map: "idx_user_branch_id")
   @@index([departmentId], map: "idx_user_department_id")
+  @@index([discipline], map: "idx_user_discipline")
   @@map("user")
 }
 

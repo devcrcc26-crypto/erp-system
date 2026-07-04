@@ -1,9 +1,10 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserDiscipline } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
+import { parseUserDisciplineInput } from '../../../../shared/user-discipline';
 import {
   ImportCommitResponseDto,
   ImportPreviewResponseDto,
@@ -46,6 +47,8 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   phone: 'phone',
   telephone: 'phone',
   mobile: 'phone',
+  discipline: 'discipline',
+  'engineering discipline': 'discipline',
 };
 
 interface ParsedImportRow {
@@ -56,6 +59,7 @@ interface ParsedImportRow {
   chineseName?: string;
   role: string;
   phone?: string;
+  discipline?: string;
 }
 
 interface RoleLookup {
@@ -85,6 +89,7 @@ export class UserImportService {
       { header: 'lastName', key: 'lastName', width: 18 },
       { header: 'chineseName', key: 'chineseName', width: 18 },
       { header: 'role', key: 'role', width: 22 },
+      { header: 'discipline', key: 'discipline', width: 24 },
       { header: 'phone', key: 'phone', width: 16 },
     ];
 
@@ -94,6 +99,7 @@ export class UserImportService {
       lastName: 'Doe',
       chineseName: '',
       role: 'Employee',
+      discipline: 'Highway',
       phone: '',
     });
     sheet.addRow({
@@ -102,6 +108,7 @@ export class UserImportService {
       lastName: 'Zhang',
       chineseName: '张伟',
       role: 'Employee',
+      discipline: 'Highway',
       phone: '',
     });
 
@@ -125,6 +132,11 @@ export class UserImportService {
       'Optional — must match an existing role name exactly (e.g. Employee) when provided',
     ]);
     instructions.addRow(['phone', 'No', 'Optional contact number']);
+    instructions.addRow([
+      'discipline',
+      'No',
+      'Optional engineering discipline label or key (e.g. Highway, STRUCTURE_ROAD)',
+    ]);
     instructions.addRow([]);
     instructions.addRow([
       'Note',
@@ -171,6 +183,7 @@ export class UserImportService {
           lastName: row.lastName,
           chineseName: row.chineseName,
           phone: row.phone,
+          discipline: row.discipline ?? undefined,
           isActive: true,
         };
 
@@ -297,6 +310,9 @@ export class UserImportService {
           case 'phone':
             parsed.phone = value || undefined;
             break;
+          case 'discipline':
+            parsed.discipline = value || undefined;
+            break;
           default:
             break;
         }
@@ -381,6 +397,19 @@ export class UserImportService {
       };
     }
 
+    let discipline: UserDiscipline | null | undefined;
+    if (row.discipline !== undefined) {
+      const parsedDiscipline = parseUserDisciplineInput(row.discipline);
+      if (parsedDiscipline === undefined && row.discipline.trim() !== '') {
+        return {
+          ...base,
+          status: 'error',
+          message: `Unknown discipline: ${row.discipline}`,
+        };
+      }
+      discipline = parsedDiscipline ?? null;
+    }
+
     let roleId: string | undefined;
     const roleName = row.role.trim();
     if (roleName) {
@@ -396,6 +425,8 @@ export class UserImportService {
     }
 
     const roleAssignment = roleId ? { roleId } : {};
+    const disciplineAssignment =
+      discipline !== undefined ? { discipline } : {};
 
     const trimmedEmail = row.email.trim();
     if (!trimmedEmail) {
@@ -403,6 +434,7 @@ export class UserImportService {
         ...base,
         status: 'ok',
         ...roleAssignment,
+        ...disciplineAssignment,
         message: 'Record-only user (no login access)',
       };
     }
@@ -438,6 +470,7 @@ export class UserImportService {
         email: normalizedEmail,
         status: 'ok',
         ...roleAssignment,
+        ...disciplineAssignment,
         message: 'Previously deleted user will be restored',
       };
     }
@@ -458,6 +491,7 @@ export class UserImportService {
       email: normalizedEmail,
       status: 'ok',
       ...roleAssignment,
+      ...disciplineAssignment,
     };
   }
 

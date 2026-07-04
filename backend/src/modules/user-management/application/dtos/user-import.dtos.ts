@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional } from 'class-validator';
+import { UserDiscipline } from '@prisma/client';
 
 export type ImportRowStatus =
   | 'ok'
@@ -37,6 +38,9 @@ export class ImportRowPreviewDto {
 
   @ApiPropertyOptional()
   phone?: string;
+
+  @ApiPropertyOptional({ enum: UserDiscipline, nullable: true })
+  discipline?: UserDiscipline | null;
 
   @ApiProperty({ enum: ['ok', 'error', 'duplicate', 'duplicate_in_file'] })
   status!: ImportRowStatus;

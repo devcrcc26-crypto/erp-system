@@ -40,7 +40,8 @@ import {
   useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { CreateUserRequest, Role, User } from '@/lib/api/types';
+import type { CreateUserRequest, Role, User, UserDiscipline } from '@/lib/api/types';
+import { USER_DISCIPLINE_OPTIONS, formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
 import { formatUserName } from '@/lib/utils/user-display';
 import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
 import {
@@ -55,6 +56,7 @@ interface InviteFormValues {
   chineseName?: string;
   email?: string;
   roleId?: string;
+  discipline?: UserDiscipline;
 }
 
 interface EditFormValues {
@@ -63,6 +65,7 @@ interface EditFormValues {
   chineseName?: string;
   phone?: string;
   roleId?: string;
+  discipline?: UserDiscipline;
   isActive: boolean;
 }
 
@@ -123,6 +126,7 @@ function buildUsersExportPdfLabels(
     email: t('common.email'),
     phone: t('users.exportTable.phone'),
     roles: t('common.roles'),
+    discipline: t('common.discipline'),
     lastLogin: t('users.exportTable.lastLogin'),
     footer: t('users.pdfFooter'),
     totalUsers: t('users.exportMetrics.totalUsers'),
@@ -185,6 +189,7 @@ function InviteEmployeeModal({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       chineseName: values.chineseName?.trim() || undefined,
+      discipline: values.discipline,
       isActive: true,
     };
     if (invitedAddress) {
@@ -282,6 +287,17 @@ function InviteEmployeeModal({
             }
           />
         </Form.Item>
+        <Form.Item
+          label={t('common.discipline')}
+          name="discipline"
+          extra={t('users.disciplineOptionalHint')}
+        >
+          <Select
+            allowClear
+            placeholder={t('common.selectDiscipline')}
+            options={USER_DISCIPLINE_OPTIONS}
+          />
+        </Form.Item>
         {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
       </Form>
     </Modal>
@@ -317,22 +333,24 @@ function EditEmployeeModal({
     '';
 
   function resetFormValues(): void {
+    const detail = userQuery.data ?? user;
     form.setFieldsValue({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      chineseName: user.chineseName ?? '',
-      phone: user.phone ?? '',
-      isActive: user.isActive,
+      firstName: detail.firstName,
+      lastName: detail.lastName,
+      chineseName: detail.chineseName ?? '',
+      phone: detail.phone ?? '',
+      discipline: detail.discipline ?? undefined,
+      isActive: detail.isActive,
       roleId: currentRoleId || undefined,
     });
   }
 
   useEffect(() => {
-    if (!open || !currentRoleId) {
+    if (!open) {
       return;
     }
-    form.setFieldValue('roleId', currentRoleId);
-  }, [open, currentRoleId, form]);
+    resetFormValues();
+  }, [open, userQuery.data, currentRoleId]);
 
   async function handleSubmit(values: EditFormValues): Promise<void> {
     setError(null);
@@ -345,6 +363,7 @@ function EditEmployeeModal({
           lastName: values.lastName,
           chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
+          discipline: values.discipline ?? null,
           isActive: values.isActive,
         },
       });
@@ -415,6 +434,17 @@ function EditEmployeeModal({
         </Form.Item>
         <Form.Item label={t('common.phone')} name="phone">
           <Input type="tel" />
+        </Form.Item>
+        <Form.Item
+          label={t('common.discipline')}
+          name="discipline"
+          extra={t('users.disciplineOptionalHint')}
+        >
+          <Select
+            allowClear
+            placeholder={t('common.selectDiscipline')}
+            options={USER_DISCIPLINE_OPTIONS}
+          />
         </Form.Item>
         <Form.Item
           label={t('users.roleOptional')}
@@ -762,6 +792,12 @@ export default function UsersPageContent(): React.ReactNode {
                   variant={userStatusVariant(record)}
                 />
               ),
+            },
+            {
+              title: t('common.discipline'),
+              key: 'discipline',
+              ellipsis: { showTitle: true },
+              render: (_, record) => formatUserDisciplineLabel(record.discipline),
             },
             {
               title: t('common.roles'),

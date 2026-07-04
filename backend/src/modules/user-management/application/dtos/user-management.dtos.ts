@@ -1,14 +1,17 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   IsArray,
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { UserDiscipline } from '@prisma/client';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
@@ -68,6 +71,11 @@ export class CreateUserDto {
   @IsEntityUuid()
   positionId?: string;
 
+  @ApiPropertyOptional({ enum: UserDiscipline })
+  @IsOptional()
+  @IsEnum(UserDiscipline)
+  discipline?: UserDiscipline;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -89,12 +97,20 @@ export class CreateUserDto {
   isActive?: boolean;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
+export class UpdateUserDto extends PartialType(
+  OmitType(CreateUserDto, ['discipline'] as const),
+) {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @MinLength(8)
   password?: string;
+
+  @ApiPropertyOptional({ nullable: true, enum: UserDiscipline })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(UserDiscipline)
+  discipline?: UserDiscipline | null;
 }
 
 export class CreateRoleDto {

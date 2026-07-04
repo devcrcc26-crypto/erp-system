@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { User } from '@/lib/api/types';
+import { formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const TEAL: [number, number, number] = [16, 152, 138];
@@ -28,6 +29,7 @@ export interface UsersExportPdfLabels {
   email: string;
   phone: string;
   roles: string;
+  discipline: string;
   lastLogin: string;
   footer: string;
   totalUsers: string;
@@ -251,6 +253,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
       user.phone?.trim() || '-',
       formatUserStatus(user),
       formatUserRoles(user),
+      formatUserDisciplineLabel(user.discipline),
       formatLastLogin(user.lastLogin),
     ]);
 
@@ -268,10 +271,11 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
         labels.phone,
         labels.status,
         labels.roles,
+        labels.discipline,
         labels.lastLogin,
       ],
     ],
-    body: directoryRows.length > 0 ? directoryRows : [['-', '-', '-', '-', '-', '-']],
+    body: directoryRows.length > 0 ? directoryRows : [['-', '-', '-', '-', '-', '-', '-']],
   });
 
   const pageCount = doc.getNumberOfPages();

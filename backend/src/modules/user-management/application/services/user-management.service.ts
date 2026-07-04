@@ -110,6 +110,7 @@ export class UserManagementService {
       branchId: rest.branchId,
       departmentId: rest.departmentId,
       positionId: rest.positionId,
+      discipline: rest.discipline,
       preferredLanguage: rest.preferredLanguage,
       preferredTimezone: rest.preferredTimezone,
       preferredDateFormat: rest.preferredDateFormat,
@@ -495,6 +496,7 @@ export class UserManagementService {
       branchId: true,
       departmentId: true,
       positionId: true,
+      discipline: true,
       firstName: true,
       lastName: true,
       chineseName: true,
@@ -527,6 +529,7 @@ export class UserManagementService {
       lastName: true,
       chineseName: true,
       email: true,
+      discipline: true,
       isActive: true,
       userRoles: this.userRolesListSelect(),
     };

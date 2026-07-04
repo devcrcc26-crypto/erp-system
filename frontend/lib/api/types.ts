@@ -135,12 +135,17 @@ export interface ChangeEmailRequest {
   newEmail: string;
 }
 
+import type { UserDiscipline } from '@/lib/constants/user-discipline';
+
+export type { UserDiscipline };
+
 export interface User {
   id: string;
   companyId: string;
   branchId: string | null;
   departmentId: string | null;
   positionId: string | null;
+  discipline: UserDiscipline | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
@@ -185,6 +190,7 @@ export interface CreateUserRequest {
   branchId?: string;
   departmentId?: string;
   positionId?: string;
+  discipline?: UserDiscipline;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;
@@ -199,6 +205,7 @@ export interface UpdateUserRequest {
   branchId?: string;
   departmentId?: string;
   positionId?: string;
+  discipline?: UserDiscipline | null;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;
