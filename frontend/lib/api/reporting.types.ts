@@ -6,11 +6,13 @@ export interface PortfolioSummary {
   completionRate: number;
   projects: {
     total: number;
-    active: number;
+    notStarted: number;
+    inProgress: number;
     onHold: number;
-    planning: number;
+    cancelled: number;
     completed: number;
-    closed: number;
+    /** @deprecated Use inProgress */
+    active: number;
     averageProgressPct: number | null;
     totalBudget: string | null;
     byStatus: Record<string, number>;

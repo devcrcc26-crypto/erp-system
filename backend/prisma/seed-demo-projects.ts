@@ -80,7 +80,7 @@ const PROJECT_1_DEF: DemoProjectDef = {
   nameZh: '中山医疗中心二期扩建',
   location: 'Zhongshan, Guangdong',
   projectType: ProjectType.COMMERCIAL,
-  status: ProjectStatus.CLOSED,
+  status: ProjectStatus.COMPLETED,
   budget: 68_500_000,
   startDate: '2023-03-01',
   plannedFinishDate: '2025-06-30',
@@ -98,7 +98,7 @@ const PROJECT_2_DEF: DemoProjectDef = {
   nameZh: '陆家嘴综合用途塔楼',
   location: 'Lujiazui, Shanghai',
   projectType: ProjectType.COMMERCIAL,
-  status: ProjectStatus.ACTIVE,
+  status: ProjectStatus.IN_PROGRESS,
   budget: 142_000_000,
   startDate: '2024-04-15',
   plannedFinishDate: '2027-12-31',
@@ -115,7 +115,7 @@ const PROJECT_3_DEF: DemoProjectDef = {
   nameZh: '浦东住宅综合体C栋',
   location: 'Pudong, Shanghai',
   projectType: ProjectType.RESIDENTIAL,
-  status: ProjectStatus.MOBILIZATION,
+  status: ProjectStatus.IN_PROGRESS,
   budget: 38_750_000,
   startDate: '2025-11-01',
   plannedFinishDate: '2028-04-30',
@@ -1381,7 +1381,7 @@ async function seedAuditLogsForProject(
       recordId: projectId,
       recordReference: projectCode,
       userId: U.pm,
-      afterValue: { status: 'ACTIVE' },
+      afterValue: { status: 'IN_PROGRESS' },
     },
     {
       entity: 1902,
@@ -1516,7 +1516,7 @@ async function finalizeClosedProject(ctx: PmSeedContext, p: number, def: DemoPro
   await db.project.update({
     where: { id: projectId },
     data: {
-      status: ProjectStatus.CLOSED,
+      status: ProjectStatus.COMPLETED,
       actualFinishDate: d(def.actualFinishDate ?? def.plannedFinishDate),
       updatedBy: adminUserId,
     },
@@ -2436,7 +2436,7 @@ async function seedProject3(
 
   await ctx.prisma.project.update({
     where: { id: projectId },
-    data: { status: ProjectStatus.MOBILIZATION, updatedBy: ctx.adminUserId },
+    data: { status: ProjectStatus.IN_PROGRESS, updatedBy: ctx.adminUserId },
   });
   await ctx.prisma.task.updateMany({
     where: { projectId },
@@ -2461,7 +2461,7 @@ async function seedProject3(
   await seedAuditLogsForProject(ctx, def.index, projectId, projectCode);
   await seedNotificationsForProject(ctx, def.index, projectCode);
 
-  console.log(`✓ Seeded project 3: ${projectCode} (${projectId}) — MOBILIZATION / early stage`);
+  console.log(`✓ Seeded project 3: ${projectCode} (${projectId}) — IN_PROGRESS / early stage`);
 }
 
 async function verifySeed(ctx: PmSeedContext): Promise<void> {

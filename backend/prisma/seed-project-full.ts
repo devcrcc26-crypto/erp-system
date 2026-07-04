@@ -41,7 +41,7 @@ export const FULL_PROJECT_DEF: DemoProjectDef = {
   name: 'Full Seed Reference Project',
   location: 'Dubai South',
   projectType: 'COMMERCIAL' as ProjectType,
-  status: 'ACTIVE' as ProjectStatus,
+  status: 'IN_PROGRESS' as ProjectStatus,
   budget: 25_000_000,
   startDate: '2026-02-01',
   plannedFinishDate: '2028-03-31',

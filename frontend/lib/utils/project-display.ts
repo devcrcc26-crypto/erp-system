@@ -1,10 +1,15 @@
 import type {
-  ProjectStatus,
   ProjectTeamRole,
   ProjectType,
 } from '@/lib/api/project-management.types';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
-import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
+import type { ProjectStatus } from '@erp/shared/project-status';
+import {
+  formatProjectStatusLabel,
+  projectStatusBadgeVariant,
+} from '@erp/shared/project-status';
+
+export type { ProjectStatus } from '@erp/shared/project-status';
 
 const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   RESIDENTIAL: 'Residential',
@@ -44,16 +49,6 @@ export const PROJECT_TEAM_ROLE_OPTIONS = (
   Object.entries(PROJECT_TEAM_ROLE_LABELS) as [ProjectTeamRole, string][]
 ).map(([value, label]) => ({ value, label }));
 
-const PROJECT_STATUS_VARIANTS: Record<ProjectStatus, StatusBadgeVariant> = {
-  PLANNING: 'info',
-  TENDER: 'warning',
-  MOBILIZATION: 'orange',
-  ACTIVE: 'success',
-  ON_HOLD: 'default',
-  COMPLETED: 'success',
-  CLOSED: 'default',
-};
-
 export function formatProjectTeamRole(role: ProjectTeamRole): string {
   return PROJECT_TEAM_ROLE_LABELS[role] ?? role;
 }
@@ -66,12 +61,11 @@ export function formatProjectType(type: ProjectType | null): string {
 }
 
 export function formatProjectStatus(status: ProjectStatus): string {
-  const step = PROJECT_STATUS_WORKFLOW.find((item) => item.key === status);
-  return step?.label ?? status;
+  return formatProjectStatusLabel(status);
 }
 
 export function projectStatusVariant(status: ProjectStatus): StatusBadgeVariant {
-  return PROJECT_STATUS_VARIANTS[status];
+  return projectStatusBadgeVariant(status);
 }
 
 export function formatProjectDate(value: string | null): string {

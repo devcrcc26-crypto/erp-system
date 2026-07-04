@@ -20,10 +20,11 @@ import type {
   CreateProjectRequest,
   Project,
   ProjectDesignPhase,
-  ProjectStatus,
   ProjectType,
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
+import type { ProjectStatus } from '@erp/shared/project-status';
+import { PROJECT_STATUS_DEFAULT } from '@erp/shared/project-status';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
 import {
@@ -160,7 +161,7 @@ export default function ProjectFormDrawer({
     }
     form.resetFields();
     form.setFieldsValue({
-      status: 'PLANNING',
+      status: PROJECT_STATUS_DEFAULT,
       currency: 'USD',
       overallProgressPct: 0,
       isOutsourced: false,

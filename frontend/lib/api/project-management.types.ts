@@ -21,16 +21,7 @@ export type ProjectType =
   | 'MIXED_USE'
   | 'OTHER';
 
-export type ProjectStatus =
-  | 'PLANNING'
-  | 'TENDER'
-  | 'MOBILIZATION'
-  | 'ACTIVE'
-  | 'ON_HOLD'
-  | 'COMPLETED'
-  | 'CLOSED';
-
-/** EPC workflow gate — must match backend ProjectDesignPhase enum. */
+export type { ProjectStatus } from '@erp/shared/project-status';
 export type ProjectDesignPhase =
   | 'INITIATION'
   | 'PLANNING'

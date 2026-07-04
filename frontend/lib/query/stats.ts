@@ -45,7 +45,7 @@ async function fetchCompletionRate(): Promise<number | null> {
 async function fetchDashboardStats(): Promise<DashboardStats> {
   const [projects, activeProjects, teamMembers, completionRate] = await Promise.all([
     silentPaginatedTotal('/projects'),
-    silentPaginatedTotal('/projects', { status: 'ACTIVE' }),
+    silentPaginatedTotal('/projects', { status: 'IN_PROGRESS' }),
     silentPaginatedTotal('/users'),
     fetchCompletionRate(),
   ]);

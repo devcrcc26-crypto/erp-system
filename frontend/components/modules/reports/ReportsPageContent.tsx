@@ -61,13 +61,11 @@ const TOOLTIP_STYLE = {
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
-  PLANNING: tokens.colorBlue400,
-  TENDER: tokens.colorTeal600,
-  MOBILIZATION: tokens.colorAmber400,
-  ACTIVE: tokens.colorGreen600,
-  ON_HOLD: tokens.colorGray200,
+  NOT_STARTED: tokens.colorBlue400,
+  IN_PROGRESS: tokens.colorGreen600,
+  ON_HOLD: tokens.colorAmber400,
+  CANCELLED: tokens.colorRed600,
   COMPLETED: tokens.colorGreen600,
-  CLOSED: tokens.colorGray600,
 };
 
 const PROJECT_TYPE_COLORS: Record<string, string> = {
@@ -344,7 +342,7 @@ function CompletionGauge({ value }: { value: number }): React.ReactNode {
           fill={tokens.colorTextTertiary}
           fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
         >
-          completed / closed
+          completed
         </text>
       </svg>
     </div>
@@ -439,8 +437,8 @@ function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
   const byStatus = aggregateProjectsByStatus(projects);
   const byType = aggregateProjectsByType(projects);
   const total = projects.length;
-  const active = projects.filter((p) => p.status === 'ACTIVE').length;
-  const completed = (byStatus.COMPLETED ?? 0) + (byStatus.CLOSED ?? 0);
+  const active = projects.filter((p) => p.status === 'IN_PROGRESS').length;
+  const completed = byStatus.COMPLETED ?? 0;
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
   const progressValues = projects.map((project) => project.overallProgressPct);
   const averageProgressPct =
@@ -458,9 +456,10 @@ function buildFallbackSummary(projects: Project[]): Partial<PortfolioSummary> {
       total,
       active,
       onHold: byStatus.ON_HOLD ?? 0,
-      planning: (byStatus.PLANNING ?? 0) + (byStatus.TENDER ?? 0),
+      notStarted: byStatus.NOT_STARTED ?? 0,
+      inProgress: byStatus.IN_PROGRESS ?? 0,
+      cancelled: byStatus.CANCELLED ?? 0,
       completed: byStatus.COMPLETED ?? 0,
-      closed: byStatus.CLOSED ?? 0,
       averageProgressPct,
       totalBudget: null,
       byStatus,

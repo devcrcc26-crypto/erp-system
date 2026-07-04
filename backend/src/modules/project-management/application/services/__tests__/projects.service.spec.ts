@@ -532,13 +532,13 @@ describe('ProjectsService', () => {
 
   describe('updateProject transition guard', () => {
     it('rejects invalid project status transitions', async () => {
-      prisma.project.findFirst.mockResolvedValue({ status: 'PLANNING' });
+      prisma.project.findFirst.mockResolvedValue({ status: 'NOT_STARTED' });
 
       await expect(
-        service.updateProject(ctx, projectId, { status: 'CLOSED' as never }),
+        service.updateProject(ctx, projectId, { status: 'COMPLETED' as never }),
       ).rejects.toThrow(
         new BadRequestException(
-          'Invalid project status transition from PLANNING to CLOSED.',
+          'Invalid project status transition from NOT_STARTED to COMPLETED.',
         ),
       );
 

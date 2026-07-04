@@ -957,13 +957,11 @@ enum ProjectType {
 }
 
 enum ProjectStatus {
-  PLANNING
-  TENDER
-  MOBILIZATION
-  ACTIVE
+  NOT_STARTED
+  IN_PROGRESS
   ON_HOLD
+  CANCELLED
   COMPLETED
-  CLOSED
 }
 
 enum TaskStatus {
@@ -1308,7 +1306,7 @@ model Project {
   roadLengthKm      Float?        @map("road_length_km")
   grossFloorAreaM2  Float?        @map("gross_floor_area_m2")
   contractType      String?       @map("contract_type")
-  status            ProjectStatus @default(PLANNING)
+  status            ProjectStatus @default(NOT_STARTED)
   startDate         DateTime?     @map("start_date") @db.Date
   plannedFinishDate DateTime?     @map("planned_finish_date") @db.Date
   actualFinishDate  DateTime?     @map("actual_finish_date") @db.Date

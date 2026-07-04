@@ -37,11 +37,13 @@ export interface PortfolioSummary {
   completionRate: number;
   projects: {
     total: number;
-    active: number;
+    notStarted: number;
+    inProgress: number;
     onHold: number;
-    planning: number;
+    cancelled: number;
     completed: number;
-    closed: number;
+    /** @deprecated Use inProgress — kept for older clients */
+    active: number;
     averageProgressPct: number | null;
     totalBudget: string | null;
     byStatus: Record<string, number>;
@@ -315,11 +317,11 @@ export class ReportingService {
       company,
       statusGroups,
       typeGroups,
-      activeProjects,
+      notStartedProjects,
+      inProgressProjects,
       onHoldProjects,
-      planningProjects,
+      cancelledProjects,
       completedProjects,
-      closedProjects,
       taskProgressGroups,
       budgetRows,
       usersTotal,
@@ -350,22 +352,19 @@ export class ReportingService {
         _count: { _all: true },
       }),
       this.prisma.project.count({
-        where: { ...companyProjects, status: ProjectStatus.ACTIVE },
+        where: { ...companyProjects, status: ProjectStatus.NOT_STARTED },
+      }),
+      this.prisma.project.count({
+        where: { ...companyProjects, status: ProjectStatus.IN_PROGRESS },
       }),
       this.prisma.project.count({
         where: { ...companyProjects, status: ProjectStatus.ON_HOLD },
       }),
       this.prisma.project.count({
-        where: {
-          ...companyProjects,
-          status: { in: [ProjectStatus.PLANNING, ProjectStatus.TENDER] },
-        },
+        where: { ...companyProjects, status: ProjectStatus.CANCELLED },
       }),
       this.prisma.project.count({
         where: { ...companyProjects, status: ProjectStatus.COMPLETED },
-      }),
-      this.prisma.project.count({
-        where: { ...companyProjects, status: ProjectStatus.CLOSED },
       }),
       this.prisma.task.groupBy({
         by: ['projectId'],
@@ -466,11 +465,12 @@ export class ReportingService {
       completionRate: completionRate.rate,
       projects: {
         total: totalProjects,
-        active: activeProjects,
+        notStarted: notStartedProjects,
+        inProgress: inProgressProjects,
         onHold: onHoldProjects,
-        planning: planningProjects,
+        cancelled: cancelledProjects,
         completed: completedProjects,
-        closed: closedProjects,
+        active: inProgressProjects,
         averageProgressPct,
         totalBudget:
           budgetTotal > 0 ? budgetTotal.toFixed(2) : null,
@@ -513,7 +513,7 @@ export class ReportingService {
       this.prisma.project.count({
         where: {
           ...where,
-          status: { in: ['COMPLETED', 'CLOSED'] },
+          status: { in: [ProjectStatus.COMPLETED] },
         },
       }),
     ]);

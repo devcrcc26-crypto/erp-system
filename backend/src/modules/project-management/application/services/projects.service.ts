@@ -46,15 +46,10 @@ import { EngineeringDocumentFolderService } from './engineering-document-folder.
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
 
-const PROJECT_STATUS_TRANSITIONS: Record<string, string[]> = {
-  PLANNING: ['TENDER', 'ON_HOLD'],
-  TENDER: ['MOBILIZATION', 'PLANNING', 'ON_HOLD'],
-  MOBILIZATION: ['ACTIVE', 'ON_HOLD', 'TENDER'],
-  ACTIVE: ['ON_HOLD', 'COMPLETED'],
-  ON_HOLD: ['PLANNING', 'TENDER', 'MOBILIZATION', 'ACTIVE'],
-  COMPLETED: ['CLOSED'],
-  CLOSED: [],
-};
+import {
+  PROJECT_STATUS_TRANSITIONS,
+  type ProjectStatus,
+} from '@erp/shared/project-status';
 
 const PROJECT_SORT_FIELDS = new Set([
   'createdAt',
@@ -256,9 +251,9 @@ export class ProjectsService {
         select: { status: true },
       });
       if (current && dto.status !== current.status) {
-        const allowed =
-          PROJECT_STATUS_TRANSITIONS[current.status as string] ?? [];
-        if (!allowed.includes(dto.status as string)) {
+        const currentStatus = current.status as ProjectStatus;
+        const allowed = PROJECT_STATUS_TRANSITIONS[currentStatus] ?? [];
+        if (!allowed.includes(dto.status as ProjectStatus)) {
           throw new BadRequestException(
             `Invalid project status transition from ${current.status} to ${dto.status}.`,
           );

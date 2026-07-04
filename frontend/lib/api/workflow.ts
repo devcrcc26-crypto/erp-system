@@ -1,17 +1,25 @@
+import type { ProjectStatus } from '@erp/shared/project-status';
+import {
+  PROJECT_STATUS_DEFINITIONS,
+  PROJECT_STATUS_DEFAULT,
+  PROJECT_STATUS_VALUES,
+  formatProjectStatusLabel,
+  projectStatusBadgeVariant,
+} from '@erp/shared/project-status';
+
+export type { ProjectStatus };
+export { PROJECT_STATUS_DEFAULT, PROJECT_STATUS_VALUES };
+
 export interface WorkflowStep {
   key: string;
   label: string;
 }
 
-export const PROJECT_STATUS_WORKFLOW: WorkflowStep[] = [
-  { key: 'PLANNING', label: 'Planning' },
-  { key: 'TENDER', label: 'Tender' },
-  { key: 'MOBILIZATION', label: 'Mobilization' },
-  { key: 'ACTIVE', label: 'Active' },
-  { key: 'ON_HOLD', label: 'On Hold' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'CLOSED', label: 'Closed' },
-];
+export const PROJECT_STATUS_WORKFLOW: WorkflowStep[] =
+  PROJECT_STATUS_DEFINITIONS.map((definition) => ({
+    key: definition.value,
+    label: definition.label,
+  }));
 
 export const RFI_WORKFLOW: WorkflowStep[] = [
   { key: 'DRAFT', label: 'Draft' },
@@ -105,3 +113,6 @@ export function getWorkflowStepLabel(
   const normalized = currentStatus.trim().toUpperCase();
   return steps.find((step) => step.key === normalized)?.label ?? currentStatus;
 }
+
+/** Re-export for components that import display helpers from workflow. */
+export { formatProjectStatusLabel, projectStatusBadgeVariant };

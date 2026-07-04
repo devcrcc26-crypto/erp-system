@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@erp/shared/*": ["../backend/src/shared/*"]
     }
   },
   "include": [

@@ -78,6 +78,7 @@ describe('ProjectExportService', () => {
         projectType: 'RAILWAY',
         designProperties: 'Design-build',
         designStage: 'DETAILED_DESIGN',
+        status: 'IN_PROGRESS',
         railwayLengthKm: 120.5,
         urbanRailLengthKm: null,
         roadLengthKm: null,
@@ -98,14 +99,17 @@ describe('ProjectExportService', () => {
     const sheet = await readWorksheet(buffer, 'Project list');
     const dataRow = sheet.getRow(3);
 
-    expect(sheet.getRow(1).getCell(13).value).toBe('铁路长度(km)');
-    expect(sheet.getRow(2).getCell(13).value).toBe('Length of Railway (km)');
-    expect(dataRow.getCell(13).value).toBe(120.5);
-    expect(dataRow.getCell(14).value).toBe('');
+    expect(sheet.getRow(1).getCell(4).value).toBe('项目状态');
+    expect(sheet.getRow(2).getCell(4).value).toBe('Project Status');
+    expect(dataRow.getCell(4).value).toBe('In Progress');
+    expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
+    expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
+    expect(dataRow.getCell(14).value).toBe(120.5);
     expect(dataRow.getCell(15).value).toBe('');
     expect(dataRow.getCell(16).value).toBe('');
-    expect(dataRow.getCell(17).value).toBe(5000000);
-    expect(dataRow.getCell(18).value).toBe('');
+    expect(dataRow.getCell(17).value).toBe('');
+    expect(dataRow.getCell(18).value).toBe(5000000);
+    expect(dataRow.getCell(19).value).toBe('');
   });
 
   it('exports project list with bilingual project name format', async () => {

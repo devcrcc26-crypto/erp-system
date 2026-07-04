@@ -21,7 +21,7 @@ const projectResponse = {
   projectCode: 'PRJ-00001',
   name: 'Marina Tower',
   nameZh: '滨海大厦',
-  status: 'ACTIVE',
+  status: 'IN_PROGRESS',
 };
 
 class TestUserGuard implements CanActivate {
@@ -85,7 +85,7 @@ describe('ProjectsController', () => {
         name: 'Marina Tower',
         nameZh: '滨海大厦',
         projectType: 'COMMERCIAL',
-        status: 'PLANNING',
+        status: 'NOT_STARTED',
       })
       .expect(201);
 
@@ -104,7 +104,7 @@ describe('ProjectsController', () => {
         name: 'Blocked Project',
         nameZh: '受阻项目',
         projectType: 'COMMERCIAL',
-        status: 'PLANNING',
+        status: 'NOT_STARTED',
       })
       .expect(403);
 

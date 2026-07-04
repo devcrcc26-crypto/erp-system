@@ -19,7 +19,8 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@erp/shared/*": ["src/shared/*"]
     }
   },
   "include": ["src/**/*", "prisma/**/*.ts"],

@@ -544,7 +544,7 @@ describe('Closure chain (closure-chain)', () => {
     beforeEach(() => {
       prisma = {
         project: {
-          findFirst: jest.fn().mockResolvedValue({ status: ProjectStatus.ACTIVE }),
+          findFirst: jest.fn().mockResolvedValue({ status: ProjectStatus.IN_PROGRESS }),
           update: jest.fn().mockResolvedValue({
             id: projectId,
             status: ProjectStatus.COMPLETED,

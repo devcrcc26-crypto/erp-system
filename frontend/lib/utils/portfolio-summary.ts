@@ -51,6 +51,24 @@ export function normalizePortfolioSummary(
       )
     : [];
 
+  const notStarted = asNumber(
+    data.projects?.notStarted,
+    byStatus.NOT_STARTED ?? 0,
+  );
+  const inProgress = asNumber(
+    data.projects?.inProgress,
+    byStatus.IN_PROGRESS ?? data.projects?.active ?? 0,
+  );
+  const onHold = asNumber(data.projects?.onHold, byStatus.ON_HOLD ?? 0);
+  const cancelled = asNumber(
+    data.projects?.cancelled,
+    byStatus.CANCELLED ?? 0,
+  );
+  const completed = asNumber(
+    data.projects?.completed,
+    byStatus.COMPLETED ?? 0,
+  );
+
   return {
     generatedAt:
       typeof data.generatedAt === 'string'
@@ -64,14 +82,12 @@ export function normalizePortfolioSummary(
         data.projects?.total,
         Object.values(byStatus).reduce((sum, count) => sum + count, 0),
       ),
-      active: asNumber(data.projects?.active, byStatus.ACTIVE ?? 0),
-      onHold: asNumber(data.projects?.onHold, byStatus.ON_HOLD ?? 0),
-      planning: asNumber(
-        data.projects?.planning,
-        (byStatus.PLANNING ?? 0) + (byStatus.TENDER ?? 0),
-      ),
-      completed: asNumber(data.projects?.completed, byStatus.COMPLETED ?? 0),
-      closed: asNumber(data.projects?.closed, byStatus.CLOSED ?? 0),
+      notStarted,
+      inProgress,
+      onHold,
+      cancelled,
+      completed,
+      active: inProgress,
       averageProgressPct:
         typeof data.projects?.averageProgressPct === 'number'
           ? data.projects.averageProgressPct

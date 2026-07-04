@@ -1,10 +1,12 @@
 import {
   ApprovalLevel,
   CompletionStatus,
+  ProjectStatus,
   ProjectType,
   TaskLanguage,
   UrgencyLevel,
 } from '@prisma/client';
+import { formatProjectStatusLabel } from '@erp/shared/project-status';
 
 /**
  * Formats project/task name for export: "English (Chinese)" when Chinese is set.
@@ -150,6 +152,16 @@ export function formatExportCompletionStatus(
     return '';
   }
   return COMPLETION_STATUS_LABELS[value] ?? value;
+}
+
+/** Human-readable project status label for Excel export. */
+export function formatExportProjectStatus(
+  value: ProjectStatus | null | undefined,
+): string {
+  if (value == null) {
+    return '';
+  }
+  return formatProjectStatusLabel(value);
 }
 
 /**
