@@ -751,8 +751,11 @@ export interface CreateProjectRequest {
   isOutsourced?: boolean;
 }
 
-export type UpdateProjectRequest = Partial<CreateProjectRequest> & {
+export type UpdateProjectRequest = Partial<
+  Omit<CreateProjectRequest, 'client'>
+> & {
   actualFinishDate?: string;
+  client?: string | null;
 };
 
 export interface ProjectListFilters {

@@ -4,6 +4,7 @@
 
 import {
   Button,
+  AutoComplete,
   DatePicker,
   Divider,
   Drawer,
@@ -30,6 +31,7 @@ import {
   PROJECT_CONTRACT_TYPE_DEFAULT,
   PROJECT_CONTRACT_TYPE_OPTIONS,
 } from '@/lib/constants/project-contract-type';
+import { PROJECT_CLIENT_PRESET_OPTIONS } from '@/lib/constants/project-client-presets';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { PROJECT_DESIGN_PHASE_OPTIONS } from '@/lib/utils/project-design-phase';
 import {
@@ -134,8 +136,10 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
 }
 
 function toUpdatePayload(values: ProjectFormValues): UpdateProjectRequest {
+  const trimmedClient = values.client?.trim();
   return {
     ...toCreatePayload(values),
+    client: trimmedClient ? trimmedClient : null,
     actualFinishDate: values.actualFinishDate?.toISOString(),
   };
 }
@@ -313,7 +317,17 @@ export default function ProjectFormDrawer({
         <Divider titlePlacement="left">Project Details</Divider>
 
         <Form.Item label="Client" name="client">
-          <Input placeholder="Client name" />
+          <AutoComplete
+            allowClear
+            options={PROJECT_CLIENT_PRESET_OPTIONS}
+            placeholder="Select or enter client name"
+            filterOption={(input, option) =>
+              (option?.label ?? '')
+                .toString()
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
         <Form.Item label="Commissioning method" name="commissioningMethod">
           <Input />

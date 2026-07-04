@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   ApprovalLevel,
   CloseoutStatus,
@@ -43,11 +43,16 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
+import {
+  PROJECT_CLIENT_MAX_LENGTH,
+  normalizeProjectClientInput,
+} from '@/shared/project-client-presets';
 
 export class ProjectListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: ProjectStatus })
@@ -198,9 +203,19 @@ export class CreateProjectDto {
   @IsEntityUuid()
   projectManagerId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Client name — suggested presets: CCECC Ethiopia, CCECC Djibouti, CCECC Kenya; custom names allowed.',
+    maxLength: PROJECT_CLIENT_MAX_LENGTH,
+  })
   @IsOptional()
   @IsString()
+  @MaxLength(PROJECT_CLIENT_MAX_LENGTH)
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeProjectClientInput(
+      typeof value === 'string' ? value : undefined,
+    ),
+  )
   client?: string;
 
   @ApiPropertyOptional()
@@ -246,11 +261,34 @@ export class CreateProjectDto {
   isOutsourced?: boolean;
 }
 
-export class UpdateProjectDto extends PartialType(CreateProjectDto) {
+export class UpdateProjectDto extends PartialType(
+  OmitType(CreateProjectDto, ['client'] as const),
+) {
   @ApiPropertyOptional()
   @IsOptional()
   @IsDateString()
   actualFinishDate?: string;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Client name — null clears the client. Custom names allowed beyond presets.',
+    maxLength: PROJECT_CLIENT_MAX_LENGTH,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(PROJECT_CLIENT_MAX_LENGTH)
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+    return value;
+  })
+  client?: string | null;
 }
 
 export class SetProjectTeamMemberDto {

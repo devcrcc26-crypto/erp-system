@@ -42,6 +42,7 @@ import {
 } from '../utils/project-progress.util';
 import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
+import { normalizeProjectClientInput } from '@/shared/project-client-presets';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
@@ -182,7 +183,7 @@ export class ProjectsService {
           budget: parseOptionalDecimal(dto.budget),
           currency: dto.currency,
           projectManagerId,
-          client: dto.client,
+          client: normalizeProjectClientInput(dto.client) ?? null,
           commissioningMethod: dto.commissioningMethod,
           responsibleDepartmentId: dto.responsibleDepartmentId,
           designProperties: dto.designProperties,
@@ -342,7 +343,10 @@ export class ProjectsService {
         budget: parseOptionalDecimal(dto.budget),
         currency: dto.currency,
         projectManagerId: dto.projectManagerId,
-        client: dto.client,
+        client:
+          dto.client !== undefined
+            ? (normalizeProjectClientInput(dto.client ?? undefined) ?? null)
+            : undefined,
         commissioningMethod: dto.commissioningMethod,
         responsibleDepartmentId: dto.responsibleDepartmentId,
         designProperties: dto.designProperties,
