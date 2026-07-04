@@ -209,7 +209,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2026-12-31',
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 78_500,
-    designProperties: 'Design-Build',
+    designProperties: 'IMPLEMENTATION_DB',
     designStage: 'Construction Documents',
   },
   {
@@ -225,7 +225,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     railwayLengthKm: 4.2,
     urbanRailLengthKm: 2.1,
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
     designStage: 'Detailed Design',
   },
   {
@@ -240,7 +240,7 @@ const DEMO_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2027-09-30',
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 34_800,
-    designProperties: 'Design-Bid-Build',
+    designProperties: 'IMPLEMENTATION_DBB',
     designStage: 'Preliminary Design',
   },
 ];

@@ -35,6 +35,11 @@ import {
   PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
   PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS,
 } from '@/lib/constants/project-responsible-department';
+import {
+  PROJECT_DESIGN_PROPERTIES_DEFAULT,
+  PROJECT_DESIGN_PROPERTIES_OPTIONS,
+} from '@/lib/constants/project-design-properties';
+import type { ProjectDesignProperties } from '@/lib/constants/project-design-properties';
 import type { ProjectResponsibleDepartment } from '@/lib/constants/project-responsible-department';
 import { PROJECT_CLIENT_PRESET_OPTIONS } from '@/lib/constants/project-client-presets';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
@@ -65,7 +70,7 @@ interface ProjectFormValues {
   currency?: string;
   client?: string;
   responsibleDepartment?: ProjectResponsibleDepartment;
-  designProperties?: string;
+  designProperties?: ProjectDesignProperties;
   designStage?: ProjectDesignPhase;
   responsiblePersonId?: string;
   description?: string;
@@ -97,7 +102,7 @@ function toFormValues(project: Project): ProjectFormValues {
     currency: project.currency ?? undefined,
     client: project.client ?? undefined,
     responsibleDepartment: project.responsibleDepartment,
-    designProperties: project.designProperties ?? undefined,
+    designProperties: project.designProperties,
     designStage: project.designStage ?? undefined,
     responsiblePersonId: project.responsiblePersonId ?? undefined,
     description: project.description ?? undefined,
@@ -125,7 +130,7 @@ function toCreatePayload(values: ProjectFormValues): CreateProjectRequest {
     currency: values.currency?.trim() || undefined,
     client: values.client?.trim() || undefined,
     responsibleDepartment: values.responsibleDepartment,
-    designProperties: values.designProperties?.trim() || undefined,
+    designProperties: values.designProperties,
     designStage: values.designStage,
     responsiblePersonId: values.responsiblePersonId,
     description: values.description?.trim() || undefined,
@@ -172,6 +177,7 @@ export default function ProjectFormDrawer({
       status: PROJECT_STATUS_DEFAULT,
       contractType: PROJECT_CONTRACT_TYPE_DEFAULT,
       responsibleDepartment: PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
+      designProperties: PROJECT_DESIGN_PROPERTIES_DEFAULT,
       currency: 'USD',
       overallProgressPct: 0,
       isOutsourced: false,
@@ -329,7 +335,7 @@ export default function ProjectFormDrawer({
           <Select options={PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS} />
         </Form.Item>
         <Form.Item label="Design properties" name="designProperties">
-          <Input />
+          <Select options={PROJECT_DESIGN_PROPERTIES_OPTIONS} />
         </Form.Item>
         <Form.Item
           label="Design stage"

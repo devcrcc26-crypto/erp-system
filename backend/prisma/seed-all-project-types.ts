@@ -27,7 +27,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2027-06-30',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Detailed Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 21,
@@ -43,7 +43,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     roadLengthKm: 42.6,
     designStage: 'Construction Documents',
-    designProperties: 'Design-Bid-Build',
+    designProperties: 'IMPLEMENTATION_DBB',
   },
   {
     index: 22,
@@ -59,7 +59,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     railwayLengthKm: 68.4,
     designStage: 'Preliminary Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 23,
@@ -75,7 +75,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     urbanRailLengthKm: 12.8,
     designStage: 'Detailed Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 24,
@@ -91,7 +91,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 92_400,
     designStage: 'Construction Documents',
-    designProperties: 'Design-Build',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 25,
@@ -106,7 +106,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2030-06-30',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Scheme Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 26,
@@ -121,7 +121,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2031-12-31',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Feasibility',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 27,
@@ -136,7 +136,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2027-04-30',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Detailed Design',
-    designProperties: 'Design-Bid-Build',
+    designProperties: 'IMPLEMENTATION_DBB',
   },
   {
     index: 28,
@@ -151,7 +151,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2028-12-31',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Preliminary Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 29,
@@ -167,7 +167,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 124_000,
     designStage: 'Scheme Design',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 30,
@@ -182,7 +182,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2027-08-31',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Construction Documents',
-    designProperties: 'EPC',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 31,
@@ -198,7 +198,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     contractType: ProjectContractType.CONTRACT,
     grossFloorAreaM2: 156_200,
     designStage: 'Detailed Design',
-    designProperties: 'Design-Build',
+    designProperties: 'IMPLEMENTATION_DB',
   },
   {
     index: 32,
@@ -213,7 +213,7 @@ const SHOWCASE_PROJECTS: DemoProjectDef[] = [
     plannedFinishDate: '2028-06-30',
     contractType: ProjectContractType.CONTRACT,
     designStage: 'Feasibility',
-    designProperties: 'Consultancy',
+    designProperties: 'PRELIMINARY',
   },
 ];
 

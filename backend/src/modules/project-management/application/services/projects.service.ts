@@ -658,6 +658,9 @@ export class ProjectsService {
     if (query.responsibleDepartment) {
       where.responsibleDepartment = query.responsibleDepartment;
     }
+    if (query.designProperties) {
+      where.designProperties = query.designProperties;
+    }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [

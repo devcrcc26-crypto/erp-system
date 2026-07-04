@@ -8,9 +8,13 @@ import {
   UrgencyLevel,
 } from '@prisma/client';
 import { formatProjectContractTypeLabel } from '@/shared/project-contract-type';
+import { formatProjectDesignPropertiesLabel } from '@/shared/project-design-properties';
 import { formatProjectResponsibleDepartmentLabel } from '@/shared/project-responsible-department';
 import { formatProjectStatusLabel } from '@/shared/project-status';
-import type { ProjectResponsibleDepartment } from '@prisma/client';
+import type {
+  ProjectDesignProperties,
+  ProjectResponsibleDepartment,
+} from '@prisma/client';
 
 /**
  * Formats project/task name for export: "English (Chinese)" when Chinese is set.
@@ -188,6 +192,16 @@ export function formatExportResponsibleDepartment(
     );
   }
   return formatProjectResponsibleDepartmentLabel(value);
+}
+
+/** Human-readable design properties label for Excel export. */
+export function formatExportDesignProperties(
+  value: ProjectDesignProperties | null | undefined,
+): string {
+  if (value == null) {
+    return formatProjectDesignPropertiesLabel('PRELIMINARY');
+  }
+  return formatProjectDesignPropertiesLabel(value);
 }
 
 /**

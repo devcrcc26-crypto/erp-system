@@ -21,7 +21,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { Project, ProjectStatus, ProjectResponsibleDepartment } from '@/lib/api/project-management.types';
+import type { Project, ProjectStatus, ProjectResponsibleDepartment, ProjectDesignProperties } from '@/lib/api/project-management.types';
 import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
 import { fetchAllProjects, useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
@@ -30,14 +30,19 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { tokens } from '@/lib/theme/tokens';
 import {
+  PROJECT_DESIGN_PROPERTIES_OPTIONS,
+} from '@/lib/constants/project-design-properties';
+import {
   PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS,
 } from '@/lib/constants/project-responsible-department';
 import {
   formatProjectBudget,
   formatProjectDate,
+  formatProjectDesignProperties,
   formatProjectResponsibleDepartment,
   formatProjectStatus,
   formatProjectType,
+  projectDesignPropertiesVariant,
   projectResponsibleDepartmentVariant,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
@@ -55,6 +60,9 @@ export default function ProjectsPageContent(): React.ReactNode {
   const [departmentFilter, setDepartmentFilter] = useState<
     ProjectResponsibleDepartment | undefined
   >();
+  const [designPropertiesFilter, setDesignPropertiesFilter] = useState<
+    ProjectDesignProperties | undefined
+  >();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -71,6 +79,7 @@ export default function ProjectsPageContent(): React.ReactNode {
       search: search.trim() || undefined,
       status: statusFilter,
       responsibleDepartment: departmentFilter,
+      designProperties: designPropertiesFilter,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     },
@@ -86,6 +95,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         search: trimmedSearch || undefined,
         status: statusFilter,
         responsibleDepartment: departmentFilter,
+        designProperties: designPropertiesFilter,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       });
@@ -108,7 +118,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingPdf(false);
     }
-  }, [authUser, departmentFilter, messageApi, search, statusFilter]);
+  }, [authUser, departmentFilter, designPropertiesFilter, messageApi, search, statusFilter]);
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingExcel(true);
@@ -117,6 +127,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         search: search.trim() || undefined,
         status: statusFilter,
         responsibleDepartment: departmentFilter,
+        designProperties: designPropertiesFilter,
       });
       messageApi.success('Project list export downloaded.');
     } catch {
@@ -124,7 +135,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingExcel(false);
     }
-  }, [departmentFilter, messageApi, search, statusFilter]);
+  }, [departmentFilter, designPropertiesFilter, messageApi, search, statusFilter]);
 
   const columns: ColumnsType<Project> = useMemo(
     () => [
@@ -173,6 +184,17 @@ export default function ProjectsPageContent(): React.ReactNode {
           <StatusBadge
             label={formatProjectResponsibleDepartment(value)}
             variant={projectResponsibleDepartmentVariant(value)}
+          />
+        ),
+      },
+      {
+        title: 'Design properties',
+        dataIndex: 'designProperties',
+        key: 'designProperties',
+        render: (value: ProjectDesignProperties) => (
+          <StatusBadge
+            label={formatProjectDesignProperties(value)}
+            variant={projectDesignPropertiesVariant(value)}
           />
         ),
       },
@@ -345,6 +367,17 @@ export default function ProjectsPageContent(): React.ReactNode {
               setDepartmentFilter(value);
             }}
             options={PROJECT_RESPONSIBLE_DEPARTMENT_OPTIONS}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by design properties"
+            className={layout.filterControlMd}
+            value={designPropertiesFilter}
+            onChange={(value: ProjectDesignProperties | undefined) => {
+              resetPage();
+              setDesignPropertiesFilter(value);
+            }}
+            options={PROJECT_DESIGN_PROPERTIES_OPTIONS}
           />
         </Space>
 

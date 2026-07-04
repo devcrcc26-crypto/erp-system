@@ -13,6 +13,11 @@ import {
   formatProjectResponsibleDepartmentLabel,
   projectResponsibleDepartmentBadgeVariant,
 } from '@/lib/constants/project-responsible-department';
+import type { ProjectDesignProperties } from '@/lib/constants/project-design-properties';
+import {
+  formatProjectDesignPropertiesLabel,
+  projectDesignPropertiesBadgeVariant,
+} from '@/lib/constants/project-design-properties';
 
 export type { ProjectStatus } from '@/lib/constants/project-status';
 
@@ -68,6 +73,18 @@ export function projectResponsibleDepartmentVariant(
   value: ProjectResponsibleDepartment,
 ): StatusBadgeVariant {
   return projectResponsibleDepartmentBadgeVariant(value);
+}
+
+export function formatProjectDesignProperties(
+  value: ProjectDesignProperties,
+): string {
+  return formatProjectDesignPropertiesLabel(value);
+}
+
+export function projectDesignPropertiesVariant(
+  value: ProjectDesignProperties,
+): StatusBadgeVariant {
+  return projectDesignPropertiesBadgeVariant(value);
 }
 
 export function formatProjectType(type: ProjectType | null): string {

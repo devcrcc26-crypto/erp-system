@@ -117,7 +117,7 @@ export interface MappedProject {
   responsiblePersonName?: string | null;
   client: string | null;
   responsibleDepartment: Project['responsibleDepartment'];
-  designProperties: string | null;
+  designProperties: Project['designProperties'];
   designStage: string | null;
   description: string | null;
   overallProgressPct: number;

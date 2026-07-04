@@ -966,6 +966,14 @@ enum ProjectResponsibleDepartment {
   ARCHITECTURAL_DESIGN_DEPARTMENT
 }
 
+enum ProjectDesignProperties {
+  PRELIMINARY
+  GEOTECNICAL_INVESTIGATION
+  SURVEY
+  IMPLEMENTATION_DB
+  IMPLEMENTATION_DBB
+}
+
 enum ProjectStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -1324,7 +1332,7 @@ model Project {
   currency                String?
   client                  String?
   responsibleDepartment   ProjectResponsibleDepartment @default(MUNICIPAL_TRANSPORTATION_DEPARTMENT) @map("responsible_department")
-  designProperties        String?       @map("design_properties")
+  designProperties        ProjectDesignProperties      @default(PRELIMINARY) @map("design_properties")
   designStage             String?       @map("design_stage")
   responsiblePersonId     String?       @map("responsible_person_id")
   description             String?

@@ -88,7 +88,7 @@ const PROJECT_1_DEF: DemoProjectDef = {
   actualFinishDate: '2025-05-28',
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 112_000,
-  designProperties: 'EPC',
+  designProperties: 'IMPLEMENTATION_DB' as const,
   designStage: 'As-Built',
 };
 
@@ -105,7 +105,7 @@ const PROJECT_2_DEF: DemoProjectDef = {
   plannedFinishDate: '2027-12-31',
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 198_500,
-  designProperties: 'Design-Build',
+  designProperties: 'IMPLEMENTATION_DB' as const,
   designStage: 'Detailed Design',
 };
 
@@ -122,7 +122,7 @@ const PROJECT_3_DEF: DemoProjectDef = {
   plannedFinishDate: '2028-04-30',
   contractType: ProjectContractType.CONTRACT,
   grossFloorAreaM2: 48_200,
-  designProperties: 'Design-Bid-Build',
+  designProperties: 'IMPLEMENTATION_DBB' as const,
   designStage: 'Preliminary Design',
 };
 

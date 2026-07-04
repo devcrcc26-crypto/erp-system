@@ -75,7 +75,7 @@ describe('ProjectExportService', () => {
         contractType: 'EMAIL',
         startDate: new Date('2026-01-15'),
         projectType: 'RAILWAY',
-        designProperties: 'Design-build',
+        designProperties: 'IMPLEMENTATION_DB',
         designStage: 'DETAILED_DESIGN',
         status: 'IN_PROGRESS',
         railwayLengthKm: 120.5,
@@ -102,6 +102,7 @@ describe('ProjectExportService', () => {
     expect(dataRow.getCell(4).value).toBe('In Progress');
     expect(dataRow.getCell(6).value).toBe('Email');
     expect(dataRow.getCell(9).value).toBe('Municipal Transportation Department');
+    expect(dataRow.getCell(10).value).toBe('Implementation（DB）');
     expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
     expect(sheet.getRow(2).getCell(14).value).toBe('Length of Railway (km)');
     expect(dataRow.getCell(14).value).toBe(120.5);
@@ -125,7 +126,7 @@ describe('ProjectExportService', () => {
         status: 'NOT_STARTED',
         startDate: null,
         projectType: 'BUILDING',
-        designProperties: null,
+        designProperties: 'PRELIMINARY',
         designStage: null,
         railwayLengthKm: null,
         urbanRailLengthKm: null,
