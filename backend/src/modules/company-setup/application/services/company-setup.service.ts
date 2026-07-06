@@ -344,16 +344,27 @@ export class CompanySetupService {
     ctx: AuditContext,
     dto: CreateDisciplineDto,
   ): Promise<unknown> {
-    return this.prisma.discipline.create({
-      data: {
-        companyId: ctx.companyId,
-        name: dto.name.trim(),
-        nameZh: dto.nameZh?.trim() || null,
-        isActive: dto.isActive ?? true,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
-    });
+    const name = dto.name.trim();
+    if (!name) {
+      throw new BadRequestException('Discipline name is required');
+    }
+
+    await this.assertDisciplineNameAvailable(ctx, name);
+
+    try {
+      return await this.prisma.discipline.create({
+        data: {
+          companyId: ctx.companyId,
+          name,
+          nameZh: dto.nameZh?.trim() || null,
+          isActive: dto.isActive ?? true,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+    } catch (error) {
+      this.rethrowDisciplineUniqueViolation(error, name);
+    }
   }
 
   /**
@@ -364,16 +375,29 @@ export class CompanySetupService {
     id: string,
     dto: UpdateDisciplineDto,
   ): Promise<unknown> {
-    await this.findDisciplineOrThrow(ctx, id);
-    return this.prisma.discipline.update({
-      where: { id },
-      data: {
-        name: dto.name?.trim(),
-        nameZh: dto.nameZh?.trim(),
-        isActive: dto.isActive,
-        updatedBy: ctx.userId,
-      },
-    });
+    const existing = await this.findDisciplineOrThrow(ctx, id);
+    const name = dto.name?.trim();
+
+    if (name && name !== existing.name) {
+      await this.assertDisciplineNameAvailable(ctx, name, id);
+    }
+
+    try {
+      return await this.prisma.discipline.update({
+        where: { id },
+        data: {
+          name,
+          nameZh: dto.nameZh?.trim(),
+          isActive: dto.isActive,
+          updatedBy: ctx.userId,
+        },
+      });
+    } catch (error) {
+      if (name) {
+        this.rethrowDisciplineUniqueViolation(error, name);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -836,6 +860,56 @@ export class CompanySetupService {
       throw new NotFoundException('Discipline not found');
     }
     return row;
+  }
+
+  /**
+   * Rejects duplicate discipline names within a company (including soft-deleted rows).
+   */
+  private async assertDisciplineNameAvailable(
+    ctx: AuditContext,
+    name: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.discipline.findFirst({
+      where: {
+        companyId: ctx.companyId,
+        name,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true, deletedAt: true, isActive: true },
+    });
+
+    if (!existing) {
+      return;
+    }
+
+    if (existing.deletedAt) {
+      throw new ConflictException(
+        `A discipline named "${name}" already exists but is inactive. Reactivate it instead of creating a duplicate.`,
+      );
+    }
+
+    throw new ConflictException(
+      `A discipline named "${name}" already exists.`,
+    );
+  }
+
+  /**
+   * Maps Prisma unique violations on discipline name to a 409 response.
+   */
+  private rethrowDisciplineUniqueViolation(
+    error: unknown,
+    name: string,
+  ): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        `A discipline named "${name}" already exists.`,
+      );
+    }
+    throw error;
   }
 
   private async getDisciplineReferenceCount(id: string): Promise<number> {
