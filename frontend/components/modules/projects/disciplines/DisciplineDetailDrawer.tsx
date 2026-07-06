@@ -60,9 +60,16 @@ export default function DisciplineDetailDrawer({
       return;
     }
 
-    if (!isUuidLike(body.disciplineId) || !isUuidLike(body.disciplineLeadUserId)) {
+    const disciplineIdValid = isUuidLike(body.disciplineId);
+    const leadUserIdValid = isUuidLike(body.disciplineLeadUserId);
+    if (!disciplineIdValid || !leadUserIdValid) {
+      const badField = !disciplineIdValid ? 'Discipline' : 'Discipline leader';
+      console.error('[DisciplineDetailDrawer] invalid selection', {
+        disciplineId: body.disciplineId,
+        disciplineLeadUserId: body.disciplineLeadUserId,
+      });
       messageApi.error(
-        'The discipline list looks out of date. Refreshing it — please try again.',
+        `${badField} selection looks out of date (not a valid id). Refreshing the list — please reselect and try again.`,
       );
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
       return;
