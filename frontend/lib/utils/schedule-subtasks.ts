@@ -51,6 +51,16 @@ export function computeScheduleSubtaskRollup(
 }
 
 /**
+ * EPC workspace path for a discipline (task discipline overview).
+ */
+export function scheduleDisciplineWorkspaceHref(
+  projectId: string,
+  taskDisciplineId: string,
+): string {
+  return `/projects/${projectId}/disciplines/${taskDisciplineId}`;
+}
+
+/**
  * EPC workspace path for a subtask (design package).
  */
 export function scheduleSubtaskWorkspaceHref(

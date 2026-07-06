@@ -31,6 +31,7 @@ import {
   TaskDependencyType,
   TaskLanguage,
   TaskStatus,
+  TaskAttributes,
   UrgencyLevel,
 } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
@@ -370,6 +371,16 @@ export class CreateMilestoneDto {
 
 export class UpdateMilestoneDto extends PartialType(CreateMilestoneDto) {}
 
+export class TaskDisciplineAssignmentDto {
+  @ApiProperty()
+  @IsString()
+  disciplineName!: string;
+
+  @ApiProperty()
+  @IsEntityUuid()
+  disciplineLeadUserId!: string;
+}
+
 export class CreateTaskDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -385,6 +396,16 @@ export class CreateTaskDto {
   @IsOptional()
   @IsEntityUuid()
   dispatcherUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  supervisingChiefUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  assignedPersonUserId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -447,10 +468,10 @@ export class CreateTaskDto {
   @IsBoolean()
   requiresArchiving?: boolean;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: TaskAttributes })
   @IsOptional()
-  @IsString()
-  taskAttributes?: string;
+  @IsEnum(TaskAttributes)
+  taskAttributes?: TaskAttributes;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -511,9 +532,29 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   remark?: string;
+
+  @ApiPropertyOptional({ type: [TaskDisciplineAssignmentDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskDisciplineAssignmentDto)
+  disciplines?: TaskDisciplineAssignmentDto[];
 }
 
-export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
+export class UpdateTaskDto extends PartialType(CreateTaskDto) {
+  @ApiPropertyOptional({ type: [TaskDisciplineAssignmentDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskDisciplineAssignmentDto)
+  disciplinesToAdd?: TaskDisciplineAssignmentDto[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  disciplineIdsToRemove?: string[];
+}
 
 export class CreateTaskDisciplineDto {
   @ApiProperty()

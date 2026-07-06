@@ -289,47 +289,95 @@ export class ScheduleService {
     if (dto.parentTaskId) {
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    await this.assertUsersOnProjectTeam(projectId, [dto.dispatcherUserId]);
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.dispatcherUserId,
+      dto.supervisingChiefUserId,
+      dto.assignedPersonUserId,
+      ...(dto.disciplines?.map((discipline) => discipline.disciplineLeadUserId) ??
+        []),
+    ]);
 
     const taskIdCode =
       dto.taskIdCode?.trim() ||
       (await this.documentNumberService.getNextNumber(ctx, 'TASK'));
 
-    const task = await this.prisma.task.create({
-      data: {
-        projectId,
-        milestoneId: dto.milestoneId,
-        parentTaskId: dto.parentTaskId,
-        dispatcherUserId: dto.dispatcherUserId,
-        taskIdCode,
-        name: dto.name,
-        nameZh: dto.nameZh,
-        description: dto.description,
-        startDate: parseOptionalDate(dto.startDate),
-        finishDate: parseOptionalDate(dto.finishDate),
-        durationDays: dto.durationDays,
-        progressPct: dto.progressPct ?? 0,
-        status: dto.status,
-        isCritical: dto.isCritical ?? false,
-        commissioningMethod: dto.commissioningMethod,
-        requiresArchiving: dto.requiresArchiving ?? false,
-        taskAttributes: dto.taskAttributes,
-        onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
-        assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
-        contactFormNumber: dto.contactFormNumber,
-        designStage: dto.designStage,
-        urgencyLevel: dto.urgencyLevel,
-        hasCustomSchedule: dto.hasCustomSchedule ?? false,
-        language: dto.language,
-        approvalLevel: dto.approvalLevel,
-        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
-        actualWorkdays: dto.actualWorkdays,
-        completionStatus: dto.completionStatus,
-        remark: dto.remark,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    const createdDisciplines: Array<{ id: string; disciplineName: string }> =
+      [];
+
+    const task = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.task.create({
+        data: {
+          projectId,
+          milestoneId: dto.milestoneId,
+          parentTaskId: dto.parentTaskId,
+          dispatcherUserId: dto.dispatcherUserId,
+          supervisingChiefUserId: dto.supervisingChiefUserId,
+          assignedPersonUserId: dto.assignedPersonUserId,
+          taskIdCode,
+          name: dto.name,
+          nameZh: dto.nameZh,
+          description: dto.description,
+          startDate: parseOptionalDate(dto.startDate),
+          finishDate: parseOptionalDate(dto.finishDate),
+          durationDays: dto.durationDays,
+          progressPct: dto.progressPct ?? 0,
+          status: dto.status,
+          isCritical: dto.isCritical ?? false,
+          commissioningMethod: dto.commissioningMethod,
+          requiresArchiving: dto.requiresArchiving ?? false,
+          taskAttributes: dto.taskAttributes,
+          onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
+          assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
+          contactFormNumber: dto.contactFormNumber,
+          designStage: dto.designStage,
+          urgencyLevel: dto.urgencyLevel,
+          hasCustomSchedule: dto.hasCustomSchedule ?? false,
+          language: dto.language,
+          approvalLevel: dto.approvalLevel,
+          actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+          actualWorkdays: dto.actualWorkdays,
+          completionStatus: dto.completionStatus,
+          remark: dto.remark,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (dto.disciplines?.length) {
+        for (const disciplineDto of dto.disciplines) {
+          const disciplinaryLeader = await this.resolveUserDisplayName(
+            ctx,
+            disciplineDto.disciplineLeadUserId,
+          );
+          const discipline = await tx.taskDiscipline.create({
+            data: {
+              taskId: created.id,
+              companyId: ctx.companyId,
+              disciplineName: disciplineDto.disciplineName,
+              disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
+              disciplinaryLeader,
+              createdBy: ctx.userId,
+              updatedBy: ctx.userId,
+            },
+          });
+          createdDisciplines.push({
+            id: discipline.id,
+            disciplineName: discipline.disciplineName,
+          });
+        }
+      }
+
+      return created;
     });
+
+    for (const discipline of createdDisciplines) {
+      await this.engineeringDocumentFolderService.ensureDisciplineFolder(
+        ctx,
+        projectId,
+        discipline.id,
+        discipline.disciplineName,
+      );
+    }
 
     return mapTask(task);
   }
@@ -354,7 +402,14 @@ export class ScheduleService {
       }
       await this.getTaskOrThrow(projectId, dto.parentTaskId);
     }
-    await this.assertUsersOnProjectTeam(projectId, [dto.dispatcherUserId]);
+    await this.assertUsersOnProjectTeam(projectId, [
+      dto.dispatcherUserId,
+      dto.supervisingChiefUserId,
+      dto.assignedPersonUserId,
+      ...(dto.disciplinesToAdd?.map(
+        (discipline) => discipline.disciplineLeadUserId,
+      ) ?? []),
+    ]);
 
     if (dto.status !== undefined) {
       const current = await this.prisma.task.findFirst({
@@ -395,40 +450,107 @@ export class ScheduleService {
       }
     }
 
-    const task = await this.prisma.task.update({
-      where: { id: taskId },
-      data: {
-        milestoneId: dto.milestoneId,
-        parentTaskId: dto.parentTaskId,
-        dispatcherUserId: dto.dispatcherUserId,
-        taskIdCode: dto.taskIdCode,
-        name: dto.name,
-        nameZh: dto.nameZh,
-        description: dto.description,
-        startDate: parseOptionalDate(dto.startDate),
-        finishDate: parseOptionalDate(dto.finishDate),
-        durationDays: dto.durationDays,
-        progressPct: dto.progressPct,
-        status: dto.status,
-        isCritical: dto.isCritical,
-        commissioningMethod: dto.commissioningMethod,
-        requiresArchiving: dto.requiresArchiving,
-        taskAttributes: dto.taskAttributes,
-        onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
-        assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
-        contactFormNumber: dto.contactFormNumber,
-        designStage: dto.designStage,
-        urgencyLevel: dto.urgencyLevel,
-        hasCustomSchedule: dto.hasCustomSchedule,
-        language: dto.language,
-        approvalLevel: dto.approvalLevel,
-        actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
-        actualWorkdays: dto.actualWorkdays,
-        completionStatus: dto.completionStatus,
-        remark: dto.remark,
-        updatedBy: ctx.userId,
-      },
+    if (dto.disciplineIdsToRemove?.length) {
+      for (const disciplineId of dto.disciplineIdsToRemove) {
+        await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+
+        const packageCount = await this.prisma.designPackage.count({
+          where: activeOnly({
+            taskDisciplineId: disciplineId,
+            companyId: ctx.companyId,
+          }),
+        });
+        if (packageCount > 0) {
+          throw new BadRequestException(
+            `Cannot remove discipline: it has ${packageCount} design package(s)`,
+          );
+        }
+      }
+    }
+
+    const createdDisciplines: Array<{ id: string; disciplineName: string }> =
+      [];
+
+    const task = await this.prisma.$transaction(async (tx) => {
+      if (dto.disciplineIdsToRemove?.length) {
+        for (const disciplineId of dto.disciplineIdsToRemove) {
+          await tx.taskDiscipline.update({
+            where: { id: disciplineId },
+            data: { deletedAt: new Date(), deletedBy: ctx.userId },
+          });
+        }
+      }
+
+      if (dto.disciplinesToAdd?.length) {
+        for (const disciplineDto of dto.disciplinesToAdd) {
+          const disciplinaryLeader = await this.resolveUserDisplayName(
+            ctx,
+            disciplineDto.disciplineLeadUserId,
+          );
+          const discipline = await tx.taskDiscipline.create({
+            data: {
+              taskId,
+              companyId: ctx.companyId,
+              disciplineName: disciplineDto.disciplineName,
+              disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
+              disciplinaryLeader,
+              createdBy: ctx.userId,
+              updatedBy: ctx.userId,
+            },
+          });
+          createdDisciplines.push({
+            id: discipline.id,
+            disciplineName: discipline.disciplineName,
+          });
+        }
+      }
+
+      return tx.task.update({
+        where: { id: taskId },
+        data: {
+          milestoneId: dto.milestoneId,
+          parentTaskId: dto.parentTaskId,
+          dispatcherUserId: dto.dispatcherUserId,
+          supervisingChiefUserId: dto.supervisingChiefUserId,
+          assignedPersonUserId: dto.assignedPersonUserId,
+          taskIdCode: dto.taskIdCode,
+          name: dto.name,
+          nameZh: dto.nameZh,
+          description: dto.description,
+          startDate: parseOptionalDate(dto.startDate),
+          finishDate: parseOptionalDate(dto.finishDate),
+          durationDays: dto.durationDays,
+          progressPct: dto.progressPct,
+          status: dto.status,
+          isCritical: dto.isCritical,
+          commissioningMethod: dto.commissioningMethod,
+          requiresArchiving: dto.requiresArchiving,
+          taskAttributes: dto.taskAttributes,
+          onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
+          assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
+          contactFormNumber: dto.contactFormNumber,
+          designStage: dto.designStage,
+          urgencyLevel: dto.urgencyLevel,
+          hasCustomSchedule: dto.hasCustomSchedule,
+          language: dto.language,
+          approvalLevel: dto.approvalLevel,
+          actualCompletionTime: parseOptionalDate(dto.actualCompletionTime),
+          actualWorkdays: dto.actualWorkdays,
+          completionStatus: dto.completionStatus,
+          remark: dto.remark,
+          updatedBy: ctx.userId,
+        },
+      });
     });
+
+    for (const discipline of createdDisciplines) {
+      await this.engineeringDocumentFolderService.ensureDisciplineFolder(
+        ctx,
+        projectId,
+        discipline.id,
+        discipline.disciplineName,
+      );
+    }
 
     return mapTask(task);
   }

@@ -18,6 +18,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
+import TaskDetailDrawer from '@/components/modules/projects/schedule/TaskDetailDrawer';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
 import type {
   Task,
@@ -108,6 +109,8 @@ export default function TasksPanel({
   const queryClient = useQueryClient();
   const messageApi = useAppMessage();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [viewing, setViewing] = useState<Task | null>(null);
   const [dependencyOpen, setDependencyOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
@@ -202,7 +205,16 @@ export default function TasksPanel({
 
           return (
             <div>
-              <span>{formatLocalizedName(record.task)}</span>
+              <button
+                type="button"
+                className="text-left text-[13px] font-medium hover:underline"
+                onClick={() => {
+                  setViewing(record.task);
+                  setDetailOpen(true);
+                }}
+              >
+                {formatLocalizedName(record.task)}
+              </button>
               {rollup && (
                 <p
                   className="mt-0.5 text-[11px]"
@@ -300,6 +312,16 @@ export default function TasksPanel({
 
         return (
           <div className="flex gap-2">
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                setViewing(record.task);
+                setDetailOpen(true);
+              }}
+            >
+              View
+            </Button>
             <Button
               type="link"
               className="!px-0"
@@ -495,14 +517,26 @@ export default function TasksPanel({
         ]}
       />
 
+      <TaskDetailDrawer
+        open={detailOpen}
+        projectId={projectId}
+        task={viewing}
+        onClose={() => {
+          setDetailOpen(false);
+          setViewing(null);
+        }}
+        onEdit={(selectedTask) => {
+          setDetailOpen(false);
+          setViewing(null);
+          setEditing(selectedTask);
+          setDrawerOpen(true);
+        }}
+      />
+
       <TaskFormDrawer
         open={drawerOpen}
         projectId={projectId}
         task={editing ?? undefined}
-        subtasks={
-          editing ? (subtasksByTaskId.get(editing.id) ?? []) : undefined
-        }
-        subtasksLoading={isSubtasksLoading}
         onClose={() => {
           setDrawerOpen(false);
           setEditing(null);

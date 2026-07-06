@@ -43,7 +43,9 @@ export type TaskStatus =
 
 export type TaskDependencyType = 'FS' | 'SS' | 'FF' | 'SF';
 
-export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'CRITICAL';
+export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'VERY_URGENT' | 'CRITICAL';
+
+export type TaskAttributes = 'ETHIOPIA' | 'CHINA' | 'COMBINE1' | 'COMBINE2';
 
 export type TaskLanguage = 'CHINESE' | 'ENGLISH';
 
@@ -235,6 +237,8 @@ export interface Task {
   milestoneId: string | null;
   parentTaskId: string | null;
   dispatcherUserId: string | null;
+  supervisingChiefUserId: string | null;
+  assignedPersonUserId: string | null;
   taskIdCode: string;
   name: string;
   nameZh: string | null;
@@ -247,7 +251,7 @@ export interface Task {
   isCritical: boolean;
   commissioningMethod: string | null;
   requiresArchiving: boolean;
-  taskAttributes: string | null;
+  taskAttributes: TaskAttributes | null;
   onSiteReceivingTime: string | null;
   assignmentToHqTime: string | null;
   contactFormNumber: string | null;
@@ -854,10 +858,17 @@ export interface CreateMilestoneRequest {
 
 export type UpdateMilestoneRequest = Partial<CreateMilestoneRequest>;
 
+export interface TaskDisciplineAssignment {
+  disciplineName: string;
+  disciplineLeadUserId: string;
+}
+
 export interface CreateTaskRequest {
   milestoneId?: string;
   parentTaskId?: string;
   dispatcherUserId?: string;
+  supervisingChiefUserId?: string;
+  assignedPersonUserId?: string;
   taskIdCode?: string;
   name: string;
   nameZh?: string;
@@ -870,7 +881,8 @@ export interface CreateTaskRequest {
   isCritical?: boolean;
   commissioningMethod?: string;
   requiresArchiving?: boolean;
-  taskAttributes?: string;
+  taskAttributes?: TaskAttributes;
+  disciplines?: TaskDisciplineAssignment[];
   onSiteReceivingTime?: string;
   assignmentToHqTime?: string;
   contactFormNumber?: string;
@@ -885,14 +897,19 @@ export interface CreateTaskRequest {
   remark?: string;
 }
 
-export type UpdateTaskRequest = Partial<CreateTaskRequest>;
+export interface UpdateTaskRequest extends Partial<
+  Omit<CreateTaskRequest, 'disciplines'>
+> {
+  disciplinesToAdd?: TaskDisciplineAssignment[];
+  disciplineIdsToRemove?: string[];
+}
 
 export interface CreateTaskDisciplineRequest {
   disciplineName: string;
+  disciplineLeadUserId: string;
   designerUserId?: string;
   ownerUserId?: string;
   reviewerUserId?: string;
-  disciplineLeadUserId?: string;
   chiefUserId?: string;
   instituteChiefUserId?: string;
   supportingDesignerUserId?: string;

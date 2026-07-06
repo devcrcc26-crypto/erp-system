@@ -110,6 +110,7 @@ const URGENCY_LABELS: Record<UrgencyLevel, string> = {
   NORMAL: 'Normal',
   URGENT: 'Urgent',
   CRITICAL: 'Critical',
+  VERY_URGENT: 'Very Urgent',
 };
 
 export function formatExportUrgency(

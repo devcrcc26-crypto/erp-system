@@ -2,12 +2,10 @@
 
 import { Form, Modal, Select } from 'antd';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
-import DisciplineFormFields, {
-  setDisciplineFormValues,
-} from '@/components/modules/projects/disciplines/DisciplineFormFields';
+import DisciplineSimpleFormFields from '@/components/modules/projects/disciplines/DisciplineSimpleFormFields';
 import {
-  type DisciplineFormValues,
-  toDisciplinePayload,
+  type DisciplineSimpleFormValues,
+  toDisciplineSimplePayload,
 } from '@/components/modules/projects/disciplines/discipline-form.util';
 import {
   useCreateTaskDiscipline,
@@ -15,7 +13,7 @@ import {
   useUpdateTaskDiscipline,
 } from '@/lib/query/schedule';
 
-interface DisciplineDetailFormValues extends DisciplineFormValues {
+interface DisciplineDetailFormValues extends DisciplineSimpleFormValues {
   scheduleTaskId?: string;
 }
 
@@ -48,7 +46,7 @@ export default function DisciplineDetailDrawer({
   }));
 
   async function handleSubmit(values: DisciplineDetailFormValues): Promise<void> {
-    const body = toDisciplinePayload(values);
+    const body = toDisciplineSimplePayload(values);
     const submitTaskId = isEditing ? taskId : (taskId ?? values.scheduleTaskId);
 
     if (!submitTaskId) {
@@ -92,7 +90,14 @@ export default function DisciplineDetailDrawer({
       }}
       afterOpenChange={(visible: boolean) => {
         if (visible) {
-          setDisciplineFormValues(form, discipline);
+          if (discipline) {
+            form.setFieldsValue({
+              disciplineName: discipline.disciplineName,
+              disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
+            });
+          } else {
+            form.resetFields();
+          }
           if (showTaskSelect) {
             form.setFieldValue('scheduleTaskId', undefined);
           }
@@ -120,7 +125,7 @@ export default function DisciplineDetailDrawer({
             />
           </Form.Item>
         )}
-        <DisciplineFormFields projectId={projectId} />
+        <DisciplineSimpleFormFields projectId={projectId} />
       </Form>
     </Modal>
   );

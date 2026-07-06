@@ -447,6 +447,8 @@ model User {
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
+  supervisingChiefTasks  Task[]                 @relation("TaskSupervisingChief")
+  assignedPersonTasks    Task[]                 @relation("TaskAssignedPerson")
   ownerDisciplines       TaskDiscipline[]       @relation("DisciplineOwner")
   raisedRfis             Rfi[]                  @relation("RfiRaisedBy")
   assignedRfis           Rfi[]                  @relation("RfiAssignedTo")
@@ -1036,6 +1038,14 @@ enum UrgencyLevel {
   NORMAL
   URGENT
   CRITICAL
+  VERY_URGENT
+}
+
+enum TaskAttributes {
+  ETHIOPIA
+  CHINA
+  COMBINE1
+  COMBINE2
 }
 
 enum TaskLanguage {
@@ -1454,8 +1464,10 @@ model Task {
   projectId    String     @map("project_id")
   milestoneId  String?    @map("milestone_id")
   parentTaskId         String? @map("parent_task_id")
-  dispatcherUserId String? @map("dispatcher_user_id")
-  taskIdCode       String  @map("task_id_code")
+  dispatcherUserId         String? @map("dispatcher_user_id")
+  supervisingChiefUserId   String? @map("supervising_chief_user_id")
+  assignedPersonUserId     String? @map("assigned_person_user_id")
+  taskIdCode               String  @map("task_id_code")
   name         String
   nameZh       String? @map("name_zh")
   description  String?
@@ -1467,7 +1479,7 @@ model Task {
   isCritical            Boolean           @default(false) @map("is_critical")
   commissioningMethod   String?           @map("commissioning_method")
   requiresArchiving     Boolean           @default(false) @map("requires_archiving")
-  taskAttributes        String?           @map("task_attributes")
+  taskAttributes        TaskAttributes?   @map("task_attributes")
   onSiteReceivingTime   DateTime?         @map("on_site_receiving_time")
   assignmentToHqTime    DateTime?         @map("assignment_to_hq_time")
   contactFormNumber     String?           @map("contact_form_number")
@@ -1491,8 +1503,10 @@ model Task {
   milestone          Milestone?       @relation(fields: [milestoneId], references: [id])
   parentTask         Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   childTasks         Task[]           @relation("TaskHierarchy")
-  dispatcherUser   User?            @relation("TaskDispatcher", fields: [dispatcherUserId], references: [id])
-  predecessorLinks TaskDependency[] @relation("PredecessorTask")
+  dispatcherUser       User?            @relation("TaskDispatcher", fields: [dispatcherUserId], references: [id])
+  supervisingChiefUser User?            @relation("TaskSupervisingChief", fields: [supervisingChiefUserId], references: [id])
+  assignedPersonUser   User?            @relation("TaskAssignedPerson", fields: [assignedPersonUserId], references: [id])
+  predecessorLinks     TaskDependency[] @relation("PredecessorTask")
   successorLinks     TaskDependency[]  @relation("SuccessorTask")
   disciplines        TaskDiscipline[]
 
@@ -1500,6 +1514,8 @@ model Task {
   @@index([projectId, deletedAt], map: "idx_task_project_deleted")
   @@index([milestoneId], map: "idx_task_milestone_id")
   @@index([dispatcherUserId], map: "idx_task_dispatcher_user_id")
+  @@index([supervisingChiefUserId], map: "idx_task_supervising_chief_user_id")
+  @@index([assignedPersonUserId], map: "idx_task_assigned_person_user_id")
   @@map("task")
 }
 

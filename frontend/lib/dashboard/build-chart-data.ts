@@ -5,12 +5,14 @@ import { tokens } from '@/lib/theme/tokens';
 
 const URGENCY_COLORS: Record<UrgencyLevel, string> = {
   CRITICAL: tokens.colorRed400,
+  VERY_URGENT: tokens.colorRed400,
   URGENT: tokens.colorAmber400,
   NORMAL: tokens.colorGreen400,
 };
 
 const URGENCY_LABELS: Record<UrgencyLevel, string> = {
   CRITICAL: 'Critical',
+  VERY_URGENT: 'Very Urgent',
   URGENT: 'Urgent',
   NORMAL: 'Normal',
 };
@@ -114,6 +116,7 @@ function buildDisciplineWorkloadChart(
 function buildPriorityChart(tasks: Task[]): DashboardChartDatum[] {
   const counts: Record<UrgencyLevel, number> = {
     CRITICAL: 0,
+    VERY_URGENT: 0,
     URGENT: 0,
     NORMAL: 0,
   };

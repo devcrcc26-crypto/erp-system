@@ -924,6 +924,8 @@ export interface MappedTask {
   milestoneId: string | null;
   parentTaskId: string | null;
   dispatcherUserId: string | null;
+  supervisingChiefUserId: string | null;
+  assignedPersonUserId: string | null;
   taskIdCode: string;
   name: string;
   nameZh: string | null;
@@ -936,7 +938,7 @@ export interface MappedTask {
   isCritical: boolean;
   commissioningMethod: string | null;
   requiresArchiving: boolean;
-  taskAttributes: string | null;
+  taskAttributes: Task['taskAttributes'];
   onSiteReceivingTime: string | null;
   assignmentToHqTime: string | null;
   contactFormNumber: string | null;
@@ -1083,6 +1085,8 @@ export function mapTask(task: Task): MappedTask {
     milestoneId: task.milestoneId,
     parentTaskId: task.parentTaskId,
     dispatcherUserId: task.dispatcherUserId,
+    supervisingChiefUserId: task.supervisingChiefUserId,
+    assignedPersonUserId: task.assignedPersonUserId,
     taskIdCode: task.taskIdCode,
     name: task.name,
     nameZh: task.nameZh,

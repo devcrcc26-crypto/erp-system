@@ -5,15 +5,23 @@ import type {
   UpdateTaskDisciplineRequest,
 } from '@/lib/api/project-management.types';
 
-export interface DisciplineFormValues {
+export interface DisciplineSimpleFormValues {
   disciplineName: string;
-  ownerUserId?: string;
+  disciplineLeadUserId: string;
+}
+
+export interface DisciplineRolesFormValues {
   designerUserId?: string;
+  supportingDesignerUserId?: string;
+  ownerUserId?: string;
   reviewerUserId?: string;
-  disciplineLeadUserId?: string;
   chiefUserId?: string;
   instituteChiefUserId?: string;
-  supportingDesignerUserId?: string;
+}
+
+export interface DisciplineFormValues
+  extends DisciplineSimpleFormValues,
+    DisciplineRolesFormValues {
   actualCompletionTime?: Dayjs;
   deptReviewTime?: Dayjs;
 }
@@ -25,18 +33,36 @@ export function formatDisciplineDateTime(value: string | null): string {
   return dayjs(value).format('DD/MM/YYYY HH:mm');
 }
 
+/** Payload for creating a discipline with name and leader only. */
+export function toDisciplineSimplePayload(
+  values: DisciplineSimpleFormValues,
+): CreateTaskDisciplineRequest {
+  return {
+    disciplineName: values.disciplineName.trim(),
+    disciplineLeadUserId: values.disciplineLeadUserId,
+  };
+}
+
+/** Payload for updating discipline role assignments. */
+export function toDisciplineRolesPayload(
+  values: DisciplineRolesFormValues,
+): UpdateTaskDisciplineRequest {
+  return {
+    designerUserId: values.designerUserId,
+    supportingDesignerUserId: values.supportingDesignerUserId,
+    ownerUserId: values.ownerUserId,
+    reviewerUserId: values.reviewerUserId,
+    chiefUserId: values.chiefUserId,
+    instituteChiefUserId: values.instituteChiefUserId,
+  };
+}
+
 export function toDisciplinePayload(
   values: DisciplineFormValues,
 ): CreateTaskDisciplineRequest {
   return {
-    disciplineName: values.disciplineName.trim(),
-    ownerUserId: values.ownerUserId,
-    designerUserId: values.designerUserId,
-    reviewerUserId: values.reviewerUserId,
-    disciplineLeadUserId: values.disciplineLeadUserId,
-    chiefUserId: values.chiefUserId,
-    instituteChiefUserId: values.instituteChiefUserId,
-    supportingDesignerUserId: values.supportingDesignerUserId,
+    ...toDisciplineSimplePayload(values),
+    ...toDisciplineRolesPayload(values),
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     deptReviewTime: values.deptReviewTime?.toISOString(),
   };
@@ -47,10 +73,10 @@ export function toDisciplineFormValues(
 ): DisciplineFormValues {
   return {
     disciplineName: discipline.disciplineName,
+    disciplineLeadUserId: discipline.disciplineLeadUserId ?? '',
     ownerUserId: discipline.ownerUserId ?? undefined,
     designerUserId: discipline.designerUserId ?? undefined,
     reviewerUserId: discipline.reviewerUserId ?? undefined,
-    disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
     chiefUserId: discipline.chiefUserId ?? undefined,
     instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
     supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
@@ -60,6 +86,19 @@ export function toDisciplineFormValues(
     deptReviewTime: discipline.deptReviewTime
       ? dayjs(discipline.deptReviewTime)
       : undefined,
+  };
+}
+
+export function toDisciplineRolesFormValues(
+  discipline: TaskDiscipline,
+): DisciplineRolesFormValues {
+  return {
+    ownerUserId: discipline.ownerUserId ?? undefined,
+    designerUserId: discipline.designerUserId ?? undefined,
+    reviewerUserId: discipline.reviewerUserId ?? undefined,
+    chiefUserId: discipline.chiefUserId ?? undefined,
+    instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+    supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
   };
 }
 
