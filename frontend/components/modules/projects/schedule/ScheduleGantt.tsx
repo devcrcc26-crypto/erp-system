@@ -1,16 +1,21 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Empty, Switch, Tooltip } from 'antd';
+import { useMemo, useState } from 'react';
+import { Button, Empty, Switch, Tooltip } from 'antd';
+import { ZoomInOutlined, ZoomOutOutlined } from '@ant-design/icons';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { Task } from '@/lib/api/project-management.types';
 import {
   buildGanttTimeline,
   GANTT_BAR_HEIGHT_PX,
+  GANTT_DAY_WIDTH_PX,
+  GANTT_DEFAULT_ZOOM_INDEX,
   GANTT_HEADER_HEIGHT_PX,
   GANTT_ROW_HEIGHT_PX,
   GANTT_TASK_COLUMN_PX,
+  GANTT_ZOOM_LEVELS,
   getGanttBarLayout,
+  getGanttBarLayoutPx,
   getGanttDateRange,
   type GanttDateRange,
   type ScheduleMetrics,
@@ -88,10 +93,6 @@ function todayPositionPercent(
   return ((todayDayIndex + 0.5) / dateRange.totalDays) * 100;
 }
 
-function dayOffsetPercent(dayIndex: number, totalDays: number): string {
-  return `${(dayIndex / totalDays) * 100}%`;
-}
-
 function TaskTimelineBar({
   task,
   left,
@@ -166,6 +167,12 @@ export default function ScheduleGantt({
   criticalOnly: boolean;
   onCriticalOnlyChange: (value: boolean) => void;
 }): React.ReactNode {
+  const [zoomIndex, setZoomIndex] = useState(GANTT_DEFAULT_ZOOM_INDEX);
+  const zoom = GANTT_ZOOM_LEVELS[zoomIndex];
+  const dayWidthPx = GANTT_DAY_WIDTH_PX * zoom;
+  const canZoomOut = zoomIndex > 0;
+  const canZoomIn = zoomIndex < GANTT_ZOOM_LEVELS.length - 1;
+
   const visibleTasks = useMemo(
     () => (criticalOnly ? tasks.filter((task) => task.isCritical) : tasks),
     [tasks, criticalOnly],
@@ -177,8 +184,8 @@ export default function ScheduleGantt({
   );
 
   const timeline = useMemo(
-    () => (dateRange ? buildGanttTimeline(dateRange) : null),
-    [dateRange],
+    () => (dateRange ? buildGanttTimeline(dateRange, dayWidthPx) : null),
+    [dateRange, dayWidthPx],
   );
 
   return (
@@ -226,6 +233,29 @@ export default function ScheduleGantt({
               Done
             </span>
           </div>
+          <label className="hidden shrink-0 items-center gap-2 text-xs text-slate-600 lg:flex">
+            <Button
+              size="small"
+              icon={<ZoomOutOutlined />}
+              disabled={!canZoomOut}
+              onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
+              aria-label="Zoom out"
+            />
+            <span className="w-10 text-center tabular-nums">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              size="small"
+              icon={<ZoomInOutlined />}
+              disabled={!canZoomIn}
+              onClick={() =>
+                setZoomIndex((index) =>
+                  Math.min(GANTT_ZOOM_LEVELS.length - 1, index + 1),
+                )
+              }
+              aria-label="Zoom in"
+            />
+          </label>
           <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
             <Switch
               size="small"
@@ -301,38 +331,39 @@ export default function ScheduleGantt({
             </div>
           </div>
 
-          {/* Desktop: fluid-width timeline — fits container without horizontal scroll. */}
+          {/* Desktop: fixed day-width timeline — scrolls horizontally, zoomable. */}
           <div className="hidden lg:block">
-            <div className="overflow-hidden rounded-md border border-slate-200">
+            <div className="overflow-x-auto rounded-md border border-slate-200">
               <div
                 className="grid border-b border-slate-300 bg-slate-100"
                 style={{
-                  gridTemplateColumns: `${GANTT_TASK_COLUMN_PX}px minmax(0, 1fr)`,
+                  gridTemplateColumns: `${GANTT_TASK_COLUMN_PX}px ${timeline.totalWidthPx}px`,
                   height: GANTT_HEADER_HEIGHT_PX,
+                  width: GANTT_TASK_COLUMN_PX + timeline.totalWidthPx,
                 }}
               >
-                <div className="flex items-end border-r border-slate-300 px-4 pb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <div className="sticky left-0 z-20 flex items-end border-r border-slate-300 bg-slate-100 px-4 pb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   Task
                 </div>
-                <div className="relative min-w-0">
-                  <div className="flex h-10 w-full border-b border-slate-200 bg-white">
+                <div className="relative">
+                  <div className="flex h-10 border-b border-slate-200 bg-white">
                     {timeline.months.map((month) => (
                       <div
                         key={month.key}
-                        className="flex min-w-0 items-center overflow-hidden border-r border-slate-200 px-2 text-xs font-semibold text-slate-800 last:border-r-0"
-                        style={{ flex: month.dayCount }}
+                        className="flex items-center overflow-hidden border-r border-slate-200 px-2 text-xs font-semibold text-slate-800 last:border-r-0"
+                        style={{ width: month.dayCount * dayWidthPx }}
                         title={month.label}
                       >
                         <span className="truncate">{month.label}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex h-10 w-full bg-slate-50">
+                  <div className="flex h-10 bg-slate-50">
                     {timeline.weeks.map((week) => (
                       <div
                         key={week.key}
-                        className="flex min-w-0 items-center overflow-hidden border-r border-slate-200 px-1 text-[11px] font-medium text-slate-600 last:border-r-0"
-                        style={{ flex: week.dayCount }}
+                        className="flex items-center overflow-hidden border-r border-slate-200 px-1 text-[11px] font-medium text-slate-600 last:border-r-0"
+                        style={{ width: week.dayCount * dayWidthPx }}
                         title={week.label}
                       >
                         <span className="truncate">{week.label}</span>
@@ -343,19 +374,22 @@ export default function ScheduleGantt({
               </div>
 
               {visibleTasks.map((task) => {
-                const bar = getGanttBarLayout(task, dateRange);
-                const showBarLabel = bar ? bar.widthPct >= 10 : false;
+                const bar = getGanttBarLayoutPx(task, dateRange, dayWidthPx);
+                const showBarLabel = bar
+                  ? bar.widthPx >= dayWidthPx * 2.5
+                  : false;
 
                 return (
                   <div
                     key={task.id}
                     className="grid border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80"
                     style={{
-                      gridTemplateColumns: `${GANTT_TASK_COLUMN_PX}px minmax(0, 1fr)`,
+                      gridTemplateColumns: `${GANTT_TASK_COLUMN_PX}px ${timeline.totalWidthPx}px`,
                       height: GANTT_ROW_HEIGHT_PX,
+                      width: GANTT_TASK_COLUMN_PX + timeline.totalWidthPx,
                     }}
                   >
-                    <div className="flex flex-col justify-center border-r border-slate-300 bg-white px-4 py-2">
+                    <div className="sticky left-0 z-10 flex flex-col justify-center border-r border-slate-300 bg-white px-4 py-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900">
@@ -376,14 +410,12 @@ export default function ScheduleGantt({
                       </p>
                     </div>
 
-                    <div className="relative min-w-0 bg-white">
+                    <div className="relative bg-white">
                       {timeline.weeks.map((week) => (
                         <div
                           key={`${task.id}-${week.key}`}
                           className="pointer-events-none absolute top-0 bottom-0 border-l border-slate-100"
-                          style={{
-                            left: dayOffsetPercent(week.startDay, dateRange.totalDays),
-                          }}
+                          style={{ left: week.startDay * dayWidthPx }}
                         />
                       ))}
 
@@ -391,10 +423,7 @@ export default function ScheduleGantt({
                         <div
                           className="pointer-events-none absolute top-0 bottom-0 z-10 w-0.5 rounded-full bg-orange-500"
                           style={{
-                            left: dayOffsetPercent(
-                              timeline.todayDayIndex + 0.5,
-                              dateRange.totalDays,
-                            ),
+                            left: (timeline.todayDayIndex + 0.5) * dayWidthPx,
                           }}
                         />
                       )}
@@ -403,8 +432,8 @@ export default function ScheduleGantt({
                         {bar && (
                           <TaskTimelineBar
                             task={task}
-                            left={`${bar.leftPct}%`}
-                            width={`${bar.widthPct}%`}
+                            left={`${bar.leftPx}px`}
+                            width={`${bar.widthPx}px`}
                             showBarLabel={showBarLabel}
                           />
                         )}

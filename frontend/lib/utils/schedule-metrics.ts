@@ -164,6 +164,8 @@ export interface GanttBarLayout {
 }
 
 export const GANTT_DAY_WIDTH_PX = 40;
+export const GANTT_ZOOM_LEVELS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
+export const GANTT_DEFAULT_ZOOM_INDEX = 2;
 export const GANTT_TASK_COLUMN_PX = 280;
 export const GANTT_HEADER_HEIGHT_PX = 80;
 export const GANTT_ROW_HEIGHT_PX = 72;
@@ -204,8 +206,11 @@ function addDays(date: Date, days: number): Date {
 }
 
 /** Builds month/week header segments and pixel width for the Gantt timeline. */
-export function buildGanttTimeline(range: GanttDateRange): GanttTimeline {
-  const totalWidthPx = range.totalDays * GANTT_DAY_WIDTH_PX;
+export function buildGanttTimeline(
+  range: GanttDateRange,
+  dayWidthPx: number = GANTT_DAY_WIDTH_PX,
+): GanttTimeline {
+  const totalWidthPx = range.totalDays * dayWidthPx;
   const rangeStart = startOfDay(range.start);
   const rangeEnd = startOfDay(range.end);
 
@@ -279,6 +284,7 @@ export function buildGanttTimeline(range: GanttDateRange): GanttTimeline {
 export function getGanttBarLayoutPx(
   task: Task,
   range: GanttDateRange,
+  dayWidthPx: number = GANTT_DAY_WIDTH_PX,
 ): { leftPx: number; widthPx: number } | null {
   const layout = getGanttBarLayout(task, range);
   if (!layout) {
@@ -286,9 +292,9 @@ export function getGanttBarLayoutPx(
   }
 
   return {
-    leftPx: (layout.leftPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
+    leftPx: (layout.leftPct / 100) * range.totalDays * dayWidthPx,
     widthPx: Math.max(
-      (layout.widthPct / 100) * range.totalDays * GANTT_DAY_WIDTH_PX,
+      (layout.widthPct / 100) * range.totalDays * dayWidthPx,
       GANTT_BAR_MIN_WIDTH_PX,
     ),
   };
