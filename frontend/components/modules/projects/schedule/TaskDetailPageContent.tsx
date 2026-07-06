@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import TaskDetailContent from '@/components/modules/projects/schedule/TaskDetailContent';
-import { useTasks } from '@/lib/query/schedule';
+import { useTask } from '@/lib/query/schedule';
 import { useProject } from '@/lib/query/projects';
 
 export default function TaskDetailPageContent({
@@ -14,11 +14,10 @@ export default function TaskDetailPageContent({
   projectId: string;
   taskId: string;
 }): React.ReactNode {
-  const tasksQuery = useTasks(projectId, { page: 1, limit: 200 });
+  const taskQuery = useTask(projectId, taskId);
   const projectQuery = useProject(projectId);
-  const task = tasksQuery.data?.data.find((entry) => entry.id === taskId);
 
-  if (tasksQuery.isLoading) {
+  if (taskQuery.isLoading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center p-6">
         <Spin />
@@ -26,7 +25,7 @@ export default function TaskDetailPageContent({
     );
   }
 
-  if (!task) {
+  if (!taskQuery.data) {
     return (
       <div className="p-6">
         <Link href={`/projects/${projectId}/schedule`}>
@@ -51,7 +50,7 @@ export default function TaskDetailPageContent({
           projectId={projectId}
           projectName={projectQuery.data?.name}
           projectNumber={projectQuery.data?.projectCode}
-          task={task}
+          task={taskQuery.data}
         />
       </div>
     </div>

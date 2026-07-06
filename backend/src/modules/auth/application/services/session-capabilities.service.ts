@@ -164,6 +164,7 @@ export class SessionCapabilitiesService {
         schedule.canView &&
         (schedule.canCreate || schedule.canEdit) &&
         !schedule.canApprove,
+      canViewMyWork: schedule.canView,
       canViewEngineering,
       canUploadEngineeringDocuments,
       disciplineScopeBypass,

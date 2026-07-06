@@ -207,6 +207,24 @@ export interface ReviewInboxItem {
   openedAt: string;
 }
 
+export type MyWorkItemKind = 'DISCIPLINE_LEAD' | 'SUBTASK_ROLE';
+
+export interface MyWorkItem {
+  kind: MyWorkItemKind;
+  projectId: string;
+  projectName: string;
+  projectNumber: string;
+  taskId: string;
+  taskName: string;
+  taskDisciplineId: string;
+  disciplineName: string;
+  designPackageId: string | null;
+  subtaskName: string | null;
+  roleLabel: string | null;
+  projectedStatus: string | null;
+  packageStatus: string | null;
+}
+
 export interface MyCommentItem {
   commentId: string;
   body: string;

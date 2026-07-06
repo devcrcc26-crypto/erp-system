@@ -18,6 +18,7 @@ import {
 import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
 import {
   useCanViewMyComments,
+  useCanViewMyWork,
   useCanViewReviewInbox,
   usePermissionsLoading,
   usePmCapabilities,
@@ -177,6 +178,7 @@ export default function MainNavPanel({
   const pm = usePmCapabilities();
   const canViewReviewInbox = useCanViewReviewInbox();
   const canViewMyComments = useCanViewMyComments();
+  const canViewMyWork = useCanViewMyWork();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
@@ -184,6 +186,7 @@ export default function MainNavPanel({
   const navItems = buildIconRailItems({
     canViewReviewInbox: !permLoading && canViewReviewInbox,
     canViewMyComments: !permLoading && canViewMyComments,
+    canViewMyWork: !permLoading && canViewMyWork,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,

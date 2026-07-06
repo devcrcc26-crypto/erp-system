@@ -78,6 +78,9 @@ export class EpcCapabilitiesDto {
   canViewMyComments!: boolean;
 
   @ApiProperty()
+  canViewMyWork!: boolean;
+
+  @ApiProperty()
   canViewEngineering!: boolean;
 
   @ApiProperty({

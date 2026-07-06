@@ -4,12 +4,14 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { apiGet, apiGetPaginated } from '@/lib/api/client';
 import {
   useCanViewMyComments,
+  useCanViewMyWork,
   useCanViewReviewInbox,
   useCapabilitiesReady,
 } from '@/hooks/use-pm-capabilities';
 import type {
   DispatcherWorkloadItem,
   MyCommentItem,
+  MyWorkItem,
   ProjectStatusBoard,
   ReviewInboxItem,
   ReviewModeView,
@@ -30,6 +32,8 @@ export const epcWorkspaceKeys = {
     [...epcWorkspaceKeys.all, 'review-inbox', projectId ?? 'global'] as const,
   myComments: (projectId?: string) =>
     [...epcWorkspaceKeys.all, 'my-comments', projectId ?? 'global'] as const,
+  myWork: (projectId?: string) =>
+    [...epcWorkspaceKeys.all, 'my-work', projectId ?? 'global'] as const,
   statusBoard: (projectId: string) =>
     [...epcWorkspaceKeys.all, 'status-board', projectId] as const,
   workload: (projectId: string) =>
@@ -92,6 +96,28 @@ export function useMyComments(
         : apiGet<MyCommentItem[]>('/my-comments'),
     enabled: enabled && capabilitiesReady && canViewMyComments,
     retry: false,
+    ...options,
+  });
+}
+
+export function useMyWork(
+  projectId?: string,
+  enabled = true,
+  options?: Omit<UseQueryOptions<MyWorkItem[]>, 'queryKey' | 'queryFn'>,
+) {
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewMyWork = useCanViewMyWork();
+
+  return useQuery({
+    queryKey: epcWorkspaceKeys.myWork(projectId),
+    queryFn: () =>
+      projectId
+        ? apiGet<MyWorkItem[]>(`${projectPath(projectId)}/my-work`)
+        : apiGet<MyWorkItem[]>('/my-work'),
+    enabled: enabled && capabilitiesReady && canViewMyWork,
+    retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     ...options,
   });
 }

@@ -60,6 +60,12 @@ import {
 } from '../../domain/approval-chain.util';
 import { ReviewWorkflowService } from './review-workflow.service';
 import { TaskAccessScopeService } from './task-access-scope.service';
+import { TaskAssignmentNotificationService } from './task-assignment-notification.service';
+import {
+  collectSubtaskRoleAssignments,
+  diffNewSubtaskRoleAssignments,
+} from '../utils/subtask-role-notification.util';
+import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
 import { MappedReviewSessionAttachment } from '../utils/review-session-attachment.mapper';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -92,6 +98,7 @@ export class DesignPackagesService {
     private readonly reviewWorkflowService: ReviewWorkflowService,
     private readonly prisma: PrismaService,
     private readonly taskAccessScopeService: TaskAccessScopeService,
+    private readonly taskAssignmentNotificationService: TaskAssignmentNotificationService,
   ) {}
 
   /**
@@ -272,6 +279,19 @@ export class DesignPackagesService {
       ctx.companyId,
       row.id,
     );
+
+    if (withItems) {
+      await this.notifySubtaskRoleChanges(
+        ctx,
+        projectId,
+        taskDisciplineId,
+        withItems.id,
+        withItems.name,
+        null,
+        withItems,
+      );
+    }
+
     return mapDesignPackage(withItems!);
   }
 
@@ -401,6 +421,19 @@ export class DesignPackagesService {
       ctx.companyId,
       packageId,
     );
+
+    if (chainFkChanged && refreshed) {
+      await this.notifySubtaskRoleChanges(
+        ctx,
+        projectId,
+        taskDisciplineId,
+        packageId,
+        refreshed.name,
+        existing,
+        refreshed,
+      );
+    }
+
     return mapDesignPackage(refreshed!);
   }
 
@@ -1201,5 +1234,72 @@ export class DesignPackagesService {
       projectId,
       taskDisciplineId,
     );
+  }
+
+  private async notifySubtaskRoleChanges(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+    packageName: string,
+    before: {
+      designerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplinaryLeaderUserId: string | null;
+      deptDeputyChiefUserId: string | null;
+      instituteChiefUserId: string | null;
+      disciplineOwnerUserId: string | null;
+      supportingDesignerUserId: string | null;
+    } | null,
+    after: {
+      designerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplinaryLeaderUserId: string | null;
+      deptDeputyChiefUserId: string | null;
+      instituteChiefUserId: string | null;
+      disciplineOwnerUserId: string | null;
+      supportingDesignerUserId: string | null;
+    },
+  ): Promise<void> {
+    const assignments = before
+      ? diffNewSubtaskRoleAssignments(before, after)
+      : collectSubtaskRoleAssignments(after);
+    if (assignments.length === 0) {
+      return;
+    }
+
+    const context = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        id: taskDisciplineId,
+        companyId: ctx.companyId,
+        task: { projectId, deletedAt: null },
+      }),
+      select: {
+        disciplineName: true,
+        task: {
+          select: {
+            id: true,
+            name: true,
+            nameZh: true,
+            project: {
+              select: { name: true, nameZh: true, projectCode: true },
+            },
+          },
+        },
+      },
+    });
+    if (!context) {
+      return;
+    }
+
+    await this.taskAssignmentNotificationService.notifySubtaskRolesAssigned(ctx, {
+      projectName: context.task.project.name,
+      projectNumber: context.task.project.projectCode,
+      taskName: formatLocalizedName(context.task.name, context.task.nameZh),
+      disciplineName: context.disciplineName,
+      subtaskName: packageName,
+      designPackageId: packageId,
+      assignments,
+    });
   }
 }

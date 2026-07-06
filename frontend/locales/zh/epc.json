@@ -14,6 +14,7 @@
     "signingOut": "正在退出…",
     "reviewInbox": "审阅收件箱",
     "myComments": "我的意见",
+    "myWork": "我的工作",
     "menuApplication": "应用",
     "menuProject": "项目"
   },
@@ -38,6 +39,7 @@
       "externalRelease": "对外发布",
       "reviewInbox": "审阅收件箱",
       "myComments": "我的意见",
+      "myWork": "我的工作",
       "rfis": "RFI",
       "issues": "问题",
       "dailyLogs": "施工日志",
@@ -77,6 +79,10 @@
     "myComments": {
       "title": "我的意见",
       "description": "设计人员队列--处理审阅意见并上传修订版。"
+    },
+    "myWork": {
+      "title": "我的工作",
+      "description": "您负责的专业及担任角色的子任务。"
     },
     "reviewMode": {
       "title": "审阅模式",
@@ -287,6 +293,7 @@
     "noDisciplines": "未找到专业--请使用「添加专业」将专业关联到进度任务。",
     "noReviewInbox": "收件箱中暂无审阅会话",
     "noComments": "暂无分配给您的意见",
+    "noAssignedWork": "暂无分配给您的任务或子任务",
     "noDeliverables": "未找到交付包",
     "noWorkload": "暂无审阅人工作量数据"
   },

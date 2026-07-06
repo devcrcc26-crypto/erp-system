@@ -7,6 +7,7 @@ import {
   Task,
   TaskDiscipline,
   User,
+  Department,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -41,11 +42,12 @@ import {
   normalizeDisciplineName,
 } from '../utils/project-export-format.util';
 import { loadUserDisplayNameMap } from '../utils/pm-user-names.util';
-import { ProjectScopeService } from './project-scope.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 import { PmContext } from '../types/pm-context.type';
 
 type ProjectExportRow = Project & {
   responsiblePerson: Pick<User, 'firstName' | 'lastName' | 'email'> | null;
+  department: Pick<Department, 'name' | 'nameZh'> | null;
 };
 
 type TaskExportRow = Task & {
@@ -60,7 +62,7 @@ type TaskExportRow = Task & {
 export class ProjectExportService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly projectScopeService: ProjectScopeService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
   ) {}
 
   /**
@@ -70,42 +72,50 @@ export class ProjectExportService {
     ctx: PmContext,
     query: ProjectExportListQueryDto = {},
   ): Promise<Buffer> {
-    const where: Prisma.ProjectWhereInput = activeOnly({
+    const base: Prisma.ProjectWhereInput = activeOnly({
       companyId: ctx.companyId,
     });
 
     if (query.projectIds?.length) {
-      where.id = { in: query.projectIds };
+      base.id = { in: query.projectIds };
     }
     if (query.status) {
-      where.status = query.status;
+      base.status = query.status;
     }
     if (query.projectType) {
-      where.projectType = query.projectType;
+      base.projectType = query.projectType;
     }
     if (query.responsibleDepartment) {
-      where.responsibleDepartment = query.responsibleDepartment;
+      base.responsibleDepartment = query.responsibleDepartment;
     }
     if (query.designProperties) {
-      where.designProperties = query.designProperties;
+      base.designProperties = query.designProperties;
     }
     if (query.designStage) {
-      where.designStage = query.designStage;
+      base.designStage = query.designStage;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
+      base.OR = [
         { projectCode: { contains: term, mode: 'insensitive' } },
         { name: { contains: term, mode: 'insensitive' } },
         { nameZh: { contains: term, mode: 'insensitive' } },
       ];
     }
 
+    const where = await this.taskAccessScopeService.buildProjectListWhere(
+      ctx,
+      base,
+    );
+
     const projects = await this.prisma.project.findMany({
       where,
       include: {
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
+        },
+        department: {
+          select: { name: true, nameZh: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -129,10 +139,13 @@ export class ProjectExportService {
    * Generates a bilingual task list workbook for all tasks in a project.
    */
   async exportTaskList(ctx: PmContext, projectId: string): Promise<Buffer> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const taskWhere = await this.taskAccessScopeService.buildTaskListWhere(
+      ctx,
+      projectId,
+    );
 
     const tasks = await this.prisma.task.findMany({
-      where: activeOnly({ projectId }),
+      where: taskWhere,
       include: {
         project: {
           select: {
@@ -177,6 +190,9 @@ export class ProjectExportService {
         responsiblePerson: {
           select: { firstName: true, lastName: true, chineseName: true, email: true },
         },
+        department: {
+          select: { name: true, nameZh: true },
+        },
       },
     });
 
@@ -209,7 +225,12 @@ export class ProjectExportService {
         formatExportContractType(project.contractType),
         formatExportDate(project.startDate),
         formatExportProjectType(project.projectType),
-        formatExportResponsibleDepartment(project.responsibleDepartment),
+        project.department
+          ? formatExportLocalizedName(
+              project.department.name,
+              project.department.nameZh,
+            )
+          : formatExportResponsibleDepartment(project.responsibleDepartment),
         formatExportDesignProperties(project.designProperties),
         formatExportDesignStage(project.designStage),
         '',
@@ -283,8 +304,8 @@ export class ProjectExportService {
       formatExportYesNo(task.hasCustomSchedule),
       formatExportLanguage(task.language),
       formatExportApprovalLevel(task.approvalLevel),
-      '',
-      '',
+      this.resolveUserName(userNameMap, task.supervisingChiefUserId),
+      this.resolveUserName(userNameMap, task.assignedPersonUserId),
       this.resolveUserName(userNameMap, task.dispatcherUserId),
     ];
 
@@ -393,6 +414,12 @@ export class ProjectExportService {
     for (const task of tasks) {
       if (task.dispatcherUserId) {
         userIds.push(task.dispatcherUserId);
+      }
+      if (task.supervisingChiefUserId) {
+        userIds.push(task.supervisingChiefUserId);
+      }
+      if (task.assignedPersonUserId) {
+        userIds.push(task.assignedPersonUserId);
       }
       for (const discipline of task.disciplines) {
         for (const field of [

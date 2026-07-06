@@ -47,6 +47,7 @@ import { DocumentNumberService } from './document-number.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
+import { TaskAssignmentNotificationService } from './task-assignment-notification.service';
 import { ProjectScopeService } from './project-scope.service';
 import { TaskAccessScopeService } from './task-access-scope.service';
 
@@ -97,6 +98,7 @@ export class ScheduleService {
     private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly documentNumberService: DocumentNumberService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
+    private readonly taskAssignmentNotificationService: TaskAssignmentNotificationService,
   ) {}
 
   /**
@@ -932,6 +934,29 @@ export class ScheduleService {
       discipline.disciplineName,
     );
 
+    if (dto.disciplineLeadUserId) {
+      const task = await this.prisma.task.findFirst({
+        where: activeOnly({ id: taskId, projectId }),
+        include: {
+          project: { select: { name: true, nameZh: true, projectCode: true } },
+        },
+      });
+      if (task) {
+        await this.taskAssignmentNotificationService.notifyDisciplineLeaderAssigned(
+          ctx,
+          {
+            recipientId: dto.disciplineLeadUserId,
+            projectName: task.project.name,
+            projectNumber: task.project.projectCode,
+            taskName: formatLocalizedName(task.name, task.nameZh),
+            disciplineName: discipline.disciplineName,
+            taskId,
+            taskDisciplineId: discipline.id,
+          },
+        );
+      }
+    }
+
     return mapTaskDiscipline(discipline);
   }
 
@@ -946,6 +971,11 @@ export class ScheduleService {
     dto: UpdateTaskDisciplineDto,
   ): Promise<MappedTaskDiscipline> {
     await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
+
+    const priorLeader = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({ id: disciplineId, taskId, companyId: ctx.companyId }),
+      select: { disciplineLeadUserId: true },
+    });
 
     await this.assertUsersOnProjectTeam(projectId, [
       dto.designerUserId,
@@ -990,6 +1020,32 @@ export class ScheduleService {
       },
       include: TASK_DISCIPLINE_USER_INCLUDE,
     });
+
+    if (
+      dto.disciplineLeadUserId &&
+      dto.disciplineLeadUserId !== priorLeader?.disciplineLeadUserId
+    ) {
+      const task = await this.prisma.task.findFirst({
+        where: activeOnly({ id: taskId, projectId }),
+        include: {
+          project: { select: { name: true, nameZh: true, projectCode: true } },
+        },
+      });
+      if (task) {
+        await this.taskAssignmentNotificationService.notifyDisciplineLeaderAssigned(
+          ctx,
+          {
+            recipientId: dto.disciplineLeadUserId,
+            projectName: task.project.name,
+            projectNumber: task.project.projectCode,
+            taskName: formatLocalizedName(task.name, task.nameZh),
+            disciplineName: discipline.disciplineName,
+            taskId,
+            taskDisciplineId: discipline.id,
+          },
+        );
+      }
+    }
 
     return mapTaskDiscipline(discipline);
   }

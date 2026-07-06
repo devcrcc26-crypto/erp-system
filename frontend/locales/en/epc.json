@@ -14,6 +14,7 @@
     "signingOut": "Signing out…",
     "reviewInbox": "Review Inbox",
     "myComments": "My Comments",
+    "myWork": "My Work",
     "menuApplication": "Application",
     "menuProject": "Project"
   },
@@ -38,6 +39,7 @@
       "externalRelease": "External Release",
       "reviewInbox": "Review Inbox",
       "myComments": "My Comments",
+      "myWork": "My Work",
       "rfis": "RFIs",
       "issues": "Issues",
       "dailyLogs": "Daily Logs",
@@ -77,6 +79,10 @@
     "myComments": {
       "title": "My Comments",
       "description": "Designer queue - resolve reviewer comments and upload revisions."
+    },
+    "myWork": {
+      "title": "My Work",
+      "description": "Tasks you lead and subtasks where you hold a role."
     },
     "reviewMode": {
       "title": "Review Mode",
@@ -287,6 +293,7 @@
     "noDisciplines": "No disciplines found - use Add discipline to link a discipline to a schedule task.",
     "noReviewInbox": "No review sessions in your inbox",
     "noComments": "No comments assigned to you",
+    "noAssignedWork": "No tasks or subtasks assigned to you",
     "noDeliverables": "No deliverable packages found",
     "noWorkload": "No reviewer workload data"
   },

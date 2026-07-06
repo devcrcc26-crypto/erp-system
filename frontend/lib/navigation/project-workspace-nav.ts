@@ -20,7 +20,7 @@ export interface ProjectWorkspaceNavItem {
   /** Hide unless user is assigned on a discipline (team-only members still see other items). */
   readonly requiresDisciplineAssignment?: boolean;
   /** When set, item also requires the matching EPC workspace capability. */
-  readonly epcCapability?: 'reviewInbox' | 'myComments';
+  readonly epcCapability?: 'reviewInbox' | 'myComments' | 'myWork';
 }
 
 export interface ProjectWorkspaceNavGroup {
@@ -173,6 +173,17 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroup: 'Review & Release',
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
         epcCapability: 'myComments',
+      },
+      {
+        key: 'my-work',
+        label: 'My Work',
+        labelKey: 'workspace.items.myWork',
+        iconKey: 'my-work',
+        pathSuffix: 'my-work',
+        capability: 'schedule',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
+        epcCapability: 'myWork',
       },
     ],
   },

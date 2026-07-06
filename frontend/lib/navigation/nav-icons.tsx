@@ -42,6 +42,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   projects: ProjectOutlined,
   'review-inbox': InboxOutlined,
   'my-comments': CommentOutlined,
+  'my-work': CheckSquareOutlined,
   kanban: AppstoreOutlined,
   users: UserOutlined,
   teams: TeamOutlined,

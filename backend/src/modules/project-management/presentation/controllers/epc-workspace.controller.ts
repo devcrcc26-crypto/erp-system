@@ -6,6 +6,7 @@ import { RequireAnyPermission } from '../../../../shared/permissions/require-any
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { EpcWorkspaceService } from '../../application/services/epc-workspace.service';
+import { MyWorkService } from '../../application/services/my-work.service';
 import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('EPC Workspace')
@@ -13,10 +14,30 @@ import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
 @UseGuards(PermissionsGuard)
 @Controller()
 export class EpcWorkspaceController {
-  constructor(private readonly epcWorkspaceService: EpcWorkspaceService) {}
+  constructor(
+    private readonly epcWorkspaceService: EpcWorkspaceService,
+    private readonly myWorkService: MyWorkService,
+  ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('my-work')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Tasks and subtasks assigned to the current user' })
+  myWork(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.myWorkService.getMyWork(this.ctx(user));
+  }
+
+  @Get('projects/:projectId/my-work')
+  @RequirePermission('schedule', 'view')
+  @ApiOperation({ summary: 'Assigned work scoped to a project' })
+  projectMyWork(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.myWorkService.getMyWork(this.ctx(user), projectId);
   }
 
   @Get('review-inbox')

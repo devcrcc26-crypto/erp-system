@@ -64,12 +64,20 @@ export function useCanViewMyComments(): boolean {
 }
 
 /**
+ * Assigned tasks and subtasks for the current user.
+ */
+export function useCanViewMyWork(): boolean {
+  return useEpcCapabilities().canViewMyWork;
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {
   return (
     useCanViewReviewInbox() ||
     useCanViewMyComments() ||
+    useCanViewMyWork() ||
     useEpcCapabilities().canViewEngineering
   );
 }

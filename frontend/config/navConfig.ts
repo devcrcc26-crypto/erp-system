@@ -34,6 +34,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/kanban-board': 'nav.kanbanBoard',
   '/review-inbox': 'pages.reviewInbox.title',
   '/my-comments': 'pages.myComments.title',
+  '/my-work': 'pages.myWork.title',
   '/users': 'nav.users',
   '/teams': 'nav.teams',
   '/reports': 'nav.reports',
@@ -46,6 +47,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 export interface IconRailVisibility {
   canViewReviewInbox: boolean;
   canViewMyComments: boolean;
+  canViewMyWork: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -59,6 +61,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
   const {
     canViewReviewInbox,
     canViewMyComments,
+    canViewMyWork,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -93,6 +96,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/my-comments',
       iconKey: 'my-comments',
       visible: canViewMyComments,
+    },
+    {
+      key: '/my-work',
+      labelKey: 'nav.myWork',
+      href: '/my-work',
+      iconKey: 'my-work',
+      visible: canViewMyWork,
     },
     {
       key: '/kanban-board',

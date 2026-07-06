@@ -52,6 +52,10 @@ export function canViewProjectNavItem(
     return false;
   }
 
+  if (item.epcCapability === 'myWork' && !ctx.epc.canViewMyWork) {
+    return false;
+  }
+
   if (
     item.requiresDisciplineAssignment &&
     !ctx.disciplineScopeBypass &&

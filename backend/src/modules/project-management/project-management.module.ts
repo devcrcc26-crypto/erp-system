@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PermissionsModule } from '../../shared/permissions/permissions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import {
   WORKFLOW_COMMITTED_QUEUE,
   WORKFLOW_SLA_QUEUE,
@@ -26,6 +27,8 @@ import { EpcWorkspaceService } from './application/services/epc-workspace.servic
 import { ExternalReviewTriggerService } from './application/services/external-review-trigger.service';
 import { IssuesService } from './application/services/issues.service';
 import { MeetingsService } from './application/services/meetings.service';
+import { MyWorkService } from './application/services/my-work.service';
+import { TaskAssignmentNotificationService } from './application/services/task-assignment-notification.service';
 import { PermissionResolverService } from './application/services/permission-resolver.service';
 import { ProjectChangeRequestService } from './application/services/project-change-request.service';
 import { ProjectScopeService } from './application/services/project-scope.service';
@@ -105,7 +108,12 @@ const workflowBullProcessors = redisEnabled
   : [];
 
 @Module({
-  imports: [PermissionsModule, ScheduleModule.forRoot(), ...workflowBullImports],
+  imports: [
+    PermissionsModule,
+    NotificationsModule,
+    ScheduleModule.forRoot(),
+    ...workflowBullImports,
+  ],
   controllers: [
     ProjectsController,
     ScheduleController,
@@ -131,6 +139,8 @@ const workflowBullProcessors = redisEnabled
   ],
   providers: [
     TaskAccessScopeService,
+    MyWorkService,
+    TaskAssignmentNotificationService,
     ProjectsService,
     ProjectExportService,
     ProjectScopeService,

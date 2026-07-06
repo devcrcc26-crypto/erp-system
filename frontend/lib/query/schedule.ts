@@ -71,6 +71,8 @@ export const scheduleKeys = {
     projectId: string,
     params: PaginationParams = { page: 1, limit: 100 },
   ) => [...scheduleKeys.tasks(projectId), params] as const,
+  taskDetail: (projectId: string, taskId: string) =>
+    [...scheduleKeys.all, projectId, 'tasks', taskId, 'detail'] as const,
   dependencies: (projectId: string) =>
     [...scheduleKeys.all, projectId, 'dependencies'] as const,
   disciplines: (projectId: string, taskId: string) =>
@@ -193,6 +195,23 @@ export function useTasks(
         `${scheduleBase(projectId)}/tasks${toQueryString(params)}`,
       ),
     enabled: Boolean(projectId) && enabled,
+    staleTime: SCHEDULE_STALE_MS,
+    refetchOnMount: false,
+    retry: scheduleReadRetry,
+    ...options,
+  });
+}
+
+export function useTask(
+  projectId: string,
+  taskId: string,
+  enabled = true,
+  options?: Omit<UseQueryOptions<Task>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: scheduleKeys.taskDetail(projectId, taskId),
+    queryFn: () => apiGet<Task>(`${scheduleBase(projectId)}/tasks/${taskId}`),
+    enabled: Boolean(projectId) && Boolean(taskId) && enabled,
     staleTime: SCHEDULE_STALE_MS,
     refetchOnMount: false,
     retry: scheduleReadRetry,
