@@ -44,11 +44,19 @@ export class ProjectScopeService {
       select: { visibleModules: true },
     });
 
-    if (!membership) {
-      throw new NotFoundException('Project not found');
+    if (membership) {
+      if (!canAccessModule(membership.visibleModules, module)) {
+        throw new NotFoundException('Project not found');
+      }
+      return;
     }
 
-    if (!canAccessModule(membership.visibleModules, module)) {
+    // Not a formal team member — fall back to the same scoped visibility
+    // (department leadership, discipline assignment, subtask roles) that
+    // TaskAccessScopeService already grants for project/task reads, so
+    // discipline leads etc. aren't blocked here before reaching that check.
+    const visibleIds = await this.taskAccessScopeService.getVisibleProjectIds(ctx);
+    if (!visibleIds?.includes(projectId)) {
       throw new NotFoundException('Project not found');
     }
   }
