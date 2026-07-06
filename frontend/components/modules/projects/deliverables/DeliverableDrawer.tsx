@@ -90,7 +90,7 @@ export default function DeliverableDrawer({
               </Descriptions.Item>
             )}
             {item.designPackageName && (
-              <Descriptions.Item label="Design package">
+              <Descriptions.Item label="Subtask">
                 {item.designPackageName}
               </Descriptions.Item>
             )}

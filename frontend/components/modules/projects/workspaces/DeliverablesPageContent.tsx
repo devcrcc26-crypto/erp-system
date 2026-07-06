@@ -132,14 +132,14 @@ export default function DeliverablesPageContent({
     <ProjectModuleGate projectId={projectId} module="deliverables">
     <FormLayout
       title="Deliverables"
-      description="Derived from design packages and EDV statuses until full Deliverable API ships."
+      description="Derived from subtasks and EDV statuses until full Deliverable API ships."
     >
       <Alert
         type="info"
         showIcon
         className="mb-4"
         title="Read-only derived view"
-        description="Deliverables are grouped from design packages. Full CRUD will be available when the backend Deliverable API is released."
+        description="Deliverables are grouped from subtasks. Full CRUD will be available when the backend Deliverable API is released."
       />
 
       <DataTable<DeliverableRow>

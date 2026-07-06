@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { ProjectExportService } from '../project-export.service';
-import { ProjectScopeService } from '../project-scope.service';
+import { TaskAccessScopeService } from '../task-access-scope.service';
 
 describe('ProjectExportService', () => {
   const ctx = { companyId: 'company-1', userId: 'user-1' };
@@ -15,7 +15,10 @@ describe('ProjectExportService', () => {
     projectChangeRequest: { findMany: jest.Mock };
     user: { findMany: jest.Mock };
   };
-  let projectScopeService: { getProjectOrThrow: jest.Mock };
+  let taskAccessScopeService: {
+    buildProjectListWhere: jest.Mock;
+    buildTaskListWhere: jest.Mock;
+  };
   let service: ProjectExportService;
 
   beforeEach(async () => {
@@ -35,15 +38,16 @@ describe('ProjectExportService', () => {
       },
     };
 
-    projectScopeService = {
-      getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+    taskAccessScopeService = {
+      buildProjectListWhere: jest.fn((_ctx, base) => Promise.resolve(base)),
+      buildTaskListWhere: jest.fn().mockResolvedValue({ projectId }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectExportService,
         { provide: PrismaService, useValue: prisma },
-        { provide: ProjectScopeService, useValue: projectScopeService },
+        { provide: TaskAccessScopeService, useValue: taskAccessScopeService },
       ],
     }).compile();
 
@@ -85,6 +89,10 @@ describe('ProjectExportService', () => {
         budget: { toString: () => '5000000' },
         description: 'Main note',
         responsibleDepartment: 'MUNICIPAL_TRANSPORTATION_DEPARTMENT',
+        department: {
+          name: 'Municipal Transportation Department',
+          nameZh: '市政交通部',
+        },
         responsiblePerson: {
           firstName: 'Alex',
           lastName: 'Lead',
@@ -101,7 +109,9 @@ describe('ProjectExportService', () => {
     expect(sheet.getRow(2).getCell(4).value).toBe('Project Status');
     expect(dataRow.getCell(4).value).toBe('In Progress');
     expect(dataRow.getCell(6).value).toBe('Email');
-    expect(dataRow.getCell(9).value).toBe('Municipal Transportation Department');
+    expect(dataRow.getCell(9).value).toBe(
+      'Municipal Transportation Department (市政交通部)',
+    );
     expect(dataRow.getCell(10).value).toBe('Implementation（DB）');
     expect(dataRow.getCell(11).value).toBe('Detailed Design (DD)');
     expect(sheet.getRow(1).getCell(14).value).toBe('铁路长度(km)');
@@ -163,7 +173,11 @@ describe('ProjectExportService', () => {
         hasCustomSchedule: true,
         language: 'CHINESE',
         approvalLevel: 'DESIGN_INSTITUTE_REVIEW',
+        supervisingChiefUserId: 'user-supervising',
+        assignedPersonUserId: 'user-assigned',
         dispatcherUserId: 'user-dispatcher',
+        overseasTaskNumber: 'OS-2026-001',
+        commissionMode: 'EMAIL',
         actualCompletionTime: null,
         completionStatus: null,
         remark: null,
@@ -223,6 +237,30 @@ describe('ProjectExportService', () => {
 
     prisma.user.findMany.mockResolvedValue([
       {
+        id: 'user-dispatcher',
+        firstName: 'Disp',
+        lastName: 'Atcher',
+        email: 'd@example.com',
+      },
+      {
+        id: 'user-supervising',
+        firstName: 'Super',
+        lastName: 'Chief',
+        email: 'super@example.com',
+      },
+      {
+        id: 'user-chief',
+        firstName: 'C',
+        lastName: 'Chief',
+        email: 'c@example.com',
+      },
+      {
+        id: 'user-assigned',
+        firstName: 'On',
+        lastName: 'Site',
+        email: 'site@example.com',
+      },
+      {
         id: 'user-designer',
         firstName: 'D',
         lastName: 'Designer',
@@ -239,12 +277,6 @@ describe('ProjectExportService', () => {
         firstName: 'L',
         lastName: 'Lead',
         email: 'l@example.com',
-      },
-      {
-        id: 'user-chief',
-        firstName: 'C',
-        lastName: 'Chief',
-        email: 'c@example.com',
       },
       {
         id: 'user-institute',
@@ -270,8 +302,16 @@ describe('ProjectExportService', () => {
     const sheet = await readWorksheet(buffer, 'task list');
     const dataRow = sheet.getRow(3);
 
-    expect(dataRow.getCell(1).value).toBe('TASK-001');
+    expect(taskAccessScopeService.buildTaskListWhere).toHaveBeenCalledWith(
+      ctx,
+      projectId,
+    );
+    expect(dataRow.getCell(1).value).toBe('OS-2026-001');
     expect(dataRow.getCell(5).value).toBe('Yes');
+    expect(dataRow.getCell(16).value).toBe('Design Institute Review (院审)');
+    expect(dataRow.getCell(17).value).toBe('Super Chief');
+    expect(dataRow.getCell(18).value).toBe('On Site');
+    expect(dataRow.getCell(19).value).toBe('Disp Atcher');
     expect(dataRow.getCell(20).value).toBe('D Designer');
     expect(dataRow.getCell(21).value).toBe('R Reviewer');
 
@@ -299,7 +339,11 @@ describe('ProjectExportService', () => {
         urgencyLevel: 'NORMAL',
         hasCustomSchedule: false,
         language: 'ENGLISH',
+        overseasTaskNumber: 'TASK-002',
+        commissionMode: 'NO_ASSIGNMENT',
         approvalLevel: null,
+        supervisingChiefUserId: null,
+        assignedPersonUserId: null,
         dispatcherUserId: null,
         actualCompletionTime: null,
         completionStatus: null,

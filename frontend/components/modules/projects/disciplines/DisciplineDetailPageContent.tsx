@@ -211,7 +211,7 @@ export default function DisciplineDetailPageContent({
       <ConfirmDialog
         open={closeDisciplineOpen}
         title="Close Discipline?"
-        description="This confirms all design packages are closed and the discipline workflow is complete. This cannot be undone."
+        description="This confirms all subtasks are closed and the discipline workflow is complete. This cannot be undone."
         confirmLabel="Close Discipline"
         confirmLoading={closeDiscipline.isPending}
         onConfirm={() => {

@@ -208,7 +208,7 @@
       "breakdown": {
         "tasksByStatus": "按状态任务",
         "siteOpsBreakdown": "现场运营分解",
-        "packagesByStatus": "按状态设计包",
+        "packagesByStatus": "子任务按状态",
         "disciplinesByStatus": "按状态专业"
       },
       "metrics": {
@@ -231,8 +231,8 @@
         "tasksByStatusHint": "进度任务在各工作流状态下的数量",
         "siteOps": "现场运营工作量",
         "siteOpsHint": "未关闭 RFI、逾期 RFI、问题与尾项",
-        "packagesByStatus": "设计包按状态",
-        "packagesByStatusHint": "EPC 设计包预测状态分布",
+        "packagesByStatus": "子任务按状态",
+        "packagesByStatusHint": "EPC 子任务预测状态分布",
         "disciplinesByStatus": "专业按状态",
         "disciplinesByStatusHint": "任务专业预测状态分布"
       },
@@ -306,7 +306,7 @@
     "openReviewMode": "打开审阅模式",
     "registerDocument": "登记文档",
     "newPackage": "新建包",
-    "designPackageSubmittal": "设计包送审"
+    "designPackageSubmittal": "子任务送审"
   },
   "common": {
     "save": "保存",

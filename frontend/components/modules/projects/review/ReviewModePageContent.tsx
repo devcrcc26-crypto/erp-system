@@ -45,7 +45,7 @@ export default function ReviewModePageContent({
           type="warning"
           showIcon
           title="Review mode is for reviewers only"
-          description="Designers should resolve assigned comments from My Comments or on the design package page."
+          description="Designers should resolve assigned comments from My Comments or on the subtask page."
           action={
             projectId && taskDisciplineId ? (
               <Link

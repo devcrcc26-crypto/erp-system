@@ -55,14 +55,16 @@ describe('ScheduleService', () => {
   let prisma: {
     milestone: { create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     task: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
+    project: { findFirst: jest.Mock };
     taskDependency: {
       create: jest.Mock;
       findFirst: jest.Mock;
       findMany: jest.Mock;
       update: jest.Mock;
     };
-    taskDiscipline: { findMany: jest.Mock };
+    taskDiscipline: { findMany: jest.Mock; update: jest.Mock };
     projectTeam: { count: jest.Mock };
+    $transaction: jest.Mock;
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
   let service: ScheduleService;
@@ -79,6 +81,12 @@ describe('ScheduleService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      project: {
+        findFirst: jest.fn().mockResolvedValue({
+          designStage: null,
+          contractType: null,
+        }),
+      },
       taskDependency: {
         create: jest.fn(),
         findFirst: jest.fn(),
@@ -87,10 +95,14 @@ describe('ScheduleService', () => {
       },
       taskDiscipline: {
         findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn(),
       },
       projectTeam: {
         count: jest.fn(),
       },
+      $transaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+        fn(prisma),
+      ),
     };
 
     projectScopeService = {
@@ -100,10 +112,18 @@ describe('ScheduleService', () => {
     service = new ScheduleService(
       prisma as unknown as PrismaService,
       projectScopeService as unknown as ProjectScopeService,
-      {} as never,
+      {
+        resolveEditableDisciplineIds: jest.fn().mockResolvedValue([]),
+      } as never,
+      {
+        buildTaskListWhere: jest.fn().mockResolvedValue({ projectId }),
+        assertTaskReadable: jest.fn(),
+        canWriteProjectTasks: jest.fn().mockResolvedValue(true),
+      } as never,
       {
         getNextNumber: jest.fn().mockResolvedValue('TASK-00001'),
       } as unknown as DocumentNumberService,
+      {} as never,
       {} as never,
     );
   });

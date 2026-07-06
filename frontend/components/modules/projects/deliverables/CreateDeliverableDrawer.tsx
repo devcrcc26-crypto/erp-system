@@ -112,7 +112,7 @@ export default function CreateDeliverableDrawer({
             onChange={() => form.setFieldValue('designPackageId', undefined)}
           />
         </Form.Item>
-        <Form.Item label="Design package" name="designPackageId">
+        <Form.Item label="Subtask" name="designPackageId">
           <Select
             allowClear
             placeholder="Select package"

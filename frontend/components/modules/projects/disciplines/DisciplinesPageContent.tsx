@@ -202,7 +202,7 @@ export default function DisciplinesPageContent({
           showIcon
           className="mb-4"
           title="EPC disciplines API not connected"
-          description="Disciplines are sourced from schedule tasks. Design package counts appear when the backend is available."
+          description="Disciplines are sourced from schedule tasks. Subtask counts appear when the backend is available."
         />
       )}
 

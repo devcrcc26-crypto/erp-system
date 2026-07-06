@@ -108,7 +108,7 @@ export default function SubmittalPackageDrawer({
         type="info"
         showIcon
         className="mb-4"
-        title="Select approved design packages"
+        title="Select approved subtasks"
         description={
           isDeputy
             ? 'Deputy chief submittals may bundle locked-ready packages across disciplines.'
@@ -303,7 +303,7 @@ function SubmittalPackageForm({
 
       <Form.Item
         name="designPackageIds"
-        label="Design packages"
+        label="Subtasks"
         rules={[{ required: true, message: 'Select at least one package' }]}
       >
         <Select

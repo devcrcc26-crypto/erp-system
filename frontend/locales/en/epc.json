@@ -57,7 +57,7 @@
   "pages": {
     "disciplines": {
       "title": "Disciplines & Packages",
-      "description": "Task disciplines and design packages grouped by workflow status.",
+      "description": "Task disciplines and subtasks grouped by workflow status.",
       "addDiscipline": "Add discipline"
     },
     "statusBoard": {
@@ -208,7 +208,7 @@
       "breakdown": {
         "tasksByStatus": "Tasks by status",
         "siteOpsBreakdown": "Site operations breakdown",
-        "packagesByStatus": "Design packages by status",
+        "packagesByStatus": "Subtasks by status",
         "disciplinesByStatus": "Disciplines by status"
       },
       "metrics": {
@@ -231,7 +231,7 @@
         "tasksByStatusHint": "Distribution of schedule tasks across workflow states",
         "siteOps": "Site operations workload",
         "siteOpsHint": "Open RFIs, overdue RFIs, issues, and punch items",
-        "packagesByStatus": "Design packages by status",
+        "packagesByStatus": "Subtasks by status",
         "packagesByStatusHint": "EPC package projected status breakdown",
         "disciplinesByStatus": "Disciplines by status",
         "disciplinesByStatusHint": "Task discipline projected status breakdown"
@@ -306,7 +306,7 @@
     "openReviewMode": "Open review mode",
     "registerDocument": "Register document",
     "newPackage": "New package",
-    "designPackageSubmittal": "Design package submittal"
+    "designPackageSubmittal": "Subtask submittal"
   },
   "common": {
     "save": "Save",

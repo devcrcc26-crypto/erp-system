@@ -290,7 +290,7 @@ export default function ReviewModePanel({
         type="info"
         showIcon
         title="No active review session"
-        description="Submit the design package for review to open review mode."
+        description="Submit the subtask for review to open review mode."
       />
     );
   }
@@ -331,7 +331,7 @@ export default function ReviewModePanel({
               type="info"
               showIcon
               title="No documents in package"
-              description="The design package has no engineering document versions linked yet."
+              description="The subtask has no engineering document versions linked yet."
             />
           ) : (
             <ul className="divide-y divide-slate-100">

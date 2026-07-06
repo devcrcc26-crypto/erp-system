@@ -228,7 +228,7 @@ export default function SubmittalsPageContent({
               <TableEmptyState
                 icon={<Send />}
                 title="No construction submittals"
-                description="Create a submittal with design packages and documents for discipline leader approval"
+                description="Create a submittal with subtasks and documents for discipline leader approval"
                 action={
                   lens.canCreateSubmittals && !apiUnavailable
                     ? {

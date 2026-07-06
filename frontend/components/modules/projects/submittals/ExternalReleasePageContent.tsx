@@ -167,7 +167,7 @@ export default function ExternalReleasePageContent({
     <>
       <FormLayout
         title="External release"
-        description="Submit discipline-leader-approved design packages to site engineers or consultants for formal review."
+        description="Submit discipline-leader-approved subtasks to site engineers or consultants for formal review."
         extra={
           lens.canCreateSubmittals ? (
             <Button
@@ -186,7 +186,7 @@ export default function ExternalReleasePageContent({
           showIcon
           className="!mb-4"
           title="Discipline leader workflow"
-          description="Only approved and locked design packages can be issued externally. Select packages prepared by the discipline lead and issue them to site engineers or consultants."
+          description="Only approved and locked subtasks can be issued externally. Select subtasks prepared by the discipline lead and issue them to site engineers or consultants."
         />
 
         {apiUnavailable && (
@@ -248,7 +248,7 @@ export default function ExternalReleasePageContent({
               <TableEmptyState
                 icon={<Send />}
                 title="No external releases"
-                description="Issue approved design packages to site engineers or consultants"
+                description="Issue approved subtasks to site engineers or consultants"
                 action={
                   lens.canCreateSubmittals && !apiUnavailable
                     ? {

@@ -153,7 +153,7 @@ export default function ConstructionSubmittalDrawer({
         showIcon
         className="mb-4"
         title="Submit to discipline leader"
-        description="Attach design packages from the system and upload your own shop drawings or product data. After creating, upload supporting documents and submit directly to the discipline leader for approval."
+        description="Attach subtasks from the system and upload your own shop drawings or product data. After creating, upload supporting documents and submit directly to the discipline leader for approval."
       />
 
       <Form<ConstructionSubmittalFormValues>
@@ -219,27 +219,27 @@ export default function ConstructionSubmittalDrawer({
         </Form.Item>
 
         {taskDisciplineId && (
-          <FormLayout title="Design packages from system" className="mb-4">
+          <FormLayout title="Subtasks from system" className="mb-4">
             <DataTable<DesignPackage>
               rowKey="id"
               size="small"
               loading={packagesQuery.isLoading}
               columns={packageColumns}
               dataSource={packages}
-              locale={{ emptyText: 'No design packages in this discipline' }}
+              locale={{ emptyText: 'No subtasks in this discipline' }}
             />
           </FormLayout>
         )}
 
         <Form.Item
           name="designPackageIds"
-          label="Attach design packages (optional)"
-          extra="Link existing design packages from the discipline. You can also upload your own documents after creating."
+          label="Attach subtasks (optional)"
+          extra="Link existing subtasks from the discipline. You can also upload your own documents after creating."
         >
           <Select
             mode="multiple"
             allowClear
-            placeholder="Select design packages"
+            placeholder="Select subtasks"
             loading={packagesQuery.isLoading}
             disabled={!taskDisciplineId}
             options={packages.map((pkg) => ({

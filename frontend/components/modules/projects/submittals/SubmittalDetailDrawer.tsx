@@ -350,7 +350,7 @@ export default function SubmittalDetailDrawer({
           {submittal.items.length > 0 && (
             <div>
               <h3 className={`${layout.drawerHeading} mb-2`}>
-                Linked design packages
+                Linked subtasks
               </h3>
               <div className="erp-drawer-list">
                 {submittal.items.map((item) => (
@@ -426,7 +426,7 @@ export default function SubmittalDetailDrawer({
               type="warning"
               showIcon
               title="Ready to submit?"
-              description="Attach design packages and upload your document package, then submit directly to the discipline leader for approval."
+              description="Attach subtasks and upload your document package, then submit directly to the discipline leader for approval."
               action={
                 <Button
                   type="primary"
