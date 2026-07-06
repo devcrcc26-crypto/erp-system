@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -7,9 +8,11 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
 export class UpdateCompanyDto {
   @ApiPropertyOptional()
@@ -305,3 +308,19 @@ export class CreateDisciplineDto {
 }
 
 export class UpdateDisciplineDto extends PartialType(CreateDisciplineDto) {}
+
+/** Query params for engineering discipline catalog (allows full catalog in one page). */
+export class ListEngineeringDisciplinesQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'When "true", return only active disciplines' })
+  @IsOptional()
+  @IsString()
+  activeOnly?: string;
+
+  @ApiPropertyOptional({ default: 100, minimum: 1, maximum: 200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  declare limit: number;
+}

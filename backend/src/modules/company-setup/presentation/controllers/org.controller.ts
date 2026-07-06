@@ -22,6 +22,7 @@ import {
   CreateDisciplineDto,
   CreateDivisionDto,
   CreatePositionDto,
+  ListEngineeringDisciplinesQueryDto,
   UpdateBranchDto,
   UpdateCostCentreDto,
   UpdateDepartmentDto,
@@ -171,7 +172,7 @@ export class OrgController {
   @ApiOperation({ summary: 'List engineering disciplines' })
   listDisciplines(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto & { activeOnly?: string },
+    @Query() query: ListEngineeringDisciplinesQueryDto,
   ): Promise<unknown> {
     return this.companySetupService.listDisciplines(this.ctx(user), query);
   }

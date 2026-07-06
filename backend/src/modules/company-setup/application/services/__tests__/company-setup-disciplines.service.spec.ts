@@ -9,6 +9,8 @@ describe('CompanySetupService — engineering disciplines', () => {
   let prisma: {
     discipline: {
       findFirst: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
     };
@@ -19,6 +21,8 @@ describe('CompanySetupService — engineering disciplines', () => {
     prisma = {
       discipline: {
         findFirst: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -74,5 +78,24 @@ describe('CompanySetupService — engineering disciplines', () => {
         nameZh: '声学',
       }),
     });
+  });
+
+  it('listDisciplines passes numeric take when query limit is a string', async () => {
+    prisma.discipline.findMany.mockResolvedValue([]);
+    prisma.discipline.count.mockResolvedValue(0);
+
+    await service.listDisciplines(ctx, {
+      page: '1' as unknown as number,
+      limit: '200' as unknown as number,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+
+    expect(prisma.discipline.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 200,
+      }),
+    );
   });
 });

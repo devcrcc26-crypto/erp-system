@@ -24,6 +24,7 @@ import {
   CreateFinancialYearDto,
   CreateNumberSeriesDto,
   CreatePositionDto,
+  ListEngineeringDisciplinesQueryDto,
   UpdateBranchDto,
   UpdateCompanyDto,
   UpdateCompanySettingDto,
@@ -302,7 +303,7 @@ export class CompanySetupService {
    */
   async listDisciplines(
     ctx: AuditContext,
-    query: PaginationQueryDto & { activeOnly?: string },
+    query: ListEngineeringDisciplinesQueryDto,
   ): Promise<PaginatedResult<unknown>> {
     const where: Prisma.DisciplineWhereInput = activeOnly({
       companyId: ctx.companyId,

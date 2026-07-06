@@ -6,12 +6,14 @@ export interface PaginatedResult<T> {
 }
 
 export function buildPrismaPagination(
-  page: number,
-  limit: number,
+  page: number | string,
+  limit: number | string,
 ): { skip: number; take: number } {
+  const safePage = Math.max(1, Number.parseInt(String(page), 10) || 1);
+  const safeLimit = Math.max(1, Number.parseInt(String(limit), 10) || 20);
   return {
-    skip: (page - 1) * limit,
-    take: limit,
+    skip: (safePage - 1) * safeLimit,
+    take: safeLimit,
   };
 }
 
