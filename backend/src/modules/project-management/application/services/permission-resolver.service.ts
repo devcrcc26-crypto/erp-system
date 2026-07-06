@@ -199,11 +199,13 @@ export class PermissionResolverService {
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
-      packageOwnerUserId: packageOverrides?.packageOwnerUserId,
-      packageReviewerUserId: packageOverrides?.packageReviewerUserId,
-      packageDisciplineLeadUserId: packageOverrides?.packageDisciplineLeadUserId,
-      packageChiefUserId: packageOverrides?.packageChiefUserId,
-      packageInstituteChiefUserId: packageOverrides?.packageInstituteChiefUserId,
+      subtaskDesignerUserId: packageOverrides?.designerUserId,
+      subtaskSupportingDesignerUserId: packageOverrides?.supportingDesignerUserId,
+      subtaskDisciplineOwnerUserId: packageOverrides?.disciplineOwnerUserId,
+      subtaskReviewerUserId: packageOverrides?.reviewerUserId,
+      subtaskDisciplinaryLeaderUserId: packageOverrides?.disciplinaryLeaderUserId,
+      subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
+      subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
       demoMemberBypass,
@@ -341,31 +343,37 @@ export class PermissionResolverService {
     companyId: string,
     designPackageId: string,
   ): Promise<{
-    packageOwnerUserId?: string;
-    packageReviewerUserId?: string;
-    packageDisciplineLeadUserId?: string;
-    packageChiefUserId?: string;
-    packageInstituteChiefUserId?: string;
+    designerUserId?: string;
+    supportingDesignerUserId?: string;
+    disciplineOwnerUserId?: string;
+    reviewerUserId?: string;
+    disciplinaryLeaderUserId?: string;
+    deptDeputyChiefUserId?: string;
+    instituteChiefUserId?: string;
   }> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId }),
       select: {
-        packageOwnerUserId: true,
-        packageReviewerUserId: true,
-        packageDisciplineLeadUserId: true,
-        packageChiefUserId: true,
-        packageInstituteChiefUserId: true,
+        designerUserId: true,
+        supportingDesignerUserId: true,
+        disciplineOwnerUserId: true,
+        reviewerUserId: true,
+        disciplinaryLeaderUserId: true,
+        deptDeputyChiefUserId: true,
+        instituteChiefUserId: true,
       },
     });
     if (!pkg) {
       return {};
     }
     return {
-      packageOwnerUserId: pkg.packageOwnerUserId ?? undefined,
-      packageReviewerUserId: pkg.packageReviewerUserId ?? undefined,
-      packageDisciplineLeadUserId: pkg.packageDisciplineLeadUserId ?? undefined,
-      packageChiefUserId: pkg.packageChiefUserId ?? undefined,
-      packageInstituteChiefUserId: pkg.packageInstituteChiefUserId ?? undefined,
+      designerUserId: pkg.designerUserId ?? undefined,
+      supportingDesignerUserId: pkg.supportingDesignerUserId ?? undefined,
+      disciplineOwnerUserId: pkg.disciplineOwnerUserId ?? undefined,
+      reviewerUserId: pkg.reviewerUserId ?? undefined,
+      disciplinaryLeaderUserId: pkg.disciplinaryLeaderUserId ?? undefined,
+      deptDeputyChiefUserId: pkg.deptDeputyChiefUserId ?? undefined,
+      instituteChiefUserId: pkg.instituteChiefUserId ?? undefined,
     };
   }
 }

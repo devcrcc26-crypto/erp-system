@@ -28,6 +28,7 @@ import {
   DesignPackageItemsTable,
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import DesignPackageCommentsSection from '@/components/modules/projects/design-packages/DesignPackageCommentsSection';
+import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
   useApproveReviewSession,
@@ -72,6 +73,7 @@ export default function DesignPackageDetailPageContent({
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [returnOpen, setReturnOpen] = useState(false);
   const [closePackageOpen, setClosePackageOpen] = useState(false);
+  const [rolesModalOpen, setRolesModalOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
 
@@ -138,7 +140,7 @@ export default function DesignPackageDetailPageContent({
   }
 
   if (!pkg || !disciplineQuery.data) {
-    return <Alert type="error" showIcon title="Design package not found" />;
+    return <Alert type="error" showIcon title="Subtask not found" />;
   }
 
   const lockGuidance = getPackageLockGuidance(
@@ -271,9 +273,12 @@ export default function DesignPackageDetailPageContent({
 
       <FormLayout
         title={pkg.name}
-        description="Package items, dependencies, and workflow actions."
+        description="Subtask items, dependencies, and workflow actions."
         extra={
           <Space wrap>
+            {isDisciplineLeader && (
+              <Button onClick={() => setRolesModalOpen(true)}>Edit roles</Button>
+            )}
             {reviewSessionId && lens.canAccessReviewMode && (
               <Link href={`/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`}>
                 <Button type="primary">Open review mode</Button>
@@ -484,7 +489,7 @@ export default function DesignPackageDetailPageContent({
 
       <ConfirmDialog
         open={closePackageOpen}
-        title="Close Design Package?"
+        title="Close subtask?"
         description="This confirms all documents are locked and all linked RFIs, issues, and change requests are resolved. This cannot be undone."
         confirmLabel="Close Package"
         confirmLoading={closeDesignPackage.isPending}
@@ -492,13 +497,13 @@ export default function DesignPackageDetailPageContent({
           void closeDesignPackage
             .mutateAsync({ packageId })
             .then(() => {
-              messageApi.success('Design package closed');
+              messageApi.success('Subtask closed');
               setClosePackageOpen(false);
               void packageQuery.refetch();
               void reviewModeQuery.refetch();
             })
             .catch((error: unknown) => {
-              notifyApiError(error, 'Failed to close design package', messageApi);
+              notifyApiError(error, 'Failed to close subtask', messageApi);
             });
         }}
         onCancel={() => setClosePackageOpen(false)}
@@ -560,6 +565,17 @@ export default function DesignPackageDetailPageContent({
           </Form.Item>
         </Form>
       </Modal>
+
+      <SubtaskRolesModal
+        open={rolesModalOpen}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        subtask={pkg}
+        onClose={() => setRolesModalOpen(false)}
+        onSaved={() => {
+          void packageQuery.refetch();
+        }}
+      />
     </div>
     </ProjectModuleGate>
   );

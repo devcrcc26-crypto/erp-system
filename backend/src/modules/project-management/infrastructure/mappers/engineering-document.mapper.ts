@@ -56,11 +56,13 @@ export interface MappedDesignPackage {
   submittedAt: string | null;
   approvedAt: string | null;
   requiredTiers: DesignPackage['requiredTiers'];
-  packageOwnerUserId: string | null;
-  packageReviewerUserId: string | null;
-  packageDisciplineLeadUserId: string | null;
-  packageChiefUserId: string | null;
-  packageInstituteChiefUserId: string | null;
+  designerUserId: string | null;
+  reviewerUserId: string | null;
+  disciplinaryLeaderUserId: string | null;
+  deptDeputyChiefUserId: string | null;
+  instituteChiefUserId: string | null;
+  disciplineOwnerUserId: string | null;
+  supportingDesignerUserId: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -173,11 +175,13 @@ export function mapDesignPackage(
     submittedAt: toIsoString(row.submittedAt),
     approvedAt: toIsoString(row.approvedAt),
     requiredTiers: row.requiredTiers,
-    packageOwnerUserId: row.packageOwnerUserId,
-    packageReviewerUserId: row.packageReviewerUserId,
-    packageDisciplineLeadUserId: row.packageDisciplineLeadUserId,
-    packageChiefUserId: row.packageChiefUserId,
-    packageInstituteChiefUserId: row.packageInstituteChiefUserId,
+    designerUserId: row.designerUserId,
+    reviewerUserId: row.reviewerUserId,
+    disciplinaryLeaderUserId: row.disciplinaryLeaderUserId,
+    deptDeputyChiefUserId: row.deptDeputyChiefUserId,
+    instituteChiefUserId: row.instituteChiefUserId,
+    disciplineOwnerUserId: row.disciplineOwnerUserId,
+    supportingDesignerUserId: row.supportingDesignerUserId,
     briefText: row.briefText,
     sourceEntityType: row.sourceEntityType,
     sourceEntityId: row.sourceEntityId,

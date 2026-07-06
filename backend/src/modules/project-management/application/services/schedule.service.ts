@@ -288,7 +288,9 @@ export class ScheduleService {
       await this.getMilestoneOrThrow(projectId, dto.milestoneId);
     }
     if (dto.parentTaskId) {
-      await this.getTaskOrThrow(projectId, dto.parentTaskId);
+      throw new BadRequestException(
+        'Child tasks cannot be created. Assign work using subtasks on a discipline instead.',
+      );
     }
     await this.assertUsersOnProjectTeam(projectId, [
       dto.dispatcherUserId,
@@ -417,11 +419,10 @@ export class ScheduleService {
     if (dto.milestoneId) {
       await this.getMilestoneOrThrow(projectId, dto.milestoneId);
     }
-    if (dto.parentTaskId) {
-      if (dto.parentTaskId === taskId) {
-        throw new BadRequestException('Task cannot be its own parent');
-      }
-      await this.getTaskOrThrow(projectId, dto.parentTaskId);
+    if (dto.parentTaskId !== undefined) {
+      throw new BadRequestException(
+        'Child task parent links cannot be changed. Use subtasks on a discipline instead.',
+      );
     }
     await this.assertUsersOnProjectTeam(projectId, [
       dto.dispatcherUserId,

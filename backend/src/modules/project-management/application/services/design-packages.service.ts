@@ -169,11 +169,18 @@ export class DesignPackagesService {
     // END DEMO BYPASS
 
     const packageOverrides = {
-      packageOwnerUserId: dto.packageOwnerUserId ?? null,
-      packageReviewerUserId: dto.packageReviewerUserId ?? null,
-      packageDisciplineLeadUserId: dto.packageDisciplineLeadUserId ?? null,
-      packageChiefUserId: dto.packageChiefUserId ?? null,
-      packageInstituteChiefUserId: dto.packageInstituteChiefUserId ?? null,
+      designerUserId: dto.designerUserId ?? discipline.designerUserId ?? null,
+      supportingDesignerUserId:
+        dto.supportingDesignerUserId ?? discipline.supportingDesignerUserId ?? null,
+      disciplineOwnerUserId:
+        dto.disciplineOwnerUserId ?? discipline.ownerUserId ?? null,
+      reviewerUserId: dto.reviewerUserId ?? discipline.reviewerUserId ?? null,
+      disciplinaryLeaderUserId:
+        dto.disciplinaryLeaderUserId ?? discipline.disciplineLeadUserId ?? null,
+      deptDeputyChiefUserId:
+        dto.deptDeputyChiefUserId ?? discipline.chiefUserId ?? null,
+      instituteChiefUserId:
+        dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
     };
     const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
 
@@ -221,7 +228,7 @@ export class DesignPackagesService {
         briefText: dto.briefText,
         sourceEntityType: dto.sourceEntityType,
         sourceEntityId: dto.sourceEntityId,
-        ...this.buildPackageApprovalChainCreateRelations(dto),
+        ...this.buildPackageApprovalChainCreateRelations(packageOverrides),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
@@ -281,19 +288,23 @@ export class DesignPackagesService {
     }
 
     const chainFkChanged =
-      dto.packageOwnerUserId !== undefined ||
-      dto.packageReviewerUserId !== undefined ||
-      dto.packageDisciplineLeadUserId !== undefined ||
-      dto.packageChiefUserId !== undefined ||
-      dto.packageInstituteChiefUserId !== undefined;
+      dto.designerUserId !== undefined ||
+      dto.supportingDesignerUserId !== undefined ||
+      dto.disciplineOwnerUserId !== undefined ||
+      dto.reviewerUserId !== undefined ||
+      dto.disciplinaryLeaderUserId !== undefined ||
+      dto.deptDeputyChiefUserId !== undefined ||
+      dto.instituteChiefUserId !== undefined;
 
     const priorEffectiveChain = this.getEffectiveApprovalChain(
       {
-        packageOwnerUserId: existing.packageOwnerUserId,
-        packageReviewerUserId: existing.packageReviewerUserId,
-        packageDisciplineLeadUserId: existing.packageDisciplineLeadUserId,
-        packageChiefUserId: existing.packageChiefUserId,
-        packageInstituteChiefUserId: existing.packageInstituteChiefUserId,
+        designerUserId: existing.designerUserId,
+        supportingDesignerUserId: existing.supportingDesignerUserId,
+        disciplineOwnerUserId: existing.disciplineOwnerUserId,
+        reviewerUserId: existing.reviewerUserId,
+        disciplinaryLeaderUserId: existing.disciplinaryLeaderUserId,
+        deptDeputyChiefUserId: existing.deptDeputyChiefUserId,
+        instituteChiefUserId: existing.instituteChiefUserId,
       },
       discipline,
     );
@@ -303,26 +314,34 @@ export class DesignPackagesService {
     );
 
     const nextPackageOverrides = {
-      packageOwnerUserId:
-        dto.packageOwnerUserId !== undefined
-          ? dto.packageOwnerUserId
-          : existing.packageOwnerUserId,
-      packageReviewerUserId:
-        dto.packageReviewerUserId !== undefined
-          ? dto.packageReviewerUserId
-          : existing.packageReviewerUserId,
-      packageDisciplineLeadUserId:
-        dto.packageDisciplineLeadUserId !== undefined
-          ? dto.packageDisciplineLeadUserId
-          : existing.packageDisciplineLeadUserId,
-      packageChiefUserId:
-        dto.packageChiefUserId !== undefined
-          ? dto.packageChiefUserId
-          : existing.packageChiefUserId,
-      packageInstituteChiefUserId:
-        dto.packageInstituteChiefUserId !== undefined
-          ? dto.packageInstituteChiefUserId
-          : existing.packageInstituteChiefUserId,
+      designerUserId:
+        dto.designerUserId !== undefined
+          ? dto.designerUserId
+          : existing.designerUserId,
+      supportingDesignerUserId:
+        dto.supportingDesignerUserId !== undefined
+          ? dto.supportingDesignerUserId
+          : existing.supportingDesignerUserId,
+      disciplineOwnerUserId:
+        dto.disciplineOwnerUserId !== undefined
+          ? dto.disciplineOwnerUserId
+          : existing.disciplineOwnerUserId,
+      reviewerUserId:
+        dto.reviewerUserId !== undefined
+          ? dto.reviewerUserId
+          : existing.reviewerUserId,
+      disciplinaryLeaderUserId:
+        dto.disciplinaryLeaderUserId !== undefined
+          ? dto.disciplinaryLeaderUserId
+          : existing.disciplinaryLeaderUserId,
+      deptDeputyChiefUserId:
+        dto.deptDeputyChiefUserId !== undefined
+          ? dto.deptDeputyChiefUserId
+          : existing.deptDeputyChiefUserId,
+      instituteChiefUserId:
+        dto.instituteChiefUserId !== undefined
+          ? dto.instituteChiefUserId
+          : existing.instituteChiefUserId,
     };
     const nextEffectiveChain = this.getEffectiveApprovalChain(
       nextPackageOverrides,
@@ -1015,34 +1034,54 @@ export class DesignPackagesService {
     };
   }
 
-  private buildPackageApprovalChainCreateRelations(dto: {
-    packageOwnerUserId?: string;
-    packageReviewerUserId?: string;
-    packageDisciplineLeadUserId?: string;
-    packageChiefUserId?: string;
-    packageInstituteChiefUserId?: string;
+  private buildPackageApprovalChainCreateRelations(overrides: {
+    designerUserId: string | null;
+    supportingDesignerUserId: string | null;
+    disciplineOwnerUserId: string | null;
+    reviewerUserId: string | null;
+    disciplinaryLeaderUserId: string | null;
+    deptDeputyChiefUserId: string | null;
+    instituteChiefUserId: string | null;
   }) {
     return {
-      ...(dto.packageOwnerUserId
-        ? { packageOwner: { connect: { id: dto.packageOwnerUserId } } }
+      ...(overrides.designerUserId
+        ? { designerUser: { connect: { id: overrides.designerUserId } } }
         : {}),
-      ...(dto.packageReviewerUserId
-        ? { packageReviewer: { connect: { id: dto.packageReviewerUserId } } }
-        : {}),
-      ...(dto.packageDisciplineLeadUserId
+      ...(overrides.supportingDesignerUserId
         ? {
-            packageDisciplineLead: {
-              connect: { id: dto.packageDisciplineLeadUserId },
+            supportingDesignerUser: {
+              connect: { id: overrides.supportingDesignerUserId },
             },
           }
         : {}),
-      ...(dto.packageChiefUserId
-        ? { packageChief: { connect: { id: dto.packageChiefUserId } } }
-        : {}),
-      ...(dto.packageInstituteChiefUserId
+      ...(overrides.disciplineOwnerUserId
         ? {
-            packageInstituteChief: {
-              connect: { id: dto.packageInstituteChiefUserId },
+            disciplineOwnerUser: {
+              connect: { id: overrides.disciplineOwnerUserId },
+            },
+          }
+        : {}),
+      ...(overrides.reviewerUserId
+        ? { reviewerUser: { connect: { id: overrides.reviewerUserId } } }
+        : {}),
+      ...(overrides.disciplinaryLeaderUserId
+        ? {
+            disciplinaryLeaderUser: {
+              connect: { id: overrides.disciplinaryLeaderUserId },
+            },
+          }
+        : {}),
+      ...(overrides.deptDeputyChiefUserId
+        ? {
+            deptDeputyChiefUser: {
+              connect: { id: overrides.deptDeputyChiefUserId },
+            },
+          }
+        : {}),
+      ...(overrides.instituteChiefUserId
+        ? {
+            instituteChiefUser: {
+              connect: { id: overrides.instituteChiefUserId },
             },
           }
         : {}),
@@ -1050,38 +1089,48 @@ export class DesignPackagesService {
   }
 
   private buildPackageApprovalChainUpdateRelations(overrides: {
-    packageOwnerUserId: string | null;
-    packageReviewerUserId: string | null;
-    packageDisciplineLeadUserId: string | null;
-    packageChiefUserId: string | null;
-    packageInstituteChiefUserId: string | null;
+    designerUserId: string | null;
+    supportingDesignerUserId: string | null;
+    disciplineOwnerUserId: string | null;
+    reviewerUserId: string | null;
+    disciplinaryLeaderUserId: string | null;
+    deptDeputyChiefUserId: string | null;
+    instituteChiefUserId: string | null;
   }) {
     return {
-      packageOwner: overrides.packageOwnerUserId
-        ? { connect: { id: overrides.packageOwnerUserId } }
+      designerUser: overrides.designerUserId
+        ? { connect: { id: overrides.designerUserId } }
         : { disconnect: true },
-      packageReviewer: overrides.packageReviewerUserId
-        ? { connect: { id: overrides.packageReviewerUserId } }
+      supportingDesignerUser: overrides.supportingDesignerUserId
+        ? { connect: { id: overrides.supportingDesignerUserId } }
         : { disconnect: true },
-      packageDisciplineLead: overrides.packageDisciplineLeadUserId
-        ? { connect: { id: overrides.packageDisciplineLeadUserId } }
+      disciplineOwnerUser: overrides.disciplineOwnerUserId
+        ? { connect: { id: overrides.disciplineOwnerUserId } }
         : { disconnect: true },
-      packageChief: overrides.packageChiefUserId
-        ? { connect: { id: overrides.packageChiefUserId } }
+      reviewerUser: overrides.reviewerUserId
+        ? { connect: { id: overrides.reviewerUserId } }
         : { disconnect: true },
-      packageInstituteChief: overrides.packageInstituteChiefUserId
-        ? { connect: { id: overrides.packageInstituteChiefUserId } }
+      disciplinaryLeaderUser: overrides.disciplinaryLeaderUserId
+        ? { connect: { id: overrides.disciplinaryLeaderUserId } }
+        : { disconnect: true },
+      deptDeputyChiefUser: overrides.deptDeputyChiefUserId
+        ? { connect: { id: overrides.deptDeputyChiefUserId } }
+        : { disconnect: true },
+      instituteChiefUser: overrides.instituteChiefUserId
+        ? { connect: { id: overrides.instituteChiefUserId } }
         : { disconnect: true },
     };
   }
 
   private getEffectiveApprovalChain(
     pkg: {
-      packageOwnerUserId: string | null;
-      packageReviewerUserId: string | null;
-      packageDisciplineLeadUserId: string | null;
-      packageChiefUserId: string | null;
-      packageInstituteChiefUserId: string | null;
+      designerUserId: string | null;
+      supportingDesignerUserId: string | null;
+      disciplineOwnerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplinaryLeaderUserId: string | null;
+      deptDeputyChiefUserId: string | null;
+      instituteChiefUserId: string | null;
     },
     discipline: {
       ownerUserId: string | null;

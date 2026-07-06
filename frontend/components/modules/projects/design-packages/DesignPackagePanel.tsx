@@ -245,7 +245,7 @@ export default function DesignPackagePanel({
 
   return (
     <FormLayout
-      title={compact ? undefined : 'Design packages'}
+      title={compact ? undefined : 'Subtasks'}
       description={
         compact
           ? undefined
@@ -272,7 +272,7 @@ export default function DesignPackagePanel({
           type="info"
           showIcon
           className="mb-4"
-          title="Design packages API not available"
+          title="Subtasks API not available"
         />
       )}
 
@@ -293,7 +293,7 @@ export default function DesignPackagePanel({
       {packages.length === 0 && !packagesQuery.isLoading && (
         <TableEmptyState
           icon={<Package />}
-          title="No design packages"
+          title="No subtasks"
           description="Create a package to begin the review workflow"
           action={
             lens.canCreateEngineering

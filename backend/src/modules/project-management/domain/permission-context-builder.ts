@@ -36,11 +36,13 @@ const DEMO_NON_REVIEW_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
 function resolveEffectiveChain(input: PermissionContextInput) {
   return getEffectiveApprovalChain(
     {
-      packageOwnerUserId: input.packageOwnerUserId ?? null,
-      packageReviewerUserId: input.packageReviewerUserId ?? null,
-      packageDisciplineLeadUserId: input.packageDisciplineLeadUserId ?? null,
-      packageChiefUserId: input.packageChiefUserId ?? null,
-      packageInstituteChiefUserId: input.packageInstituteChiefUserId ?? null,
+      designerUserId: input.subtaskDesignerUserId ?? null,
+      supportingDesignerUserId: input.subtaskSupportingDesignerUserId ?? null,
+      disciplineOwnerUserId: input.subtaskDisciplineOwnerUserId ?? null,
+      reviewerUserId: input.subtaskReviewerUserId ?? null,
+      disciplinaryLeaderUserId: input.subtaskDisciplinaryLeaderUserId ?? null,
+      deptDeputyChiefUserId: input.subtaskDeptDeputyChiefUserId ?? null,
+      instituteChiefUserId: input.subtaskInstituteChiefUserId ?? null,
     },
     {
       ownerUserId: input.disciplineOwnerUserId ?? null,

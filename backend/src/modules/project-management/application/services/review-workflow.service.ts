@@ -38,7 +38,10 @@ import {
   CommentActorRole,
   transitionCommentStatus,
 } from '../../domain/comment-state-machine';
-import { getEffectiveApprovalChain } from '../../domain/approval-chain.util';
+import {
+  getEffectiveApprovalChain,
+  type PackageApprovalChainOverrides,
+} from '../../domain/approval-chain.util';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
   EdvWithDiscipline,
@@ -1364,12 +1367,7 @@ export class ReviewWorkflowService {
   private assertActorMatchesReviewTier(
     actorId: string,
     currentTier: ReviewTier,
-    packageWithDiscipline?: {
-      packageOwnerUserId: string | null;
-      packageReviewerUserId: string | null;
-      packageDisciplineLeadUserId: string | null;
-      packageChiefUserId: string | null;
-      packageInstituteChiefUserId: string | null;
+    packageWithDiscipline?: (PackageApprovalChainOverrides & {
       taskDiscipline: {
         ownerUserId: string | null;
         reviewerUserId: string | null;
@@ -1379,7 +1377,7 @@ export class ReviewWorkflowService {
         designerUserId?: string | null;
         supportingDesignerUserId?: string | null;
       };
-    } | null,
+    }) | null,
   ): void {
     if (!packageWithDiscipline) {
       throw new ForbiddenException('Actor role does not match current review tier.');

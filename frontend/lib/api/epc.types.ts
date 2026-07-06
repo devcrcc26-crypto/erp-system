@@ -120,6 +120,13 @@ export interface DesignPackage {
   submittedAt: string | null;
   approvedAt: string | null;
   requiredTiers: ReviewTier[];
+  designerUserId: string | null;
+  reviewerUserId: string | null;
+  disciplinaryLeaderUserId: string | null;
+  deptDeputyChiefUserId: string | null;
+  instituteChiefUserId: string | null;
+  disciplineOwnerUserId: string | null;
+  supportingDesignerUserId: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -422,6 +429,13 @@ export interface TransitionEdvStatusRequest {
 export interface CreateDesignPackageRequest {
   name: string;
   projectedStatus?: DesignPackageProjectedStatus;
+  designerUserId?: string;
+  reviewerUserId?: string;
+  disciplinaryLeaderUserId?: string;
+  deptDeputyChiefUserId?: string;
+  instituteChiefUserId?: string;
+  disciplineOwnerUserId?: string;
+  supportingDesignerUserId?: string;
 }
 
 export type UpdateDesignPackageRequest = Partial<CreateDesignPackageRequest>;

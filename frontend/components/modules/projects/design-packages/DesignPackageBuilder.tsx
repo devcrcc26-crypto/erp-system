@@ -45,14 +45,14 @@ export default function DesignPackageBuilder({
           packageId: editing.id,
           body: { name },
         });
-        messageApi.success('Design package updated successfully');
+        messageApi.success('Subtask updated successfully');
       } else {
         await createPackage.mutateAsync({
           projectId,
           taskDisciplineId,
           body: { name },
         });
-        messageApi.success('Design package created successfully');
+        messageApi.success('Subtask created successfully');
       }
 
       onSaved();
@@ -60,7 +60,7 @@ export default function DesignPackageBuilder({
     } catch (error) {
       notifyApiError(
         error,
-        editing ? 'Failed to update design package' : 'Failed to create design package',
+        editing ? 'Failed to update subtask' : 'Failed to create subtask',
         messageApi,
       );
     }
@@ -69,7 +69,7 @@ export default function DesignPackageBuilder({
   return (
     <Modal
       open={open}
-      title={editing ? 'Edit design package' : 'New design package'}
+      title={editing ? 'Edit subtask' : 'New subtask'}
       onCancel={onClose}
       onOk={() => form.submit()}
       okText={editing ? 'Save changes' : 'Create package'}

@@ -352,27 +352,37 @@ export class CreateDesignPackageDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
-  packageOwnerUserId?: string;
+  designerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
-  packageReviewerUserId?: string;
+  reviewerUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
-  packageDisciplineLeadUserId?: string;
+  disciplinaryLeaderUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
-  packageChiefUserId?: string;
+  deptDeputyChiefUserId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
-  packageInstituteChiefUserId?: string;
+  instituteChiefUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  disciplineOwnerUserId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  supportingDesignerUserId?: string;
 }
 
 export class UpdateDesignPackageDto extends PartialType(CreateDesignPackageDto) {}

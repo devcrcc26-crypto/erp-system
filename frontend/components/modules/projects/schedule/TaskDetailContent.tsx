@@ -8,7 +8,8 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
 import DisciplineDetailDrawer from '@/components/modules/projects/disciplines/DisciplineDetailDrawer';
-import DisciplineRolesModal from '@/components/modules/projects/disciplines/DisciplineRolesModal';
+import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
+import type { DesignPackage } from '@/lib/api/epc.types';
 import type { Task, TaskDiscipline } from '@/lib/api/project-management.types';
 import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
 import {
@@ -50,7 +51,7 @@ function resolveTeamMemberName(
   return nameById.get(userId) ?? 'Unknown';
 }
 
-function canEditDisciplineRoles(
+function canEditSubtaskRoles(
   discipline: TaskDiscipline,
   currentUserId: string | undefined,
   isSystemAdministrator: boolean,
@@ -97,9 +98,10 @@ export default function TaskDetailContent({
   const teamQuery = useProjectTeam(projectId);
   const disciplinesQuery = useTaskDisciplines(projectId, task.id);
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
-  const [rolesDiscipline, setRolesDiscipline] = useState<TaskDiscipline | null>(
-    null,
-  );
+  const [rolesSubtask, setRolesSubtask] = useState<{
+    package: DesignPackage;
+    taskDisciplineId: string;
+  } | null>(null);
   const [addDisciplineOpen, setAddDisciplineOpen] = useState(false);
 
   const leaderNameById = useMemo(
@@ -335,7 +337,7 @@ export default function TaskDetailContent({
             {disciplines.map((discipline) => {
               const packages =
                 packagesByDisciplineId.get(discipline.id) ?? [];
-              const showEditRoles = canEditDisciplineRoles(
+              const showEditSubtaskRoles = canEditSubtaskRoles(
                 discipline,
                 currentUserId,
                 isSystemAdministrator,
@@ -357,16 +359,6 @@ export default function TaskDetailContent({
                         <span className="text-[14px] font-medium">
                           {discipline.disciplineName}
                         </span>
-                        {showEditRoles && (
-                          <Button
-                            type="link"
-                            size="small"
-                            className="!px-0 text-[12px]"
-                            onClick={() => setRolesDiscipline(discipline)}
-                          >
-                            Edit roles
-                          </Button>
-                        )}
                         <Link href={workspaceHref}>
                           <Button
                             type="text"
@@ -409,24 +401,45 @@ export default function TaskDetailContent({
 
                         return (
                           <li key={entry.package.id}>
-                            <Link
-                              href={packageHref}
-                              className="flex items-center justify-between gap-2 rounded border px-3 py-2 transition-colors hover:bg-[#fafafa]"
+                            <div
+                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
                               style={{ borderColor: tokens.colorBorder }}
                             >
-                              <span className="text-[13px]">
-                                {entry.package.name}
-                              </span>
-                              <div className="flex items-center gap-2">
+                              <Link
+                                href={packageHref}
+                                className="min-w-0 flex-1 transition-colors hover:text-[#D4610A]"
+                              >
+                                <span className="text-[13px]">
+                                  {entry.package.name}
+                                </span>
+                              </Link>
+                              <div className="flex shrink-0 items-center gap-2">
+                                {showEditSubtaskRoles && (
+                                  <Button
+                                    type="link"
+                                    size="small"
+                                    className="!px-0 text-[12px]"
+                                    onClick={() =>
+                                      setRolesSubtask({
+                                        package: entry.package,
+                                        taskDisciplineId: entry.taskDisciplineId,
+                                      })
+                                    }
+                                  >
+                                    Edit roles
+                                  </Button>
+                                )}
                                 <ScheduleSubtaskStatusBadge
                                   status={displayStatus}
                                 />
-                                <ArrowRightOutlined
-                                  className="text-[12px]"
-                                  style={{ color: tokens.colorTextTertiary }}
-                                />
+                                <Link href={packageHref}>
+                                  <ArrowRightOutlined
+                                    className="text-[12px]"
+                                    style={{ color: tokens.colorTextTertiary }}
+                                  />
+                                </Link>
                               </div>
-                            </Link>
+                            </div>
                           </li>
                         );
                       })}
@@ -439,12 +452,12 @@ export default function TaskDetailContent({
         )}
       </FormLayout>
 
-      <DisciplineRolesModal
-        open={Boolean(rolesDiscipline)}
+      <SubtaskRolesModal
+        open={Boolean(rolesSubtask)}
         projectId={projectId}
-        taskId={task.id}
-        discipline={rolesDiscipline}
-        onClose={() => setRolesDiscipline(null)}
+        taskDisciplineId={rolesSubtask?.taskDisciplineId ?? ''}
+        subtask={rolesSubtask?.package ?? null}
+        onClose={() => setRolesSubtask(null)}
         onSaved={() => {
           void disciplinesQuery.refetch();
         }}

@@ -1,9 +1,11 @@
 export type PackageApprovalChainOverrides = {
-  packageOwnerUserId: string | null;
-  packageReviewerUserId: string | null;
-  packageDisciplineLeadUserId: string | null;
-  packageChiefUserId: string | null;
-  packageInstituteChiefUserId: string | null;
+  designerUserId: string | null;
+  supportingDesignerUserId: string | null;
+  disciplineOwnerUserId: string | null;
+  reviewerUserId: string | null;
+  disciplinaryLeaderUserId: string | null;
+  deptDeputyChiefUserId: string | null;
+  instituteChiefUserId: string | null;
 };
 
 export type DisciplineApprovalChain = {
@@ -27,21 +29,22 @@ export type EffectiveApprovalChain = {
 };
 
 /**
- * Resolves the effective approval chain — package-level FKs override discipline defaults.
+ * Resolves the effective approval chain — subtask-level FKs override discipline defaults.
  */
 export function getEffectiveApprovalChain(
   pkg: PackageApprovalChainOverrides,
   discipline: DisciplineApprovalChain,
 ): EffectiveApprovalChain {
   return {
-    designerUserId: discipline.designerUserId,
-    supportingDesignerUserId: discipline.supportingDesignerUserId,
-    ownerUserId: pkg.packageOwnerUserId ?? discipline.ownerUserId,
-    reviewerUserId: pkg.packageReviewerUserId ?? discipline.reviewerUserId,
+    designerUserId: pkg.designerUserId ?? discipline.designerUserId,
+    supportingDesignerUserId:
+      pkg.supportingDesignerUserId ?? discipline.supportingDesignerUserId,
+    ownerUserId: pkg.disciplineOwnerUserId ?? discipline.ownerUserId,
+    reviewerUserId: pkg.reviewerUserId ?? discipline.reviewerUserId,
     disciplineLeadUserId:
-      pkg.packageDisciplineLeadUserId ?? discipline.disciplineLeadUserId,
-    chiefUserId: pkg.packageChiefUserId ?? discipline.chiefUserId,
+      pkg.disciplinaryLeaderUserId ?? discipline.disciplineLeadUserId,
+    chiefUserId: pkg.deptDeputyChiefUserId ?? discipline.chiefUserId,
     instituteChiefUserId:
-      pkg.packageInstituteChiefUserId ?? discipline.instituteChiefUserId,
+      pkg.instituteChiefUserId ?? discipline.instituteChiefUserId,
   };
 }
