@@ -1,6 +1,7 @@
 'use client';
 
 import { Form, Modal, Select } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
 import DisciplineSimpleFormFields from '@/components/modules/projects/disciplines/DisciplineSimpleFormFields';
 import {
@@ -12,6 +13,10 @@ import {
   useTasks,
   useUpdateTaskDiscipline,
 } from '@/lib/query/schedule';
+import { orgKeys } from '@/lib/query/org';
+import { isUuidLike } from '@/lib/utils/user-display';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface DisciplineDetailFormValues extends DisciplineSimpleFormValues {
   scheduleTaskId?: string;
@@ -34,6 +39,8 @@ export default function DisciplineDetailDrawer({
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<DisciplineDetailFormValues>();
+  const messageApi = useAppMessage();
+  const queryClient = useQueryClient();
   const createDiscipline = useCreateTaskDiscipline();
   const updateDiscipline = useUpdateTaskDiscipline();
   const tasksQuery = useTasks(projectId, { page: 1, limit: 100 }, open);
@@ -53,19 +60,35 @@ export default function DisciplineDetailDrawer({
       return;
     }
 
-    if (discipline) {
-      await updateDiscipline.mutateAsync({
-        projectId,
-        taskId: submitTaskId,
-        disciplineId: discipline.id,
-        body,
-      });
-    } else {
-      await createDiscipline.mutateAsync({ projectId, taskId: submitTaskId, body });
+    if (!isUuidLike(body.disciplineId) || !isUuidLike(body.disciplineLeadUserId)) {
+      messageApi.error(
+        'The discipline list looks out of date. Refreshing it — please try again.',
+      );
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+      return;
     }
 
-    onSaved();
-    onClose();
+    try {
+      if (discipline) {
+        await updateDiscipline.mutateAsync({
+          projectId,
+          taskId: submitTaskId,
+          disciplineId: discipline.id,
+          body,
+        });
+      } else {
+        await createDiscipline.mutateAsync({ projectId, taskId: submitTaskId, body });
+      }
+
+      onSaved();
+      onClose();
+    } catch (error) {
+      notifyApiError(
+        error,
+        discipline ? 'Failed to update discipline' : 'Failed to add discipline',
+        messageApi,
+      );
+    }
   }
 
   return (
