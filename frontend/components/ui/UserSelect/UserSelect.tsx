@@ -9,8 +9,7 @@ import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 function formatUserLabel(user: User): string {
-  const contact = user.email ? ` (${user.email})` : '';
-  return `${formatUserName(user)}${contact} (${formatUserDiscipline(user)})`;
+  return `${formatUserName(user)} (${formatUserDiscipline(user)})`;
 }
 
 /**
