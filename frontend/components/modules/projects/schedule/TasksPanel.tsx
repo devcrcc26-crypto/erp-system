@@ -11,6 +11,7 @@ import {
   Modal,
   Progress,
   Select,
+  Switch,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -108,6 +109,7 @@ export default function TasksPanel({
 }): React.ReactNode {
   const queryClient = useQueryClient();
   const messageApi = useAppMessage();
+  const [showSubtasks, setShowSubtasks] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [viewing, setViewing] = useState<Task | null>(null);
@@ -179,10 +181,12 @@ export default function TasksPanel({
 
   const dependencySaving = createDependency.isPending || updateDependency.isPending;
 
-  const tableRows = useMemo(
-    () => buildScheduleTableRows(tasks, subtasksByTaskId),
-    [tasks, subtasksByTaskId],
-  );
+  const tableRows = useMemo(() => {
+    const rows = buildScheduleTableRows(tasks, subtasksByTaskId);
+    return showSubtasks
+      ? rows
+      : rows.filter((row) => row.rowType !== 'subtask');
+  }, [tasks, subtasksByTaskId, showSubtasks]);
 
   const columns: ColumnsType<ScheduleTaskTableRow> = [
     {
@@ -461,7 +465,15 @@ export default function TasksPanel({
 
   return (
     <>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center justify-end gap-4">
+        <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
+          <Switch
+            size="small"
+            checked={showSubtasks}
+            onChange={setShowSubtasks}
+          />
+          Show subtasks
+        </label>
         <Button
           type="primary"
           size="small"
