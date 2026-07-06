@@ -53,6 +53,15 @@ export function formatUserName(user: {
 }
 
 /**
+ * Engineering discipline name, or "Not Assigned" when the user has none.
+ */
+export function formatUserDiscipline(user: {
+  engineeringDiscipline?: { name: string } | null;
+}): string {
+  return user.engineeringDiscipline?.name?.trim() || 'Not Assigned';
+}
+
+/**
  * Comma-separated system role names for a user.
  */
 export function formatUserRoleNames(user: User): string {
@@ -70,5 +79,5 @@ export function formatUserRoleNames(user: User): string {
 export function formatUserPickerLabel(user: User): string {
   const roles = formatUserRoleNames(user);
   const contact = user.email ? ` (${user.email})` : '';
-  return `${formatUserName(user)} — ${roles}${contact}`;
+  return `${formatUserName(user)} — ${roles}${contact} (${formatUserDiscipline(user)})`;
 }

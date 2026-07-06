@@ -499,6 +499,7 @@ export class UserManagementService {
       positionId: true,
       discipline: true,
       engineeringDisciplineId: true,
+      engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
       firstName: true,
       lastName: true,
       chineseName: true,
@@ -532,6 +533,8 @@ export class UserManagementService {
       chineseName: true,
       email: true,
       discipline: true,
+      engineeringDisciplineId: true,
+      engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
       isActive: true,
       userRoles: this.userRolesListSelect(),
     };

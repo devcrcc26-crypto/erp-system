@@ -5,12 +5,12 @@ import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
 import { useFullUsersDirectory, useUser } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 function formatUserLabel(user: User): string {
   const contact = user.email ? ` (${user.email})` : '';
-  return `${formatUserName(user)}${contact}`;
+  return `${formatUserName(user)}${contact} (${formatUserDiscipline(user)})`;
 }
 
 /**

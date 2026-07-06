@@ -25,7 +25,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { useAuditLogs } from '@/lib/query/audit-logs';
 import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import { layout } from '@/lib/theme/layout';
 
 function formatTimestamp(value: string): string {
@@ -87,7 +87,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
     () =>
       (usersDirectoryQuery.data?.data ?? []).map((user) => ({
         value: user.id,
-        label: formatUserName(user),
+        label: `${formatUserName(user)} (${formatUserDiscipline(user)})`,
       })),
     [usersDirectoryQuery.data?.data],
   );

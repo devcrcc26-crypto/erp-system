@@ -147,6 +147,7 @@ export interface User {
   positionId: string | null;
   discipline: UserDiscipline | null;
   engineeringDisciplineId: string | null;
+  engineeringDiscipline?: { id: string; name: string; nameZh: string | null } | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
