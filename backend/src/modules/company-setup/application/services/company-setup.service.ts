@@ -214,16 +214,38 @@ export class CompanySetupService {
     ctx: AuditContext,
     dto: CreateDepartmentDto,
   ): Promise<unknown> {
-    await this.findOrThrow('division', dto.divisionId, ctx.companyId);
-    await this.findOrThrow('branch', dto.branchId, ctx.companyId);
-    return this.prisma.department.create({
+    const divisionId =
+      dto.divisionId ?? (await this.resolveDefaultDivisionId(ctx.companyId));
+    const branchId =
+      dto.branchId ?? (await this.resolveDefaultBranchId(ctx.companyId));
+    await this.findOrThrow('division', divisionId, ctx.companyId);
+    await this.findOrThrow('branch', branchId, ctx.companyId);
+
+    const department = await this.prisma.department.create({
       data: {
         companyId: ctx.companyId,
-        ...dto,
+        divisionId,
+        branchId,
+        name: dto.name,
+        nameZh: dto.nameZh,
+        code: dto.code,
+        isActive: dto.isActive ?? true,
+        leaderUserId: dto.leaderUserId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
     });
+
+    if (dto.leaderUserId) {
+      await this.syncDepartmentLeaderUser(
+        ctx,
+        department.id,
+        dto.leaderUserId,
+        Boolean(dto.forceAlignLeaderDepartment),
+      );
+    }
+
+    return department;
   }
 
   async updateDepartment(
@@ -238,10 +260,31 @@ export class CompanySetupService {
     if (dto.branchId) {
       await this.findOrThrow('branch', dto.branchId, ctx.companyId);
     }
-    return this.prisma.department.update({
+
+    const department = await this.prisma.department.update({
       where: { id },
-      data: { ...dto, updatedBy: ctx.userId },
+      data: {
+        divisionId: dto.divisionId,
+        branchId: dto.branchId,
+        name: dto.name,
+        nameZh: dto.nameZh,
+        code: dto.code,
+        isActive: dto.isActive,
+        leaderUserId: dto.leaderUserId,
+        updatedBy: ctx.userId,
+      },
     });
+
+    if (dto.leaderUserId !== undefined && dto.leaderUserId) {
+      await this.syncDepartmentLeaderUser(
+        ctx,
+        id,
+        dto.leaderUserId,
+        Boolean(dto.forceAlignLeaderDepartment),
+      );
+    }
+
+    return department;
   }
 
   async deleteDepartment(ctx: AuditContext, id: string): Promise<void> {
@@ -617,5 +660,69 @@ export class CompanySetupService {
     if (!setting) {
       throw new NotFoundException('Company setting not found');
     }
+  }
+
+  /** First active division for the company — used when org fields are omitted. */
+  private async resolveDefaultDivisionId(companyId: string): Promise<string> {
+    const division = await this.prisma.division.findFirst({
+      where: activeOnly({ companyId }),
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!division) {
+      throw new BadRequestException(
+        'No division configured — create a division or pass divisionId.',
+      );
+    }
+    return division.id;
+  }
+
+  /** First active branch for the company — used when org fields are omitted. */
+  private async resolveDefaultBranchId(companyId: string): Promise<string> {
+    const branch = await this.prisma.branch.findFirst({
+      where: activeOnly({ companyId }),
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!branch) {
+      throw new BadRequestException(
+        'No branch configured — create a branch or pass branchId.',
+      );
+    }
+    return branch.id;
+  }
+
+  /**
+   * Ensures the department leader belongs to this department.
+   * When forceAlign is true, updates the user's departmentId.
+   */
+  private async syncDepartmentLeaderUser(
+    ctx: AuditContext,
+    departmentId: string,
+    leaderUserId: string,
+    forceAlign: boolean,
+  ): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: leaderUserId, companyId: ctx.companyId }),
+      select: { id: true, departmentId: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Leader user not found');
+    }
+
+    if (user.departmentId === departmentId) {
+      return;
+    }
+
+    if (user.departmentId && !forceAlign) {
+      throw new BadRequestException(
+        'Leader user belongs to a different department. Confirm to align their department.',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: leaderUserId },
+      data: { departmentId, updatedBy: ctx.userId },
+    });
   }
 }

@@ -141,17 +141,29 @@ export class CreateDivisionDto {
 export class UpdateDivisionDto extends PartialType(CreateDivisionDto) {}
 
 export class CreateDepartmentDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description:
+      'Optional — defaults to the company primary division when omitted.',
+  })
+  @IsOptional()
   @IsString()
-  divisionId!: string;
+  divisionId?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'Optional — defaults to the company primary branch when omitted.',
+  })
+  @IsOptional()
   @IsString()
-  branchId!: string;
+  branchId?: string;
 
   @ApiProperty()
   @IsString()
   name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  nameZh?: string;
 
   @ApiProperty()
   @IsString()
@@ -161,6 +173,19 @@ export class CreateDepartmentDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsString()
+  leaderUserId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, sets the leader user departmentId to this department if mismatched.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  forceAlignLeaderDepartment?: boolean;
 }
 
 export class UpdateDepartmentDto extends PartialType(CreateDepartmentDto) {}

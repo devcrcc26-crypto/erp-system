@@ -249,32 +249,37 @@ model Division {
 }
 
 model Department {
-  id         String    @id @default(uuid())
-  companyId  String    @map("company_id")
-  divisionId String    @map("division_id")
-  branchId   String    @map("branch_id")
-  name       String
-  code       String
-  isActive   Boolean   @default(true) @map("is_active")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  createdBy  String    @map("created_by")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  updatedBy  String    @map("updated_by")
-  deletedAt  DateTime? @map("deleted_at")
-  deletedBy  String?   @map("deleted_by")
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
+  divisionId   String    @map("division_id")
+  branchId     String    @map("branch_id")
+  name         String
+  nameZh       String?   @map("name_zh")
+  code         String
+  isActive     Boolean   @default(true) @map("is_active")
+  leaderUserId String?   @map("leader_user_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdBy    String    @map("created_by")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String    @map("updated_by")
+  deletedAt    DateTime? @map("deleted_at")
+  deletedBy    String?   @map("deleted_by")
 
   company     Company      @relation(fields: [companyId], references: [id])
   division    Division     @relation(fields: [divisionId], references: [id])
   branch      Branch       @relation(fields: [branchId], references: [id])
-  costCentres        CostCentre[]
-  positions          Position[]
-  users              User[]
+  leaderUser  User?        @relation("DepartmentLeader", fields: [leaderUserId], references: [id])
+  costCentres CostCentre[]
+  positions   Position[]
+  users       User[]
+  projects    Project[]
 
   @@unique([companyId, code], map: "uq_department_company_code")
   @@index([companyId], map: "idx_department_company_id")
   @@index([companyId, deletedAt], map: "idx_department_company_deleted")
   @@index([divisionId], map: "idx_department_division_id")
   @@index([branchId], map: "idx_department_branch_id")
+  @@index([leaderUserId], map: "idx_department_leader_user_id")
   @@map("department")
 }
 
@@ -444,6 +449,7 @@ model User {
   notificationPreferences NotificationPreference[]
   documentVersions       DocumentVersion[]
   reportDefinitions      ReportDefinition[]
+  ledDepartments         Department[]           @relation("DepartmentLeader")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
@@ -1370,7 +1376,9 @@ model Project {
   budget            Decimal?      @db.Decimal(18, 2)
   currency                String?
   client                  String?
+  /// @deprecated Use departmentId FK — retained for migration/audit.
   responsibleDepartment   ProjectResponsibleDepartment @default(MUNICIPAL_TRANSPORTATION_DEPARTMENT) @map("responsible_department")
+  departmentId            String?       @map("department_id")
   designProperties        ProjectDesignProperties      @default(PRELIMINARY) @map("design_properties")
   designStage             ProjectDesignStage           @default(TENDER) @map("design_stage")
   responsiblePersonId     String?       @map("responsible_person_id")
@@ -1386,6 +1394,7 @@ model Project {
 
   company               Company     @relation(fields: [companyId], references: [id])
   branch                Branch?     @relation(fields: [branchId], references: [id])
+  department            Department? @relation(fields: [departmentId], references: [id])
   responsiblePerson     User?       @relation("ProjectResponsiblePerson", fields: [responsiblePersonId], references: [id])
   teamMembers    ProjectTeam[]
   milestones     Milestone[]
@@ -1409,6 +1418,7 @@ model Project {
   @@index([companyId, deletedAt], map: "idx_project_company_deleted")
   @@index([status], map: "idx_project_status")
   @@index([responsibleDepartment], map: "idx_project_responsible_department")
+  @@index([departmentId], map: "idx_project_department_id")
   @@index([responsiblePersonId], map: "idx_project_responsible_person_id")
   @@map("project")
 }
