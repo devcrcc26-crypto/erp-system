@@ -43,13 +43,19 @@ export type TaskStatus =
 
 export type TaskDependencyType = 'FS' | 'SS' | 'FF' | 'SF';
 
-export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'VERY_URGENT' | 'CRITICAL';
+export type UrgencyLevel = 'NORMAL' | 'URGENT' | 'VERY_URGENT';
 
 export type TaskAttributes = 'ETHIOPIA' | 'CHINA' | 'COMBINE1' | 'COMBINE2';
 
 export type TaskLanguage = 'CHINESE' | 'ENGLISH';
 
-export type ApprovalLevel = 'DEPARTMENT' | 'INSTITUTE';
+export type ApprovalLevel = 'DESIGN_INSTITUTE_REVIEW' | 'COMPANY_REVIEW';
+
+export type CommissionMode =
+  | 'CONTRACT'
+  | 'EMAIL'
+  | 'INFORMAL_ASSIGNMENT'
+  | 'NO_ASSIGNMENT';
 
 export type CompletionStatus = 'NORMAL' | 'AHEAD' | 'BEHIND';
 
@@ -240,6 +246,7 @@ export interface Task {
   supervisingChiefUserId: string | null;
   assignedPersonUserId: string | null;
   taskIdCode: string;
+  overseasTaskNumber: string | null;
   name: string;
   nameZh: string | null;
   description: string | null;
@@ -249,6 +256,7 @@ export interface Task {
   progressPct: number;
   status: TaskStatus;
   isCritical: boolean;
+  commissionMode: CommissionMode | null;
   commissioningMethod: string | null;
   requiresArchiving: boolean;
   taskAttributes: TaskAttributes | null;
@@ -871,6 +879,7 @@ export interface CreateTaskRequest {
   supervisingChiefUserId?: string;
   assignedPersonUserId?: string;
   taskIdCode?: string;
+  overseasTaskNumber?: string;
   name: string;
   nameZh?: string;
   description?: string;
@@ -880,6 +889,7 @@ export interface CreateTaskRequest {
   progressPct?: number;
   status?: TaskStatus;
   isCritical?: boolean;
+  commissionMode?: CommissionMode;
   commissioningMethod?: string;
   requiresArchiving?: boolean;
   taskAttributes?: TaskAttributes;

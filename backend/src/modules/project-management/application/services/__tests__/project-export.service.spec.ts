@@ -162,7 +162,7 @@ describe('ProjectExportService', () => {
         urgencyLevel: 'URGENT',
         hasCustomSchedule: true,
         language: 'CHINESE',
-        approvalLevel: 'DEPARTMENT',
+        approvalLevel: 'DESIGN_INSTITUTE_REVIEW',
         dispatcherUserId: 'user-dispatcher',
         actualCompletionTime: null,
         completionStatus: null,

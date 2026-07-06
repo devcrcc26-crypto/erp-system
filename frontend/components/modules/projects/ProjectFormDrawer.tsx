@@ -28,7 +28,6 @@ import type { ProjectStatus } from '@/lib/constants/project-status';
 import { PROJECT_STATUS_DEFAULT } from '@/lib/constants/project-status';
 import {
   PROJECT_CONTRACT_TYPE_DEFAULT,
-  PROJECT_CONTRACT_TYPE_OPTIONS,
 } from '@/lib/constants/project-contract-type';
 import {
   PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
@@ -269,18 +268,13 @@ export default function ProjectFormDrawer({
           <Input placeholder="Site location" />
         </Form.Item>
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Project type" name="projectType">
-            <Select
-              allowClear
-              placeholder="Select type"
-              options={PROJECT_TYPE_OPTIONS}
-            />
-          </Form.Item>
-          <Form.Item label="Contract type" name="contractType">
-            <Select options={PROJECT_CONTRACT_TYPE_OPTIONS} />
-          </Form.Item>
-        </div>
+        <Form.Item label="Project type" name="projectType">
+          <Select
+            allowClear
+            placeholder="Select type"
+            options={PROJECT_TYPE_OPTIONS}
+          />
+        </Form.Item>
 
         {typeSpecificFields.map((field) => (
           <Form.Item

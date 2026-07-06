@@ -7,7 +7,12 @@ import {
   TaskLanguage,
   UrgencyLevel,
 } from '@prisma/client';
+import { formatCommissionModeLabel } from '@/shared/commission-mode';
 import { formatProjectContractTypeLabel } from '@/shared/project-contract-type';
+import {
+  formatApprovalLevelLabel,
+  formatUrgencyLevelBilingualLabel,
+} from '@/shared/task-comment8';
 import { formatProjectDesignPropertiesLabel } from '@/shared/project-design-properties';
 import { formatProjectDesignStageLabel } from '@/shared/project-design-stage';
 import { formatProjectResponsibleDepartmentLabel } from '@/shared/project-responsible-department';
@@ -107,10 +112,9 @@ export function formatExportProjectType(
 }
 
 const URGENCY_LABELS: Record<UrgencyLevel, string> = {
-  NORMAL: 'Normal',
-  URGENT: 'Urgent',
-  CRITICAL: 'Critical',
-  VERY_URGENT: 'Very Urgent',
+  NORMAL: '正常',
+  URGENT: '急',
+  VERY_URGENT: '紧急',
 };
 
 export function formatExportUrgency(
@@ -119,7 +123,7 @@ export function formatExportUrgency(
   if (value == null) {
     return '';
   }
-  return URGENCY_LABELS[value] ?? value;
+  return formatUrgencyLevelBilingualLabel(value);
 }
 
 const LANGUAGE_LABELS: Record<TaskLanguage, string> = {
@@ -137,8 +141,8 @@ export function formatExportLanguage(
 }
 
 const APPROVAL_LEVEL_LABELS: Record<ApprovalLevel, string> = {
-  DEPARTMENT: 'Department',
-  INSTITUTE: 'Institute',
+  DESIGN_INSTITUTE_REVIEW: 'Design Institute Review (院审)',
+  COMPANY_REVIEW: 'Company Review (司审)',
 };
 
 export function formatExportApprovalLevel(
@@ -147,7 +151,17 @@ export function formatExportApprovalLevel(
   if (value == null) {
     return '';
   }
-  return APPROVAL_LEVEL_LABELS[value] ?? value;
+  return formatApprovalLevelLabel(value);
+}
+
+/** Human-readable commission mode label for Excel export. */
+export function formatExportCommissionMode(
+  value: ProjectContractType | null | undefined,
+): string {
+  if (value == null) {
+    return formatCommissionModeLabel('NO_ASSIGNMENT');
+  }
+  return formatCommissionModeLabel(value);
 }
 
 const COMPLETION_STATUS_LABELS: Record<CompletionStatus, string> = {

@@ -17,6 +17,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 import type {
   ApprovalLevel,
+  CommissionMode,
   CompletionStatus,
   CreateTaskRequest,
   ProjectDesignStage,
@@ -34,6 +35,7 @@ import {
   useUpdateTask,
 } from '@/lib/query/schedule';
 import { useScheduleSubtasks } from '@/lib/query/schedule';
+import { useProject } from '@/lib/query/projects';
 import { calculateTaskDurationDays } from '@/lib/utils/schedule-metrics';
 import {
   nextStatusOptions,
@@ -44,6 +46,7 @@ import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { PROJECT_DESIGN_STAGE_OPTIONS } from '@/lib/constants/project-design-stage';
+import { COMMISSION_MODE_OPTIONS } from '@/lib/constants/commission-mode';
 import {
   ARCHIVING_OPTIONS,
   TASK_ATTRIBUTES_OPTIONS,
@@ -78,12 +81,12 @@ const COMPLETION_STATUS_OPTIONS: Array<{
 
 interface TaskFormValues {
   taskIdCode?: string;
+  overseasTaskNumber?: string;
   name: string;
   nameZh?: string;
   description?: string;
   milestoneId?: string;
   dispatcherUserId?: string;
-  assignedPersonUserId?: string;
   supervisingChiefUserId?: string;
   startDate?: Dayjs;
   finishDate?: Dayjs;
@@ -91,6 +94,7 @@ interface TaskFormValues {
   progressPct?: number;
   status: TaskStatus;
   isCritical: boolean;
+  commissionMode?: CommissionMode;
   urgencyLevel: UrgencyLevel;
   language: TaskLanguage;
   approvalLevel?: ApprovalLevel;
@@ -122,8 +126,8 @@ function toExtendedPayload(
   | 'language'
   | 'approvalLevel'
   | 'dispatcherUserId'
-  | 'assignedPersonUserId'
   | 'supervisingChiefUserId'
+  | 'commissionMode'
   | 'actualCompletionTime'
   | 'actualWorkdays'
   | 'completionStatus'
@@ -141,8 +145,8 @@ function toExtendedPayload(
     language: values.language,
     approvalLevel: values.approvalLevel,
     dispatcherUserId: values.dispatcherUserId,
-    assignedPersonUserId: values.assignedPersonUserId,
     supervisingChiefUserId: values.supervisingChiefUserId,
+    commissionMode: values.commissionMode,
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
     actualWorkdays: values.actualWorkdays,
     completionStatus: values.completionStatus,
@@ -153,12 +157,12 @@ function toExtendedPayload(
 function toFormValues(task: Task): TaskFormValues {
   return {
     taskIdCode: task.taskIdCode,
+    overseasTaskNumber: task.overseasTaskNumber ?? undefined,
     name: task.name,
     nameZh: task.nameZh ?? undefined,
     description: task.description ?? undefined,
     milestoneId: task.milestoneId ?? undefined,
     dispatcherUserId: task.dispatcherUserId ?? undefined,
-    assignedPersonUserId: task.assignedPersonUserId ?? undefined,
     supervisingChiefUserId: task.supervisingChiefUserId ?? undefined,
     startDate: task.startDate ? dayjs(task.startDate) : undefined,
     finishDate: task.finishDate ? dayjs(task.finishDate) : undefined,
@@ -166,6 +170,7 @@ function toFormValues(task: Task): TaskFormValues {
     progressPct: task.progressPct,
     status: task.status,
     isCritical: task.isCritical,
+    commissionMode: task.commissionMode ?? undefined,
     urgencyLevel: task.urgencyLevel,
     language: task.language,
     approvalLevel: task.approvalLevel ?? undefined,
@@ -189,7 +194,10 @@ function toFormValues(task: Task): TaskFormValues {
   };
 }
 
-function defaultFormValues(): Partial<TaskFormValues> {
+function defaultFormValues(
+  projectDesignStage?: ProjectDesignStage | null,
+  projectContractType?: CommissionMode | null,
+): Partial<TaskFormValues> {
   return {
     status: 'NOT_STARTED',
     progressPct: 0,
@@ -198,6 +206,8 @@ function defaultFormValues(): Partial<TaskFormValues> {
     language: 'CHINESE',
     requiresArchiving: false,
     hasCustomSchedule: false,
+    designStage: projectDesignStage ?? undefined,
+    commissionMode: projectContractType ?? undefined,
   };
 }
 
@@ -237,19 +247,17 @@ export default function TaskFormDrawer({
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const messageApi = useAppMessage();
+  const projectQuery = useProject(projectId, open);
   const milestonesQuery = useMilestones(projectId, { page: 1, limit: 50 }, open);
-  const milestones = milestonesQuery.data?.data ?? [];
-  const isEditing = Boolean(task);
   const disciplinesQuery = useTaskDisciplines(
     projectId,
     task?.id ?? '',
-    open && isEditing && Boolean(task?.id),
+    open && Boolean(task),
   );
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(
     projectId,
-    open && isEditing,
+    open && Boolean(task),
   );
-
   const [disciplineDrafts, setDisciplineDrafts] = useState<TaskDisciplineDraft[]>(
     [],
   );
@@ -258,13 +266,17 @@ export default function TaskFormDrawer({
     [],
   );
 
+  const isEditing = Boolean(task);
+  const milestones = milestonesQuery.data?.data ?? [];
+  const watchedStatus = Form.useWatch('status', form);
+
   const packageCountByDisciplineId = useMemo(() => {
     const map = new Map<string, number>();
     if (!task) {
       return map;
     }
-    const subtasks = subtasksByTaskId.get(task.id) ?? [];
-    for (const entry of subtasks) {
+    const entries = subtasksByTaskId.get(task.id) ?? [];
+    for (const entry of entries) {
       map.set(
         entry.taskDisciplineId,
         (map.get(entry.taskDisciplineId) ?? 0) + 1,
@@ -273,13 +285,12 @@ export default function TaskFormDrawer({
     return map;
   }, [subtasksByTaskId, task]);
 
-  const taskStatusOptions =
-    isEditing && task
-      ? nextStatusOptions(task.status, TASK_VALID_TRANSITIONS).map((status) => ({
-          value: status,
-          label: formatTaskStatus(status),
-        }))
-      : TASK_STATUS_OPTIONS;
+  const statusOptions = isEditing
+    ? nextStatusOptions(task!.status, TASK_VALID_TRANSITIONS).map((status) => ({
+        value: status,
+        label: formatTaskStatus(status),
+      }))
+    : TASK_STATUS_OPTIONS;
 
   useEffect(() => {
     if (!open) {
@@ -297,11 +308,16 @@ export default function TaskFormDrawer({
     }
 
     form.resetFields();
-    form.setFieldsValue(defaultFormValues());
+    form.setFieldsValue(
+      defaultFormValues(
+        projectQuery.data?.designStage,
+        projectQuery.data?.contractType,
+      ),
+    );
     setDisciplineDrafts([]);
     setRemovedDisciplineIds([]);
     setInitialDisciplineKeys([]);
-  }, [open, task, form]);
+  }, [open, task, form, projectQuery.data?.designStage, projectQuery.data?.contractType]);
 
   useEffect(() => {
     if (!open || !task || !disciplinesQuery.data) {
@@ -336,6 +352,13 @@ export default function TaskFormDrawer({
   }
 
   async function handleSubmit(values: TaskFormValues): Promise<void> {
+    if (values.status === 'NOT_STARTED' && values.actualCompletionTime) {
+      messageApi.error(
+        'Actual completion time cannot be set while status is Not started.',
+      );
+      return;
+    }
+
     const durationDays = durationFromFormDates(values.startDate, values.finishDate);
 
     const base = {
@@ -343,6 +366,7 @@ export default function TaskFormDrawer({
       nameZh: values.nameZh?.trim() || undefined,
       description: values.description?.trim() || undefined,
       milestoneId: values.milestoneId,
+      overseasTaskNumber: values.overseasTaskNumber?.trim() || undefined,
       startDate: values.startDate?.toISOString(),
       finishDate: values.finishDate?.toISOString(),
       durationDays,
@@ -398,89 +422,80 @@ export default function TaskFormDrawer({
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
-      title={
-        isEditing && task
-          ? formatLocalizedName(task)
-          : isEditing
-            ? 'Edit task'
-            : 'Add task'
-      }
+      title={isEditing ? `Edit task — ${formatLocalizedName(task!)}` : 'Add task'}
       onClose={onClose}
+      extra={
+        <Button type="primary" onClick={() => form.submit()}>
+          {isEditing ? 'Save task' : 'Create task'}
+        </Button>
+      }
+      destroyOnHidden
     >
       <Form<TaskFormValues>
         form={form}
         layout="vertical"
         className="erp-drawer-form"
-        onValuesChange={(
-          changed: Partial<TaskFormValues>,
-          allValues: TaskFormValues,
-        ) => {
+        onFinish={(values) => void handleSubmit(values)}
+        onValuesChange={(changed, allValues) => {
           if ('startDate' in changed || 'finishDate' in changed) {
             syncDurationField(form, allValues.startDate, allValues.finishDate);
           }
         }}
-        onFinish={(values: TaskFormValues) => void handleSubmit(values)}
       >
-        {isEditing && task && (
-          <div className="mb-4 grid gap-4 md:grid-cols-2 md:gap-x-4">
-            <Form.Item label="Task ID" name="taskIdCode">
-              <Input disabled />
-            </Form.Item>
-            {taskStatusOptions.length > 0 ? (
-              <Form.Item
-                label="Status"
-                name="status"
-                rules={[{ required: true, message: 'Status is required' }]}
-              >
-                <Select options={taskStatusOptions} />
-              </Form.Item>
-            ) : (
-              <Form.Item label="Status">
-                <Input disabled value={formatTaskStatus(task.status)} />
-              </Form.Item>
-            )}
-          </div>
-        )}
-
-        {!isEditing && (
-          <Form.Item
-            label="Status"
-            name="status"
-            rules={[{ required: true, message: 'Status is required' }]}
-            className="hidden"
-          >
-            <Select options={TASK_STATUS_OPTIONS} />
-          </Form.Item>
-        )}
-
         <Collapse
           bordered={false}
           className="erp-schedule-collapse bg-transparent"
-          defaultActiveKey={['basic']}
+          defaultActiveKey={['basic', 'dates', 'details', 'disciplines']}
           items={[
             {
               key: 'basic',
               label: 'Basic',
               children: (
                 <>
-                  <Form.Item
-                    label="Name"
-                    name="name"
-                    rules={[{ required: true, message: 'Name is required' }]}
-                  >
-                    <Input placeholder="Task name" />
+                  {isEditing && (
+                    <Form.Item label="Task ID" name="taskIdCode">
+                      <Input disabled />
+                    </Form.Item>
+                  )}
+                  <Form.Item label="Overseas task number" name="overseasTaskNumber">
+                    <Input placeholder="Manual entry" />
                   </Form.Item>
-                  <Form.Item label="Chinese name (optional)" name="nameZh">
-                    <Input placeholder="任务中文名称" />
+                  <Form.Item
+                    label="Task name"
+                    name="name"
+                    rules={[{ required: true, message: 'Task name is required' }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label="Chinese name" name="nameZh">
+                    <Input />
                   </Form.Item>
                   <Form.Item label="Main work content" name="description">
-                    <Input.TextArea rows={2} />
+                    <Input.TextArea rows={3} />
                   </Form.Item>
+                  <Form.Item label="Status" name="status">
+                    <Select options={statusOptions} />
+                  </Form.Item>
+                </>
+              ),
+            },
+            {
+              key: 'dates',
+              label: 'Dates & assignment',
+              children: (
+                <>
                   <Form.Item label="Design stage" name="designStage">
                     <Select
                       allowClear
                       placeholder="Select design stage"
                       options={PROJECT_DESIGN_STAGE_OPTIONS}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Commission mode" name="commissionMode">
+                    <Select
+                      allowClear
+                      placeholder="Select commission mode"
+                      options={COMMISSION_MODE_OPTIONS}
                     />
                   </Form.Item>
                   <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
@@ -509,14 +524,9 @@ export default function TaskFormDrawer({
                       <DatePicker className="w-full" />
                     </Form.Item>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-                    <Form.Item label="Dispatcher" name="dispatcherUserId">
-                      <ProjectTeamUserSelect projectId={projectId} />
-                    </Form.Item>
-                    <Form.Item label="Assigned person" name="assignedPersonUserId">
-                      <ProjectTeamUserSelect projectId={projectId} />
-                    </Form.Item>
-                  </div>
+                  <Form.Item label="Dispatcher (调度员)" name="dispatcherUserId">
+                    <ProjectTeamUserSelect projectId={projectId} />
+                  </Form.Item>
                   {isEditing && (
                     <>
                       <Form.Item label="Milestone" name="milestoneId">
@@ -556,10 +566,7 @@ export default function TaskFormDrawer({
                 <>
                   <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
                     <Form.Item label="Task attributes" name="taskAttributes">
-                      <Select
-                        allowClear
-                        options={TASK_ATTRIBUTES_OPTIONS}
-                      />
+                      <Select allowClear options={TASK_ATTRIBUTES_OPTIONS} />
                     </Form.Item>
                     <Form.Item label="Urgency level" name="urgencyLevel">
                       <Select options={URGENCY_LEVEL_OPTIONS} />
@@ -602,11 +609,52 @@ export default function TaskFormDrawer({
                   >
                     <ProjectTeamUserSelect projectId={projectId} />
                   </Form.Item>
+                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                    <Form.Item label="On-site receiving time" name="onSiteReceivingTime">
+                      <DatePicker showTime className="w-full" />
+                    </Form.Item>
+                    <Form.Item label="HQ assignment time" name="assignmentToHqTime">
+                      <DatePicker showTime className="w-full" />
+                    </Form.Item>
+                  </div>
                   {isEditing && (
                     <>
-                      <Form.Item label="Completion status" name="completionStatus">
-                        <Select allowClear options={COMPLETION_STATUS_OPTIONS} />
+                      <Form.Item
+                        label="Actual completion"
+                        name="actualCompletionTime"
+                        rules={[
+                          {
+                            validator(_rule, value: Dayjs | undefined) {
+                              const status = form.getFieldValue('status') as TaskStatus;
+                              if (status === 'NOT_STARTED' && value) {
+                                return Promise.reject(
+                                  new Error(
+                                    'Cannot set actual completion while status is Not started',
+                                  ),
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
+                        <DatePicker
+                          showTime
+                          className="w-full"
+                          disabled={watchedStatus === 'NOT_STARTED'}
+                        />
                       </Form.Item>
+                      <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+                        <Form.Item label="Actual workdays" name="actualWorkdays">
+                          <InputNumber className="!w-full" min={0} />
+                        </Form.Item>
+                        <Form.Item label="Completion status" name="completionStatus">
+                          <Select
+                            allowClear
+                            options={COMPLETION_STATUS_OPTIONS}
+                          />
+                        </Form.Item>
+                      </div>
                       <Form.Item label="Remark" name="remark">
                         <Input.TextArea rows={2} />
                       </Form.Item>
@@ -616,64 +664,18 @@ export default function TaskFormDrawer({
               ),
             },
             {
-              key: 'dates',
-              label: 'Dates',
+              key: 'disciplines',
+              label: 'Disciplines',
               children: (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-                    <Form.Item
-                      label="On-site receiving time"
-                      name="onSiteReceivingTime"
-                    >
-                      <DatePicker className="w-full" showTime />
-                    </Form.Item>
-                    <Form.Item
-                      label="HQ assignment time"
-                      name="assignmentToHqTime"
-                    >
-                      <DatePicker className="w-full" showTime />
-                    </Form.Item>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-                    <Form.Item label="Planned completion" name="finishDate">
-                      <DatePicker className="w-full" />
-                    </Form.Item>
-                    <Form.Item
-                      label="Actual completion"
-                      name="actualCompletionTime"
-                    >
-                      <DatePicker className="w-full" showTime />
-                    </Form.Item>
-                  </div>
-                  {isEditing && (
-                    <Form.Item label="Actual workdays" name="actualWorkdays">
-                      <InputNumber className="!w-full" min={0} />
-                    </Form.Item>
-                  )}
-                </>
+                <TaskDisciplinesEditor
+                  projectId={projectId}
+                  disciplines={disciplineDrafts}
+                  onChange={handleDisciplinesChange}
+                />
               ),
             },
           ]}
         />
-
-        <div className="mt-4">
-          <TaskDisciplinesEditor
-            projectId={projectId}
-            disciplines={disciplineDrafts}
-            onChange={handleDisciplinesChange}
-          />
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={createTask.isPending || updateTask.isPending}
-          >
-            Save task
-          </Button>
-        </div>
       </Form>
     </Drawer>
   );

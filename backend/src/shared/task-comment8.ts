@@ -1,4 +1,4 @@
-import { ApprovalLevel, TaskAttributes, UrgencyLevel } from '@prisma/client';
+import { ApprovalLevel, UrgencyLevel } from '@prisma/client';
 
 /**
  * Task attribute region/combination — keys must match Prisma enum.
@@ -24,18 +24,18 @@ export const TASK_ATTRIBUTES_DEFINITIONS: readonly TaskAttributesDefinition[] = 
   { value: 'COMBINE2', label: 'Combine 2' },
 ] as const;
 
-const TASK_ATTRIBUTES_LABELS: Record<TaskAttributes, string> =
+const TASK_ATTRIBUTES_LABELS: Record<TaskAttributesValue, string> =
   TASK_ATTRIBUTES_DEFINITIONS.reduce(
     (accumulator, definition) => {
       accumulator[definition.value] = definition.label;
       return accumulator;
     },
-    {} as Record<TaskAttributes, string>,
+    {} as Record<TaskAttributesValue, string>,
   );
 
 /** Human-readable label for a task attributes key. */
 export function formatTaskAttributesLabel(
-  value: TaskAttributes | null | undefined,
+  value: TaskAttributesValue | null | undefined,
 ): string {
   if (value == null) {
     return '';
@@ -51,16 +51,24 @@ export const TASK_ATTRIBUTES_OPTIONS = TASK_ATTRIBUTES_DEFINITIONS.map(
 );
 
 export const URGENCY_LEVEL_DEFINITIONS = [
-  { value: 'NORMAL' as const, label: 'Normal' },
-  { value: 'URGENT' as const, label: 'Urgent' },
-  { value: 'CRITICAL' as const, label: 'Critical' },
-  { value: 'VERY_URGENT' as const, label: 'Very Urgent' },
+  { value: 'NORMAL' as const, label: '正常', labelEn: 'Normal' },
+  { value: 'URGENT' as const, label: '急', labelEn: 'Urgent' },
+  { value: 'VERY_URGENT' as const, label: '紧急', labelEn: 'Very Urgent' },
 ] as const;
 
 const URGENCY_LEVEL_LABELS: Record<UrgencyLevel, string> =
   URGENCY_LEVEL_DEFINITIONS.reduce(
     (accumulator, definition) => {
       accumulator[definition.value] = definition.label;
+      return accumulator;
+    },
+    {} as Record<UrgencyLevel, string>,
+  );
+
+const URGENCY_LEVEL_BILINGUAL_LABELS: Record<UrgencyLevel, string> =
+  URGENCY_LEVEL_DEFINITIONS.reduce(
+    (accumulator, definition) => {
+      accumulator[definition.value] = `${definition.labelEn} (${definition.label})`;
       return accumulator;
     },
     {} as Record<UrgencyLevel, string>,
@@ -76,16 +84,32 @@ export function formatUrgencyLevelLabel(
   return URGENCY_LEVEL_LABELS[value] ?? value;
 }
 
+/** Bilingual urgency label for exports. */
+export function formatUrgencyLevelBilingualLabel(
+  value: UrgencyLevel | null | undefined,
+): string {
+  if (value == null) {
+    return '';
+  }
+  return URGENCY_LEVEL_BILINGUAL_LABELS[value] ?? value;
+}
+
 export const URGENCY_LEVEL_OPTIONS = URGENCY_LEVEL_DEFINITIONS.map(
   (definition) => ({
     value: definition.value,
-    label: definition.label,
+    label: `${definition.labelEn} (${definition.label})`,
   }),
 );
 
 export const APPROVAL_LEVEL_DEFINITIONS = [
-  { value: 'DEPARTMENT' as const, label: 'Department' },
-  { value: 'INSTITUTE' as const, label: 'Institute' },
+  {
+    value: 'DESIGN_INSTITUTE_REVIEW' as const,
+    label: 'Design Institute Review (院审)',
+  },
+  {
+    value: 'COMPANY_REVIEW' as const,
+    label: 'Company Review (司审)',
+  },
 ] as const;
 
 const APPROVAL_LEVEL_LABELS: Record<ApprovalLevel, string> =

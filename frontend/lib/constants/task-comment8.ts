@@ -18,18 +18,23 @@ export const URGENCY_LEVEL_OPTIONS: Array<{
   value: UrgencyLevel;
   label: string;
 }> = [
-  { value: 'NORMAL', label: 'Normal' },
-  { value: 'URGENT', label: 'Urgent' },
-  { value: 'VERY_URGENT', label: 'Very Urgent' },
-  { value: 'CRITICAL', label: 'Critical' },
+  { value: 'NORMAL', label: 'Normal (正常)' },
+  { value: 'URGENT', label: 'Urgent (急)' },
+  { value: 'VERY_URGENT', label: 'Very Urgent (紧急)' },
 ];
 
 export const TASK_REVIEW_LEVEL_OPTIONS: Array<{
   value: ApprovalLevel;
   label: string;
 }> = [
-  { value: 'INSTITUTE', label: 'Design Institute Review' },
-  { value: 'DEPARTMENT', label: 'Company Review' },
+  {
+    value: 'DESIGN_INSTITUTE_REVIEW',
+    label: 'Design Institute Review (院审)',
+  },
+  {
+    value: 'COMPANY_REVIEW',
+    label: 'Company Review (司审)',
+  },
 ];
 
 export const ARCHIVING_OPTIONS = [
@@ -45,15 +50,14 @@ const TASK_ATTRIBUTES_LABELS: Record<TaskAttributes, string> = {
 };
 
 const URGENCY_LABELS: Record<UrgencyLevel, string> = {
-  NORMAL: 'Normal',
-  URGENT: 'Urgent',
-  VERY_URGENT: 'Very Urgent',
-  CRITICAL: 'Critical',
+  NORMAL: '正常',
+  URGENT: '急',
+  VERY_URGENT: '紧急',
 };
 
 const APPROVAL_LABELS: Record<ApprovalLevel, string> = {
-  INSTITUTE: 'Design Institute Review',
-  DEPARTMENT: 'Company Review',
+  DESIGN_INSTITUTE_REVIEW: 'Design Institute Review (院审)',
+  COMPANY_REVIEW: 'Company Review (司审)',
 };
 
 /** Human-readable task attributes label. */
@@ -100,7 +104,7 @@ export function formatArchivingLabel(
 export function urgencyBadgeVariant(
   value: UrgencyLevel,
 ): 'default' | 'orange' | 'error' {
-  if (value === 'VERY_URGENT' || value === 'CRITICAL') {
+  if (value === 'VERY_URGENT') {
     return 'error';
   }
   if (value === 'URGENT') {

@@ -927,6 +927,7 @@ export interface MappedTask {
   supervisingChiefUserId: string | null;
   assignedPersonUserId: string | null;
   taskIdCode: string;
+  overseasTaskNumber: string | null;
   name: string;
   nameZh: string | null;
   description: string | null;
@@ -936,6 +937,7 @@ export interface MappedTask {
   progressPct: number;
   status: Task['status'];
   isCritical: boolean;
+  commissionMode: Task['commissionMode'];
   commissioningMethod: string | null;
   requiresArchiving: boolean;
   taskAttributes: Task['taskAttributes'];
@@ -1089,6 +1091,7 @@ export function mapTask(task: Task): MappedTask {
     supervisingChiefUserId: task.supervisingChiefUserId,
     assignedPersonUserId: task.assignedPersonUserId,
     taskIdCode: task.taskIdCode,
+    overseasTaskNumber: task.overseasTaskNumber,
     name: task.name,
     nameZh: task.nameZh,
     description: task.description,
@@ -1098,6 +1101,7 @@ export function mapTask(task: Task): MappedTask {
     progressPct: task.progressPct,
     status: task.status,
     isCritical: task.isCritical,
+    commissionMode: task.commissionMode,
     commissioningMethod: task.commissioningMethod,
     requiresArchiving: task.requiresArchiving,
     taskAttributes: task.taskAttributes,

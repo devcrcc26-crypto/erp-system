@@ -3,6 +3,7 @@
 import { Drawer } from 'antd';
 import TaskDetailContent from '@/components/modules/projects/schedule/TaskDetailContent';
 import type { Task } from '@/lib/api/project-management.types';
+import { useProject } from '@/lib/query/projects';
 import { wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 
@@ -19,6 +20,8 @@ export default function TaskDetailDrawer({
   onClose: () => void;
   onEdit?: (task: Task) => void;
 }): React.ReactNode {
+  const projectQuery = useProject(projectId, open);
+
   return (
     <Drawer
       {...wideDetailDrawerProps}
@@ -29,6 +32,8 @@ export default function TaskDetailDrawer({
       {task && (
         <TaskDetailContent
           projectId={projectId}
+          projectName={projectQuery.data?.name}
+          projectNumber={projectQuery.data?.projectCode}
           task={task}
           onEdit={onEdit ? () => onEdit(task) : undefined}
         />

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs
 import {
   ApprovalLevel,
   CloseoutStatus,
+  CommissionMode,
   CompletionStatus,
   CorrespondenceStatus,
   CorrespondenceType,
@@ -412,6 +413,11 @@ export class CreateTaskDto {
   @IsString()
   taskIdCode?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  overseasTaskNumber?: string;
+
   @ApiProperty()
   @IsString()
   name!: string;
@@ -458,7 +464,12 @@ export class CreateTaskDto {
   @IsBoolean()
   isCritical?: boolean;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: CommissionMode })
+  @IsOptional()
+  @IsEnum(CommissionMode)
+  commissionMode?: CommissionMode;
+
+  @ApiPropertyOptional({ deprecated: true })
   @IsOptional()
   @IsString()
   commissioningMethod?: string;

@@ -8,6 +8,7 @@ import {
 import {
   DesignPackageStatus,
   MilestoneStatus,
+  TaskStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -301,6 +302,20 @@ export class ScheduleService {
       dto.taskIdCode?.trim() ||
       (await this.documentNumberService.getNextNumber(ctx, 'TASK'));
 
+    const project = await this.prisma.project.findFirst({
+      where: activeOnly({ id: projectId }),
+      select: { designStage: true, contractType: true },
+    });
+
+    const taskStatus = dto.status ?? 'NOT_STARTED';
+    this.assertActualCompletionAllowed(
+      taskStatus,
+      parseOptionalDate(dto.actualCompletionTime),
+    );
+
+    const designStage = dto.designStage ?? project?.designStage ?? undefined;
+    const commissionMode = dto.commissionMode ?? project?.contractType ?? undefined;
+
     const createdDisciplines: Array<{ id: string; disciplineName: string }> =
       [];
 
@@ -314,6 +329,7 @@ export class ScheduleService {
           supervisingChiefUserId: dto.supervisingChiefUserId,
           assignedPersonUserId: dto.assignedPersonUserId,
           taskIdCode,
+          overseasTaskNumber: dto.overseasTaskNumber?.trim() || null,
           name: dto.name,
           nameZh: dto.nameZh,
           description: dto.description,
@@ -321,15 +337,15 @@ export class ScheduleService {
           finishDate: parseOptionalDate(dto.finishDate),
           durationDays: dto.durationDays,
           progressPct: dto.progressPct ?? 0,
-          status: dto.status,
+          status: taskStatus,
           isCritical: dto.isCritical ?? false,
-          commissioningMethod: dto.commissioningMethod,
+          commissionMode,
           requiresArchiving: dto.requiresArchiving ?? false,
           taskAttributes: dto.taskAttributes,
           onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
           assignmentToHqTime: parseOptionalDate(dto.assignmentToHqTime),
           contactFormNumber: dto.contactFormNumber,
-          designStage: dto.designStage,
+          designStage,
           urgencyLevel: dto.urgencyLevel,
           hasCustomSchedule: dto.hasCustomSchedule ?? false,
           language: dto.language,
@@ -455,6 +471,19 @@ export class ScheduleService {
       }
     }
 
+    const currentTask = await this.prisma.task.findFirst({
+      where: activeOnly({ id: taskId, projectId }),
+      select: { status: true, actualCompletionTime: true },
+    });
+    if (currentTask) {
+      const nextStatus = dto.status ?? currentTask.status;
+      const nextActualCompletion =
+        dto.actualCompletionTime !== undefined
+          ? parseOptionalDate(dto.actualCompletionTime)
+          : currentTask.actualCompletionTime;
+      this.assertActualCompletionAllowed(nextStatus, nextActualCompletion);
+    }
+
     if (dto.disciplineIdsToRemove?.length) {
       for (const disciplineId of dto.disciplineIdsToRemove) {
         await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
@@ -524,6 +553,10 @@ export class ScheduleService {
           supervisingChiefUserId: dto.supervisingChiefUserId,
           assignedPersonUserId: dto.assignedPersonUserId,
           taskIdCode: dto.taskIdCode,
+          overseasTaskNumber:
+            dto.overseasTaskNumber !== undefined
+              ? dto.overseasTaskNumber?.trim() || null
+              : undefined,
           name: dto.name,
           nameZh: dto.nameZh,
           description: dto.description,
@@ -533,7 +566,7 @@ export class ScheduleService {
           progressPct: dto.progressPct,
           status: dto.status,
           isCritical: dto.isCritical,
-          commissioningMethod: dto.commissioningMethod,
+          commissionMode: dto.commissionMode,
           requiresArchiving: dto.requiresArchiving,
           taskAttributes: dto.taskAttributes,
           onSiteReceivingTime: parseOptionalDate(dto.onSiteReceivingTime),
@@ -1215,9 +1248,17 @@ export class ScheduleService {
     }
   }
 
-  /**
-   * Resolves an active engineering discipline catalog row for assignment.
-   */
+  private assertActualCompletionAllowed(
+    status: TaskStatus,
+    actualCompletionTime: Date | null | undefined,
+  ): void {
+    if (status === 'NOT_STARTED' && actualCompletionTime != null) {
+      throw new BadRequestException(
+        'Actual completion time cannot be set while task status is Not started.',
+      );
+    }
+  }
+
   private async resolveEngineeringDiscipline(
     ctx: PmContext,
     disciplineId: string,

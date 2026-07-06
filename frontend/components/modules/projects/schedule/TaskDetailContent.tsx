@@ -37,6 +37,7 @@ import {
   scheduleDisciplineWorkspaceHref,
   scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
+import { formatCommissionModeLabel } from '@/lib/constants/commission-mode';
 import { tokens } from '@/lib/theme/tokens';
 
 function resolveTeamMemberName(
@@ -77,10 +78,14 @@ function canAddTaskDiscipline(
 
 export default function TaskDetailContent({
   projectId,
+  projectName,
+  projectNumber,
   task,
   onEdit,
 }: {
   projectId: string;
+  projectName?: string;
+  projectNumber?: string;
   task: Task;
   onEdit?: () => void;
 }): React.ReactNode {
@@ -132,6 +137,15 @@ export default function TaskDetailContent({
       <div>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
+            {projectName && (
+              <p
+                className="text-[12px] font-medium uppercase tracking-wide"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {projectName}
+                {projectNumber ? ` · ${projectNumber}` : ''}
+              </p>
+            )}
             <h2 className="text-[18px] font-semibold">
               {formatLocalizedName(task)}
             </h2>
@@ -174,24 +188,28 @@ export default function TaskDetailContent({
           size="small"
           items={[
             {
+              key: 'overseas',
+              label: 'Overseas task number',
+              children: task.overseasTaskNumber || '-',
+            },
+            {
               key: 'due',
               label: 'Due date',
               children: formatProjectDate(task.finishDate),
             },
             {
+              key: 'commission',
+              label: 'Commission mode',
+              children: task.commissionMode
+                ? formatCommissionModeLabel(task.commissionMode)
+                : '-',
+            },
+            {
               key: 'dispatcher',
-              label: 'Dispatcher',
+              label: 'Dispatcher (调度员)',
               children: resolveTeamMemberName(
                 leaderNameById,
                 task.dispatcherUserId,
-              ),
-            },
-            {
-              key: 'assigned',
-              label: 'Assigned person',
-              children: resolveTeamMemberName(
-                leaderNameById,
-                task.assignedPersonUserId,
               ),
             },
           ]}

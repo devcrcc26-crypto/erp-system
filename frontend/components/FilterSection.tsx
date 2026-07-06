@@ -25,9 +25,9 @@ const TASK_STATUS_OPTIONS: TaskStatus[] = [
 ];
 
 const URGENCY_OPTIONS: Array<{ value: UrgencyLevel; label: string }> = [
-  { value: 'CRITICAL', label: 'Critical' },
-  { value: 'URGENT', label: 'Urgent' },
-  { value: 'NORMAL', label: 'Normal' },
+  { value: 'VERY_URGENT', label: 'Very Urgent (紧急)' },
+  { value: 'URGENT', label: 'Urgent (急)' },
+  { value: 'NORMAL', label: 'Normal (正常)' },
 ];
 
 const DATE_RANGE_OPTIONS: Array<{ value: DashboardDateRange; label: string }> = [

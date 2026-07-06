@@ -23,6 +23,7 @@ import {
 } from '../utils/project-export-excel.util';
 import {
   formatExportApprovalLevel,
+  formatExportCommissionMode,
   formatExportCompletionStatus,
   formatExportContractType,
   formatExportDesignProperties,
@@ -263,10 +264,10 @@ export class ProjectExportService {
           disciplineIds.has(change.originEntityId)),
     );
 
-    const commissionMode = formatExportContractType(task.project.contractType);
+    const commissionMode = formatExportCommissionMode(task.commissionMode);
 
     const row: Array<string | number> = [
-      task.taskIdCode,
+      task.overseasTaskNumber ?? '',
       formatExportLocalizedName(task.project.name, task.project.nameZh),
       task.project.projectCode,
       task.description ?? '',
