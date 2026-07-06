@@ -42,6 +42,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/settings': 'nav.settings',
   '/profile': 'nav.profile',
   '/audit-logs': 'nav.auditLogs',
+  '/departments': 'pages.departments.title',
+  '/disciplines': 'pages.disciplinesCatalog.title',
 };
 
 export interface IconRailVisibility {
@@ -52,6 +54,8 @@ export interface IconRailVisibility {
   canManageUsers: boolean;
   canManageRoles: boolean;
   canViewProjects: boolean;
+  canViewDepartments: boolean;
+  canViewDisciplinesCatalog: boolean;
 }
 
 /**
@@ -66,6 +70,8 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canManageUsers,
     canManageRoles,
     canViewProjects,
+    canViewDepartments,
+    canViewDisciplinesCatalog,
   } = visibility;
 
   return [
@@ -103,6 +109,20 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/my-work',
       iconKey: 'my-work',
       visible: canViewMyWork,
+    },
+    {
+      key: '/departments',
+      labelKey: 'nav.departments',
+      href: '/departments',
+      iconKey: 'departments',
+      visible: canViewDepartments,
+    },
+    {
+      key: '/disciplines',
+      labelKey: 'nav.disciplinesCatalog',
+      href: '/disciplines',
+      iconKey: 'disciplines-catalog',
+      visible: canViewDisciplinesCatalog,
     },
     {
       key: '/kanban-board',

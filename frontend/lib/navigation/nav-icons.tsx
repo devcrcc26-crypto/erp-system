@@ -2,6 +2,7 @@
 
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import {
+  ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
   BarChartOutlined,
@@ -43,6 +44,8 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'review-inbox': InboxOutlined,
   'my-comments': CommentOutlined,
   'my-work': CheckSquareOutlined,
+  departments: ApartmentOutlined,
+  'disciplines-catalog': ClusterOutlined,
   kanban: AppstoreOutlined,
   users: UserOutlined,
   teams: TeamOutlined,

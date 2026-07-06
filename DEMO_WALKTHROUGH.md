@@ -2,6 +2,8 @@
 
 **Password for every demo account:** `Admin@12345`
 
+For **Comment 8** features (departments, My Work, subtask roles, task detail fields), see [`docs/COMMENT8_WALKTHROUGH.md`](docs/COMMENT8_WALKTHROUGH.md).
+
 Open the website. Follow the steps below in order. Every step tells you exactly what to click and what to do.
 
 ---

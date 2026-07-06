@@ -29,6 +29,7 @@ import {
   ReviewTier,
   RiskStatus,
   SubmittalItemType,
+  TaskAttributes,
   TaskDisciplineProjectedStatus,
   TaskDisciplineReviewStatus,
   WorkflowEntityType,
@@ -73,6 +74,13 @@ const U = {
 } as const;
 
 const ALL_DEMO_USER_IDS: string[] = Object.values(U);
+
+const TASK_ATTRIBUTES_CYCLE: TaskAttributes[] = [
+  'CHINA',
+  'ETHIOPIA',
+  'COMBINE1',
+  'COMBINE2',
+];
 
 const PROJECT_1_DEF: DemoProjectDef = {
   index: 10,
@@ -353,7 +361,7 @@ async function seedExtendedProjectData(
       isCritical: true,
       commissioningMethod: 'Joint commissioning with client',
       requiresArchiving: true,
-      taskAttributes: 'design-coordination',
+      taskAttributes: 'COMBINE1',
       onSiteReceivingTime: d('2025-02-01'),
       assignmentToHqTime: d('2025-02-05'),
       contactFormNumber: `CF-${prefix}-001`,
@@ -430,7 +438,7 @@ async function seedExtendedProjectData(
         isCritical: i < 3,
         commissioningMethod: i > 7 ? 'Witness testing' : 'Standard',
         requiresArchiving: i > 8,
-        taskAttributes: `phase-${Math.floor(i / 3) + 1}`,
+        taskAttributes: TASK_ATTRIBUTES_CYCLE[Math.floor(i / 3) % TASK_ATTRIBUTES_CYCLE.length]!,
         contactFormNumber: `CF-${prefix}-${String(i + 2).padStart(3, '0')}`,
         designStage: i < 4 ? 'CONSTRUCTION_SUPPORT' : 'AS_BUILT_DRAWINGS',
         urgencyLevel: i === 3 ? 'URGENT' : 'NORMAL',
@@ -881,10 +889,12 @@ async function seedDesignPackageRow(
       briefText: spec.briefText ?? null,
       sourceEntityType: spec.sourceEntityType ?? null,
       sourceEntityId: spec.sourceEntityId ?? null,
+      designerUserId: U.designer,
+      supportingDesignerUserId: U.supportingDesigner,
       disciplineOwnerUserId: U.owner,
       reviewerUserId: U.reviewer,
       disciplinaryLeaderUserId: U.lead,
-      deptDeputyChiefUserId: U.deptChief,
+      deptDeputyChiefUserId: U.deputy,
       instituteChiefUserId: U.instituteChief,
       updatedBy: adminUserId,
     },
@@ -903,10 +913,12 @@ async function seedDesignPackageRow(
       briefText: spec.briefText ?? `${spec.name} review brief for ${projectCode}.`,
       sourceEntityType: spec.sourceEntityType ?? null,
       sourceEntityId: spec.sourceEntityId ?? null,
+      designerUserId: U.designer,
+      supportingDesignerUserId: U.supportingDesigner,
       disciplineOwnerUserId: U.owner,
       reviewerUserId: U.reviewer,
       disciplinaryLeaderUserId: U.lead,
-      deptDeputyChiefUserId: U.deptChief,
+      deptDeputyChiefUserId: U.deputy,
       instituteChiefUserId: U.instituteChief,
       createdBy: adminUserId,
       updatedBy: adminUserId,

@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { seedPmDemoData } from './seed-pm-demo';
 import { seedAllProjectTypes } from './seed-all-project-types';
 import { appendRichDemoProjects } from './seed-demo-projects';
+import { seedComment8Walkthrough } from './seed-comment8-walkthrough';
 
 const prisma = new PrismaClient();
 
@@ -1534,6 +1535,7 @@ async function main(): Promise<void> {
     await seedPmDemoData(pmCtx);
     await seedAllProjectTypes(pmCtx);
     await appendRichDemoProjects(pmCtx);
+    await seedComment8Walkthrough(pmCtx);
     console.log('  Demo password for all seeded accounts: Admin@12345 (or SEED_ADMIN_PASSWORD)');
   }
 }

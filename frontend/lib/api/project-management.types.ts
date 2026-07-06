@@ -176,6 +176,7 @@ export interface Project {
   responsiblePersonName?: string | null;
   client: string | null;
   responsibleDepartment: ProjectResponsibleDepartment;
+  departmentId?: string | null;
   designProperties: ProjectDesignProperties;
   designStage: ProjectDesignStage;
   description: string | null;

@@ -24,6 +24,10 @@ import {
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers } from '@/hooks/use-auth-capabilities';
+import {
+  useCanViewDepartmentsNav,
+  useCanViewDisciplinesCatalogNav,
+} from '@/hooks/use-org-nav-access';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
@@ -182,6 +186,8 @@ export default function MainNavPanel({
   const canViewAuditLogs = useCanViewAuditLogs();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
+  const canViewDepartments = useCanViewDepartmentsNav();
+  const canViewDisciplinesCatalog = useCanViewDisciplinesCatalogNav();
 
   const navItems = buildIconRailItems({
     canViewReviewInbox: !permLoading && canViewReviewInbox,
@@ -191,6 +197,8 @@ export default function MainNavPanel({
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,
     canViewProjects: !permLoading && pm.projects.canView,
+    canViewDepartments: !permLoading && canViewDepartments,
+    canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
   const visibleNavItems = navItems.filter((item) => item.visible);
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);

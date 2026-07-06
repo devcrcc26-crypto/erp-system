@@ -1,44 +1,49 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Button } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import { GitBranch } from 'lucide-react';
+import { Alert, Select } from 'antd';
+import { Package } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
-import DisciplineClosureBadge from '@/components/ui/DisciplineClosureBadge/DisciplineClosureBadge';
-import DisciplineDetailDrawer from '@/components/modules/projects/disciplines/DisciplineDetailDrawer';
+import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useProjectDisciplines, type ProjectDisciplineRow } from '@/lib/query/disciplines';
-import { useDesignPackages } from '@/lib/query/design-packages';
-import { useDeleteTaskDiscipline } from '@/lib/query/schedule';
+import type { DesignPackage } from '@/lib/api/epc.types';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useEngineeringDisciplineOptions } from '@/lib/query/org';
+import { useProject } from '@/lib/query/projects';
+import { useScheduleSubtasks, useTasks } from '@/lib/query/schedule';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import {
+  getScheduleSubtaskDisplayStatus,
+  scheduleSubtaskWorkspaceHref,
+  type ScheduleSubtaskDisplayStatus,
+} from '@/lib/utils/schedule-subtasks';
+import { summarizeSubtaskRoles } from '@/lib/utils/subtask-roles-summary';
+import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 
-function DisciplinePackageCount({
-  projectId,
-  disciplineId,
-}: {
+interface SubtaskTableRow {
+  id: string;
+  name: string;
+  disciplineName: string;
+  disciplineCatalogId: string | null;
+  taskId: string;
+  taskName: string;
+  taskDisciplineId: string;
   projectId: string;
-  disciplineId: string;
-}): React.ReactNode {
-  const query = useDesignPackages(projectId, disciplineId);
-  if (query.isLoading) {
-    return <span style={{ color: tokens.colorTextTertiary }}>…</span>;
-  }
-  return <span>{query.data?.length ?? 0}</span>;
+  projectName: string;
+  status: ScheduleSubtaskDisplayStatus;
+  dueDate: string | null;
+  rolesSummary: string;
+  package: DesignPackage;
 }
 
 export default function DisciplinesPageContent({
@@ -50,15 +55,29 @@ export default function DisciplinesPageContent({
   const permLoading = usePermissionsLoading();
   const { t } = useEpcTranslation();
   const [search, setSearch] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<ProjectDisciplineRow | null>(null);
-  const [deleting, setDeleting] = useState<ProjectDisciplineRow | null>(null);
+  const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
+  const [statusFilter, setStatusFilter] = useState<
+    ScheduleSubtaskDisplayStatus | undefined
+  >();
 
+  const projectQuery = useProject(projectId, Boolean(projectId));
   const disciplinesQuery = useProjectDisciplines(
     projectId,
     !permLoading && lens.canViewEngineering,
   );
-  const deleteDiscipline = useDeleteTaskDiscipline();
+  const subtasksQuery = useScheduleSubtasks(
+    projectId,
+    !permLoading && lens.canViewEngineering,
+  );
+  const tasksQuery = useTasks(
+    projectId,
+    { page: 1, limit: 100 },
+    !permLoading && lens.canViewEngineering,
+  );
+  const disciplineOptionsQuery = useEngineeringDisciplineOptions(
+    true,
+    !permLoading && lens.canViewEngineering,
+  );
 
   const apiUnavailable =
     disciplinesQuery.isError &&
@@ -67,27 +86,117 @@ export default function DisciplinesPageContent({
       disciplinesQuery.error.status === 0 ||
       disciplinesQuery.error.status === 429);
 
-  const filtered = useMemo(() => {
-    const rows = disciplinesQuery.data ?? [];
-    const term = search.trim().toLowerCase();
-    if (!term) {
-      return rows;
-    }
-    return rows.filter(
-      (row) =>
-        row.disciplineName.toLowerCase().includes(term) ||
-        row.taskName.toLowerCase().includes(term),
-    );
-  }, [disciplinesQuery.data, search]);
+  const projectName = projectQuery.data
+    ? formatLocalizedName(projectQuery.data)
+    : 'Project';
 
-  const columns: ColumnsType<ProjectDisciplineRow> = [
+  const taskNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const task of tasksQuery.data?.data ?? []) {
+      map.set(task.id, task.name);
+    }
+    for (const discipline of subtasksQuery.disciplines) {
+      map.set(discipline.taskId, discipline.taskName);
+    }
+    return map;
+  }, [subtasksQuery.disciplines, tasksQuery.data?.data]);
+
+  const taskDueDateById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const task of tasksQuery.data?.data ?? []) {
+      map.set(task.id, task.finishDate);
+    }
+    return map;
+  }, [tasksQuery.data?.data]);
+
+  const disciplineCatalogIdByTaskDisciplineId = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const discipline of subtasksQuery.disciplines) {
+      map.set(discipline.id, discipline.disciplineId);
+    }
+    return map;
+  }, [subtasksQuery.disciplines]);
+
+  const rows = useMemo(() => {
+    const output: SubtaskTableRow[] = [];
+    for (const [taskId, entries] of subtasksQuery.byTaskId) {
+      for (const entry of entries) {
+        output.push({
+          id: entry.package.id,
+          name: entry.package.name,
+          disciplineName: entry.disciplineName,
+          disciplineCatalogId:
+            disciplineCatalogIdByTaskDisciplineId.get(entry.taskDisciplineId) ??
+            null,
+          taskId,
+          taskName: taskNameById.get(taskId) ?? '—',
+          taskDisciplineId: entry.taskDisciplineId,
+          projectId,
+          projectName,
+          status: getScheduleSubtaskDisplayStatus(entry.package),
+          dueDate: taskDueDateById.get(taskId) ?? null,
+          rolesSummary: summarizeSubtaskRoles(entry.package),
+          package: entry.package,
+        });
+      }
+    }
+    return output.sort((left, right) => left.name.localeCompare(right.name));
+  }, [
+    disciplineCatalogIdByTaskDisciplineId,
+    projectId,
+    projectName,
+    subtasksQuery.byTaskId,
+    taskDueDateById,
+    taskNameById,
+  ]);
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (disciplineFilter && row.disciplineCatalogId !== disciplineFilter) {
+        return false;
+      }
+      if (statusFilter && row.status !== statusFilter) {
+        return false;
+      }
+      if (!term) {
+        return true;
+      }
+      return row.name.toLowerCase().includes(term);
+    });
+  }, [disciplineFilter, rows, search, statusFilter]);
+
+  const statusOptions: ScheduleSubtaskDisplayStatus[] = [
+    'OPEN',
+    'IN REVIEW',
+    'APPROVED',
+    'LOCKED',
+    'CLOSED',
+  ];
+
+  const columns: ColumnsType<SubtaskTableRow> = [
     {
-      title: 'Discipline',
-      dataIndex: 'disciplineName',
-      key: 'disciplineName',
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 120,
+      ellipsis: true,
+      render: (id: string) => (
+        <span className="font-mono text-[11px] text-slate-600">{id.slice(0, 8)}</span>
+      ),
+    },
+    {
+      title: 'Subtask name',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
       render: (name: string, record) => (
         <Link
-          href={`/projects/${projectId}/disciplines/${record.id}`}
+          href={scheduleSubtaskWorkspaceHref(
+            record.projectId,
+            record.taskDisciplineId,
+            record.id,
+          )}
           className={`${layout.traceabilityLinkClass} no-underline hover:underline`}
           style={{ color: tokens.colorTeal600 }}
         >
@@ -96,79 +205,77 @@ export default function DisciplinesPageContent({
       ),
     },
     {
-      title: 'Schedule task',
-      dataIndex: 'taskName',
-      key: 'taskName',
+      title: 'Discipline',
+      dataIndex: 'disciplineName',
+      key: 'disciplineName',
       ellipsis: true,
     },
     {
-      title: 'Projected status',
-      key: 'projectedStatus',
-      render: (_value, record) =>
-        record.projectedStatus ? (
-          <ProjectedStatusBadge status={record.projectedStatus} />
-        ) : (
-          '-'
-        ),
-    },
-    {
-      title: 'Closure',
-      key: 'isClosed',
-      width: 100,
+      title: 'Task',
+      key: 'task',
+      ellipsis: true,
       render: (_value, record) => (
-        <DisciplineClosureBadge isClosed={record.isClosed} />
+        <Link
+          href={`/projects/${record.projectId}/schedule/tasks/${record.taskId}`}
+          className="text-[12px] text-slate-700 hover:underline"
+        >
+          {record.taskName}
+        </Link>
       ),
     },
     {
-      title: 'Designer',
-      dataIndex: 'designerName',
-      key: 'designerName',
-      render: (value: string | null) => value ?? '-',
-    },
-    {
-      title: 'Packages',
-      key: 'packages',
-      width: 90,
-      align: 'right',
+      title: 'Project',
+      key: 'project',
+      ellipsis: true,
       render: (_value, record) => (
-        <DisciplinePackageCount projectId={projectId} disciplineId={record.id} />
+        <Link
+          href={`/projects/${record.projectId}`}
+          className="text-[12px] text-slate-700 hover:underline"
+        >
+          {record.projectName}
+        </Link>
       ),
     },
     {
-      title: '',
-      key: 'actions',
-      width: 200,
+      title: 'Status',
+      key: 'status',
+      width: 120,
       render: (_value, record) => (
-        <div className="flex gap-2">
-          <Link href={`/projects/${projectId}/disciplines/${record.id}`}>
-            <Button type="link" className="!px-0">
-              Workspace
-            </Button>
-          </Link>
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => {
-              setEditing(record);
-              setDrawerOpen(true);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            danger
-            className="!px-0"
-            onClick={() => setDeleting(record)}
-          >
-            Delete
-          </Button>
-        </div>
+        <ScheduleSubtaskStatusBadge status={record.status} />
+      ),
+    },
+    {
+      title: 'Due date',
+      key: 'dueDate',
+      width: 110,
+      render: (_value, record) => record.dueDate ?? '—',
+    },
+    {
+      title: 'Roles',
+      dataIndex: 'rolesSummary',
+      key: 'rolesSummary',
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: 'EPC Workspace',
+      key: 'workspace',
+      width: 130,
+      render: (_value, record) => (
+        <Link
+          href={scheduleSubtaskWorkspaceHref(
+            record.projectId,
+            record.taskDisciplineId,
+            record.id,
+          )}
+        >
+          Open
+        </Link>
       ),
     },
   ];
 
-  if (permLoading || disciplinesQuery.isLoading) {
+  if (permLoading || disciplinesQuery.isLoading || subtasksQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -180,104 +287,68 @@ export default function DisciplinesPageContent({
 
   return (
     <ProjectModuleGate projectId={projectId} module="design_packages">
-    <FormLayout
-      title={t('pages.disciplines.title')}
-      description={t('pages.disciplines.description')}
-      extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditing(null);
-            setDrawerOpen(true);
+      <FormLayout
+        title={t('pages.disciplines.title')}
+        description={t('pages.disciplines.description')}
+      >
+        {apiUnavailable && (
+          <Alert
+            type="info"
+            showIcon
+            className="mb-4"
+            title="Subtasks API not connected"
+            description="Subtask rows appear when the backend is available."
+          />
+        )}
+
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <ListSearchInput
+            live
+            placeholder="Search subtask name…"
+            className="w-full max-w-xs"
+            committedValue={search}
+            onCommit={setSearch}
+          />
+          <Select
+            allowClear
+            placeholder="Discipline"
+            className="w-full min-w-[160px] sm:w-44"
+            loading={disciplineOptionsQuery.isLoading}
+            options={disciplineOptionsQuery.options}
+            value={disciplineFilter}
+            onChange={(value: string | undefined) => setDisciplineFilter(value)}
+          />
+          <Select
+            allowClear
+            placeholder="Status"
+            className="w-full min-w-[140px] sm:w-40"
+            options={statusOptions.map((status) => ({
+              value: status,
+              label: status,
+            }))}
+            value={statusFilter}
+            onChange={(value: ScheduleSubtaskDisplayStatus | undefined) =>
+              setStatusFilter(value)
+            }
+          />
+        </div>
+
+        <DataTable<SubtaskTableRow>
+          rowKey="id"
+          columns={columns}
+          dataSource={filtered}
+          loading={subtasksQuery.isSubtasksLoading}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<Package />}
+                title="No subtasks"
+                description="Subtasks assigned to you on this project will appear here."
+              />
+            ),
           }}
-        >
-          {t('pages.disciplines.addDiscipline')}
-        </Button>
-      }
-    >
-      {apiUnavailable && (
-        <Alert
-          type="info"
-          showIcon
-          className="mb-4"
-          title="EPC disciplines API not connected"
-          description="Disciplines are sourced from schedule tasks. Subtask counts appear when the backend is available."
         />
-      )}
-
-      <ListSearchInput
-        live
-        placeholder="Search disciplines or tasks…"
-        className="mb-4 max-w-xs"
-        committedValue={search}
-        onCommit={setSearch}
-      />
-
-      <DataTable<ProjectDisciplineRow>
-        rowKey="id"
-        columns={columns}
-        dataSource={filtered}
-        loading={disciplinesQuery.isLoading}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<GitBranch />}
-              title="No disciplines"
-              description="Add a discipline to begin assigning packages"
-              action={
-                lens.canCreateEngineering
-                  ? {
-                      label: 'Add discipline',
-                      onClick: () => {
-                        setEditing(null);
-                        setDrawerOpen(true);
-                      },
-                    }
-                  : undefined
-              }
-            />
-          ),
-        }}
-      />
-
-      <DisciplineDetailDrawer
-        open={drawerOpen}
-        projectId={projectId}
-        taskId={editing?.taskId}
-        discipline={editing}
-        onClose={() => {
-          setDrawerOpen(false);
-          setEditing(null);
-        }}
-        onSaved={() => void disciplinesQuery.refetch()}
-      />
-
-      <ConfirmDialog
-        open={Boolean(deleting)}
-        title="Delete discipline"
-        description={`Remove discipline "${deleting?.disciplineName}" from task "${deleting?.taskName}"?`}
-        confirmLabel="Delete"
-        danger
-        confirmLoading={deleteDiscipline.isPending}
-        onConfirm={() => {
-          if (!deleting) {
-            return;
-          }
-          void deleteDiscipline
-            .mutateAsync({
-              projectId,
-              taskId: deleting.taskId,
-              disciplineId: deleting.id,
-            })
-            .then(() => {
-              setDeleting(null);
-              void disciplinesQuery.refetch();
-            });
-        }}
-        onCancel={() => setDeleting(null)}
-      />
-    </FormLayout>
+      </FormLayout>
     </ProjectModuleGate>
   );
 }

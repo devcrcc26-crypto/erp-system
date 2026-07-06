@@ -95,8 +95,8 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
       },
       {
         key: 'disciplines',
-        label: 'Disciplines & Packages',
-        labelKey: 'workspace.items.disciplines',
+        label: 'Subtasks',
+        labelKey: 'workspace.items.subtasks',
         pathSuffix: 'disciplines',
         capability: 'schedule',
         breadcrumbGroup: 'Engineering',

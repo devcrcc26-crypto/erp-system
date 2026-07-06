@@ -15,6 +15,8 @@
     "reviewInbox": "审阅收件箱",
     "myComments": "我的意见",
     "myWork": "我的工作",
+    "departments": "部门",
+    "disciplinesCatalog": "专业",
     "menuApplication": "应用",
     "menuProject": "项目"
   },
@@ -32,7 +34,8 @@
       "workload": "工作量",
       "reports": "报表",
       "schedule": "进度与任务",
-      "disciplines": "专业与包",
+      "subtasks": "子任务",
+      "disciplines": "子任务",
       "deliverables": "交付物",
       "submittals": "送审文件",
       "changeRequests": "变更请求",
@@ -56,9 +59,17 @@
   },
   "pages": {
     "disciplines": {
-      "title": "专业与包",
-      "description": "按工作流状态分组的任务专业与设计包。",
+      "title": "子任务",
+      "description": "各专业子任务及工作流状态与角色分配。",
       "addDiscipline": "添加专业"
+    },
+    "departments": {
+      "title": "部门",
+      "description": "部门项目概况、负责人与项目关联。"
+    },
+    "disciplinesCatalog": {
+      "title": "专业",
+      "description": "公司工程专业目录，用于任务与子任务。"
     },
     "statusBoard": {
       "title": "状态看板",
