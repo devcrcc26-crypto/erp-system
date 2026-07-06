@@ -59,6 +59,7 @@ import {
   getEffectiveApprovalChain,
 } from '../../domain/approval-chain.util';
 import { ReviewWorkflowService } from './review-workflow.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 import { MappedReviewSessionAttachment } from '../utils/review-session-attachment.mapper';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -90,6 +91,7 @@ export class DesignPackagesService {
     private readonly epcReviewRepository: EpcReviewRepository,
     private readonly reviewWorkflowService: ReviewWorkflowService,
     private readonly prisma: PrismaService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
   ) {}
 
   /**
@@ -100,10 +102,15 @@ export class DesignPackagesService {
     projectId: string,
     taskDisciplineId: string,
   ): Promise<MappedDesignPackage[]> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const packageScope = await this.taskAccessScopeService.buildPackageListWhere(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
     const rows = await this.designPackageRepository.findMany(
       ctx.companyId,
       taskDisciplineId,
+      packageScope,
     );
     return rows.map(mapDesignPackage);
   }
@@ -117,7 +124,12 @@ export class DesignPackagesService {
     taskDisciplineId: string,
     packageId: string,
   ): Promise<MappedDesignPackage> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    await this.taskAccessScopeService.assertPackageReadable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+      packageId,
+    );
     const row = await this.designPackageRepository.findById(
       ctx.companyId,
       packageId,
@@ -137,7 +149,11 @@ export class DesignPackagesService {
     taskDisciplineId: string,
     dto: CreateDesignPackageDto,
   ): Promise<MappedDesignPackage> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    await this.taskAccessScopeService.assertDisciplineWritable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
 
     const discipline = await this.taskDisciplineScopeRepository.findWithReviewRoles(
       ctx.companyId,
@@ -269,7 +285,17 @@ export class DesignPackagesService {
     packageId: string,
     dto: UpdateDesignPackageDto,
   ): Promise<MappedDesignPackage> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    await this.taskAccessScopeService.assertPackageReadable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+      packageId,
+    );
+    await this.taskAccessScopeService.assertDisciplineWritable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
     const existing = await this.designPackageRepository.findById(
       ctx.companyId,
       packageId,
@@ -387,7 +413,17 @@ export class DesignPackagesService {
     taskDisciplineId: string,
     packageId: string,
   ): Promise<void> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    await this.taskAccessScopeService.assertDisciplineWritable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
+    await this.taskAccessScopeService.assertPackageReadable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+      packageId,
+    );
     const existing = await this.designPackageRepository.findById(
       ctx.companyId,
       packageId,
@@ -1160,13 +1196,10 @@ export class DesignPackagesService {
     projectId: string,
     taskDisciplineId: string,
   ): Promise<void> {
-    const discipline = await this.taskDisciplineScopeRepository.findScoped(
-      ctx.companyId,
-      taskDisciplineId,
+    await this.taskAccessScopeService.assertDisciplineReadable(
+      ctx,
       projectId,
+      taskDisciplineId,
     );
-    if (!discipline) {
-      throw new NotFoundException('Task discipline not found');
-    }
   }
 }

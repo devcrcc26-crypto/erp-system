@@ -259,8 +259,9 @@ export function evaluateDisciplineAssignmentLayer(
   const { userId, action } = input;
 
   if (ENGINEERING_FILE_UPLOAD_ACTIONS.has(action)) {
-    const isPrimary = userId === input.disciplineDesignerUserId;
-    const isSupporting = userId === input.disciplineSupportingDesignerUserId;
+    const chain = resolveEffectiveChain(input);
+    const isPrimary = userId === chain.designerUserId;
+    const isSupporting = userId === chain.supportingDesignerUserId;
     if (isPrimary || isSupporting) {
       return {
         layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
@@ -285,8 +286,9 @@ export function evaluateDisciplineAssignmentLayer(
   }
 
   if (DESIGN_PACKAGE_ITEM_ACTIONS.has(action)) {
-    const isPrimary = userId === input.disciplineDesignerUserId;
-    const isSupporting = userId === input.disciplineSupportingDesignerUserId;
+    const chain = resolveEffectiveChain(input);
+    const isPrimary = userId === chain.designerUserId;
+    const isSupporting = userId === chain.supportingDesignerUserId;
     const match = isPrimary || isSupporting;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
@@ -296,7 +298,8 @@ export function evaluateDisciplineAssignmentLayer(
   }
 
   if (DESIGNER_SUBMIT_ACTIONS.has(action)) {
-    const match = userId === input.disciplineDesignerUserId;
+    const chain = resolveEffectiveChain(input);
+    const match = userId === chain.designerUserId;
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,

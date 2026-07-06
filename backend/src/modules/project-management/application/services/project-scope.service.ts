@@ -1,46 +1,26 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Project } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { PermissionService } from '../../../../shared/permissions/permission.service';
-import { isSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
   canAccessModule,
   PmModuleKey,
 } from '../../domain/project-modules.const';
 import { PmContext } from '../types/pm-context.type';
+import { TaskAccessScopeService } from './task-access-scope.service';
 
 @Injectable()
 export class ProjectScopeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly permissionService: PermissionService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
   ) {}
 
   /**
    * Loads an active project scoped to the caller's company or throws 404.
    */
   async getProjectOrThrow(ctx: PmContext, projectId: string): Promise<Project> {
-    const project = await this.prisma.project.findFirst({
-      where: activeOnly({ id: projectId, companyId: ctx.companyId }),
-    });
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-
-    if (await this.hasSystemAdministratorBypass(ctx)) {
-      return project;
-    }
-
-    const teamMembership = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({ projectId, userId: ctx.userId }),
-      select: { id: true },
-    });
-    if (!teamMembership) {
-      throw new NotFoundException('Project not found');
-    }
-
-    return project;
+    return this.taskAccessScopeService.assertProjectReadable(ctx, projectId);
   }
 
   /**
@@ -51,7 +31,8 @@ export class ProjectScopeService {
     projectId: string,
     module: PmModuleKey,
   ): Promise<void> {
-    if (await this.hasSystemAdministratorBypass(ctx)) {
+    const profile = await this.taskAccessScopeService.resolveProfile(ctx);
+    if (profile.hasFullProjectAccess) {
       return;
     }
 
@@ -68,9 +49,7 @@ export class ProjectScopeService {
     }
 
     if (!canAccessModule(membership.visibleModules, module)) {
-      throw new ForbiddenException(
-        `You do not have access to the ${module} module on this project.`,
-      );
+      throw new NotFoundException('Project not found');
     }
   }
 
@@ -103,13 +82,5 @@ export class ProjectScopeService {
       projectId,
       project: { companyId: ctx.companyId, deletedAt: null },
     };
-  }
-
-  private async hasSystemAdministratorBypass(ctx: PmContext): Promise<boolean> {
-    const roleNames = await this.permissionService.getUserRoleNames(
-      ctx.userId,
-      ctx.companyId,
-    );
-    return isSystemAdministrator(roleNames);
   }
 }

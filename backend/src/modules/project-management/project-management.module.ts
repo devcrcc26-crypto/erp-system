@@ -29,6 +29,7 @@ import { MeetingsService } from './application/services/meetings.service';
 import { PermissionResolverService } from './application/services/permission-resolver.service';
 import { ProjectChangeRequestService } from './application/services/project-change-request.service';
 import { ProjectScopeService } from './application/services/project-scope.service';
+import { TaskAccessScopeService } from './application/services/task-access-scope.service';
 import { ProjectsService } from './application/services/projects.service';
 import { ProjectExportService } from './application/services/project-export.service';
 import { PunchItemsService } from './application/services/punch-items.service';
@@ -129,6 +130,7 @@ const workflowBullProcessors = redisEnabled
     DeliverablesController,
   ],
   providers: [
+    TaskAccessScopeService,
     ProjectsService,
     ProjectExportService,
     ProjectScopeService,

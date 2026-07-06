@@ -48,6 +48,7 @@ import { DisciplineScopeService } from './discipline-scope.service';
 import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 
 const MILESTONE_SORT_FIELDS = new Set([
   'createdAt',
@@ -93,6 +94,7 @@ export class ScheduleService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly disciplineScopeService: DisciplineScopeService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly documentNumberService: DocumentNumberService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
@@ -231,9 +233,10 @@ export class ScheduleService {
     projectId: string,
     query: PaginationQueryDto,
   ): Promise<PaginatedResult<MappedTask>> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
-
-    const where = activeOnly({ projectId });
+    const where = await this.taskAccessScopeService.buildTaskListWhere(
+      ctx,
+      projectId,
+    );
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const orderBy = buildPmOrderBy(
       query.sortBy,
@@ -262,14 +265,11 @@ export class ScheduleService {
     projectId: string,
     taskId: string,
   ): Promise<MappedTask> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
-
-    const task = await this.prisma.task.findFirst({
-      where: activeOnly({ id: taskId, projectId }),
-    });
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
+    const task = await this.taskAccessScopeService.assertTaskReadable(
+      ctx,
+      projectId,
+      taskId,
+    );
 
     return mapTask(task);
   }
@@ -283,6 +283,9 @@ export class ScheduleService {
     dto: CreateTaskDto,
   ): Promise<MappedTask> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    if (!(await this.taskAccessScopeService.canWriteProjectTasks(ctx, projectId))) {
+      throw new NotFoundException('Project not found');
+    }
 
     if (dto.milestoneId) {
       await this.getMilestoneOrThrow(projectId, dto.milestoneId);
@@ -414,7 +417,7 @@ export class ScheduleService {
     taskId: string,
     dto: UpdateTaskDto,
   ): Promise<MappedTask> {
-    await this.getTaskOrThrow(projectId, taskId);
+    await this.assertTaskWritable(ctx, projectId, taskId);
 
     if (dto.milestoneId) {
       await this.getMilestoneOrThrow(projectId, dto.milestoneId);
@@ -607,7 +610,7 @@ export class ScheduleService {
     projectId: string,
     taskId: string,
   ): Promise<void> {
-    await this.getTaskOrThrow(projectId, taskId);
+    await this.assertTaskWritable(ctx, projectId, taskId);
     await this.prisma.task.update({
       where: { id: taskId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
@@ -1086,6 +1089,17 @@ export class ScheduleService {
       throw new NotFoundException('Milestone not found');
     }
     return milestone;
+  }
+
+  private async assertTaskWritable(
+    ctx: PmContext,
+    projectId: string,
+    taskId: string,
+  ): Promise<void> {
+    await this.taskAccessScopeService.assertTaskReadable(ctx, projectId, taskId);
+    if (!(await this.taskAccessScopeService.canWriteProjectTasks(ctx, projectId))) {
+      throw new NotFoundException('Task not found');
+    }
   }
 
   private async getTaskOrThrow(

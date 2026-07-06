@@ -1,35 +1,18 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { disciplineAssigneeOr } from '../../domain/task-access-scope.util';
 import { PmContext } from '../types/pm-context.type';
-
-const BYPASS_ROLE_NAMES = new Set([
-  'System Administrator',
-  'Managing Director',
-  'Project Manager',
-]);
-
-/** Discipline assignee columns used for responsibility scoping. */
-const ASSIGNEE_OR = (userId: string) => [
-  { designerUserId: userId },
-  { ownerUserId: userId },
-  { reviewerUserId: userId },
-  { disciplineLeadUserId: userId },
-  { chiefUserId: userId },
-  { instituteChiefUserId: userId },
-  { supportingDesignerUserId: userId },
-];
+import { TaskAccessScopeService } from './task-access-scope.service';
 
 /**
  * Enforces discipline-level responsibility scoping for reads and navigation.
- * PM / admin roles bypass per product rules.
  */
 @Injectable()
 export class DisciplineScopeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly permissionService: PermissionService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
   ) {}
 
   /**
@@ -39,11 +22,8 @@ export class DisciplineScopeService {
     ctx: PmContext,
     projectId?: string,
   ): Promise<boolean> {
-    const roleNames = await this.permissionService.getUserRoleNames(
-      ctx.userId,
-      ctx.companyId,
-    );
-    if (roleNames.some((name) => BYPASS_ROLE_NAMES.has(name))) {
+    const profile = await this.taskAccessScopeService.resolveProfile(ctx);
+    if (profile.hasFullProjectAccess) {
       return true;
     }
 
@@ -53,6 +33,14 @@ export class DisciplineScopeService {
         select: { responsiblePersonId: true },
       });
       if (project?.responsiblePersonId === ctx.userId) {
+        return true;
+      }
+
+      const onTeam = await this.prisma.projectTeam.findFirst({
+        where: activeOnly({ projectId, userId: ctx.userId }),
+        select: { id: true },
+      });
+      if (onTeam) {
         return true;
       }
     }
@@ -71,7 +59,7 @@ export class DisciplineScopeService {
       where: activeOnly({
         companyId: ctx.companyId,
         task: { projectId, deletedAt: null },
-        OR: ASSIGNEE_OR(ctx.userId),
+        OR: disciplineAssigneeOr(ctx.userId),
       }),
       select: { id: true },
     });
@@ -85,7 +73,7 @@ export class DisciplineScopeService {
     const rows = await this.prisma.taskDiscipline.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
-        OR: ASSIGNEE_OR(ctx.userId),
+        OR: disciplineAssigneeOr(ctx.userId),
       }),
       select: { task: { select: { projectId: true } } },
       distinct: ['taskId'],
@@ -94,7 +82,7 @@ export class DisciplineScopeService {
   }
 
   /**
-   * Throws 403 when user cannot access the discipline (non-bypass).
+   * Throws 404 when user cannot access the discipline.
    */
   async assertDisciplineAccess(
     ctx: PmContext,
@@ -105,19 +93,11 @@ export class DisciplineScopeService {
       return;
     }
 
-    const row = await this.prisma.taskDiscipline.findFirst({
-      where: activeOnly({
-        id: taskDisciplineId,
-        companyId: ctx.companyId,
-        task: { projectId, deletedAt: null },
-        OR: ASSIGNEE_OR(ctx.userId),
-      }),
-      select: { id: true },
-    });
-
-    if (!row) {
-      throw new ForbiddenException('You are not assigned to this task discipline');
-    }
+    await this.taskAccessScopeService.assertDisciplineReadable(
+      ctx,
+      projectId,
+      taskDisciplineId,
+    );
   }
 
   /**
@@ -126,10 +106,10 @@ export class DisciplineScopeService {
   async disciplineWhereForUser(
     ctx: PmContext,
     projectId: string,
-  ): Promise<{ id?: { in: string[] }; OR?: ReturnType<typeof ASSIGNEE_OR> }> {
+  ): Promise<{ OR?: ReturnType<typeof disciplineAssigneeOr> }> {
     if (await this.hasDisciplineScopeBypass(ctx, projectId)) {
       return {};
     }
-    return { OR: ASSIGNEE_OR(ctx.userId) };
+    return this.taskAccessScopeService.buildDisciplineListWhere(ctx, projectId);
   }
 }

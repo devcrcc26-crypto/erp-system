@@ -183,9 +183,10 @@ export class DesignPackageRepository {
   async findMany(
     companyId: string,
     taskDisciplineId: string,
+    extraWhere?: Prisma.DesignPackageWhereInput,
   ): Promise<(DesignPackage & { items: DesignPackageItem[] })[]> {
     return this.prisma.designPackage.findMany({
-      where: activeOnly({ companyId, taskDisciplineId }),
+      where: activeOnly({ companyId, taskDisciplineId, ...extraWhere }),
       orderBy: { createdAt: 'desc' },
       include: { items: { orderBy: { sortOrder: 'asc' } } },
     });

@@ -1,7 +1,7 @@
-import { ForbiddenException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
-import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
+import { TaskAccessScopeService } from '../task-access-scope.service';
 import { PmContext } from '../../types/pm-context.type';
 
 describe('DisciplineScopeService', () => {
@@ -11,21 +11,35 @@ describe('DisciplineScopeService', () => {
   let prisma: {
     taskDiscipline: { findMany: jest.Mock; findFirst: jest.Mock };
     project: { findFirst: jest.Mock };
+    projectTeam: { findFirst: jest.Mock };
   };
-  let permissionService: { getUserRoleNames: jest.Mock };
+  let taskAccessScopeService: {
+    resolveProfile: jest.Mock;
+    assertDisciplineReadable: jest.Mock;
+    buildDisciplineListWhere: jest.Mock;
+  };
   let service: DisciplineScopeService;
 
   beforeEach(() => {
     prisma = {
       taskDiscipline: { findMany: jest.fn(), findFirst: jest.fn() },
       project: { findFirst: jest.fn() },
+      projectTeam: { findFirst: jest.fn().mockResolvedValue(null) },
     };
-    permissionService = {
-      getUserRoleNames: jest.fn().mockResolvedValue(['Document Controller']),
+    taskAccessScopeService = {
+      resolveProfile: jest.fn().mockResolvedValue({
+        hasFullProjectAccess: false,
+        ledDepartmentIds: [],
+        isDepartmentLeader: false,
+      }),
+      assertDisciplineReadable: jest.fn().mockResolvedValue(undefined),
+      buildDisciplineListWhere: jest.fn().mockResolvedValue({
+        OR: [{ designerUserId: ctx.userId }],
+      }),
     };
     service = new DisciplineScopeService(
       prisma as unknown as PrismaService,
-      permissionService as unknown as PermissionService,
+      taskAccessScopeService as unknown as TaskAccessScopeService,
     );
   });
 
@@ -38,31 +52,9 @@ describe('DisciplineScopeService', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           companyId: ctx.companyId,
-          OR: [
-            { designerUserId: ctx.userId },
-            { ownerUserId: ctx.userId },
-            { reviewerUserId: ctx.userId },
-            { disciplineLeadUserId: ctx.userId },
-            { chiefUserId: ctx.userId },
-            { instituteChiefUserId: ctx.userId },
-            { supportingDesignerUserId: ctx.userId },
-          ],
-        }),
-      }),
-    );
-  });
-
-  it('allows access when user is assigned as supporting designer', async () => {
-    prisma.taskDiscipline.findFirst.mockResolvedValue({ id: 'discipline-1' });
-
-    await expect(
-      service.assertDisciplineAccess(ctx, projectId, 'discipline-1'),
-    ).resolves.toBeUndefined();
-
-    expect(prisma.taskDiscipline.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
           OR: expect.arrayContaining([
+            { disciplineLeadUserId: ctx.userId },
+            { designerUserId: ctx.userId },
             { supportingDesignerUserId: ctx.userId },
             { instituteChiefUserId: ctx.userId },
           ]),
@@ -71,11 +63,25 @@ describe('DisciplineScopeService', () => {
     );
   });
 
-  it('denies access when user is not on any assignee column', async () => {
-    prisma.taskDiscipline.findFirst.mockResolvedValue(null);
+  it('delegates discipline access checks to task access scope', async () => {
+    await expect(
+      service.assertDisciplineAccess(ctx, projectId, 'discipline-1'),
+    ).resolves.toBeUndefined();
+
+    expect(taskAccessScopeService.assertDisciplineReadable).toHaveBeenCalledWith(
+      ctx,
+      projectId,
+      'discipline-1',
+    );
+  });
+
+  it('returns 404 when task access scope denies discipline', async () => {
+    taskAccessScopeService.assertDisciplineReadable.mockRejectedValue(
+      new NotFoundException('Task discipline not found'),
+    );
 
     await expect(
       service.assertDisciplineAccess(ctx, projectId, 'discipline-1'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

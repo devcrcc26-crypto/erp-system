@@ -11,6 +11,7 @@ const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
 const CORE_ROLES = [
   'System Administrator',
+  'Project Administrator',
   'Managing Director',
   'Project Manager',
   'Site Engineer',
@@ -404,7 +405,7 @@ function extendedPmModulePermissionFlags(
   }
 
   if (module === 'change_requests') {
-    if (roleName === 'Project Manager' || roleName === 'Managing Director') {
+    if (roleName === 'Project Manager' || roleName === 'Managing Director' || roleName === 'Project Administrator') {
       return fullPermissionFlags();
     }
     if (roleName === 'Site Engineer') {
@@ -417,7 +418,7 @@ function extendedPmModulePermissionFlags(
   }
 
   if (module === 'deliverables') {
-    if (roleName === 'Project Manager') {
+    if (roleName === 'Project Manager' || roleName === 'Project Administrator') {
       return fullPermissionFlags();
     }
     if (roleName === 'Site Engineer' || roleName === 'Designer') {
@@ -430,6 +431,9 @@ function extendedPmModulePermissionFlags(
   }
 
   if (module === 'engineering_documents') {
+    if (roleName === 'Project Administrator') {
+      return fullPermissionFlags();
+    }
     const epcViewRoles = new Set<string>([...EPC_WORKFLOW_ROLES, 'Institute Chief']);
 
     if (roleName === 'Designer') {
@@ -457,7 +461,7 @@ function extendedPmModulePermissionFlags(
   }
 
   if (module === 'design_packages') {
-    if (roleName === 'Project Manager') {
+    if (roleName === 'Project Manager' || roleName === 'Project Administrator') {
       return fullPermissionFlags();
     }
     if (roleName === 'Designer') {
@@ -473,7 +477,7 @@ function extendedPmModulePermissionFlags(
   }
 
   if (module === 'review_sessions') {
-    if (roleName === 'Project Manager') {
+    if (roleName === 'Project Manager' || roleName === 'Project Administrator') {
       if (action === 'view' || action === 'create') {
         return singleActionFlags(action);
       }
@@ -489,6 +493,9 @@ function extendedPmModulePermissionFlags(
     if (roleName === 'Project Manager' && action === 'view') {
       return viewOnlyFlags();
     }
+    if (roleName === 'Project Administrator' && action === 'view') {
+      return viewOnlyFlags();
+    }
     if (REVIEW_TIER_ROLES.has(roleName)) {
       if (action === 'view' || action === 'create' || action === 'edit') {
         return singleActionFlags(action);
@@ -500,11 +507,67 @@ function extendedPmModulePermissionFlags(
   return null;
 }
 
+function projectAdministratorPermissionFlags(
+  roleName: string,
+  module: string,
+  action: string,
+): PermissionFlags | null {
+  if (roleName !== 'Project Administrator') {
+    return null;
+  }
+
+  const blockedModules = new Set([
+    'users',
+    'roles',
+    'departments',
+    'branches',
+    'company_settings',
+    'financial_periods',
+    'audit',
+    'notifications',
+  ]);
+  if (blockedModules.has(module)) {
+    return null;
+  }
+
+  if (action === 'delete') {
+    return null;
+  }
+
+  if (module === 'company' && action === 'view') {
+    return viewOnlyFlags();
+  }
+
+  if (
+    PM_MODULES.includes(module as (typeof PM_MODULES)[number]) ||
+    EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])
+  ) {
+    if (action === 'view' || action === 'create' || action === 'edit' || action === 'approve' || action === 'export') {
+      return singleActionFlags(action);
+    }
+  }
+
+  if (module === 'documents') {
+    return documentsPermissionFlags('Project Manager', action);
+  }
+
+  return null;
+}
+
 function pmPermissionFlags(
   roleName: string,
   module: string,
   action: string,
 ): PermissionFlags | null {
+  const projectAdminFlags = projectAdministratorPermissionFlags(
+    roleName,
+    module,
+    action,
+  );
+  if (projectAdminFlags !== null) {
+    return projectAdminFlags;
+  }
+
   if (module === 'documents') {
     return documentsPermissionFlags(roleName, action);
   }

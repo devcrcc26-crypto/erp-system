@@ -46,6 +46,7 @@ import { normalizeProjectClientInput } from '@/shared/project-client-presets';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { ProjectScopeService } from './project-scope.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 
 import {
   PROJECT_STATUS_TRANSITIONS,
@@ -69,6 +70,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly disciplineScopeService: DisciplineScopeService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
   ) {}
 
@@ -631,42 +633,29 @@ export class ProjectsService {
     ctx: PmContext,
     query: ProjectListQueryDto,
   ): Promise<Prisma.ProjectWhereInput> {
-    const where: Prisma.ProjectWhereInput = activeOnly({
-      companyId: ctx.companyId,
-    });
-
-    if (!(await this.disciplineScopeService.hasDisciplineScopeBypass(ctx))) {
-      const [disciplineProjectIds, teamProjectIds] = await Promise.all([
-        this.disciplineScopeService.getAssignedProjectIds(ctx),
-        this.projectScopeService.getTeamProjectIds(ctx),
-      ]);
-      const projectIds = [
-        ...new Set([...disciplineProjectIds, ...teamProjectIds]),
-      ];
-      where.id = { in: projectIds.length > 0 ? projectIds : ['__none__'] };
-    }
+    const filters: Prisma.ProjectWhereInput = {};
 
     if (query.status) {
-      where.status = query.status;
+      filters.status = query.status;
     }
     if (query.projectType) {
-      where.projectType = query.projectType;
+      filters.projectType = query.projectType;
     }
     if (query.responsiblePersonId) {
-      where.responsiblePersonId = query.responsiblePersonId;
+      filters.responsiblePersonId = query.responsiblePersonId;
     }
     if (query.responsibleDepartment) {
-      where.responsibleDepartment = query.responsibleDepartment;
+      filters.responsibleDepartment = query.responsibleDepartment;
     }
     if (query.designProperties) {
-      where.designProperties = query.designProperties;
+      filters.designProperties = query.designProperties;
     }
     if (query.designStage) {
-      where.designStage = query.designStage;
+      filters.designStage = query.designStage;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
+      filters.OR = [
         { name: { contains: term, mode: 'insensitive' } },
         { nameZh: { contains: term, mode: 'insensitive' } },
         { projectCode: { contains: term, mode: 'insensitive' } },
@@ -674,7 +663,13 @@ export class ProjectsService {
       ];
     }
 
-    return where;
+    return this.taskAccessScopeService.buildProjectListWhere(
+      ctx,
+      activeOnly({
+        companyId: ctx.companyId,
+        ...filters,
+      }),
+    );
   }
 
   private async assertProjectCodeAvailable(
