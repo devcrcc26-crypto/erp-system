@@ -36,6 +36,7 @@ function mockEdv(id: string, status: EdvStatus): EdvWithDiscipline {
         id: 'td',
         taskId: 'task',
         companyId: 'co',
+        disciplineId: 'disc-catalog-1',
         disciplineName: 'Structural',
         projectedStatus: 'IN_PROGRESS',
         designerName: null,

@@ -19,6 +19,7 @@ import {
   CreateCompanySettingDto,
   CreateCostCentreDto,
   CreateDepartmentDto,
+  CreateDisciplineDto,
   CreateDivisionDto,
   CreateFinancialYearDto,
   CreateNumberSeriesDto,
@@ -28,6 +29,7 @@ import {
   UpdateCompanySettingDto,
   UpdateCostCentreDto,
   UpdateDepartmentDto,
+  UpdateDisciplineDto,
   UpdateDivisionDto,
   UpdateFinancialYearDto,
   UpdateNumberSeriesDto,
@@ -290,6 +292,102 @@ export class CompanySetupService {
   async deleteDepartment(ctx: AuditContext, id: string): Promise<void> {
     await this.findOrThrow('department', id, ctx.companyId);
     await this.prisma.department.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    });
+  }
+
+  /**
+   * Lists engineering disciplines for the company catalog.
+   */
+  async listDisciplines(
+    ctx: AuditContext,
+    query: PaginationQueryDto & { activeOnly?: string },
+  ): Promise<PaginatedResult<unknown>> {
+    const where: Prisma.DisciplineWhereInput = activeOnly({
+      companyId: ctx.companyId,
+    });
+    if (query.activeOnly === 'true') {
+      where.isActive = true;
+    }
+
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.discipline.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { name: 'asc' },
+        include: {
+          _count: {
+            select: {
+              taskDisciplines: { where: { deletedAt: null } },
+              users: { where: { deletedAt: null } },
+            },
+          },
+        },
+      }),
+      this.prisma.discipline.count({ where }),
+    ]);
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  async getDiscipline(ctx: AuditContext, id: string): Promise<unknown> {
+    return this.findDisciplineOrThrow(ctx, id);
+  }
+
+  /**
+   * Creates an engineering discipline catalog entry.
+   */
+  async createDiscipline(
+    ctx: AuditContext,
+    dto: CreateDisciplineDto,
+  ): Promise<unknown> {
+    return this.prisma.discipline.create({
+      data: {
+        companyId: ctx.companyId,
+        name: dto.name.trim(),
+        nameZh: dto.nameZh?.trim() || null,
+        isActive: dto.isActive ?? true,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  /**
+   * Updates an engineering discipline. Deactivate via isActive=false.
+   */
+  async updateDiscipline(
+    ctx: AuditContext,
+    id: string,
+    dto: UpdateDisciplineDto,
+  ): Promise<unknown> {
+    await this.findDisciplineOrThrow(ctx, id);
+    return this.prisma.discipline.update({
+      where: { id },
+      data: {
+        name: dto.name?.trim(),
+        nameZh: dto.nameZh?.trim(),
+        isActive: dto.isActive,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  /**
+   * Soft-deletes a discipline only when unused; otherwise rejects.
+   */
+  async deleteDiscipline(ctx: AuditContext, id: string): Promise<void> {
+    await this.findDisciplineOrThrow(ctx, id);
+    const references = await this.getDisciplineReferenceCount(id);
+    if (references > 0) {
+      throw new ConflictException(
+        'Discipline is referenced by tasks or users — deactivate instead.',
+      );
+    }
+    await this.prisma.discipline.update({
       where: { id },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
@@ -724,5 +822,31 @@ export class CompanySetupService {
       where: { id: leaderUserId },
       data: { departmentId, updatedBy: ctx.userId },
     });
+  }
+
+  private async findDisciplineOrThrow(
+    ctx: AuditContext,
+    id: string,
+  ): Promise<{ id: string; name: string }> {
+    const row = await this.prisma.discipline.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: { id: true, name: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Discipline not found');
+    }
+    return row;
+  }
+
+  private async getDisciplineReferenceCount(id: string): Promise<number> {
+    const [taskDisciplines, users] = await Promise.all([
+      this.prisma.taskDiscipline.count({
+        where: activeOnly({ disciplineId: id }),
+      }),
+      this.prisma.user.count({
+        where: activeOnly({ engineeringDisciplineId: id }),
+      }),
+    ]);
+    return taskDisciplines + users;
   }
 }

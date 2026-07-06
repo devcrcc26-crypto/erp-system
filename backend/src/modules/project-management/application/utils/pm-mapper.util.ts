@@ -959,6 +959,7 @@ export interface MappedTaskDiscipline {
   id: string;
   taskId: string;
   companyId: string;
+  disciplineId: string | null;
   disciplineName: string;
   projectedStatus: TaskDiscipline['projectedStatus'];
   designerName: string | null;
@@ -1154,6 +1155,7 @@ export function mapTaskDiscipline(
     id: discipline.id,
     taskId: discipline.taskId,
     companyId: discipline.companyId,
+    disciplineId: discipline.disciplineId,
     disciplineName: discipline.disciplineName,
     projectedStatus: discipline.projectedStatus,
     designerName: discipline.designerName,

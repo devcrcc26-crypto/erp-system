@@ -272,6 +272,7 @@ export interface TaskDiscipline {
   id: string;
   taskId: string;
   companyId: string;
+  disciplineId: string | null;
   disciplineName: string;
   projectedStatus?: TaskDisciplineProjectedStatus;
   designerName: string | null;
@@ -859,7 +860,7 @@ export interface CreateMilestoneRequest {
 export type UpdateMilestoneRequest = Partial<CreateMilestoneRequest>;
 
 export interface TaskDisciplineAssignment {
-  disciplineName: string;
+  disciplineId: string;
   disciplineLeadUserId: string;
 }
 
@@ -905,7 +906,7 @@ export interface UpdateTaskRequest extends Partial<
 }
 
 export interface CreateTaskDisciplineRequest {
-  disciplineName: string;
+  disciplineId: string;
   disciplineLeadUserId: string;
   designerUserId?: string;
   ownerUserId?: string;

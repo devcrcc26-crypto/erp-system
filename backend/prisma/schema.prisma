@@ -136,6 +136,7 @@ model Company {
   branches         Branch[]
   divisions        Division[]
   departments      Department[]
+  disciplines      Discipline[]
   costCentres      CostCentre[]
   positions        Position[]
   financialYears   FinancialYear[]
@@ -283,6 +284,31 @@ model Department {
   @@map("department")
 }
 
+/// Flat engineering discipline catalog (Highway, Structure, etc.) — not org HR department.
+model Discipline {
+  id        String    @id @default(uuid())
+  companyId String    @map("company_id")
+  name      String
+  nameZh    String?   @map("name_zh")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  createdBy String    @map("created_by")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  updatedBy String    @map("updated_by")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  taskDisciplines TaskDiscipline[]
+  users           User[]
+
+  @@unique([companyId, name], map: "uq_engineering_discipline_company_name")
+  @@index([companyId], map: "idx_engineering_discipline_company_id")
+  @@index([companyId, deletedAt], map: "idx_engineering_discipline_company_deleted")
+  @@index([companyId, isActive], map: "idx_engineering_discipline_company_active")
+  @@map("engineering_discipline")
+}
+
 model CostCentre {
   id           String         @id @default(uuid())
   companyId    String         @map("company_id")
@@ -412,8 +438,10 @@ model User {
   id                  String    @id @default(uuid())
   companyId           String    @map("company_id")
   branchId            String?   @map("branch_id")
-  departmentId        String?   @map("department_id")
+  departmentId            String?   @map("department_id")
+  engineeringDisciplineId String?   @map("engineering_discipline_id")
   positionId          String?   @map("position_id")
+  /// @deprecated Use engineeringDisciplineId — retained for migration/audit.
   discipline          UserDiscipline? @map("discipline")
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
@@ -439,6 +467,7 @@ model User {
   company                Company                 @relation(fields: [companyId], references: [id])
   branch                 Branch?                 @relation(fields: [branchId], references: [id])
   department             Department?             @relation(fields: [departmentId], references: [id])
+  engineeringDiscipline  Discipline?             @relation(fields: [engineeringDisciplineId], references: [id])
   position               Position?               @relation(fields: [positionId], references: [id])
   sessions               UserSession[]
   passwordResetTokens    PasswordResetToken[]
@@ -500,6 +529,7 @@ model User {
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
   @@index([branchId], map: "idx_user_branch_id")
   @@index([departmentId], map: "idx_user_department_id")
+  @@index([engineeringDisciplineId], map: "idx_user_engineering_discipline_id")
   @@index([discipline], map: "idx_user_discipline")
   @@map("user")
 }
@@ -1533,6 +1563,8 @@ model TaskDiscipline {
   id                     String                       @id @default(uuid())
   taskId                 String                       @map("task_id")
   companyId              String                       @map("company_id")
+  disciplineId           String?                      @map("discipline_id")
+  /// @deprecated Use disciplineId — retained for migration/audit.
   disciplineName         String                       @map("discipline_name")
   projectedStatus        TaskDisciplineProjectedStatus @default(IN_PROGRESS) @map("projected_status")
   designerName         String?                      @map("designer_name")
@@ -1561,6 +1593,7 @@ model TaskDiscipline {
 
   task                  Task                  @relation(fields: [taskId], references: [id])
   company               Company               @relation(fields: [companyId], references: [id])
+  discipline            Discipline?           @relation(fields: [disciplineId], references: [id])
   designerUser          User?                 @relation("DisciplineDesigner", fields: [designerUserId], references: [id])
   ownerUser             User?                 @relation("DisciplineOwner", fields: [ownerUserId], references: [id])
   reviewerUser          User?                 @relation("DisciplineReviewer", fields: [reviewerUserId], references: [id])
@@ -1580,6 +1613,7 @@ model TaskDiscipline {
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
   @@index([companyId, deletedAt], map: "idx_task_discipline_company_deleted")
+  @@index([disciplineId], map: "idx_task_discipline_discipline_id")
   @@index([designerUserId], map: "idx_task_discipline_designer_user_id")
   @@index([ownerUserId], map: "idx_task_discipline_owner_user_id")
   @@index([reviewerUserId], map: "idx_task_discipline_reviewer_user_id")

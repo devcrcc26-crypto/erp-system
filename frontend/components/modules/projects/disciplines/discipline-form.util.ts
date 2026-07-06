@@ -6,7 +6,7 @@ import type {
 } from '@/lib/api/project-management.types';
 
 export interface DisciplineSimpleFormValues {
-  disciplineName: string;
+  disciplineId: string;
   disciplineLeadUserId: string;
 }
 
@@ -38,7 +38,7 @@ export function toDisciplineSimplePayload(
   values: DisciplineSimpleFormValues,
 ): CreateTaskDisciplineRequest {
   return {
-    disciplineName: values.disciplineName.trim(),
+    disciplineId: values.disciplineId,
     disciplineLeadUserId: values.disciplineLeadUserId,
   };
 }
@@ -72,7 +72,7 @@ export function toDisciplineFormValues(
   discipline: TaskDiscipline,
 ): DisciplineFormValues {
   return {
-    disciplineName: discipline.disciplineName,
+    disciplineId: discipline.disciplineId ?? '',
     disciplineLeadUserId: discipline.disciplineLeadUserId ?? '',
     ownerUserId: discipline.ownerUserId ?? undefined,
     designerUserId: discipline.designerUserId ?? undefined,

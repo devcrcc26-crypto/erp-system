@@ -18,6 +18,7 @@ export interface ProvisionInvitedUserInput {
   departmentId?: string;
   positionId?: string;
   discipline?: UserDiscipline;
+  engineeringDisciplineId?: string;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;
@@ -79,6 +80,7 @@ export class UserProvisioningService {
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
         discipline: input.discipline ?? null,
+        engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -125,6 +127,7 @@ export class UserProvisioningService {
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
         discipline: input.discipline ?? null,
+        engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -169,6 +172,7 @@ export class UserProvisioningService {
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
         discipline: input.discipline ?? null,
+        engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,
@@ -250,6 +254,7 @@ export class UserProvisioningService {
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
         discipline: input.discipline ?? null,
+        engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
         preferredTimezone: input.preferredTimezone ?? null,
         preferredDateFormat: input.preferredDateFormat ?? null,

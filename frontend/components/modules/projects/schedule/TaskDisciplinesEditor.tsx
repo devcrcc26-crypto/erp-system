@@ -5,19 +5,13 @@ import { Button, Modal, Select } from 'antd';
 import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { USER_DISCIPLINE_DEFINITIONS } from '@/lib/constants/user-discipline';
+import { useEngineeringDisciplineOptions } from '@/lib/query/org';
 import { useProjectTeam } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 
-const DISCIPLINE_NAME_OPTIONS = USER_DISCIPLINE_DEFINITIONS.map(
-  (definition) => ({
-    value: definition.label,
-    label: definition.label,
-  }),
-);
-
 export interface TaskDisciplineDraft {
   key: string;
+  disciplineId: string;
   disciplineName: string;
   disciplineLeadUserId: string;
   isExisting?: boolean;
@@ -25,7 +19,7 @@ export interface TaskDisciplineDraft {
 }
 
 interface AddDisciplineFormState {
-  disciplineName?: string;
+  disciplineId?: string;
   disciplineLeadUserId?: string;
 }
 
@@ -41,6 +35,17 @@ export default function TaskDisciplinesEditor({
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState<AddDisciplineFormState>({});
   const teamQuery = useProjectTeam(projectId);
+  const { options, nameById, isLoading } = useEngineeringDisciplineOptions(true);
+
+  const assignedDisciplineIds = useMemo(
+    () => new Set(disciplines.map((entry) => entry.disciplineId)),
+    [disciplines],
+  );
+
+  const availableOptions = useMemo(
+    () => options.filter((option) => !assignedDisciplineIds.has(option.value)),
+    [assignedDisciplineIds, options],
+  );
 
   const leaderNameById = useMemo(
     () =>
@@ -53,7 +58,12 @@ export default function TaskDisciplinesEditor({
   );
 
   function handleAdd(): void {
-    if (!draft.disciplineName || !draft.disciplineLeadUserId) {
+    if (!draft.disciplineId || !draft.disciplineLeadUserId) {
+      return;
+    }
+
+    const disciplineName = nameById.get(draft.disciplineId);
+    if (!disciplineName) {
       return;
     }
 
@@ -61,7 +71,8 @@ export default function TaskDisciplinesEditor({
       ...disciplines,
       {
         key: `new-${Date.now()}`,
-        disciplineName: draft.disciplineName,
+        disciplineId: draft.disciplineId,
+        disciplineName,
         disciplineLeadUserId: draft.disciplineLeadUserId,
       },
     ]);
@@ -83,6 +94,7 @@ export default function TaskDisciplinesEditor({
           className="!px-0"
           icon={<PlusOutlined />}
           onClick={() => setAddOpen(true)}
+          disabled={availableOptions.length === 0 && disciplines.length > 0}
         >
           Add
         </Button>
@@ -150,7 +162,7 @@ export default function TaskDisciplinesEditor({
         }}
         onOk={handleAdd}
         okButtonProps={{
-          disabled: !draft.disciplineName || !draft.disciplineLeadUserId,
+          disabled: !draft.disciplineId || !draft.disciplineLeadUserId,
         }}
         destroyOnHidden
         width={480}
@@ -158,16 +170,18 @@ export default function TaskDisciplinesEditor({
         <div className="space-y-4 py-2">
           <div>
             <label className="mb-1 block text-[13px] font-medium">
-              Discipline name
+              Discipline
             </label>
             <Select
               showSearch
               className="w-full"
+              loading={isLoading}
               placeholder="Select discipline"
-              options={DISCIPLINE_NAME_OPTIONS}
-              value={draft.disciplineName}
+              options={availableOptions}
+              optionFilterProp="label"
+              value={draft.disciplineId}
               onChange={(value: string) =>
-                setDraft((current) => ({ ...current, disciplineName: value }))
+                setDraft((current) => ({ ...current, disciplineId: value }))
               }
             />
           </div>

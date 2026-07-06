@@ -2,31 +2,27 @@
 
 import { Form, Select } from 'antd';
 import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
-import { USER_DISCIPLINE_DEFINITIONS } from '@/lib/constants/user-discipline';
-
-const DISCIPLINE_NAME_OPTIONS = USER_DISCIPLINE_DEFINITIONS.map(
-  (definition) => ({
-    value: definition.label,
-    label: definition.label,
-  }),
-);
+import { useEngineeringDisciplineOptions } from '@/lib/query/org';
 
 export default function DisciplineSimpleFormFields({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
+  const { options, isLoading } = useEngineeringDisciplineOptions(true);
+
   return (
     <>
       <Form.Item
-        label="Discipline name"
-        name="disciplineName"
-        rules={[{ required: true, message: 'Discipline name is required' }]}
+        label="Discipline"
+        name="disciplineId"
+        rules={[{ required: true, message: 'Discipline is required' }]}
       >
         <Select
           showSearch
+          loading={isLoading}
           placeholder="Select discipline"
-          options={DISCIPLINE_NAME_OPTIONS}
+          options={options}
           optionFilterProp="label"
         />
       </Form.Item>

@@ -345,6 +345,10 @@ export class ScheduleService {
 
       if (dto.disciplines?.length) {
         for (const disciplineDto of dto.disciplines) {
+          const catalog = await this.resolveEngineeringDiscipline(
+            ctx,
+            disciplineDto.disciplineId,
+          );
           const disciplinaryLeader = await this.resolveUserDisplayName(
             ctx,
             disciplineDto.disciplineLeadUserId,
@@ -353,7 +357,8 @@ export class ScheduleService {
             data: {
               taskId: created.id,
               companyId: ctx.companyId,
-              disciplineName: disciplineDto.disciplineName,
+              disciplineId: catalog.id,
+              disciplineName: catalog.name,
               disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
               disciplinaryLeader,
               createdBy: ctx.userId,
@@ -483,6 +488,10 @@ export class ScheduleService {
 
       if (dto.disciplinesToAdd?.length) {
         for (const disciplineDto of dto.disciplinesToAdd) {
+          const catalog = await this.resolveEngineeringDiscipline(
+            ctx,
+            disciplineDto.disciplineId,
+          );
           const disciplinaryLeader = await this.resolveUserDisplayName(
             ctx,
             disciplineDto.disciplineLeadUserId,
@@ -491,7 +500,8 @@ export class ScheduleService {
             data: {
               taskId,
               companyId: ctx.companyId,
-              disciplineName: disciplineDto.disciplineName,
+              disciplineId: catalog.id,
+              disciplineName: catalog.name,
               disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
               disciplinaryLeader,
               createdBy: ctx.userId,
@@ -850,12 +860,14 @@ export class ScheduleService {
     ]);
 
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
+    const catalog = await this.resolveEngineeringDiscipline(ctx, dto.disciplineId);
 
     const discipline = await this.prisma.taskDiscipline.create({
       data: {
         taskId,
         companyId: ctx.companyId,
-        disciplineName: dto.disciplineName,
+        disciplineId: catalog.id,
+        disciplineName: catalog.name,
         designerName: roleNames.designerName,
         reviewerName: roleNames.reviewerName,
         disciplinaryLeader: roleNames.disciplinaryLeader,
@@ -910,10 +922,19 @@ export class ScheduleService {
 
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
 
+    const catalog = dto.disciplineId
+      ? await this.resolveEngineeringDiscipline(ctx, dto.disciplineId)
+      : null;
+
     const discipline = await this.prisma.taskDiscipline.update({
       where: { id: disciplineId },
       data: {
-        disciplineName: dto.disciplineName,
+        ...(catalog
+          ? { disciplineId: catalog.id, disciplineName: catalog.name }
+          : {}),
+        ...(dto.disciplineName && !catalog
+          ? { disciplineName: dto.disciplineName }
+          : {}),
         designerName: roleNames.designerName,
         reviewerName: roleNames.reviewerName,
         disciplinaryLeader: roleNames.disciplinaryLeader,
@@ -1192,5 +1213,28 @@ export class ScheduleService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+  }
+
+  /**
+   * Resolves an active engineering discipline catalog row for assignment.
+   */
+  private async resolveEngineeringDiscipline(
+    ctx: PmContext,
+    disciplineId: string,
+  ): Promise<{ id: string; name: string }> {
+    const row = await this.prisma.discipline.findFirst({
+      where: activeOnly({
+        id: disciplineId,
+        companyId: ctx.companyId,
+        isActive: true,
+      }),
+      select: { id: true, name: true },
+    });
+    if (!row) {
+      throw new BadRequestException(
+        'Engineering discipline not found or inactive',
+      );
+    }
+    return row;
   }
 }

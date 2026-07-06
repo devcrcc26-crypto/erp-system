@@ -287,3 +287,21 @@ export class CreateNumberSeriesDto {
 }
 
 export class UpdateNumberSeriesDto extends PartialType(CreateNumberSeriesDto) {}
+
+export class CreateDisciplineDto {
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  nameZh?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateDisciplineDto extends PartialType(CreateDisciplineDto) {}

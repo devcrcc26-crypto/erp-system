@@ -312,6 +312,7 @@ export default function TaskFormDrawer({
       .filter((discipline) => !removedDisciplineIds.includes(discipline.id))
       .map((discipline) => ({
         key: discipline.id,
+        disciplineId: discipline.disciplineId ?? '',
         disciplineName: discipline.disciplineName,
         disciplineLeadUserId: discipline.disciplineLeadUserId ?? '',
         isExisting: true,
@@ -354,7 +355,7 @@ export default function TaskFormDrawer({
     const newDisciplines = disciplineDrafts
       .filter((entry) => !entry.isExisting)
       .map((entry) => ({
-        disciplineName: entry.disciplineName,
+        disciplineId: entry.disciplineId,
         disciplineLeadUserId: entry.disciplineLeadUserId,
       }));
 

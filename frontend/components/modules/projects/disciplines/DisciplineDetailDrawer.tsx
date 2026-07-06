@@ -92,7 +92,7 @@ export default function DisciplineDetailDrawer({
         if (visible) {
           if (discipline) {
             form.setFieldsValue({
-              disciplineName: discipline.disciplineName,
+              disciplineId: discipline.disciplineId ?? undefined,
               disciplineLeadUserId: discipline.disciplineLeadUserId ?? undefined,
             });
           } else {

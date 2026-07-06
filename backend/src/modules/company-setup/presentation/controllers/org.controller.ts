@@ -19,11 +19,13 @@ import {
   CreateBranchDto,
   CreateCostCentreDto,
   CreateDepartmentDto,
+  CreateDisciplineDto,
   CreateDivisionDto,
   CreatePositionDto,
   UpdateBranchDto,
   UpdateCostCentreDto,
   UpdateDepartmentDto,
+  UpdateDisciplineDto,
   UpdateDivisionDto,
   UpdatePositionDto,
 } from '../../application/dtos/company.dtos';
@@ -162,6 +164,54 @@ export class OrgController {
   ): Promise<{ message: string }> {
     await this.companySetupService.deleteDepartment(this.ctx(user), id);
     return { message: 'Department deleted' };
+  }
+
+  @Get('engineering-disciplines')
+  @RequirePermission('departments', 'view')
+  @ApiOperation({ summary: 'List engineering disciplines' })
+  listDisciplines(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PaginationQueryDto & { activeOnly?: string },
+  ): Promise<unknown> {
+    return this.companySetupService.listDisciplines(this.ctx(user), query);
+  }
+
+  @Get('engineering-disciplines/:id')
+  @RequirePermission('departments', 'view')
+  getDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.companySetupService.getDiscipline(this.ctx(user), id);
+  }
+
+  @Post('engineering-disciplines')
+  @RequirePermission('departments', 'create')
+  createDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateDisciplineDto,
+  ): Promise<unknown> {
+    return this.companySetupService.createDiscipline(this.ctx(user), dto);
+  }
+
+  @Patch('engineering-disciplines/:id')
+  @RequirePermission('departments', 'edit')
+  updateDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateDisciplineDto,
+  ): Promise<unknown> {
+    return this.companySetupService.updateDiscipline(this.ctx(user), id, dto);
+  }
+
+  @Delete('engineering-disciplines/:id')
+  @RequirePermission('departments', 'delete')
+  async deleteDiscipline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.companySetupService.deleteDiscipline(this.ctx(user), id);
+    return { message: 'Discipline deleted' };
   }
 
   @Get('cost-centres')

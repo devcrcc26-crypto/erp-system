@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Checkbox, Spin } from 'antd';
+import { Alert, Button, Checkbox, Spin, Tabs } from 'antd';
 import { SafetyCertificateOutlined } from '@ant-design/icons';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { Settings } from 'lucide-react';
@@ -21,6 +21,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
+import SettingsDepartmentsPanel from '@/components/modules/settings/SettingsDepartmentsPanel';
+import SettingsDisciplinesPanel from '@/components/modules/settings/SettingsDisciplinesPanel';
 
 const ACTIONS = [
   'view',
@@ -279,6 +281,7 @@ export default function SettingsPageContent(): React.ReactNode {
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('roles');
 
   const rolesQuery = useRoles({ page: 1, limit: 100 });
   const permissionsQuery = usePermissions(Boolean(selectedRoleId));
@@ -400,121 +403,143 @@ export default function SettingsPageContent(): React.ReactNode {
         grantedCount={grantedCount}
       />
 
-      <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
-        <div className="lg:col-span-4">
-          <FormLayout
-            title={t('settings.rolesTitle')}
-            description={t('settings.rolesDescription')}
-          >
-            <RoleList
-              roles={roles}
-              selectedRoleId={selectedRoleId}
-              onSelect={handleSelectRole}
-            />
-          </FormLayout>
-        </div>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'roles',
+            label: t('settings.rolesPermissions'),
+            children: (
+              <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+                <div className="lg:col-span-4">
+                  <FormLayout
+                    title={t('settings.rolesTitle')}
+                    description={t('settings.rolesDescription')}
+                  >
+                    <RoleList
+                      roles={roles}
+                      selectedRoleId={selectedRoleId}
+                      onSelect={handleSelectRole}
+                    />
+                  </FormLayout>
+                </div>
 
-        <div className="lg:col-span-8">
-          <FormLayout
-            title={
-              selectedRole
-                ? t('settings.permissionsForRole', { name: selectedRole.name })
-                : t('settings.permissionsTitle')
-            }
-            description={
-              selectedRole
-                ? t('settings.permissionsDescription')
-                : t('settings.permissionsSelectRole')
-            }
-            extra={
-              selectedRole && rolesEditable ? (
-                <Button
-                  type="primary"
-                  onClick={() => void handleSave()}
-                  loading={updatePermissions.isPending || roleQuery.isLoading}
-                >
-                  {t('settings.savePermissions')}
-                </Button>
-              ) : undefined
-            }
-          >
-            {!selectedRole ? (
-              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
-                <p className="text-sm font-medium text-slate-700">
-                  {t('settings.permissionsEmptyTitle')}
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {t('settings.permissionsEmptyDescription')}
-                </p>
+                <div className="lg:col-span-8">
+                  <FormLayout
+                    title={
+                      selectedRole
+                        ? t('settings.permissionsForRole', { name: selectedRole.name })
+                        : t('settings.permissionsTitle')
+                    }
+                    description={
+                      selectedRole
+                        ? t('settings.permissionsDescription')
+                        : t('settings.permissionsSelectRole')
+                    }
+                    extra={
+                      selectedRole && rolesEditable ? (
+                        <Button
+                          type="primary"
+                          onClick={() => void handleSave()}
+                          loading={updatePermissions.isPending || roleQuery.isLoading}
+                        >
+                          {t('settings.savePermissions')}
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    {!selectedRole ? (
+                      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-12 text-center">
+                        <p className="text-sm font-medium text-slate-700">
+                          {t('settings.permissionsEmptyTitle')}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {t('settings.permissionsEmptyDescription')}
+                        </p>
+                      </div>
+                    ) : roleQuery.isLoading || permissionsQuery.isLoading ? (
+                      <div className="flex justify-center py-12">
+                        <Spin />
+                      </div>
+                    ) : (
+                      <DataTable<{ module: string }>
+                        rowKey="module"
+                        dataSource={modules.map((module) => ({ module }))}
+                        pagination={false}
+                        scroll={{ x: 'max-content' }}
+                        columns={[
+                          {
+                            title: t('common.module'),
+                            dataIndex: 'module',
+                            key: 'module',
+                            fixed: 'left',
+                            width: 180,
+                            render: (module: string) => (
+                              <span className="font-medium text-slate-800">
+                                {formatModuleLabel(module)}
+                              </span>
+                            ),
+                          },
+                          ...ACTIONS.map((action) => ({
+                            title: t(ACTION_TITLE_KEYS[action]),
+                            key: action,
+                            align: 'center' as const,
+                            width: 88,
+                            render: (_: unknown, record: { module: string }) => {
+                              const permission = permissionFor(record.module, action);
+                              const checked =
+                                matrix[matrixKey(record.module, action)] ?? false;
+
+                              if (!permission) {
+                                return <span className="text-slate-300">-</span>;
+                              }
+
+                              return (
+                                <Checkbox
+                                  checked={checked}
+                                  disabled={!rolesEditable}
+                                  onChange={(event: { target: { checked: boolean } }) =>
+                                    handleToggle(record.module, action, event.target.checked)
+                                  }
+                                />
+                              );
+                            },
+                          })),
+                        ]}
+                      />
+                    )}
+
+                    {!permLoading && !canEditRoles && selectedRole && (
+                      <p className="mt-4 text-sm text-slate-500">
+                        {t('settings.viewOnlyRoles')}
+                      </p>
+                    )}
+
+                    {saveError && (
+                      <Alert type="error" showIcon title={saveError} className="!mt-4" />
+                    )}
+
+                    {saveSuccess && (
+                      <Alert type="success" showIcon title={saveSuccess} className="!mt-4" />
+                    )}
+                  </FormLayout>
+                </div>
               </div>
-            ) : roleQuery.isLoading || permissionsQuery.isLoading ? (
-              <div className="flex justify-center py-12">
-                <Spin />
+            ),
+          },
+          {
+            key: 'organization',
+            label: 'Organization',
+            children: (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <SettingsDepartmentsPanel />
+                <SettingsDisciplinesPanel />
               </div>
-            ) : (
-              <DataTable<{ module: string }>
-                rowKey="module"
-                dataSource={modules.map((module) => ({ module }))}
-                pagination={false}
-                scroll={{ x: 'max-content' }}
-                columns={[
-                  {
-                    title: t('common.module'),
-                    dataIndex: 'module',
-                    key: 'module',
-                    fixed: 'left',
-                    width: 180,
-                    render: (module: string) => (
-                      <span className="font-medium text-slate-800">
-                        {formatModuleLabel(module)}
-                      </span>
-                    ),
-                  },
-                  ...ACTIONS.map((action) => ({
-                    title: t(ACTION_TITLE_KEYS[action]),
-                    key: action,
-                    align: 'center' as const,
-                    width: 88,
-                    render: (_: unknown, record: { module: string }) => {
-                      const permission = permissionFor(record.module, action);
-                      const checked =
-                        matrix[matrixKey(record.module, action)] ?? false;
-
-                      if (!permission) {
-                        return <span className="text-slate-300">-</span>;
-                      }
-
-                      return (
-                        <Checkbox
-                          checked={checked}
-                          disabled={!rolesEditable}
-                          onChange={(event: { target: { checked: boolean } }) =>
-                            handleToggle(record.module, action, event.target.checked)
-                          }
-                        />
-                      );
-                    },
-                  })),
-                ]}
-              />
-            )}
-
-            {!permLoading && !canEditRoles && selectedRole && (
-              <p className="mt-4 text-sm text-slate-500">
-                {t('settings.viewOnlyRoles')}
-              </p>
-            )}
-
-            {saveError && (
-              <Alert type="error" showIcon title={saveError} className="!mt-4" />
-            )}
-
-            {saveSuccess && (
-              <Alert type="success" showIcon title={saveSuccess} className="!mt-4" />
-            )}
-          </FormLayout>
-        </div>
-      </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -71,10 +71,15 @@ export class CreateUserDto {
   @IsEntityUuid()
   positionId?: string;
 
-  @ApiPropertyOptional({ enum: UserDiscipline })
+  @ApiPropertyOptional({ enum: UserDiscipline, deprecated: true })
   @IsOptional()
   @IsEnum(UserDiscipline)
   discipline?: UserDiscipline;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  engineeringDisciplineId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -98,7 +103,7 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto extends PartialType(
-  OmitType(CreateUserDto, ['discipline'] as const),
+  OmitType(CreateUserDto, ['discipline', 'engineeringDisciplineId'] as const),
 ) {
   @ApiPropertyOptional()
   @IsOptional()
@@ -106,11 +111,17 @@ export class UpdateUserDto extends PartialType(
   @MinLength(8)
   password?: string;
 
-  @ApiPropertyOptional({ nullable: true, enum: UserDiscipline })
+  @ApiPropertyOptional({ nullable: true, enum: UserDiscipline, deprecated: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsEnum(UserDiscipline)
   discipline?: UserDiscipline | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  engineeringDisciplineId?: string | null;
 }
 
 export class CreateRoleDto {

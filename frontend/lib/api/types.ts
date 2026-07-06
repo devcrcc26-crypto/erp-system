@@ -146,6 +146,7 @@ export interface User {
   departmentId: string | null;
   positionId: string | null;
   discipline: UserDiscipline | null;
+  engineeringDisciplineId: string | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
@@ -191,6 +192,7 @@ export interface CreateUserRequest {
   departmentId?: string;
   positionId?: string;
   discipline?: UserDiscipline;
+  engineeringDisciplineId?: string;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;
@@ -206,6 +208,7 @@ export interface UpdateUserRequest {
   departmentId?: string;
   positionId?: string;
   discipline?: UserDiscipline | null;
+  engineeringDisciplineId?: string | null;
   preferredLanguage?: string;
   preferredTimezone?: string;
   preferredDateFormat?: string;

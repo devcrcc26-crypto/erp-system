@@ -40,8 +40,8 @@ import {
   useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { CreateUserRequest, Role, User, UserDiscipline } from '@/lib/api/types';
-import { USER_DISCIPLINE_OPTIONS, formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
+import type { CreateUserRequest, Role, User } from '@/lib/api/types';
+import { useEngineeringDisciplineOptions } from '@/lib/query/org';
 import { formatUserName } from '@/lib/utils/user-display';
 import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
 import {
@@ -56,7 +56,7 @@ interface InviteFormValues {
   chineseName?: string;
   email?: string;
   roleId?: string;
-  discipline?: UserDiscipline;
+  engineeringDisciplineId?: string;
 }
 
 interface EditFormValues {
@@ -65,7 +65,7 @@ interface EditFormValues {
   chineseName?: string;
   phone?: string;
   roleId?: string;
-  discipline?: UserDiscipline;
+  engineeringDisciplineId?: string;
   isActive: boolean;
 }
 
@@ -173,6 +173,8 @@ function InviteEmployeeModal({
   const hasEmail = Boolean(emailValue?.trim());
   const createUser = useCreateUser();
   const assignRole = useAssignRole();
+  const { options: disciplineOptions, isLoading: disciplinesLoading } =
+    useEngineeringDisciplineOptions(true, open);
 
   const isSubmitting = createUser.isPending || assignRole.isPending;
 
@@ -189,7 +191,7 @@ function InviteEmployeeModal({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       chineseName: values.chineseName?.trim() || undefined,
-      discipline: values.discipline,
+      engineeringDisciplineId: values.engineeringDisciplineId,
       isActive: true,
     };
     if (invitedAddress) {
@@ -289,13 +291,15 @@ function InviteEmployeeModal({
         </Form.Item>
         <Form.Item
           label={t('common.discipline')}
-          name="discipline"
+          name="engineeringDisciplineId"
           extra={t('users.disciplineOptionalHint')}
         >
           <Select
             allowClear
+            loading={disciplinesLoading}
             placeholder={t('common.selectDiscipline')}
-            options={USER_DISCIPLINE_OPTIONS}
+            options={disciplineOptions}
+            optionFilterProp="label"
           />
         </Form.Item>
         {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
@@ -323,6 +327,8 @@ function EditEmployeeModal({
   const updateUser = useUpdateUser();
   const assignRole = useAssignRole();
   const revokeRole = useRevokeRole();
+  const { options: disciplineOptions, isLoading: disciplinesLoading } =
+    useEngineeringDisciplineOptions(true, open);
   const [error, setError] = useState<string | null>(null);
 
   const currentRoleId =
@@ -339,7 +345,7 @@ function EditEmployeeModal({
       lastName: detail.lastName,
       chineseName: detail.chineseName ?? '',
       phone: detail.phone ?? '',
-      discipline: detail.discipline ?? undefined,
+      engineeringDisciplineId: detail.engineeringDisciplineId ?? undefined,
       isActive: detail.isActive,
       roleId: currentRoleId || undefined,
     });
@@ -363,7 +369,7 @@ function EditEmployeeModal({
           lastName: values.lastName,
           chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
-          discipline: values.discipline ?? null,
+          engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
         },
       });
@@ -437,13 +443,15 @@ function EditEmployeeModal({
         </Form.Item>
         <Form.Item
           label={t('common.discipline')}
-          name="discipline"
+          name="engineeringDisciplineId"
           extra={t('users.disciplineOptionalHint')}
         >
           <Select
             allowClear
+            loading={disciplinesLoading}
             placeholder={t('common.selectDiscipline')}
-            options={USER_DISCIPLINE_OPTIONS}
+            options={disciplineOptions}
+            optionFilterProp="label"
           />
         </Form.Item>
         <Form.Item
@@ -494,6 +502,7 @@ export default function UsersPageContent(): React.ReactNode {
   );
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
+  const { nameById: disciplineNameById } = useEngineeringDisciplineOptions(true);
 
   const roles = rolesQuery.data?.data ?? [];
   const companyName = authUser?.companyName ?? 'Company';
@@ -797,7 +806,10 @@ export default function UsersPageContent(): React.ReactNode {
               title: t('common.discipline'),
               key: 'discipline',
               ellipsis: { showTitle: true },
-              render: (_, record) => formatUserDisciplineLabel(record.discipline),
+              render: (_, record) =>
+                record.engineeringDisciplineId
+                  ? (disciplineNameById.get(record.engineeringDisciplineId) ?? '-')
+                  : '-',
             },
             {
               title: t('common.roles'),

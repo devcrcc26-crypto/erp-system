@@ -373,8 +373,8 @@ export class UpdateMilestoneDto extends PartialType(CreateMilestoneDto) {}
 
 export class TaskDisciplineAssignmentDto {
   @ApiProperty()
-  @IsString()
-  disciplineName!: string;
+  @IsEntityUuid()
+  disciplineId!: string;
 
   @ApiProperty()
   @IsEntityUuid()
@@ -558,8 +558,16 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
 
 export class CreateTaskDisciplineDto {
   @ApiProperty()
+  @IsEntityUuid()
+  disciplineId!: string;
+
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Deprecated — derived from disciplineId.',
+  })
+  @IsOptional()
   @IsString()
-  disciplineName!: string;
+  disciplineName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
