@@ -63,6 +63,26 @@ export class ScheduleController {
     });
   }
 
+  @Get('export/task-list-summary')
+  @RequirePermission('schedule', 'export')
+  @ApiOperation({
+    summary:
+      'Export project task list as Excel with only the 17 standard task columns',
+  })
+  async exportTaskListSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<StreamableFile> {
+    const buffer = await this.projectExportService.exportTaskListSummary(
+      this.ctx(user),
+      projectId,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="task-list-summary.xlsx"',
+    });
+  }
+
   @Get('milestones')
   @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'List project milestones' })

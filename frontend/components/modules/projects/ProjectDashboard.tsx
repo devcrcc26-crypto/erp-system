@@ -20,7 +20,10 @@ import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import ProjectStatusBoard from '@/components/modules/projects/workspaces/ProjectStatusBoard';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { downloadTaskListExcel } from '@/lib/query/project-exports';
+import {
+  downloadTaskListExcel,
+  downloadTaskListSummaryExcel,
+} from '@/lib/query/project-exports';
 
 const QUICK_LINKS = [
   {
@@ -70,6 +73,7 @@ export default function ProjectDashboard({
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [exportingTasks, setExportingTasks] = useState(false);
+  const [exportingTasksSummary, setExportingTasksSummary] = useState(false);
   const statsQuery = useProjectDashboardStats(projectId);
 
   const statsApiUnavailable =
@@ -146,6 +150,18 @@ export default function ProjectDashboard({
       messageApi.error('Unable to export task list. Please try again.');
     } finally {
       setExportingTasks(false);
+    }
+  }
+
+  async function handleExportTaskListSummary(): Promise<void> {
+    setExportingTasksSummary(true);
+    try {
+      await downloadTaskListSummaryExcel(projectId);
+      messageApi.success('Task list summary export downloaded.');
+    } catch {
+      messageApi.error('Unable to export task list summary. Please try again.');
+    } finally {
+      setExportingTasksSummary(false);
     }
   }
 
@@ -231,13 +247,22 @@ export default function ProjectDashboard({
         <FormLayout
           title="Schedule snapshot"
           extra={
-            <Button
-              icon={<FileExcelOutlined />}
-              loading={exportingTasks}
-              onClick={() => void handleExportTaskList()}
-            >
-              Export task list
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                icon={<FileExcelOutlined />}
+                loading={exportingTasksSummary}
+                onClick={() => void handleExportTaskListSummary()}
+              >
+                Export task list (summary)
+              </Button>
+              <Button
+                icon={<FileExcelOutlined />}
+                loading={exportingTasks}
+                onClick={() => void handleExportTaskList()}
+              >
+                Export task list
+              </Button>
+            </div>
           }
         >
           {scheduleLoading ? (

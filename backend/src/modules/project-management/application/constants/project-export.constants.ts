@@ -83,6 +83,15 @@ export const TASK_LIST_STANDARD_COLUMNS: BilingualColumn[] = [
   { zh: '调度员', en: 'Scheduler', width: 16 },
 ];
 
+/**
+ * The first 17 standard task columns only — Overseas Task Number through
+ * Task Supervising Company Chief Engineer / Department Chief Engineer.
+ * Used by the "task list (summary)" export, which omits disciplines and
+ * the trailing change-request/commercial columns.
+ */
+export const TASK_LIST_SUMMARY_EXPORT_COLUMNS: BilingualColumn[] =
+  TASK_LIST_STANDARD_COLUMNS.slice(0, 17);
+
 export const TASK_LIST_TRAILING_COLUMNS: BilingualColumn[] = [
   { zh: '实际完成时间', en: 'Actual Completion Time', width: 22 },
   { zh: '完成情况', en: 'Whether Completed on Time', width: 24 },

@@ -35,7 +35,8 @@ import {
   useScheduleSubtasks,
   type ScheduleSubtaskEntry,
 } from '@/lib/query/schedule';
-import { formatProjectDate } from '@/lib/utils/project-display';
+import { useProject, useProjectTeam } from '@/lib/query/projects';
+import { formatProjectDate, formatProjectDesignStage } from '@/lib/utils/project-display';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import {
   computeScheduleSubtaskRollup,
@@ -49,6 +50,14 @@ import {
   formatTaskStatus,
   taskStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import {
+  formatArchivingLabel,
+  formatTaskAttributesLabel,
+  formatTaskReviewLevelLabel,
+  formatUrgencyLevelLabel,
+} from '@/lib/constants/task-comment8';
+import { formatCommissionModeLabel } from '@/lib/constants/commission-mode';
+import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 
 const DEPENDENCY_TYPES: Array<{ value: TaskDependencyType; label: string }> = [
   { value: 'FS', label: 'Finish-to-Start (FS)' },
@@ -159,6 +168,23 @@ export default function TasksPanel({
   const deleteTask = useDeleteTask();
   const { byTaskId: subtasksByTaskId, isSubtasksLoading } =
     useScheduleSubtasks(projectId);
+  const projectQuery = useProject(projectId);
+  const teamQuery = useProjectTeam(projectId);
+
+  const teamNameById = useMemo(
+    () =>
+      new Map(
+        (teamQuery.data ?? [])
+          .filter((member) => member.userName)
+          .map((member) => [member.userId, member.userName as string]),
+      ),
+    [teamQuery.data],
+  );
+
+  const projectName = projectQuery.data
+    ? formatLocalizedName(projectQuery.data)
+    : '';
+  const projectNumber = projectQuery.data?.projectCode ?? '';
 
   const tasks = useMemo(
     () =>
@@ -293,6 +319,156 @@ export default function TasksPanel({
             variant={taskStatusVariant(record.task.status)}
           />
         ) : null,
+    },
+    {
+      title: 'Overseas Task Number',
+      key: 'overseasTaskNumber',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task' ? record.task.overseasTaskNumber || '-' : null,
+    },
+    {
+      title: 'Project Name',
+      key: 'projectName',
+      ellipsis: true,
+      render: (_value, record) => (record.rowType === 'task' ? projectName : null),
+    },
+    {
+      title: 'Project Number',
+      key: 'projectNumber',
+      ellipsis: true,
+      render: (_value, record) => (record.rowType === 'task' ? projectNumber : null),
+    },
+    {
+      title: 'Main Work Content',
+      key: 'mainWorkContent',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task' ? record.task.description || '-' : null,
+    },
+    {
+      title: 'Form of Archiving',
+      key: 'formOfArchiving',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatArchivingLabel(record.task.requiresArchiving)
+          : null,
+    },
+    {
+      title: 'Mode of Project Commission',
+      key: 'modeOfProjectCommission',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.commissionMode
+            ? formatCommissionModeLabel(record.task.commissionMode)
+            : '-'
+          : null,
+    },
+    {
+      title: 'Task Attributes',
+      key: 'taskAttributesColumn',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatTaskAttributesLabel(record.task.taskAttributes)
+          : null,
+    },
+    {
+      title: 'On-site Task Receiving Time',
+      key: 'onSiteReceivingTime',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatDisciplineDateTime(record.task.onSiteReceivingTime)
+          : null,
+    },
+    {
+      title: 'Time of Domestic Task Assignment',
+      key: 'assignmentToHqTime',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatDisciplineDateTime(record.task.assignmentToHqTime)
+          : null,
+    },
+    {
+      title: 'Planned Task Completion Time',
+      key: 'plannedTaskCompletionTime',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatProjectDate(record.task.finishDate)
+          : null,
+    },
+    {
+      title: 'Contact Sheet Number',
+      key: 'contactFormNumber',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task' ? record.task.contactFormNumber || '-' : null,
+    },
+    {
+      title: 'Design Stage',
+      key: 'designStageColumn',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.designStage
+            ? formatProjectDesignStage(record.task.designStage)
+            : '-'
+          : null,
+    },
+    {
+      title: 'Urgency Level',
+      key: 'urgencyLevelColumn',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatUrgencyLevelLabel(record.task.urgencyLevel)
+          : null,
+    },
+    {
+      title: 'Whether the Work Plan Has Been Made',
+      key: 'hasCustomSchedule',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.hasCustomSchedule
+            ? 'Yes'
+            : 'No'
+          : null,
+    },
+    {
+      title: 'Language',
+      key: 'languageColumn',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.language === 'CHINESE'
+            ? 'Chinese'
+            : 'English'
+          : null,
+    },
+    {
+      title: 'Task Review Level',
+      key: 'taskReviewLevel',
+      ellipsis: true,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? formatTaskReviewLevelLabel(record.task.approvalLevel)
+          : null,
+    },
+    {
+      title: 'Task Supervision Company Chief Engineer / Department Chief Engineer',
+      key: 'supervisingChief',
+      ellipsis: true,
+      width: 220,
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? (teamNameById.get(record.task.supervisingChiefUserId ?? '') ?? '-')
+          : null,
     },
     {
       title: '',
@@ -491,6 +667,7 @@ export default function TasksPanel({
         columns={columns}
         dataSource={tableRows}
         pagination={false}
+        scroll={{ x: 'max-content' }}
         loading={isSubtasksLoading ? { spinning: true, tip: 'Loading subtasks…' } : false}
         locale={{ emptyText: 'No tasks defined' }}
         onRow={(record) => ({

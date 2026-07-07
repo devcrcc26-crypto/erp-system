@@ -53,3 +53,18 @@ export async function downloadTaskListExcel(projectId: string): Promise<void> {
     'task-list.xlsx',
   );
 }
+
+/**
+ * Downloads the task list Excel export limited to the 17 standard task
+ * columns (Overseas Task Number through Task Supervising Company Chief
+ * Engineer / Department Chief Engineer) — no disciplines or trailing
+ * change-request/commercial columns.
+ */
+export async function downloadTaskListSummaryExcel(
+  projectId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${projectPath(projectId)}/schedule/export/task-list-summary`,
+    'task-list-summary.xlsx',
+  );
+}

@@ -16,6 +16,7 @@ import {
   buildTaskListExportColumns,
   EXPORT_DISCIPLINES,
   PROJECT_LIST_EXPORT_COLUMNS,
+  TASK_LIST_SUMMARY_EXPORT_COLUMNS,
 } from '../constants/project-export.constants';
 import { ProjectExportListQueryDto } from '../dtos/pm.dtos';
 import {
@@ -50,7 +51,11 @@ type ProjectExportRow = Project & {
   department: Pick<Department, 'name' | 'nameZh'> | null;
 };
 
-type TaskExportRow = Task & {
+type TaskStandardExportRow = Task & {
+  project: Pick<Project, 'name' | 'nameZh' | 'projectCode'>;
+};
+
+type TaskExportRow = TaskStandardExportRow & {
   project: Pick<
     Project,
     'name' | 'nameZh' | 'projectCode' | 'contractType'
@@ -180,6 +185,53 @@ export class ProjectExportService {
     );
   }
 
+  /**
+   * Generates a bilingual task list workbook with only the 17 standard
+   * task columns (Overseas Task Number through Task Supervising Company
+   * Chief Engineer / Department Chief Engineer) — no disciplines or
+   * change-request/commercial columns.
+   */
+  async exportTaskListSummary(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<Buffer> {
+    const taskWhere = await this.taskAccessScopeService.buildTaskListWhere(
+      ctx,
+      projectId,
+    );
+
+    const tasks = await this.prisma.task.findMany({
+      where: taskWhere,
+      include: {
+        project: {
+          select: { name: true, nameZh: true, projectCode: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const userIds = new Set<string>();
+    for (const task of tasks) {
+      if (task.supervisingChiefUserId) {
+        userIds.add(task.supervisingChiefUserId);
+      }
+      if (task.assignedPersonUserId) {
+        userIds.add(task.assignedPersonUserId);
+      }
+      if (task.dispatcherUserId) {
+        userIds.add(task.dispatcherUserId);
+      }
+    }
+
+    const userNameMap = await loadUserDisplayNameMap(
+      this.prisma,
+      ctx.companyId,
+      [...userIds],
+    );
+
+    return this.buildTaskListSummaryWorkbook(tasks, userNameMap);
+  }
+
   private async loadProjectExportRow(
     ctx: PmContext,
     projectId: string,
@@ -268,26 +320,29 @@ export class ProjectExportService {
     return workbookToBuffer(workbook);
   }
 
-  private buildTaskExportRow(
-    task: TaskExportRow,
-    changeRequests: Pick<
-      ProjectChangeRequest,
-      'id' | 'sourceEntityId' | 'originEntityId'
-    >[],
+  private buildTaskListSummaryWorkbook(
+    tasks: TaskStandardExportRow[],
+    userNameMap: Map<string, string>,
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('task list (summary)');
+    applyBilingualHeaders(sheet, TASK_LIST_SUMMARY_EXPORT_COLUMNS);
+
+    for (const task of tasks) {
+      sheet.addRow(this.buildTaskStandardRow(task, userNameMap));
+    }
+
+    return workbookToBuffer(workbook);
+  }
+
+  /** The 17 standard task columns shared by the full and summary exports. */
+  private buildTaskStandardRow(
+    task: TaskStandardExportRow,
     userNameMap: Map<string, string>,
   ): Array<string | number> {
-    const disciplineIds = new Set(task.disciplines.map((item) => item.id));
-    const hasLinkedChange = changeRequests.some(
-      (change) =>
-        (change.sourceEntityId != null &&
-          disciplineIds.has(change.sourceEntityId)) ||
-        (change.originEntityId != null &&
-          disciplineIds.has(change.originEntityId)),
-    );
-
     const commissionMode = formatExportCommissionMode(task.commissionMode);
 
-    const row: Array<string | number> = [
+    return [
       task.overseasTaskNumber ?? '',
       formatExportLocalizedName(task.project.name, task.project.nameZh),
       task.project.projectCode,
@@ -305,6 +360,28 @@ export class ProjectExportService {
       formatExportLanguage(task.language),
       formatExportApprovalLevel(task.approvalLevel),
       this.resolveUserName(userNameMap, task.supervisingChiefUserId),
+    ];
+  }
+
+  private buildTaskExportRow(
+    task: TaskExportRow,
+    changeRequests: Pick<
+      ProjectChangeRequest,
+      'id' | 'sourceEntityId' | 'originEntityId'
+    >[],
+    userNameMap: Map<string, string>,
+  ): Array<string | number> {
+    const disciplineIds = new Set(task.disciplines.map((item) => item.id));
+    const hasLinkedChange = changeRequests.some(
+      (change) =>
+        (change.sourceEntityId != null &&
+          disciplineIds.has(change.sourceEntityId)) ||
+        (change.originEntityId != null &&
+          disciplineIds.has(change.originEntityId)),
+    );
+
+    const row = [
+      ...this.buildTaskStandardRow(task, userNameMap),
       this.resolveUserName(userNameMap, task.assignedPersonUserId),
       this.resolveUserName(userNameMap, task.dispatcherUserId),
     ];
