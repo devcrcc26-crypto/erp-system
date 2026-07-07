@@ -26,6 +26,7 @@ export interface UsersExportPdfLabels {
   share: string;
   role: string;
   name: string;
+  chineseName: string;
   email: string;
   phone: string;
   roles: string;
@@ -110,6 +111,33 @@ function computeRoleBreakdown(
   return [...counts.entries()]
     .map(([role, count]) => ({ role, count }))
     .sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
+}
+
+export function buildUsersExportDirectoryRows(
+  users: User[],
+  formatUserStatus: (user: User) => string,
+  formatUserRoles: (user: User) => string,
+  formatUserDiscipline: (discipline: User['discipline']) => string,
+  formatLastLoginValue: (value: string | null) => string,
+): string[][] {
+  return [...users]
+    .sort((a, b) => {
+      const last = a.lastName.localeCompare(b.lastName);
+      if (last !== 0) {
+        return last;
+      }
+      return a.firstName.localeCompare(b.firstName);
+    })
+    .map((user) => [
+      formatUserName(user),
+      user.chineseName?.trim() || '-',
+      user.email?.trim() || '-',
+      user.phone?.trim() || '-',
+      formatUserStatus(user),
+      formatUserRoles(user),
+      formatUserDiscipline(user.discipline),
+      formatLastLoginValue(user.lastLogin),
+    ]);
 }
 
 export function computeUsersExportSummary(users: User[]): UsersExportSummary {
@@ -239,23 +267,13 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
 
   y = ensureSpace(doc, y, 30);
   y = drawSectionTitle(doc, labels.directory, y);
-  const directoryRows = [...users]
-    .sort((a, b) => {
-      const last = a.lastName.localeCompare(b.lastName);
-      if (last !== 0) {
-        return last;
-      }
-      return a.firstName.localeCompare(b.firstName);
-    })
-    .map((user) => [
-      formatUserName(user),
-      user.email?.trim() || '-',
-      user.phone?.trim() || '-',
-      formatUserStatus(user),
-      formatUserRoles(user),
-      formatUserDisciplineLabel(user.discipline),
-      formatLastLogin(user.lastLogin),
-    ]);
+  const directoryRows = buildUsersExportDirectoryRows(
+    users,
+    formatUserStatus,
+    formatUserRoles,
+    (discipline) => formatUserDisciplineLabel(discipline),
+    formatLastLogin,
+  );
 
   autoTable(doc, {
     startY: y,
@@ -267,6 +285,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     head: [
       [
         labels.name,
+        labels.chineseName,
         labels.email,
         labels.phone,
         labels.status,
@@ -275,7 +294,10 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
         labels.lastLogin,
       ],
     ],
-    body: directoryRows.length > 0 ? directoryRows : [['-', '-', '-', '-', '-', '-', '-']],
+    body:
+      directoryRows.length > 0
+        ? directoryRows
+        : [['-', '-', '-', '-', '-', '-', '-', '-']],
   });
 
   const pageCount = doc.getNumberOfPages();

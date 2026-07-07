@@ -123,6 +123,7 @@ function buildUsersExportPdfLabels(
     share: t('pages.systemReports.table.share'),
     role: t('common.role'),
     name: t('common.name'),
+    chineseName: t('common.chineseName'),
     email: t('common.email'),
     phone: t('users.exportTable.phone'),
     roles: t('common.roles'),
