@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Switch } from 'antd';
+import { Alert, Button, Switch } from 'antd';
+import { FileExcelOutlined } from '@ant-design/icons';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useAllTasks, useTaskDependencies } from '@/lib/query/schedule';
+import { downloadTaskListSummaryExcel } from '@/lib/query/project-exports';
 import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -15,6 +18,8 @@ export default function TasksListPageContent({
   projectId: string;
 }): React.ReactNode {
   const [criticalOnly, setCriticalOnly] = useState(false);
+  const [exportingSummary, setExportingSummary] = useState(false);
+  const messageApi = useAppMessage();
 
   const permLoading = usePermissionsLoading();
   const tasksQuery = useAllTasks(projectId, !permLoading);
@@ -29,6 +34,18 @@ export default function TasksListPageContent({
 
   const tasks = tasksQuery.data?.data ?? [];
   const dependencies = dependenciesQuery.data ?? [];
+
+  async function handleExportTaskListSummary(): Promise<void> {
+    setExportingSummary(true);
+    try {
+      await downloadTaskListSummaryExcel(projectId);
+      messageApi.success('Task list summary export downloaded.');
+    } catch {
+      messageApi.error('Unable to export task list summary. Please try again.');
+    } finally {
+      setExportingSummary(false);
+    }
+  }
 
   if (isLoading) {
     return <PageLoadingSkeleton />;
@@ -46,7 +63,15 @@ export default function TasksListPageContent({
           />
         )}
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Button
+            size="small"
+            icon={<FileExcelOutlined />}
+            loading={exportingSummary}
+            onClick={() => void handleExportTaskListSummary()}
+          >
+            Export task list (summary)
+          </Button>
           <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
             <Switch
               size="small"
