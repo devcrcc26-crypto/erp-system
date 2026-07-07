@@ -50,9 +50,9 @@ const TASK_ATTRIBUTES_LABELS: Record<TaskAttributes, string> = {
 };
 
 const URGENCY_LABELS: Record<UrgencyLevel, string> = {
-  NORMAL: '正常',
-  URGENT: '急',
-  VERY_URGENT: '紧急',
+  NORMAL: 'Normal (正常)',
+  URGENT: 'Urgent (急)',
+  VERY_URGENT: 'Very Urgent (紧急)',
 };
 
 const APPROVAL_LABELS: Record<ApprovalLevel, string> = {

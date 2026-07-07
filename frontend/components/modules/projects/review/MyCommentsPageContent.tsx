@@ -152,6 +152,7 @@ export default function MyCommentsPageContent({
       title: '',
       key: 'actions',
       width: 280,
+      fixed: 'right',
       render: (_value, record) => (
         <Space size="small" wrap>
           <Button

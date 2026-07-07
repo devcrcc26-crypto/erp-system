@@ -477,6 +477,7 @@ export default function TasksPanel({
       title: '',
       key: 'actions',
       width: 140,
+      fixed: 'right',
       render: (_value, record) => {
         if (record.rowType === 'subtask') {
           const href = scheduleSubtaskWorkspaceHref(

@@ -36,7 +36,7 @@ BEGIN
       gen_random_uuid(), comp_id, 'SUBTASK', 'SUB-', '', seq_name, 5,
       'NEVER', NOW(), admin_id, NOW(), admin_id
     )
-    ON CONFLICT ON CONSTRAINT uq_number_series_company_doc_type DO NOTHING;
+    ON CONFLICT (company_id, document_type) DO NOTHING;
 
     WITH ordered AS (
       SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC) AS rn

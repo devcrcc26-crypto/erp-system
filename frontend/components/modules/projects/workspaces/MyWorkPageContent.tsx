@@ -119,6 +119,7 @@ export default function MyWorkPageContent({
       title: '',
       key: 'actions',
       width: 100,
+      fixed: 'right',
       render: (_value, record) => (
         <Link href={workItemHref(record)}>
           <Button type="link" className="!px-0">
