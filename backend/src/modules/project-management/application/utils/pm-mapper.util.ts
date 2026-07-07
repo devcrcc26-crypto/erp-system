@@ -982,7 +982,6 @@ export interface MappedTaskDiscipline {
   closedAt: string | null;
   closedBy: string | null;
   actualCompletionTime: string | null;
-  deptReviewTime: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -1180,7 +1179,6 @@ export function mapTaskDiscipline(
     closedAt: toIsoString(discipline.closedAt),
     closedBy: discipline.closedBy,
     actualCompletionTime: toIsoString(discipline.actualCompletionTime),
-    deptReviewTime: toIsoString(discipline.deptReviewTime),
     createdAt: toIsoString(discipline.createdAt)!,
     createdBy: discipline.createdBy,
     updatedAt: toIsoString(discipline.updatedAt)!,

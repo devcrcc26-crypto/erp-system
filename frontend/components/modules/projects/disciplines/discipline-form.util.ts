@@ -23,7 +23,6 @@ export interface DisciplineFormValues
   extends DisciplineSimpleFormValues,
     DisciplineRolesFormValues {
   actualCompletionTime?: Dayjs;
-  deptReviewTime?: Dayjs;
 }
 
 export function formatDisciplineDateTime(value: string | null): string {
@@ -64,7 +63,6 @@ export function toDisciplinePayload(
     ...toDisciplineSimplePayload(values),
     ...toDisciplineRolesPayload(values),
     actualCompletionTime: values.actualCompletionTime?.toISOString(),
-    deptReviewTime: values.deptReviewTime?.toISOString(),
   };
 }
 
@@ -82,9 +80,6 @@ export function toDisciplineFormValues(
     supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
     actualCompletionTime: discipline.actualCompletionTime
       ? dayjs(discipline.actualCompletionTime)
-      : undefined,
-    deptReviewTime: discipline.deptReviewTime
-      ? dayjs(discipline.deptReviewTime)
       : undefined,
   };
 }

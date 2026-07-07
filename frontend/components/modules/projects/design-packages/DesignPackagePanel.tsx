@@ -39,6 +39,7 @@ import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
+import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
@@ -71,6 +72,7 @@ export default function DesignPackagePanel({
   const messageApi = useAppMessage();
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
+  const [editingRoles, setEditingRoles] = useState<DesignPackage | null>(null);
   const [addItemPackageId, setAddItemPackageId] = useState<string | null>(null);
   const [addDepPackageId, setAddDepPackageId] = useState<string | null>(null);
   const [submittingPackageId, setSubmittingPackageId] = useState<string | null>(
@@ -172,7 +174,7 @@ export default function DesignPackagePanel({
     {
       title: '',
       key: 'actions',
-      width: 320,
+      width: 400,
       render: (_value, record) => {
         const submitEligibility = getPackageSubmitEligibility(
           record,
@@ -224,6 +226,14 @@ export default function DesignPackagePanel({
           <Button
             type="link"
             className="!px-0"
+            onClick={() => setEditingRoles(record)}
+            disabled={!lens.canEditEngineering}
+          >
+            Edit roles
+          </Button>
+          <Button
+            type="link"
+            className="!px-0"
             onClick={() => setAddItemPackageId(record.id)}
             disabled={!lens.canEditEngineering}
           >
@@ -262,7 +272,7 @@ export default function DesignPackagePanel({
               setBuilderOpen(true);
             }}
           >
-            New package
+            New subtask
           </Button>
         ) : undefined
       }
@@ -298,7 +308,7 @@ export default function DesignPackagePanel({
           action={
             lens.canCreateEngineering
               ? {
-                  label: 'New package',
+                  label: 'New subtask',
                   onClick: () => {
                     setEditing(null);
                     setBuilderOpen(true);
@@ -318,6 +328,15 @@ export default function DesignPackagePanel({
           setBuilderOpen(false);
           setEditing(null);
         }}
+        onSaved={() => void packagesQuery.refetch()}
+      />
+
+      <SubtaskRolesModal
+        open={Boolean(editingRoles)}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        subtask={editingRoles}
+        onClose={() => setEditingRoles(null)}
         onSaved={() => void packagesQuery.refetch()}
       />
 

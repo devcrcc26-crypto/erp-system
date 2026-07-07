@@ -302,7 +302,6 @@ export interface TaskDiscipline {
   closedAt: string | null;
   closedBy: string | null;
   actualCompletionTime: string | null;
-  deptReviewTime: string | null;
   createdAt: string;
   createdBy: string;
 }
@@ -926,7 +925,6 @@ export interface CreateTaskDisciplineRequest {
   instituteChiefUserId?: string;
   supportingDesignerUserId?: string;
   actualCompletionTime?: string;
-  deptReviewTime?: string;
 }
 
 export type UpdateTaskDisciplineRequest = Partial<CreateTaskDisciplineRequest>;

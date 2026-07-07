@@ -317,7 +317,7 @@
     "returnForRework": "退回返工",
     "openReviewMode": "打开审阅模式",
     "registerDocument": "登记文档",
-    "newPackage": "新建包",
+    "newPackage": "新建子任务",
     "designPackageSubmittal": "子任务送审"
   },
   "common": {

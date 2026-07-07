@@ -16,14 +16,15 @@ import ProjectionLagHelper from '@/components/modules/projects/workspaces/Projec
 import { ApiRequestError } from '@/lib/api/errors';
 import { useDesignPackages, useCloseTaskDiscipline } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
+import { useUser } from '@/lib/query/users';
 import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
-import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
 import { layout } from '@/lib/theme/layout';
 import { parseRevisionTriggerParams } from '@/lib/utils/revision-trigger-url';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 
 export default function DisciplineDetailPageContent({
   projectId,
@@ -52,6 +53,9 @@ export default function DisciplineDetailPageContent({
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId, true, {
     refetchInterval: projectionPending ? PROJECTION_POLL_MS : false,
   });
+
+  const leaderUserId = disciplineQuery.data?.disciplineLeadUserId ?? '';
+  const leaderQuery = useUser(leaderUserId, Boolean(leaderUserId));
 
   useEffect(() => {
     if (
@@ -158,6 +162,16 @@ export default function DisciplineDetailPageContent({
         <ProjectionLagHelper pending={projectionPending} />
 
         <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="mb-6">
+          <Descriptions.Item label="Discipline name">
+            {discipline.disciplineName}
+          </Descriptions.Item>
+          <Descriptions.Item label="Leader">
+            {leaderUserId
+              ? leaderQuery.data
+                ? `${formatUserName(leaderQuery.data)} (${formatUserDiscipline(leaderQuery.data)})`
+                : '…'
+              : '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Closure">
             <DisciplineClosureBadge isClosed={discipline.isClosed} />
           </Descriptions.Item>
@@ -170,30 +184,6 @@ export default function DisciplineDetailPageContent({
             ) : (
               '-'
             )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Designer">
-            {discipline.designerName ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Reviewer">
-            {discipline.reviewerName ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Discipline owner">
-            {discipline.disciplineOwnerName ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Disciplinary leader">
-            {discipline.disciplinaryLeader ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Dept chief engineer">
-            {discipline.deptChiefEngineer ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Institute chief">
-            {discipline.instituteChief?.name ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Supporting designer">
-            {discipline.supportingDesigner?.name ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Dept review">
-            {formatDisciplineDateTime(discipline.deptReviewTime)}
           </Descriptions.Item>
         </Descriptions>
       </FormLayout>

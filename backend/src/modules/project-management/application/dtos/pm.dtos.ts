@@ -605,11 +605,6 @@ export class CreateTaskDisciplineDto {
   @IsDateString()
   actualCompletionTime?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString()
-  deptReviewTime?: string;
-
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsEntityUuid()
