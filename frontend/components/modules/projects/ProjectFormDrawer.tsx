@@ -28,6 +28,7 @@ import type { ProjectStatus } from '@/lib/constants/project-status';
 import { PROJECT_STATUS_DEFAULT } from '@/lib/constants/project-status';
 import {
   PROJECT_CONTRACT_TYPE_DEFAULT,
+  PROJECT_CONTRACT_TYPE_OPTIONS,
 } from '@/lib/constants/project-contract-type';
 import {
   PROJECT_RESPONSIBLE_DEPARTMENT_DEFAULT,
@@ -273,6 +274,14 @@ export default function ProjectFormDrawer({
             allowClear
             placeholder="Select type"
             options={PROJECT_TYPE_OPTIONS}
+          />
+        </Form.Item>
+
+        <Form.Item label="Contract type" name="contractType">
+          <Select
+            allowClear
+            placeholder="Select contract type"
+            options={PROJECT_CONTRACT_TYPE_OPTIONS}
           />
         </Form.Item>
 
