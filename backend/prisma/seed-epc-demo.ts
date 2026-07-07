@@ -24,6 +24,12 @@ export function sid(project: number, entity: number): string {
   return `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 }
 
+/** Deterministic subtask code for seeded design packages, matching sid()'s numbering. */
+export function subtaskCode(project: number, entity: number): string {
+  const n = project * 1000 + entity;
+  return `SUB-${String(n).padStart(5, '0')}`;
+}
+
 export const EPC_DEMO_PROJECT_CODES = ['DEMO-001', 'DEMO-002', 'DEMO-003'] as const;
 
 const DEMO_PROJECT_INDEX = 1;
@@ -398,6 +404,7 @@ async function seedEpcProjectStandard(
     },
     create: {
       id: sid(p, 210),
+      packageCode: subtaskCode(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: names.designPackageName,
@@ -472,6 +479,7 @@ async function seedEpcProjectStandard(
     },
     create: {
       id: sid(p, 212),
+      packageCode: subtaskCode(p, 212),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: names.designPackageLeadName,
@@ -546,6 +554,7 @@ async function seedEpcProjectStandard(
     },
     create: {
       id: sid(p, 214),
+      packageCode: subtaskCode(p, 214),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: 'MEP Coordination - Draft Package',
@@ -623,6 +632,7 @@ async function seedEpcProjectStandard(
     },
     create: {
       id: sid(p, 216),
+      packageCode: subtaskCode(p, 216),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: names.designPackageReviewerName,
@@ -917,6 +927,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
     },
     create: {
       id: sid(p, 210),
+      packageCode: subtaskCode(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: 'Terminal MEP Release - Dept Review',
@@ -1020,6 +1031,7 @@ async function seedEpcProject002(ctx: PmSeedContext): Promise<void> {
     },
     create: {
       id: sid(p, 212),
+      packageCode: subtaskCode(p, 212),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: 'Electrical Single Line - Approved',
@@ -1331,6 +1343,7 @@ async function seedEpcProject003(ctx: PmSeedContext): Promise<void> {
     },
     create: {
       id: sid(p, 210),
+      packageCode: subtaskCode(p, 210),
       companyId,
       taskDisciplineId: sid(p, 200),
       name: 'Civil Issue Package - IFC',

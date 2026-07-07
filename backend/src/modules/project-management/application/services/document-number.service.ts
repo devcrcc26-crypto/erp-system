@@ -14,6 +14,7 @@ export const SUPPORTED_DOCUMENT_TYPES = [
   'MEETING',
   'CORRESPONDENCE',
   'TASK',
+  'SUBTASK',
 ] as const;
 
 export type SupportedDocumentType = (typeof SUPPORTED_DOCUMENT_TYPES)[number];

@@ -86,9 +86,18 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
     items: [
       {
         key: 'schedule',
-        label: 'Schedule & Tasks',
+        label: 'Schedule',
         labelKey: 'workspace.items.schedule',
         pathSuffix: 'schedule',
+        capability: 'schedule',
+        breadcrumbGroup: 'Engineering',
+        breadcrumbGroupKey: 'workspace.groups.engineering',
+      },
+      {
+        key: 'tasks',
+        label: 'Tasks',
+        labelKey: 'workspace.items.tasks',
+        pathSuffix: 'schedule/tasks',
         capability: 'schedule',
         breadcrumbGroup: 'Engineering',
         breadcrumbGroupKey: 'workspace.groups.engineering',

@@ -1397,6 +1397,7 @@ async function main(): Promise<void> {
     'MEETING',
     'CORRESPONDENCE',
     'TASK',
+    'SUBTASK',
   ];
 
   for (const docType of documentTypes) {

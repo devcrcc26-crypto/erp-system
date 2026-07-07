@@ -50,6 +50,7 @@ export interface MappedDesignPackage {
   id: string;
   companyId: string;
   taskDisciplineId: string;
+  packageCode: string;
   name: string;
   projectedStatus: DesignPackage['projectedStatus'];
   projectionPending: boolean;
@@ -169,6 +170,7 @@ export function mapDesignPackage(
     id: row.id,
     companyId: row.companyId,
     taskDisciplineId: row.taskDisciplineId,
+    packageCode: row.packageCode,
     name: row.name,
     projectedStatus: row.projectedStatus,
     projectionPending: row.projectionPending,

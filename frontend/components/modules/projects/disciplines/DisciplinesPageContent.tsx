@@ -176,13 +176,14 @@ export default function DisciplinesPageContent({
 
   const columns: ColumnsType<SubtaskTableRow> = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      title: 'Code',
+      key: 'packageCode',
       width: 120,
       ellipsis: true,
-      render: (id: string) => (
-        <span className="font-mono text-[11px] text-slate-600">{id.slice(0, 8)}</span>
+      render: (_value, record) => (
+        <span className="font-mono text-[11px] text-slate-600">
+          {record.package.packageCode}
+        </span>
       ),
     },
     {

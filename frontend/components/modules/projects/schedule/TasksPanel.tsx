@@ -264,6 +264,9 @@ export default function TasksPanel({
           <div className="pl-8">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge label="Subtask" variant="orange" />
+              <span className="font-mono text-[11px] text-slate-500">
+                {subtask.package.packageCode}
+              </span>
               <span className="text-[12px] font-medium">
                 {subtask.package.name}
               </span>

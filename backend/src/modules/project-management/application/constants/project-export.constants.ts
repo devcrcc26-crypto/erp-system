@@ -10,7 +10,6 @@ export const PROJECT_LIST_EXPORT_COLUMNS: BilingualColumn[] = [
   { zh: '项目编号', en: 'Project Number', width: 18 },
   { zh: '项目状态', en: 'Project Status', width: 18 },
   { zh: '委托单位', en: 'Client', width: 24 },
-  { zh: '项目委托形式', en: 'Mode of Project Commission', width: 28 },
   {
     zh: '合同签订日期/邮件委托日期',
     en: 'Contract Signing Date / Email Commission Date',

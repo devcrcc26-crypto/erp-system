@@ -189,16 +189,6 @@ export function formatExportProjectStatus(
   return formatProjectStatusLabel(value);
 }
 
-/** Human-readable project contract type label for Excel export. */
-export function formatExportContractType(
-  value: ProjectContractType | null | undefined,
-): string {
-  if (value == null) {
-    return formatProjectContractTypeLabel('NO_ASSIGNMENT');
-  }
-  return formatProjectContractTypeLabel(value);
-}
-
 /** Human-readable responsible department label for Excel export. */
 export function formatExportResponsibleDepartment(
   value: ProjectResponsibleDepartment | null | undefined,

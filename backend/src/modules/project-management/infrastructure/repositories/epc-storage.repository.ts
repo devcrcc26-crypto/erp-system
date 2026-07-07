@@ -364,6 +364,7 @@ export class DesignPackageRepository {
   async createRevisionPackageFromTrigger(input: {
     companyId: string;
     taskDisciplineId: string;
+    packageCode: string;
     name: string;
     sourceEntityType: string;
     sourceEntityId: string;
@@ -373,6 +374,7 @@ export class DesignPackageRepository {
       data: {
         company: { connect: { id: input.companyId } },
         taskDiscipline: { connect: { id: input.taskDisciplineId } },
+        packageCode: input.packageCode,
         name: input.name,
         sourceEntityType: input.sourceEntityType,
         sourceEntityId: input.sourceEntityId,

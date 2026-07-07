@@ -66,6 +66,9 @@ export default function TaskSubtasksSection({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge label="Subtask" variant="orange" />
+                    <span className="font-mono text-[11px] text-slate-500">
+                      {entry.package.packageCode}
+                    </span>
                     <span className="text-[14px] font-medium">
                       {entry.package.name}
                     </span>

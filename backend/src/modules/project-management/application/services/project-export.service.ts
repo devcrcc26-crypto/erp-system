@@ -27,7 +27,6 @@ import {
   formatExportApprovalLevel,
   formatExportCommissionMode,
   formatExportCompletionStatus,
-  formatExportContractType,
   formatExportDesignProperties,
   formatExportDesignStage,
   formatExportDate,
@@ -274,7 +273,6 @@ export class ProjectExportService {
         project.projectCode,
         formatExportProjectStatus(project.status),
         project.client ?? '',
-        formatExportContractType(project.contractType),
         formatExportDate(project.startDate),
         formatExportProjectType(project.projectType),
         project.department

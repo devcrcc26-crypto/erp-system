@@ -409,6 +409,9 @@ export default function TaskDetailContent({
                                 href={packageHref}
                                 className="min-w-0 flex-1 transition-colors hover:text-[#D4610A]"
                               >
+                                <span className="font-mono text-[11px] text-slate-500">
+                                  {entry.package.packageCode}
+                                </span>{' '}
                                 <span className="text-[13px]">
                                   {entry.package.name}
                                 </span>

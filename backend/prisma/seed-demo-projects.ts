@@ -874,6 +874,9 @@ async function seedDesignPackageRow(
   spec: PackageSeedSpec,
 ): Promise<void> {
   const { prisma: db, companyId, adminUserId } = ctx;
+  const packageCode = `SUB-${parseInt(spec.packageId.slice(-12), 16)
+    .toString()
+    .padStart(5, '0')}`;
 
   await db.designPackage.upsert({
     where: { id: spec.packageId },
@@ -900,6 +903,7 @@ async function seedDesignPackageRow(
     },
     create: {
       id: spec.packageId,
+      packageCode,
       companyId,
       taskDisciplineId: spec.disciplineId,
       name: spec.name,

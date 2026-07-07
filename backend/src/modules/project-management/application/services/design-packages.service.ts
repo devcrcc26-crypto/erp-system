@@ -51,6 +51,7 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import { WorkflowEventLogService } from './workflow-event-log.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
+import { DocumentNumberService } from './document-number.service';
 import { DependencyGraphService } from './dependency-graph.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 import { computeRequiredTiers } from '../../domain/required-tiers.util';
@@ -99,6 +100,7 @@ export class DesignPackagesService {
     private readonly prisma: PrismaService,
     private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly taskAssignmentNotificationService: TaskAssignmentNotificationService,
+    private readonly documentNumberService: DocumentNumberService,
   ) {}
 
   /**
@@ -240,10 +242,16 @@ export class DesignPackagesService {
       }
     }
 
+    const packageCode = await this.documentNumberService.getNextNumber(
+      ctx,
+      'SUBTASK',
+    );
+
     const row = await this.designPackageRepository.createWithBriefAttachments({
       packageData: {
         company: { connect: { id: ctx.companyId } },
         taskDiscipline: { connect: { id: taskDisciplineId } },
+        packageCode,
         name: dto.name,
         projectedStatus:
           dto.projectedStatus ?? DesignPackageProjectedStatus.IN_PROGRESS,

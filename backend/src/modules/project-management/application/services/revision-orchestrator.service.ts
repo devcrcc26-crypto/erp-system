@@ -23,6 +23,7 @@ import {
 import { validateNewRevisionUpload } from '../../domain/edv-state-machine';
 import { DesignPackageRepository } from '../../infrastructure/repositories/epc-storage.repository';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
+import { DocumentNumberService } from './document-number.service';
 import {
   EpcWorkflowRepository,
   PrismaTx,
@@ -62,6 +63,7 @@ export class RevisionOrchestratorService {
     private readonly permissionResolver: PermissionResolverService,
     private readonly stateProjection: StateProjectionService,
     private readonly workflowTransactionRunner: WorkflowTransactionRunner,
+    private readonly documentNumberService: DocumentNumberService,
   ) {}
 
   /**
@@ -269,9 +271,14 @@ export class RevisionOrchestratorService {
     const sourceEntityType = this.mapTriggerTypeToPackageSourceEntityType(
       trigger.triggerType,
     );
+    const packageCode = await this.documentNumberService.getNextNumber(
+      ctx,
+      'SUBTASK',
+    );
     const newPackage = await this.designPackageRepository.createRevisionPackageFromTrigger({
       companyId: ctx.companyId,
       taskDisciplineId,
+      packageCode,
       name: `Revision Package — ${trigger.triggerType} ${trigger.sourceEntityId}`,
       sourceEntityType,
       sourceEntityId: trigger.sourceEntityId,

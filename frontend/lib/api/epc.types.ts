@@ -114,6 +114,7 @@ export interface DesignPackage {
   id: string;
   companyId: string;
   taskDisciplineId: string;
+  packageCode: string;
   name: string;
   projectedStatus: DesignPackageProjectedStatus;
   projectionPending: boolean;

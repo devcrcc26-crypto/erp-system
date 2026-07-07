@@ -11,6 +11,7 @@ describe('mapDesignPackage', () => {
       id: 'pkg-1',
       companyId: 'company-1',
       taskDisciplineId: 'discipline-1',
+      packageCode: 'SUB-00001',
       name: 'Package A',
       projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
       projectionPending: false,

@@ -1693,6 +1693,7 @@ model DesignPackage {
   id                String                       @id @default(uuid())
   companyId         String                       @map("company_id")
   taskDisciplineId  String                       @map("task_discipline_id")
+  packageCode       String                       @map("package_code")
   name              String
   projectedStatus   DesignPackageProjectedStatus @default(IN_PROGRESS) @map("projected_status")
   projectionPending Boolean                      @default(false) @map("projection_pending")

@@ -6,11 +6,11 @@ import { useMemo, useState } from 'react';
 import { Alert, Collapse } from 'antd';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useAllTasks, useTaskDependencies } from '@/lib/query/schedule';
+import { useAllTasks } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPanel';
-import TasksPanel from '@/components/modules/projects/schedule/TasksPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
+import ScheduleCalendar from '@/components/modules/projects/schedule/ScheduleCalendar';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
@@ -20,14 +20,12 @@ export default function SchedulePageContent({
   projectId: string;
 }): React.ReactNode {
   const [criticalOnly, setCriticalOnly] = useState(false);
-  const [tasksOpen, setTasksOpen] = useState(false);
   const [milestonesOpen, setMilestonesOpen] = useState(false);
 
   const permLoading = usePermissionsLoading();
   const tasksQuery = useAllTasks(projectId, !permLoading);
-  const dependenciesQuery = useTaskDependencies(projectId, !permLoading);
 
-  const isLoading = permLoading || tasksQuery.isLoading || dependenciesQuery.isLoading;
+  const isLoading = permLoading || tasksQuery.isLoading;
 
   const apiUnavailable =
     tasksQuery.isError &&
@@ -35,7 +33,6 @@ export default function SchedulePageContent({
     (tasksQuery.error.status === 404 || tasksQuery.error.status === 0);
 
   const tasks = tasksQuery.data?.data ?? [];
-  const dependencies = dependenciesQuery.data ?? [];
 
   const metrics = useMemo(() => computeScheduleMetrics(tasks), [tasks]);
 
@@ -51,7 +48,7 @@ export default function SchedulePageContent({
           type="info"
           showIcon
           title="Schedule APIs are not connected yet."
-          description="Tasks and the Gantt chart will populate when the project management backend module is available."
+          description="The Gantt chart and calendar will populate when the project management backend module is available."
         />
       )}
 
@@ -62,29 +59,7 @@ export default function SchedulePageContent({
         onCriticalOnlyChange={setCriticalOnly}
       />
 
-      <Collapse
-        bordered={false}
-        className="erp-schedule-collapse bg-transparent"
-        activeKey={tasksOpen ? ['tasks'] : []}
-        onChange={(keys) =>
-          setTasksOpen(Array.isArray(keys) ? keys.includes('tasks') : keys === 'tasks')
-        }
-        items={[
-          {
-            key: 'tasks',
-            label: `Tasks (${tasks.length})`,
-            children: (
-              <TasksPanel
-                projectId={projectId}
-                tasks={tasks}
-                dependencies={dependencies}
-                dependenciesLoading={dependenciesQuery.isLoading}
-                criticalOnly={criticalOnly}
-              />
-            ),
-          },
-        ]}
-      />
+      <ScheduleCalendar tasks={tasks} />
 
       <Collapse
         bordered={false}
