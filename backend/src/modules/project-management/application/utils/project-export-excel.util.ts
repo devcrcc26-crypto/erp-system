@@ -7,6 +7,13 @@ const HEADER_FILL: ExcelJS.FillPattern = {
   fgColor: { argb: 'FFE5E7EB' },
 };
 
+const HEADER_BORDER: Partial<ExcelJS.Borders> = {
+  top: { style: 'thin', color: { argb: 'FF9CA3AF' } },
+  left: { style: 'thin', color: { argb: 'FF9CA3AF' } },
+  bottom: { style: 'thin', color: { argb: 'FF9CA3AF' } },
+  right: { style: 'thin', color: { argb: 'FF9CA3AF' } },
+};
+
 /**
  * Writes bilingual header rows and applies template styling.
  */
@@ -26,8 +33,15 @@ export function applyBilingualHeaders(
 
   for (const row of [headerRowZh, headerRowEn]) {
     row.font = { bold: true };
-    row.eachCell((cell) => {
+    row.height = 30;
+    row.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = HEADER_FILL;
+      cell.border = HEADER_BORDER;
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: 'center',
+        wrapText: true,
+      };
     });
   }
 
