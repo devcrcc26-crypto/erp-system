@@ -2,38 +2,38 @@
 
 import { useMemo } from 'react';
 import { PROJECT_ADMINISTRATOR_ROLE } from '@/lib/constants/org-roles';
-import { useDepartments } from '@/lib/query/org';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
-import { useCapabilitiesReady, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import {
+  useCapabilitiesReady,
+  useEpcCapabilities,
+  usePermissionsLoading,
+} from '@/hooks/use-pm-capabilities';
 
 /**
- * True when the session may open the company Departments page (admin or department leader).
+ * True when the session may open the company Departments page.
+ * Uses session EPC nav probes — does not list /departments (avoids 403 noise for design roles).
  */
 export function useCanViewDepartmentsNav(): boolean {
   const capabilitiesReady = useCapabilitiesReady();
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
-  const currentUserId = useAuthStore((state) => state.user?.id);
-  const departmentsQuery = useDepartments(
-    { page: 1, limit: 100 },
-    capabilitiesReady && Boolean(currentUserId),
-  );
+  const epc = useEpcCapabilities();
 
   return useMemo(() => {
-    if (!capabilitiesReady || !currentUserId) {
+    if (!capabilitiesReady) {
       return false;
     }
-    if (isSystemAdministrator) {
-      return true;
-    }
-    const departments = departmentsQuery.data?.data ?? [];
-    return departments.some((row) => row.leaderUserId === currentUserId);
+    return (
+      isSystemAdministrator ||
+      epc.navFullAccess ||
+      epc.navDepartmentLeader
+    );
   }, [
     capabilitiesReady,
-    currentUserId,
-    departmentsQuery.data?.data,
+    epc.navDepartmentLeader,
+    epc.navFullAccess,
     isSystemAdministrator,
   ]);
 }
@@ -53,18 +53,24 @@ export function useCanViewDisciplinesCatalogNav(): boolean {
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
+  const epc = useEpcCapabilities();
   const profileQuery = useCurrentUser();
 
   return useMemo(() => {
     if (permLoading) {
       return false;
     }
-    if (isSystemAdministrator) {
+    if (isSystemAdministrator || epc.navFullAccess) {
       return true;
     }
     const roles = profileQuery.data?.roles ?? [];
     return roles.some((role) => role.name === PROJECT_ADMINISTRATOR_ROLE);
-  }, [isSystemAdministrator, permLoading, profileQuery.data?.roles]);
+  }, [
+    epc.navFullAccess,
+    isSystemAdministrator,
+    permLoading,
+    profileQuery.data?.roles,
+  ]);
 }
 
 /**
