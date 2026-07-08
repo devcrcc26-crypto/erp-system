@@ -11,6 +11,7 @@ import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensPr
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import type { ReviewModeComment } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { reviewTierBilingualLabel } from '@/lib/utils/review-tier-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -57,19 +58,12 @@ export default function DisciplineLeadConsole({
 
   const approvalAllowed = canApproveReviewSession(comments.map((comment) => comment.status));
   const isFinalTier = currentTier === 'DEPT_CHIEF';
-  const tierLabel =
-    currentTier === 'DISCIPLINE_OWNER'
-      ? 'Discipline owner'
-      : currentTier === 'REVIEWER'
-        ? 'Reviewer'
-        : currentTier === 'DISCIPLINE_LEAD'
-          ? 'Discipline lead'
-          : 'Department chief';
+  const tierLabel = reviewTierBilingualLabel(currentTier ?? '');
 
   return (
     <FormLayout
       title={`${tierLabel} console`}
-      description={`Approve or return at the ${tierLabel.toLowerCase()} tier.`}
+      description={`Approve or return at the ${tierLabel} tier.`}
     >
       <ReviewApprovalBlockedAlert comments={comments} />
       <Space wrap>

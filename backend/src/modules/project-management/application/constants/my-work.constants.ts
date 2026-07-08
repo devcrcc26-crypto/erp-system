@@ -14,13 +14,19 @@ export type SubtaskRoleField =
   | 'disciplineOwnerUserId'
   | 'supportingDesignerUserId';
 
+/**
+ * Kept in exact sync with the frontend's canonical bilingual tier labels
+ * (frontend/lib/utils/review-tier-display.ts, reviewTierBilingualLabel) for
+ * the four fields that map onto ReviewTier. designerUserId/
+ * supportingDesignerUserId have no ReviewTier equivalent and keep plain text.
+ */
 export const SUBTASK_ROLE_LABELS: Record<SubtaskRoleField, string> = {
   designerUserId: 'Designer (设计)',
   reviewerUserId: 'Reviewer (复核)',
-  disciplinaryLeaderUserId: 'Disciplinary leader (专册)',
+  disciplinaryLeaderUserId: 'Disciplinary Leader (专册)',
   deptDeputyChiefUserId:
     '(Deputy) Chief Engineer of The Department (院审)',
   instituteChiefUserId: 'Chief Engineer of The Institute (司审)',
-  disciplineOwnerUserId: 'Discipline owner',
+  disciplineOwnerUserId: 'Discipline Owner',
   supportingDesignerUserId: 'Supporting designer',
 };

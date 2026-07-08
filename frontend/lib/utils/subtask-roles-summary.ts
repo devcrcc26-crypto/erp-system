@@ -1,4 +1,5 @@
 import type { DesignPackage } from '@/lib/api/epc.types';
+import { reviewTierBilingualLabel } from '@/lib/utils/review-tier-display';
 
 const SUBTASK_ROLE_FIELDS: ReadonlyArray<{
   key: keyof Pick<
@@ -15,11 +16,11 @@ const SUBTASK_ROLE_FIELDS: ReadonlyArray<{
 }> = [
   { key: 'designerUserId', label: 'Designer' },
   { key: 'supportingDesignerUserId', label: 'Supporting designer' },
-  { key: 'reviewerUserId', label: 'Reviewer' },
-  { key: 'disciplinaryLeaderUserId', label: 'Disciplinary leader' },
-  { key: 'deptDeputyChiefUserId', label: 'Deputy chief' },
-  { key: 'instituteChiefUserId', label: 'Institute chief' },
-  { key: 'disciplineOwnerUserId', label: 'Discipline owner' },
+  { key: 'reviewerUserId', label: reviewTierBilingualLabel('REVIEWER') },
+  { key: 'disciplinaryLeaderUserId', label: reviewTierBilingualLabel('DISCIPLINE_LEAD') },
+  { key: 'deptDeputyChiefUserId', label: reviewTierBilingualLabel('DEPT_CHIEF') },
+  { key: 'instituteChiefUserId', label: reviewTierBilingualLabel('INSTITUTE_CHIEF') },
+  { key: 'disciplineOwnerUserId', label: reviewTierBilingualLabel('DISCIPLINE_OWNER') },
 ];
 
 /**
