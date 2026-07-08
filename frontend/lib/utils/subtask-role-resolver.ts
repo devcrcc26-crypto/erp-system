@@ -5,7 +5,7 @@ export interface ResolvedSubtaskRoles {
   secondaryReviewRole: ReviewTier | null;
 }
 
-interface PackageRoleFields {
+export interface PackageRoleFields {
   designerUserId: string | null;
   supportingDesignerUserId: string | null;
   reviewerUserId: string | null;
@@ -15,7 +15,7 @@ interface PackageRoleFields {
   disciplineOwnerUserId: string | null;
 }
 
-interface DisciplineRoleFields {
+export interface DisciplineRoleFields {
   designerUserId?: string | null;
   supportingDesignerUserId?: string | null;
   reviewerUserId?: string | null;

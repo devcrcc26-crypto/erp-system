@@ -57,7 +57,8 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
-import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
+import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
+import type { ReviewTier } from '@/lib/api/epc.types';
 import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { layout } from '@/lib/theme/layout';
@@ -123,6 +124,14 @@ export default function DesignPackageDetailPageContent({
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
 
   const pkg = packageQuery.data;
+  const discipline = disciplineQuery.data;
+  const reviewMode = reviewModeQuery.data;
+  const packageLens = usePackageRoleLens(
+    pkg,
+    discipline,
+    (reviewMode?.currentTier as ReviewTier | null | undefined) ?? null,
+  );
+  const isAssignedDesigner = packageLens.canSubmitPackage;
   const packageDocuments = useMemo(() => {
     const documents = documentsQuery.data?.data ?? [];
     const versionToDoc = new Map<string, { id: string; title: string }>();
@@ -140,7 +149,6 @@ export default function DesignPackageDetailPageContent({
     }
     return [...seen.values()];
   }, [pkg?.items, documentsQuery.data]);
-  const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId;
   const sessionComments = reviewMode?.comments ?? [];
   const lastReturnedComments = reviewMode?.lastReturnedSessionComments ?? [];
@@ -160,7 +168,7 @@ export default function DesignPackageDetailPageContent({
     return null;
   }
 
-  if (!pkg || !disciplineQuery.data) {
+  if (!pkg || !discipline) {
     return <Alert type="error" showIcon title="Subtask not found" />;
   }
 
@@ -176,22 +184,16 @@ export default function DesignPackageDetailPageContent({
     Boolean(reviewSessionId),
   );
   const canApproveAllInReview =
-    lens.canApproveReview &&
+    packageLens.canApproveAtTier &&
     Boolean(reviewSessionId) &&
     canBatchApprovePackageEdvs(
       reviewMode?.currentTier,
       pkg.requiredTiers,
       lockGuidance.inReviewEdvIds.length,
     );
-  const discipline = disciplineQuery.data;
-  const { secondaryReviewRole } = resolvePackageRoles(
-    pkg,
-    discipline,
-    currentUserId ?? '',
-  );
   const isDisciplineLeader =
     Boolean(currentUserId) &&
-    discipline?.disciplineLeadUserId === currentUserId;
+    discipline.disciplineLeadUserId === currentUserId;
   const canClosePackage =
     isDisciplineLeader &&
     pkg.projectedStatus === 'LOCKED' &&
@@ -290,7 +292,7 @@ export default function DesignPackageDetailPageContent({
           {
             title: (
               <Link href={`/projects/${projectId}/disciplines/${taskDisciplineId}`}>
-                {disciplineQuery.data.disciplineName}
+                {discipline.disciplineName}
               </Link>
             ),
           },
@@ -306,12 +308,12 @@ export default function DesignPackageDetailPageContent({
             {isDisciplineLeader && (
               <Button onClick={() => setRolesModalOpen(true)}>Edit roles</Button>
             )}
-            {reviewSessionId && secondaryReviewRole !== null && (
+            {reviewSessionId && packageLens.canAddReviewComment && (
               <Link href={reviewModeHref(projectId, taskDisciplineId, packageId)}>
                 <Button type="primary">Open review mode</Button>
               </Link>
             )}
-            {lens.canSubmitDesignPackage && submitEligibility.submittable && (
+            {isAssignedDesigner && submitEligibility.submittable && (
               <Tooltip
                 title={
                   hasUnacknowledgedComments
@@ -329,7 +331,7 @@ export default function DesignPackageDetailPageContent({
                 </Button>
               </Tooltip>
             )}
-            {lens.canApproveReview && reviewSessionId && (
+            {packageLens.canApproveAtTier && reviewSessionId && (
               <Button
                 type="primary"
                 disabled={!approvalAllowed}
@@ -348,7 +350,7 @@ export default function DesignPackageDetailPageContent({
                 Approve all EDVs
               </Button>
             )}
-            {lens.canEditEngineering && (
+            {packageLens.canUploadToPackage && (
               <Button
                 loading={lockEdvs.isPending}
                 disabled={!lockGuidance.eligible}
@@ -357,7 +359,7 @@ export default function DesignPackageDetailPageContent({
                 Lock EDVs
               </Button>
             )}
-            {lens.canApproveReview && (
+            {packageLens.canApproveAtTier && (
               <Button
                 loading={batchLock.isPending}
                 disabled={!lockGuidance.eligible}
@@ -366,7 +368,7 @@ export default function DesignPackageDetailPageContent({
                 Batch lock
               </Button>
             )}
-            {lens.canApproveReview && reviewSessionId && (
+            {packageLens.canReturnForRework && reviewSessionId && (
               <Button danger onClick={() => setReturnOpen(true)}>
                 Return for rework
               </Button>
@@ -404,7 +406,7 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        {lens.canEditEngineering && !lockGuidance.eligible && lockGuidance.reason && (
+        {packageLens.canUploadToPackage && !lockGuidance.eligible && lockGuidance.reason && (
           <div className="mb-4">
             <Alert
               type="info"
@@ -469,7 +471,7 @@ export default function DesignPackageDetailPageContent({
           packageId={packageId}
           items={pkg.items ?? []}
           documents={documentsQuery.data?.data ?? []}
-          canEdit={lens.canEditEngineering}
+          canEdit={packageLens.canUploadToPackage}
           onChanged={() => void packageQuery.refetch()}
         />
       </FormLayout>
@@ -486,7 +488,7 @@ export default function DesignPackageDetailPageContent({
       <FormLayout
         title="Dependencies"
         extra={
-          lens.canEditEngineering ? (
+          packageLens.canUploadToPackage ? (
             <Button size="small" onClick={() => setAddDependencyOpen(true)}>
               Add dependency
             </Button>
@@ -499,7 +501,7 @@ export default function DesignPackageDetailPageContent({
           packageId={packageId}
           dependencies={dependenciesQuery.data ?? []}
           packages={allPackagesQuery.data ?? []}
-          canEdit={lens.canEditEngineering}
+          canEdit={packageLens.canUploadToPackage}
           onChanged={() => void dependenciesQuery.refetch()}
         />
       </FormLayout>

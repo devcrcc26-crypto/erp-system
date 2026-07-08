@@ -20,11 +20,8 @@ export interface RoleLens {
   canViewSubmittals: boolean;
   canCreateSubmittals: boolean;
   canViewReviewInbox: boolean;
-  canViewMyComments: boolean;
   /** Full review mode (batch approve, add comments, verify). */
   canAccessReviewMode: boolean;
-  isReviewerWorkspace: boolean;
-  isDesignerWorkspace: boolean;
   disciplineScopeBypass: boolean;
 }
 
@@ -77,10 +74,7 @@ function buildRoleLens(
     canViewSubmittals: submittals.canView,
     canCreateSubmittals: submittals.canCreate,
     canViewReviewInbox,
-    canViewMyComments,
     canAccessReviewMode: canViewReviewInbox,
-    isReviewerWorkspace: canViewReviewInbox,
-    isDesignerWorkspace: canSubmitDesignPackage && !canViewReviewInbox,
     disciplineScopeBypass: epc.disciplineScopeBypass,
   };
 }

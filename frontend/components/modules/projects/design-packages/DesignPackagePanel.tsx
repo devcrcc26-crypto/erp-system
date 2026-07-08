@@ -200,6 +200,15 @@ export default function DesignPackagePanel({
       key: 'actions',
       width: 400,
       render: (_value, record) => {
+        const discipline = disciplineQuery.data;
+        const roles =
+          discipline && currentUserId
+            ? resolvePackageRoles(record, discipline, currentUserId)
+            : null;
+        const canUploadToPackage =
+          roles?.primaryRole === 'DESIGNER' ||
+          roles?.primaryRole === 'SUPPORTING_DESIGNER';
+        const canSubmitPackage = roles?.primaryRole === 'DESIGNER';
         const submitEligibility = getPackageSubmitEligibility(
           record,
           record.items,
@@ -208,7 +217,7 @@ export default function DesignPackagePanel({
 
         return (
         <Space size="small" wrap>
-          {lens.canSubmitDesignPackage && submitEligibility.submittable ? (
+          {canSubmitPackage && submitEligibility.submittable ? (
             <Button
               type="link"
               className="!px-0"
@@ -259,7 +268,7 @@ export default function DesignPackagePanel({
             type="link"
             className="!px-0"
             onClick={() => setAddItemPackageId(record.id)}
-            disabled={!lens.canEditEngineering}
+            disabled={!canUploadToPackage}
           >
             Add EDV
           </Button>
