@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button, Space } from 'antd';
 import { MessageSquare } from 'lucide-react';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
+import ReviewTierBadge from '@/components/modules/projects/review/ReviewTierBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
 import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
@@ -181,6 +182,7 @@ export default function DesignPackageCommentsSection({
                 <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <CommentSeverityTag severity={comment.severity} />
+                    <ReviewTierBadge tier={comment.reviewTier} />
                     <StatusBadge
                       label={comment.status.replace(/_/g, ' ')}
                       variant={commentStatusVariant(comment.status)}

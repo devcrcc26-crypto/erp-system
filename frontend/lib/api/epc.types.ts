@@ -278,6 +278,7 @@ export interface ReviewModeComment {
   body: string;
   status: CommentStatus;
   severity: CommentSeverity | string;
+  reviewTier: ReviewTier | null;
   engineeringDocumentVersionId: string;
   createdBy: string;
   createdAt: string;
@@ -325,6 +326,19 @@ export interface ReviewModeView {
   comments: readonly ReviewModeComment[];
   /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
   lastReturnedSessionComments: readonly { status: CommentStatus | string }[];
+  /** Full read-only context of the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
+  lastReturnedSession: {
+    closedReason: string | null;
+    closedAt: string | null;
+    returnedByTier: ReviewTier | string;
+    comments: readonly {
+      body: string | null;
+      reviewTier: ReviewTier | null;
+      authorName: string;
+      createdAt: string;
+      severity: CommentSeverity | string;
+    }[];
+  } | null;
 }
 
 export interface ReviewContextSnapshot {

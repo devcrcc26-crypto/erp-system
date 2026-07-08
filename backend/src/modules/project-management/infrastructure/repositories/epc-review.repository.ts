@@ -180,6 +180,7 @@ export class EpcReviewRepository {
       body?: string;
       commentDocumentVersionId?: string;
       severity: CommentSeverity;
+      reviewTier?: ReviewTier;
       assignedToUserId: string;
       createdBy: string;
     },
@@ -192,6 +193,7 @@ export class EpcReviewRepository {
         body: input.body?.trim() || null,
         commentDocumentVersionId: input.commentDocumentVersionId,
         severity: input.severity,
+        reviewTier: input.reviewTier,
         assignedToUserId: input.assignedToUserId,
         createdBy: input.createdBy,
         updatedBy: input.createdBy,

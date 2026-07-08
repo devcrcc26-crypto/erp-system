@@ -360,6 +360,7 @@ export class ReviewWorkflowService {
         body: body,
         commentDocumentVersionId: command.commentDocumentVersionId,
         severity: command.severity as CommentSeverity,
+        reviewTier: session.currentTier,
         assignedToUserId: command.assignedToUserId,
         createdBy: command.actorId,
       });
@@ -1073,6 +1074,7 @@ export class ReviewWorkflowService {
           engineeringDocumentVersionId: edv.id,
           body: command.commentTemplate,
           severity: CommentSeverity.MODERATE,
+          reviewTier: session.currentTier,
           assignedToUserId: assigneeId,
           createdBy: command.actorId,
         });

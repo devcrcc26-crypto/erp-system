@@ -29,6 +29,7 @@ function toReviewModeComment(comment: MyCommentItem): ReviewModeComment {
     body: comment.body,
     status: comment.status,
     severity: comment.severity,
+    reviewTier: null,
     engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
     createdBy: '',
     createdAt: comment.createdAt,

@@ -3,7 +3,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Breadcrumb,
@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
+import ReturnedSessionBanner from '@/components/modules/projects/review/ReturnedSessionBanner';
 import RequiredTiersStepIndicator from '@/components/modules/projects/review/RequiredTiersStepIndicator';
 import ReviewSessionAttachmentsSection from '@/components/modules/projects/review/ReviewSessionAttachmentsSection';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
@@ -29,6 +30,7 @@ import {
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import DesignPackageCommentsSection from '@/components/modules/projects/design-packages/DesignPackageCommentsSection';
 import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
+import VersionHistoryTimeline from '@/components/modules/projects/engineering/VersionHistoryTimeline';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
   useApproveReviewSession,
@@ -119,6 +121,23 @@ export default function DesignPackageDetailPageContent({
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
 
   const pkg = packageQuery.data;
+  const packageDocuments = useMemo(() => {
+    const documents = documentsQuery.data?.data ?? [];
+    const versionToDoc = new Map<string, { id: string; title: string }>();
+    for (const doc of documents) {
+      for (const version of doc.versions ?? []) {
+        versionToDoc.set(version.id, { id: doc.id, title: doc.title });
+      }
+    }
+    const seen = new Map<string, { id: string; title: string }>();
+    for (const item of pkg?.items ?? []) {
+      const doc = versionToDoc.get(item.engineeringDocumentVersionId);
+      if (doc && !seen.has(doc.id)) {
+        seen.set(doc.id, doc);
+      }
+    }
+    return [...seen.values()];
+  }, [pkg?.items, documentsQuery.data]);
   const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId;
   const sessionComments = reviewMode?.comments ?? [];
@@ -371,6 +390,12 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
+        {!reviewSessionId && reviewMode?.lastReturnedSession && (
+          <div className="mb-4">
+            <ReturnedSessionBanner session={reviewMode.lastReturnedSession} />
+          </div>
+        )}
+
         {lens.canEditEngineering && !lockGuidance.eligible && lockGuidance.reason && (
           <div className="mb-4">
             <Alert
@@ -440,6 +465,15 @@ export default function DesignPackageDetailPageContent({
           onChanged={() => void packageQuery.refetch()}
         />
       </FormLayout>
+
+      {packageDocuments.map((doc) => (
+        <div key={doc.id}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {doc.title}
+          </p>
+          <VersionHistoryTimeline engineeringDocumentId={doc.id} />
+        </div>
+      ))}
 
       <FormLayout
         title="Dependencies"

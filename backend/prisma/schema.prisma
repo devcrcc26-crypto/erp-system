@@ -1884,6 +1884,7 @@ model ReviewComment {
   commentDocumentVersionId     String?         @map("comment_document_version_id")
   responseDocumentVersionId    String?         @map("response_document_version_id")
   severity                     CommentSeverity
+  reviewTier                   ReviewTier?     @map("review_tier")
   status                       CommentStatus   @default(OPEN)
   assignedToUserId             String          @map("assigned_to_user_id")
   createdBy                    String          @map("created_by")

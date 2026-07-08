@@ -100,6 +100,22 @@ export function reviewTierLabel(tier: ReviewTier): string {
   return labels[tier] ?? tier;
 }
 
+/**
+ * Bilingual tier label for governance-facing surfaces (comment tier badges,
+ * return-reason banners). DISCIPLINE_OWNER has no confirmed Chinese text yet
+ * — English-only until supplied.
+ */
+export function reviewTierBilingualLabel(tier: ReviewTier | string): string {
+  const labels: Record<ReviewTier, string> = {
+    DISCIPLINE_OWNER: 'Discipline Owner',
+    REVIEWER: 'Reviewer (复核)',
+    DISCIPLINE_LEAD: 'Disciplinary Leader (专册)',
+    DEPT_CHIEF: '(Deputy) Chief Engineer of The Department (院审)',
+    INSTITUTE_CHIEF: 'Chief Engineer of The Institute (司审)',
+  };
+  return (labels as Record<string, string>)[tier] ?? tier;
+}
+
 export function reviewTierColors(tier: ReviewTier): {
   bg: string;
   text: string;

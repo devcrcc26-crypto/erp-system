@@ -3,6 +3,7 @@ import {
   CommentStatus,
   ReviewSession,
   ReviewSessionStatus,
+  ReviewTier,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
@@ -95,6 +96,7 @@ export interface ReviewModeView {
     body: string | null;
     status: CommentStatus;
     severity: string;
+    reviewTier: ReviewTier | null;
     engineeringDocumentVersionId: string;
     createdBy: string;
     createdAt: string;
@@ -109,6 +111,19 @@ export interface ReviewModeView {
   }[];
   /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
   readonly lastReturnedSessionComments: readonly { status: CommentStatus }[];
+  /** Full read-only context of the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
+  readonly lastReturnedSession: {
+    closedReason: string | null;
+    closedAt: string | null;
+    returnedByTier: ReviewTier;
+    comments: readonly {
+      body: string | null;
+      reviewTier: ReviewTier | null;
+      authorName: string;
+      createdAt: string;
+      severity: string;
+    }[];
+  } | null;
   /** Tier markup attachments accumulated across the session lifecycle. */
   readonly attachments: readonly MappedReviewSessionAttachment[];
 }
@@ -526,6 +541,7 @@ export class EpcWorkspaceService {
     ]);
 
     let lastReturnedSessionComments: { status: CommentStatus }[] = [];
+    let lastReturnedSession: ReviewModeView['lastReturnedSession'] = null;
     if (!session) {
       const lastReturned = await this.prisma.reviewSession.findFirst({
         where: activeOnly({
@@ -536,13 +552,46 @@ export class EpcWorkspaceService {
         orderBy: { closedAt: 'desc' },
         select: {
           id: true,
+          currentTier: true,
+          closedAt: true,
+          closedReason: true,
           comments: {
             where: { deletedAt: null },
-            select: { status: true },
+            orderBy: { createdAt: 'asc' },
+            select: {
+              status: true,
+              body: true,
+              reviewTier: true,
+              severity: true,
+              createdAt: true,
+              author: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  chineseName: true,
+                  email: true,
+                },
+              },
+            },
           },
         },
       });
       lastReturnedSessionComments = lastReturned?.comments ?? [];
+      if (lastReturned) {
+        lastReturnedSession = {
+          closedReason: lastReturned.closedReason,
+          closedAt: lastReturned.closedAt?.toISOString() ?? null,
+          returnedByTier: lastReturned.currentTier,
+          comments: lastReturned.comments.map((c) => ({
+            body: c.body,
+            reviewTier: c.reviewTier,
+            authorName: formatReviewerName(c.author),
+            createdAt: c.createdAt.toISOString(),
+            severity: c.severity,
+          })),
+        };
+      }
     }
 
     const sessionComments = session?.comments ?? [];
@@ -583,6 +632,7 @@ export class EpcWorkspaceService {
           body: c.body,
           status: c.status,
           severity: c.severity,
+          reviewTier: c.reviewTier,
           engineeringDocumentVersionId: c.engineeringDocumentVersionId,
           createdBy: c.createdBy,
           createdAt: c.createdAt.toISOString(),
@@ -597,6 +647,7 @@ export class EpcWorkspaceService {
         };
       }),
       lastReturnedSessionComments,
+      lastReturnedSession,
       attachments: mapReviewSessionAttachments(session?.reviewSessionAttachments ?? []),
     };
   }
