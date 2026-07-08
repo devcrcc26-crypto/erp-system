@@ -12,10 +12,9 @@ const ALL_IDS = {
 };
 
 describe('computeRequiredTiers', () => {
-  it('1. full team all 5 distinct users → all 5 tiers in order', () => {
+  it('1. full team all 5 distinct users → 4 tiers in order, DISCIPLINE_OWNER excluded', () => {
     const result = computeRequiredTiers(ALL_IDS);
     expect(result).toEqual([
-      ReviewTier.DISCIPLINE_OWNER,
       ReviewTier.REVIEWER,
       ReviewTier.DISCIPLINE_LEAD,
       ReviewTier.DEPT_CHIEF,
@@ -23,7 +22,7 @@ describe('computeRequiredTiers', () => {
     ]);
   });
 
-  it('2. ownerUserId === designerUserId → DISCIPLINE_OWNER removed', () => {
+  it('2. DISCIPLINE_OWNER is never included, regardless of ownerUserId', () => {
     const result = computeRequiredTiers({
       ...ALL_IDS,
       ownerUserId: ALL_IDS.designerUserId,
@@ -32,7 +31,7 @@ describe('computeRequiredTiers', () => {
     expect(result).toContain(ReviewTier.DISCIPLINE_LEAD);
   });
 
-  it('3. ownerUserId null → DISCIPLINE_OWNER removed', () => {
+  it('3. ownerUserId null → DISCIPLINE_OWNER still excluded', () => {
     const result = computeRequiredTiers({ ...ALL_IDS, ownerUserId: null });
     expect(result).not.toContain(ReviewTier.DISCIPLINE_OWNER);
   });

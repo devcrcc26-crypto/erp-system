@@ -52,6 +52,14 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
     findSourceEntityInProject: jest.Mock;
   };
   let workflowEventLogService: { logCrud: jest.Mock };
+  let taskAccessScopeService: {
+    assertDisciplineWritable: jest.Mock;
+    assertPackageReadable: jest.Mock;
+    assertDisciplineReadable: jest.Mock;
+    buildPackageListWhere: jest.Mock;
+  };
+  let taskAssignmentNotificationService: { notifySubtaskRolesAssigned: jest.Mock };
+  let documentNumberService: { getNextNumber: jest.Mock };
   let service: DesignPackagesService;
 
   function buildPackage(overrides: Partial<DesignPackage> = {}): DesignPackage {
@@ -109,9 +117,24 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       findSourceEntityInProject: jest.fn().mockResolvedValue(true),
     };
     workflowEventLogService = { logCrud: jest.fn() };
+    taskAccessScopeService = {
+      assertDisciplineWritable: jest.fn().mockResolvedValue(undefined),
+      assertPackageReadable: jest.fn().mockResolvedValue(undefined),
+      assertDisciplineReadable: jest.fn().mockResolvedValue(undefined),
+      buildPackageListWhere: jest.fn().mockResolvedValue({}),
+    };
+    taskAssignmentNotificationService = {
+      notifySubtaskRolesAssigned: jest.fn().mockResolvedValue(undefined),
+    };
+    documentNumberService = {
+      getNextNumber: jest.fn().mockResolvedValue('SUB-0001'),
+    };
     const prisma = {
       projectTeam: {
         findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
+      },
+      taskDiscipline: {
+        findFirst: jest.fn().mockResolvedValue(null),
       },
     };
 
@@ -125,6 +148,9 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       {} as never,
       {} as never,
       prisma as never,
+      taskAccessScopeService as never,
+      taskAssignmentNotificationService as never,
+      documentNumberService as never,
     );
   });
 
@@ -195,7 +221,6 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       expect.objectContaining({
         packageData: expect.objectContaining({
           requiredTiers: [
-            ReviewTier.DISCIPLINE_OWNER,
             ReviewTier.REVIEWER,
             ReviewTier.DISCIPLINE_LEAD,
             ReviewTier.DEPT_CHIEF,

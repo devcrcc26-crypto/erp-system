@@ -51,6 +51,14 @@ describe('DesignPackagesService approval chain (design-packages-chain)', () => {
     findScoped: jest.Mock;
     findWithReviewRoles: jest.Mock;
   };
+  let taskAccessScopeService: {
+    assertDisciplineWritable: jest.Mock;
+    assertPackageReadable: jest.Mock;
+    assertDisciplineReadable: jest.Mock;
+    buildPackageListWhere: jest.Mock;
+  };
+  let taskAssignmentNotificationService: { notifySubtaskRolesAssigned: jest.Mock };
+  let documentNumberService: { getNextNumber: jest.Mock };
   let service: DesignPackagesService;
 
   function buildPackage(overrides: Partial<DesignPackage> = {}): DesignPackage {
@@ -107,6 +115,18 @@ describe('DesignPackagesService approval chain (design-packages-chain)', () => {
       }),
       findWithReviewRoles: jest.fn().mockResolvedValue(baseDiscipline),
     };
+    taskAccessScopeService = {
+      assertDisciplineWritable: jest.fn().mockResolvedValue(undefined),
+      assertPackageReadable: jest.fn().mockResolvedValue(undefined),
+      assertDisciplineReadable: jest.fn().mockResolvedValue(undefined),
+      buildPackageListWhere: jest.fn().mockResolvedValue({}),
+    };
+    taskAssignmentNotificationService = {
+      notifySubtaskRolesAssigned: jest.fn().mockResolvedValue(undefined),
+    };
+    documentNumberService = {
+      getNextNumber: jest.fn().mockResolvedValue('SUB-0001'),
+    };
 
     service = new DesignPackagesService(
       designPackageRepository as unknown as DesignPackageRepository,
@@ -121,7 +141,13 @@ describe('DesignPackagesService approval chain (design-packages-chain)', () => {
         projectTeam: {
           findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
         },
+        taskDiscipline: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
       } as never,
+      taskAccessScopeService as never,
+      taskAssignmentNotificationService as never,
+      documentNumberService as never,
     );
   });
 

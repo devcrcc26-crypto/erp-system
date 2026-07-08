@@ -10,20 +10,14 @@ export function computeRequiredTiers(discipline: {
   chiefUserId: string | null;
   instituteChiefUserId: string | null;
 }): ReviewTier[] {
+  // DISCIPLINE_OWNER is intentionally never included — disciplineOwnerUserId
+  // stays on DesignPackage/TaskDiscipline but is no longer an approval step.
   const included = new Set<string>([
-    ReviewTier.DISCIPLINE_OWNER,
     ReviewTier.REVIEWER,
     ReviewTier.DISCIPLINE_LEAD,
     ReviewTier.DEPT_CHIEF,
     ReviewTier.INSTITUTE_CHIEF,
   ]);
-
-  if (
-    !discipline.ownerUserId ||
-    discipline.ownerUserId === discipline.designerUserId
-  ) {
-    included.delete(ReviewTier.DISCIPLINE_OWNER);
-  }
 
   if (
     !discipline.reviewerUserId ||
