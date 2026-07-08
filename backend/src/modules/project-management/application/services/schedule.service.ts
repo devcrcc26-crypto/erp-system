@@ -873,21 +873,6 @@ export class ScheduleService {
   ): Promise<MappedTaskDiscipline> {
     await this.getTaskOrThrow(projectId, taskId);
 
-    // DEMO BYPASS — remove after demo
-    const isMember = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({
-        projectId,
-        userId: ctx.userId,
-      }),
-      select: { id: true },
-    });
-    if (!isMember) {
-      throw new ForbiddenException(
-        'Only the task dispatcher or project manager can create discipline tasks.',
-      );
-    }
-    // END DEMO BYPASS
-
     await this.assertUsersOnProjectTeam(projectId, [
       dto.designerUserId,
       dto.ownerUserId,
@@ -1071,21 +1056,6 @@ export class ScheduleService {
     if (!discipline) {
       throw new NotFoundException('Task discipline not found');
     }
-
-    // DEMO BYPASS — remove after demo
-    const isMember = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({
-        projectId,
-        userId: ctx.userId,
-      }),
-      select: { id: true },
-    });
-    if (!isMember) {
-      throw new ForbiddenException(
-        'Only the discipline leader can close a task discipline.',
-      );
-    }
-    // END DEMO BYPASS
 
     if (discipline.isClosed) {
       throw new ConflictException('Discipline is already closed.');

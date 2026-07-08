@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -178,21 +177,6 @@ export class DesignPackagesService {
         'Assign a discipline leader before creating a design package.',
       );
     }
-    // DEMO BYPASS — remove after demo
-    const isMember = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({
-        projectId,
-        userId: ctx.userId,
-      }),
-      select: { id: true },
-    });
-    if (!isMember) {
-      throw new ForbiddenException(
-        'You must be a project team member to create a design package.',
-      );
-    }
-    // END DEMO BYPASS
-
     if (dto.instituteChiefUserId && dto.instituteChiefName) {
       throw new BadRequestException(
         'Set either instituteChiefUserId or instituteChiefName, not both.',
@@ -731,21 +715,6 @@ export class DesignPackagesService {
     if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
       throw new NotFoundException('Design package not found');
     }
-
-    // DEMO BYPASS — remove after demo
-    const isMember = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({
-        projectId,
-        userId: ctx.userId,
-      }),
-      select: { id: true },
-    });
-    if (!isMember) {
-      throw new ForbiddenException(
-        'You must be a project team member to close a design package.',
-      );
-    }
-    // END DEMO BYPASS
 
     if (pkg.packageStatus === DesignPackageStatus.CLOSED) {
       throw new ConflictException('Package is already closed.');

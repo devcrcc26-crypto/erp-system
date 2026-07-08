@@ -4,18 +4,6 @@ import { PermissionService } from '../../../../shared/permissions/permission.ser
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
-
-// DEMO BYPASS — remove after demo
-const DEMO_NON_REVIEW_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
-  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
-  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
-  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
-  EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
-  EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
-  EpcWorkflowAction.REVISION_TRIGGER,
-  EpcWorkflowAction.REVISION_TRIGGER_CREATE,
-]);
-// END DEMO BYPASS
 import { ProjectDesignStage } from '../../domain/contracts/enums/project-design-stage.enum';
 import { canPerformFromContext } from '../../domain/permission-context-builder';
 import {
@@ -65,19 +53,6 @@ export class PermissionResolverService {
       input.actionOverride ??
       this.mapTransitionToAction(input.edv.status, input.targetStatus);
 
-    // DEMO BYPASS — remove after demo
-    if (DEMO_NON_REVIEW_ACTIONS.has(action)) {
-      const isMember = await this.isProjectMember(
-        input.userId,
-        input.companyId,
-        input.projectId,
-      );
-      if (isMember) {
-        return;
-      }
-    }
-    // END DEMO BYPASS
-
     const grantedActions = await this.resolveGrantedActions(
       input.userId,
       input.companyId,
@@ -90,12 +65,6 @@ export class PermissionResolverService {
       input.userId,
     );
     const projectDesignStage = await this.resolveProjectDesignStage(
-      input.companyId,
-      input.projectId,
-    );
-
-    const demoMemberBypass = await this.isProjectMember(
-      input.userId,
       input.companyId,
       input.projectId,
     );
@@ -120,7 +89,6 @@ export class PermissionResolverService {
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
       currentAssigneeUserId: input.currentAssigneeUserId,
-      demoMemberBypass,
     });
 
     if (!allowed) {
@@ -162,25 +130,6 @@ export class PermissionResolverService {
         )
       : undefined;
 
-    // DEMO BYPASS — remove after demo
-    if (DEMO_NON_REVIEW_ACTIONS.has(input.action)) {
-      const isMember = await this.isProjectMember(
-        input.userId,
-        input.companyId,
-        input.projectId,
-      );
-      if (isMember) {
-        return;
-      }
-    }
-    // END DEMO BYPASS
-
-    const demoMemberBypass = await this.isProjectMember(
-      input.userId,
-      input.companyId,
-      input.projectId,
-    );
-
     const allowed = canPerformFromContext({
       companyId: input.companyId,
       userId: input.userId,
@@ -208,7 +157,6 @@ export class PermissionResolverService {
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
-      demoMemberBypass,
     });
 
     if (!allowed) {
@@ -320,24 +268,6 @@ export class PermissionResolverService {
     }
     return EpcWorkflowAction.REVISION_TRIGGER;
   }
-
-  // DEMO BYPASS helper — remove after demo
-  private async isProjectMember(
-    userId: string,
-    _companyId: string,
-    projectId: string,
-  ): Promise<boolean> {
-    const membership = await this.prisma.projectTeam.findFirst({
-      where: {
-        projectId,
-        userId,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
-    return membership !== null;
-  }
-  // END DEMO BYPASS helper
 
   private async resolvePackageApprovalOverrides(
     companyId: string,
