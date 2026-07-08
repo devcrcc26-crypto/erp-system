@@ -11,7 +11,6 @@ describe('DisciplineScopeService', () => {
   let prisma: {
     taskDiscipline: { findMany: jest.Mock; findFirst: jest.Mock };
     project: { findFirst: jest.Mock };
-    projectTeam: { findFirst: jest.Mock };
   };
   let taskAccessScopeService: {
     resolveProfile: jest.Mock;
@@ -24,7 +23,6 @@ describe('DisciplineScopeService', () => {
     prisma = {
       taskDiscipline: { findMany: jest.fn(), findFirst: jest.fn() },
       project: { findFirst: jest.fn() },
-      projectTeam: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     taskAccessScopeService = {
       resolveProfile: jest.fn().mockResolvedValue({

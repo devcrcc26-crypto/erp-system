@@ -6,6 +6,7 @@ import { PermissionService } from '../../../../shared/permissions/permission.ser
 import {
   hasFullProjectDataAccess,
   hasProjectAdminAccess,
+  isProjectAdminWritable,
 } from '../../../../shared/permissions/project-admin.util';
 import {
   disciplineAssigneeOr,
@@ -152,11 +153,7 @@ export class TaskAccessScopeService {
     const profile = await this.resolveProfile(ctx);
     const base = activeOnly({ projectId });
 
-    if (profile.hasFullProjectAccess) {
-      return base;
-    }
-
-    if (await this.isProjectTeamMember(ctx, projectId)) {
+    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
       return base;
     }
 
@@ -192,6 +189,9 @@ export class TaskAccessScopeService {
         }),
       },
     });
+
+    // TODO: add { dispatcherUserId: ctx.userId } once Chen confirms
+    // dispatcher scope (pending).
 
     return {
       AND: [base, { OR: orConditions }],
@@ -233,7 +233,19 @@ export class TaskAccessScopeService {
     if (profile.hasFullProjectAccess) {
       return true;
     }
-    return this.isProjectTeamMember(ctx, projectId);
+    if (profile.isProjectAdmin) {
+      const project = await this.prisma.project.findFirst({
+        where: activeOnly({
+          id: projectId,
+          companyId: ctx.companyId,
+        }),
+        select: { createdBy: true },
+      });
+      return project
+        ? isProjectAdminWritable(project, ctx.userId)
+        : false;
+    }
+    return false;
   }
 
   /**
@@ -246,11 +258,7 @@ export class TaskAccessScopeService {
     await this.assertProjectReadable(ctx, projectId);
 
     const profile = await this.resolveProfile(ctx);
-    if (profile.hasFullProjectAccess) {
-      return {};
-    }
-
-    if (await this.isProjectTeamMember(ctx, projectId)) {
+    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
       return {};
     }
 
@@ -450,16 +458,5 @@ export class TaskAccessScopeService {
     return [
       ...new Set(rows.map((row) => row.taskDiscipline.task.projectId)),
     ];
-  }
-
-  private async isProjectTeamMember(
-    ctx: PmContext,
-    projectId: string,
-  ): Promise<boolean> {
-    const member = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({ projectId, userId: ctx.userId }),
-      select: { id: true },
-    });
-    return member !== null;
   }
 }

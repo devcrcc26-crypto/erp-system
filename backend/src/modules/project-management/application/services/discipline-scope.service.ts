@@ -35,14 +35,6 @@ export class DisciplineScopeService {
       if (project?.responsiblePersonId === ctx.userId) {
         return true;
       }
-
-      const onTeam = await this.prisma.projectTeam.findFirst({
-        where: activeOnly({ projectId, userId: ctx.userId }),
-        select: { id: true },
-      });
-      if (onTeam) {
-        return true;
-      }
     }
 
     return false;
