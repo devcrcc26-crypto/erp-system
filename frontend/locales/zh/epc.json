@@ -13,8 +13,8 @@
     "logout": "退出登录",
     "signingOut": "正在退出…",
     "reviewInbox": "审阅收件箱",
-    "myComments": "我的意见",
-    "myWork": "我的工作",
+    "myComments": "全部我的意见",
+    "myWork": "全部我的工作",
     "departments": "部门",
     "disciplinesCatalog": "专业",
     "menuApplication": "应用",
@@ -89,11 +89,11 @@
       "description": "已分配的审阅会话，含 SLA 跟踪与层级筛选。"
     },
     "myComments": {
-      "title": "我的意见",
+      "title": "全部我的意见",
       "description": "设计人员队列--处理审阅意见并上传修订版。"
     },
     "myWork": {
-      "title": "我的工作",
+      "title": "全部我的工作",
       "description": "您负责的专业及担任角色的子任务。"
     },
     "reviewMode": {

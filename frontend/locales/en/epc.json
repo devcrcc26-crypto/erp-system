@@ -13,8 +13,8 @@
     "logout": "Logout",
     "signingOut": "Signing out…",
     "reviewInbox": "Review Inbox",
-    "myComments": "My Comments",
-    "myWork": "My Work",
+    "myComments": "All My Comments",
+    "myWork": "All My Work",
     "departments": "Departments",
     "disciplinesCatalog": "Disciplines",
     "menuApplication": "Application",
@@ -89,11 +89,11 @@
       "description": "Assigned review sessions with SLA tracking and tier filtering."
     },
     "myComments": {
-      "title": "My Comments",
+      "title": "All My Comments",
       "description": "Designer queue - resolve reviewer comments and upload revisions."
     },
     "myWork": {
-      "title": "My Work",
+      "title": "All My Work",
       "description": "Tasks you lead and subtasks where you hold a role."
     },
     "reviewMode": {

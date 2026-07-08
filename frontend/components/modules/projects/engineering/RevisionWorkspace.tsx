@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Alert, Button, Form, Input, Modal, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { RcFile } from 'antd/es/upload';
@@ -15,6 +14,7 @@ import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { tokens } from '@/lib/theme/tokens';
 import { useState } from 'react';
 
 interface DocumentWithVersions {
@@ -57,7 +57,13 @@ export default function RevisionWorkspace({
     open && Boolean(comment),
   );
 
+  const uploading = uploadDocument.isPending || uploadEdvVersion.isPending;
+  const resolving = transitionComment.isPending;
+
   function handleClose(): void {
+    if (uploading || resolving) {
+      return;
+    }
     setPendingFile(null);
     form.resetFields();
     onClose();
@@ -118,11 +124,7 @@ export default function RevisionWorkspace({
         },
       });
 
-      messageApi.success(
-        values.resolutionNote.trim()
-          ? 'Comment marked resolved'
-          : 'Comment marked resolved',
-      );
+      messageApi.success('Comment marked resolved');
       form.resetFields();
       setPendingFile(null);
       onResolved();
@@ -133,85 +135,124 @@ export default function RevisionWorkspace({
 
   return (
     <Modal
-      title="Upload revision"
+      title="Revise document"
       open={open}
       onCancel={handleClose}
       footer={null}
-      width={520}
+      width={560}
       destroyOnHidden
     >
       {comment && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500">
-            {comment.documentTitle} · Rev {comment.revisionLabel}
-          </p>
-
-          <Alert
-            type="info"
-            showIcon
-            title={comment.designPackageName}
-            description={comment.body}
-          />
-
-          <div className="flex flex-wrap items-center gap-2">
-            <EdvFileActions
-              compact
-              documentVersionId={comment.documentVersionId}
-              fileName={comment.documentTitle}
-            />
-            <Link
-              href={`/projects/${comment.projectId}/disciplines/${comment.taskDisciplineId}`}
-              className="text-sm text-orange-600 hover:underline"
-            >
-              Open discipline
-            </Link>
+        <div className="flex flex-col gap-5">
+          <div
+            className="rounded-lg border px-4 py-3"
+            style={{
+              borderColor: tokens.colorBorder,
+              background: tokens.colorSurfaceSecondary,
+            }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              Review comment
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-900">
+              {comment.designPackageName}
+            </p>
+            <p className="mt-1 text-sm text-slate-700">{comment.body}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="text-xs text-slate-500">
+                {comment.documentTitle} · Rev {comment.revisionLabel}
+              </span>
+              <EdvFileActions
+                compact
+                documentVersionId={comment.documentVersionId}
+                fileName={comment.documentTitle}
+              />
+            </div>
           </div>
 
-          <Upload
-            maxCount={1}
-            beforeUpload={(file: RcFile) => {
-              setPendingFile(file);
-              return false;
-            }}
-            onRemove={() => setPendingFile(null)}
-            fileList={
-              pendingFile
-                ? [{ uid: 'revision', name: pendingFile.name, status: 'done' }]
-                : []
-            }
-          >
-            <Button icon={<UploadOutlined />}>Select revised file</Button>
-          </Upload>
-
-          <Button
-            type="default"
-            block
-            loading={uploadDocument.isPending || uploadEdvVersion.isPending}
-            disabled={!pendingFile}
-            onClick={() => void handleUploadRevision()}
-          >
-            Upload new revision
-          </Button>
-
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={(values: { resolutionNote: string }) => void handleResolve(values)}
-          >
-            <Form.Item name="resolutionNote" label="Resolution note">
-              <Input.TextArea rows={3} placeholder="Summarize changes made" />
-            </Form.Item>
-            <div className="flex justify-end gap-2">
-              <Button onClick={handleClose}>Cancel</Button>
-              <Button
-                type="primary"
-                loading={transitionComment.isPending}
-                onClick={() => form.submit()}
-              >
-                Mark resolved
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-medium text-slate-900">
+              1. Upload revised file
+            </p>
+            <p className="text-xs text-slate-500">
+              Attach the updated drawing or document, then upload it as a new
+              revision before marking the comment resolved.
+            </p>
+            <Upload
+              maxCount={1}
+              disabled={uploading || resolving}
+              beforeUpload={(file: RcFile) => {
+                setPendingFile(file);
+                return false;
+              }}
+              onRemove={() => setPendingFile(null)}
+              fileList={
+                pendingFile
+                  ? [{ uid: 'revision', name: pendingFile.name, status: 'done' }]
+                  : []
+              }
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.dwg"
+            >
+              <Button icon={<UploadOutlined />} disabled={uploading || resolving}>
+                Select revised file
               </Button>
-            </div>
-          </Form>
+            </Upload>
+            <Button
+              type="default"
+              loading={uploading}
+              disabled={!pendingFile || resolving}
+              onClick={() => void handleUploadRevision()}
+            >
+              Upload new revision
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-slate-200 pt-4">
+            <p className="text-[13px] font-medium text-slate-900">
+              2. Resolve comment
+            </p>
+            <Form
+              form={form}
+              layout="vertical"
+              requiredMark={false}
+              onFinish={(values: { resolutionNote: string }) =>
+                void handleResolve(values)
+              }
+            >
+              <Form.Item
+                name="resolutionNote"
+                label="Resolution note"
+                className="!mb-3"
+              >
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Summarize what changed in this revision"
+                  disabled={uploading || resolving}
+                />
+              </Form.Item>
+              <div className="flex justify-end gap-2">
+                <Button onClick={handleClose} disabled={uploading || resolving}>
+                  Cancel
+                </Button>
+                <Button
+                  type="primary"
+                  loading={resolving}
+                  disabled={uploading}
+                  onClick={() => form.submit()}
+                >
+                  Mark resolved
+                </Button>
+              </div>
+            </Form>
+          </div>
+
+          {comment.status !== 'IN_PROGRESS' && (
+            <Alert
+              type="warning"
+              showIcon
+              title="Start the comment before marking it resolved."
+            />
+          )}
         </div>
       )}
     </Modal>
