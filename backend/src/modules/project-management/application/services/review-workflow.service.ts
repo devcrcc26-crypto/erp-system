@@ -692,6 +692,7 @@ export class ReviewWorkflowService {
         command.actorId,
         session.currentTier,
         approveDiscipline,
+        { approvedOnBehalfOfName: command.approvedOnBehalfOfName },
       );
 
       const commentStatuses = await this.epcReviewRepository.listCommentStatusesForSession(
@@ -807,6 +808,10 @@ export class ReviewWorkflowService {
         status: ReviewSessionStatus.APPROVED,
         outcome: ReviewSessionOutcome.APPROVED,
         closedAt: new Date(),
+        instituteChiefApprovedOnBehalfOfName:
+          session.currentTier === ReviewTier.INSTITUTE_CHIEF
+            ? command.approvedOnBehalfOfName ?? null
+            : null,
         updatedBy: command.actorId,
       });
 
@@ -1380,6 +1385,11 @@ export class ReviewWorkflowService {
         supportingDesignerUserId?: string | null;
       };
     }) | null,
+    // Only passed by approveReviewSession — enables the DEPT_CHIEF to approve
+    // the INSTITUTE_CHIEF tier on behalf of an external Institute Chief with
+    // no system account. Omitted entirely elsewhere (e.g. returnPackageForRework)
+    // so this bypass never applies to other actions.
+    proxyApproval?: { approvedOnBehalfOfName?: string },
   ): void {
     if (!packageWithDiscipline) {
       throw new ForbiddenException('Actor role does not match current review tier.');
@@ -1401,6 +1411,20 @@ export class ReviewWorkflowService {
           packageWithDiscipline.taskDiscipline.supportingDesignerUserId ?? null,
       },
     );
+
+    if (
+      proxyApproval !== undefined &&
+      currentTier === ReviewTier.INSTITUTE_CHIEF &&
+      !effectiveChain.instituteChiefUserId &&
+      actorId === effectiveChain.chiefUserId
+    ) {
+      if (!proxyApproval.approvedOnBehalfOfName?.trim()) {
+        throw new BadRequestException(
+          'Approving on behalf of the Institute Chief requires their name.',
+        );
+      }
+      return;
+    }
 
     const actorTiers = REVIEW_TIER_ORDER.filter(
       (tier) =>

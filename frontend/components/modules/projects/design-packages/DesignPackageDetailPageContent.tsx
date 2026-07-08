@@ -180,6 +180,7 @@ export default function DesignPackageDetailPageContent({
     Boolean(reviewSessionId) &&
     canBatchApprovePackageEdvs(
       reviewMode?.currentTier,
+      pkg.requiredTiers,
       lockGuidance.inReviewEdvIds.length,
     );
   const discipline = disciplineQuery.data;
@@ -335,7 +336,7 @@ export default function DesignPackageDetailPageContent({
                 loading={approveSession.isPending}
                 onClick={() => void handleApproveSession()}
               >
-                {getSessionApproveLabel(reviewMode?.currentTier)}
+                {getSessionApproveLabel(reviewMode?.currentTier, pkg.requiredTiers)}
               </Button>
             )}
             {canApproveAllInReview && (
@@ -380,7 +381,7 @@ export default function DesignPackageDetailPageContent({
       >
         <ProjectionLagHelper pending={pkg.projectionPending} />
 
-        {reviewSessionId && !isFinalReviewTier(reviewMode?.currentTier) && (
+        {reviewSessionId && !isFinalReviewTier(reviewMode?.currentTier, pkg.requiredTiers) && (
           <div className="mb-4">
             <Alert
               type="info"

@@ -224,6 +224,7 @@ export default function ReviewModePanel({
   ).length;
   const canBatchApproveEdvs = canBatchApprovePackageEdvs(
     reviewMode?.currentTier,
+    packageQuery.data?.requiredTiers,
     inReviewEdvCount,
   );
 
@@ -298,7 +299,7 @@ export default function ReviewModePanel({
   return (
     <div className="flex flex-col gap-4 overflow-x-hidden" data-testid="review-mode-panel">
       <ReviewApprovalBlockedAlert comments={sessionComments} />
-      {!isFinalReviewTier(reviewMode?.currentTier) && (
+      {!isFinalReviewTier(reviewMode?.currentTier, packageQuery.data?.requiredTiers) && (
         <Alert
           type="info"
           showIcon
@@ -438,6 +439,9 @@ export default function ReviewModePanel({
                       packageId={packageId}
                       reviewSessionId={reviewSessionId}
                       currentTier={reviewMode?.currentTier ?? null}
+                      requiredTiers={packageQuery.data?.requiredTiers ?? []}
+                      instituteChiefUserId={packageQuery.data?.instituteChiefUserId ?? null}
+                      instituteChiefName={packageQuery.data?.instituteChiefName ?? null}
                       comments={sessionComments}
                       onAction={refetchAll}
                     />

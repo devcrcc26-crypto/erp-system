@@ -510,6 +510,8 @@ export interface LockPackageEdvsRequest {
 
 export interface ApproveReviewSessionRequest {
   idempotencyKey?: string;
+  /** Required when approving the INSTITUTE_CHIEF tier on behalf of an external Institute Chief with no system account. */
+  approvedOnBehalfOfName?: string;
 }
 
 export interface ReturnPackageForReworkRequest {

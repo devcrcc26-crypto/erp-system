@@ -1,6 +1,7 @@
 'use client';
 
-import { Button, Space } from 'antd';
+import { useState } from 'react';
+import { Button, Checkbox, Input, Space } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import {
@@ -9,9 +10,10 @@ import {
 } from '@/lib/query/design-packages';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
-import type { ReviewModeComment } from '@/lib/api/epc.types';
+import type { ReviewModeComment, ReviewTier } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { reviewTierBilingualLabel } from '@/lib/utils/review-tier-display';
+import { isFinalReviewTier } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -21,6 +23,9 @@ export default function DisciplineLeadConsole({
   packageId,
   reviewSessionId,
   currentTier,
+  requiredTiers,
+  instituteChiefUserId,
+  instituteChiefName,
   comments,
   onAction,
 }: {
@@ -29,6 +34,9 @@ export default function DisciplineLeadConsole({
   packageId: string;
   reviewSessionId: string | null;
   currentTier: string | null;
+  requiredTiers: ReadonlyArray<ReviewTier | string>;
+  instituteChiefUserId: string | null;
+  instituteChiefName: string | null;
   comments: readonly ReviewModeComment[];
   onAction: () => void;
 }): React.ReactNode {
@@ -37,6 +45,8 @@ export default function DisciplineLeadConsole({
   const messageApi = useAppMessage();
   const approveSession = useApproveReviewSession();
   const returnPackage = useReturnPackageForRework();
+  const [approveOnBehalf, setApproveOnBehalf] = useState(false);
+  const [onBehalfOfName, setOnBehalfOfName] = useState(instituteChiefName ?? '');
 
   if (permLoading) {
     return null;
@@ -50,15 +60,20 @@ export default function DisciplineLeadConsole({
     currentTier === 'DISCIPLINE_OWNER' ||
     currentTier === 'REVIEWER' ||
     currentTier === 'DISCIPLINE_LEAD' ||
-    currentTier === 'DEPT_CHIEF';
+    currentTier === 'DEPT_CHIEF' ||
+    currentTier === 'INSTITUTE_CHIEF';
 
   if (!isGovernanceTier) {
     return null;
   }
 
   const approvalAllowed = canApproveReviewSession(comments.map((comment) => comment.status));
-  const isFinalTier = currentTier === 'DEPT_CHIEF';
+  const isFinalTier = isFinalReviewTier(currentTier, requiredTiers);
   const tierLabel = reviewTierBilingualLabel(currentTier ?? '');
+  const isInstituteChiefProxyEligible =
+    currentTier === 'INSTITUTE_CHIEF' && !instituteChiefUserId;
+  const canSubmitApproval =
+    approvalAllowed && (!approveOnBehalf || onBehalfOfName.trim().length > 0);
 
   return (
     <FormLayout
@@ -66,10 +81,27 @@ export default function DisciplineLeadConsole({
       description={`Approve or return at the ${tierLabel} tier.`}
     >
       <ReviewApprovalBlockedAlert comments={comments} />
+      {isInstituteChiefProxyEligible && (
+        <div className="mb-3 space-y-2">
+          <Checkbox
+            checked={approveOnBehalf}
+            onChange={(event) => setApproveOnBehalf(event.target.checked)}
+          >
+            Approve on behalf of Institute Chief
+          </Checkbox>
+          {approveOnBehalf && (
+            <Input
+              placeholder="Institute Chief's name"
+              value={onBehalfOfName}
+              onChange={(event) => setOnBehalfOfName(event.target.value)}
+            />
+          )}
+        </div>
+      )}
       <Space wrap>
         <Button
           type="primary"
-          disabled={!approvalAllowed}
+          disabled={!canSubmitApproval}
           loading={approveSession.isPending}
           onClick={() => {
             void approveSession
@@ -78,6 +110,9 @@ export default function DisciplineLeadConsole({
                 taskDisciplineId,
                 packageId,
                 reviewSessionId,
+                body: approveOnBehalf
+                  ? { approvedOnBehalfOfName: onBehalfOfName.trim() }
+                  : undefined,
               })
               .then(() => {
                 messageApi.success('Session approved');
@@ -101,14 +136,7 @@ export default function DisciplineLeadConsole({
                 packageId,
                 body: {
                   reviewSessionId,
-                  reason:
-                    currentTier === 'DISCIPLINE_OWNER'
-                      ? 'Returned by discipline owner'
-                      : currentTier === 'REVIEWER'
-                        ? 'Returned by reviewer'
-                        : currentTier === 'DISCIPLINE_LEAD'
-                          ? 'Returned by discipline lead'
-                          : 'Returned by department chief',
+                  reason: `Returned by ${tierLabel}`,
                 },
               })
               .then(() => {

@@ -876,6 +876,7 @@ export class DesignPackagesService {
       actorId: ctx.userId,
       reviewSessionId,
       idempotencyKey: dto.idempotencyKey,
+      approvedOnBehalfOfName: dto.approvedOnBehalfOfName,
     });
   }
 

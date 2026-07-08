@@ -220,6 +220,14 @@ export class ApproveReviewSessionDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Required when approving the INSTITUTE_CHIEF tier on behalf of an external Institute Chief with no system account.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  approvedOnBehalfOfName?: string;
 }
 
 export class AddReviewCommentDto {

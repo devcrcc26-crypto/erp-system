@@ -1832,6 +1832,8 @@ model ReviewSession {
   openedAt         DateTime             @default(now()) @map("opened_at")
   closedAt         DateTime?            @map("closed_at")
   closedReason     String?              @map("closed_reason")
+  /** Set when the DEPT_CHIEF approves the INSTITUTE_CHIEF tier on behalf of an external (no-account) Institute Chief. */
+  instituteChiefApprovedOnBehalfOfName String? @map("institute_chief_approved_on_behalf_of_name")
   slaDeadlineAt    DateTime?            @map("sla_deadline_at")
   slaEscalatedAt   DateTime?            @map("sla_escalated_at")
   createdAt        DateTime             @default(now()) @map("created_at")

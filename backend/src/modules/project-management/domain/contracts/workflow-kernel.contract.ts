@@ -67,6 +67,8 @@ export interface UpdateReviewCommentCommand extends WorkflowCommandBase {
 export interface ApproveReviewSessionCommand extends WorkflowCommandBase {
   readonly type: 'ApproveReviewSession';
   readonly reviewSessionId: string;
+  /** Required when the actor is the DEPT_CHIEF approving the INSTITUTE_CHIEF tier on behalf of an external Institute Chief with no system account. */
+  readonly approvedOnBehalfOfName?: string;
 }
 
 export interface ReturnPackageForReworkCommand extends WorkflowCommandBase {

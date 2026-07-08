@@ -1,12 +1,31 @@
 import type { ReviewTier } from '@/lib/api/epc.types';
+import { REVIEW_TIER_ORDER } from '@/lib/utils/review-tier-display';
 
 /**
- * Final governance tier - only here may EDVs be batch-approved to APPROVED.
+ * Final governance tier for THIS package — the last tier, in canonical
+ * REVIEW_TIER_ORDER, among the package's own requiredTiers. Not a fixed
+ * tier: a package that doesn't require INSTITUTE_CHIEF finalizes at
+ * DEPT_CHIEF, one that does finalizes at INSTITUTE_CHIEF.
  */
 export function isFinalReviewTier(
   tier: ReviewTier | string | null | undefined,
+  requiredTiers?: ReadonlyArray<ReviewTier | string> | null,
 ): boolean {
-  return tier === 'DEPT_CHIEF';
+  if (!tier) {
+    return false;
+  }
+  if (!requiredTiers || requiredTiers.length === 0) {
+    // No package context available — fall back to the pre-INSTITUTE_CHIEF
+    // default rather than silently treating every tier as non-final.
+    return tier === 'DEPT_CHIEF';
+  }
+  const tierIndex = REVIEW_TIER_ORDER.indexOf(tier as ReviewTier);
+  if (tierIndex < 0) {
+    return false;
+  }
+  return !requiredTiers.some(
+    (required) => REVIEW_TIER_ORDER.indexOf(required as ReviewTier) > tierIndex,
+  );
 }
 
 /**
@@ -14,8 +33,9 @@ export function isFinalReviewTier(
  */
 export function getSessionApproveLabel(
   tier: ReviewTier | string | null | undefined,
+  requiredTiers?: ReadonlyArray<ReviewTier | string> | null,
 ): string {
-  return isFinalReviewTier(tier) ? 'Approve package' : 'Approve & escalate';
+  return isFinalReviewTier(tier, requiredTiers) ? 'Approve package' : 'Approve & escalate';
 }
 
 /**
@@ -23,7 +43,8 @@ export function getSessionApproveLabel(
  */
 export function canBatchApprovePackageEdvs(
   tier: ReviewTier | string | null | undefined,
+  requiredTiers: ReadonlyArray<ReviewTier | string> | null | undefined,
   inReviewEdvCount: number,
 ): boolean {
-  return isFinalReviewTier(tier) && inReviewEdvCount > 0;
+  return isFinalReviewTier(tier, requiredTiers) && inReviewEdvCount > 0;
 }
