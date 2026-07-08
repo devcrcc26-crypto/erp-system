@@ -209,6 +209,8 @@ export default function DesignPackagePanel({
           roles?.primaryRole === 'DESIGNER' ||
           roles?.primaryRole === 'SUPPORTING_DESIGNER';
         const canSubmitPackage = roles?.primaryRole === 'DESIGNER';
+        const isRowPackageDisciplineLeader =
+          roles?.primaryRole === 'DISCIPLINE_LEAD';
         const submitEligibility = getPackageSubmitEligibility(
           record,
           record.items,
@@ -252,7 +254,9 @@ export default function DesignPackagePanel({
               setEditing(record);
               setBuilderOpen(true);
             }}
-            disabled={!lens.canEditEngineering}
+            disabled={
+              !lens.canEditEngineering && !isRowPackageDisciplineLeader
+            }
           >
             Edit
           </Button>
@@ -260,7 +264,9 @@ export default function DesignPackagePanel({
             type="link"
             className="!px-0"
             onClick={() => setEditingRoles(record)}
-            disabled={!lens.canEditEngineering}
+            disabled={
+              !lens.canEditEngineering && !isRowPackageDisciplineLeader
+            }
           >
             Edit roles
           </Button>
@@ -276,7 +282,9 @@ export default function DesignPackagePanel({
             type="link"
             className="!px-0"
             onClick={() => setAddDepPackageId(record.id)}
-            disabled={!lens.canEditEngineering}
+            disabled={
+              !lens.canEditEngineering && !isRowPackageDisciplineLeader
+            }
           >
             Add dependency
           </Button>
