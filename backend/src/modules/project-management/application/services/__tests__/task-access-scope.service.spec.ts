@@ -68,6 +68,19 @@ describe('TaskAccessScopeService', () => {
     await expect(service.getVisibleProjectIds(ctx)).resolves.toBeNull();
   });
 
+  it('allows project administrator to read any project detail when visibleIds is null', async () => {
+    permissionService.getUserRoleNames.mockResolvedValue(['Project Administrator']);
+    const project = {
+      id: projectId,
+      companyId: ctx.companyId,
+    };
+    prisma.project.findFirst.mockResolvedValue(project);
+
+    await expect(service.assertProjectReadable(ctx, projectId)).resolves.toEqual(
+      project,
+    );
+  });
+
   it('scopes department leader reads to led departments only', async () => {
     permissionService.getUserRoleNames.mockResolvedValue(['Employee']);
     prisma.department.findMany.mockResolvedValue([{ id: 'dept-mtd' }]);

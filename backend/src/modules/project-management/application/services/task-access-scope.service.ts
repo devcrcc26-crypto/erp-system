@@ -3,7 +3,10 @@ import { Prisma, Project, Task } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
-import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
+import {
+  hasFullProjectDataAccess,
+  hasProjectAdminAccess,
+} from '../../../../shared/permissions/project-admin.util';
 import {
   disciplineAssigneeOr,
   subtaskRoleOr,
@@ -12,6 +15,7 @@ import { PmContext } from '../types/pm-context.type';
 
 export interface TaskAccessProfile {
   hasFullProjectAccess: boolean;
+  isProjectAdmin: boolean;
   ledDepartmentIds: string[];
   isDepartmentLeader: boolean;
 }
@@ -47,6 +51,7 @@ export class TaskAccessScopeService {
 
     return {
       hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
+      isProjectAdmin: hasProjectAdminAccess(roleNames),
       ledDepartmentIds: ledDepartments.map((row) => row.id),
       isDepartmentLeader: ledDepartments.length > 0,
     };
@@ -61,14 +66,17 @@ export class TaskAccessScopeService {
       return null;
     }
 
+    // Project Admin-class: all projects readable (write gated elsewhere).
+    if (profile.isProjectAdmin) {
+      return null;
+    }
+
     const [
       departmentProjectIds,
-      teamProjectIds,
       disciplineProjectIds,
       subtaskProjectIds,
     ] = await Promise.all([
       this.getDepartmentLeaderProjectIds(profile.ledDepartmentIds),
-      this.getTeamProjectIds(ctx),
       this.getDisciplineScopedProjectIds(ctx),
       this.getSubtaskScopedProjectIds(ctx),
     ]);
@@ -76,7 +84,6 @@ export class TaskAccessScopeService {
     return [
       ...new Set([
         ...departmentProjectIds,
-        ...teamProjectIds,
         ...disciplineProjectIds,
         ...subtaskProjectIds,
       ]),
@@ -122,7 +129,11 @@ export class TaskAccessScopeService {
     }
 
     const visibleIds = await this.getVisibleProjectIds(ctx);
-    if (!visibleIds?.includes(projectId)) {
+    // null = no id filter (full company or Project Admin-class read)
+    if (visibleIds === null) {
+      return project;
+    }
+    if (!visibleIds.includes(projectId)) {
       throw new NotFoundException('Project not found');
     }
 
@@ -329,11 +340,7 @@ export class TaskAccessScopeService {
     await this.assertDisciplineReadable(ctx, projectId, taskDisciplineId);
 
     const profile = await this.resolveProfile(ctx);
-    if (profile.hasFullProjectAccess) {
-      return {};
-    }
-
-    if (await this.isProjectTeamMember(ctx, projectId)) {
+    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
       return {};
     }
 
@@ -417,17 +424,6 @@ export class TaskAccessScopeService {
       select: { id: true },
     });
     return rows.map((row) => row.id);
-  }
-
-  private async getTeamProjectIds(ctx: PmContext): Promise<string[]> {
-    const rows = await this.prisma.projectTeam.findMany({
-      where: activeOnly({
-        userId: ctx.userId,
-        project: activeOnly({ companyId: ctx.companyId }),
-      }),
-      select: { projectId: true },
-    });
-    return [...new Set(rows.map((row) => row.projectId))];
   }
 
   private async getDisciplineScopedProjectIds(ctx: PmContext): Promise<string[]> {

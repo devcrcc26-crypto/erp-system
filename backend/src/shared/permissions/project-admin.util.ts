@@ -1,5 +1,8 @@
 export const PROJECT_ADMINISTRATOR_ROLE = 'Project Administrator';
 
+/** Company Role.name for System Administrator — company-wide full access. */
+export const SYSTEM_ADMINISTRATOR_ROLE = 'System Administrator';
+
 /**
  * Returns true when the user holds the Project Administrator role.
  */
@@ -8,15 +11,45 @@ export function isProjectAdministrator(roleNames: readonly string[]): boolean {
 }
 
 /**
- * Returns true for roles with company-wide project/task data access (comment-8 phase 5).
+ * Company-wide unrestricted project/task data access
+ * (System Admin, Managing Director, Project Manager).
  */
-export function hasFullProjectDataAccess(roleNames: readonly string[]): boolean {
+export function hasFullProjectDataAccess(
+  roleNames: readonly string[],
+): boolean {
   return roleNames.some((name) =>
     [
-      'System Administrator',
-      PROJECT_ADMINISTRATOR_ROLE,
+      SYSTEM_ADMINISTRATOR_ROLE,
       'Managing Director',
       'Project Manager',
     ].includes(name),
   );
+}
+
+/**
+ * Project Admin-class roles: all projects readable; write gated by creator
+ * for Project Administrator. Site Coordinator / Document Controller included
+ * for company-wide project read scope after ProjectTeam bypass removal.
+ */
+export function hasProjectAdminAccess(
+  roleNames: readonly string[],
+): boolean {
+  return roleNames.some((name) =>
+    [
+      PROJECT_ADMINISTRATOR_ROLE,
+      'Site Coordinator',
+      'Document Controller',
+    ].includes(name),
+  );
+}
+
+/**
+ * True when a Project Admin may mutate this project (creator only).
+ * Callers must already know the user has Project Admin access.
+ */
+export function isProjectAdminWritable(
+  project: { createdBy: string },
+  userId: string,
+): boolean {
+  return project.createdBy === userId;
 }
