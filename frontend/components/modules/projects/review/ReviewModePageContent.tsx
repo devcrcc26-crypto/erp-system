@@ -5,9 +5,19 @@
 import Link from 'next/link';
 import { Alert, Breadcrumb, Button } from 'antd';
 import ReviewModePanel from '@/components/modules/projects/review/ReviewModePanel';
+import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { useDesignPackage } from '@/lib/query/design-packages';
-import { useCanViewReviewInbox, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { useProjectDiscipline } from '@/lib/query/disciplines';
+import {
+  useCanViewReviewInbox,
+  useEpcCapabilities,
+  usePermissionsLoading,
+} from '@/hooks/use-pm-capabilities';
+import { useAuthStore } from '@/stores/auth.store';
+import { useCurrentUser } from '@/lib/query/profile';
+import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
+import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -22,17 +32,45 @@ export default function ReviewModePageContent({
 }): React.ReactNode {
   const permLoading = usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
+  const epc = useEpcCapabilities();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const { data: profile } = useCurrentUser();
+  const canLoad =
+    !permLoading &&
+    canViewReviewInbox &&
+    Boolean(projectId) &&
+    Boolean(taskDisciplineId);
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
     packageId,
-    !permLoading &&
-      canViewReviewInbox &&
-      Boolean(projectId) &&
-      Boolean(taskDisciplineId),
+    canLoad,
+  );
+  const disciplineQuery = useProjectDiscipline(
+    projectId,
+    taskDisciplineId,
+    canLoad,
   );
 
   const packageName = packageQuery.data?.name ?? 'Review mode';
+  const pkg = packageQuery.data;
+  const discipline = disciplineQuery.data;
+  const roles =
+    pkg && discipline && currentUserId
+      ? resolvePackageRoles(pkg, discipline, currentUserId)
+      : null;
+  const companyAdminFallback =
+    epc.navFullAccess ||
+    profile?.roles.some((role) => role.name === 'Project Administrator')
+      ? 'Project Admin'
+      : null;
+  const actingAsLabel = formatActingAsLabel(
+    roles?.primaryRole ?? null,
+    roles?.secondaryReviewRole ?? null,
+    companyAdminFallback,
+  );
+  const actingAsReadOnly =
+    (roles?.primaryRole ?? null) === null && companyAdminFallback !== null;
 
   if (permLoading) {
     return <PageLoadingSkeleton />;
@@ -88,6 +126,14 @@ export default function ReviewModePageContent({
             >
               Review package documents, add comments, and run batch actions.
             </p>
+            {actingAsLabel ? (
+              <div className="mt-2">
+                <ResourceRoleContextBadge
+                  label={actingAsLabel}
+                  readOnly={actingAsReadOnly}
+                />
+              </div>
+            ) : null}
           </div>
           {projectId ? (
             <Link

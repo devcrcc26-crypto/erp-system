@@ -29,6 +29,7 @@ import {
   DesignPackageItemsTable,
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import DesignPackageCommentsSection from '@/components/modules/projects/design-packages/DesignPackageCommentsSection';
+import DesignPackageUploadModal from '@/components/modules/projects/design-packages/DesignPackageUploadModal';
 import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import VersionHistoryTimeline from '@/components/modules/projects/engineering/VersionHistoryTimeline';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
@@ -59,8 +60,13 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import type { ReviewTier } from '@/lib/api/epc.types';
+import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
+import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
 import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
+import { useCurrentUser } from '@/lib/query/profile';
+import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
 
 export default function DesignPackageDetailPageContent({
@@ -73,13 +79,16 @@ export default function DesignPackageDetailPageContent({
   packageId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
+  const epc = useEpcCapabilities();
   const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const { data: profile } = useCurrentUser();
   const [returnOpen, setReturnOpen] = useState(false);
   const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [rolesModalOpen, setRolesModalOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
 
   const canViewPackage =
@@ -199,6 +208,23 @@ export default function DesignPackageDetailPageContent({
     pkg.projectedStatus === 'LOCKED' &&
     pkg.packageStatus !== 'CLOSED';
 
+  const { primaryRole, secondaryReviewRole } = resolvePackageRoles(
+    pkg,
+    discipline,
+    currentUserId ?? '',
+  );
+  const companyAdminFallback =
+    epc.navFullAccess || profile?.roles.some((role) => role.name === 'Project Administrator')
+      ? 'Project Admin'
+      : null;
+  const actingAsLabel = formatActingAsLabel(
+    primaryRole,
+    secondaryReviewRole,
+    companyAdminFallback,
+  );
+  const actingAsReadOnly =
+    primaryRole === null && companyAdminFallback !== null;
+
   async function handleApproveAllEdvs(): Promise<void> {
     if (!reviewSessionId || lockGuidance.inReviewEdvIds.length === 0) {
       return;
@@ -302,7 +328,17 @@ export default function DesignPackageDetailPageContent({
 
       <FormLayout
         title={pkg.name}
-        description="Subtask items, dependencies, and workflow actions."
+        description={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <span>Subtask items, dependencies, and workflow actions.</span>
+            {actingAsLabel ? (
+              <ResourceRoleContextBadge
+                label={actingAsLabel}
+                readOnly={actingAsReadOnly}
+              />
+            ) : null}
+          </div>
+        }
         extra={
           <Space wrap>
             {isDisciplineLeader && (
@@ -464,7 +500,20 @@ export default function DesignPackageDetailPageContent({
         </div>
       </FormLayout>
 
-      <FormLayout title="Package items">
+      <FormLayout
+        title="Package items"
+        extra={
+          packageLens.canUploadToPackage ? (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => setUploadModalOpen(true)}
+            >
+              Upload document
+            </Button>
+          ) : undefined
+        }
+      >
         <DesignPackageItemsTable
           projectId={projectId}
           taskDisciplineId={taskDisciplineId}
@@ -475,6 +524,18 @@ export default function DesignPackageDetailPageContent({
           onChanged={() => void packageQuery.refetch()}
         />
       </FormLayout>
+
+      <DesignPackageUploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        packageId={packageId}
+        onSuccess={() => {
+          void packageQuery.refetch();
+          void documentsQuery.refetch();
+        }}
+      />
 
       {packageDocuments.map((doc) => (
         <div key={doc.id}>
@@ -523,6 +584,8 @@ export default function DesignPackageDetailPageContent({
           packageName={pkg.name}
           reviewSessionId={reviewSessionId}
           comments={sessionComments}
+          canActOnAssignedComments={packageLens.canAcknowledgeComments}
+          canOpenReviewMode={packageLens.canAddReviewComment}
           onChanged={() => {
             void reviewModeQuery.refetch();
             void packageQuery.refetch();

@@ -21,10 +21,15 @@ import { PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { layout } from '@/lib/theme/layout';
 import { parseRevisionTriggerParams } from '@/lib/utils/revision-trigger-url';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
+import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
+import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
+import type { SubtaskRole } from '@/lib/api/epc.types';
 
 export default function DisciplineDetailPageContent({
   projectId,
@@ -38,7 +43,9 @@ export default function DisciplineDetailPageContent({
   const revisionTriggerContext = parseRevisionTriggerParams(searchParams);
   const messageApi = useAppMessage();
   const lens = useRoleLens();
+  const epc = useEpcCapabilities();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const { data: profile } = useCurrentUser();
   const [closeDisciplineOpen, setCloseDisciplineOpen] = useState(false);
   const packagesQuery = useDesignPackages(projectId, taskDisciplineId);
   const closeDiscipline = useCloseTaskDiscipline(projectId);
@@ -130,6 +137,46 @@ export default function DisciplineDetailPageContent({
   const canCloseDiscipline =
     isDisciplineLeader && allPackagesClosed && !discipline.isClosed;
 
+  const disciplinePrimaryRole: SubtaskRole | null = (() => {
+    if (!currentUserId) {
+      return null;
+    }
+    if (discipline.designerUserId === currentUserId) {
+      return 'DESIGNER';
+    }
+    if (discipline.supportingDesignerUserId === currentUserId) {
+      return 'SUPPORTING_DESIGNER';
+    }
+    if (discipline.reviewerUserId === currentUserId) {
+      return 'REVIEWER';
+    }
+    if (discipline.disciplineLeadUserId === currentUserId) {
+      return 'DISCIPLINE_LEAD';
+    }
+    if (discipline.chiefUserId === currentUserId) {
+      return 'DEPT_CHIEF';
+    }
+    if (discipline.instituteChiefUserId === currentUserId) {
+      return 'INSTITUTE_CHIEF';
+    }
+    if (discipline.ownerUserId === currentUserId) {
+      return 'DISCIPLINE_OWNER';
+    }
+    return null;
+  })();
+  const companyAdminFallback =
+    epc.navFullAccess ||
+    profile?.roles.some((role) => role.name === 'Project Administrator')
+      ? 'Project Admin'
+      : null;
+  const actingAsLabel = formatActingAsLabel(
+    disciplinePrimaryRole,
+    null,
+    companyAdminFallback,
+  );
+  const actingAsReadOnly =
+    disciplinePrimaryRole === null && companyAdminFallback !== null;
+
   return (
     <div className={layout.pageStack}>
       <Breadcrumb
@@ -150,7 +197,17 @@ export default function DisciplineDetailPageContent({
 
       <FormLayout
         title={discipline.disciplineName}
-        description={`Schedule task: ${discipline.taskName}`}
+        description={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <span>{`Schedule task: ${discipline.taskName}`}</span>
+            {actingAsLabel ? (
+              <ResourceRoleContextBadge
+                label={actingAsLabel}
+                readOnly={actingAsReadOnly}
+              />
+            ) : null}
+          </div>
+        }
         extra={
           canCloseDiscipline ? (
             <Button onClick={() => setCloseDisciplineOpen(true)}>

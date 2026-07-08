@@ -14,7 +14,6 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type { MyCommentItem, ReviewModeComment } from '@/lib/api/epc.types';
 import { useTransitionReviewComment } from '@/lib/query/review-comments';
 import { useAuthStore } from '@/stores/auth.store';
-import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -68,7 +67,7 @@ function toMyCommentItem(
 }
 
 /**
- * Package-level review comments - read-only for reviewers, actionable for assigned designers.
+ * Package-level review comments - actionable for assigned designers via packageLens.
  */
 export default function DesignPackageCommentsSection({
   projectId,
@@ -78,6 +77,8 @@ export default function DesignPackageCommentsSection({
   reviewSessionId,
   comments,
   onChanged,
+  canActOnAssignedComments = false,
+  canOpenReviewMode = false,
 }: {
   projectId: string;
   taskDisciplineId: string;
@@ -86,8 +87,11 @@ export default function DesignPackageCommentsSection({
   reviewSessionId: string;
   comments: readonly ReviewModeComment[];
   onChanged: () => void;
+  /** Designer: Acknowledge / Start / Revise on comments assigned to them. */
+  canActOnAssignedComments?: boolean;
+  /** Reviewer-tier: link into review mode. */
+  canOpenReviewMode?: boolean;
 }): React.ReactNode {
-  const lens = useRoleLens();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const transitionComment = useTransitionReviewComment();
@@ -152,16 +156,16 @@ export default function DesignPackageCommentsSection({
       <FormLayout
         title="Review comments"
         description={
-          lens.canResolveAssignedComments
-            ? 'Comments assigned to you can be acknowledged and resolved here. Resolved comments stay visible until the reviewer verifies them.'
+          canActOnAssignedComments
+            ? 'Comments assigned to you can be acknowledged, started, and revised here. Resolved comments stay visible until the reviewer verifies them.'
             : 'All session comments remain visible with their current status.'
         }
         extra={
-          lens.canResolveAssignedComments ? (
+          canActOnAssignedComments ? (
             <Link href={`/projects/${projectId}/my-comments`}>
               <Button size="small">Open My Comments</Button>
             </Link>
-          ) : lens.canAccessReviewMode ? (
+          ) : canOpenReviewMode ? (
             <Link
               href={`/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`}
             >
@@ -175,7 +179,7 @@ export default function DesignPackageCommentsSection({
         <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
           {comments.map((comment) => {
             const isAssignee = comment.assignedToUserId === currentUserId;
-            const canAct = lens.canResolveAssignedComments && isAssignee;
+            const canAct = canActOnAssignedComments && isAssignee;
 
             return (
               <li key={comment.id} className="p-4 text-sm">

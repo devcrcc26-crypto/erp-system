@@ -17,7 +17,7 @@ export default function FormLayout({
   className,
 }: {
   title?: string;
-  description?: string;
+  description?: ReactNode;
   extra?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -53,12 +53,12 @@ export default function FormLayout({
               </div>
             )}
             {description && (
-              <p
+              <div
                 className="mt-1 text-[12px] font-normal leading-[1.5]"
                 style={{ color: tokens.colorTextSecondary }}
               >
                 {description}
-              </p>
+              </div>
             )}
           </div>
           {extra && (
