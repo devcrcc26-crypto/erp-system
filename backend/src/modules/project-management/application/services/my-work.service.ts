@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DesignPackage } from '@prisma/client';
+import { DesignPackage, ReviewTier } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
@@ -8,6 +8,11 @@ import {
   type SubtaskRoleField,
 } from '../constants/my-work.constants';
 import { subtaskRoleOr } from '../../domain/task-access-scope.util';
+import { getEffectiveApprovalChain } from '../../domain/approval-chain.util';
+import {
+  resolveSubtaskRoles,
+  type SubtaskRole,
+} from '../../domain/subtask-role-resolver.util';
 import { PmContext } from '../types/pm-context.type';
 import { TaskAccessScopeService } from './task-access-scope.service';
 
@@ -25,6 +30,10 @@ export interface MyWorkItem {
   designPackageId: string | null;
   subtaskName: string | null;
   roleLabel: string | null;
+  /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
+  primaryRole: SubtaskRole | null;
+  /** Highest reviewer-tier role also held, only set when primaryRole is DESIGNER or SUPPORTING_DESIGNER. */
+  secondaryReviewRole: ReviewTier | null;
   projectedStatus: string | null;
   packageStatus: string | null;
 }
@@ -127,6 +136,8 @@ export class MyWorkService {
         designPackageId: null,
         subtaskName: null,
         roleLabel: 'Discipline leader (专册)',
+        primaryRole: null,
+        secondaryReviewRole: null,
         projectedStatus: null,
         packageStatus: null,
       });
@@ -134,6 +145,11 @@ export class MyWorkService {
 
     for (const pkg of subtaskPackages) {
       const discipline = pkg.taskDiscipline;
+      const effectiveChain = getEffectiveApprovalChain(pkg, discipline);
+      const { primaryRole, secondaryReviewRole } = resolveSubtaskRoles(
+        effectiveChain,
+        ctx.userId,
+      );
       items.push({
         kind: 'SUBTASK_ROLE',
         projectId: discipline.task.projectId,
@@ -149,6 +165,8 @@ export class MyWorkService {
         designPackageId: pkg.id,
         subtaskName: pkg.name,
         roleLabel: this.resolveSubtaskRoleLabel(pkg, ctx.userId),
+        primaryRole,
+        secondaryReviewRole,
         projectedStatus: pkg.projectedStatus,
         packageStatus: pkg.packageStatus,
       });
