@@ -20,6 +20,7 @@ import {
   useCanViewMyComments,
   useCanViewMyWork,
   useCanViewReviewInbox,
+  useEpcCapabilities,
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
@@ -28,6 +29,7 @@ import {
   useCanViewDepartmentsNav,
   useCanViewDisciplinesCatalogNav,
 } from '@/hooks/use-org-nav-access';
+import { canViewGlobalNavKey } from '@/lib/navigation/project-nav-visibility';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
@@ -180,6 +182,7 @@ export default function MainNavPanel({
   const { t } = useEpcTranslation();
   const permLoading = usePermissionsLoading();
   const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
   const canViewReviewInbox = useCanViewReviewInbox();
   const canViewMyComments = useCanViewMyComments();
   const canViewMyWork = useCanViewMyWork();
@@ -200,7 +203,9 @@ export default function MainNavPanel({
     canViewDepartments: !permLoading && canViewDepartments,
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
-  const visibleNavItems = navItems.filter((item) => item.visible);
+  const visibleNavItems = navItems.filter(
+    (item) => item.visible && canViewGlobalNavKey(item.key, epc),
+  );
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';
 

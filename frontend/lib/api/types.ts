@@ -393,6 +393,13 @@ export interface EpcCapabilities {
   canViewEngineering: boolean;
   canUploadEngineeringDocuments: boolean;
   disciplineScopeBypass: boolean;
+  /** SysAdmin / MD / Project Manager / Project Administrator. */
+  navFullAccess: boolean;
+  navDepartmentLeader: boolean;
+  navDisciplineLeader: boolean;
+  navReviewerTier: boolean;
+  navDesigner: boolean;
+  navSupportingDesigner: boolean;
 }
 
 export const EMPTY_EPC_CAPABILITIES: EpcCapabilities = {
@@ -402,6 +409,12 @@ export const EMPTY_EPC_CAPABILITIES: EpcCapabilities = {
   canViewEngineering: false,
   canUploadEngineeringDocuments: false,
   disciplineScopeBypass: false,
+  navFullAccess: false,
+  navDepartmentLeader: false,
+  navDisciplineLeader: false,
+  navReviewerTier: false,
+  navDesigner: false,
+  navSupportingDesigner: false,
 };
 
 export interface Capabilities extends AuthCapabilities {

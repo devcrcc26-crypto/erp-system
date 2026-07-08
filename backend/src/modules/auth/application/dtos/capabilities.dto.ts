@@ -94,6 +94,40 @@ export class EpcCapabilitiesDto {
       'When true, user sees all project disciplines (PM / admin bypass).',
   })
   disciplineScopeBypass!: boolean;
+
+  @ApiProperty({
+    description:
+      'SysAdmin / Managing Director / Project Manager / Project Administrator — full design-cycle nav.',
+  })
+  navFullAccess!: boolean;
+
+  @ApiProperty({
+    description: 'User is leader of at least one company department.',
+  })
+  navDepartmentLeader!: boolean;
+
+  @ApiProperty({
+    description:
+      'User is discipline leader on at least one active task discipline or package.',
+  })
+  navDisciplineLeader!: boolean;
+
+  @ApiProperty({
+    description:
+      'User holds reviewer / dept chief / institute chief assignment or active review inbox.',
+  })
+  navReviewerTier!: boolean;
+
+  @ApiProperty({
+    description: 'User is designer on at least one active discipline or package.',
+  })
+  navDesigner!: boolean;
+
+  @ApiProperty({
+    description:
+      'Supporting designer assignment and/or Document Controller company role.',
+  })
+  navSupportingDesigner!: boolean;
 }
 
 export class CapabilitiesDto {
