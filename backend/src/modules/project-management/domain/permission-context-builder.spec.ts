@@ -186,6 +186,22 @@ describe('permission-context-builder', () => {
       ).toBe(true);
     });
 
+    it('allows designer upload when assigned on subtask but not on project team', () => {
+      expect(
+        canPerformFromContext(
+          baseContext({
+            action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+            userId: 'designer-1',
+            grantedActions: new Set([
+              EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+            ]),
+            projectTeamRole: undefined,
+            subtaskDesignerUserId: 'designer-1',
+          }),
+        ),
+      ).toBe(true);
+    });
+
     it('allows batch approve when user is active session assignee', () => {
       expect(
         canPerformFromContext(

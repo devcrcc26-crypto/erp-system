@@ -2,10 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Project } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import {
-  canAccessModule,
-  PmModuleKey,
-} from '../../domain/project-modules.const';
+import { PmModuleKey } from '../../domain/project-modules.const';
 import { PmContext } from '../types/pm-context.type';
 import { TaskAccessScopeService } from './task-access-scope.service';
 
@@ -24,41 +21,17 @@ export class ProjectScopeService {
   }
 
   /**
-   * Asserts the caller's project team membership allows access to a PM module.
+   * Asserts the caller may open a PM module on this project.
+   * Uses the same visibility as project reads (full access, Project Admin,
+   * department leadership, discipline assignee, or subtask role) — never
+   * ProjectTeam membership or visibleModules.
    */
   async assertModuleAccess(
     ctx: PmContext,
     projectId: string,
-    module: PmModuleKey,
+    _module: PmModuleKey,
   ): Promise<void> {
-    const profile = await this.taskAccessScopeService.resolveProfile(ctx);
-    if (profile.hasFullProjectAccess) {
-      return;
-    }
-
-    const membership = await this.prisma.projectTeam.findFirst({
-      where: activeOnly({
-        projectId,
-        userId: ctx.userId,
-      }),
-      select: { visibleModules: true },
-    });
-
-    if (membership) {
-      if (!canAccessModule(membership.visibleModules, module)) {
-        throw new NotFoundException('Project not found');
-      }
-      return;
-    }
-
-    // Not a formal team member — fall back to the same scoped visibility
-    // (department leadership, discipline assignment, subtask roles) that
-    // TaskAccessScopeService already grants for project/task reads, so
-    // discipline leads etc. aren't blocked here before reaching that check.
-    const visibleIds = await this.taskAccessScopeService.getVisibleProjectIds(ctx);
-    if (!visibleIds?.includes(projectId)) {
-      throw new NotFoundException('Project not found');
-    }
+    await this.taskAccessScopeService.assertProjectReadable(ctx, projectId);
   }
 
   /**

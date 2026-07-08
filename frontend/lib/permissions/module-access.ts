@@ -1,41 +1,46 @@
 'use client';
 
-import { useProjectTeam } from '@/lib/query/projects';
+import { useProject } from '@/lib/query/projects';
 import { useAuthStore } from '@/stores/auth.store';
-import { canAccessModule, type PmModuleKey } from './pm-modules.const';
+import type { PmModuleKey } from './pm-modules.const';
 
 /**
- * Checks whether the current user can see a given PM module in a project.
+ * Whether the current user can open a PM module page on a project.
+ *
+ * Access is based on project readability (full / Project Admin / department
+ * leadership / discipline assignee / subtask role) — never ProjectTeam
+ * membership or visibleModules.
  */
 export function useProjectModuleAccess(
   projectId: string,
-  module: PmModuleKey,
+  _module: PmModuleKey,
 ): { canAccess: boolean; isLoading: boolean } {
-  const currentUserId = useAuthStore((state) => state.user?.id);
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
   const capabilitiesReady = useAuthStore((state) => state.capabilitiesReady);
-  const teamQuery = useProjectTeam(projectId, Boolean(projectId) && Boolean(currentUserId));
+  const navFullAccess = useAuthStore(
+    (state) => state.capabilities.epc.navFullAccess,
+  );
+  const projectQuery = useProject(
+    projectId,
+    Boolean(projectId) && capabilitiesReady && !isSystemAdministrator && !navFullAccess,
+  );
 
-  if (!capabilitiesReady || teamQuery.isLoading) {
+  if (!capabilitiesReady) {
     return { canAccess: false, isLoading: true };
   }
 
-  if (isSystemAdministrator) {
+  if (isSystemAdministrator || navFullAccess) {
     return { canAccess: true, isLoading: false };
   }
 
-  const myMembership = teamQuery.data?.find(
-    (member) => member.userId === currentUserId,
-  );
-
-  if (!myMembership) {
-    return { canAccess: false, isLoading: false };
+  if (projectQuery.isLoading) {
+    return { canAccess: false, isLoading: true };
   }
 
   return {
-    canAccess: canAccessModule(myMembership.visibleModules, module),
+    canAccess: projectQuery.isSuccess && Boolean(projectQuery.data),
     isLoading: false,
   };
 }

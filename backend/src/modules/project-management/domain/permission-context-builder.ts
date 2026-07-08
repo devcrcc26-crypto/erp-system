@@ -1,6 +1,5 @@
 import { EpcWorkflowAction } from './contracts/enums/epc-workflow-action.enum';
 import { ProjectDesignStage } from './contracts/enums/project-design-stage.enum';
-import { ProjectTeamRole } from './contracts/enums/project-team-role.enum';
 import { EdvStatus } from './contracts/enums/edv-status.enum';
 import {
   PermissionContext,
@@ -58,26 +57,6 @@ const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVISION_TRIGGER,
   EpcWorkflowAction.REVISION_TRIGGER_CREATE,
 ]);
-
-const PROJECT_TEAM_REQUIRED_ACTIONS: ReadonlySet<EpcWorkflowAction> =
-  new Set([
-    EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
-    EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
-    EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
-    EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
-    EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
-    EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE,
-    EpcWorkflowAction.REVIEW_COMMENT_RESOLVE,
-    EpcWorkflowAction.REVIEW_SESSION_APPROVE,
-    EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
-    EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
-    EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD,
-    EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
-    EpcWorkflowAction.SUBMITTAL_CREATE,
-    EpcWorkflowAction.SUBMITTAL_ISSUE,
-    EpcWorkflowAction.REVISION_TRIGGER,
-    EpcWorkflowAction.REVISION_TRIGGER_CREATE,
-  ]);
 
 /** Stage gates — action denied when project is in a locked design stage. */
 const STAGE_LOCKED_ACTIONS: Readonly<
@@ -166,44 +145,13 @@ export function evaluateSystemRoleLayer(
 }
 
 /**
- * Layer 2 - project team membership.
+ * Layer 2 - legacy project-team slot.
+ * Access is authorized by discipline/subtask assignee FKs (and system role),
+ * never by ProjectTeam membership.
  */
 export function evaluateProjectTeamLayer(
-  input: PermissionContextInput,
+  _input: PermissionContextInput,
 ): PermissionLayerResult {
-  if (!PROJECT_TEAM_REQUIRED_ACTIONS.has(input.action)) {
-    return {
-      layer: PermissionLayerId.PROJECT_TEAM_ROLE,
-      verdict: PermissionLayerVerdict.ALLOW,
-    };
-  }
-
-  // Review governance is authorized via discipline reviewer/lead/chief FKs.
-  if (REVIEW_TIER_ACTIONS.has(input.action)) {
-    return {
-      layer: PermissionLayerId.PROJECT_TEAM_ROLE,
-      verdict: PermissionLayerVerdict.ALLOW,
-    };
-  }
-
-  if (input.projectTeamRole === undefined) {
-    return {
-      layer: PermissionLayerId.PROJECT_TEAM_ROLE,
-      verdict: PermissionLayerVerdict.DENY,
-      reason: 'User is not on project team',
-    };
-  }
-
-  if (
-    input.action === EpcWorkflowAction.SUBMITTAL_CREATE ||
-    input.action === EpcWorkflowAction.SUBMITTAL_ISSUE
-  ) {
-    return {
-      layer: PermissionLayerId.PROJECT_TEAM_ROLE,
-      verdict: PermissionLayerVerdict.ALLOW,
-    };
-  }
-
   return {
     layer: PermissionLayerId.PROJECT_TEAM_ROLE,
     verdict: PermissionLayerVerdict.ALLOW,

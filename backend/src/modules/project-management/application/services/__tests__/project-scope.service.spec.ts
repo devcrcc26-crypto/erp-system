@@ -1,8 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { Project } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
-import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { ProjectScopeService } from '../project-scope.service';
+import { TaskAccessScopeService } from '../task-access-scope.service';
 import { PmContext } from '../../types/pm-context.type';
 
 describe('ProjectScopeService', () => {
@@ -16,82 +16,59 @@ describe('ProjectScopeService', () => {
   } as Project;
 
   let prisma: {
-    project: { findFirst: jest.Mock };
-    projectTeam: { findFirst: jest.Mock; findMany: jest.Mock };
+    projectTeam: { findMany: jest.Mock };
   };
-  let permissionService: { getUserRoleNames: jest.Mock };
+  let taskAccessScopeService: {
+    assertProjectReadable: jest.Mock;
+  };
   let service: ProjectScopeService;
 
   beforeEach(() => {
     prisma = {
-      project: { findFirst: jest.fn() },
-      projectTeam: { findFirst: jest.fn(), findMany: jest.fn() },
+      projectTeam: { findMany: jest.fn() },
     };
-    permissionService = {
-      getUserRoleNames: jest.fn().mockResolvedValue(['Employee']),
+    taskAccessScopeService = {
+      assertProjectReadable: jest.fn().mockResolvedValue(mockProject),
     };
     service = new ProjectScopeService(
       prisma as unknown as PrismaService,
-      permissionService as unknown as PermissionService,
+      taskAccessScopeService as unknown as TaskAccessScopeService,
     );
   });
 
-  it('allows System Administrator without project team membership', async () => {
-    permissionService.getUserRoleNames.mockResolvedValue(['System Administrator']);
-    prisma.project.findFirst.mockResolvedValue(mockProject);
+  it('delegates project reads to TaskAccessScopeService (subtask/discipline scope)', async () => {
+    await expect(service.getProjectOrThrow(ctx, projectId)).resolves.toBe(
+      mockProject,
+    );
 
-    await expect(service.getProjectOrThrow(ctx, projectId)).resolves.toBe(mockProject);
-
-    expect(prisma.projectTeam.findFirst).not.toHaveBeenCalled();
+    expect(taskAccessScopeService.assertProjectReadable).toHaveBeenCalledWith(
+      ctx,
+      projectId,
+    );
   });
 
-  it('allows access when the user is an active project team member', async () => {
-    prisma.project.findFirst.mockResolvedValue(mockProject);
-    prisma.projectTeam.findFirst.mockResolvedValue({ id: 'team-1' });
+  it('assertModuleAccess uses project readability, not ProjectTeam', async () => {
+    await expect(
+      service.assertModuleAccess(ctx, projectId, 'design_packages'),
+    ).resolves.toBeUndefined();
 
-    await expect(service.getProjectOrThrow(ctx, projectId)).resolves.toBe(mockProject);
-
-    expect(prisma.project.findFirst).toHaveBeenCalledWith({
-      where: { id: projectId, companyId: ctx.companyId, deletedAt: null },
-    });
-    expect(prisma.projectTeam.findFirst).toHaveBeenCalledWith({
-      where: { projectId, userId: ctx.userId, deletedAt: null },
-      select: { id: true },
-    });
+    expect(taskAccessScopeService.assertProjectReadable).toHaveBeenCalledWith(
+      ctx,
+      projectId,
+    );
   });
 
-  it('throws NotFoundException when the user is not a project team member', async () => {
-    prisma.project.findFirst.mockResolvedValue(mockProject);
-    prisma.projectTeam.findFirst.mockResolvedValue(null);
+  it('propagates NotFoundException when project is not readable', async () => {
+    taskAccessScopeService.assertProjectReadable.mockRejectedValue(
+      new NotFoundException('Project not found'),
+    );
 
     await expect(service.getProjectOrThrow(ctx, projectId)).rejects.toThrow(
       NotFoundException,
     );
   });
 
-  it('throws NotFoundException when the project belongs to another company', async () => {
-    prisma.project.findFirst.mockResolvedValue(null);
-
-    await expect(service.getProjectOrThrow(ctx, projectId)).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(prisma.projectTeam.findFirst).not.toHaveBeenCalled();
-  });
-
-  it('throws NotFoundException when the project team row is soft-deleted', async () => {
-    prisma.project.findFirst.mockResolvedValue(mockProject);
-    prisma.projectTeam.findFirst.mockResolvedValue(null);
-
-    await expect(service.getProjectOrThrow(ctx, projectId)).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(prisma.projectTeam.findFirst).toHaveBeenCalledWith({
-      where: { projectId, userId: ctx.userId, deletedAt: null },
-      select: { id: true },
-    });
-  });
-
-  it('returns distinct project ids for active team memberships', async () => {
+  it('returns distinct project ids for active team memberships (roster only)', async () => {
     prisma.projectTeam.findMany.mockResolvedValue([
       { projectId: 'project-1' },
       { projectId: 'project-2' },
