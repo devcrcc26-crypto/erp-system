@@ -171,7 +171,6 @@ export class SessionCapabilitiesService {
     };
   }
 
-  // DEMO BYPASS — remove after demo
   private async hasActiveReviewInboxAssignment(
     userId: string,
     companyId: string,
@@ -185,7 +184,6 @@ export class SessionCapabilitiesService {
     });
     return count > 0;
   }
-  // END DEMO BYPASS
 
   private toModuleCapabilities(flags: PermissionFlags): ModuleCapabilitiesDto {
     return {
