@@ -34,6 +34,7 @@ import {
   useSubmitPackageForReview,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
+import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
@@ -41,8 +42,18 @@ import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadg
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
+import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
+import { reviewModeHref, scheduleSubtaskWorkspaceHref } from '@/lib/utils/schedule-subtasks';
+
+const REVIEWER_TIER_ROLES = new Set([
+  'REVIEWER',
+  'DISCIPLINE_LEAD',
+  'DEPT_CHIEF',
+  'INSTITUTE_CHIEF',
+]);
 
 function groupPackagesByStatus(
   packages: DesignPackage[],
@@ -70,6 +81,12 @@ export default function DesignPackagePanel({
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const disciplineQuery = useProjectDiscipline(
+    projectId,
+    taskDisciplineId,
+    !permLoading && lens.canViewEngineering,
+  );
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
   const [editingRoles, setEditingRoles] = useState<DesignPackage | null>(null);
@@ -138,17 +155,24 @@ export default function DesignPackagePanel({
     return null;
   }
 
+  function packageOpenHref(pkg: DesignPackage): string {
+    const discipline = disciplineQuery.data;
+    if (discipline && currentUserId) {
+      const { primaryRole } = resolvePackageRoles(pkg, discipline, currentUserId);
+      if (primaryRole && REVIEWER_TIER_ROLES.has(primaryRole)) {
+        return reviewModeHref(projectId, taskDisciplineId, pkg.id);
+      }
+    }
+    return scheduleSubtaskWorkspaceHref(projectId, taskDisciplineId, pkg.id);
+  }
+
   const packageColumns: ColumnsType<DesignPackage> = [
     {
       title: 'Package',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record) => (
-        <Link
-          href={`/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${record.id}`}
-        >
-          {name}
-        </Link>
+        <Link href={packageOpenHref(record)}>{name}</Link>
       ),
     },
     {

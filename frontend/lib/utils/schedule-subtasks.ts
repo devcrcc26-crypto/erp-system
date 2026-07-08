@@ -70,3 +70,14 @@ export function scheduleSubtaskWorkspaceHref(
 ): string {
   return `/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${packageId}`;
 }
+
+/**
+ * Review mode path for a subtask (design package).
+ */
+export function reviewModeHref(
+  projectId: string,
+  taskDisciplineId: string,
+  packageId: string,
+): string {
+  return `/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`;
+}

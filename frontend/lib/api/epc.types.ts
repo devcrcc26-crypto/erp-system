@@ -210,6 +210,15 @@ export interface ReviewInboxItem {
 
 export type MyWorkItemKind = 'DISCIPLINE_LEAD' | 'SUBTASK_ROLE';
 
+export type SubtaskRole =
+  | 'DESIGNER'
+  | 'SUPPORTING_DESIGNER'
+  | 'REVIEWER'
+  | 'DISCIPLINE_LEAD'
+  | 'DEPT_CHIEF'
+  | 'INSTITUTE_CHIEF'
+  | 'DISCIPLINE_OWNER';
+
 export interface MyWorkItem {
   kind: MyWorkItemKind;
   projectId: string;
@@ -222,6 +231,10 @@ export interface MyWorkItem {
   designPackageId: string | null;
   subtaskName: string | null;
   roleLabel: string | null;
+  /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
+  primaryRole: SubtaskRole | null;
+  /** Highest reviewer-tier role also held, only set when primaryRole is DESIGNER or SUPPORTING_DESIGNER. */
+  secondaryReviewRole: ReviewTier | null;
   projectedStatus: string | null;
   packageStatus: string | null;
 }

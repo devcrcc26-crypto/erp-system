@@ -57,6 +57,8 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
+import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
+import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { layout } from '@/lib/theme/layout';
 
@@ -181,6 +183,11 @@ export default function DesignPackageDetailPageContent({
       lockGuidance.inReviewEdvIds.length,
     );
   const discipline = disciplineQuery.data;
+  const { secondaryReviewRole } = resolvePackageRoles(
+    pkg,
+    discipline,
+    currentUserId ?? '',
+  );
   const isDisciplineLeader =
     Boolean(currentUserId) &&
     discipline?.disciplineLeadUserId === currentUserId;
@@ -298,8 +305,8 @@ export default function DesignPackageDetailPageContent({
             {isDisciplineLeader && (
               <Button onClick={() => setRolesModalOpen(true)}>Edit roles</Button>
             )}
-            {reviewSessionId && lens.canAccessReviewMode && (
-              <Link href={`/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`}>
+            {reviewSessionId && secondaryReviewRole !== null && (
+              <Link href={reviewModeHref(projectId, taskDisciplineId, packageId)}>
                 <Button type="primary">Open review mode</Button>
               </Link>
             )}
