@@ -193,6 +193,13 @@ export class DesignPackagesService {
     }
     // END DEMO BYPASS
 
+    if (dto.instituteChiefUserId && dto.instituteChiefName) {
+      throw new BadRequestException(
+        'Set either instituteChiefUserId or instituteChiefName, not both.',
+      );
+    }
+    const instituteChiefName = dto.instituteChiefName ?? null;
+
     const packageOverrides = {
       designerUserId: dto.designerUserId ?? discipline.designerUserId ?? null,
       supportingDesignerUserId:
@@ -204,15 +211,18 @@ export class DesignPackagesService {
         dto.disciplinaryLeaderUserId ?? discipline.disciplineLeadUserId ?? null,
       deptDeputyChiefUserId:
         dto.deptDeputyChiefUserId ?? discipline.chiefUserId ?? null,
-      instituteChiefUserId:
-        dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
+      // An external Institute Chief name means no FK, even if the discipline
+      // has a default instituteChiefUserId to fall back to.
+      instituteChiefUserId: instituteChiefName
+        ? null
+        : dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
     };
     const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
 
     const requiredTiers =
       dto.requiredTiers && dto.requiredTiers.length > 0
         ? dto.requiredTiers
-        : computeRequiredTiers(effectiveChain);
+        : computeRequiredTiers(effectiveChain, instituteChiefName);
 
     if (!requiredTiers.includes(ReviewTier.DISCIPLINE_LEAD)) {
       throw new BadRequestException(
@@ -259,6 +269,7 @@ export class DesignPackagesService {
         briefText: dto.briefText,
         sourceEntityType: dto.sourceEntityType,
         sourceEntityId: dto.sourceEntityId,
+        instituteChiefName,
         ...this.buildPackageApprovalChainCreateRelations(packageOverrides),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
@@ -341,6 +352,12 @@ export class DesignPackagesService {
       throw new NotFoundException('Task discipline not found');
     }
 
+    if (dto.instituteChiefUserId && dto.instituteChiefName) {
+      throw new BadRequestException(
+        'Set either instituteChiefUserId or instituteChiefName, not both.',
+      );
+    }
+
     const chainFkChanged =
       dto.designerUserId !== undefined ||
       dto.supportingDesignerUserId !== undefined ||
@@ -348,7 +365,8 @@ export class DesignPackagesService {
       dto.reviewerUserId !== undefined ||
       dto.disciplinaryLeaderUserId !== undefined ||
       dto.deptDeputyChiefUserId !== undefined ||
-      dto.instituteChiefUserId !== undefined;
+      dto.instituteChiefUserId !== undefined ||
+      dto.instituteChiefName !== undefined;
 
     const priorEffectiveChain = this.getEffectiveApprovalChain(
       {
@@ -365,7 +383,25 @@ export class DesignPackagesService {
     const wasAutoComputed = this.requiredTiersMatchAutoComputed(
       existing.requiredTiers,
       priorEffectiveChain,
+      existing.instituteChiefName,
     );
+
+    let nextInstituteChiefName =
+      dto.instituteChiefName !== undefined
+        ? dto.instituteChiefName
+        : existing.instituteChiefName;
+    let nextInstituteChiefUserId =
+      dto.instituteChiefUserId !== undefined
+        ? dto.instituteChiefUserId
+        : existing.instituteChiefUserId;
+    // Whichever of the two this request explicitly set wins; clear the other
+    // so the row never ends up with both populated.
+    if (dto.instituteChiefUserId !== undefined && dto.instituteChiefUserId) {
+      nextInstituteChiefName = null;
+    }
+    if (dto.instituteChiefName !== undefined && dto.instituteChiefName) {
+      nextInstituteChiefUserId = null;
+    }
 
     const nextPackageOverrides = {
       designerUserId:
@@ -392,10 +428,7 @@ export class DesignPackagesService {
         dto.deptDeputyChiefUserId !== undefined
           ? dto.deptDeputyChiefUserId
           : existing.deptDeputyChiefUserId,
-      instituteChiefUserId:
-        dto.instituteChiefUserId !== undefined
-          ? dto.instituteChiefUserId
-          : existing.instituteChiefUserId,
+      instituteChiefUserId: nextInstituteChiefUserId,
     };
     const nextEffectiveChain = this.getEffectiveApprovalChain(
       nextPackageOverrides,
@@ -406,7 +439,7 @@ export class DesignPackagesService {
     if (dto.requiredTiers !== undefined && dto.requiredTiers.length > 0) {
       requiredTiers = dto.requiredTiers;
     } else if (chainFkChanged && wasAutoComputed) {
-      requiredTiers = computeRequiredTiers(nextEffectiveChain);
+      requiredTiers = computeRequiredTiers(nextEffectiveChain, nextInstituteChiefName);
     }
 
     if (!requiredTiers.includes(ReviewTier.DISCIPLINE_LEAD)) {
@@ -419,6 +452,7 @@ export class DesignPackagesService {
       name: dto.name,
       projectedStatus: dto.projectedStatus,
       requiredTiers,
+      instituteChiefName: nextInstituteChiefName,
       ...(chainFkChanged
         ? this.buildPackageApprovalChainUpdateRelations(nextPackageOverrides)
         : {}),
@@ -1225,8 +1259,9 @@ export class DesignPackagesService {
   private requiredTiersMatchAutoComputed(
     tiers: ReviewTier[],
     chain: EffectiveApprovalChain,
+    instituteChiefName?: string | null,
   ): boolean {
-    const auto = computeRequiredTiers(chain);
+    const auto = computeRequiredTiers(chain, instituteChiefName);
     return (
       tiers.length === auto.length && tiers.every((tier, index) => tier === auto[index])
     );

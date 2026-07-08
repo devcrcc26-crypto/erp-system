@@ -83,6 +83,22 @@ describe('computeRequiredTiers', () => {
     expect(result).not.toContain(ReviewTier.INSTITUTE_CHIEF);
   });
 
+  it('10a. instituteChiefUserId null but instituteChiefName set → INSTITUTE_CHIEF kept', () => {
+    const result = computeRequiredTiers(
+      { ...ALL_IDS, instituteChiefUserId: null },
+      'External Chief Engineer',
+    );
+    expect(result).toContain(ReviewTier.INSTITUTE_CHIEF);
+  });
+
+  it('10b. instituteChiefUserId null and instituteChiefName null → INSTITUTE_CHIEF removed', () => {
+    const result = computeRequiredTiers(
+      { ...ALL_IDS, instituteChiefUserId: null },
+      null,
+    );
+    expect(result).not.toContain(ReviewTier.INSTITUTE_CHIEF);
+  });
+
   it('11. designer=owner and reviewer null → [DISCIPLINE_LEAD, DEPT_CHIEF, INSTITUTE_CHIEF]', () => {
     const result = computeRequiredTiers({
       ...ALL_IDS,

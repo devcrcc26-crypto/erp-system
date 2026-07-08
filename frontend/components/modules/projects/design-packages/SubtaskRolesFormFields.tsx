@@ -1,13 +1,17 @@
 'use client';
 
-import { Form } from 'antd';
+import { Form, Input, Radio } from 'antd';
 import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
+import { reviewTierBilingualLabel } from '@/lib/utils/review-tier-display';
 
 export default function SubtaskRolesFormFields({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
+  const form = Form.useFormInstance();
+  const instituteChiefMode = Form.useWatch('instituteChiefMode', form) ?? 'SYSTEM_USER';
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
@@ -19,19 +23,25 @@ export default function SubtaskRolesFormFields({
         </Form.Item>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label="Discipline owner" name="disciplineOwnerUserId">
+        <Form.Item
+          label={reviewTierBilingualLabel('DISCIPLINE_OWNER')}
+          name="disciplineOwnerUserId"
+        >
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
-        <Form.Item label="Reviewer (复核)" name="reviewerUserId">
+        <Form.Item label={reviewTierBilingualLabel('REVIEWER')} name="reviewerUserId">
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label="Disciplinary leader (专册)" name="disciplinaryLeaderUserId">
+        <Form.Item
+          label={reviewTierBilingualLabel('DISCIPLINE_LEAD')}
+          name="disciplinaryLeaderUserId"
+        >
           <ProjectTeamUserSelect projectId={projectId} />
         </Form.Item>
         <Form.Item
-          label="(Deputy) Chief Engineer of The Department (院审)"
+          label={reviewTierBilingualLabel('DEPT_CHIEF')}
           name="deptDeputyChiefUserId"
         >
           <ProjectTeamUserSelect projectId={projectId} />
@@ -39,11 +49,30 @@ export default function SubtaskRolesFormFields({
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
         <Form.Item
-          label="Chief Engineer of The Institute (司审)"
-          name="instituteChiefUserId"
+          label={reviewTierBilingualLabel('INSTITUTE_CHIEF')}
+          name="instituteChiefMode"
         >
-          <ProjectTeamUserSelect projectId={projectId} />
+          <Radio.Group
+            options={[
+              { label: 'System user', value: 'SYSTEM_USER' },
+              { label: 'External person', value: 'EXTERNAL_PERSON' },
+            ]}
+            optionType="button"
+          />
         </Form.Item>
+        {instituteChiefMode === 'EXTERNAL_PERSON' ? (
+          <Form.Item
+            label="External person's name"
+            name="instituteChiefName"
+            rules={[{ required: true, message: "External person's name is required" }]}
+          >
+            <Input placeholder="Full name" />
+          </Form.Item>
+        ) : (
+          <Form.Item label="Institute chief" name="instituteChiefUserId">
+            <ProjectTeamUserSelect projectId={projectId} />
+          </Form.Item>
+        )}
       </div>
     </>
   );

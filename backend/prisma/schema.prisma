@@ -1705,6 +1705,7 @@ model DesignPackage {
   disciplinaryLeaderUserId   String?                      @map("disciplinary_leader_user_id")
   deptDeputyChiefUserId      String?                      @map("dept_deputy_chief_user_id")
   instituteChiefUserId       String?                      @map("institute_chief_user_id")
+  instituteChiefName         String?                      @map("institute_chief_name")
   disciplineOwnerUserId      String?                      @map("discipline_owner_user_id")
   supportingDesignerUserId   String?                      @map("supporting_designer_user_id")
   briefText         String?                      @map("brief_text")

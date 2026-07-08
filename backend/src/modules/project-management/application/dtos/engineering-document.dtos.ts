@@ -9,6 +9,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import {
@@ -373,6 +374,14 @@ export class CreateDesignPackageDto {
   @IsOptional()
   @IsEntityUuid()
   instituteChiefUserId?: string;
+
+  @ApiPropertyOptional({
+    description: 'External Institute Chief name — set instead of instituteChiefUserId when they have no system account.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  instituteChiefName?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()

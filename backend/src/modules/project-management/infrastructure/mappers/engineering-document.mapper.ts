@@ -62,6 +62,7 @@ export interface MappedDesignPackage {
   disciplinaryLeaderUserId: string | null;
   deptDeputyChiefUserId: string | null;
   instituteChiefUserId: string | null;
+  instituteChiefName: string | null;
   disciplineOwnerUserId: string | null;
   supportingDesignerUserId: string | null;
   briefText: string | null;
@@ -182,6 +183,7 @@ export function mapDesignPackage(
     disciplinaryLeaderUserId: row.disciplinaryLeaderUserId,
     deptDeputyChiefUserId: row.deptDeputyChiefUserId,
     instituteChiefUserId: row.instituteChiefUserId,
+    instituteChiefName: row.instituteChiefName,
     disciplineOwnerUserId: row.disciplineOwnerUserId,
     supportingDesignerUserId: row.supportingDesignerUserId,
     briefText: row.briefText,

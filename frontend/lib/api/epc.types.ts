@@ -126,6 +126,8 @@ export interface DesignPackage {
   disciplinaryLeaderUserId: string | null;
   deptDeputyChiefUserId: string | null;
   instituteChiefUserId: string | null;
+  /** External Institute Chief name — set instead of instituteChiefUserId when they have no system account. Only one of the two is ever populated. */
+  instituteChiefName: string | null;
   disciplineOwnerUserId: string | null;
   supportingDesignerUserId: string | null;
   briefText: string | null;
@@ -480,6 +482,8 @@ export interface CreateDesignPackageRequest {
   disciplinaryLeaderUserId?: string;
   deptDeputyChiefUserId?: string;
   instituteChiefUserId?: string;
+  /** Set instead of instituteChiefUserId for an external person with no system account. Only one of the two may be set. */
+  instituteChiefName?: string;
   disciplineOwnerUserId?: string;
   supportingDesignerUserId?: string;
 }
