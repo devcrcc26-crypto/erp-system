@@ -190,9 +190,6 @@ export class TaskAccessScopeService {
       },
     });
 
-    // TODO: add { dispatcherUserId: ctx.userId } once Chen confirms
-    // dispatcher scope (pending).
-
     return {
       AND: [base, { OR: orConditions }],
     };
