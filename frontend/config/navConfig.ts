@@ -43,6 +43,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/profile': 'nav.profile',
   '/audit-logs': 'nav.auditLogs',
   '/departments': 'pages.departments.title',
+  '/positions': 'pages.positions.title',
   '/disciplines': 'pages.disciplinesCatalog.title',
 };
 
@@ -55,6 +56,7 @@ export interface IconRailVisibility {
   canManageRoles: boolean;
   canViewProjects: boolean;
   canViewDepartments: boolean;
+  canViewPositions: boolean;
   canViewDisciplinesCatalog: boolean;
 }
 
@@ -71,6 +73,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canManageRoles,
     canViewProjects,
     canViewDepartments,
+    canViewPositions,
     canViewDisciplinesCatalog,
   } = visibility;
 
@@ -116,6 +119,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/departments',
       iconKey: 'departments',
       visible: canViewDepartments,
+    },
+    {
+      key: '/positions',
+      labelKey: 'nav.positions',
+      href: '/positions',
+      iconKey: 'positions',
+      visible: canViewPositions,
     },
     {
       key: '/disciplines',

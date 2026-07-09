@@ -223,3 +223,39 @@ export function useUpdateDepartment() {
     },
   });
 }
+
+export function useCreatePosition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      departmentId: string;
+      title: string;
+      grade?: string;
+      isActive?: boolean;
+    }) => apiPost<Position>('/positions', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+export function useUpdatePosition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: {
+        departmentId?: string;
+        title?: string;
+        grade?: string;
+        isActive?: boolean;
+      };
+    }) => apiPatch<Position>(`/positions/${id}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}

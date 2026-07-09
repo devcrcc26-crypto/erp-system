@@ -16,6 +16,7 @@
     "myComments": "全部我的意见",
     "myWork": "全部我的工作",
     "departments": "部门",
+    "positions": "职位",
     "disciplinesCatalog": "专业",
     "menuApplication": "应用",
     "menuProject": "项目"
@@ -67,6 +68,10 @@
     "departments": {
       "title": "部门",
       "description": "部门项目概况、负责人与项目关联。"
+    },
+    "positions": {
+      "title": "职位",
+      "description": "与部门关联的职务名称与职级，用于用户分配。"
     },
     "disciplinesCatalog": {
       "title": "专业",

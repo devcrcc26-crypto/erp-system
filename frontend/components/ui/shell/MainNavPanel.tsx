@@ -190,6 +190,7 @@ export default function MainNavPanel({
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
   const canViewDepartments = useCanViewDepartmentsNav();
+  const canViewPositions = useCanViewDepartmentsNav();
   const canViewDisciplinesCatalog = useCanViewDisciplinesCatalogNav();
 
   const navItems = buildIconRailItems({
@@ -201,6 +202,7 @@ export default function MainNavPanel({
     canManageRoles: !permLoading && canManageRoles,
     canViewProjects: !permLoading && pm.projects.canView,
     canViewDepartments: !permLoading && canViewDepartments,
+    canViewPositions: !permLoading && canViewPositions,
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
   const visibleNavItems = navItems.filter(

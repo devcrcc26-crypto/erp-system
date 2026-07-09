@@ -16,6 +16,7 @@
     "myComments": "All My Comments",
     "myWork": "All My Work",
     "departments": "Departments",
+    "positions": "Positions",
     "disciplinesCatalog": "Disciplines",
     "menuApplication": "Application",
     "menuProject": "Project"
@@ -67,6 +68,10 @@
     "departments": {
       "title": "Departments",
       "description": "Department portfolio overview, leaders, and project linkage."
+    },
+    "positions": {
+      "title": "Positions",
+      "description": "Job titles and grades linked to departments for user assignment."
     },
     "disciplinesCatalog": {
       "title": "Disciplines",

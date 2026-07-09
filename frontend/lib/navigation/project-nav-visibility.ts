@@ -185,6 +185,7 @@ const GLOBAL_DEPT_LEADER = new Set([
   '/',
   '/projects',
   '/departments',
+  '/positions',
   '/disciplines',
   '/my-work',
   '/review-inbox',
