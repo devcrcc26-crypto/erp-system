@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Drawer, Form, Input, Switch } from 'antd';
+import { useEffect, useState } from 'react';
+import { Button, Drawer, Form, Input, Switch } from 'antd';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import {
@@ -81,16 +81,11 @@ export default function DepartmentFormDrawer({
     values: DepartmentFormValues,
     forceAlign = false,
   ): Promise<void> {
-    if (!values.leaderUserId) {
-      messageApi.warning('Department leader is required');
-      return;
-    }
-
     const body = {
       name: values.name.trim(),
       nameZh: values.nameZh?.trim() || undefined,
       code: (values.code ?? deriveDepartmentCode(values.name)).trim().toUpperCase(),
-      leaderUserId: values.leaderUserId,
+      leaderUserId: editing ? (values.leaderUserId ?? null) : values.leaderUserId,
       isActive: values.isActive,
       forceAlignLeaderDepartment: forceAlign || values.forceAlignLeaderDepartment,
     };
@@ -164,12 +159,8 @@ export default function DepartmentFormDrawer({
               <Input placeholder="Auto" />
             </Form.Item>
           ) : null}
-          <Form.Item
-            label="Department leader"
-            name="leaderUserId"
-            rules={[{ required: true, message: 'Leader is required' }]}
-          >
-            <UserSelect placeholder="Select leader" />
+          <Form.Item label="Department leader" name="leaderUserId">
+            <UserSelect placeholder="Select leader (optional)" />
           </Form.Item>
           <Form.Item label="Active" name="isActive" valuePropName="checked">
             <Switch />

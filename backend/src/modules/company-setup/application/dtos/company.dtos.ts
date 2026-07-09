@@ -11,6 +11,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
@@ -177,10 +178,11 @@ export class CreateDepartmentDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
   @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsString()
-  leaderUserId?: string;
+  leaderUserId?: string | null;
 
   @ApiPropertyOptional({
     description:
