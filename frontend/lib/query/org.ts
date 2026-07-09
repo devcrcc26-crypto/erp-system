@@ -214,6 +214,10 @@ export function useUpdateDepartment() {
         nameZh?: string;
         code?: string;
         leaderUserId?: string | null;
+        forceAlignLeaderDepartment?: boolean;
+        isActive?: boolean;
+      };
+    }) => apiPatch<DepartmentRow>(`/departments/${id}`, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },

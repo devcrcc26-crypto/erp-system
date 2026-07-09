@@ -81,21 +81,29 @@ export default function DepartmentFormDrawer({
     values: DepartmentFormValues,
     forceAlign = false,
   ): Promise<void> {
-    const body = {
+    const shared = {
       name: values.name.trim(),
       nameZh: values.nameZh?.trim() || undefined,
       code: (values.code ?? deriveDepartmentCode(values.name)).trim().toUpperCase(),
-      leaderUserId: editing ? (values.leaderUserId ?? null) : values.leaderUserId,
       isActive: values.isActive,
       forceAlignLeaderDepartment: forceAlign || values.forceAlignLeaderDepartment,
     };
 
     try {
       if (editing) {
-        await updateDepartment.mutateAsync({ id: editing.id, body });
+        await updateDepartment.mutateAsync({
+          id: editing.id,
+          body: {
+            ...shared,
+            leaderUserId: values.leaderUserId ?? null,
+          },
+        });
         messageApi.success('Department updated');
       } else {
-        await createDepartment.mutateAsync(body);
+        await createDepartment.mutateAsync({
+          ...shared,
+          ...(values.leaderUserId ? { leaderUserId: values.leaderUserId } : {}),
+        });
         messageApi.success('Department created');
       }
       onSaved();
