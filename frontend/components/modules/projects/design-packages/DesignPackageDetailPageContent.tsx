@@ -349,7 +349,7 @@ export default function DesignPackageDetailPageContent({
                 <Button type="primary">Open review mode</Button>
               </Link>
             )}
-            {isAssignedDesigner && submitEligibility.submittable && (
+            {isAssignedDesigner && (
               <Tooltip
                 title={
                   hasUnacknowledgedComments
@@ -360,7 +360,7 @@ export default function DesignPackageDetailPageContent({
                 <Button
                   type="primary"
                   loading={submitForReview.isPending}
-                  disabled={hasUnacknowledgedComments}
+                  disabled={hasUnacknowledgedComments || !submitEligibility.submittable}
                   onClick={() => void handleSubmitForReview()}
                 >
                   Submit for review

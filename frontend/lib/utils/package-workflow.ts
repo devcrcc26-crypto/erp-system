@@ -4,7 +4,7 @@ import type {
   EdvStatus,
   EngineeringDocument,
 } from '@/lib/api/epc.types';
-import { formatEdvStatus } from '@/lib/utils/epc-display';
+import { formatEdvStatus, formatProjectedStatus } from '@/lib/utils/epc-display';
 
 export interface PackageLockEligibility {
   eligible: boolean;
@@ -152,7 +152,10 @@ export function getPackageSubmitEligibility(
   hasActiveReviewSession = false,
 ): PackageSubmitEligibility {
   if (!isPackageProjectedStatusSubmittable(pkg)) {
-    return { submittable: false, reason: null };
+    return {
+      submittable: false,
+      reason: `Package must be In Progress or Rework Required to submit. Current status: ${formatProjectedStatus(pkg.projectedStatus)}.`,
+    };
   }
 
   if (hasActiveReviewSession) {
