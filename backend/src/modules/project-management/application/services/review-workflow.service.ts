@@ -127,6 +127,7 @@ export class ReviewWorkflowService {
         ),
         action: EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
         taskDisciplineId: command.taskDisciplineId,
+        designPackageId: command.designPackageId,
       });
 
       await this.conflictGuard.assertNoActiveSessionOnPackage(
