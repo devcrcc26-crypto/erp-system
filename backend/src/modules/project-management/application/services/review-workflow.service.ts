@@ -351,6 +351,7 @@ export class ReviewWorkflowService {
         ),
         action: EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
         taskDisciplineId: session.taskDisciplineId,
+        designPackageId: session.designPackageId,
       });
 
       const routing = this.reviewRouting.route({
