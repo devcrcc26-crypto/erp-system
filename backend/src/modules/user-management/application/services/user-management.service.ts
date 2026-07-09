@@ -24,6 +24,7 @@ import {
   UpdateRoleDto,
   UpdateRolePermissionsDto,
   UpdateUserDto,
+  UsersQueryDto,
 } from '../dtos/user-management.dtos';
 import { UserProvisioningService } from './user-provisioning.service';
 
@@ -39,9 +40,28 @@ export class UserManagementService {
 
   async listUsers(
     ctx: AuditContext,
-    query: PaginationQueryDto,
+    query: UsersQueryDto,
   ): Promise<PaginatedResult<unknown>> {
-    const where = activeOnly({ companyId: ctx.companyId });
+    const where: Prisma.UserWhereInput = activeOnly({ companyId: ctx.companyId });
+    if (query.search) {
+      where.OR = [
+        { firstName: { contains: query.search, mode: 'insensitive' } },
+        { lastName: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+    if (query.disciplineId) {
+      where.engineeringDisciplineId = query.disciplineId;
+    }
+    if (query.departmentId) {
+      where.departmentId = query.departmentId;
+    }
+    if (query.positionId) {
+      where.positionId = query.positionId;
+    }
+    if (query.isActive !== undefined) {
+      where.isActive = query.isActive;
+    }
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -496,7 +516,9 @@ export class UserManagementService {
       companyId: true,
       branchId: true,
       departmentId: true,
+      department: { select: { id: true, name: true } },
       positionId: true,
+      position: { select: { id: true, title: true } },
       discipline: true,
       engineeringDisciplineId: true,
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },

@@ -26,6 +26,7 @@ import type {
   UpdateUserRequest,
   User,
   UserDetail,
+  UsersQueryParams,
 } from '@/lib/api/types';
 
 /** Must match backend PaginationQueryDto @Max(100) on /users/directory. */
@@ -34,7 +35,7 @@ export const USER_DIRECTORY_PAGE_LIMIT = 100;
 export const userKeys = {
   all: ['users'] as const,
   lists: () => [...userKeys.all, 'list'] as const,
-  list: (params: PaginationParams) => [...userKeys.lists(), params] as const,
+  list: (params: UsersQueryParams) => [...userKeys.lists(), params] as const,
   directories: () => [...userKeys.all, 'directory'] as const,
   directory: (params: PaginationParams) => [...userKeys.directories(), params] as const,
   details: () => [...userKeys.all, 'detail'] as const,
@@ -51,8 +52,23 @@ function toQueryString(params: PaginationParams): string {
   return query ? `?${query}` : '';
 }
 
+function toUsersQueryString(params: UsersQueryParams): string {
+  const search = new URLSearchParams();
+  if (params.page !== undefined) search.set('page', String(params.page));
+  if (params.limit !== undefined) search.set('limit', String(params.limit));
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortOrder) search.set('sortOrder', params.sortOrder);
+  if (params.search) search.set('search', params.search);
+  if (params.disciplineId) search.set('disciplineId', params.disciplineId);
+  if (params.departmentId) search.set('departmentId', params.departmentId);
+  if (params.positionId) search.set('positionId', params.positionId);
+  if (params.isActive !== undefined) search.set('isActive', String(params.isActive));
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
 export function useUsers(
-  params: PaginationParams = { page: 1, limit: 20 },
+  params: UsersQueryParams = { page: 1, limit: 20 },
   options?: Omit<
     UseQueryOptions<{ data: User[]; meta: { total: number; page: number; limit: number; pages: number } }>,
     'queryKey' | 'queryFn'
@@ -60,7 +76,7 @@ export function useUsers(
 ) {
   return useQuery({
     queryKey: userKeys.list(params),
-    queryFn: () => apiGetPaginated<User>(`/users${toQueryString(params)}`),
+    queryFn: () => apiGetPaginated<User>(`/users${toUsersQueryString(params)}`),
     retry: false,
     staleTime: 5 * 60 * 1000,
     ...options,

@@ -19,6 +19,7 @@ import {
   AssignUserRoleDto,
   CreateUserDto,
   UpdateUserDto,
+  UsersQueryDto,
 } from '../../application/dtos/user-management.dtos';
 import { UserManagementService } from '../../application/services/user-management.service';
 
@@ -38,7 +39,7 @@ export class UsersController {
   @ApiOperation({ summary: 'List users' })
   list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
+    @Query() query: UsersQueryDto,
   ): Promise<unknown> {
     return this.userManagementService.listUsers(this.ctx(user), query);
   }

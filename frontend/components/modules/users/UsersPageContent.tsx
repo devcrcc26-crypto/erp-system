@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -12,8 +12,15 @@ import {
   Select,
   Space,
   Spin,
+  Switch,
+  Tag,
   type MenuProps,
 } from 'antd';
+import type {
+  FilterValue,
+  SorterResult,
+  TablePaginationConfig,
+} from 'antd/es/table/interface';
 import { FilePdfOutlined, MoreOutlined } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -41,7 +48,11 @@ import {
   useUsers,
 } from '@/lib/query/users';
 import type { CreateUserRequest, Role, User } from '@/lib/api/types';
-import { useEngineeringDisciplineOptions } from '@/lib/query/org';
+import {
+  useDepartments,
+  useEngineeringDisciplineOptions,
+  usePositions,
+} from '@/lib/query/org';
 import { formatUserName } from '@/lib/utils/user-display';
 import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
 import {
@@ -49,14 +60,57 @@ import {
   exportUsersPdf,
 } from '@/lib/utils/users-export-pdf';
 import { useAuthStore } from '@/stores/auth.store';
+import { tokens } from '@/lib/theme/tokens';
+
+const ROLE_COLOR_MAP: Record<string, string> = {
+  'System Administrator': 'red',
+  'Project Administrator': 'volcano',
+  'Managing Director': 'orange',
+  'General Manager': 'gold',
+  'Project Director': 'yellow',
+  'Project Manager': 'lime',
+  'Chief Engineer': 'geekblue',
+  'Deputy Chief': 'blue',
+  'Department Chief': 'cyan',
+  'Discipline Lead': 'purple',
+  'Discipline Owner': 'magenta',
+  'Institute Chief': 'processing',
+  Designer: 'green',
+  Reviewer: 'success',
+  'Site Coordinator': 'orange',
+  'Site Engineer': 'default',
+  'Document Controller': 'geekblue',
+  Dispatcher: 'warning',
+  'Planning Engineer': 'default',
+  'Procurement Officer': 'default',
+  'Finance Manager': 'default',
+  Accountant: 'default',
+  'HR Officer': 'default',
+  'Safety Officer': 'error',
+  'Client Consultant': 'default',
+  Storekeeper: 'default',
+  Employee: 'default',
+};
+
+const COLUMN_SORT_FIELD: Record<string, string> = {
+  name: 'firstName',
+  email: 'email',
+  department: 'departmentId',
+  position: 'positionId',
+  status: 'isActive',
+};
 
 interface InviteFormValues {
   firstName: string;
   lastName: string;
   chineseName?: string;
   email?: string;
+  phone?: string;
+  departmentId?: string;
+  positionId?: string;
   roleId?: string;
   engineeringDisciplineId?: string;
+  isActive: boolean;
 }
 
 interface EditFormValues {
@@ -64,6 +118,8 @@ interface EditFormValues {
   lastName: string;
   chineseName?: string;
   phone?: string;
+  departmentId?: string;
+  positionId?: string;
   roleId?: string;
   engineeringDisciplineId?: string;
   isActive: boolean;
@@ -172,16 +228,44 @@ function InviteEmployeeModal({
   const [error, setError] = useState<string | null>(null);
   const emailValue = Form.useWatch('email', form);
   const hasEmail = Boolean(emailValue?.trim());
+  const departmentIdValue = Form.useWatch('departmentId', form);
   const createUser = useCreateUser();
   const assignRole = useAssignRole();
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, open);
+  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, open);
+  const positionsQuery = usePositions({ page: 1, limit: 200 }, open);
+  const departmentOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.data ?? []).map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departmentsQuery.data],
+  );
+  const allPositions = positionsQuery.data?.data ?? [];
+  const positionOptions = useMemo(() => {
+    const filtered = departmentIdValue
+      ? allPositions.filter((position) => position.departmentId === departmentIdValue)
+      : allPositions.filter((position) => position.isActive);
+    return filtered.map((position) => ({ value: position.id, label: position.title }));
+  }, [allPositions, departmentIdValue]);
 
   const isSubmitting = createUser.isPending || assignRole.isPending;
 
   function resetForm(): void {
     form.resetFields();
     setError(null);
+  }
+
+  function handleDepartmentChange(nextDepartmentId?: string): void {
+    const currentPositionId = form.getFieldValue('positionId') as string | undefined;
+    if (currentPositionId) {
+      const currentPosition = allPositions.find((p) => p.id === currentPositionId);
+      if (currentPosition && currentPosition.departmentId !== nextDepartmentId) {
+        form.setFieldValue('positionId', undefined);
+      }
+    }
   }
 
   async function handleSubmit(values: InviteFormValues): Promise<void> {
@@ -192,8 +276,11 @@ function InviteEmployeeModal({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       chineseName: values.chineseName?.trim() || undefined,
+      phone: values.phone?.trim() || undefined,
+      departmentId: values.departmentId,
+      positionId: values.positionId,
       engineeringDisciplineId: values.engineeringDisciplineId,
-      isActive: true,
+      isActive: values.isActive,
     };
     if (invitedAddress) {
       body.email = invitedAddress;
@@ -244,6 +331,7 @@ function InviteEmployeeModal({
       <Form<InviteFormValues>
         form={form}
         layout="vertical"
+        initialValues={{ isActive: true }}
         onFinish={(values: InviteFormValues) => void handleSubmit(values)}
       >
         <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
@@ -274,34 +362,63 @@ function InviteEmployeeModal({
         >
           <Input placeholder={t('users.emailOptionalPlaceholder')} />
         </Form.Item>
-        <Form.Item
-          label={t('users.roleOptional')}
-          name="roleId"
-          extra={t('users.roleOptionalHint')}
-        >
-          <Select
-            allowClear
-            loading={rolesLoading}
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-            placeholder={
-              roles.length === 0
-                ? t('common.noRolesAvailable')
-                : t('common.selectRole')
-            }
-          />
+        <Form.Item label={t('common.phone')} name="phone">
+          <Input />
         </Form.Item>
-        <Form.Item
-          label={t('common.discipline')}
-          name="engineeringDisciplineId"
-          extra={t('users.disciplineOptionalHint')}
-        >
-          <Select
-            allowClear
-            loading={disciplinesLoading}
-            placeholder={t('common.selectDiscipline')}
-            options={disciplineOptions}
-            optionFilterProp="label"
-          />
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label={t('common.department')} name="departmentId">
+            <Select
+              allowClear
+              loading={departmentsQuery.isLoading}
+              placeholder={t('users.filterDepartment')}
+              options={departmentOptions}
+              optionFilterProp="label"
+              onChange={handleDepartmentChange}
+            />
+          </Form.Item>
+          <Form.Item label={t('common.position')} name="positionId">
+            <Select
+              allowClear
+              loading={positionsQuery.isLoading}
+              placeholder={t('users.filterPosition')}
+              options={positionOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        </div>
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item
+            label={t('common.discipline')}
+            name="engineeringDisciplineId"
+            extra={t('users.disciplineOptionalHint')}
+          >
+            <Select
+              allowClear
+              loading={disciplinesLoading}
+              placeholder={t('common.selectDiscipline')}
+              options={disciplineOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Form.Item
+            label={t('users.roleOptional')}
+            name="roleId"
+            extra={t('users.roleOptionalHint')}
+          >
+            <Select
+              allowClear
+              loading={rolesLoading}
+              options={roles.map((role) => ({ value: role.id, label: role.name }))}
+              placeholder={
+                roles.length === 0
+                  ? t('common.noRolesAvailable')
+                  : t('common.selectRole')
+              }
+            />
+          </Form.Item>
+        </div>
+        <Form.Item name="isActive" valuePropName="checked">
+          <Switch checkedChildren={t('common.active')} unCheckedChildren={t('common.inactive')} />
         </Form.Item>
         {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
       </Form>
@@ -330,6 +447,24 @@ function EditEmployeeModal({
   const revokeRole = useRevokeRole();
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, open);
+  const departmentIdValue = Form.useWatch('departmentId', form);
+  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, open);
+  const positionsQuery = usePositions({ page: 1, limit: 200 }, open);
+  const departmentOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.data ?? []).map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departmentsQuery.data],
+  );
+  const allPositions = positionsQuery.data?.data ?? [];
+  const positionOptions = useMemo(() => {
+    const filtered = departmentIdValue
+      ? allPositions.filter((position) => position.departmentId === departmentIdValue)
+      : allPositions.filter((position) => position.isActive);
+    return filtered.map((position) => ({ value: position.id, label: position.title }));
+  }, [allPositions, departmentIdValue]);
   const [error, setError] = useState<string | null>(null);
 
   const currentRoleId =
@@ -346,10 +481,22 @@ function EditEmployeeModal({
       lastName: detail.lastName,
       chineseName: detail.chineseName ?? '',
       phone: detail.phone ?? '',
+      departmentId: detail.departmentId ?? undefined,
+      positionId: detail.positionId ?? undefined,
       engineeringDisciplineId: detail.engineeringDisciplineId ?? undefined,
       isActive: detail.isActive,
       roleId: currentRoleId || undefined,
     });
+  }
+
+  function handleDepartmentChange(nextDepartmentId?: string): void {
+    const currentPositionId = form.getFieldValue('positionId') as string | undefined;
+    if (currentPositionId) {
+      const currentPosition = allPositions.find((p) => p.id === currentPositionId);
+      if (currentPosition && currentPosition.departmentId !== nextDepartmentId) {
+        form.setFieldValue('positionId', undefined);
+      }
+    }
   }
 
   useEffect(() => {
@@ -370,6 +517,8 @@ function EditEmployeeModal({
           lastName: values.lastName,
           chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
+          departmentId: values.departmentId,
+          positionId: values.positionId,
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
         },
@@ -442,35 +591,58 @@ function EditEmployeeModal({
         <Form.Item label={t('common.phone')} name="phone">
           <Input type="tel" />
         </Form.Item>
-        <Form.Item
-          label={t('common.discipline')}
-          name="engineeringDisciplineId"
-          extra={t('users.disciplineOptionalHint')}
-        >
-          <Select
-            allowClear
-            loading={disciplinesLoading}
-            placeholder={t('common.selectDiscipline')}
-            options={disciplineOptions}
-            optionFilterProp="label"
-          />
-        </Form.Item>
-        <Form.Item
-          label={t('users.roleOptional')}
-          name="roleId"
-          extra={t('users.roleOptionalHint')}
-        >
-          <Select
-            allowClear
-            loading={userQuery.isLoading}
-            options={roles.map((role) => ({ value: role.id, label: role.name }))}
-            placeholder={
-              userQuery.isLoading
-                ? t('common.loadingRoles')
-                : t('common.selectRole')
-            }
-          />
-        </Form.Item>
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label={t('common.department')} name="departmentId">
+            <Select
+              allowClear
+              loading={departmentsQuery.isLoading}
+              placeholder={t('users.filterDepartment')}
+              options={departmentOptions}
+              optionFilterProp="label"
+              onChange={handleDepartmentChange}
+            />
+          </Form.Item>
+          <Form.Item label={t('common.position')} name="positionId">
+            <Select
+              allowClear
+              loading={positionsQuery.isLoading}
+              placeholder={t('users.filterPosition')}
+              options={positionOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        </div>
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item
+            label={t('common.discipline')}
+            name="engineeringDisciplineId"
+            extra={t('users.disciplineOptionalHint')}
+          >
+            <Select
+              allowClear
+              loading={disciplinesLoading}
+              placeholder={t('common.selectDiscipline')}
+              options={disciplineOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Form.Item
+            label={t('users.roleOptional')}
+            name="roleId"
+            extra={t('users.roleOptionalHint')}
+          >
+            <Select
+              allowClear
+              loading={userQuery.isLoading}
+              options={roles.map((role) => ({ value: role.id, label: role.name }))}
+              placeholder={
+                userQuery.isLoading
+                  ? t('common.loadingRoles')
+                  : t('common.selectRole')
+              }
+            />
+          </Form.Item>
+        </div>
         <Form.Item name="isActive" valuePropName="checked">
           <Checkbox>{t('common.activeAccount')}</Checkbox>
         </Form.Item>
@@ -484,7 +656,7 @@ export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const authUser = useAuthStore((state) => state.user);
-  const { params, bindMeta } = useTablePagination();
+  const { params, bindMeta, resetPage } = useTablePagination();
   const [exportingPdf, setExportingPdf] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -496,14 +668,112 @@ export default function UsersPageContent(): React.ReactNode {
   } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const usersQuery = useUsers(params);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
+  const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
+  const [positionFilter, setPositionFilter] = useState<string | undefined>();
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>();
+  const [sortBy, setSortBy] = useState<string | undefined>();
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search);
+      resetPage();
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [search, resetPage]);
+
+  const handleDisciplineFilterChange = useCallback(
+    (value?: string) => {
+      setDisciplineFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleDepartmentFilterChange = useCallback(
+    (value?: string) => {
+      setDepartmentFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handlePositionFilterChange = useCallback(
+    (value?: string) => {
+      setPositionFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleStatusFilterChange = useCallback(
+    (value?: boolean) => {
+      setStatusFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleTableChange = useCallback(
+    (
+      _pagination: TablePaginationConfig,
+      _filters: Record<string, FilterValue | null>,
+      sorter: SorterResult<User> | SorterResult<User>[],
+    ) => {
+      const resolved = Array.isArray(sorter) ? sorter[0] : sorter;
+      const columnKey =
+        typeof resolved?.columnKey === 'string' ? resolved.columnKey : undefined;
+      const field = columnKey ? COLUMN_SORT_FIELD[columnKey] : undefined;
+      if (!field || !resolved?.order) {
+        setSortBy(undefined);
+        setSortOrder(undefined);
+        return;
+      }
+      setSortBy(field);
+      setSortOrder(resolved.order === 'ascend' ? 'asc' : 'desc');
+    },
+    [],
+  );
+
+  const usersQuery = useUsers({
+    ...params,
+    search: debouncedSearch || undefined,
+    disciplineId: disciplineFilter,
+    departmentId: departmentFilter,
+    positionId: positionFilter,
+    isActive: statusFilter,
+    sortBy,
+    sortOrder,
+  });
   const rolesQuery = useRoles(
     { page: 1, limit: 100 },
     { enabled: usersQuery.isSuccess },
   );
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
-  const { nameById: disciplineNameById } = useEngineeringDisciplineOptions(true);
+  const { options: disciplineFilterOptions, nameById: disciplineNameById } =
+    useEngineeringDisciplineOptions(true);
+  const departmentsQuery = useDepartments({ page: 1, limit: 200 });
+  const positionsQuery = usePositions({ page: 1, limit: 200 });
+  const departmentFilterOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.data ?? []).map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departmentsQuery.data],
+  );
+  const positionFilterOptions = useMemo(
+    () =>
+      (positionsQuery.data?.data ?? []).map((position) => ({
+        value: position.id,
+        label: position.title,
+      })),
+    [positionsQuery.data],
+  );
 
   const roles = rolesQuery.data?.data ?? [];
   const companyName = authUser?.companyName ?? 'Company';
@@ -754,10 +1024,55 @@ export default function UsersPageContent(): React.ReactNode {
           </Space>
         }
       >
+        <Input.Search
+          placeholder={t('users.searchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          allowClear
+          style={{ marginBottom: 12 }}
+        />
+        <div className="flex flex-wrap gap-2" style={{ marginBottom: 12 }}>
+          <Select
+            placeholder={t('users.filterDiscipline')}
+            options={disciplineFilterOptions}
+            allowClear
+            style={{ minWidth: 160 }}
+            value={disciplineFilter}
+            onChange={handleDisciplineFilterChange}
+          />
+          <Select
+            placeholder={t('users.filterDepartment')}
+            options={departmentFilterOptions}
+            allowClear
+            style={{ minWidth: 180 }}
+            value={departmentFilter}
+            onChange={handleDepartmentFilterChange}
+          />
+          <Select
+            placeholder={t('users.filterPosition')}
+            options={positionFilterOptions}
+            allowClear
+            style={{ minWidth: 180 }}
+            value={positionFilter}
+            onChange={handlePositionFilterChange}
+          />
+          <Select
+            placeholder={t('users.filterStatus')}
+            options={[
+              { label: t('common.active'), value: true },
+              { label: t('common.inactive'), value: false },
+            ]}
+            allowClear
+            style={{ minWidth: 130 }}
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+          />
+        </div>
         <DataTable<User>
           rowKey="id"
           dataSource={users}
           pagination={bindMeta(meta)}
+          onChange={handleTableChange}
           locale={{
             emptyText: (
               <TableEmptyState
@@ -775,48 +1090,105 @@ export default function UsersPageContent(): React.ReactNode {
             {
               title: t('common.name'),
               key: 'name',
+              sorter: true,
               render: (_, record) => (
-                <span className="font-medium text-slate-900">
-                  {record.firstName} {record.lastName}
-                </span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-slate-900">
+                    {record.firstName} {record.lastName}
+                  </span>
+                  {record.chineseName ? (
+                    <span
+                      style={{ color: tokens.colorTextSecondary, fontSize: 12 }}
+                    >
+                      {record.chineseName}
+                    </span>
+                  ) : null}
+                </div>
               ),
             },
             {
-              title: t('common.chineseName'),
-              key: 'chineseName',
+              title: t('common.department'),
+              key: 'department',
               ellipsis: { showTitle: true },
-              render: (_, record) => record.chineseName || '-',
+              sorter: true,
+              render: (_, record) =>
+                record.department?.name ?? <span style={{ color: tokens.colorTextSecondary }}>-</span>,
+            },
+            {
+              title: t('common.position'),
+              key: 'position',
+              ellipsis: { showTitle: true },
+              sorter: true,
+              render: (_, record) =>
+                record.position?.title ?? <span style={{ color: tokens.colorTextSecondary }}>-</span>,
             },
             {
               title: t('common.email'),
               key: 'email',
               ellipsis: { showTitle: true },
+              sorter: true,
               render: (_, record) => record.email || '-',
+            },
+            {
+              title: t('common.discipline'),
+              key: 'discipline',
+              ellipsis: { showTitle: true },
+              render: (_, record) => {
+                if (!record.engineeringDisciplineId) {
+                  return '-';
+                }
+                const name =
+                  record.engineeringDiscipline?.name ??
+                  disciplineNameById.get(record.engineeringDisciplineId) ??
+                  '-';
+                const nameZh = record.engineeringDiscipline?.nameZh;
+                return (
+                  <div className="flex flex-col">
+                    <span>{name}</span>
+                    {nameZh ? (
+                      <span
+                        style={{ color: tokens.colorTextSecondary, fontSize: 12 }}
+                      >
+                        {nameZh}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              },
+            },
+            {
+              title: t('common.roles'),
+              key: 'roles',
+              ellipsis: { showTitle: true },
+              render: (_, record) => {
+                const roles = record.userRoles ?? [];
+                if (roles.length === 0) {
+                  return '-';
+                }
+                return (
+                  <>
+                    {roles.map((assignment) => (
+                      <Tag
+                        key={assignment.id}
+                        color={ROLE_COLOR_MAP[assignment.role.name] ?? 'default'}
+                      >
+                        {assignment.role.name}
+                      </Tag>
+                    ))}
+                  </>
+                );
+              },
             },
             {
               title: t('common.status'),
               key: 'status',
+              sorter: true,
               render: (_, record) => (
                 <StatusBadge
                   label={userStatusLabel(record, t)}
                   variant={userStatusVariant(record)}
                 />
               ),
-            },
-            {
-              title: t('common.discipline'),
-              key: 'discipline',
-              ellipsis: { showTitle: true },
-              render: (_, record) =>
-                record.engineeringDisciplineId
-                  ? (disciplineNameById.get(record.engineeringDisciplineId) ?? '-')
-                  : '-',
-            },
-            {
-              title: t('common.roles'),
-              key: 'roles',
-              ellipsis: { showTitle: true },
-              render: (_, record) => formatUserRoleNames(record),
             },
             {
               title: t('common.actions'),

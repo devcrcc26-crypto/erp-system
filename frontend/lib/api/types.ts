@@ -144,7 +144,9 @@ export interface User {
   companyId: string;
   branchId: string | null;
   departmentId: string | null;
+  department?: { id: string; name: string } | null;
   positionId: string | null;
+  position?: { id: string; title: string } | null;
   discipline: UserDiscipline | null;
   engineeringDisciplineId: string | null;
   engineeringDiscipline?: { id: string; name: string; nameZh: string | null } | null;
@@ -180,6 +182,14 @@ export interface UserRoleAssignment {
 
 export interface UserDetail extends User {
   userRoles: UserRoleAssignment[];
+}
+
+export interface UsersQueryParams extends PaginationParams {
+  search?: string;
+  disciplineId?: string;
+  departmentId?: string;
+  positionId?: string;
+  isActive?: boolean;
 }
 
 export interface CreateUserRequest {

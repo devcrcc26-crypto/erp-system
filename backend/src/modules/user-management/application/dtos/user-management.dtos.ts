@@ -14,6 +14,7 @@ import { Transform, Type } from 'class-transformer';
 import { UserDiscipline } from '@prisma/client';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
 export class CreateUserDto {
   @ApiPropertyOptional({
@@ -122,6 +123,38 @@ export class UpdateUserDto extends PartialType(
   @ValidateIf((_, value) => value !== null)
   @IsEntityUuid()
   engineeringDisciplineId?: string | null;
+}
+
+export class UsersQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'Matches against first name, last name, or email' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  disciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  departmentId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  positionId?: string;
+
+  @ApiPropertyOptional({ description: 'Pass "true" or "false"' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class CreateRoleDto {

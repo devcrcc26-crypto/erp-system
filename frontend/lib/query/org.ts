@@ -34,12 +34,25 @@ export interface DepartmentRow {
   updatedAt: string;
 }
 
+export interface Position {
+  id: string;
+  companyId: string;
+  departmentId: string;
+  title: string;
+  grade: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const orgKeys = {
   all: ['org'] as const,
   departments: (params: PaginationParams) =>
     [...orgKeys.all, 'departments', params] as const,
   disciplines: (params: PaginationParams & { activeOnly?: boolean }) =>
     [...orgKeys.all, 'engineering-disciplines', params] as const,
+  positions: (params: PaginationParams) =>
+    [...orgKeys.all, 'positions', params] as const,
 };
 
 export function useDepartments(
@@ -51,6 +64,20 @@ export function useDepartments(
     queryFn: () =>
       apiGetPaginated<DepartmentRow>(
         `/departments?page=${params.page}&limit=${params.limit}`,
+      ),
+    enabled,
+  });
+}
+
+export function usePositions(
+  params: PaginationParams = { page: 1, limit: 200 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: orgKeys.positions(params),
+    queryFn: () =>
+      apiGetPaginated<Position>(
+        `/positions?page=${params.page}&limit=${params.limit}`,
       ),
     enabled,
   });

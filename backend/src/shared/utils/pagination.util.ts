@@ -49,6 +49,9 @@ export function buildOrderBy(
     'title',
     'periodNumber',
     'startDate',
+    'departmentId',
+    'positionId',
+    'isActive',
   ]);
 
   const field = allowedFields.has(sortBy) ? sortBy : 'createdAt';
