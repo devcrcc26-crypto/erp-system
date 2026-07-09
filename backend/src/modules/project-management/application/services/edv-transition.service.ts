@@ -39,6 +39,7 @@ export class EdvTransitionService {
       projectId: string;
       currentAssigneeUserId?: string;
       permissionActionOverride?: EpcWorkflowAction;
+      designPackageId?: string;
       transitions: readonly {
         engineeringDocumentVersionId: string;
         targetStatus: EdvStatus;
@@ -73,6 +74,7 @@ export class EdvTransitionService {
         targetStatus: to as PrismaEdvStatus,
         currentAssigneeUserId: input.currentAssigneeUserId,
         actionOverride: input.permissionActionOverride,
+        designPackageId: input.designPackageId,
       });
 
       const beforeState: Prisma.InputJsonValue = {

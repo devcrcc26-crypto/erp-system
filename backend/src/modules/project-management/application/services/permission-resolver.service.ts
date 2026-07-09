@@ -18,6 +18,7 @@ export interface EdvTransitionPermissionInput {
   readonly edv: EdvWithDiscipline;
   readonly targetStatus: EdvStatus;
   readonly currentAssigneeUserId?: string;
+  readonly designPackageId?: string;
 }
 
 export interface WorkflowActionPermissionInput {
@@ -69,12 +70,20 @@ export class PermissionResolverService {
       input.projectId,
     );
 
+    const packageOverrides = input.designPackageId
+      ? await this.resolvePackageApprovalOverrides(
+          input.companyId,
+          input.designPackageId,
+        )
+      : undefined;
+
     const allowed = canPerformFromContext({
       companyId: input.companyId,
       userId: input.userId,
       projectId: input.projectId,
       action,
       taskDisciplineId: discipline.id,
+      designPackageId: input.designPackageId,
       engineeringDocumentVersionId: input.edv.id,
       edvStatus: input.edv.status as never,
       grantedActions,
@@ -88,6 +97,13 @@ export class PermissionResolverService {
       disciplineChiefUserId: discipline.chiefUserId ?? undefined,
       disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
       disciplineInstituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+      subtaskDesignerUserId: packageOverrides?.designerUserId,
+      subtaskSupportingDesignerUserId: packageOverrides?.supportingDesignerUserId,
+      subtaskDisciplineOwnerUserId: packageOverrides?.disciplineOwnerUserId,
+      subtaskReviewerUserId: packageOverrides?.reviewerUserId,
+      subtaskDisciplinaryLeaderUserId: packageOverrides?.disciplinaryLeaderUserId,
+      subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
+      subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 

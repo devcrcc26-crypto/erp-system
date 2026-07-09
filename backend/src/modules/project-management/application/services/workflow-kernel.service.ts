@@ -352,6 +352,7 @@ export class WorkflowKernelService {
         projectId,
         currentAssigneeUserId: session.assignedToUserId ?? undefined,
         permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+        designPackageId: command.designPackageId,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: p.to as EdvStatus,
@@ -423,6 +424,7 @@ export class WorkflowKernelService {
         actorId: command.actorId,
         correlationId,
         projectId,
+        designPackageId: command.designPackageId,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: p.to as EdvStatus,

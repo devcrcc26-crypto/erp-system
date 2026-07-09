@@ -273,6 +273,7 @@ export class ReviewWorkflowService {
         actorId: command.actorId,
         correlationId,
         projectId,
+        designPackageId: command.designPackageId,
         transitions: loaded.map((edv) => ({
           engineeringDocumentVersionId: edv.id,
           targetStatus: EdvStatus.IN_REVIEW,
@@ -869,6 +870,7 @@ export class ReviewWorkflowService {
               projectId,
               currentAssigneeUserId: session.assignedToUserId ?? undefined,
               permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE,
+              designPackageId: session.designPackageId,
               transitions: approvalPlan.map((plan) => ({
                 engineeringDocumentVersionId: plan.edvId,
                 targetStatus: EdvStatus.APPROVED,
@@ -985,6 +987,7 @@ export class ReviewWorkflowService {
         actorId: command.actorId,
         correlationId,
         projectId,
+        designPackageId: command.designPackageId,
         transitions: loaded
           .filter((e) => (e.status as EdvStatus) === EdvStatus.IN_REVIEW)
           .map((edv) => ({
@@ -1103,6 +1106,7 @@ export class ReviewWorkflowService {
         actorId: command.actorId,
         correlationId,
         projectId,
+        designPackageId: command.designPackageId,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: EdvStatus.DRAFT,
@@ -1173,6 +1177,7 @@ export class ReviewWorkflowService {
       actorId: input.actorId,
       correlationId: input.correlationId,
       projectId: input.projectId,
+      designPackageId: input.designPackageId,
       transitions: premature.map((edv) => ({
         engineeringDocumentVersionId: edv.id,
         targetStatus: EdvStatus.IN_REVIEW,
@@ -1216,6 +1221,7 @@ export class ReviewWorkflowService {
       actorId: command.actorId,
       correlationId,
       projectId,
+      designPackageId: command.designPackageId,
       transitions: orphans.map((edv) => ({
         engineeringDocumentVersionId: edv.id,
         targetStatus: EdvStatus.DRAFT,
