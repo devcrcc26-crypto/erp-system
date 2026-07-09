@@ -180,9 +180,14 @@ export class EpcWorkflowRepository {
   async findDirtyPackages(
     tx: PrismaTx,
     companyId: string,
+    packageIds?: readonly string[],
   ): Promise<DesignPackage[]> {
     return tx.designPackage.findMany({
-      where: activeOnly({ companyId, projectionPending: true }),
+      where: activeOnly({
+        companyId,
+        projectionPending: true,
+        ...(packageIds ? { id: { in: [...packageIds] } } : {}),
+      }),
       orderBy: { createdAt: 'asc' },
     });
   }

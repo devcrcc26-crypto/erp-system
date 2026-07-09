@@ -57,6 +57,7 @@ describe('StateProjectionService', () => {
     expect(epcWorkflowRepository.findDirtyPackages).toHaveBeenCalledWith(
       tx,
       companyId,
+      undefined,
     );
     expect(epcWorkflowRepository.updatePackageProjection).toHaveBeenCalledWith(
       tx,

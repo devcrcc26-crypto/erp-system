@@ -105,6 +105,7 @@ describe('review-session-attachments', () => {
       {} as unknown as ReviewSlaService,
       {} as unknown as StateProjectionService,
       {} as unknown as WorkflowTransactionRunner,
+      {} as never,
     );
   });
 

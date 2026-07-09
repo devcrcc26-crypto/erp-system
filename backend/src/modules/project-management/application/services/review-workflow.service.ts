@@ -48,6 +48,7 @@ import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   mapReviewSessionAttachment,
@@ -87,6 +88,7 @@ export class ReviewWorkflowService {
     private readonly reviewSla: ReviewSlaService,
     private readonly stateProjection: StateProjectionService,
     private readonly workflowTransactionRunner: WorkflowTransactionRunner,
+    private readonly prisma: PrismaService,
   ) {}
 
   private runTx<T>(
@@ -107,6 +109,19 @@ export class ReviewWorkflowService {
     command: SubmitPackageForReviewCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
+    await this.permissionResolver.assertActionAllowed({
+      companyId: command.companyId,
+      userId: command.actorId,
+      projectId: await this.resolveProjectIdFromDiscipline(
+        this.prisma,
+        command.taskDisciplineId,
+        command.companyId,
+      ),
+      action: EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+      taskDisciplineId: command.taskDisciplineId,
+      designPackageId: command.designPackageId,
+    });
+
     return this.runTx(command.companyId, correlationId, async (tx) => {
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
@@ -116,19 +131,6 @@ export class ReviewWorkflowService {
       if (!pkg || pkg.taskDisciplineId !== command.taskDisciplineId) {
         throw new NotFoundException('Design package not found');
       }
-
-      await this.permissionResolver.assertActionAllowed({
-        companyId: command.companyId,
-        userId: command.actorId,
-        projectId: await this.resolveProjectIdFromDiscipline(
-          tx,
-          pkg.taskDisciplineId,
-          command.companyId,
-        ),
-        action: EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
-        taskDisciplineId: command.taskDisciplineId,
-        designPackageId: command.designPackageId,
-      });
 
       await this.conflictGuard.assertNoActiveSessionOnPackage(
         tx,
@@ -288,6 +290,7 @@ export class ReviewWorkflowService {
         tx,
         command.companyId,
         command.actorId,
+        { packageIds: [command.designPackageId] },
       );
 
       return this.buildReviewSnapshot(
@@ -781,6 +784,7 @@ export class ReviewWorkflowService {
           tx,
           command.companyId,
           command.actorId,
+          { packageIds: [session.designPackageId] },
         );
 
         return {
@@ -877,6 +881,7 @@ export class ReviewWorkflowService {
         tx,
         command.companyId,
         command.actorId,
+        { packageIds: [session.designPackageId] },
       );
 
       return this.buildReviewSnapshot(
@@ -993,6 +998,7 @@ export class ReviewWorkflowService {
         tx,
         command.companyId,
         command.actorId,
+        { packageIds: [command.designPackageId] },
       );
 
       return this.buildReviewSnapshot(
@@ -1108,6 +1114,7 @@ export class ReviewWorkflowService {
         tx,
         command.companyId,
         command.actorId,
+        { packageIds: [command.designPackageId] },
       );
 
       return this.buildReviewSnapshot(

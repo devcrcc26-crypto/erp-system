@@ -40,10 +40,12 @@ export class StateProjectionService {
     tx: PrismaTx,
     companyId: string,
     updatedBy: string,
+    options?: { packageIds?: readonly string[] },
   ): Promise<PhaseBProjectionResult> {
     const dirtyPackages = await this.epcWorkflowRepository.findDirtyPackages(
       tx,
       companyId,
+      options?.packageIds,
     );
 
     const packageStatuses: Record<string, DomainPackageStatus> = {};
