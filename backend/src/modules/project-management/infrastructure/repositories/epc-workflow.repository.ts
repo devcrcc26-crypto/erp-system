@@ -30,7 +30,7 @@ export class EpcWorkflowRepository {
    * Runs Phase A + Phase B inside a single Prisma transaction.
    */
   async runPhaseAB<T>(work: (tx: PrismaTx) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(work);
+    return this.prisma.$transaction(work, { timeout: 15000 });
   }
 
   /** @deprecated Use runPhaseAB - alias for backward compatibility */
