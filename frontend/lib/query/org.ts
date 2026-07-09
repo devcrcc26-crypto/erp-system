@@ -224,6 +224,17 @@ export function useUpdateDepartment() {
   });
 }
 
+export function useDeleteDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiDelete<{ message: string }>(`/departments/${id}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
 export function useCreatePosition() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -254,6 +265,17 @@ export function useUpdatePosition() {
         isActive?: boolean;
       };
     }) => apiPatch<Position>(`/positions/${id}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+export function useDeletePosition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiDelete<{ message: string }>(`/positions/${id}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },

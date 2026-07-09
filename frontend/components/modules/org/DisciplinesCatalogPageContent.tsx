@@ -15,8 +15,8 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import {
+  useDeleteEngineeringDiscipline,
   useEngineeringDisciplines,
-  useUpdateEngineeringDiscipline,
   type EngineeringDiscipline,
 } from '@/lib/query/org';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -31,15 +31,13 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<EngineeringDiscipline | null>(null);
   const [readOnlyDrawer, setReadOnlyDrawer] = useState(false);
-  const [deactivating, setDeactivating] = useState<EngineeringDiscipline | null>(
-    null,
-  );
+  const [deleting, setDeleting] = useState<EngineeringDiscipline | null>(null);
 
   const disciplinesQuery = useEngineeringDisciplines(
     { page: 1, limit: 200, activeOnly: false },
     canView,
   );
-  const updateDiscipline = useUpdateEngineeringDiscipline();
+  const deleteDiscipline = useDeleteEngineeringDiscipline();
   const disciplines = disciplinesQuery.data?.data ?? [];
 
   const columns: ColumnsType<EngineeringDiscipline> = [
@@ -85,14 +83,14 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
           >
             {canManage ? 'Edit' : 'View'}
           </Button>
-          {canManage && record.isActive ? (
+          {canManage ? (
             <Button
               type="link"
               danger
               className="!px-0"
-              onClick={() => setDeactivating(record)}
+              onClick={() => setDeleting(record)}
             >
-              Deactivate
+              Delete
             </Button>
           ) : null}
         </div>
@@ -150,35 +148,32 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
       />
 
       <ConfirmDialog
-        open={Boolean(deactivating)}
-        title="Deactivate discipline?"
+        open={Boolean(deleting)}
+        title="Delete discipline?"
         description={
-          deactivating
-            ? `${deactivating._count?.taskDisciplines ?? 0} active assignment(s) use this discipline — it will be hidden from dropdowns but historical data is preserved.`
+          deleting
+            ? `"${deleting.name}" will be removed. Task subtasks and users linked to this discipline will have their discipline cleared.`
             : undefined
         }
-        confirmLabel="Deactivate"
+        confirmLabel="Delete"
         danger
-        confirmLoading={updateDiscipline.isPending}
+        confirmLoading={deleteDiscipline.isPending}
         onConfirm={() => {
-          if (!deactivating) {
+          if (!deleting) {
             return;
           }
-          void updateDiscipline
-            .mutateAsync({
-              id: deactivating.id,
-              body: { isActive: false },
-            })
+          void deleteDiscipline
+            .mutateAsync(deleting.id)
             .then(() => {
-              messageApi.success('Discipline deactivated');
-              setDeactivating(null);
+              messageApi.success('Discipline deleted');
+              setDeleting(null);
               void disciplinesQuery.refetch();
             })
             .catch((error: unknown) => {
-              notifyApiError(error, 'Failed to deactivate discipline', messageApi);
+              notifyApiError(error, 'Failed to delete discipline', messageApi);
             });
         }}
-        onCancel={() => setDeactivating(null)}
+        onCancel={() => setDeleting(null)}
       />
     </FormLayout>
   );

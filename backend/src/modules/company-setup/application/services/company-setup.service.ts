@@ -292,9 +292,69 @@ export class CompanySetupService {
 
   async deleteDepartment(ctx: AuditContext, id: string): Promise<void> {
     await this.findOrThrow('department', id, ctx.companyId);
-    await this.prisma.department.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const positions = await tx.position.findMany({
+        where: activeOnly({ companyId: ctx.companyId, departmentId: id }),
+        select: { id: true },
+      });
+      const positionIds = positions.map((position) => position.id);
+
+      if (positionIds.length > 0) {
+        await tx.user.updateMany({
+          where: {
+            companyId: ctx.companyId,
+            positionId: { in: positionIds },
+            deletedAt: null,
+          },
+          data: { positionId: null, updatedBy: ctx.userId },
+        });
+        await tx.position.updateMany({
+          where: { id: { in: positionIds } },
+          data: {
+            deletedAt: now,
+            deletedBy: ctx.userId,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+
+      await tx.costCentre.updateMany({
+        where: activeOnly({ companyId: ctx.companyId, departmentId: id }),
+        data: {
+          deletedAt: now,
+          deletedBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      await tx.user.updateMany({
+        where: {
+          companyId: ctx.companyId,
+          departmentId: id,
+          deletedAt: null,
+        },
+        data: { departmentId: null, updatedBy: ctx.userId },
+      });
+
+      await tx.project.updateMany({
+        where: {
+          companyId: ctx.companyId,
+          departmentId: id,
+          deletedAt: null,
+        },
+        data: { departmentId: null, updatedBy: ctx.userId },
+      });
+
+      await tx.department.update({
+        where: { id },
+        data: {
+          leaderUserId: null,
+          deletedAt: now,
+          deletedBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
     });
   }
 
@@ -402,19 +462,28 @@ export class CompanySetupService {
   }
 
   /**
-   * Soft-deletes a discipline only when unused; otherwise rejects.
+   * Soft-deletes a discipline and clears FK references on users and task disciplines.
    */
   async deleteDiscipline(ctx: AuditContext, id: string): Promise<void> {
     await this.findDisciplineOrThrow(ctx, id);
-    const references = await this.getDisciplineReferenceCount(id);
-    if (references > 0) {
-      throw new ConflictException(
-        'Discipline is referenced by tasks or users — deactivate instead.',
-      );
-    }
-    await this.prisma.discipline.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.taskDiscipline.updateMany({
+        where: activeOnly({ companyId: ctx.companyId, disciplineId: id }),
+        data: { disciplineId: null, updatedBy: ctx.userId },
+      });
+      await tx.user.updateMany({
+        where: activeOnly({ companyId: ctx.companyId, engineeringDisciplineId: id }),
+        data: { engineeringDisciplineId: null, updatedBy: ctx.userId },
+      });
+      await tx.discipline.update({
+        where: { id },
+        data: {
+          deletedAt: now,
+          deletedBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
     });
   }
 
@@ -510,9 +579,24 @@ export class CompanySetupService {
 
   async deletePosition(ctx: AuditContext, id: string): Promise<void> {
     await this.findOrThrow('position', id, ctx.companyId);
-    await this.prisma.position.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: {
+          companyId: ctx.companyId,
+          positionId: id,
+          deletedAt: null,
+        },
+        data: { positionId: null, updatedBy: ctx.userId },
+      });
+      await tx.position.update({
+        where: { id },
+        data: {
+          deletedAt: now,
+          deletedBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
     });
   }
 
@@ -911,17 +995,5 @@ export class CompanySetupService {
       );
     }
     throw error;
-  }
-
-  private async getDisciplineReferenceCount(id: string): Promise<number> {
-    const [taskDisciplines, users] = await Promise.all([
-      this.prisma.taskDiscipline.count({
-        where: activeOnly({ disciplineId: id }),
-      }),
-      this.prisma.user.count({
-        where: activeOnly({ engineeringDisciplineId: id }),
-      }),
-    ]);
-    return taskDisciplines + users;
   }
 }

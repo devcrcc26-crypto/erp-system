@@ -20,7 +20,7 @@ import {
   countProjectsForDepartment,
   useDepartmentMetrics,
 } from '@/lib/query/department-metrics';
-import { useDepartments, useUpdateDepartment, type DepartmentRow } from '@/lib/query/org';
+import { useDepartments, useDeleteDepartment, type DepartmentRow } from '@/lib/query/org';
 import { useAllProjects } from '@/lib/query/projects';
 import { useUsersDirectory } from '@/lib/query/users';
 import { useAuthStore } from '@/stores/auth.store';
@@ -115,7 +115,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DepartmentRow | null>(null);
-  const [deactivating, setDeactivating] = useState<DepartmentRow | null>(null);
+  const [deleting, setDeleting] = useState<DepartmentRow | null>(null);
   const [warningDismissed, setWarningDismissed] = useState(
     () =>
       typeof window !== 'undefined' &&
@@ -128,7 +128,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
     { page: 1, limit: 100 },
     { enabled: canManage },
   );
-  const updateDepartment = useUpdateDepartment();
+  const deleteDepartment = useDeleteDepartment();
 
   const allDepartments = departmentsQuery.data?.data ?? [];
   const projects = projectsQuery.data?.data ?? [];
@@ -215,16 +215,14 @@ export default function DepartmentsPageContent(): React.ReactNode {
             >
               Edit
             </Button>
-            {record.isActive ? (
-              <Button
-                type="link"
-                danger
-                className="!px-0"
-                onClick={() => setDeactivating(record)}
-              >
-                Deactivate
-              </Button>
-            ) : null}
+            <Button
+              type="link"
+              danger
+              className="!px-0"
+              onClick={() => setDeleting(record)}
+            >
+              Delete
+            </Button>
           </div>
         ) : null,
     },
@@ -325,35 +323,32 @@ export default function DepartmentsPageContent(): React.ReactNode {
       ) : null}
 
       <ConfirmDialog
-        open={Boolean(deactivating)}
-        title="Deactivate department?"
+        open={Boolean(deleting)}
+        title="Delete department?"
         description={
-          deactivating
-            ? `${countActiveProjectsForDepartment(projects, deactivating)} active project(s) will have no department — proceed?`
+          deleting
+            ? `"${deleting.name}" will be removed. Linked users and projects will have their department cleared; positions in this department will also be deleted.`
             : undefined
         }
-        confirmLabel="Deactivate"
+        confirmLabel="Delete"
         danger
-        confirmLoading={updateDepartment.isPending}
+        confirmLoading={deleteDepartment.isPending}
         onConfirm={() => {
-          if (!deactivating) {
+          if (!deleting) {
             return;
           }
-          void updateDepartment
-            .mutateAsync({
-              id: deactivating.id,
-              body: { isActive: false },
-            })
+          void deleteDepartment
+            .mutateAsync(deleting.id)
             .then(() => {
-              messageApi.success('Department deactivated');
-              setDeactivating(null);
+              messageApi.success('Department deleted');
+              setDeleting(null);
               void departmentsQuery.refetch();
             })
             .catch((error: unknown) => {
-              notifyApiError(error, 'Failed to deactivate department', messageApi);
+              notifyApiError(error, 'Failed to delete department', messageApi);
             });
         }}
-        onCancel={() => setDeactivating(null)}
+        onCancel={() => setDeleting(null)}
       />
     </FormLayout>
   );

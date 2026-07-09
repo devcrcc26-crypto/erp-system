@@ -15,9 +15,9 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import {
+  useDeletePosition,
   useDepartments,
   usePositions,
-  useUpdatePosition,
   type Position,
 } from '@/lib/query/org';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -32,11 +32,11 @@ export default function PositionsPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Position | null>(null);
   const [readOnlyDrawer, setReadOnlyDrawer] = useState(false);
-  const [deactivating, setDeactivating] = useState<Position | null>(null);
+  const [deleting, setDeleting] = useState<Position | null>(null);
 
-  const positionsQuery = usePositions({ page: 1, limit: 200 }, canView);
-  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, canView);
-  const updatePosition = useUpdatePosition();
+  const positionsQuery = usePositions({ page: 1, limit: 100 }, canView);
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, canView);
+  const deletePosition = useDeletePosition();
   const positions = positionsQuery.data?.data ?? [];
 
   const departmentNameById = useMemo(
@@ -91,14 +91,14 @@ export default function PositionsPageContent(): React.ReactNode {
           >
             {canManage ? 'Edit' : 'View'}
           </Button>
-          {canManage && record.isActive ? (
+          {canManage ? (
             <Button
               type="link"
               danger
               className="!px-0"
-              onClick={() => setDeactivating(record)}
+              onClick={() => setDeleting(record)}
             >
-              Deactivate
+              Delete
             </Button>
           ) : null}
         </div>
@@ -113,6 +113,17 @@ export default function PositionsPageContent(): React.ReactNode {
   if (!canView) {
     return (
       <Alert type="warning" showIcon title="You do not have access to positions." />
+    );
+  }
+
+  if (positionsQuery.isError) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title="Failed to load positions"
+        description="Please refresh the page or contact your administrator."
+      />
     );
   }
 
@@ -156,35 +167,32 @@ export default function PositionsPageContent(): React.ReactNode {
       />
 
       <ConfirmDialog
-        open={Boolean(deactivating)}
-        title="Deactivate position?"
+        open={Boolean(deleting)}
+        title="Delete position?"
         description={
-          deactivating
-            ? `"${deactivating.title}" will be hidden from dropdowns but historical assignments are preserved.`
+          deleting
+            ? `"${deleting.title}" will be removed. Users assigned to this position will have their position cleared.`
             : undefined
         }
-        confirmLabel="Deactivate"
+        confirmLabel="Delete"
         danger
-        confirmLoading={updatePosition.isPending}
+        confirmLoading={deletePosition.isPending}
         onConfirm={() => {
-          if (!deactivating) {
+          if (!deleting) {
             return;
           }
-          void updatePosition
-            .mutateAsync({
-              id: deactivating.id,
-              body: { isActive: false },
-            })
+          void deletePosition
+            .mutateAsync(deleting.id)
             .then(() => {
-              messageApi.success('Position deactivated');
-              setDeactivating(null);
+              messageApi.success('Position deleted');
+              setDeleting(null);
               void positionsQuery.refetch();
             })
             .catch((error: unknown) => {
-              notifyApiError(error, 'Failed to deactivate position', messageApi);
+              notifyApiError(error, 'Failed to delete position', messageApi);
             });
         }}
-        onCancel={() => setDeactivating(null)}
+        onCancel={() => setDeleting(null)}
       />
     </FormLayout>
   );

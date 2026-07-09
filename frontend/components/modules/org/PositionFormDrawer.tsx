@@ -35,7 +35,7 @@ export default function PositionFormDrawer({
   const messageApi = useAppMessage();
   const createPosition = useCreatePosition();
   const updatePosition = useUpdatePosition();
-  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, open);
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
   const departmentOptions = (departmentsQuery.data?.data ?? []).map((department) => ({
     value: department.id,
     label: department.name,
