@@ -232,6 +232,8 @@ export class EpcReviewRepository {
           email: string | null;
         };
         reviewSession: { id: string; designPackageId: string; status: ReviewSessionStatus };
+        commentDocumentVersion: { id: string; document: { id: string; name: string } } | null;
+        responseDocumentVersion: { id: string; document: { id: string; name: string } } | null;
       })
     | null
   > {
@@ -258,6 +260,12 @@ export class EpcReviewRepository {
         },
         reviewSession: {
           select: { id: true, designPackageId: true, status: true },
+        },
+        commentDocumentVersion: {
+          select: { id: true, document: { select: { id: true, name: true } } },
+        },
+        responseDocumentVersion: {
+          select: { id: true, document: { select: { id: true, name: true } } },
         },
       },
     });

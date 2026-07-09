@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { Button, Descriptions, Drawer } from 'antd';
 import CommentRevisionSection from '@/components/modules/projects/review/CommentRevisionSection';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
+import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { ReviewCommentDetail, ReviewModeComment } from '@/lib/api/epc.types';
 import { useReviewComment } from '@/lib/query/review-comments';
@@ -41,6 +42,8 @@ function mergeFallbackComment(
       revisionLabel: '-',
     },
     responseRevision: fallbackComment.responseRevision ?? null,
+    attachment: null,
+    responseAttachment: null,
   };
 }
 
@@ -95,6 +98,7 @@ export default function ReviewCommentDetailDrawer({
   const showResponse =
     comment &&
     (Boolean(comment.responseRevision) ||
+      Boolean(comment.responseAttachment) ||
       Boolean(comment.resolutionNote?.trim()) ||
       Boolean(comment.resolvedAt) ||
       comment.status === 'RESOLVED' ||
@@ -167,6 +171,20 @@ export default function ReviewCommentDetailDrawer({
                 {comment.body}
               </p>
             </Descriptions.Item>
+            {comment.attachment ? (
+              <Descriptions.Item label="Attachment">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[12px] text-[var(--color-text-primary)]">
+                    {comment.attachment.name}
+                  </span>
+                  <EdvFileActions
+                    compact
+                    documentVersionId={comment.attachment.documentVersionId}
+                    fileName={comment.attachment.name}
+                  />
+                </div>
+              </Descriptions.Item>
+            ) : null}
           </Descriptions>
 
           {showResponse ? (
@@ -174,6 +192,7 @@ export default function ReviewCommentDetailDrawer({
               <CommentRevisionSection
               commentedOn={comment.commentedOn}
               responseRevision={comment.responseRevision}
+              responseAttachment={comment.responseAttachment}
               resolutionNote={comment.resolutionNote}
               resolvedAt={comment.resolvedAt}
               verifiedAt={comment.verifiedAt}

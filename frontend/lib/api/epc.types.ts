@@ -307,6 +307,11 @@ export interface ReviewModeComment {
   responseRevision?: CommentEdvSnapshot | null;
 }
 
+export interface ReviewCommentAttachment {
+  documentVersionId: string;
+  name: string;
+}
+
 export interface ReviewCommentDetail {
   id: string;
   reviewSessionId: string;
@@ -326,6 +331,8 @@ export interface ReviewCommentDetail {
   verifiedAt: string | null;
   commentedOn: CommentEdvSnapshot;
   responseRevision: CommentEdvSnapshot | null;
+  attachment: ReviewCommentAttachment | null;
+  responseAttachment: ReviewCommentAttachment | null;
 }
 
 export interface ReviewModeView {

@@ -3,25 +3,28 @@
 'use client';
 
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
-import type { CommentEdvSnapshot } from '@/lib/api/epc.types';
+import type { CommentEdvSnapshot, ReviewCommentAttachment } from '@/lib/api/epc.types';
 import { layout } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function CommentRevisionSection({
   commentedOn,
   responseRevision,
+  responseAttachment,
   resolutionNote,
   resolvedAt,
   verifiedAt,
 }: {
   commentedOn?: CommentEdvSnapshot;
   responseRevision?: CommentEdvSnapshot | null;
+  responseAttachment?: ReviewCommentAttachment | null;
   resolutionNote?: string | null;
   resolvedAt?: string | null;
   verifiedAt?: string | null;
 }): React.ReactNode {
   const hasResolution =
     Boolean(responseRevision) ||
+    Boolean(responseAttachment) ||
     Boolean(resolutionNote?.trim()) ||
     Boolean(resolvedAt);
 
@@ -69,6 +72,24 @@ export default function CommentRevisionSection({
         <p className={layout.drawerMutedText}>
           Marked resolved without a newer engineering revision on file.
         </p>
+      ) : null}
+
+      {responseAttachment ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-teal-600)]">
+            Response attachment
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] font-medium text-[var(--color-text-primary)]">
+              {responseAttachment.name}
+            </p>
+            <EdvFileActions
+              compact
+              documentVersionId={responseAttachment.documentVersionId}
+              fileName={responseAttachment.name}
+            />
+          </div>
+        </div>
       ) : null}
 
       {resolutionNote?.trim() ? (

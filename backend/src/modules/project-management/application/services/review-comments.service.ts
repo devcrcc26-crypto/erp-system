@@ -16,6 +16,11 @@ import {
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 
+export interface MappedCommentAttachment {
+  documentVersionId: string;
+  name: string;
+}
+
 export interface MappedReviewCommentDetail {
   id: string;
   reviewSessionId: string;
@@ -35,6 +40,8 @@ export interface MappedReviewCommentDetail {
   verifiedAt: string | null;
   commentedOn: CommentEdvSnapshot;
   responseRevision: CommentEdvSnapshot | null;
+  attachment: MappedCommentAttachment | null;
+  responseAttachment: MappedCommentAttachment | null;
 }
 
 /**
@@ -221,5 +228,17 @@ function mapReviewCommentDetail(
     verifiedAt: revisionContext?.verifiedAt ?? comment.verifiedAt?.toISOString() ?? null,
     commentedOn,
     responseRevision: revisionContext?.responseRevision ?? null,
+    attachment: comment.commentDocumentVersion
+      ? {
+          documentVersionId: comment.commentDocumentVersion.id,
+          name: comment.commentDocumentVersion.document.name,
+        }
+      : null,
+    responseAttachment: comment.responseDocumentVersion
+      ? {
+          documentVersionId: comment.responseDocumentVersion.id,
+          name: comment.responseDocumentVersion.document.name,
+        }
+      : null,
   };
 }
