@@ -233,8 +233,8 @@ function InviteEmployeeModal({
   const assignRole = useAssignRole();
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, open);
-  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, open);
-  const positionsQuery = usePositions({ page: 1, limit: 200 }, open);
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
+  const positionsQuery = usePositions({ page: 1, limit: 100 }, open);
   const departmentOptions = useMemo(
     () =>
       (departmentsQuery.data?.data ?? []).map((department) => ({
@@ -318,6 +318,8 @@ function InviteEmployeeModal({
       }
       confirmLoading={isSubmitting}
       className="erp-responsive-modal"
+      width={720}
+      styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: 4 } }}
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {
         if (visible) {
@@ -448,8 +450,8 @@ function EditEmployeeModal({
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, open);
   const departmentIdValue = Form.useWatch('departmentId', form);
-  const departmentsQuery = useDepartments({ page: 1, limit: 200 }, open);
-  const positionsQuery = usePositions({ page: 1, limit: 200 }, open);
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
+  const positionsQuery = usePositions({ page: 1, limit: 100 }, open);
   const departmentOptions = useMemo(
     () =>
       (departmentsQuery.data?.data ?? []).map((department) => ({
@@ -553,6 +555,9 @@ function EditEmployeeModal({
       onOk={() => form.submit()}
       okText={t('common.saveChanges')}
       confirmLoading={isSubmitting}
+      className="erp-responsive-modal"
+      width={720}
+      styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: 4 } }}
       destroyOnHidden
       afterOpenChange={(visible: boolean) => {
         if (!visible) {
@@ -756,8 +761,8 @@ export default function UsersPageContent(): React.ReactNode {
   const resendInvitation = useResendInvitation();
   const { options: disciplineFilterOptions, nameById: disciplineNameById } =
     useEngineeringDisciplineOptions(true);
-  const departmentsQuery = useDepartments({ page: 1, limit: 200 });
-  const positionsQuery = usePositions({ page: 1, limit: 200 });
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 });
+  const positionsQuery = usePositions({ page: 1, limit: 100 });
   const departmentFilterOptions = useMemo(
     () =>
       (departmentsQuery.data?.data ?? []).map((department) => ({

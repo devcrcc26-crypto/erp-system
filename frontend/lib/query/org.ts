@@ -70,7 +70,7 @@ export function useDepartments(
 }
 
 export function usePositions(
-  params: PaginationParams = { page: 1, limit: 200 },
+  params: PaginationParams = { page: 1, limit: 100 },
   enabled = true,
 ) {
   return useQuery({
