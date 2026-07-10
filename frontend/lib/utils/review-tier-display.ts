@@ -32,6 +32,41 @@ export function orderedRequiredTiers(requiredTiers: readonly ReviewTier[]): Revi
   return REVIEW_TIER_ORDER.filter((tier) => required.has(tier));
 }
 
+/** Next tier in the package's required sequence after the current tier. */
+export function getNextReviewTier(
+  currentTier: ReviewTier | string | null | undefined,
+  requiredTiers: readonly ReviewTier[],
+): ReviewTier | null {
+  const ordered = orderedRequiredTiers(requiredTiers);
+  if (ordered.length === 0) {
+    return null;
+  }
+  if (!currentTier) {
+    return ordered[0] ?? null;
+  }
+  const currentIndex = ordered.indexOf(currentTier as ReviewTier);
+  if (currentIndex < 0 || currentIndex >= ordered.length - 1) {
+    return null;
+  }
+  return ordered[currentIndex + 1] ?? null;
+}
+
+/** Tier immediately before the current tier in the package's required sequence. */
+export function getPreviousReviewTier(
+  currentTier: ReviewTier | string | null | undefined,
+  requiredTiers: readonly ReviewTier[],
+): ReviewTier | null {
+  const ordered = orderedRequiredTiers(requiredTiers);
+  if (!currentTier) {
+    return null;
+  }
+  const currentIndex = ordered.indexOf(currentTier as ReviewTier);
+  if (currentIndex <= 0) {
+    return null;
+  }
+  return ordered[currentIndex - 1] ?? null;
+}
+
 export function getReviewTierStepState(
   tier: ReviewTier,
   requiredTiers: readonly ReviewTier[],

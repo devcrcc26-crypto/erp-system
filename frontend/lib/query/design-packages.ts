@@ -521,6 +521,9 @@ export function useApproveReviewSession() {
         variables.packageId,
       );
       void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.reviewMode(variables.packageId),
+      });
+      void queryClient.invalidateQueries({
         queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
     },

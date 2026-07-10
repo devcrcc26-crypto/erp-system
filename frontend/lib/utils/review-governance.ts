@@ -1,5 +1,10 @@
 import type { ReviewTier } from '@/lib/api/epc.types';
-import { REVIEW_TIER_ORDER } from '@/lib/utils/review-tier-display';
+import type { PackageRoleLens } from '@/lib/hooks/use-package-role-lens';
+import type { DisciplineRoleFields } from '@/lib/utils/subtask-role-resolver';
+import {
+  resolveTierActorUserId,
+  REVIEW_TIER_ORDER,
+} from '@/lib/utils/review-tier-display';
 
 /**
  * Final governance tier for THIS package — the last tier, in canonical
@@ -60,4 +65,34 @@ export function isGovernanceReviewTier(
     tier === 'DEPT_CHIEF' ||
     tier === 'INSTITUTE_CHIEF'
   );
+}
+
+/**
+ * True when the signed-in user may approve or return at the session's current tier.
+ */
+export function canUserActAtCurrentReviewTier(
+  packageLens: PackageRoleLens,
+  discipline: DisciplineRoleFields | null | undefined,
+  currentUserId: string | null | undefined,
+  currentTier: ReviewTier | string | null | undefined,
+  instituteChiefUserId: string | null,
+  canApproveReview: boolean,
+): boolean {
+  if (!currentTier || !currentUserId) {
+    return false;
+  }
+  if (packageLens.canApproveAtTier || packageLens.canApproveOnBehalf) {
+    return true;
+  }
+  if (
+    currentTier === 'INSTITUTE_CHIEF' &&
+    !instituteChiefUserId &&
+    canApproveReview
+  ) {
+    return true;
+  }
+  if (!discipline) {
+    return false;
+  }
+  return resolveTierActorUserId(discipline, currentTier) === currentUserId;
 }

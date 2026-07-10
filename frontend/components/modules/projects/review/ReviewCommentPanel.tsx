@@ -11,16 +11,23 @@ import CommentSeverityTag from '@/components/modules/projects/review/CommentSeve
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
 import ReviewCommentEditDrawer from '@/components/modules/projects/review/ReviewCommentEditDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import type { CommentSeverity, ReviewModeComment, ReviewModeView } from '@/lib/api/epc.types';
+import type { CommentSeverity, ReviewModeComment, ReviewModeView, ReviewTier } from '@/lib/api/epc.types';
 import {
   useAddReviewComment,
   useDeleteReviewComment,
   useVerifyReviewComment,
 } from '@/lib/query/review-comments';
+import {
+  useDesignPackage,
+  useReturnPackageForRework,
+} from '@/lib/query/design-packages';
+import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
+import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAuthStore } from '@/stores/auth.store';
+import { canUserActAtCurrentReviewTier } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -59,8 +66,22 @@ export default function ReviewCommentPanel({
   const addComment = useAddReviewComment();
   const verifyComment = useVerifyReviewComment();
   const deleteComment = useDeleteReviewComment();
+  const returnPackage = useReturnPackageForRework();
   const uploadDocument = useUploadDocumentToFolder();
   const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
+  const designPackageId = reviewMode?.designPackageId ?? '';
+  const packageQuery = useDesignPackage(
+    projectId,
+    taskDisciplineId,
+    designPackageId,
+    Boolean(projectId) && Boolean(taskDisciplineId) && Boolean(designPackageId),
+  );
+  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
+  const packageLens = usePackageRoleLens(
+    packageQuery.data,
+    disciplineQuery.data,
+    (reviewMode?.currentTier as ReviewTier | null | undefined) ?? null,
+  );
   const [commentFileVersionId, setCommentFileVersionId] = useState<string | null>(
     null,
   );
@@ -73,6 +94,19 @@ export default function ReviewCommentPanel({
   );
   const [editTarget, setEditTarget] = useState<ReviewModeComment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewModeComment | null>(null);
+  const [returningCommentId, setReturningCommentId] = useState<string | null>(null);
+
+  const canReturnForComment =
+    reviewMode?.sessionStatus === 'ACTIVE' &&
+    Boolean(reviewMode?.reviewSessionId) &&
+    canUserActAtCurrentReviewTier(
+      packageLens,
+      disciplineQuery.data,
+      currentUserId,
+      reviewMode?.currentTier,
+      packageQuery.data?.instituteChiefUserId ?? null,
+      lens.canApproveReview,
+    );
 
   const edvLabelById = new Map(edvOptions.map((option) => [option.value, option.label]));
 
@@ -133,6 +167,40 @@ export default function ReviewCommentPanel({
   function openEdit(comment: ReviewModeComment): void {
     setSelectedComment(null);
     setEditTarget(comment);
+  }
+
+  async function handleReturnForComment(comment: ReviewModeComment): Promise<void> {
+    if (!reviewMode?.reviewSessionId || !designPackageId) {
+      messageApi.error('No active review session');
+      return;
+    }
+
+    const reason =
+      comment.body?.trim() ||
+      `Return for rework — comment on ${resolveEdvDisplayLabel(
+        comment.engineeringDocumentVersionId,
+        [],
+        snapshotEdvLabels,
+      )}`;
+
+    setReturningCommentId(comment.id);
+    try {
+      await returnPackage.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        packageId: designPackageId,
+        body: {
+          reviewSessionId: reviewMode.reviewSessionId,
+          reason,
+        },
+      });
+      messageApi.success('Package returned for rework');
+      onCommentAdded();
+    } catch (error) {
+      notifyApiError(error, 'Failed to return package', messageApi);
+    } finally {
+      setReturningCommentId(null);
+    }
   }
 
   return (
@@ -289,6 +357,18 @@ export default function ReviewCommentPanel({
                           }}
                         >
                           Verify
+                        </Button>
+                      )}
+                      {canReturnForComment && (
+                        <Button
+                          type="link"
+                          size="small"
+                          danger
+                          className="!px-1"
+                          loading={returningCommentId === comment.id}
+                          onClick={() => void handleReturnForComment(comment)}
+                        >
+                          Return for rework
                         </Button>
                       )}
                     </div>

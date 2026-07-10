@@ -20,13 +20,17 @@ import {
   useDesignPackages,
   useReviewContextSnapshot,
 } from '@/lib/query/design-packages';
+import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
+import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import { useBatchReviewApprove } from '@/lib/query/review-batch';
 import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import {
   canBatchApprovePackageEdvs,
+  canUserActAtCurrentReviewTier,
   isFinalReviewTier,
   isGovernanceReviewTier,
 } from '@/lib/utils/review-governance';
@@ -34,7 +38,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import { tokens } from '@/lib/theme/tokens';
-import type { EngineeringDocument } from '@/lib/api/epc.types';
+import type { EngineeringDocument, ReviewTier } from '@/lib/api/epc.types';
 
 export default function ReviewModePanel({
   packageId,
@@ -47,6 +51,7 @@ export default function ReviewModePanel({
 }): React.ReactNode {
   const lens = useRoleLens();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const reviewModeQuery = useDesignPackageReviewMode(packageId, Boolean(packageId));
   const packageQuery = useDesignPackage(
     projectId,
@@ -72,6 +77,7 @@ export default function ReviewModePanel({
     taskDisciplineId,
     Boolean(projectId) && Boolean(taskDisciplineId),
   );
+  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
 
   const batchApprove = useBatchReviewApprove();
   const [approvedDocIds, setApprovedDocIds] = useState<Set<string>>(() => new Set());
@@ -88,6 +94,11 @@ export default function ReviewModePanel({
 
   const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId ?? null;
+  const packageLens = usePackageRoleLens(
+    packageQuery.data,
+    disciplineQuery.data,
+    (reviewMode?.currentTier as ReviewTier | null | undefined) ?? null,
+  );
   const contextSnapshotQuery = useReviewContextSnapshot(
     projectId,
     taskDisciplineId,
@@ -234,10 +245,16 @@ export default function ReviewModePanel({
   const totalDocs = packageDocumentRows.length;
   const allDocumentsApproved = approvedDocIds.size === totalDocs && totalDocs > 0;
   const canShowPerDocumentApprove =
-    lens.canApproveReview &&
-    Boolean(reviewSessionId) &&
     reviewMode?.sessionStatus === 'ACTIVE' &&
-    isGovernanceReviewTier(reviewMode?.currentTier);
+    isGovernanceReviewTier(reviewMode?.currentTier) &&
+    canUserActAtCurrentReviewTier(
+      packageLens,
+      disciplineQuery.data,
+      currentUserId,
+      reviewMode?.currentTier,
+      packageQuery.data?.instituteChiefUserId ?? null,
+      lens.canApproveReview,
+    );
 
   useEffect(() => {
     setApprovedDocIds(new Set());
@@ -439,6 +456,7 @@ export default function ReviewModePanel({
         taskDisciplineId={taskDisciplineId}
         packageId={packageId}
         reviewSessionId={reviewSessionId}
+        sessionStatus={reviewMode?.sessionStatus ?? null}
         currentTier={reviewMode?.currentTier ?? null}
         requiredTiers={packageQuery.data?.requiredTiers ?? []}
         instituteChiefUserId={packageQuery.data?.instituteChiefUserId ?? null}
