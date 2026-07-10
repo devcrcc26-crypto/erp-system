@@ -9,9 +9,7 @@ export interface BulkReviewActionBarProps {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onApproveAll: () => void;
-  onReturnAll: () => void;
   approveLoading?: boolean;
-  returnLoading?: boolean;
   disabled?: boolean;
   showApproveAll?: boolean;
 }
@@ -25,9 +23,7 @@ export default function BulkReviewActionBar({
   onSelectAll,
   onClearSelection,
   onApproveAll,
-  onReturnAll,
   approveLoading = false,
-  returnLoading = false,
   disabled = false,
   showApproveAll = true,
 }: BulkReviewActionBarProps): React.ReactNode {
@@ -74,14 +70,6 @@ export default function BulkReviewActionBar({
             Approve All
           </Button>
         ) : null}
-        <Button
-          danger
-          disabled={disabled || selectedCount === 0}
-          loading={returnLoading}
-          onClick={onReturnAll}
-        >
-          Return All
-        </Button>
       </Space>
     </div>
   );

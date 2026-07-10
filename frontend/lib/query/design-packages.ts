@@ -6,7 +6,6 @@ import type {
   AddDesignPackageItemRequest,
   ApproveReviewSessionRequest,
   BatchApproveEdvsRequest,
-  BatchReturnEdvsRequest,
   CreateDesignPackageDependencyRequest,
   CreateDesignPackageRequest,
   DesignPackage,
@@ -483,39 +482,6 @@ export function useBatchApprovePackageEdvs() {
       );
       void queryClient.invalidateQueries({
         queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
-      });
-    },
-  });
-}
-
-export function useBatchReturnPackageEdvs() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      taskDisciplineId,
-      packageId,
-      body,
-    }: {
-      projectId: string;
-      taskDisciplineId: string;
-      packageId: string;
-      body: BatchReturnEdvsRequest;
-    }) =>
-      apiPost<WorkflowResultSnapshot>(
-        designPackagesPath(projectId, taskDisciplineId, packageId, 'batch-return'),
-        body,
-      ),
-    onSuccess: (_data, variables) => {
-      invalidatePackageQueries(
-        queryClient,
-        variables.projectId,
-        variables.taskDisciplineId,
-        variables.packageId,
-      );
-      void queryClient.invalidateQueries({
-        queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
     },
   });

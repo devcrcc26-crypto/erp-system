@@ -533,18 +533,7 @@ export interface BatchApproveEdvsRequest {
   idempotencyKey?: string;
 }
 
-export interface BatchReturnEdvsRequest {
-  engineeringDocumentVersionIds: string[];
-  reviewSessionId: string;
-  commentTemplate: string;
-  idempotencyKey?: string;
-}
-
 export interface BatchReviewApproveRequest extends BatchApproveEdvsRequest {
-  designPackageId: string;
-}
-
-export interface BatchReviewReturnRequest extends BatchReturnEdvsRequest {
   designPackageId: string;
 }
 

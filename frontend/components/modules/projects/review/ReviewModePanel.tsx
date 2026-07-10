@@ -19,7 +19,7 @@ import {
   useReviewContextSnapshot,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
-import { useBatchReviewApprove, useBatchReviewReturn } from '@/lib/query/review-batch';
+import { useBatchReviewApprove } from '@/lib/query/review-batch';
 import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
@@ -70,7 +70,6 @@ export default function ReviewModePanel({
   );
 
   const batchApprove = useBatchReviewApprove();
-  const batchReturn = useBatchReviewReturn();
 
   const {
     selectedEdvIds,
@@ -258,25 +257,6 @@ export default function ReviewModePanel({
     }
   }
 
-  async function handleBatchReturn(): Promise<void> {
-    if (!reviewSessionId || selectedEdvIds.length === 0) {
-      return;
-    }
-    try {
-      await batchReturn.mutateAsync({
-        designPackageId: packageId,
-        reviewSessionId,
-        engineeringDocumentVersionIds: selectedEdvIds,
-        commentTemplate: 'Returned in batch review',
-      });
-      messageApi.success('Selected EDVs returned');
-      clearEdvSelection();
-      refetchAll();
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-    }
-  }
-
   if (reviewModeQuery.isLoading) {
     return (
       <div className="flex justify-center py-16">
@@ -313,9 +293,7 @@ export default function ReviewModePanel({
         onSelectAll={() => selectAllEdvs(selectableEdvIds)}
         onClearSelection={clearEdvSelection}
         onApproveAll={() => void handleBatchApprove()}
-        onReturnAll={() => void handleBatchReturn()}
         approveLoading={batchApprove.isPending}
-        returnLoading={batchReturn.isPending}
         disabled={!lens.canApproveReview || !approvalAllowed}
         showApproveAll={canBatchApproveEdvs}
       />

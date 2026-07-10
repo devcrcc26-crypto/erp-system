@@ -8,7 +8,6 @@ describe('BulkReviewActionBar', () => {
     onSelectAll: vi.fn(),
     onClearSelection: vi.fn(),
     onApproveAll: vi.fn(),
-    onReturnAll: vi.fn(),
   };
 
   function renderBar(
@@ -43,7 +42,6 @@ describe('BulkReviewActionBar', () => {
     const bar = getBar(container);
 
     expect(within(bar).getByRole('button', { name: 'Approve All' })).toBeDisabled();
-    expect(within(bar).getByRole('button', { name: 'Return All' })).toBeDisabled();
   });
 
   it('calls onApproveAll when Approve All is clicked', async () => {
