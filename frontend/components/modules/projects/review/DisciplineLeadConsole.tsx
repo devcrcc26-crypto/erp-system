@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Checkbox, Input, Space } from 'antd';
+import { Button, Checkbox, Input, Space, Tooltip } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import {
@@ -13,7 +13,7 @@ import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import type { ReviewModeComment, ReviewTier } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { reviewTierBilingualLabel } from '@/lib/utils/review-tier-display';
-import { isFinalReviewTier } from '@/lib/utils/review-governance';
+import { isFinalReviewTier, isGovernanceReviewTier } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 
@@ -27,6 +27,7 @@ export default function DisciplineLeadConsole({
   instituteChiefUserId,
   instituteChiefName,
   comments,
+  allDocumentsApproved,
   onAction,
 }: {
   projectId: string;
@@ -38,6 +39,7 @@ export default function DisciplineLeadConsole({
   instituteChiefUserId: string | null;
   instituteChiefName: string | null;
   comments: readonly ReviewModeComment[];
+  allDocumentsApproved: boolean;
   onAction: () => void;
 }): React.ReactNode {
   const lens = useRoleLens();
@@ -56,12 +58,7 @@ export default function DisciplineLeadConsole({
     return null;
   }
 
-  const isGovernanceTier =
-    currentTier === 'DISCIPLINE_OWNER' ||
-    currentTier === 'REVIEWER' ||
-    currentTier === 'DISCIPLINE_LEAD' ||
-    currentTier === 'DEPT_CHIEF' ||
-    currentTier === 'INSTITUTE_CHIEF';
+  const isGovernanceTier = isGovernanceReviewTier(currentTier);
 
   if (!isGovernanceTier) {
     return null;
@@ -73,7 +70,17 @@ export default function DisciplineLeadConsole({
   const isInstituteChiefProxyEligible =
     currentTier === 'INSTITUTE_CHIEF' && !instituteChiefUserId;
   const canSubmitApproval =
-    approvalAllowed && (!approveOnBehalf || onBehalfOfName.trim().length > 0);
+    approvalAllowed &&
+    allDocumentsApproved &&
+    (!approveOnBehalf || onBehalfOfName.trim().length > 0);
+  const approveEscalateLabel = isFinalTier ? 'Approve' : 'Approve & escalate';
+  const approveEscalateDisabled = !canSubmitApproval;
+  const approveEscalateTooltip =
+    !allDocumentsApproved
+      ? 'Approve all documents before escalating.'
+      : !approvalAllowed
+        ? 'Resolve blocking comments before approving.'
+        : undefined;
 
   return (
     <FormLayout
@@ -99,32 +106,36 @@ export default function DisciplineLeadConsole({
         </div>
       )}
       <Space wrap>
-        <Button
-          type="primary"
-          disabled={!canSubmitApproval}
-          loading={approveSession.isPending}
-          onClick={() => {
-            void approveSession
-              .mutateAsync({
-                projectId,
-                taskDisciplineId,
-                packageId,
-                reviewSessionId,
-                body: approveOnBehalf
-                  ? { approvedOnBehalfOfName: onBehalfOfName.trim() }
-                  : undefined,
-              })
-              .then(() => {
-                messageApi.success('Session approved');
-                onAction();
-              })
-              .catch((error: unknown) => {
-                notifyApiError(error, 'Request failed', messageApi);
-              });
-          }}
-        >
-          {isFinalTier ? 'Approve' : 'Approve & escalate'}
-        </Button>
+        <Tooltip title={approveEscalateTooltip}>
+          <span>
+            <Button
+              type="primary"
+              disabled={approveEscalateDisabled}
+              loading={approveSession.isPending}
+              onClick={() => {
+                void approveSession
+                  .mutateAsync({
+                    projectId,
+                    taskDisciplineId,
+                    packageId,
+                    reviewSessionId,
+                    body: approveOnBehalf
+                      ? { approvedOnBehalfOfName: onBehalfOfName.trim() }
+                      : undefined,
+                  })
+                  .then(() => {
+                    messageApi.success('Session approved');
+                    onAction();
+                  })
+                  .catch((error: unknown) => {
+                    notifyApiError(error, 'Request failed', messageApi);
+                  });
+              }}
+            >
+              {approveEscalateLabel}
+            </Button>
+          </span>
+        </Tooltip>
         <Button
           danger
           loading={returnPackage.isPending}

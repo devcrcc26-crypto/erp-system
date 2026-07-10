@@ -48,3 +48,16 @@ export function canBatchApprovePackageEdvs(
 ): boolean {
   return isFinalReviewTier(tier, requiredTiers) && inReviewEdvCount > 0;
 }
+
+/** Tiers where session-level approve/return actions are available. */
+export function isGovernanceReviewTier(
+  tier: ReviewTier | string | null | undefined,
+): boolean {
+  return (
+    tier === 'DISCIPLINE_OWNER' ||
+    tier === 'REVIEWER' ||
+    tier === 'DISCIPLINE_LEAD' ||
+    tier === 'DEPT_CHIEF' ||
+    tier === 'INSTITUTE_CHIEF'
+  );
+}

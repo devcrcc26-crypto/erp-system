@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Alert, Checkbox, Spin } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Checkbox, Spin } from 'antd';
 import BulkReviewActionBar from '@/components/modules/projects/review/BulkReviewActionBar';
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
@@ -28,10 +28,12 @@ import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import {
   canBatchApprovePackageEdvs,
   isFinalReviewTier,
+  isGovernanceReviewTier,
 } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
+import { tokens } from '@/lib/theme/tokens';
 import type { EngineeringDocument } from '@/lib/api/epc.types';
 
 export default function ReviewModePanel({
@@ -72,6 +74,7 @@ export default function ReviewModePanel({
   );
 
   const batchApprove = useBatchReviewApprove();
+  const [approvedDocIds, setApprovedDocIds] = useState<Set<string>>(() => new Set());
 
   const {
     selectedEdvIds,
@@ -228,6 +231,17 @@ export default function ReviewModePanel({
     packageQuery.data?.requiredTiers,
     inReviewEdvCount,
   );
+  const totalDocs = packageDocumentRows.length;
+  const allDocumentsApproved = approvedDocIds.size === totalDocs && totalDocs > 0;
+  const canShowPerDocumentApprove =
+    lens.canApproveReview &&
+    Boolean(reviewSessionId) &&
+    reviewMode?.sessionStatus === 'ACTIVE' &&
+    isGovernanceReviewTier(reviewMode?.currentTier);
+
+  useEffect(() => {
+    setApprovedDocIds(new Set());
+  }, [reviewSessionId]);
 
   useEffect(() => {
     setActiveDesignPackage(packageId);
@@ -239,6 +253,14 @@ export default function ReviewModePanel({
     void contextSnapshotQuery.refetch();
     void packageQuery.refetch();
     void documentsQuery.refetch();
+  }
+
+  function approveDocument(packageEdvId: string): void {
+    setApprovedDocIds((previous) => {
+      const next = new Set(previous);
+      next.add(packageEdvId);
+      return next;
+    });
   }
 
   async function handleBatchApprove(): Promise<void> {
@@ -328,6 +350,7 @@ export default function ReviewModePanel({
           <ul className="divide-y divide-slate-100">
             {packageDocumentRows.map((row) => {
               const info = row.info;
+              const isDocumentApproved = approvedDocIds.has(row.packageEdvId);
               return (
                 <li
                   key={row.key}
@@ -370,7 +393,22 @@ export default function ReviewModePanel({
                       </div>
                     </div>
                   </div>
-                  <div className="shrink-0 pl-8 sm:pl-0">
+                  <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
+                    {canShowPerDocumentApprove ? (
+                      isDocumentApproved ? (
+                        <Button type="primary" size="small" disabled>
+                          Approved ✓
+                        </Button>
+                      ) : (
+                        <Button
+                          type="default"
+                          size="small"
+                          onClick={() => approveDocument(row.packageEdvId)}
+                        >
+                          Approve
+                        </Button>
+                      )
+                    ) : null}
                     <EdvFileActions
                       compact
                       documentVersionId={info?.documentVersionId}
@@ -382,6 +420,18 @@ export default function ReviewModePanel({
             })}
           </ul>
         )}
+        {totalDocs > 0 ? (
+          <p
+            className="mt-3 text-sm"
+            style={{
+              color: allDocumentsApproved
+                ? tokens.colorPrimary
+                : tokens.colorTextSecondary,
+            }}
+          >
+            {approvedDocIds.size} of {totalDocs} documents approved
+          </p>
+        ) : null}
       </section>
 
       <DisciplineLeadConsole
@@ -394,6 +444,7 @@ export default function ReviewModePanel({
         instituteChiefUserId={packageQuery.data?.instituteChiefUserId ?? null}
         instituteChiefName={packageQuery.data?.instituteChiefName ?? null}
         comments={sessionComments}
+        allDocumentsApproved={allDocumentsApproved}
         onAction={refetchAll}
       />
       <ReviewSessionAttachmentsSection
