@@ -53,6 +53,7 @@ import {
 import { BarChart3 } from 'lucide-react';
 
 const CHART_HEIGHT = 220;
+const PIE_CHART_HEIGHT = 300;
 
 const TOOLTIP_STYLE = {
   borderRadius: tokens.borderRadiusCard,
@@ -86,14 +87,16 @@ function ChartCard({
   title,
   subtitle,
   children,
+  chartHeight = CHART_HEIGHT,
 }: {
   title: string;
   subtitle: string;
   children: React.ReactNode;
+  chartHeight?: number;
 }): React.ReactNode {
   return (
     <div
-      className="flex h-full flex-col overflow-hidden"
+      className="flex h-full min-w-0 flex-col"
       style={{
         borderRadius: tokens.borderRadiusCard,
         border: `0.5px solid ${tokens.colorBorder}`,
@@ -117,8 +120,10 @@ function ChartCard({
           {subtitle}
         </p>
       </div>
-      <div className="flex flex-1 flex-col px-[18px] py-4">
-        <div style={{ width: '100%', height: CHART_HEIGHT }}>{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-visible px-[18px] py-4">
+        <div className="min-w-0" style={{ width: '100%', height: chartHeight }}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -158,41 +163,45 @@ function DonutChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   }
 
   return (
-    <>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={52}
-            outerRadius={78}
-            paddingAngle={2}
-            startAngle={90}
-            endAngle={-270}
-          >
-            {data.map((entry) => (
-              <Cell key={entry.name} fill={entry.color ?? tokens.colorTeal600} />
-            ))}
-          </Pie>
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="min-h-0 min-w-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius="42%"
+              outerRadius="68%"
+              paddingAngle={2}
+              startAngle={90}
+              endAngle={-270}
+            >
+              {data.map((entry) => (
+                <Cell key={entry.name} fill={entry.color ?? tokens.colorTeal600} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={TOOLTIP_STYLE} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
       <div
-        className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px]"
+        className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px]"
         style={{ color: tokens.colorTextSecondary }}
       >
         {data.map((item) => (
           <div key={item.name} className="flex items-center gap-1.5">
             <span
-              className="inline-block h-2 w-2 rounded-full"
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: item.color ?? tokens.colorTeal600 }}
             />
             {item.name}
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -203,19 +212,21 @@ function TypePieChart({ data }: { data: ChartDatum[] }): React.ReactNode {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
+      <PieChart margin={{ top: 12, right: 24, bottom: 28, left: 24 }}>
         <Pie
           data={data}
           dataKey="value"
           nameKey="name"
-          outerRadius={78}
+          cx="50%"
+          cy="46%"
+          outerRadius="58%"
           paddingAngle={1}
           label={({ name, percent }) =>
             percent != null && percent >= 0.08
               ? `${name} ${Math.round(percent * 100)}%`
               : ''
           }
-          labelLine={false}
+          labelLine
         >
           {data.map((entry) => (
             <Cell key={entry.name} fill={entry.color ?? tokens.colorTeal600} />
@@ -226,7 +237,7 @@ function TypePieChart({ data }: { data: ChartDatum[] }): React.ReactNode {
           verticalAlign="bottom"
           iconType="circle"
           iconSize={8}
-          wrapperStyle={{ fontSize: 10, paddingTop: 8 }}
+          wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -901,19 +912,23 @@ export default function ReportsPageContent(): React.ReactNode {
         >
           {t('pages.systemReports.sections.charts')}
         </p>
-        <div className={`${layout.cardGrid} mb-4 lg:grid-cols-2 xl:grid-cols-3`}>
+        <div className={`${layout.cardGrid} mb-4 lg:grid-cols-2`}>
           <ChartCard
             title={t('pages.systemReports.charts.projectsByStatus')}
             subtitle={t('pages.systemReports.charts.projectsByStatusHint')}
+            chartHeight={PIE_CHART_HEIGHT}
           >
             <DonutChart data={statusChart} />
           </ChartCard>
           <ChartCard
             title={t('pages.systemReports.charts.projectsByType')}
             subtitle={t('pages.systemReports.charts.projectsByTypeHint')}
+            chartHeight={PIE_CHART_HEIGHT}
           >
             <TypePieChart data={typeChart} />
           </ChartCard>
+        </div>
+        <div className={`${layout.cardGrid} mb-4 lg:grid-cols-2 xl:grid-cols-3`}>
           <ChartCard
             title={t('pages.systemReports.charts.completionRate')}
             subtitle={t('pages.systemReports.charts.completionRateHint')}
