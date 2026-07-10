@@ -309,7 +309,7 @@ export default function ReviewModePanel({
           type="info"
           showIcon
           title="Governance review in progress"
-          description="Use Approve & escalate in the governance console to advance to the next tier. EDV approval happens at the department chief tier."
+          description="After the Institute Chief approves, the Department Chief locks all documents. The Discipline Leader then closes the subtask."
         />
       )}
       <GovernanceReviewPanel
