@@ -308,6 +308,9 @@ export async function exportUsersPdf(input: UsersExportPdfInput): Promise<void> 
     styles: { overflow: 'linebreak', cellWidth: 'wrap', ...tableFont },
     headStyles: { fillColor: NAVY, fontSize: 7, ...tableFont },
     bodyStyles: { fontSize: 7, ...tableFont },
+    columnStyles: {
+      0: { cellWidth: 40 },
+    },
     head: [
       [
         labels.name,
