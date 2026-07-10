@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Checkbox, Spin } from 'antd';
-import BulkReviewActionBar from '@/components/modules/projects/review/BulkReviewActionBar';
+import { Alert, Button, Spin } from 'antd';
 import DependencySnapshotPanel from '@/components/modules/projects/review/DependencySnapshotPanel';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ReviewCommentPanel from '@/components/modules/projects/review/ReviewCommentPanel';
@@ -23,19 +22,13 @@ import {
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
-import { useBatchReviewApprove } from '@/lib/query/review-batch';
-import { useReviewWorkspaceStore } from '@/stores/review-workspace.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import {
-  canBatchApprovePackageEdvs,
   canUserActAtCurrentReviewTier,
   isFinalReviewTier,
   isGovernanceReviewTier,
 } from '@/lib/utils/review-governance';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useAppMessage } from '@/hooks/use-app-message';
 import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import { tokens } from '@/lib/theme/tokens';
 import type { EngineeringDocument, ReviewTier } from '@/lib/api/epc.types';
@@ -50,7 +43,6 @@ export default function ReviewModePanel({
   taskDisciplineId: string;
 }): React.ReactNode {
   const lens = useRoleLens();
-  const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const reviewModeQuery = useDesignPackageReviewMode(packageId, Boolean(packageId));
   const packageQuery = useDesignPackage(
@@ -79,18 +71,7 @@ export default function ReviewModePanel({
   );
   const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
 
-  const batchApprove = useBatchReviewApprove();
   const [approvedDocIds, setApprovedDocIds] = useState<Set<string>>(() => new Set());
-
-  const {
-    selectedEdvIds,
-    setActiveDesignPackage,
-    setActiveReviewSession,
-    toggleEdvSelection,
-    selectAllEdvs,
-    clearEdvSelection,
-    isEdvSelected,
-  } = useReviewWorkspaceStore();
 
   const reviewMode = reviewModeQuery.data;
   const reviewSessionId = reviewMode?.reviewSessionId ?? null;
@@ -211,11 +192,6 @@ export default function ReviewModePanel({
     });
   }, [packageEdvIds, edvMap]);
 
-  const selectableEdvIds = useMemo(
-    () => packageDocumentRows.map((row) => row.packageEdvId),
-    [packageDocumentRows],
-  );
-
   const snapshotEdvs = contextSnapshotQuery.data?.edvs ?? [];
 
   const edvCommentOptions = useMemo(
@@ -232,16 +208,6 @@ export default function ReviewModePanel({
   );
 
   const sessionComments = reviewMode?.comments ?? [];
-  const commentStatuses = sessionComments.map((comment) => comment.status);
-  const approvalAllowed = canApproveReviewSession(commentStatuses);
-  const inReviewEdvCount = packageDocumentRows.filter(
-    (row) => row.info?.status === 'IN_REVIEW',
-  ).length;
-  const canBatchApproveEdvs = canBatchApprovePackageEdvs(
-    reviewMode?.currentTier,
-    packageQuery.data?.requiredTiers,
-    inReviewEdvCount,
-  );
   const totalDocs = packageDocumentRows.length;
   const allDocumentsApproved = approvedDocIds.size === totalDocs && totalDocs > 0;
   const canShowPerDocumentApprove =
@@ -260,11 +226,6 @@ export default function ReviewModePanel({
     setApprovedDocIds(new Set());
   }, [reviewSessionId]);
 
-  useEffect(() => {
-    setActiveDesignPackage(packageId);
-    setActiveReviewSession(reviewSessionId);
-  }, [packageId, reviewSessionId, setActiveDesignPackage, setActiveReviewSession]);
-
   function refetchAll(): void {
     void reviewModeQuery.refetch();
     void contextSnapshotQuery.refetch();
@@ -280,22 +241,10 @@ export default function ReviewModePanel({
     });
   }
 
-  async function handleBatchApprove(): Promise<void> {
-    if (!reviewSessionId || selectedEdvIds.length === 0) {
-      return;
-    }
-    try {
-      await batchApprove.mutateAsync({
-        designPackageId: packageId,
-        reviewSessionId,
-        engineeringDocumentVersionIds: selectedEdvIds,
-      });
-      messageApi.success('Selected EDVs approved');
-      clearEdvSelection();
-      refetchAll();
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-    }
+  function approveAllDocuments(): void {
+    setApprovedDocIds(
+      new Set(packageDocumentRows.map((row) => row.packageEdvId)),
+    );
   }
 
   if (reviewModeQuery.isLoading) {
@@ -339,23 +288,26 @@ export default function ReviewModePanel({
           sessionStatus={reviewMode?.sessionStatus}
         />
       </FormLayout>
-      <BulkReviewActionBar
-        selectedCount={selectedEdvIds.length}
-        totalCount={selectableEdvIds.length}
-        onSelectAll={() => selectAllEdvs(selectableEdvIds)}
-        onClearSelection={clearEdvSelection}
-        onApproveAll={() => void handleBatchApprove()}
-        approveLoading={batchApprove.isPending}
-        disabled={!lens.canApproveReview || !approvalAllowed}
-        showApproveAll={canBatchApproveEdvs}
-      />
 
       <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="mb-1 text-sm font-semibold text-slate-900">Documents</h3>
-        <p className="mb-4 text-xs text-slate-500">
-          Select package items for batch approve or return. Use the icons to
-          view or download each file.
-        </p>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900">Documents</h3>
+            <p className="text-xs text-slate-500">
+              Review each document and approve before escalating. Use the icons to
+              view or download each file.
+            </p>
+          </div>
+          <Button
+            size="small"
+            type="default"
+            className="shrink-0"
+            onClick={approveAllDocuments}
+            disabled={!canShowPerDocumentApprove || allDocumentsApproved}
+          >
+            Approve all
+          </Button>
+        </div>
         {packageDocumentRows.length === 0 ? (
           <Alert
             type="info"
@@ -373,44 +325,36 @@ export default function ReviewModePanel({
                   key={row.key}
                   className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <Checkbox
-                      className="mt-0.5 shrink-0"
-                      checked={isEdvSelected(row.packageEdvId)}
-                      disabled={!lens.canApproveReview}
-                      onChange={() => toggleEdvSelection(row.packageEdvId)}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-medium text-slate-900">
-                        {info
-                          ? info.doc.title?.trim() ||
-                            info.doc.documentNumber?.trim() ||
-                            'Engineering document'
-                          : resolveEdvDisplayLabel(
-                              row.displayEdvId,
-                              documentsQuery.data?.data ?? [],
-                              snapshotEdvs,
-                            )}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        {info?.revisionLabel && (
-                          <span>Rev {info.revisionLabel}</span>
-                        )}
-                        {row.hasNewerRevision && (
-                          <span className="font-medium text-emerald-700">
-                            New revision uploaded
-                          </span>
-                        )}
-                        {info?.doc.documentNumber && (
-                          <span>{info.doc.documentNumber}</span>
-                        )}
-                        {info?.status && (
-                          <EdvStatusBadge status={info.status} />
-                        )}
-                      </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-medium text-slate-900">
+                      {info
+                        ? info.doc.title?.trim() ||
+                          info.doc.documentNumber?.trim() ||
+                          'Engineering document'
+                        : resolveEdvDisplayLabel(
+                            row.displayEdvId,
+                            documentsQuery.data?.data ?? [],
+                            snapshotEdvs,
+                          )}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      {info?.revisionLabel && (
+                        <span>Rev {info.revisionLabel}</span>
+                      )}
+                      {row.hasNewerRevision && (
+                        <span className="font-medium text-emerald-700">
+                          New revision uploaded
+                        </span>
+                      )}
+                      {info?.doc.documentNumber && (
+                        <span>{info.doc.documentNumber}</span>
+                      )}
+                      {info?.status && (
+                        <EdvStatusBadge status={info.status} />
+                      )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 pl-8 sm:pl-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {canShowPerDocumentApprove ? (
                       isDocumentApproved ? (
                         <Button type="primary" size="small" disabled>

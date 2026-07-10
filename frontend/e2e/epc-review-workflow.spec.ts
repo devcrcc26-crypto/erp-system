@@ -53,7 +53,7 @@ test.describe('EPC review workflow', () => {
     await expect(page.getByTestId('review-mode-panel')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByTestId('bulk-review-action-bar')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Approve all' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Documents', exact: true })).toBeVisible();
   });
 
@@ -82,6 +82,6 @@ test.describe('EPC review workflow', () => {
     await expect(page.getByTestId('review-mode-panel')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByTestId('bulk-review-action-bar')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Approve all' })).toBeVisible();
   });
 });
