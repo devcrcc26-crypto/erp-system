@@ -21,7 +21,7 @@ import type {
   SorterResult,
   TablePaginationConfig,
 } from 'antd/es/table/interface';
-import { FilePdfOutlined, MoreOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, MoreOutlined } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
@@ -53,12 +53,7 @@ import {
   useEngineeringDisciplineOptions,
   usePositions,
 } from '@/lib/query/org';
-import { formatUserName } from '@/lib/utils/user-display';
-import type { UsersExportPdfLabels } from '@/lib/utils/users-export-pdf';
-import {
-  computeUsersExportSummary,
-  exportUsersPdf,
-} from '@/lib/utils/users-export-pdf';
+import { exportUsersExcel } from '@/lib/utils/users-export-excel';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -160,36 +155,17 @@ function userStatusLabel(
   return t('users.statusActive');
 }
 
-function buildUsersExportPdfLabels(
+function buildUsersExportLabels(
   t: (key: string, vars?: Record<string, string | number>) => string,
-): UsersExportPdfLabels {
+) {
   return {
-    title: t('users.allUsers'),
-    subtitle: t('users.exportSubtitle'),
-    preparedBy: t('users.preparedBy'),
-    generatedAt: t('users.generatedAt'),
-    summary: t('users.exportSections.summary'),
-    statusBreakdown: t('users.exportSections.statusBreakdown'),
-    rolesBreakdown: t('users.exportSections.rolesBreakdown'),
-    directory: t('users.exportSections.directory'),
-    metric: t('pages.systemReports.table.metric'),
-    value: t('pages.systemReports.table.value'),
-    status: t('common.status'),
-    count: t('pages.systemReports.table.count'),
-    share: t('pages.systemReports.table.share'),
-    role: t('common.role'),
+    sheetName: t('users.exportSheetName'),
     name: t('common.name'),
-    email: t('common.email'),
-    phone: t('users.exportTable.phone'),
-    roles: t('common.roles'),
+    position: t('common.position'),
     discipline: t('common.discipline'),
+    department: t('common.department'),
+    role: t('common.role'),
     lastLogin: t('users.exportTable.lastLogin'),
-    footer: t('users.pdfFooter'),
-    totalUsers: t('users.exportMetrics.totalUsers'),
-    activeUsers: t('users.exportMetrics.activeUsers'),
-    pendingUsers: t('users.exportMetrics.pendingUsers'),
-    inactiveUsers: t('users.exportMetrics.inactiveUsers'),
-    noRole: t('users.noRoleAssigned'),
   };
 }
 
@@ -661,7 +637,7 @@ export default function UsersPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta, resetPage } = useTablePagination();
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingUsers, setExportingUsers] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -782,30 +758,26 @@ export default function UsersPageContent(): React.ReactNode {
   const roles = rolesQuery.data?.data ?? [];
   const companyName = authUser?.companyName ?? 'Company';
 
-  const handleExportPdf = useCallback(async (): Promise<void> => {
-    setExportingPdf(true);
+  const handleExportExcel = useCallback(async (): Promise<void> => {
+    setExportingUsers(true);
     try {
       const allUsers = await fetchAllUsers();
       const generatedAt = new Date().toISOString();
-      const preparedBy = authUser ? formatUserName(authUser) : 'User';
 
-      await exportUsersPdf({
+      await exportUsersExcel({
         companyName,
         generatedAt,
-        preparedBy,
-        labels: buildUsersExportPdfLabels(t),
+        labels: buildUsersExportLabels(t),
         users: allUsers,
-        summary: computeUsersExportSummary(allUsers),
-        formatUserStatus: (user) => userStatusLabel(user, t),
         formatUserRoles: formatUserRoleNames,
       });
       messageApi.success(t('users.exportSuccess'));
     } catch {
       messageApi.error(t('users.exportError'));
     } finally {
-      setExportingPdf(false);
+      setExportingUsers(false);
     }
-  }, [authUser, companyName, messageApi, t]);
+  }, [companyName, messageApi, t]);
 
   if (usersQuery.isLoading) {
     return (
@@ -1013,11 +985,11 @@ export default function UsersPageContent(): React.ReactNode {
         extra={
           <Space wrap>
             <Button
-              icon={<FilePdfOutlined />}
-              loading={exportingPdf}
-              onClick={() => void handleExportPdf()}
+              icon={<FileExcelOutlined />}
+              loading={exportingUsers}
+              onClick={() => void handleExportExcel()}
             >
-              {t('users.exportPdf')}
+              {t('users.exportExcel')}
             </Button>
             <Button onClick={() => setImportOpen(true)}>
               {t('common.importFromExcel')}
