@@ -386,7 +386,7 @@ export default function DesignPackageDetailPageContent({
                 Approve all EDVs
               </Button>
             )}
-            {packageLens.canUploadToPackage && (
+            {isDisciplineLeader && (
               <Button
                 loading={lockEdvs.isPending}
                 disabled={!lockGuidance.eligible}
@@ -395,7 +395,7 @@ export default function DesignPackageDetailPageContent({
                 Lock EDVs
               </Button>
             )}
-            {packageLens.canApproveAtTier && (
+            {isDisciplineLeader && (
               <Button
                 loading={batchLock.isPending}
                 disabled={!lockGuidance.eligible}
@@ -442,7 +442,7 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        {packageLens.canUploadToPackage && !lockGuidance.eligible && lockGuidance.reason && (
+        {isDisciplineLeader && !lockGuidance.eligible && lockGuidance.reason && (
           <div className="mb-4">
             <Alert
               type="info"

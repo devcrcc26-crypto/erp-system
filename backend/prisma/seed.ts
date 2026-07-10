@@ -55,6 +55,7 @@ const EPC_WORKFLOW_ROLES = [
   'Discipline Lead',
   'Department Chief',
   'Deputy Chief',
+  'Institute Chief',
   'Site Coordinator',
   'Client Consultant',
 ] as const;
@@ -474,6 +475,9 @@ function extendedPmModulePermissionFlags(
     if (roleName === 'Document Controller' && action === 'view') {
       return viewOnlyFlags();
     }
+    if (REVIEW_TIER_ROLES.has(roleName) && action === 'view') {
+      return viewOnlyFlags();
+    }
     return null;
   }
 
@@ -774,7 +778,11 @@ function epcWorkflowPermissionFlags(
   } else if (roleName === 'Discipline Lead') {
     allowedModules = engineeringModules;
     canApprove = action === 'approve';
-  } else if (roleName === 'Department Chief' || roleName === 'Deputy Chief') {
+  } else if (
+    roleName === 'Department Chief' ||
+    roleName === 'Deputy Chief' ||
+    roleName === 'Institute Chief'
+  ) {
     allowedModules = engineeringModules;
     canApprove = action === 'approve' || action === 'edit';
   } else if (roleName === 'Site Coordinator') {
