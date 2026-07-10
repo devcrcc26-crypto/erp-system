@@ -8,6 +8,7 @@ import {
   type DisciplineRoleFields,
   type PackageRoleFields,
 } from '@/lib/utils/subtask-role-resolver';
+import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 
 export interface PackageRoleLens {
   isPackageDesigner: boolean;
@@ -134,7 +135,9 @@ export function usePackageRoleLens(
       canApproveAtTier,
       canReturnForRework: canApproveAtTier,
       canApproveOnBehalf:
-        isPackageDeptChief && currentTier === 'INSTITUTE_CHIEF',
+        isPackageDeptChief &&
+        currentTier === 'INSTITUTE_CHIEF' &&
+        isExternalInstituteChief(pkg),
       canCreateSubtask: isPackageDisciplineLeader,
     };
   }, [pkg, discipline, currentUserId, currentTier]);

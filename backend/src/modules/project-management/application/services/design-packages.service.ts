@@ -200,6 +200,7 @@ export class DesignPackagesService {
       instituteChiefUserId: instituteChiefName
         ? null
         : dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
+      instituteChiefName,
     };
     const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
 
@@ -361,6 +362,7 @@ export class DesignPackagesService {
         disciplinaryLeaderUserId: existing.disciplinaryLeaderUserId,
         deptDeputyChiefUserId: existing.deptDeputyChiefUserId,
         instituteChiefUserId: existing.instituteChiefUserId,
+        instituteChiefName: existing.instituteChiefName,
       },
       discipline,
     );
@@ -413,6 +415,7 @@ export class DesignPackagesService {
           ? dto.deptDeputyChiefUserId
           : existing.deptDeputyChiefUserId,
       instituteChiefUserId: nextInstituteChiefUserId,
+      instituteChiefName: nextInstituteChiefName,
     };
     const nextEffectiveChain = this.getEffectiveApprovalChain(
       nextPackageOverrides,
@@ -1212,6 +1215,7 @@ export class DesignPackagesService {
       disciplinaryLeaderUserId: string | null;
       deptDeputyChiefUserId: string | null;
       instituteChiefUserId: string | null;
+      instituteChiefName?: string | null;
     },
     discipline: {
       ownerUserId: string | null;

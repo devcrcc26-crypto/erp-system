@@ -1,6 +1,7 @@
 import type { ReviewTier } from '@/lib/api/epc.types';
 import type { PackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import type { DisciplineRoleFields } from '@/lib/utils/subtask-role-resolver';
+import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import {
   resolveTierActorUserId,
   REVIEW_TIER_ORDER,
@@ -76,6 +77,7 @@ export function canUserActAtCurrentReviewTier(
   currentUserId: string | null | undefined,
   currentTier: ReviewTier | string | null | undefined,
   instituteChiefUserId: string | null,
+  instituteChiefName: string | null | undefined,
   canApproveReview: boolean,
 ): boolean {
   if (!currentTier || !currentUserId) {
@@ -86,7 +88,10 @@ export function canUserActAtCurrentReviewTier(
   }
   if (
     currentTier === 'INSTITUTE_CHIEF' &&
-    !instituteChiefUserId &&
+    isExternalInstituteChief({
+      instituteChiefUserId,
+      instituteChiefName,
+    }) &&
     canApproveReview
   ) {
     return true;

@@ -1,4 +1,5 @@
 import type { ReviewTier, SubtaskRole } from '@/lib/api/epc.types';
+import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 
 export interface ResolvedSubtaskRoles {
   primaryRole: SubtaskRole | null;
@@ -12,6 +13,7 @@ export interface PackageRoleFields {
   disciplinaryLeaderUserId: string | null;
   deptDeputyChiefUserId: string | null;
   instituteChiefUserId: string | null;
+  instituteChiefName?: string | null;
   disciplineOwnerUserId: string | null;
 }
 
@@ -82,8 +84,9 @@ export function resolvePackageRoles(
     disciplineLeadUserId:
       pkg.disciplinaryLeaderUserId ?? taskDiscipline.disciplineLeadUserId ?? null,
     chiefUserId: pkg.deptDeputyChiefUserId ?? taskDiscipline.chiefUserId ?? null,
-    instituteChiefUserId:
-      pkg.instituteChiefUserId ?? taskDiscipline.instituteChiefUserId ?? null,
+    instituteChiefUserId: isExternalInstituteChief(pkg)
+      ? null
+      : (pkg.instituteChiefUserId ?? taskDiscipline.instituteChiefUserId ?? null),
     ownerUserId: pkg.disciplineOwnerUserId ?? taskDiscipline.ownerUserId ?? null,
   };
 

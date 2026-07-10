@@ -219,6 +219,7 @@ export default function ReviewModePanel({
       currentUserId,
       reviewMode?.currentTier,
       packageQuery.data?.instituteChiefUserId ?? null,
+      packageQuery.data?.instituteChiefName,
       lens.canApproveReview,
     );
 

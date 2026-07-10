@@ -27,6 +27,7 @@ function resolveEffectiveChain(input: PermissionContextInput) {
       disciplinaryLeaderUserId: input.subtaskDisciplinaryLeaderUserId ?? null,
       deptDeputyChiefUserId: input.subtaskDeptDeputyChiefUserId ?? null,
       instituteChiefUserId: input.subtaskInstituteChiefUserId ?? null,
+      instituteChiefName: input.subtaskInstituteChiefName ?? null,
     },
     {
       ownerUserId: input.disciplineOwnerUserId ?? null,

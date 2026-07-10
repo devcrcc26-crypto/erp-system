@@ -1,3 +1,5 @@
+import { isExternalInstituteChief } from './institute-chief.util';
+
 export type PackageApprovalChainOverrides = {
   designerUserId: string | null;
   supportingDesignerUserId: string | null;
@@ -6,6 +8,8 @@ export type PackageApprovalChainOverrides = {
   disciplinaryLeaderUserId: string | null;
   deptDeputyChiefUserId: string | null;
   instituteChiefUserId: string | null;
+  /** When set without instituteChiefUserId, blocks discipline fallback for Institute Chief. */
+  instituteChiefName?: string | null;
 };
 
 export type DisciplineApprovalChain = {
@@ -44,7 +48,8 @@ export function getEffectiveApprovalChain(
     disciplineLeadUserId:
       pkg.disciplinaryLeaderUserId ?? discipline.disciplineLeadUserId,
     chiefUserId: pkg.deptDeputyChiefUserId ?? discipline.chiefUserId,
-    instituteChiefUserId:
-      pkg.instituteChiefUserId ?? discipline.instituteChiefUserId,
+    instituteChiefUserId: isExternalInstituteChief(pkg)
+      ? null
+      : (pkg.instituteChiefUserId ?? discipline.instituteChiefUserId),
   };
 }

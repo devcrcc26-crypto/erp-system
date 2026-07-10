@@ -42,6 +42,7 @@ import {
   getEffectiveApprovalChain,
   type PackageApprovalChainOverrides,
 } from '../../domain/approval-chain.util';
+import { isExternalInstituteChief } from '../../domain/institute-chief.util';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
 import {
   EdvWithDiscipline,
@@ -1313,9 +1314,11 @@ export class ReviewWorkflowService {
     const effectiveChain = discipline
       ? getEffectiveApprovalChain(discipline, discipline.taskDiscipline)
       : null;
-    const assignee = effectiveChain
-      ? this.reviewSla.resolveAssigneeForTier(nextTier, effectiveChain)
-      : null;
+    const assignee = this.resolveAssigneeForTierAdvance(
+      nextTier,
+      discipline,
+      effectiveChain,
+    );
 
     if (!assignee) {
       throw new BadRequestException(
@@ -1430,7 +1433,8 @@ export class ReviewWorkflowService {
     if (
       proxyApproval !== undefined &&
       currentTier === ReviewTier.INSTITUTE_CHIEF &&
-      !effectiveChain.instituteChiefUserId &&
+      packageWithDiscipline &&
+      isExternalInstituteChief(packageWithDiscipline) &&
       actorId === effectiveChain.chiefUserId
     ) {
       if (!proxyApproval.approvedOnBehalfOfName?.trim()) {
@@ -1441,6 +1445,16 @@ export class ReviewWorkflowService {
       return;
     }
 
+    if (
+      proxyApproval?.approvedOnBehalfOfName?.trim() &&
+      packageWithDiscipline &&
+      !isExternalInstituteChief(packageWithDiscipline)
+    ) {
+      throw new BadRequestException(
+        'Institute Chief on-behalf approval is only allowed for an external Institute Chief with no system account.',
+      );
+    }
+
     const actorTiers = REVIEW_TIER_ORDER.filter(
       (tier) =>
         this.reviewSla.resolveAssigneeForTier(tier, effectiveChain) === actorId,
@@ -1449,6 +1463,39 @@ export class ReviewWorkflowService {
     if (!actorTiers.includes(currentTier as (typeof REVIEW_TIER_ORDER)[number])) {
       throw new ForbiddenException('Actor role does not match current review tier.');
     }
+  }
+
+  private resolveAssigneeForTierAdvance(
+    nextTier: ReviewTier,
+    discipline: (PackageApprovalChainOverrides & {
+      instituteChiefName?: string | null;
+    }) | null,
+    effectiveChain: {
+      ownerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplineLeadUserId: string | null;
+      chiefUserId: string | null;
+      instituteChiefUserId?: string | null;
+    } | null,
+  ): string | null {
+    if (!effectiveChain) {
+      return null;
+    }
+
+    const assignee = this.reviewSla.resolveAssigneeForTier(nextTier, effectiveChain);
+    if (assignee) {
+      return assignee;
+    }
+
+    if (
+      nextTier === ReviewTier.INSTITUTE_CHIEF &&
+      discipline &&
+      isExternalInstituteChief(discipline)
+    ) {
+      return effectiveChain.chiefUserId;
+    }
+
+    return null;
   }
 
   private resolveCommentActor(

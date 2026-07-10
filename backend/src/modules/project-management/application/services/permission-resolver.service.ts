@@ -104,6 +104,7 @@ export class PermissionResolverService {
       subtaskDisciplinaryLeaderUserId: packageOverrides?.disciplinaryLeaderUserId,
       subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
+      subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -171,6 +172,7 @@ export class PermissionResolverService {
       subtaskDisciplinaryLeaderUserId: packageOverrides?.disciplinaryLeaderUserId,
       subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
+      subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
       isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
@@ -296,6 +298,7 @@ export class PermissionResolverService {
     disciplinaryLeaderUserId?: string;
     deptDeputyChiefUserId?: string;
     instituteChiefUserId?: string;
+    instituteChiefName?: string;
   }> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId }),
@@ -307,6 +310,7 @@ export class PermissionResolverService {
         disciplinaryLeaderUserId: true,
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
+        instituteChiefName: true,
       },
     });
     if (!pkg) {
@@ -320,6 +324,7 @@ export class PermissionResolverService {
       disciplinaryLeaderUserId: pkg.disciplinaryLeaderUserId ?? undefined,
       deptDeputyChiefUserId: pkg.deptDeputyChiefUserId ?? undefined,
       instituteChiefUserId: pkg.instituteChiefUserId ?? undefined,
+      instituteChiefName: pkg.instituteChiefName ?? undefined,
     };
   }
 }

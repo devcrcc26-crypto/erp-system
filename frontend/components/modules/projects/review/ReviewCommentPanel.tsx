@@ -105,6 +105,7 @@ export default function ReviewCommentPanel({
       currentUserId,
       reviewMode?.currentTier,
       packageQuery.data?.instituteChiefUserId ?? null,
+      packageQuery.data?.instituteChiefName,
       lens.canApproveReview,
     );
 

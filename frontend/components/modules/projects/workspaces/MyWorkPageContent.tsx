@@ -28,11 +28,18 @@ const REVIEWER_TIER_ROLES = new Set([
 function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
     // DESIGNER/SUPPORTING_DESIGNER -> Designer View; REVIEWER/DISCIPLINE_LEAD/
-    // DEPT_CHIEF/INSTITUTE_CHIEF -> Review Mode directly; DISCIPLINE_OWNER (or
+    // DEPT_CHIEF/INSTITUTE_CHIEF -> Review Mode when submitted; DISCIPLINE_OWNER (or
     // unresolved) -> the same read-only detail page as Designer View, since no
     // separate read-only route exists today.
     if (item.primaryRole && REVIEWER_TIER_ROLES.has(item.primaryRole)) {
-      return reviewModeHref(item.projectId, item.taskDisciplineId, item.designPackageId);
+      if (item.packageStatus === 'SUBMITTED') {
+        return reviewModeHref(item.projectId, item.taskDisciplineId, item.designPackageId);
+      }
+      return scheduleSubtaskWorkspaceHref(
+        item.projectId,
+        item.taskDisciplineId,
+        item.designPackageId,
+      );
     }
     return scheduleSubtaskWorkspaceHref(
       item.projectId,

@@ -20,6 +20,7 @@ import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import type { ReviewModeComment, ReviewTier } from '@/lib/api/epc.types';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   getNextReviewTier,
@@ -130,6 +131,7 @@ export default function DisciplineLeadConsole({
     currentUserId,
     currentTier,
     instituteChiefUserId,
+    instituteChiefName,
     lens.canApproveReview,
   );
   const isActiveSession = sessionStatus === 'ACTIVE';
@@ -146,7 +148,11 @@ export default function DisciplineLeadConsole({
   const nextTier = getNextReviewTier(currentTier, requiredTierList);
   const nextTierLabel = nextTier ? reviewTierBilingualLabel(nextTier) : null;
   const isInstituteChiefProxyEligible =
-    currentTier === 'INSTITUTE_CHIEF' && !instituteChiefUserId;
+    currentTier === 'INSTITUTE_CHIEF' &&
+    isExternalInstituteChief({
+      instituteChiefUserId,
+      instituteChiefName,
+    });
   const canSubmitApproval =
     approvalAllowed &&
     allDocumentsApproved &&
