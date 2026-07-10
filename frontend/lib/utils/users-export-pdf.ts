@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { User } from '@/lib/api/types';
 import { formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
+import { ensurePdfCjkFont, PDF_CJK_FONT } from '@/lib/utils/pdf-cjk-font';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const TEAL: [number, number, number] = [16, 152, 138];
@@ -68,7 +69,7 @@ function pct(part: number, total: number): string {
 function drawSectionTitle(doc: jsPDF, title: string, y: number): number {
   doc.setFillColor(...BORDER);
   doc.rect(PAGE_MARGIN, y, doc.internal.pageSize.getWidth() - PAGE_MARGIN * 2, 7, 'F');
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_CJK_FONT, 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...NAVY);
   doc.text(title.toUpperCase(), PAGE_MARGIN + 2, y + 5);
@@ -165,8 +166,9 @@ export function computeUsersExportSummary(users: User[]): UsersExportSummary {
 
 /**
  * Generates a structured PDF export of the company user directory.
+ * Loads a CJK font so Chinese names and localized labels render correctly.
  */
-export function exportUsersPdf(input: UsersExportPdfInput): void {
+export async function exportUsersPdf(input: UsersExportPdfInput): Promise<void> {
   const {
     companyName,
     generatedAt,
@@ -179,16 +181,23 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
   } = input;
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  await ensurePdfCjkFont(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   let y = PAGE_MARGIN;
+
+  const tableFont = {
+    font: PDF_CJK_FONT,
+    fontStyle: 'normal' as const,
+  };
 
   doc.setFillColor(...TEAL);
   doc.rect(0, 0, pageWidth, 32, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_CJK_FONT, 'bold');
   doc.setFontSize(16);
   doc.text(labels.title, PAGE_MARGIN, 14);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_CJK_FONT, 'normal');
   doc.setFontSize(10);
   doc.text(companyName, PAGE_MARGIN, 21);
   doc.setFontSize(8);
@@ -196,6 +205,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
 
   y = 40;
   doc.setTextColor(...MUTED);
+  doc.setFont(PDF_CJK_FONT, 'normal');
   doc.setFontSize(8);
   doc.text(
     `${labels.generatedAt}: ${new Date(generatedAt).toLocaleString()}`,
@@ -210,8 +220,9 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'grid',
-    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2 },
-    bodyStyles: { fontSize: 8, cellPadding: 2 },
+    styles: tableFont,
+    headStyles: { fillColor: NAVY, fontSize: 8, cellPadding: 2, ...tableFont },
+    bodyStyles: { fontSize: 8, cellPadding: 2, ...tableFont },
     columnStyles: {
       0: { cellWidth: 72, fontStyle: 'bold' },
       1: { halign: 'right' },
@@ -237,8 +248,9 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    styles: tableFont,
+    headStyles: { fillColor: TEAL, fontSize: 8, ...tableFont },
+    bodyStyles: { fontSize: 8, ...tableFont },
     head: [[labels.status, labels.count, labels.share]],
     body: summary.total > 0 ? statusRows : [['-', '0', '0%']],
   });
@@ -251,8 +263,9 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'striped',
-    headStyles: { fillColor: TEAL, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
+    styles: tableFont,
+    headStyles: { fillColor: TEAL, fontSize: 8, ...tableFont },
+    bodyStyles: { fontSize: 8, ...tableFont },
     head: [[labels.role, labels.count, labels.share]],
     body:
       roleBreakdown.length > 0
@@ -279,9 +292,9 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
     theme: 'striped',
-    headStyles: { fillColor: NAVY, fontSize: 7 },
-    bodyStyles: { fontSize: 7 },
-    styles: { overflow: 'linebreak', cellWidth: 'wrap' },
+    styles: { overflow: 'linebreak', cellWidth: 'wrap', ...tableFont },
+    headStyles: { fillColor: NAVY, fontSize: 7, ...tableFont },
+    bodyStyles: { fontSize: 7, ...tableFont },
     head: [
       [
         labels.name,
@@ -303,6 +316,7 @@ export function exportUsersPdf(input: UsersExportPdfInput): void {
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
+    doc.setFont(PDF_CJK_FONT, 'normal');
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(

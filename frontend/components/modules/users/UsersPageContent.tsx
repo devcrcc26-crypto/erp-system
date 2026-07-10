@@ -790,7 +790,7 @@ export default function UsersPageContent(): React.ReactNode {
       const generatedAt = new Date().toISOString();
       const preparedBy = authUser ? formatUserName(authUser) : 'User';
 
-      exportUsersPdf({
+      await exportUsersPdf({
         companyName,
         generatedAt,
         preparedBy,
