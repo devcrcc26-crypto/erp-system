@@ -25,10 +25,12 @@ export default function ReviewModePageContent({
   packageId,
   projectId,
   taskDisciplineId,
+  expectedReviewSessionId = null,
 }: {
   packageId: string;
   projectId: string;
   taskDisciplineId: string;
+  expectedReviewSessionId?: string | null;
 }): React.ReactNode {
   const permLoading = usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
@@ -157,6 +159,7 @@ export default function ReviewModePageContent({
             packageId={packageId}
             projectId={projectId}
             taskDisciplineId={taskDisciplineId}
+            expectedReviewSessionId={expectedReviewSessionId}
           />
         )}
       </div>

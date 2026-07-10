@@ -15,6 +15,7 @@ import {
   usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 
 export default function ReviewInboxTable({
   projectId,
@@ -51,7 +52,12 @@ export default function ReviewInboxTable({
       ellipsis: { showTitle: true },
       render: (name: string, record) => (
         <Link
-          href={`/design-packages/${record.designPackageId}/review?projectId=${record.projectId}&disciplineId=${record.taskDisciplineId}`}
+          href={reviewModeHref(
+            record.projectId,
+            record.taskDisciplineId,
+            record.designPackageId,
+            record.reviewSessionId,
+          )}
         >
           {name}
         </Link>

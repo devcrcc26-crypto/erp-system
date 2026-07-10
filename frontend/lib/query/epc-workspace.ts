@@ -216,12 +216,16 @@ export function useDesignPackageReviewMode(
   enabled = true,
   options?: Omit<UseQueryOptions<ReviewModeView>, 'queryKey' | 'queryFn'>,
 ) {
+  const capabilitiesReady = useCapabilitiesReady();
+
   return useQuery({
     queryKey: epcWorkspaceKeys.reviewMode(designPackageId),
     queryFn: () =>
       apiGet<ReviewModeView>(`/design-packages/${designPackageId}/review-mode`),
-    enabled: Boolean(designPackageId) && enabled,
+    enabled: Boolean(designPackageId) && enabled && capabilitiesReady,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
     ...options,
   });
 }

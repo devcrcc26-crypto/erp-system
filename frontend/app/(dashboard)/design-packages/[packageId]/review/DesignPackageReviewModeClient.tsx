@@ -11,12 +11,14 @@ export default function DesignPackageReviewModeClient({
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId') ?? '';
   const taskDisciplineId = searchParams.get('disciplineId') ?? '';
+  const reviewSessionId = searchParams.get('reviewSessionId');
 
   return (
     <ReviewModePageContent
       packageId={packageId}
       projectId={projectId}
       taskDisciplineId={taskDisciplineId}
+      expectedReviewSessionId={reviewSessionId}
     />
   );
 }

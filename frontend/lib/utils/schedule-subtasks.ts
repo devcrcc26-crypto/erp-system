@@ -78,6 +78,14 @@ export function reviewModeHref(
   projectId: string,
   taskDisciplineId: string,
   packageId: string,
+  reviewSessionId?: string,
 ): string {
-  return `/design-packages/${packageId}/review?projectId=${projectId}&disciplineId=${taskDisciplineId}`;
+  const params = new URLSearchParams({
+    projectId,
+    disciplineId: taskDisciplineId,
+  });
+  if (reviewSessionId) {
+    params.set('reviewSessionId', reviewSessionId);
+  }
+  return `/design-packages/${packageId}/review?${params.toString()}`;
 }

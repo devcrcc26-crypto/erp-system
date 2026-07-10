@@ -37,10 +37,12 @@ export default function ReviewModePanel({
   packageId,
   projectId,
   taskDisciplineId,
+  expectedReviewSessionId = null,
 }: {
   packageId: string;
   projectId: string;
   taskDisciplineId: string;
+  expectedReviewSessionId?: string | null;
 }): React.ReactNode {
   const lens = useRoleLens();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -248,7 +250,7 @@ export default function ReviewModePanel({
     );
   }
 
-  if (reviewModeQuery.isLoading) {
+  if (reviewModeQuery.isLoading || (reviewModeQuery.isFetching && !reviewMode)) {
     return (
       <div className="flex justify-center py-16">
         <Spin size="large" />
@@ -256,7 +258,39 @@ export default function ReviewModePanel({
     );
   }
 
+  if (reviewModeQuery.isError) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title="Could not load review session"
+        description="The review session could not be loaded. Try again."
+        action={
+          <Button size="small" onClick={() => void reviewModeQuery.refetch()}>
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
+
   if (!reviewSessionId) {
+    if (expectedReviewSessionId) {
+      return (
+        <Alert
+          type="warning"
+          showIcon
+          title="Review session not found"
+          description="This package was opened from your review inbox, but its active session could not be loaded."
+          action={
+            <Button size="small" onClick={() => void reviewModeQuery.refetch()}>
+              Retry
+            </Button>
+          }
+        />
+      );
+    }
+
     return (
       <Alert
         type="info"
