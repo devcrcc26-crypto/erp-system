@@ -261,7 +261,7 @@ export class DesignPackageRepository {
     designPackageId: string,
   ): Promise<number> {
     const submittalItems = await this.prisma.submittalItem.findMany({
-      where: activeOnly({ companyId, designPackageId }),
+      where: { companyId, designPackageId },
       select: { id: true },
     });
     const itemIds = submittalItems.map((item) => item.id);
