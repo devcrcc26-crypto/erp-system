@@ -1,9 +1,8 @@
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { type CellInput } from 'jspdf-autotable';
 import type { User } from '@/lib/api/types';
 import { formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
 import { ensurePdfCjkFont, PDF_CJK_FONT } from '@/lib/utils/pdf-cjk-font';
-import { formatUserName } from '@/lib/utils/user-display';
 
 const TEAL: [number, number, number] = [16, 152, 138];
 const NAVY: [number, number, number] = [27, 43, 75];
@@ -27,7 +26,6 @@ export interface UsersExportPdfLabels {
   share: string;
   role: string;
   name: string;
-  chineseName: string;
   email: string;
   phone: string;
   roles: string;
@@ -114,13 +112,29 @@ function computeRoleBreakdown(
     .sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
 }
 
+function buildExportDisplayName(user: User): CellInput {
+  const latinName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+  const chineseName = user.chineseName?.trim();
+  const content = chineseName
+    ? `${latinName}\n${chineseName}`
+    : latinName || '-';
+
+  return {
+    content,
+    styles: {
+      font: PDF_CJK_FONT,
+      cellWidth: 'auto',
+    },
+  };
+}
+
 export function buildUsersExportDirectoryRows(
   users: User[],
   formatUserStatus: (user: User) => string,
   formatUserRoles: (user: User) => string,
   formatUserDiscipline: (discipline: User['discipline']) => string,
   formatLastLoginValue: (value: string | null) => string,
-): string[][] {
+): CellInput[][] {
   return [...users]
     .sort((a, b) => {
       const last = a.lastName.localeCompare(b.lastName);
@@ -130,8 +144,7 @@ export function buildUsersExportDirectoryRows(
       return a.firstName.localeCompare(b.firstName);
     })
     .map((user) => [
-      formatUserName(user),
-      user.chineseName?.trim() || '-',
+      buildExportDisplayName(user),
       user.email?.trim() || '-',
       user.phone?.trim() || '-',
       formatUserStatus(user),
@@ -298,7 +311,6 @@ export async function exportUsersPdf(input: UsersExportPdfInput): Promise<void> 
     head: [
       [
         labels.name,
-        labels.chineseName,
         labels.email,
         labels.phone,
         labels.status,
@@ -310,7 +322,7 @@ export async function exportUsersPdf(input: UsersExportPdfInput): Promise<void> 
     body:
       directoryRows.length > 0
         ? directoryRows
-        : [['-', '-', '-', '-', '-', '-', '-', '-']],
+        : [['-', '-', '-', '-', '-', '-', '-']],
   });
 
   const pageCount = doc.getNumberOfPages();
