@@ -98,13 +98,15 @@ export function getReviewTierStepState(
 }
 
 export function resolveTierActorUserId(
-  discipline: Pick<
-    TaskDiscipline,
-    | 'ownerUserId'
-    | 'reviewerUserId'
-    | 'disciplineLeadUserId'
-    | 'chiefUserId'
-    | 'instituteChiefUserId'
+  discipline: Partial<
+    Pick<
+      TaskDiscipline,
+      | 'ownerUserId'
+      | 'reviewerUserId'
+      | 'disciplineLeadUserId'
+      | 'chiefUserId'
+      | 'instituteChiefUserId'
+    >
   >,
   tier: ReviewTier | string | null | undefined,
 ): string | null {
