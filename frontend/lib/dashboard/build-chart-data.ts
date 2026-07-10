@@ -10,9 +10,9 @@ const URGENCY_COLORS: Record<UrgencyLevel, string> = {
 };
 
 const URGENCY_LABELS: Record<UrgencyLevel, string> = {
-  VERY_URGENT: '紧急',
-  URGENT: '急',
-  NORMAL: '正常',
+  VERY_URGENT: 'Very Urgent (紧急)',
+  URGENT: 'Urgent (急)',
+  NORMAL: 'Normal (正常)',
 };
 
 function parseDate(value: string | null): Date | null {
