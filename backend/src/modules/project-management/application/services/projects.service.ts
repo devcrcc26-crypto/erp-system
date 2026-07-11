@@ -609,26 +609,6 @@ export class ProjectsService {
     return member !== null;
   }
 
-  /**
-   * Asserts every user id belongs to the active project team.
-   */
-  async assertUsersOnProjectTeam(
-    projectId: string,
-    userIds: readonly (string | null | undefined)[],
-  ): Promise<void> {
-    const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
-    if (ids.length === 0) {
-      return;
-    }
-
-    const count = await this.prisma.projectTeam.count({
-      where: activeOnly({ projectId, userId: { in: ids } }),
-    });
-    if (count !== ids.length) {
-      throw new NotFoundException('One or more users are not on the project team');
-    }
-  }
-
   private async buildProjectListWhere(
     ctx: PmContext,
     query: ProjectListQueryDto,

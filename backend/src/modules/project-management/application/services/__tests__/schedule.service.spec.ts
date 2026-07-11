@@ -129,22 +129,6 @@ describe('ScheduleService', () => {
   });
 
   describe('createTask', () => {
-    it('validates dispatcherUserId is on the project team', async () => {
-      prisma.projectTeam.count.mockResolvedValue(0);
-
-      await expect(
-        service.createTask(ctx, projectId, {
-          name: 'Foundation work',
-          nameZh: '基础工程',
-          dispatcherUserId,
-        }),
-      ).rejects.toThrow(
-        new BadRequestException('One or more users are not on the project team'),
-      );
-
-      expect(prisma.task.create).not.toHaveBeenCalled();
-    });
-
     it('persists nameZh when provided on create', async () => {
       prisma.projectTeam.count.mockResolvedValue(1);
       prisma.task.create.mockResolvedValue(buildTask('NOT_STARTED'));

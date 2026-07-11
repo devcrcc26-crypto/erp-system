@@ -297,14 +297,6 @@ export class ScheduleService {
         'Child tasks cannot be created. Assign work using subtasks on a discipline instead.',
       );
     }
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.dispatcherUserId,
-      dto.supervisingChiefUserId,
-      dto.assignedPersonUserId,
-      ...(dto.disciplines?.map((discipline) => discipline.disciplineLeadUserId) ??
-        []),
-    ]);
-
     const taskIdCode =
       dto.taskIdCode?.trim() ||
       (await this.documentNumberService.getNextNumber(ctx, 'TASK'));
@@ -429,15 +421,6 @@ export class ScheduleService {
         'Child task parent links cannot be changed. Use subtasks on a discipline instead.',
       );
     }
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.dispatcherUserId,
-      dto.supervisingChiefUserId,
-      dto.assignedPersonUserId,
-      ...(dto.disciplinesToAdd?.map(
-        (discipline) => discipline.disciplineLeadUserId,
-      ) ?? []),
-    ]);
-
     if (dto.status !== undefined) {
       const current = await this.prisma.task.findFirst({
         where: activeOnly({ id: taskId, projectId }),
@@ -873,16 +856,6 @@ export class ScheduleService {
   ): Promise<MappedTaskDiscipline> {
     await this.getTaskOrThrow(projectId, taskId);
 
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.designerUserId,
-      dto.ownerUserId,
-      dto.reviewerUserId,
-      dto.disciplineLeadUserId,
-      dto.chiefUserId,
-      dto.instituteChiefUserId,
-      dto.supportingDesignerUserId,
-    ]);
-
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
     const catalog = await this.resolveEngineeringDiscipline(ctx, dto.disciplineId);
 
@@ -960,16 +933,6 @@ export class ScheduleService {
       where: activeOnly({ id: disciplineId, taskId, companyId: ctx.companyId }),
       select: { disciplineLeadUserId: true },
     });
-
-    await this.assertUsersOnProjectTeam(projectId, [
-      dto.designerUserId,
-      dto.ownerUserId,
-      dto.reviewerUserId,
-      dto.disciplineLeadUserId,
-      dto.chiefUserId,
-      dto.instituteChiefUserId,
-      dto.supportingDesignerUserId,
-    ]);
 
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
 
@@ -1181,25 +1144,6 @@ export class ScheduleService {
       throw new NotFoundException('Task discipline not found');
     }
     return discipline;
-  }
-
-  private async assertUsersOnProjectTeam(
-    projectId: string,
-    userIds: readonly (string | null | undefined)[],
-  ): Promise<void> {
-    const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
-    if (ids.length === 0) {
-      return;
-    }
-
-    const count = await this.prisma.projectTeam.count({
-      where: activeOnly({ projectId, userId: { in: ids } }),
-    });
-    if (count !== ids.length) {
-      throw new BadRequestException(
-        'One or more users are not on the project team',
-      );
-    }
   }
 
   private formatUserDisplayName(
