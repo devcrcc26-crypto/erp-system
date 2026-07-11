@@ -138,8 +138,12 @@ function toExtendedPayload(
   return {
     requiresArchiving: values.requiresArchiving,
     taskAttributes: values.taskAttributes,
-    onSiteReceivingTime: values.onSiteReceivingTime?.toISOString(),
-    assignmentToHqTime: values.assignmentToHqTime?.toISOString(),
+    onSiteReceivingTime: values.onSiteReceivingTime
+      ?.startOf('day')
+      .toISOString(),
+    assignmentToHqTime: values.assignmentToHqTime
+      ?.startOf('day')
+      .toISOString(),
     contactFormNumber: values.contactFormNumber?.trim() || undefined,
     designStage: values.designStage,
     urgencyLevel: values.urgencyLevel,
@@ -618,10 +622,10 @@ export default function TaskFormDrawer({
                   </Form.Item>
                   <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
                     <Form.Item label="On-site receiving time" name="onSiteReceivingTime">
-                      <DatePicker showTime className="w-full" />
+                      <DatePicker className="w-full" />
                     </Form.Item>
                     <Form.Item label="HQ assignment time" name="assignmentToHqTime">
-                      <DatePicker showTime className="w-full" />
+                      <DatePicker className="w-full" />
                     </Form.Item>
                   </div>
                   {isEditing && (

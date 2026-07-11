@@ -57,7 +57,7 @@ import {
   formatUrgencyLevelLabel,
 } from '@/lib/constants/task-comment8';
 import { formatCommissionModeLabel } from '@/lib/constants/commission-mode';
-import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
+import { formatDisciplineDate } from '@/components/modules/projects/disciplines/discipline-form.util';
 
 const DEPENDENCY_TYPES: Array<{ value: TaskDependencyType; label: string }> = [
   { value: 'FS', label: 'Finish-to-Start (FS)' },
@@ -384,7 +384,7 @@ export default function TasksPanel({
       ellipsis: true,
       render: (_value, record) =>
         record.rowType === 'task'
-          ? formatDisciplineDateTime(record.task.onSiteReceivingTime)
+          ? formatDisciplineDate(record.task.onSiteReceivingTime)
           : null,
     },
     {
@@ -393,7 +393,7 @@ export default function TasksPanel({
       ellipsis: true,
       render: (_value, record) =>
         record.rowType === 'task'
-          ? formatDisciplineDateTime(record.task.assignmentToHqTime)
+          ? formatDisciplineDate(record.task.assignmentToHqTime)
           : null,
     },
     {

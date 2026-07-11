@@ -32,6 +32,13 @@ export function formatDisciplineDateTime(value: string | null): string {
   return dayjs(value).format('DD/MM/YYYY HH:mm');
 }
 
+export function formatDisciplineDate(value: string | null): string {
+  if (!value) {
+    return '-';
+  }
+  return dayjs(value).format('DD/MM/YYYY');
+}
+
 /** Payload for creating a discipline with name and leader only. */
 export function toDisciplineSimplePayload(
   values: DisciplineSimpleFormValues,

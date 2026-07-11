@@ -24,7 +24,10 @@ import {
   formatProjectDate,
   formatProjectDesignStage,
 } from '@/lib/utils/project-display';
-import { formatDisciplineDateTime } from '@/components/modules/projects/disciplines/discipline-form.util';
+import {
+  formatDisciplineDate,
+  formatDisciplineDateTime,
+} from '@/components/modules/projects/disciplines/discipline-form.util';
 import { formatTaskStatus, taskStatusVariant } from '@/lib/utils/pm-status-display';
 import {
   formatArchivingLabel,
@@ -283,12 +286,12 @@ export default function TaskDetailContent({
                   {
                     key: 'site',
                     label: 'On-site receiving time',
-                    children: formatDisciplineDateTime(task.onSiteReceivingTime),
+                    children: formatDisciplineDate(task.onSiteReceivingTime),
                   },
                   {
                     key: 'hq',
                     label: 'HQ assignment time',
-                    children: formatDisciplineDateTime(task.assignmentToHqTime),
+                    children: formatDisciplineDate(task.assignmentToHqTime),
                   },
                   {
                     key: 'planned',
