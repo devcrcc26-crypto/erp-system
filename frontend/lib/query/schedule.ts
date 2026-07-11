@@ -102,7 +102,10 @@ export function useScheduleSubtasks(projectId: string, enabled = true): {
   isFetching: boolean;
 } {
   const disciplinesQuery = useProjectDisciplines(projectId, enabled);
-  const disciplines = disciplinesQuery.data ?? [];
+  const disciplines = useMemo(
+    () => disciplinesQuery.data ?? [],
+    [disciplinesQuery.data],
+  );
 
   const packageQueries = useQueries({
     queries: disciplines.map((discipline) => ({

@@ -341,10 +341,11 @@ export default function TaskFormDrawer({
         packageCount: packageCountByDisciplineId.get(discipline.id) ?? 0,
       }));
 
-    const newDrafts = disciplineDrafts.filter((entry) => !entry.isExisting);
-    setDisciplineDrafts([...drafts, ...newDrafts]);
+    setDisciplineDrafts((prev) => {
+      const newDrafts = prev.filter((entry) => !entry.isExisting);
+      return [...drafts, ...newDrafts];
+    });
     setInitialDisciplineKeys(disciplinesQuery.data.map((entry) => entry.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server disciplines load
   }, [open, task, disciplinesQuery.data, packageCountByDisciplineId]);
 
   function handleDisciplinesChange(next: TaskDisciplineDraft[]): void {
