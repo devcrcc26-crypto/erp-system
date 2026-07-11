@@ -1,12 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Button, Modal, Select } from 'antd';
-import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
-import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
+import { useMemo } from 'react';
+import { Select } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { useEngineeringDisciplineOptions } from '@/lib/query/org';
-import { useProjectTeam } from '@/lib/query/projects';
+import { useFullUsersDirectory } from '@/lib/query/users';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { formatUserPickerLabel } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
 export interface TaskDisciplineDraft {
@@ -18,190 +17,136 @@ export interface TaskDisciplineDraft {
   packageCount?: number;
 }
 
-interface AddDisciplineFormState {
-  disciplineId?: string;
-  disciplineLeadUserId?: string;
-}
-
 export default function TaskDisciplinesEditor({
-  projectId,
   disciplines,
   onChange,
 }: {
-  projectId: string;
   disciplines: TaskDisciplineDraft[];
   onChange: (next: TaskDisciplineDraft[]) => void;
 }): React.ReactNode {
-  const [addOpen, setAddOpen] = useState(false);
-  const [draft, setDraft] = useState<AddDisciplineFormState>({});
-  const teamQuery = useProjectTeam(projectId);
-  const { options, nameById, isLoading } = useEngineeringDisciplineOptions(true);
+  const messageApi = useAppMessage();
+  const usersQuery = useFullUsersDirectory();
 
-  const assignedDisciplineIds = useMemo(
-    () => new Set(disciplines.map((entry) => entry.disciplineId)),
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+
+  const userById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
+  );
+
+  const eligibleEmployees = useMemo(
+    () =>
+      users.filter(
+        (user) => user.engineeringDisciplineId !== null && user.isActive,
+      ),
+    [users],
+  );
+
+  const selectedUserIds = useMemo(
+    () => disciplines.map((entry) => entry.disciplineLeadUserId),
     [disciplines],
   );
 
-  const availableOptions = useMemo(
-    () => options.filter((option) => !assignedDisciplineIds.has(option.value)),
-    [assignedDisciplineIds, options],
+  const options = useMemo(() => {
+    const base = eligibleEmployees.map((user) => ({
+      value: user.id,
+      label: formatUserPickerLabel(user),
+    }));
+
+    for (const id of selectedUserIds) {
+      if (!base.some((option) => option.value === id)) {
+        const user = userById.get(id);
+        const fallback = disciplines.find(
+          (entry) => entry.disciplineLeadUserId === id,
+        )?.disciplineName;
+        base.push({
+          value: id,
+          label: user ? formatUserPickerLabel(user) : fallback || 'Unknown user',
+        });
+      }
+    }
+
+    return base;
+  }, [eligibleEmployees, selectedUserIds, userById, disciplines]);
+
+  const lockedEntries = disciplines.filter(
+    (entry) => entry.isExisting && (entry.packageCount ?? 0) > 0,
   );
 
-  const leaderNameById = useMemo(
-    () =>
-      new Map(
-        (teamQuery.data ?? [])
-          .filter((member) => member.userName)
-          .map((member) => [member.userId, member.userName as string]),
-      ),
-    [teamQuery.data],
-  );
+  function handleSelectionChange(nextUserIds: string[]): void {
+    const currentUserIds = disciplines.map((entry) => entry.disciplineLeadUserId);
+    const removedIds = currentUserIds.filter((id) => !nextUserIds.includes(id));
 
-  function handleAdd(): void {
-    if (!draft.disciplineId || !draft.disciplineLeadUserId) {
+    const blockedRemoval = removedIds.some((id) => {
+      const entry = disciplines.find((d) => d.disciplineLeadUserId === id);
+      return Boolean(entry?.isExisting) && (entry?.packageCount ?? 0) > 0;
+    });
+
+    if (blockedRemoval) {
+      messageApi.error(
+        'Cannot remove a discipline leader who already has packages under their discipline.',
+      );
       return;
     }
 
-    const disciplineName = nameById.get(draft.disciplineId);
-    if (!disciplineName) {
-      return;
+    const addedIds = nextUserIds.filter((id) => !currentUserIds.includes(id));
+    const keptDrafts = disciplines.filter((entry) =>
+      nextUserIds.includes(entry.disciplineLeadUserId),
+    );
+
+    const newDrafts: TaskDisciplineDraft[] = [];
+    for (const id of addedIds) {
+      const user = userById.get(id);
+      if (!user?.engineeringDisciplineId) {
+        continue;
+      }
+      newDrafts.push({
+        key: `new-${id}`,
+        disciplineId: user.engineeringDisciplineId,
+        disciplineName: user.engineeringDiscipline?.name ?? '',
+        disciplineLeadUserId: id,
+      });
     }
 
-    onChange([
-      ...disciplines,
-      {
-        key: `new-${Date.now()}`,
-        disciplineId: draft.disciplineId,
-        disciplineName,
-        disciplineLeadUserId: draft.disciplineLeadUserId,
-      },
-    ]);
-    setDraft({});
-    setAddOpen(false);
-  }
-
-  function handleRemove(key: string): void {
-    onChange(disciplines.filter((entry) => entry.key !== key));
+    onChange([...keptDrafts, ...newDrafts]);
   }
 
   return (
-    <FormLayout
-      title="Disciplines"
-      extra={
-        <Button
-          type="link"
-          size="small"
-          className="!px-0"
-          icon={<PlusOutlined />}
-          onClick={() => setAddOpen(true)}
-          disabled={availableOptions.length === 0 && disciplines.length > 0}
+    <FormLayout title="Disciplines">
+      <Select
+        mode="multiple"
+        showSearch
+        className="w-full"
+        loading={usersQuery.isLoading}
+        placeholder="Select discipline leaders"
+        options={options}
+        optionFilterProp="label"
+        value={selectedUserIds}
+        onChange={handleSelectionChange}
+        notFoundContent={usersQuery.isLoading ? 'Loading…' : 'No eligible employees found'}
+      />
+      {disciplines.length === 0 && (
+        <p
+          className="mt-2 text-[13px]"
+          style={{ color: tokens.colorTextSecondary }}
         >
-          Add
-        </Button>
-      }
-    >
-      {disciplines.length === 0 ? (
-        <p className="text-[13px]" style={{ color: tokens.colorTextSecondary }}>
-          No disciplines assigned yet. Add disciplines and leaders before saving.
+          No disciplines assigned yet. Select discipline leaders above.
         </p>
-      ) : (
-        <ul className="space-y-2">
-          {disciplines.map((entry) => {
-            const leaderName =
-              leaderNameById.get(entry.disciplineLeadUserId) ?? 'Unknown';
-            const canRemove = !entry.isExisting || (entry.packageCount ?? 0) === 0;
-
-            return (
-              <li
-                key={entry.key}
-                className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-                style={{ borderColor: tokens.colorBorder }}
-              >
-                <div className="min-w-0">
-                  <span className="text-[13px] font-medium">
-                    [{entry.disciplineName}]
-                  </span>
-                  <span
-                    className="ml-2 text-[12px]"
-                    style={{ color: tokens.colorTextSecondary }}
-                  >
-                    Leader: {leaderName}
-                  </span>
-                  {entry.isExisting && (entry.packageCount ?? 0) > 0 && (
-                    <p
-                      className="mt-0.5 text-[11px]"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
-                      Has {entry.packageCount} package(s) — cannot remove
-                    </p>
-                  )}
-                </div>
-                {canRemove && (
-                  <Button
-                    type="text"
-                    size="small"
-                    aria-label="Remove discipline"
-                    icon={<CloseOutlined />}
-                    onClick={() => handleRemove(entry.key)}
-                  />
-                )}
-              </li>
-            );
-          })}
+      )}
+      {lockedEntries.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {lockedEntries.map((entry) => (
+            <li
+              key={entry.key}
+              className="text-[11px]"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              [{entry.disciplineName}] has {entry.packageCount} package(s) —
+              cannot remove
+            </li>
+          ))}
         </ul>
       )}
-
-      <Modal
-        open={addOpen}
-        title="Add discipline"
-        centered
-        okText="Add"
-        onCancel={() => {
-          setAddOpen(false);
-          setDraft({});
-        }}
-        onOk={handleAdd}
-        okButtonProps={{
-          disabled: !draft.disciplineId || !draft.disciplineLeadUserId,
-        }}
-        destroyOnHidden
-        width={480}
-      >
-        <div className="space-y-4 py-2">
-          <div>
-            <label className="mb-1 block text-[13px] font-medium">
-              Discipline
-            </label>
-            <Select
-              showSearch
-              className="w-full"
-              loading={isLoading}
-              placeholder="Select discipline"
-              options={availableOptions}
-              optionFilterProp="label"
-              value={draft.disciplineId}
-              onChange={(value: string) =>
-                setDraft((current) => ({ ...current, disciplineId: value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[13px] font-medium">
-              Discipline leader
-            </label>
-            <ProjectTeamUserSelect
-              projectId={projectId}
-              value={draft.disciplineLeadUserId}
-              onChange={(userId) =>
-                setDraft((current) => ({
-                  ...current,
-                  disciplineLeadUserId: userId,
-                }))
-              }
-            />
-          </div>
-        </div>
-      </Modal>
     </FormLayout>
   );
 }

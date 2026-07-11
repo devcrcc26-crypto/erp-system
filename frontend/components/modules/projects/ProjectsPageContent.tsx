@@ -51,7 +51,7 @@ import {
   projectResponsibleDepartmentVariant,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
-import { formatLocalizedName } from '@/lib/utils/bilingual-name';
+import StackedName from '@/components/ui/StackedName/StackedName';
 import { formatUserName } from '@/lib/utils/user-display';
 import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
 import { downloadProjectListExcel } from '@/lib/query/project-exports';
@@ -167,8 +167,9 @@ export default function ProjectsPageContent(): React.ReactNode {
       {
         title: 'Name',
         key: 'name',
-        ellipsis: true,
-        render: (_value, record) => formatLocalizedName(record),
+        render: (_value, record) => (
+          <StackedName name={record.name} nameZh={record.nameZh} />
+        ),
       },
       {
         title: 'Type',

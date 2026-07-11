@@ -679,7 +679,6 @@ export default function TaskFormDrawer({
               label: 'Disciplines',
               children: (
                 <TaskDisciplinesEditor
-                  projectId={projectId}
                   disciplines={disciplineDrafts}
                   onChange={handleDisciplinesChange}
                 />

@@ -11,7 +11,6 @@ import { CSS } from '@dnd-kit/utilities';
 import Card from '@/components/ui/Card/Card';
 import type { Project, ProjectDashboardStats } from '@/lib/api/project-management.types';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -61,8 +60,17 @@ export default function ProjectKanbanCard({
             style={{ color: tokens.colorTextPrimary }}
             ellipsis={{ rows: 2 }}
           >
-            {formatLocalizedName(project)}
+            {project.name}
           </Typography.Paragraph>
+          {project.nameZh ? (
+            <Typography.Paragraph
+              className="!mb-0 text-[12px]"
+              style={{ color: tokens.colorTextSecondary }}
+              ellipsis={{ rows: 1 }}
+            >
+              {project.nameZh}
+            </Typography.Paragraph>
+          ) : null}
         </div>
       </div>
 

@@ -28,6 +28,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 import { CONTEXT_SIDEBAR_WIDTH } from '@/components/ui/shell/shell-layout';
+import StackedName from '@/components/ui/StackedName/StackedName';
 
 /**
  * Project context sidebar - grouped nav driven by config.
@@ -35,11 +36,13 @@ import { CONTEXT_SIDEBAR_WIDTH } from '@/components/ui/shell/shell-layout';
 export default function ContextSidebar({
   projectId,
   projectName,
+  projectNameZh,
   onNavigate,
   className = '',
 }: {
   projectId: string;
   projectName: string;
+  projectNameZh?: string | null;
   onNavigate?: () => void;
   className?: string;
 }): React.ReactNode {
@@ -136,11 +139,13 @@ export default function ContextSidebar({
         >
           {t('shell.projectSection')}
         </p>
-        <h2
-          className="mt-1 truncate text-[14px] font-medium tracking-[-0.01em]"
-          style={{ color: tokens.colorTextPrimary }}
-        >
-          {projectName}
+        <h2 className="mt-1">
+          <StackedName
+            name={projectName}
+            nameZh={projectNameZh}
+            className="truncate text-[14px] font-medium tracking-[-0.01em]"
+            style={{ color: tokens.colorTextPrimary }}
+          />
         </h2>
       </header>
 

@@ -74,13 +74,18 @@ export default function AppShell({
     setMobileNavOpen(false);
   }, [pathname]);
 
+  const loadedProject = activeProject ?? projectQuery.data ?? null;
+
   const projectName =
-    (activeProject
-      ? formatLocalizedName(activeProject)
-      : projectQuery.data
-        ? formatLocalizedName(projectQuery.data)
-        : null) ??
+    (loadedProject ? formatLocalizedName(loadedProject) : null) ??
     (projectQuery.isLoading ? '…' : t('nav.projects'));
+
+  const projectDisplayName = loadedProject
+    ? { name: loadedProject.name, nameZh: loadedProject.nameZh }
+    : {
+        name: projectQuery.isLoading ? '…' : t('nav.projects'),
+        nameZh: null,
+      };
 
   const routeMeta = resolveRouteMeta(pathname, projectName, t);
   const pageTitle = t(routeMeta.titleKey);
@@ -99,7 +104,11 @@ export default function AppShell({
 
       {showContextSidebar && projectId && (
         <div className="relative z-10 hidden h-full shrink-0 lg:block">
-          <ContextSidebar projectId={projectId} projectName={projectName} />
+          <ContextSidebar
+            projectId={projectId}
+            projectName={projectDisplayName.name}
+            projectNameZh={projectDisplayName.nameZh}
+          />
         </div>
       )}
 
