@@ -604,9 +604,11 @@ export default function TaskFormDrawer({
                       <Switch checkedChildren="Yes" unCheckedChildren="No" />
                     </Form.Item>
                   </div>
-                  <Form.Item label="Contact sheet number" name="contactFormNumber">
-                    <Input />
-                  </Form.Item>
+                  {projectQuery.data?.contractType === 'CONTRACT' && (
+                    <Form.Item label="Contact sheet number" name="contactFormNumber">
+                      <Input />
+                    </Form.Item>
+                  )}
                   <Form.Item
                     label="Supervising chief"
                     name="supervisingChiefUserId"
