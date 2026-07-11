@@ -236,6 +236,26 @@ function syncDurationField(
   form.setFieldValue('durationDays', durationFromFormDates(startDate, finishDate));
 }
 
+function disciplineDraftsMatch(
+  current: TaskDisciplineDraft[],
+  next: TaskDisciplineDraft[],
+): boolean {
+  if (current.length !== next.length) {
+    return false;
+  }
+
+  return current.every((entry, index) => {
+    const other = next[index];
+    return (
+      entry.key === other.key &&
+      entry.disciplineId === other.disciplineId &&
+      entry.disciplineName === other.disciplineName &&
+      entry.disciplineLeadUserId === other.disciplineLeadUserId &&
+      entry.isExisting === other.isExisting
+    );
+  });
+}
+
 export default function TaskFormDrawer({
   open,
   projectId,
@@ -289,7 +309,21 @@ export default function TaskFormDrawer({
       );
     }
     return map;
-  }, [subtasksByTaskId, task]);
+  }, [subtasksByTaskId, task?.id]);
+
+  const disciplineDraftsWithCounts = useMemo(
+    () =>
+      disciplineDrafts.map((entry) => {
+        if (!entry.isExisting) {
+          return entry;
+        }
+        return {
+          ...entry,
+          packageCount: packageCountByDisciplineId.get(entry.key) ?? 0,
+        };
+      }),
+    [disciplineDrafts, packageCountByDisciplineId],
+  );
 
   const statusOptions = isEditing
     ? nextStatusOptions(task!.status, TASK_VALID_TRANSITIONS).map((status) => ({
@@ -323,7 +357,7 @@ export default function TaskFormDrawer({
     setDisciplineDrafts([]);
     setRemovedDisciplineIds([]);
     setInitialDisciplineKeys([]);
-  }, [open, task, form, projectQuery.data?.designStage, projectQuery.data?.contractType]);
+  }, [open, task?.id, form, projectQuery.data?.designStage, projectQuery.data?.contractType]);
 
   useEffect(() => {
     if (!open || !task || !disciplinesQuery.data) {
@@ -338,15 +372,15 @@ export default function TaskFormDrawer({
         disciplineName: discipline.disciplineName,
         disciplineLeadUserId: discipline.disciplineLeadUserId ?? '',
         isExisting: true,
-        packageCount: packageCountByDisciplineId.get(discipline.id) ?? 0,
       }));
 
     setDisciplineDrafts((prev) => {
       const newDrafts = prev.filter((entry) => !entry.isExisting);
-      return [...drafts, ...newDrafts];
+      const next = [...drafts, ...newDrafts];
+      return disciplineDraftsMatch(prev, next) ? prev : next;
     });
     setInitialDisciplineKeys(disciplinesQuery.data.map((entry) => entry.id));
-  }, [open, task, disciplinesQuery.data, packageCountByDisciplineId]);
+  }, [open, task?.id, disciplinesQuery.data, removedDisciplineIds]);
 
   function handleDisciplinesChange(next: TaskDisciplineDraft[]): void {
     if (task) {
@@ -680,7 +714,7 @@ export default function TaskFormDrawer({
               label: 'Disciplines',
               children: (
                 <TaskDisciplinesEditor
-                  disciplines={disciplineDrafts}
+                  disciplines={disciplineDraftsWithCounts}
                   onChange={handleDisciplinesChange}
                 />
               ),
