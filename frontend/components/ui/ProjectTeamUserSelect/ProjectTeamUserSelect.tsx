@@ -12,6 +12,8 @@ import { withSelectedUserOption } from '@/lib/utils/user-select-options';
 
 /**
  * User picker limited to active members of the project team.
+ * If `restrictToUserIds` is provided, the project team is bypassed entirely
+ * and only those user IDs (still filtered to active users) are offered.
  */
 export default function ProjectTeamUserSelect({
   projectId,
@@ -21,6 +23,7 @@ export default function ProjectTeamUserSelect({
   disabled = false,
   allowClear = true,
   excludeUserIds = [],
+  restrictToUserIds,
   className,
 }: {
   projectId: string;
@@ -30,9 +33,14 @@ export default function ProjectTeamUserSelect({
   disabled?: boolean;
   allowClear?: boolean;
   excludeUserIds?: string[];
+  restrictToUserIds?: readonly string[];
   className?: string;
 }): React.ReactNode {
-  const teamQuery = useProjectTeam(projectId, Boolean(projectId) && !disabled);
+  const isRestricted = Boolean(restrictToUserIds && restrictToUserIds.length > 0);
+  const teamQuery = useProjectTeam(
+    projectId,
+    Boolean(projectId) && !disabled && !isRestricted,
+  );
   const usersQuery = useFullUsersDirectory({
     enabled: !disabled && Boolean(projectId),
   });
@@ -55,6 +63,24 @@ export default function ProjectTeamUserSelect({
 
   const options = useMemo(() => {
     const users = usersQuery.data ?? [];
+
+    if (restrictToUserIds && restrictToUserIds.length > 0) {
+      const baseOptions = users
+        .filter((user) => user.isActive && restrictToUserIds.includes(user.id))
+        .map((user) => ({
+          value: user.id,
+          label: formatUserPickerLabel(user),
+        }));
+
+      return withSelectedUserOption(
+        baseOptions,
+        value,
+        valueUserQuery.data,
+        formatUserPickerLabel,
+        undefined,
+      );
+    }
+
     const baseOptions = users
       .filter(
         (user) =>
@@ -89,6 +115,7 @@ export default function ProjectTeamUserSelect({
     teamUserIds,
     teamNameByUserId,
     excludeUserIds,
+    restrictToUserIds,
     value,
     valueUserQuery.data,
   ]);
@@ -98,7 +125,7 @@ export default function ProjectTeamUserSelect({
   };
 
   const isLoading =
-    teamQuery.isLoading ||
+    (!isRestricted && teamQuery.isLoading) ||
     usersQuery.isLoading ||
     (Boolean(value) && valueUserQuery.isLoading);
 
@@ -109,7 +136,9 @@ export default function ProjectTeamUserSelect({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      disabled={disabled || isLoading || teamUserIds.size === 0}
+      disabled={
+        disabled || isLoading || (!isRestricted && teamUserIds.size === 0)
+      }
       loading={isLoading}
       options={options}
       className={className}
@@ -121,10 +150,10 @@ export default function ProjectTeamUserSelect({
       notFoundContent={
         isLoading ? (
           <Spin size="small" />
-        ) : teamUserIds.size === 0 ? (
+        ) : !isRestricted && teamUserIds.size === 0 ? (
           'Add members on the project team first'
         ) : (
-          'No team members found'
+          'No matching users found'
         )
       }
     />

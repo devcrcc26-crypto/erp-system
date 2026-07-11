@@ -54,6 +54,7 @@ import {
   URGENCY_LEVEL_OPTIONS,
 } from '@/lib/constants/task-comment8';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
+import { DISPATCHER_IDS } from '@/lib/constants/dispatcher';
 import TaskDisciplinesEditor, {
   type TaskDisciplineDraft,
 } from '@/components/modules/projects/schedule/TaskDisciplinesEditor';
@@ -525,7 +526,10 @@ export default function TaskFormDrawer({
                     </Form.Item>
                   </div>
                   <Form.Item label="Dispatcher (调度员)" name="dispatcherUserId">
-                    <ProjectTeamUserSelect projectId={projectId} />
+                    <ProjectTeamUserSelect
+                      projectId={projectId}
+                      restrictToUserIds={DISPATCHER_IDS}
+                    />
                   </Form.Item>
                   {isEditing && (
                     <>
