@@ -15,6 +15,7 @@ import {
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type {
   ApprovalLevel,
   CommissionMode,
@@ -610,10 +611,10 @@ export default function TaskFormDrawer({
                     </Form.Item>
                   )}
                   <Form.Item
-                    label="Supervising chief"
+                    label="Responsible Person"
                     name="supervisingChiefUserId"
                   >
-                    <ProjectTeamUserSelect projectId={projectId} />
+                    <UserSelect />
                   </Form.Item>
                   <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
                     <Form.Item label="On-site receiving time" name="onSiteReceivingTime">

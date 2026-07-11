@@ -274,7 +274,7 @@ export default function TaskDetailContent({
                   },
                   {
                     key: 'chief',
-                    label: 'Supervising chief',
+                    label: 'Responsible Person',
                     children: resolveTeamMemberName(
                       leaderNameById,
                       task.supervisingChiefUserId,

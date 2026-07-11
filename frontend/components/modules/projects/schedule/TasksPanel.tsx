@@ -464,7 +464,7 @@ export default function TasksPanel({
           : null,
     },
     {
-      title: 'Task Supervision Company Chief Engineer / Department Chief Engineer',
+      title: 'Responsible Person',
       key: 'supervisingChief',
       ellipsis: true,
       width: 220,
