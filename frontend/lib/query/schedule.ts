@@ -107,7 +107,7 @@ export function useScheduleSubtasks(projectId: string, enabled = true): {
     [disciplinesQuery.data],
   );
 
-  const packageQueries = useQueries({
+  const { byTaskId, isPackagesLoading, isPackagesFetching } = useQueries({
     queries: disciplines.map((discipline) => ({
       queryKey: designPackageKeys.lists(projectId, discipline.id),
       queryFn: () =>
@@ -117,44 +117,43 @@ export function useScheduleSubtasks(projectId: string, enabled = true): {
       staleTime: SCHEDULE_STALE_MS,
       retry: scheduleReadRetry,
     })),
+    combine: (results) => {
+      const map = new Map<string, ScheduleSubtaskEntry[]>();
+
+      disciplines.forEach((discipline, index) => {
+        const packages = results[index]?.data ?? [];
+        for (const pkg of packages) {
+          const entry: ScheduleSubtaskEntry = {
+            package: pkg,
+            taskId: discipline.taskId,
+            taskDisciplineId: discipline.id,
+            disciplineName: discipline.disciplineName,
+            documentCount: pkg.items?.length ?? 0,
+          };
+          const existing = map.get(discipline.taskId) ?? [];
+          existing.push(entry);
+          map.set(discipline.taskId, existing);
+        }
+      });
+
+      for (const [taskId, entries] of map) {
+        map.set(
+          taskId,
+          [...entries].sort((a, b) =>
+            a.package.name.localeCompare(b.package.name),
+          ),
+        );
+      }
+
+      return {
+        byTaskId: map,
+        isPackagesLoading: results.some((result) => result.isLoading),
+        isPackagesFetching: results.some((result) => result.isFetching),
+      };
+    },
   });
 
-  const byTaskId = useMemo(() => {
-    const map = new Map<string, ScheduleSubtaskEntry[]>();
-
-    disciplines.forEach((discipline, index) => {
-      const packages = packageQueries[index]?.data ?? [];
-      for (const pkg of packages) {
-        const entry: ScheduleSubtaskEntry = {
-          package: pkg,
-          taskId: discipline.taskId,
-          taskDisciplineId: discipline.id,
-          disciplineName: discipline.disciplineName,
-          documentCount: pkg.items?.length ?? 0,
-        };
-        const existing = map.get(discipline.taskId) ?? [];
-        existing.push(entry);
-        map.set(discipline.taskId, existing);
-      }
-    });
-
-    for (const [taskId, entries] of map) {
-      map.set(
-        taskId,
-        [...entries].sort((a, b) =>
-          a.package.name.localeCompare(b.package.name),
-        ),
-      );
-    }
-
-    return map;
-  }, [disciplines, packageQueries]);
-
-  const isSubtasksLoading =
-    disciplinesQuery.isSuccess &&
-    packageQueries.some((query) => query.isLoading);
-
-  const isPackagesFetching = packageQueries.some((query) => query.isFetching);
+  const isSubtasksLoading = disciplinesQuery.isSuccess && isPackagesLoading;
 
   return {
     byTaskId,
