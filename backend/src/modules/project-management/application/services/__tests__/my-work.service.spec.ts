@@ -8,7 +8,7 @@ describe('MyWorkService', () => {
 
   let prisma: {
     taskDiscipline: { findMany: jest.Mock };
-    designPackage: { findMany: jest.Mock };
+    designPackage: { findMany: jest.Mock; groupBy: jest.Mock };
   };
   let taskAccessScopeService: {
     getVisibleProjectIds: jest.Mock;
@@ -18,7 +18,10 @@ describe('MyWorkService', () => {
   beforeEach(() => {
     prisma = {
       taskDiscipline: { findMany: jest.fn().mockResolvedValue([]) },
-      designPackage: { findMany: jest.fn().mockResolvedValue([]) },
+      designPackage: {
+        findMany: jest.fn().mockResolvedValue([]),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
     };
     taskAccessScopeService = {
       getVisibleProjectIds: jest.fn().mockResolvedValue(null),

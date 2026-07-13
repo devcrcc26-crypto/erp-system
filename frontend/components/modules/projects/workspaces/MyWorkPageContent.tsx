@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Alert, Button } from 'antd';
+import { Alert, Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import type { MyWorkItem } from '@/lib/api/epc.types';
 import { useMyWork } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -59,6 +61,7 @@ export default function MyWorkPageContent({
   const canViewMyWork = useCanViewMyWork();
   const workQuery = useMyWork(projectId);
   const { t } = useEpcTranslation();
+  const [addSubtaskFor, setAddSubtaskFor] = useState<string | null>(null);
 
   if (permLoading || workQuery.isLoading) {
     return <PageLoadingSkeleton />;
@@ -140,19 +143,46 @@ export default function MyWorkPageContent({
         ),
     },
     {
+      title: 'Subtasks',
+      key: 'subtasks',
+      width: 100,
+      render: (_value, record) =>
+        record.kind === 'DISCIPLINE_LEAD' ? (record.subtaskCount ?? 0) : '—',
+    },
+    {
       title: '',
       key: 'actions',
-      width: 100,
+      width: 200,
       fixed: 'right',
-      render: (_value, record) => (
-        <Link href={workItemHref(record)}>
-          <Button type="link" className="!px-0">
-            Open
-          </Button>
-        </Link>
-      ),
+      render: (_value, record) =>
+        record.kind === 'DISCIPLINE_LEAD' ? (
+          <Space size="small">
+            <Link href={workItemHref(record)}>
+              <Button type="link" className="!px-0">
+                View task
+              </Button>
+            </Link>
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => setAddSubtaskFor(record.taskDisciplineId)}
+            >
+              Add subtask
+            </Button>
+          </Space>
+        ) : (
+          <Link href={workItemHref(record)}>
+            <Button type="link" className="!px-0">
+              Open
+            </Button>
+          </Link>
+        ),
     },
   ];
+
+  const activeItem = workQuery.data?.find(
+    (item) => item.taskDisciplineId === addSubtaskFor,
+  );
 
   return (
     <FormLayout
@@ -171,6 +201,20 @@ export default function MyWorkPageContent({
         scroll={{ x: 960 }}
         locale={{ emptyText: t('empty.noAssignedWork') }}
       />
+
+      {addSubtaskFor && activeItem && (
+        <DesignPackageBuilder
+          open={true}
+          projectId={activeItem.projectId}
+          taskDisciplineId={addSubtaskFor}
+          editing={null}
+          onClose={() => setAddSubtaskFor(null)}
+          onSaved={() => {
+            void workQuery.refetch();
+            setAddSubtaskFor(null);
+          }}
+        />
+      )}
     </FormLayout>
   );
 }

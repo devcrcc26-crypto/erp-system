@@ -239,6 +239,7 @@ export interface MyWorkItem {
   secondaryReviewRole: ReviewTier | null;
   projectedStatus: string | null;
   packageStatus: string | null;
+  subtaskCount?: number;
 }
 
 export interface MyCommentItem {

@@ -26,8 +26,6 @@ export function isProjectNavReady(
 
 /** Project nav keys for discipline leaders (union can widen). */
 const DISCIPLINE_LEADER_PROJECT_KEYS = new Set([
-  'schedule',
-  'tasks',
   'disciplines',
   'my-work',
   'review-inbox',

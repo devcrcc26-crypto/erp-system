@@ -18,6 +18,7 @@ import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
 import TaskDetailDrawer from '@/components/modules/projects/schedule/TaskDetailDrawer';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
@@ -117,6 +118,7 @@ export default function TasksPanel({
   criticalOnly: boolean;
   onCriticalOnlyChange?: (value: boolean) => void;
 }): React.ReactNode {
+  const lens = useRoleLens();
   const queryClient = useQueryClient();
   const messageApi = useAppMessage();
   const [showSubtasks, setShowSubtasks] = useState(false);
@@ -516,16 +518,18 @@ export default function TasksPanel({
             >
               View
             </Button>
-            <Button
-              type="link"
-              className="!px-0"
-              onClick={() => {
-                setEditing(record.task);
-                setDrawerOpen(true);
-              }}
-            >
-              Edit
-            </Button>
+            {lens.canEditEngineering && (
+              <Button
+                type="link"
+                className="!px-0"
+                onClick={() => {
+                  setEditing(record.task);
+                  setDrawerOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+            )}
             <Button
               type="link"
               danger
@@ -659,17 +663,19 @@ export default function TasksPanel({
           />
           Show subtasks
         </label>
-        <Button
-          type="primary"
-          size="small"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditing(null);
-            setDrawerOpen(true);
-          }}
-        >
-          Add task
-        </Button>
+        {lens.canEditEngineering && (
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditing(null);
+              setDrawerOpen(true);
+            }}
+          >
+            Add task
+          </Button>
+        )}
       </div>
       <DataTable<ScheduleTaskTableRow>
         rowKey="key"

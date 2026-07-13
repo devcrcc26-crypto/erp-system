@@ -36,6 +36,7 @@ export interface MyWorkItem {
   secondaryReviewRole: ReviewTier | null;
   projectedStatus: string | null;
   packageStatus: string | null;
+  subtaskCount?: number;
 }
 
 /**
@@ -118,6 +119,19 @@ export class MyWorkService {
       }),
     ]);
 
+    const subtaskCounts = await this.prisma.designPackage.groupBy({
+      by: ['taskDisciplineId'],
+      where: activeOnly({
+        companyId: ctx.companyId,
+        taskDisciplineId: { in: ledDisciplines.map((d) => d.id) },
+      }),
+      _count: { id: true },
+    });
+
+    const countByDisciplineId = new Map(
+      subtaskCounts.map((r) => [r.taskDisciplineId, r._count.id]),
+    );
+
     const items: MyWorkItem[] = [];
 
     for (const discipline of ledDisciplines) {
@@ -140,6 +154,7 @@ export class MyWorkService {
         secondaryReviewRole: null,
         projectedStatus: null,
         packageStatus: null,
+        subtaskCount: countByDisciplineId.get(discipline.id) ?? 0,
       });
     }
 
