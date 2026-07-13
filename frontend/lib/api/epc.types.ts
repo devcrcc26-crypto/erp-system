@@ -2,6 +2,13 @@
  * EPC design workflow types - aligned with backend DTOs and mappers.
  */
 
+import type {
+  ApprovalLevel,
+  UrgencyLevel,
+} from '@/lib/api/project-management.types';
+
+export type { ApprovalLevel, UrgencyLevel };
+
 export type EdvStatus =
   | 'DRAFT'
   | 'IN_REVIEW'
@@ -115,7 +122,16 @@ export interface DesignPackage {
   companyId: string;
   taskDisciplineId: string;
   packageCode: string;
+  subtaskId: string | null;
+  subtaskIndex: number | null;
   name: string;
+  nameZh: string | null;
+  mainWorkContent: string | null;
+  plannedStartDate: string | null;
+  plannedFinishDate: string | null;
+  actualWorkDays: number | null;
+  urgencyLevel: UrgencyLevel | null;
+  reviewLevel: ApprovalLevel | null;
   projectedStatus: DesignPackageProjectedStatus;
   projectionPending: boolean;
   submittedAt: string | null;
@@ -484,6 +500,13 @@ export interface TransitionEdvStatusRequest {
 
 export interface CreateDesignPackageRequest {
   name: string;
+  nameZh?: string;
+  mainWorkContent?: string;
+  plannedStartDate?: string;
+  plannedFinishDate?: string;
+  actualWorkDays?: number;
+  urgencyLevel?: UrgencyLevel;
+  reviewLevel?: ApprovalLevel;
   projectedStatus?: DesignPackageProjectedStatus;
   designerUserId?: string;
   reviewerUserId?: string;

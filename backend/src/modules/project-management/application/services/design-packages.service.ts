@@ -242,12 +242,56 @@ export class DesignPackagesService {
       'SUBTASK',
     );
 
+    const maxPackage = await this.prisma.designPackage.aggregate({
+      where: activeOnly({
+        taskDisciplineId,
+        companyId: ctx.companyId,
+      }),
+      _max: { subtaskIndex: true },
+    });
+    const subtaskIndex = (maxPackage._max.subtaskIndex ?? 0) + 1;
+
+    const parentDiscipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        id: taskDisciplineId,
+        companyId: ctx.companyId,
+      }),
+      include: {
+        task: {
+          select: {
+            overseasTaskNumber: true,
+          },
+        },
+      },
+    });
+
+    const subtaskId =
+      parentDiscipline?.task.overseasTaskNumber &&
+      parentDiscipline.disciplineIndex
+        ? `${parentDiscipline.task.overseasTaskNumber}-${String(
+            parentDiscipline.disciplineIndex,
+          ).padStart(2, '0')}-${String(subtaskIndex).padStart(2, '0')}`
+        : null;
+
     const row = await this.designPackageRepository.createWithBriefAttachments({
       packageData: {
         company: { connect: { id: ctx.companyId } },
         taskDiscipline: { connect: { id: taskDisciplineId } },
         packageCode,
+        subtaskIndex,
+        subtaskId,
         name: dto.name,
+        nameZh: dto.nameZh,
+        mainWorkContent: dto.mainWorkContent,
+        plannedStartDate: dto.plannedStartDate
+          ? new Date(dto.plannedStartDate)
+          : undefined,
+        plannedFinishDate: dto.plannedFinishDate
+          ? new Date(dto.plannedFinishDate)
+          : undefined,
+        actualWorkDays: dto.actualWorkDays,
+        urgencyLevel: dto.urgencyLevel,
+        reviewLevel: dto.reviewLevel,
         projectedStatus:
           dto.projectedStatus ?? DesignPackageProjectedStatus.IN_PROGRESS,
         requiredTiers,
@@ -437,6 +481,17 @@ export class DesignPackagesService {
 
     await this.designPackageRepository.update(packageId, {
       name: dto.name,
+      nameZh: dto.nameZh,
+      mainWorkContent: dto.mainWorkContent,
+      plannedStartDate: dto.plannedStartDate
+        ? new Date(dto.plannedStartDate)
+        : undefined,
+      plannedFinishDate: dto.plannedFinishDate
+        ? new Date(dto.plannedFinishDate)
+        : undefined,
+      actualWorkDays: dto.actualWorkDays,
+      urgencyLevel: dto.urgencyLevel,
+      reviewLevel: dto.reviewLevel,
       projectedStatus: dto.projectedStatus,
       requiredTiers,
       instituteChiefName: nextInstituteChiefName,

@@ -75,7 +75,10 @@ export default function SubtaskRolesModal({
         className="erp-drawer-form"
         onFinish={(values: SubtaskRolesFormValues) => void handleSubmit(values)}
       >
-        <SubtaskRolesFormFields projectId={projectId} />
+        <SubtaskRolesFormFields
+          projectId={projectId}
+          reviewLevel={subtask?.reviewLevel}
+        />
       </Form>
     </Modal>
   );

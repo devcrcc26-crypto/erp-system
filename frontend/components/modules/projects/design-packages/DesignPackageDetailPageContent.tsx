@@ -13,8 +13,10 @@ import {
   Modal,
   Space,
   Tooltip,
+  Typography,
 } from 'antd';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
+import StackedName from '@/components/ui/StackedName/StackedName';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import ReturnedSessionBanner from '@/components/modules/projects/review/ReturnedSessionBanner';
 import RequiredTiersStepIndicator from '@/components/modules/projects/review/RequiredTiersStepIndicator';
@@ -68,6 +70,11 @@ import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/R
 import { useCurrentUser } from '@/lib/query/profile';
 import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import {
+  formatTaskReviewLevelLabel,
+  formatUrgencyLevelLabel,
+} from '@/lib/constants/task-comment8';
 
 export default function DesignPackageDetailPageContent({
   projectId,
@@ -330,7 +337,6 @@ export default function DesignPackageDetailPageContent({
       />
 
       <FormLayout
-        title={pkg.name}
         description={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <span>Subtask items, dependencies, and workflow actions.</span>
@@ -420,6 +426,69 @@ export default function DesignPackageDetailPageContent({
           </Space>
         }
       >
+        <div className="mb-6 border-b border-slate-200 pb-6">
+          <StackedName
+            name={pkg.name}
+            nameZh={pkg.nameZh}
+            className="text-lg font-semibold text-slate-900"
+          />
+
+          <div className="mt-4">
+            <p className="mb-1 text-xs text-slate-500">Subtask ID</p>
+            {pkg.subtaskId ? (
+              <Typography.Text copyable className="font-mono text-sm">
+                {pkg.subtaskId}
+              </Typography.Text>
+            ) : (
+              <p className="text-sm font-medium text-slate-900">-</p>
+            )}
+          </div>
+
+          {pkg.mainWorkContent ? (
+            <div className="mt-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Main work content
+              </p>
+              <p className="whitespace-pre-wrap text-sm text-slate-700">
+                {pkg.mainWorkContent}
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mb-8 grid gap-6 rounded-lg border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <p className="text-xs text-slate-500">Planned start</p>
+            <p className="text-sm font-medium">
+              {formatProjectDate(pkg.plannedStartDate)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Planned finish</p>
+            <p className="text-sm font-medium">
+              {formatProjectDate(pkg.plannedFinishDate)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Actual work days</p>
+            <p className="text-sm font-medium">
+              {pkg.actualWorkDays != null ? pkg.actualWorkDays : '-'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Urgency level</p>
+            <p className="text-sm font-medium">
+              {formatUrgencyLevelLabel(pkg.urgencyLevel)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Review level</p>
+            <p className="text-sm font-medium">
+              {formatTaskReviewLevelLabel(pkg.reviewLevel)}
+            </p>
+          </div>
+        </div>
+
         <ProjectionLagHelper pending={pkg.projectionPending} />
 
         {reviewSessionId && !isFinalReviewTier(reviewMode?.currentTier, pkg.requiredTiers) && (

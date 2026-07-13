@@ -859,12 +859,22 @@ export class ScheduleService {
     const roleNames = await this.resolveDisciplineRoleNames(ctx, dto);
     const catalog = await this.resolveEngineeringDiscipline(ctx, dto.disciplineId);
 
+    const maxDiscipline = await this.prisma.taskDiscipline.aggregate({
+      where: activeOnly({
+        taskId,
+        companyId: ctx.companyId,
+      }),
+      _max: { disciplineIndex: true },
+    });
+    const disciplineIndex = (maxDiscipline._max.disciplineIndex ?? 0) + 1;
+
     const discipline = await this.prisma.taskDiscipline.create({
       data: {
         taskId,
         companyId: ctx.companyId,
         disciplineId: catalog.id,
         disciplineName: catalog.name,
+        disciplineIndex,
         designerName: roleNames.designerName,
         reviewerName: roleNames.reviewerName,
         disciplinaryLeader: roleNames.disciplinaryLeader,

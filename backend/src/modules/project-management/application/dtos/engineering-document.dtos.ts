@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsDateString,
   IsEnum,
   IsIn,
   IsInt,
@@ -13,12 +14,14 @@ import {
   Min,
 } from 'class-validator';
 import {
+  ApprovalLevel,
   DesignPackageDependencyType,
   DesignPackageProjectedStatus,
   EdvStatus,
   EngineeringDocumentType,
   ReviewTier,
   TaskDisciplineProjectedStatus,
+  UrgencyLevel,
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
@@ -400,6 +403,43 @@ export class CreateDesignPackageDto {
   @IsOptional()
   @IsEntityUuid()
   supportingDesignerUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  nameZh?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  mainWorkContent?: string;
+
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  plannedStartDate?: string;
+
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  plannedFinishDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  actualWorkDays?: number;
+
+  @ApiPropertyOptional({ enum: UrgencyLevel })
+  @IsOptional()
+  @IsEnum(UrgencyLevel)
+  urgencyLevel?: UrgencyLevel;
+
+  @ApiPropertyOptional({ enum: ApprovalLevel })
+  @IsOptional()
+  @IsEnum(ApprovalLevel)
+  reviewLevel?: ApprovalLevel;
 }
 
 export class UpdateDesignPackageDto extends PartialType(CreateDesignPackageDto) {}

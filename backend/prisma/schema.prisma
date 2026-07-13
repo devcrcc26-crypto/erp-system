@@ -1595,6 +1595,7 @@ model TaskDiscipline {
   closedBy                 String?                      @map("closed_by")
   actualCompletionTime     DateTime?                    @map("actual_completion_time")
   deptReviewTime       DateTime?                    @map("dept_review_time")
+  disciplineIndex        Int?                         @map("discipline_index")
   createdAt              DateTime                     @default(now()) @map("created_at")
   createdBy              String                       @map("created_by")
   updatedAt              DateTime                     @updatedAt @map("updated_at")
@@ -1694,7 +1695,16 @@ model DesignPackage {
   companyId         String                       @map("company_id")
   taskDisciplineId  String                       @map("task_discipline_id")
   packageCode       String                       @map("package_code")
+  subtaskIndex      Int?                         @map("subtask_index")
+  subtaskId         String?                      @map("subtask_id")
   name              String
+  nameZh            String?                      @map("name_zh")
+  mainWorkContent   String?                      @map("main_work_content")
+  plannedStartDate  DateTime?                    @map("planned_start_date") @db.Date
+  plannedFinishDate DateTime?                    @map("planned_finish_date") @db.Date
+  actualWorkDays    Int?                         @map("actual_work_days")
+  urgencyLevel      UrgencyLevel?                @map("urgency_level")
+  reviewLevel       ApprovalLevel?               @map("review_level")
   projectedStatus   DesignPackageProjectedStatus @default(IN_PROGRESS) @map("projected_status")
   projectionPending Boolean                      @default(false) @map("projection_pending")
   submittedAt       DateTime?                    @map("submitted_at")

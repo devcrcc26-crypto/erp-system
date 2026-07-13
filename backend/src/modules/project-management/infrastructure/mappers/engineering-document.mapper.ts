@@ -1,10 +1,12 @@
 import {
+  ApprovalLevel,
   DesignPackage,
   DesignPackageDependency,
   DesignPackageItem,
   EngineeringDocument,
   EngineeringDocumentVersion,
   Prisma,
+  UrgencyLevel,
   WorkflowEventLog,
 } from '@prisma/client';
 
@@ -51,7 +53,16 @@ export interface MappedDesignPackage {
   companyId: string;
   taskDisciplineId: string;
   packageCode: string;
+  subtaskId: string | null;
+  subtaskIndex: number | null;
   name: string;
+  nameZh: string | null;
+  mainWorkContent: string | null;
+  plannedStartDate: string | null;
+  plannedFinishDate: string | null;
+  actualWorkDays: number | null;
+  urgencyLevel: UrgencyLevel | null;
+  reviewLevel: ApprovalLevel | null;
   projectedStatus: DesignPackage['projectedStatus'];
   projectionPending: boolean;
   submittedAt: string | null;
@@ -172,7 +183,20 @@ export function mapDesignPackage(
     companyId: row.companyId,
     taskDisciplineId: row.taskDisciplineId,
     packageCode: row.packageCode,
+    subtaskId: row.subtaskId ?? null,
+    subtaskIndex: row.subtaskIndex ?? null,
     name: row.name,
+    nameZh: row.nameZh ?? null,
+    mainWorkContent: row.mainWorkContent ?? null,
+    plannedStartDate: row.plannedStartDate
+      ? row.plannedStartDate.toISOString().split('T')[0]
+      : null,
+    plannedFinishDate: row.plannedFinishDate
+      ? row.plannedFinishDate.toISOString().split('T')[0]
+      : null,
+    actualWorkDays: row.actualWorkDays ?? null,
+    urgencyLevel: row.urgencyLevel ?? null,
+    reviewLevel: row.reviewLevel ?? null,
     projectedStatus: row.projectedStatus,
     projectionPending: row.projectionPending,
     submittedAt: toIsoString(row.submittedAt),

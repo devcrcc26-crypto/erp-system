@@ -56,6 +56,7 @@ function mockEdv(id: string, status: EdvStatus): EdvWithDiscipline {
         closedBy: null,
         actualCompletionTime: null,
         deptReviewTime: null,
+        disciplineIndex: null,
         createdAt: new Date(),
         createdBy: 'u',
         updatedAt: new Date(),
