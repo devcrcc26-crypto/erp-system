@@ -283,6 +283,9 @@ export interface TaskDiscipline {
   companyId: string;
   disciplineId: string | null;
   disciplineName: string;
+  disciplineIndex?: number | null;
+  disciplineNumber?: string | null;
+  overseasTaskNumber?: string | null;
   projectedStatus?: TaskDisciplineProjectedStatus;
   designerName: string | null;
   reviewerName: string | null;

@@ -64,7 +64,12 @@ import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import type { ReviewTier } from '@/lib/api/epc.types';
 import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
 import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
-import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
+import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
+import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
+import {
+  reviewModeHref,
+  scheduleDisciplineWorkspaceHref,
+} from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -215,9 +220,11 @@ export default function DesignPackageDetailPageContent({
       pkg.requiredTiers,
       lockGuidance.inReviewEdvIds.length,
     );
-  const isDisciplineLeader =
-    Boolean(currentUserId) &&
-    discipline.disciplineLeadUserId === currentUserId;
+  const isDisciplineLeader = canManageSubtaskAsDisciplineLeader(
+    discipline,
+    currentUserId,
+  );
+  const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
   const isDeptDeputyChief =
     Boolean(currentUserId) &&
     (pkg.deptDeputyChiefUserId ?? discipline.chiefUserId) === currentUserId;
@@ -332,15 +339,14 @@ export default function DesignPackageDetailPageContent({
     <div className={layout.pageStack}>
       <Breadcrumb
         items={[
-          { title: <Link href={`/projects/${projectId}/disciplines`}>Disciplines</Link> },
           {
             title: (
-              <Link href={`/projects/${projectId}/disciplines/${taskDisciplineId}`}>
-                {discipline.disciplineName}
+              <Link href={scheduleDisciplineWorkspaceHref(projectId, taskDisciplineId)}>
+                {disciplineLabel}
               </Link>
             ),
           },
-          { title: pkg.name },
+          { title: pkg.subtaskId ?? pkg.name },
         ]}
       />
 

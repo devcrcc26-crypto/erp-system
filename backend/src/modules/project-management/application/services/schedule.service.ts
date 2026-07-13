@@ -359,6 +359,7 @@ export class ScheduleService {
       });
 
       if (dto.disciplines?.length) {
+        let nextDisciplineIndex = 1;
         for (const disciplineDto of dto.disciplines) {
           const catalog = await this.resolveEngineeringDiscipline(
             ctx,
@@ -374,12 +375,14 @@ export class ScheduleService {
               companyId: ctx.companyId,
               disciplineId: catalog.id,
               disciplineName: catalog.name,
+              disciplineIndex: nextDisciplineIndex,
               disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
               disciplinaryLeader,
               createdBy: ctx.userId,
               updatedBy: ctx.userId,
             },
           });
+          nextDisciplineIndex += 1;
           createdDisciplines.push({
             id: discipline.id,
             disciplineName: discipline.disciplineName,
@@ -505,6 +508,16 @@ export class ScheduleService {
       }
 
       if (dto.disciplinesToAdd?.length) {
+        const maxDiscipline = await tx.taskDiscipline.aggregate({
+          where: activeOnly({
+            taskId,
+            companyId: ctx.companyId,
+          }),
+          _max: { disciplineIndex: true },
+        });
+        let nextDisciplineIndex =
+          (maxDiscipline._max.disciplineIndex ?? 0) + 1;
+
         for (const disciplineDto of dto.disciplinesToAdd) {
           const catalog = await this.resolveEngineeringDiscipline(
             ctx,
@@ -520,12 +533,14 @@ export class ScheduleService {
               companyId: ctx.companyId,
               disciplineId: catalog.id,
               disciplineName: catalog.name,
+              disciplineIndex: nextDisciplineIndex,
               disciplineLeadUserId: disciplineDto.disciplineLeadUserId,
               disciplinaryLeader,
               createdBy: ctx.userId,
               updatedBy: ctx.userId,
             },
           });
+          nextDisciplineIndex += 1;
           createdDisciplines.push({
             id: discipline.id,
             disciplineName: discipline.disciplineName,
@@ -764,19 +779,23 @@ export class ScheduleService {
       }),
       include: {
         task: {
-          select: { name: true, nameZh: true },
+          select: { name: true, nameZh: true, overseasTaskNumber: true },
         },
         ...TASK_DISCIPLINE_USER_INCLUDE,
       },
-      orderBy: [{ task: { name: 'asc' } }, { createdAt: 'asc' }],
+      orderBy: [{ task: { name: 'asc' } }, { disciplineIndex: 'asc' }, { createdAt: 'asc' }],
     });
 
     return disciplines.map((discipline) => ({
-      ...mapTaskDiscipline(discipline),
+      ...mapTaskDiscipline(
+        discipline,
+        discipline.task.overseasTaskNumber,
+      ),
       taskName: formatLocalizedName(
         discipline.task.name,
         discipline.task.nameZh,
       ),
+      overseasTaskNumber: discipline.task.overseasTaskNumber,
     }));
   }
 
@@ -803,7 +822,7 @@ export class ScheduleService {
       }),
       include: {
         task: {
-          select: { name: true, nameZh: true },
+          select: { name: true, nameZh: true, overseasTaskNumber: true },
         },
         ...TASK_DISCIPLINE_USER_INCLUDE,
       },
@@ -814,11 +833,15 @@ export class ScheduleService {
     }
 
     return {
-      ...mapTaskDiscipline(discipline),
+      ...mapTaskDiscipline(
+        discipline,
+        discipline.task.overseasTaskNumber,
+      ),
       taskName: formatLocalizedName(
         discipline.task.name,
         discipline.task.nameZh,
       ),
+      overseasTaskNumber: discipline.task.overseasTaskNumber,
     };
   }
 
@@ -924,7 +947,10 @@ export class ScheduleService {
       }
     }
 
-    return mapTaskDiscipline(discipline);
+    return mapTaskDiscipline(
+      discipline,
+      await this.resolveTaskOverseasNumber(taskId),
+    );
   }
 
   /**
@@ -1003,7 +1029,10 @@ export class ScheduleService {
       }
     }
 
-    return mapTaskDiscipline(discipline);
+    return mapTaskDiscipline(
+      discipline,
+      await this.resolveTaskOverseasNumber(taskId),
+    );
   }
 
   /**
@@ -1055,7 +1084,10 @@ export class ScheduleService {
       include: TASK_DISCIPLINE_USER_INCLUDE,
     });
 
-    return mapTaskDiscipline(updated);
+    return mapTaskDiscipline(
+      updated,
+      await this.resolveTaskOverseasNumber(taskId),
+    );
   }
 
   /**
@@ -1250,6 +1282,14 @@ export class ScheduleService {
         'Actual completion time cannot be set while task status is Not started.',
       );
     }
+  }
+
+  private async resolveTaskOverseasNumber(taskId: string): Promise<string | null> {
+    const task = await this.prisma.task.findFirst({
+      where: activeOnly({ id: taskId }),
+      select: { overseasTaskNumber: true },
+    });
+    return task?.overseasTaskNumber ?? null;
   }
 
   private async resolveEngineeringDiscipline(

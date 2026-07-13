@@ -2,7 +2,6 @@
 
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Breadcrumb, Button, Descriptions } from 'antd';
@@ -28,6 +27,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
+import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
+import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import type { SubtaskRole } from '@/lib/api/epc.types';
 
@@ -131,9 +132,11 @@ export default function DisciplineDetailPageContent({
     );
   }
 
-  const isDisciplineLeader =
-    Boolean(currentUserId) &&
-    discipline.disciplineLeadUserId === currentUserId;
+  const isDisciplineLeader = canManageSubtaskAsDisciplineLeader(
+    discipline,
+    currentUserId,
+  );
+  const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
   const canCloseDiscipline =
     isDisciplineLeader && allPackagesClosed && !discipline.isClosed;
 
@@ -180,10 +183,7 @@ export default function DisciplineDetailPageContent({
   return (
     <div className={layout.pageStack}>
       <Breadcrumb
-        items={[
-          { title: <Link href={`/projects/${projectId}/disciplines`}>Disciplines</Link> },
-          { title: discipline.disciplineName },
-        ]}
+        items={[{ title: disciplineLabel }]}
       />
 
       {revisionTriggerContext?.triggerSource === 'RFI' && (
@@ -196,10 +196,14 @@ export default function DisciplineDetailPageContent({
       )}
 
       <FormLayout
-        title={discipline.disciplineName}
+        title={disciplineLabel}
         description={
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            <span>{`Schedule task: ${discipline.taskName}`}</span>
+            <span>
+              {discipline.disciplineName}
+              {' · '}
+              {`Schedule task: ${discipline.taskName}`}
+            </span>
             {actingAsLabel ? (
               <ResourceRoleContextBadge
                 label={actingAsLabel}
@@ -219,6 +223,9 @@ export default function DisciplineDetailPageContent({
         <ProjectionLagHelper pending={projectionPending} />
 
         <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} className="mb-6">
+          <Descriptions.Item label="Discipline number">
+            {disciplineLabel}
+          </Descriptions.Item>
           <Descriptions.Item label="Discipline name">
             {discipline.disciplineName}
           </Descriptions.Item>

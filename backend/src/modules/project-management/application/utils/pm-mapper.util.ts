@@ -39,6 +39,7 @@ import {
   RaisedRfiSummary,
   SourceEntitySummary,
 } from './source-entity.util';
+import { formatDisciplineNumber } from '../../../../shared/discipline-number.util';
 
 /**
  * Formats a date as an ISO date string (YYYY-MM-DD).
@@ -963,6 +964,8 @@ export interface MappedTaskDiscipline {
   companyId: string;
   disciplineId: string | null;
   disciplineName: string;
+  disciplineIndex: number | null;
+  disciplineNumber: string | null;
   projectedStatus: TaskDiscipline['projectedStatus'];
   designerName: string | null;
   reviewerName: string | null;
@@ -990,6 +993,7 @@ export interface MappedTaskDiscipline {
 
 export interface MappedProjectTaskDiscipline extends MappedTaskDiscipline {
   taskName: string;
+  overseasTaskNumber: string | null;
 }
 
 export interface MappedTaskDependency {
@@ -1153,6 +1157,7 @@ function mapDisciplineUserSummary(
  */
 export function mapTaskDiscipline(
   discipline: TaskDisciplineWithUsers,
+  overseasTaskNumber?: string | null,
 ): MappedTaskDiscipline {
   return {
     id: discipline.id,
@@ -1160,6 +1165,11 @@ export function mapTaskDiscipline(
     companyId: discipline.companyId,
     disciplineId: discipline.disciplineId,
     disciplineName: discipline.disciplineName,
+    disciplineIndex: discipline.disciplineIndex,
+    disciplineNumber: formatDisciplineNumber(
+      overseasTaskNumber ?? null,
+      discipline.disciplineIndex,
+    ),
     projectedStatus: discipline.projectedStatus,
     designerName: discipline.designerName,
     reviewerName: discipline.reviewerName,

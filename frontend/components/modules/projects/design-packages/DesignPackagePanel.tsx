@@ -47,6 +47,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
 import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
 import { reviewModeHref, scheduleSubtaskWorkspaceHref } from '@/lib/utils/schedule-subtasks';
+import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 
 const REVIEWER_TIER_ROLES = new Set([
   'REVIEWER',
@@ -208,9 +209,13 @@ export default function DesignPackagePanel({
         const canUploadToPackage =
           roles?.primaryRole === 'DESIGNER' ||
           roles?.primaryRole === 'SUPPORTING_DESIGNER';
+        const canEditSubtask =
+          lens.canEditEngineering ||
+          canManageSubtaskAsDisciplineLeader(
+            disciplineQuery.data,
+            currentUserId,
+          );
         const canSubmitPackage = roles?.primaryRole === 'DESIGNER';
-        const isRowPackageDisciplineLeader =
-          roles?.primaryRole === 'DISCIPLINE_LEAD';
         const submitEligibility = getPackageSubmitEligibility(
           record,
           record.items,
@@ -254,9 +259,7 @@ export default function DesignPackagePanel({
               setEditing(record);
               setBuilderOpen(true);
             }}
-            disabled={
-              !lens.canEditEngineering && !isRowPackageDisciplineLeader
-            }
+            disabled={!canEditSubtask}
           >
             Edit
           </Button>
@@ -264,9 +267,7 @@ export default function DesignPackagePanel({
             type="link"
             className="!px-0"
             onClick={() => setEditingRoles(record)}
-            disabled={
-              !lens.canEditEngineering && !isRowPackageDisciplineLeader
-            }
+            disabled={!canEditSubtask}
           >
             Edit roles
           </Button>
@@ -282,9 +283,7 @@ export default function DesignPackagePanel({
             type="link"
             className="!px-0"
             onClick={() => setAddDepPackageId(record.id)}
-            disabled={
-              !lens.canEditEngineering && !isRowPackageDisciplineLeader
-            }
+            disabled={!canEditSubtask}
           >
             Add dependency
           </Button>
@@ -303,7 +302,11 @@ export default function DesignPackagePanel({
           : 'Packages grouped by projected workflow status - not folder hierarchy.'
       }
       extra={
-        lens.canCreateEngineering ? (
+        lens.canCreateEngineering ||
+        canManageSubtaskAsDisciplineLeader(
+          disciplineQuery.data,
+          currentUserId,
+        ) ? (
           <Button
             type="primary"
             size="small"
@@ -347,7 +350,11 @@ export default function DesignPackagePanel({
           title="No subtasks"
           description="Create a package to begin the review workflow"
           action={
-            lens.canCreateEngineering
+            lens.canCreateEngineering ||
+            canManageSubtaskAsDisciplineLeader(
+              disciplineQuery.data,
+              currentUserId,
+            )
               ? {
                   label: 'New subtask',
                   onClick: () => {

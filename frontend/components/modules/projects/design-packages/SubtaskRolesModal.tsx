@@ -62,7 +62,8 @@ export default function SubtaskRolesModal({
       confirmLoading={updateSubtask.isPending}
       destroyOnHidden
       width={720}
-      className="erp-responsive-drawer"
+      className="erp-responsive-modal"
+      styles={{ body: { overflow: 'visible' } }}
       afterOpenChange={(visible: boolean) => {
         if (visible && subtask) {
           form.setFieldsValue(toSubtaskRolesFormValues(subtask));
