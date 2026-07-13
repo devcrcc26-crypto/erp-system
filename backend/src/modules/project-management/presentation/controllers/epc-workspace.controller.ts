@@ -3,7 +3,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { EpcWorkspaceService } from '../../application/services/epc-workspace.service';
@@ -42,29 +41,21 @@ export class EpcWorkspaceController {
   }
 
   @Get('review-inbox')
-  @RequireAnyPermission(
-    { module: 'schedule', action: 'approve' },
-    { module: 'schedule', action: 'view' },
-    { module: 'review_sessions', action: 'approve' },
-  )
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Review inbox for current user' })
   reviewInbox(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
     return this.epcWorkspaceService.getReviewInbox(this.ctx(user));
   }
 
   @Get('my-comments')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Open comments assigned to current user' })
   myComments(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
     return this.epcWorkspaceService.getMyComments(this.ctx(user));
   }
 
   @Get('projects/:projectId/review-inbox')
-  @RequireAnyPermission(
-    { module: 'schedule', action: 'approve' },
-    { module: 'schedule', action: 'view' },
-    { module: 'review_sessions', action: 'approve' },
-  )
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Review inbox for current user scoped to a project' })
   projectReviewInbox(
     @CurrentUser() user: AuthenticatedUser,
@@ -74,7 +65,7 @@ export class EpcWorkspaceController {
   }
 
   @Get('projects/:projectId/my-comments')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Open comments assigned to current user scoped to a project' })
   projectMyComments(
     @CurrentUser() user: AuthenticatedUser,
@@ -119,7 +110,7 @@ export class EpcWorkspaceController {
   }
 
   @Get('design-packages/:designPackageId/review-mode')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Review mode payload for a design package' })
   reviewMode(
     @CurrentUser() user: AuthenticatedUser,

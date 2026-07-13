@@ -10,8 +10,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddReviewCommentDto,
@@ -33,7 +33,7 @@ export class ReviewCommentsController {
   }
 
   @Get(':commentId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get review comment detail' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -43,7 +43,7 @@ export class ReviewCommentsController {
   }
 
   @Post()
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add review comment to EDV in active session' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -53,7 +53,7 @@ export class ReviewCommentsController {
   }
 
   @Patch(':commentId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Edit own OPEN review comment' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -64,7 +64,7 @@ export class ReviewCommentsController {
   }
 
   @Patch(':commentId/status')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Transition review comment status' })
   transition(
     @CurrentUser() user: AuthenticatedUser,
@@ -79,7 +79,7 @@ export class ReviewCommentsController {
   }
 
   @Post(':commentId/verify')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Verify RESOLVED comment (RESOLVED → VERIFIED)' })
   verify(
     @CurrentUser() user: AuthenticatedUser,
@@ -94,7 +94,7 @@ export class ReviewCommentsController {
   }
 
   @Delete(':commentId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove own OPEN review comment' })
   remove(
     @CurrentUser() user: AuthenticatedUser,

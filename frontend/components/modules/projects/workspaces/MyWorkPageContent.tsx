@@ -31,18 +31,12 @@ const REVIEWER_TIER_ROLES = new Set([
   'INSTITUTE_CHIEF',
 ]);
 
-function workItemHref(
-  item: MyWorkItem,
-  hasProjectAccess: boolean,
-): string {
+function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'DISCIPLINE_LEAD') {
-    if (hasProjectAccess) {
-      return scheduleDisciplineWorkspaceHref(
-        item.projectId,
-        item.taskDisciplineId,
-      );
-    }
-    return '/my-work';
+    return scheduleDisciplineWorkspaceHref(
+      item.projectId,
+      item.taskDisciplineId,
+    );
   }
 
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
@@ -66,7 +60,8 @@ function workItemHref(
       item.designPackageId,
     );
   }
-  return `/projects/${item.projectId}/schedule/tasks/${item.taskId}`;
+
+  return '/my-work';
 }
 
 export default function MyWorkPageContent({
@@ -178,7 +173,7 @@ export default function MyWorkPageContent({
         record.kind === 'DISCIPLINE_LEAD' ? (
           <Space size="small">
             {hasProjectAccess ? (
-              <Link href={workItemHref(record, hasProjectAccess)}>
+              <Link href={workItemHref(record)}>
                 <Button type="link" className="!px-0">
                   View task
                 </Button>
@@ -193,7 +188,7 @@ export default function MyWorkPageContent({
             </Button>
           </Space>
         ) : (
-          <Link href={workItemHref(record, hasProjectAccess)}>
+          <Link href={workItemHref(record)}>
             <Button type="link" className="!px-0">
               Open
             </Button>

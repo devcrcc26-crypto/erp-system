@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { WorkflowEntityType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
@@ -45,7 +46,7 @@ export class EngineeringDocumentsController {
   }
 
   @Get()
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List engineering documents for a discipline' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -62,7 +63,7 @@ export class EngineeringDocumentsController {
   }
 
   @Get('upload-folder')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Resolve discipline document upload folder' })
   uploadFolder(
     @CurrentUser() user: AuthenticatedUser,
@@ -97,7 +98,7 @@ export class EngineeringDocumentsController {
   }
 
   @Get(':id')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get engineering document' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -197,7 +198,7 @@ export class EngineeringDocumentsController {
   }
 
   @Post(':id/versions/:versionId/transition')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Transition EDV status via WorkflowKernel Phase A' })
   transitionVersion(
     @CurrentUser() user: AuthenticatedUser,

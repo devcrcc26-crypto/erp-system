@@ -13,6 +13,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -150,7 +151,7 @@ export class ScheduleController {
   }
 
   @Get('tasks')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project tasks' })
   listTasks(
     @CurrentUser() user: AuthenticatedUser,
@@ -161,7 +162,7 @@ export class ScheduleController {
   }
 
   @Get('tasks/:taskId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get project task by id' })
   getTask(
     @CurrentUser() user: AuthenticatedUser,
@@ -207,7 +208,7 @@ export class ScheduleController {
   }
 
   @Get('disciplines')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List all project schedule disciplines' })
   listProjectDisciplines(
     @CurrentUser() user: AuthenticatedUser,
@@ -220,7 +221,7 @@ export class ScheduleController {
   }
 
   @Get('disciplines/:disciplineId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get project schedule discipline by id' })
   getProjectDiscipline(
     @CurrentUser() user: AuthenticatedUser,

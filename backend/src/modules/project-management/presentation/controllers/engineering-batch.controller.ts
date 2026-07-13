@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
@@ -46,7 +47,7 @@ export class EngineeringBatchController {
   }
 
   @Post('engineering-documents/batch-lock')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Lock all EDVs in multiple design packages' })
   batchLock(
     @CurrentUser() user: AuthenticatedUser,
@@ -115,7 +116,7 @@ export class EngineeringBatchController {
   }
 
   @Get('revision-triggers')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List external review triggers for a project' })
   listRevisionTriggers(
     @CurrentUser() user: AuthenticatedUser,
@@ -130,7 +131,7 @@ export class EngineeringBatchController {
   }
 
   @Get('revision-triggers/:triggerId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get external review trigger by id' })
   getRevisionTrigger(
     @CurrentUser() user: AuthenticatedUser,

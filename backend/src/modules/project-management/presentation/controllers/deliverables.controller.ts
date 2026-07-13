@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -36,7 +37,7 @@ export class DeliverablesController {
   }
 
   @Get()
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project deliverables' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,7 +52,7 @@ export class DeliverablesController {
   }
 
   @Get(':deliverableId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get deliverable by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,

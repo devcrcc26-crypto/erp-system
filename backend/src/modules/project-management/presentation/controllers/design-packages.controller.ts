@@ -45,7 +45,7 @@ export class DesignPackagesController {
   }
 
   @Get()
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List design packages for a discipline' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -77,7 +77,7 @@ export class DesignPackagesController {
   }
 
   @Get('review-sessions')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List review sessions for a discipline' })
   listReviewSessions(
     @CurrentUser() user: AuthenticatedUser,
@@ -94,7 +94,7 @@ export class DesignPackagesController {
   }
 
   @Get(':packageId')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get design package' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -130,7 +130,7 @@ export class DesignPackagesController {
   }
 
   @Delete(':packageId')
-  @RequirePermission('schedule', 'delete')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Soft-delete design package' })
   async delete(
     @CurrentUser() user: AuthenticatedUser,
@@ -187,7 +187,7 @@ export class DesignPackagesController {
   }
 
   @Get(':packageId/dependencies')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List design package dependencies' })
   listDependencies(
     @CurrentUser() user: AuthenticatedUser,
@@ -243,7 +243,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/lock-edvs')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Lock all EDVs in package via WorkflowKernel' })
   lockEdvs(
     @CurrentUser() user: AuthenticatedUser,
@@ -279,7 +279,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/batch-approve')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Batch approve EDVs in package via WorkflowKernel' })
   batchApprove(
     @CurrentUser() user: AuthenticatedUser,
@@ -298,7 +298,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/batch-return')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Batch return EDVs in package via WorkflowKernel' })
   batchReturn(
     @CurrentUser() user: AuthenticatedUser,
@@ -357,7 +357,7 @@ export class DesignPackagesController {
   }
 
   @Get(':packageId/review-sessions/:reviewSessionId/snapshot')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get frozen context snapshot for a review session' })
   getReviewSnapshot(
     @CurrentUser() user: AuthenticatedUser,
@@ -376,7 +376,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/review-sessions/:reviewSessionId/attachments')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Attach a document at the current review tier' })
   addSessionAttachment(
     @CurrentUser() user: AuthenticatedUser,
@@ -397,7 +397,7 @@ export class DesignPackagesController {
   }
 
   @Get(':packageId/review-sessions/:reviewSessionId/attachments')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List tier attachments for a review session' })
   listSessionAttachments(
     @CurrentUser() user: AuthenticatedUser,

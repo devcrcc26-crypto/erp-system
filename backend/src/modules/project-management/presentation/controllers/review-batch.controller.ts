@@ -1,8 +1,8 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   BatchReviewApproveDto,
@@ -22,7 +22,7 @@ export class ReviewBatchController {
   }
 
   @Post('batch-approve')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Batch approve EDVs in a design package' })
   batchApprove(
     @CurrentUser() user: AuthenticatedUser,
@@ -32,7 +32,7 @@ export class ReviewBatchController {
   }
 
   @Post('batch-return')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Batch return EDVs with comment template' })
   batchReturn(
     @CurrentUser() user: AuthenticatedUser,
