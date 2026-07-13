@@ -28,9 +28,9 @@ export default function TaskDetailPageContent({
   if (!taskQuery.data) {
     return (
       <div className="p-6">
-        <Link href={`/projects/${projectId}/schedule`}>
+        <Link href={`/projects/${projectId}/schedule/tasks`}>
           <Button type="link" className="!px-0" icon={<ArrowLeftOutlined />}>
-            Back to schedule
+            Back to tasks
           </Button>
         </Link>
         <p className="mt-4 text-[14px] text-gray-500">Task not found.</p>

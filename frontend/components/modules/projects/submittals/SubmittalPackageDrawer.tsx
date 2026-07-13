@@ -28,6 +28,7 @@ import { designPackageKeys } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface SubmittalPackageFormValues {
   category: string;
@@ -153,7 +154,7 @@ function SubmittalPackageForm({
 }: {
   form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
   projectId: string;
-  disciplines: { id: string; disciplineName: string }[];
+  disciplines: { id: string; disciplineIndex?: number | null }[];
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
   const purpose = Form.useWatch('submittalPurpose', form) as
@@ -261,7 +262,7 @@ function SubmittalPackageForm({
             placeholder="Select discipline"
             options={disciplines.map((d) => ({
               value: d.id,
-              label: d.disciplineName,
+              label: formatDisciplineLabel(d.disciplineIndex),
             }))}
           />
         </Form.Item>

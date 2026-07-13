@@ -18,11 +18,12 @@ import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensPr
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface DeliverableRow {
   id: string;
   name: string;
-  disciplineName: string;
+  disciplineIndex: number | null;
   taskDisciplineId: string;
   projectedStatus: string;
   projectionPending: boolean;
@@ -55,7 +56,7 @@ export default function DeliverablesPageContent({
           rows.push({
             id: pkg.id,
             name: pkg.name,
-            disciplineName: discipline.disciplineName,
+            disciplineIndex: discipline.disciplineIndex ?? null,
             taskDisciplineId: discipline.id,
             projectedStatus: pkg.projectedStatus,
             projectionPending: pkg.projectionPending,
@@ -92,8 +93,8 @@ export default function DeliverablesPageContent({
       },
       {
         title: 'Discipline',
-        dataIndex: 'disciplineName',
-        key: 'disciplineName',
+        key: 'disciplineIndex',
+        render: (_value, record) => formatDisciplineLabel(record.disciplineIndex),
       },
       {
         title: 'Status',

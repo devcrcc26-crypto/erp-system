@@ -43,6 +43,7 @@ import {
 import { useMeetings } from '@/lib/query/meetings';
 import { useCorrespondence } from '@/lib/query/correspondence';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import {
   formatRfiStatus,
   isOverdue,
@@ -105,7 +106,7 @@ function RfiFormDrawer({
     () =>
       (disciplinesQuery.data ?? []).map((row) => ({
         value: row.id,
-        label: `${row.taskName} - ${row.disciplineName}`,
+        label: `${row.taskName} - ${formatDisciplineLabel(row.disciplineIndex)}`,
       })),
     [disciplinesQuery.data],
   );

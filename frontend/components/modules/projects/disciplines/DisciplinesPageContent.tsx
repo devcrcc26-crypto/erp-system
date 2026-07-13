@@ -29,11 +29,12 @@ import {
 } from '@/lib/utils/schedule-subtasks';
 import { summarizeSubtaskRoles } from '@/lib/utils/subtask-roles-summary';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface SubtaskTableRow {
   id: string;
   name: string;
-  disciplineName: string;
+  disciplineIndex: number | null;
   disciplineCatalogId: string | null;
   taskId: string;
   taskName: string;
@@ -117,6 +118,14 @@ export default function DisciplinesPageContent({
     return map;
   }, [subtasksQuery.disciplines]);
 
+  const disciplineIndexByTaskDisciplineId = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const discipline of subtasksQuery.disciplines) {
+      map.set(discipline.id, discipline.disciplineIndex ?? null);
+    }
+    return map;
+  }, [subtasksQuery.disciplines]);
+
   const rows = useMemo(() => {
     const output: SubtaskTableRow[] = [];
     for (const [taskId, entries] of subtasksQuery.byTaskId) {
@@ -124,7 +133,9 @@ export default function DisciplinesPageContent({
         output.push({
           id: entry.package.id,
           name: entry.package.name,
-          disciplineName: entry.disciplineName,
+          disciplineIndex:
+            disciplineIndexByTaskDisciplineId.get(entry.taskDisciplineId) ??
+            null,
           disciplineCatalogId:
             disciplineCatalogIdByTaskDisciplineId.get(entry.taskDisciplineId) ??
             null,
@@ -143,6 +154,7 @@ export default function DisciplinesPageContent({
     return output.sort((left, right) => left.name.localeCompare(right.name));
   }, [
     disciplineCatalogIdByTaskDisciplineId,
+    disciplineIndexByTaskDisciplineId,
     projectId,
     projectName,
     subtasksQuery.byTaskId,
@@ -207,9 +219,9 @@ export default function DisciplinesPageContent({
     },
     {
       title: 'Discipline',
-      dataIndex: 'disciplineName',
-      key: 'disciplineName',
+      key: 'disciplineIndex',
       ellipsis: true,
+      render: (_value, record) => formatDisciplineLabel(record.disciplineIndex),
     },
     {
       title: 'Task',

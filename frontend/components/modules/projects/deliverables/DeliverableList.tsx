@@ -22,6 +22,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useDeliverables } from '@/lib/query/deliverables';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import {
   deliverableStatusVariant,
   formatDeliverableStatus,
@@ -71,7 +72,7 @@ export default function DeliverableList({
     () =>
       (disciplinesQuery.data ?? []).map((row) => ({
         value: row.id,
-        label: row.disciplineName,
+        label: formatDisciplineLabel(row.disciplineIndex),
       })),
     [disciplinesQuery.data],
   );

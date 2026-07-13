@@ -28,6 +28,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useQuery } from '@tanstack/react-query';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface ConstructionSubmittalFormValues {
   taskDisciplineId: string;
@@ -175,7 +176,7 @@ export default function ConstructionSubmittalDrawer({
             loading={disciplinesQuery.isLoading}
             options={(disciplinesQuery.data ?? []).map((d) => ({
               value: d.id,
-              label: d.disciplineName,
+              label: formatDisciplineLabel(d.disciplineIndex),
             }))}
           />
         </Form.Item>

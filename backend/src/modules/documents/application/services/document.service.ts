@@ -284,7 +284,11 @@ export class DocumentService {
                       documentType: true,
                       taskDisciplineId: true,
                       taskDiscipline: {
-                        select: { id: true, disciplineName: true },
+                        select: {
+                          id: true,
+                          disciplineName: true,
+                          disciplineIndex: true,
+                        },
                       },
                     },
                   },
@@ -328,6 +332,8 @@ export class DocumentService {
           (folder?.contextType === FolderContextType.TASK_DISCIPLINE
             ? folder.name
             : null),
+        disciplineIndex:
+          engineeringDocument?.taskDiscipline?.disciplineIndex ?? null,
         engineeringDocumentId: engineeringDocument?.id ?? null,
         engineeringDocumentTitle: engineeringDocument?.title ?? null,
         engineeringDocumentNumber: engineeringDocument?.documentNumber ?? null,

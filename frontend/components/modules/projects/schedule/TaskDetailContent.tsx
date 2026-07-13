@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button, Collapse, Descriptions, Modal, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
@@ -20,6 +19,7 @@ import {
 } from '@/lib/query/schedule';
 import { useProjectTeam } from '@/lib/query/projects';
 import { useFullUsersDirectory } from '@/lib/query/users';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -41,11 +41,9 @@ import {
   urgencyBadgeVariant,
 } from '@/lib/constants/task-comment8';
 import {
-  computePlannedWorkDaysFromDates,
   computeTaskSubtaskWorkDaysSummary,
   getScheduleSubtaskDisplayStatus,
   scheduleDisciplineWorkspaceHref,
-  scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
 import { formatCommissionModeLabel } from '@/lib/constants/commission-mode';
 import { tokens } from '@/lib/theme/tokens';
@@ -87,6 +85,35 @@ function resolveDisciplineLeaderName(
     }
   }
   return discipline.disciplinaryLeader ?? 'Unassigned';
+}
+
+type DisciplineTimelineRow =
+  | { rowType: 'discipline'; key: string; discipline: TaskDiscipline }
+  | {
+      rowType: 'subtask';
+      key: string;
+      discipline: TaskDiscipline;
+      entry: ScheduleSubtaskEntry;
+    }
+  | { rowType: 'empty'; key: string; discipline: TaskDiscipline };
+
+const UNIFIED_TIMELINE_COLUMN_COUNT = 7;
+
+/**
+ * Discipline header and empty-state rows merge into a single full-width
+ * cell (first column spans all, the rest are hidden) so the unified table
+ * reads as grouped sections rather than a flat list.
+ */
+function mergedRowCell(
+  row: DisciplineTimelineRow,
+  isFirstColumn: boolean,
+): { colSpan?: number } {
+  if (row.rowType === 'subtask') {
+    return {};
+  }
+  return isFirstColumn
+    ? { colSpan: UNIFIED_TIMELINE_COLUMN_COUNT }
+    : { colSpan: 0 };
 }
 
 export default function TaskDetailContent({
@@ -148,85 +175,6 @@ export default function TaskDetailContent({
     [subtasks],
   );
 
-  const timelineRows = useMemo(
-    () =>
-      [...subtasks].sort((a, b) =>
-        (a.package.subtaskId ?? a.package.packageCode).localeCompare(
-          b.package.subtaskId ?? b.package.packageCode,
-        ),
-      ),
-    [subtasks],
-  );
-
-  const timelineColumns: ColumnsType<ScheduleSubtaskEntry> = [
-    {
-      title: 'Subtask ID',
-      key: 'subtaskId',
-      render: (_value, entry) =>
-        entry.package.subtaskId ?? entry.package.packageCode,
-    },
-    {
-      title: 'Subtask name',
-      key: 'name',
-      render: (_value, entry) => (
-        <div>
-          <div className="text-[13px] font-medium">{entry.package.name}</div>
-          {entry.package.nameZh ? (
-            <div
-              className="text-[12px]"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {entry.package.nameZh}
-            </div>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      title: 'Discipline',
-      key: 'discipline',
-      dataIndex: 'disciplineName',
-    },
-    {
-      title: 'Planned start',
-      key: 'plannedStartDate',
-      render: (_value, entry) =>
-        entry.package.plannedStartDate
-          ? formatProjectDate(entry.package.plannedStartDate)
-          : '-',
-    },
-    {
-      title: 'Planned work days',
-      key: 'plannedWorkDays',
-      align: 'right',
-      render: (_value, entry) => {
-        const days = computePlannedWorkDaysFromDates(
-          entry.package.plannedStartDate,
-          entry.package.plannedFinishDate,
-        );
-        return days != null ? days : '-';
-      },
-    },
-    {
-      title: 'Actual work days',
-      key: 'actualWorkDays',
-      render: (_value, entry) =>
-        entry.package.packageStatus === 'CLOSED' &&
-        entry.package.actualWorkDays != null
-          ? entry.package.actualWorkDays
-          : '-',
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      render: (_value, entry) => (
-        <ScheduleSubtaskStatusBadge
-          status={getScheduleSubtaskDisplayStatus(entry.package)}
-        />
-      ),
-    },
-  ];
-
   const packagesByDisciplineId = useMemo(() => {
     const map = new Map<string, ScheduleSubtaskEntry[]>();
     for (const entry of subtasks) {
@@ -253,42 +201,194 @@ export default function TaskDetailContent({
     }));
   }, [users, editingDiscipline]);
 
-  const disciplineLeaderColumns: ColumnsType<TaskDiscipline> = [
+  function openChangeLeaderModal(discipline: TaskDiscipline): void {
+    setEditingDiscipline(discipline);
+    setSelectedLeaderId(discipline.disciplineLeadUserId ?? undefined);
+  }
+
+  const unifiedRows = useMemo<DisciplineTimelineRow[]>(() => {
+    const rows: DisciplineTimelineRow[] = [];
+    for (const discipline of disciplines) {
+      rows.push({
+        rowType: 'discipline',
+        key: `discipline-${discipline.id}`,
+        discipline,
+      });
+      const packages = packagesByDisciplineId.get(discipline.id) ?? [];
+      if (packages.length === 0) {
+        rows.push({ rowType: 'empty', key: `empty-${discipline.id}`, discipline });
+        continue;
+      }
+      const sorted = [...packages].sort((a, b) =>
+        (a.package.subtaskId ?? a.package.packageCode).localeCompare(
+          b.package.subtaskId ?? b.package.packageCode,
+        ),
+      );
+      for (const entry of sorted) {
+        rows.push({
+          rowType: 'subtask',
+          key: entry.package.id,
+          discipline,
+          entry,
+        });
+      }
+    }
+    return rows;
+  }, [disciplines, packagesByDisciplineId]);
+
+  const unifiedColumns: ColumnsType<DisciplineTimelineRow> = [
     {
-      title: 'Discipline',
-      dataIndex: 'disciplineName',
-      key: 'disciplineName',
+      title: 'Subtask ID',
+      key: 'subtaskId',
+      onCell: (row) => mergedRowCell(row, true),
+      render: (_value, row) => {
+        if (row.rowType === 'discipline') {
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={scheduleDisciplineWorkspaceHref(projectId, row.discipline.id)}
+                className="text-[14px] font-medium hover:text-[#D4610A]"
+              >
+                {formatDisciplineLabel(row.discipline.disciplineIndex)}
+              </Link>
+              <span
+                className="text-[12px]"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                Leader: {resolveDisciplineLeaderName(row.discipline, userById)}
+              </span>
+            </div>
+          );
+        }
+        if (row.rowType === 'empty') {
+          return (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span
+                className="text-[12px]"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                No subtasks yet — discipline leader will create subtasks and
+                assign work
+              </span>
+              <Button
+                type="link"
+                size="small"
+                className="!px-0 text-[12px]"
+                onClick={() => openChangeLeaderModal(row.discipline)}
+              >
+                Change leader
+              </Button>
+            </div>
+          );
+        }
+        return row.entry.package.subtaskId ?? row.entry.package.packageCode;
+      },
     },
     {
-      title: 'Current leader',
-      key: 'leader',
-      render: (_value, discipline) =>
-        resolveDisciplineLeaderName(discipline, userById),
+      title: 'Subtask name',
+      key: 'name',
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) =>
+        row.rowType === 'subtask' ? (
+          <div>
+            <div className="text-[13px] font-medium">{row.entry.package.name}</div>
+            {row.entry.package.nameZh ? (
+              <div
+                className="text-[12px]"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {row.entry.package.nameZh}
+              </div>
+            ) : null}
+          </div>
+        ) : null,
     },
     {
-      title: 'Subtasks',
-      key: 'subtaskCount',
-      width: 100,
-      render: (_value, discipline) =>
-        packagesByDisciplineId.get(discipline.id)?.length ?? 0,
+      title: 'Planned start',
+      key: 'plannedStartDate',
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) =>
+        row.rowType === 'subtask'
+          ? row.entry.package.plannedStartDate
+            ? formatProjectDate(row.entry.package.plannedStartDate)
+            : '-'
+          : null,
+    },
+    {
+      title: 'Planned finish',
+      key: 'plannedFinishDate',
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) =>
+        row.rowType === 'subtask'
+          ? row.entry.package.plannedFinishDate
+            ? formatProjectDate(row.entry.package.plannedFinishDate)
+            : '-'
+          : null,
+    },
+    {
+      title: 'Actual work days',
+      key: 'actualWorkDays',
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) =>
+        row.rowType === 'subtask'
+          ? row.entry.package.packageStatus === 'CLOSED' &&
+            row.entry.package.actualWorkDays != null
+            ? row.entry.package.actualWorkDays
+            : '-'
+          : null,
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) =>
+        row.rowType === 'subtask' ? (
+          <ScheduleSubtaskStatusBadge
+            status={getScheduleSubtaskDisplayStatus(row.entry.package)}
+          />
+        ) : null,
     },
     {
       title: '',
       key: 'actions',
-      width: 140,
-      render: (_value, discipline) => (
-        <Button
-          type="link"
-          size="small"
-          className="!px-0"
-          onClick={() => {
-            setEditingDiscipline(discipline);
-            setSelectedLeaderId(discipline.disciplineLeadUserId ?? undefined);
-          }}
-        >
-          Change leader
-        </Button>
-      ),
+      onCell: (row) => mergedRowCell(row, false),
+      render: (_value, row) => {
+        if (row.rowType !== 'subtask') {
+          return null;
+        }
+        const showEditSubtaskRoles = canEditSubtaskRoles(
+          row.discipline,
+          currentUserId,
+          isSystemAdministrator,
+        );
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {showEditSubtaskRoles && (
+              <Button
+                type="link"
+                size="small"
+                className="!px-0 text-[12px]"
+                onClick={() =>
+                  setRolesSubtask({
+                    package: row.entry.package,
+                    taskDisciplineId: row.entry.taskDisciplineId,
+                  })
+                }
+              >
+                Edit roles
+              </Button>
+            )}
+            <Button
+              type="link"
+              size="small"
+              className="!px-0 text-[12px]"
+              onClick={() => openChangeLeaderModal(row.discipline)}
+            >
+              Change leader
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -491,17 +591,7 @@ export default function TaskDetailContent({
         ]}
       />
 
-      <FormLayout title="Disciplines & subtasks">
-        {disciplines.length > 0 && (
-          <Table<TaskDiscipline>
-            rowKey="id"
-            size="small"
-            className="mb-4"
-            columns={disciplineLeaderColumns}
-            dataSource={disciplines}
-            pagination={false}
-          />
-        )}
+      <FormLayout title="Disciplines & Timeline">
         {disciplinesQuery.isLoading ? (
           <div className="erp-page-skeleton h-20 w-full rounded" />
         ) : disciplines.length === 0 ? (
@@ -513,145 +603,13 @@ export default function TaskDetailContent({
             leaders.
           </p>
         ) : (
-          <ul className="space-y-4">
-            {disciplines.map((discipline) => {
-              const packages =
-                packagesByDisciplineId.get(discipline.id) ?? [];
-              const showEditSubtaskRoles = canEditSubtaskRoles(
-                discipline,
-                currentUserId,
-                isSystemAdministrator,
-              );
-              const workspaceHref = scheduleDisciplineWorkspaceHref(
-                projectId,
-                discipline.id,
-              );
-
-              return (
-                <li
-                  key={discipline.id}
-                  className="rounded-lg border px-4 py-3"
-                  style={{ borderColor: tokens.colorBorder }}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[14px] font-medium">
-                          {discipline.disciplineName}
-                        </span>
-                        <Link href={workspaceHref}>
-                          <Button
-                            type="text"
-                            size="small"
-                            aria-label="Open discipline workspace"
-                            icon={<ArrowRightOutlined />}
-                          />
-                        </Link>
-                      </div>
-                      <p
-                        className="mt-1 text-[12px]"
-                        style={{ color: tokens.colorTextSecondary }}
-                      >
-                        Leader: {discipline.disciplinaryLeader ?? 'Unassigned'}
-                        {' · '}
-                        Designer: {discipline.designerName ?? 'Unassigned'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {packages.length === 0 ? (
-                    <p
-                      className="mt-3 text-[12px]"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
-                      No subtasks yet — discipline leader will create subtasks
-                      and assign work
-                    </p>
-                  ) : (
-                    <ul className="mt-3 space-y-2">
-                      {packages.map((entry) => {
-                        const displayStatus = getScheduleSubtaskDisplayStatus(
-                          entry.package,
-                        );
-                        const packageHref = scheduleSubtaskWorkspaceHref(
-                          projectId,
-                          entry.taskDisciplineId,
-                          entry.package.id,
-                        );
-
-                        return (
-                          <li key={entry.package.id}>
-                            <div
-                              className="flex items-center justify-between gap-2 rounded border px-3 py-2"
-                              style={{ borderColor: tokens.colorBorder }}
-                            >
-                              <Link
-                                href={packageHref}
-                                className="min-w-0 flex-1 transition-colors hover:text-[#D4610A]"
-                              >
-                                <span className="font-mono text-[11px] text-slate-500">
-                                  {entry.package.packageCode}
-                                </span>{' '}
-                                <span className="text-[13px]">
-                                  {entry.package.name}
-                                </span>
-                              </Link>
-                              <div className="flex shrink-0 items-center gap-2">
-                                {showEditSubtaskRoles && (
-                                  <Button
-                                    type="link"
-                                    size="small"
-                                    className="!px-0 text-[12px]"
-                                    onClick={() =>
-                                      setRolesSubtask({
-                                        package: entry.package,
-                                        taskDisciplineId: entry.taskDisciplineId,
-                                      })
-                                    }
-                                  >
-                                    Edit roles
-                                  </Button>
-                                )}
-                                <ScheduleSubtaskStatusBadge
-                                  status={displayStatus}
-                                />
-                                <Link href={packageHref}>
-                                  <ArrowRightOutlined
-                                    className="text-[12px]"
-                                    style={{ color: tokens.colorTextTertiary }}
-                                  />
-                                </Link>
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </FormLayout>
-
-      <FormLayout title="Timeline">
-        {subtasks.length === 0 ? (
-          <p
-            className="text-[13px]"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            No subtasks yet — planned and actual work days will appear here once
-            subtasks are created.
-          </p>
-        ) : (
           <>
-            <Table<ScheduleSubtaskEntry>
-              rowKey={(entry) => entry.package.id}
-              columns={timelineColumns}
-              dataSource={timelineRows}
-              pagination={false}
+            <Table<DisciplineTimelineRow>
+              rowKey="key"
               size="small"
+              columns={unifiedColumns}
+              dataSource={unifiedRows}
+              pagination={false}
               scroll={{ x: 'max-content' }}
             />
             <div
@@ -692,7 +650,7 @@ export default function TaskDetailContent({
 
       <Modal
         open={Boolean(editingDiscipline)}
-        title={`Change discipline leader — ${editingDiscipline?.disciplineName ?? ''}`}
+        title={`Change discipline leader — ${editingDiscipline ? formatDisciplineLabel(editingDiscipline.disciplineIndex) : ''}`}
         okText="Save"
         confirmLoading={updateTaskDiscipline.isPending}
         onCancel={() => {

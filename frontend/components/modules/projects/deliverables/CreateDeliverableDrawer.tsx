@@ -11,6 +11,7 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface FormValues {
   name: string;
@@ -48,7 +49,7 @@ export default function CreateDeliverableDrawer({
     () =>
       (disciplinesQuery.data ?? []).map((row) => ({
         value: row.id,
-        label: row.disciplineName,
+        label: formatDisciplineLabel(row.disciplineIndex),
       })),
     [disciplinesQuery.data],
   );

@@ -37,6 +37,7 @@ import {
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import {
   PROJECT_DOCUMENT_CONTEXT_OPTIONS,
   PROJECT_DOCUMENT_FILE_TYPE_OPTIONS,
@@ -183,10 +184,16 @@ export default function ProjectDocumentsPanel({
         key: 'discipline',
         width: 140,
         ellipsis: true,
-        render: (_: unknown, record) =>
-          record.disciplineName ?? (
-            <span style={{ color: tokens.colorTextSecondary }}>—</span>
-          ),
+        render: (_: unknown, record) => {
+          if (record.disciplineIndex != null) {
+            return formatDisciplineLabel(record.disciplineIndex);
+          }
+          return (
+            record.disciplineName ?? (
+              <span style={{ color: tokens.colorTextSecondary }}>—</span>
+            )
+          );
+        },
       },
       {
         title: 'Type',
@@ -264,7 +271,7 @@ export default function ProjectDocumentsPanel({
   const meta = documentsQuery.data?.meta;
   const disciplineOptions = (disciplinesQuery.data ?? []).map((row) => ({
     value: row.id,
-    label: row.disciplineName,
+    label: formatDisciplineLabel(row.disciplineIndex),
   }));
 
   return (

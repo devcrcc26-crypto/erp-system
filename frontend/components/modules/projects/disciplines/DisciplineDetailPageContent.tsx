@@ -27,7 +27,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
-import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import type { SubtaskRole } from '@/lib/api/epc.types';
@@ -136,7 +136,7 @@ export default function DisciplineDetailPageContent({
     discipline,
     currentUserId,
   );
-  const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
+  const disciplineLabel = formatDisciplineLabel(discipline.disciplineIndex);
   const canCloseDiscipline =
     isDisciplineLeader && allPackagesClosed && !discipline.isClosed;
 
@@ -198,18 +198,17 @@ export default function DisciplineDetailPageContent({
       <FormLayout
         title={disciplineLabel}
         description={
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-            <span>
-              {discipline.disciplineName}
-              {' · '}
-              {`Schedule task: ${discipline.taskName}`}
-            </span>
-            {actingAsLabel ? (
-              <ResourceRoleContextBadge
-                label={actingAsLabel}
-                readOnly={actingAsReadOnly}
-              />
-            ) : null}
+          <div className="flex flex-col gap-1">
+            <span>{discipline.disciplineName}</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <span>{`Schedule task: ${discipline.taskName}`}</span>
+              {actingAsLabel ? (
+                <ResourceRoleContextBadge
+                  label={actingAsLabel}
+                  readOnly={actingAsReadOnly}
+                />
+              ) : null}
+            </div>
           </div>
         }
         extra={

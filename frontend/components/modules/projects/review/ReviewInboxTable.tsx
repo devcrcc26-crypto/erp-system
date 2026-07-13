@@ -16,6 +16,7 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 export default function ReviewInboxTable({
   projectId,
@@ -75,9 +76,9 @@ export default function ReviewInboxTable({
         ]),
     {
       title: 'Discipline',
-      dataIndex: 'disciplineName',
-      key: 'disciplineName',
+      key: 'disciplineIndex',
       ellipsis: { showTitle: true },
+      render: (_value, record) => formatDisciplineLabel(record.disciplineIndex),
     },
     {
       title: 'Tier',

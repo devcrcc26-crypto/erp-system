@@ -34,6 +34,7 @@ export interface ReviewInboxItem {
   readonly designPackageName: string;
   readonly taskDisciplineId: string;
   readonly disciplineName: string;
+  readonly disciplineIndex: number | null;
   readonly projectId: string;
   readonly projectName: string;
   readonly currentTier: string;
@@ -196,6 +197,7 @@ export class EpcWorkspaceService {
       designPackageName: s.designPackage.name,
       taskDisciplineId: s.taskDisciplineId,
       disciplineName: s.designPackage.taskDiscipline.disciplineName,
+      disciplineIndex: s.designPackage.taskDiscipline.disciplineIndex,
       projectId: s.designPackage.taskDiscipline.task.projectId,
       projectName: s.designPackage.taskDiscipline.task.project.name,
       currentTier: s.currentTier,

@@ -218,6 +218,7 @@ export interface ReviewInboxItem {
   designPackageName: string;
   taskDisciplineId: string;
   disciplineName: string;
+  disciplineIndex: number | null;
   projectId: string;
   projectName: string;
   currentTier: ReviewTier | string;

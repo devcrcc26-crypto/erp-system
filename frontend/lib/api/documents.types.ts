@@ -97,6 +97,7 @@ export interface ProjectDocumentRecord extends DocumentRecord {
   folderContextId: string | null;
   taskDisciplineId: string | null;
   disciplineName: string | null;
+  disciplineIndex: number | null;
   engineeringDocumentId: string | null;
   engineeringDocumentTitle: string | null;
   engineeringDocumentNumber: string | null;

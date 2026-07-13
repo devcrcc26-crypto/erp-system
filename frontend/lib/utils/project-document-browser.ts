@@ -2,6 +2,7 @@ import type {
   ProjectDocumentFolderContextType,
   ProjectDocumentRecord,
 } from '@/lib/api/documents.types';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 export const PROJECT_DOCUMENT_CONTEXT_OPTIONS: Array<{
   value: ProjectDocumentFolderContextType;
@@ -44,7 +45,9 @@ export function resolveProjectDocumentSourceLabel(
 ): string {
   const contextLabel = formatFolderContextLabel(record.folderContextType);
   if (record.folderContextType === 'TASK_DISCIPLINE') {
-    return record.disciplineName ?? contextLabel;
+    return record.disciplineIndex != null
+      ? formatDisciplineLabel(record.disciplineIndex)
+      : (record.disciplineName ?? contextLabel);
   }
   if (record.folderContextType === 'PROJECT') {
     return 'Project repository';

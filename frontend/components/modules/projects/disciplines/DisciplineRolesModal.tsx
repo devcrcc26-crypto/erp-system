@@ -2,6 +2,7 @@
 
 import { Form, Modal } from 'antd';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
+import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import DisciplineRolesFormFields from '@/components/modules/projects/disciplines/DisciplineRolesFormFields';
 import {
   type DisciplineRolesFormValues,
@@ -56,7 +57,7 @@ export default function DisciplineRolesModal({
       open={open}
       title={
         discipline
-          ? `Edit roles — ${discipline.disciplineName}`
+          ? `Edit roles — ${formatDisciplineLabel(discipline.disciplineIndex)}`
           : 'Edit discipline roles'
       }
       centered
