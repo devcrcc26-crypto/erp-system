@@ -48,7 +48,7 @@ import {
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { usePermissionsLoading, useCanViewMyWork } from '@/hooks/use-pm-capabilities';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { getPackageLockGuidance, getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
@@ -88,6 +88,7 @@ export default function DesignPackageDetailPageContent({
   const lens = useRoleLens();
   const epc = useEpcCapabilities();
   const permLoading = usePermissionsLoading();
+  const canViewMyWork = useCanViewMyWork();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const { data: profile } = useCurrentUser();
@@ -99,7 +100,8 @@ export default function DesignPackageDetailPageContent({
   const [returnForm] = Form.useForm<{ reason: string }>();
 
   const canViewPackage =
-    !permLoading && (lens.canViewEngineering || lens.canViewReviewInbox);
+    !permLoading &&
+    (lens.canViewEngineering || lens.canViewReviewInbox || canViewMyWork);
 
   const disciplineQuery = useProjectDiscipline(
     projectId,
@@ -180,8 +182,14 @@ export default function DesignPackageDetailPageContent({
     return <PageLoadingSkeleton />;
   }
 
-  if (!lens.canViewEngineering && !lens.canViewReviewInbox) {
-    return null;
+  if (!lens.canViewEngineering && !lens.canViewReviewInbox && !canViewMyWork) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        title="You do not have access to this subtask."
+      />
+    );
   }
 
   if (!pkg || !discipline) {

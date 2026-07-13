@@ -43,30 +43,37 @@ function buildRoleLens(
   epc: {
     canViewReviewInbox: boolean;
     canViewMyComments: boolean;
+    canViewMyWork: boolean;
     canViewEngineering: boolean;
     canUploadEngineeringDocuments: boolean;
     disciplineScopeBypass: boolean;
   },
 ): RoleLens {
-  const engineeringView =
-    schedule.canView &&
-    (epc.canViewEngineering ||
-      epc.canViewReviewInbox ||
-      epc.canViewMyComments ||
-      schedule.canView);
+  const hasAssignedDesignAccess =
+    epc.canViewEngineering ||
+    epc.canViewReviewInbox ||
+    epc.canViewMyComments ||
+    epc.canViewMyWork;
+
+  const engineeringView = hasAssignedDesignAccess || schedule.canView;
+
   const canUploadEngineeringDocuments =
-    engineeringView && epc.canUploadEngineeringDocuments;
+    engineeringView &&
+    (epc.canUploadEngineeringDocuments ||
+      epc.canViewMyWork ||
+      schedule.canEdit);
   const canSubmitDesignPackage =
-    engineeringView && (schedule.canCreate || schedule.canEdit);
-  const canViewReviewInbox =
-    epc.canViewReviewInbox && (schedule.canView || schedule.canEdit);
-  const canViewMyComments = epc.canViewMyComments && schedule.canView;
+    engineeringView &&
+    (schedule.canCreate || schedule.canEdit || epc.canViewMyWork);
+  const canViewReviewInbox = epc.canViewReviewInbox;
+  const canViewMyComments = epc.canViewMyComments;
 
   return {
     canViewEngineering: engineeringView,
     canCreateEngineering:
-      engineeringView && (schedule.canCreate || schedule.canEdit),
-    canEditEngineering: engineeringView && schedule.canEdit,
+      engineeringView && (schedule.canCreate || schedule.canEdit || epc.canViewMyWork),
+    canEditEngineering:
+      engineeringView && (schedule.canEdit || epc.canViewMyWork),
     canUploadEngineeringDocuments,
     canSubmitDesignPackage,
     canApproveReview: canViewReviewInbox,
