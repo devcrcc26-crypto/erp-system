@@ -463,6 +463,9 @@ export class ReviewWorkflowService {
           status: to as PrismaCommentStatus,
           updatedBy: command.actorId,
           ...(resolutionNote !== undefined ? { resolutionNote } : {}),
+          ...(to === CommentStatus.RESOLVED
+            ? { assignedToUserId: comment.createdBy }
+            : {}),
           ...(to === CommentStatus.RESOLVED && command.responseDocumentVersionId
             ? { responseDocumentVersionId: command.responseDocumentVersionId }
             : {}),

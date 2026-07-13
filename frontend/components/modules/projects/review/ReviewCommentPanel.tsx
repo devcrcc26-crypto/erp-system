@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Form, Input, Select, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { MessageSquare } from 'lucide-react';
@@ -28,6 +28,7 @@ import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAuthStore } from '@/stores/auth.store';
 import { canUserActAtCurrentReviewTier } from '@/lib/utils/review-governance';
+import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -108,6 +109,31 @@ export default function ReviewCommentPanel({
       packageQuery.data?.instituteChiefName,
       lens.canApproveReview,
     );
+
+  const defaultAssignee = useMemo(() => {
+    const pkg = packageQuery.data;
+    const tier = reviewMode?.currentTier;
+    if (!pkg) {
+      return undefined;
+    }
+
+    if (tier === 'INSTITUTE_CHIEF' && isExternalInstituteChief(pkg)) {
+      return (
+        pkg.deptDeputyChiefUserId ??
+        pkg.disciplinaryLeaderUserId ??
+        pkg.designerUserId ??
+        undefined
+      );
+    }
+
+    return pkg.designerUserId ?? undefined;
+  }, [packageQuery.data, reviewMode?.currentTier]);
+
+  useEffect(() => {
+    if (defaultAssignee) {
+      form.setFieldValue('assignedToUserId', defaultAssignee);
+    }
+  }, [defaultAssignee, reviewMode?.reviewSessionId, form]);
 
   const edvLabelById = new Map(edvOptions.map((option) => [option.value, option.label]));
 
@@ -271,7 +297,7 @@ export default function ReviewCommentPanel({
             </Form.Item>
             <Form.Item
               name="assignedToUserId"
-              label="Assign to designer"
+              label="Assign to"
               rules={[{ required: true }]}
             >
               <UserSelect />
