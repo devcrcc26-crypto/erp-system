@@ -862,10 +862,13 @@ export class ScheduleService {
     const disciplines = await this.prisma.taskDiscipline.findMany({
       where: activeOnly({ taskId, companyId: ctx.companyId, ...scopeFilter }),
       include: TASK_DISCIPLINE_USER_INCLUDE,
-      orderBy: { createdAt: 'asc' },
+      orderBy: { disciplineIndex: 'asc' },
     });
 
-    return disciplines.map(mapTaskDiscipline);
+    const overseasTaskNumber = await this.resolveTaskOverseasNumber(taskId);
+    return disciplines.map((discipline) =>
+      mapTaskDiscipline(discipline, overseasTaskNumber),
+    );
   }
 
   /**
