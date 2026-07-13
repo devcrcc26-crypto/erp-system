@@ -23,10 +23,10 @@ export default function SubtaskRolesFormFields({
     <>
       <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
         <Form.Item label="Designer (设计)" name="designerUserId">
-          <ProjectTeamUserSelect projectId={projectId} />
+          <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
         </Form.Item>
         <Form.Item label="Supporting designer" name="supportingDesignerUserId">
-          <ProjectTeamUserSelect projectId={projectId} />
+          <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
         </Form.Item>
       </div>
       {showDisciplineOwner ? (
@@ -35,16 +35,16 @@ export default function SubtaskRolesFormFields({
             label={reviewTierBilingualLabel('DISCIPLINE_OWNER')}
             name="disciplineOwnerUserId"
           >
-            <ProjectTeamUserSelect projectId={projectId} />
+            <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
           </Form.Item>
           <Form.Item label={reviewTierBilingualLabel('REVIEWER')} name="reviewerUserId">
-            <ProjectTeamUserSelect projectId={projectId} />
+            <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
           </Form.Item>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item label={reviewTierBilingualLabel('REVIEWER')} name="reviewerUserId">
-            <ProjectTeamUserSelect projectId={projectId} />
+            <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
           </Form.Item>
         </div>
       )}
@@ -53,13 +53,13 @@ export default function SubtaskRolesFormFields({
           label={reviewTierBilingualLabel('DISCIPLINE_LEAD')}
           name="disciplinaryLeaderUserId"
         >
-          <ProjectTeamUserSelect projectId={projectId} />
+          <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
         </Form.Item>
         <Form.Item
           label={reviewTierBilingualLabel('DEPT_CHIEF')}
           name="deptDeputyChiefUserId"
         >
-          <ProjectTeamUserSelect projectId={projectId} />
+          <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
         </Form.Item>
       </div>
       {showInstituteChief ? (
@@ -86,7 +86,7 @@ export default function SubtaskRolesFormFields({
             </Form.Item>
           ) : (
             <Form.Item label="Institute chief" name="instituteChiefUserId">
-              <ProjectTeamUserSelect projectId={projectId} />
+              <ProjectTeamUserSelect projectId={projectId} memberScope="company_active" />
             </Form.Item>
           )}
         </div>

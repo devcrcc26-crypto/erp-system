@@ -36,7 +36,7 @@ import {
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { useCanViewMyWork, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
@@ -81,12 +81,14 @@ export default function DesignPackagePanel({
 }): React.ReactNode {
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
+  const canViewMyWork = useCanViewMyWork();
+  const canAccessEngineering = lens.canViewEngineering || canViewMyWork;
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const disciplineQuery = useProjectDiscipline(
     projectId,
     taskDisciplineId,
-    !permLoading && lens.canViewEngineering,
+    !permLoading && canAccessEngineering,
   );
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
@@ -101,13 +103,13 @@ export default function DesignPackagePanel({
   const packagesQuery = useDesignPackages(
     projectId,
     taskDisciplineId,
-    !permLoading && lens.canViewEngineering,
+    !permLoading && canAccessEngineering,
   );
   const documentsQuery = useEngineeringDocuments(
     projectId,
     taskDisciplineId,
     { page: 1, limit: 100 },
-    !permLoading && lens.canViewEngineering,
+    !permLoading && canAccessEngineering,
   );
 
   const addItem = useAddDesignPackageItem();
@@ -152,7 +154,7 @@ export default function DesignPackagePanel({
     return <PageLoadingSkeleton />;
   }
 
-  if (!lens.canViewEngineering) {
+  if (!canAccessEngineering) {
     return null;
   }
 

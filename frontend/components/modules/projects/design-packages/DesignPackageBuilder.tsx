@@ -152,9 +152,13 @@ export default function DesignPackageBuilder({
   }, [disciplineQuery.data, editing, form, open]);
 
   async function handleSubmit(values: BuilderFormValues): Promise<void> {
+    const mergedValues =
+      isCreateFlow && step === 1
+        ? { ...form.getFieldsValue(true), ...values }
+        : values;
     const body: CreateDesignPackageRequest = {
-      ...toPackagePayload(values),
-      ...toSubtaskRolesPayload(values),
+      ...toPackagePayload(mergedValues),
+      ...toSubtaskRolesPayload(mergedValues),
     };
 
     try {
@@ -261,6 +265,7 @@ export default function DesignPackageBuilder({
       <Form<BuilderFormValues>
         form={form}
         layout="vertical"
+        preserve
         className="erp-drawer-form"
         initialValues={{ urgencyLevel: 'NORMAL', instituteChiefMode: 'SYSTEM_USER' }}
         onFinish={(values: BuilderFormValues) => void handleSubmit(values)}

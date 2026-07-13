@@ -316,7 +316,7 @@ export class TaskAccessScopeService {
     taskDisciplineId: string,
   ): Promise<void> {
     const profile = await this.resolveProfile(ctx);
-    if (profile.hasFullProjectAccess) {
+    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
       return;
     }
 
