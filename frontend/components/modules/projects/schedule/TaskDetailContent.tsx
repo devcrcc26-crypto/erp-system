@@ -19,7 +19,6 @@ import {
 import { useProjectTeam } from '@/lib/query/projects';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
-import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import {
   formatProjectDate,
   formatProjectDesignStage,
@@ -152,7 +151,7 @@ export default function TaskDetailContent({
               </p>
             )}
             <h2 className="text-[18px] font-semibold">
-              {formatLocalizedName(task)}
+              {task.name}
             </h2>
             {task.nameZh && (
               <p

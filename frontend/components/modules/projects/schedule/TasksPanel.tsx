@@ -38,6 +38,7 @@ import {
 import { useProject, useProjectTeam } from '@/lib/query/projects';
 import { formatProjectDate, formatProjectDesignStage } from '@/lib/utils/project-display';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
+import StackedName from '@/components/ui/StackedName/StackedName';
 import {
   computeScheduleSubtaskRollup,
   getScheduleSubtaskDisplayStatus,
@@ -237,13 +238,17 @@ export default function TasksPanel({
             <div>
               <button
                 type="button"
-                className="text-left text-[13px] font-medium hover:underline"
+                className="text-left hover:underline"
                 onClick={() => {
                   setViewing(record.task);
                   setDetailOpen(true);
                 }}
               >
-                {formatLocalizedName(record.task)}
+                <StackedName
+                  name={record.task.name}
+                  nameZh={record.task.nameZh}
+                  className="text-[13px] font-medium"
+                />
               </button>
               {rollup && (
                 <p
