@@ -498,6 +498,14 @@ main::-webkit-scrollbar,
 }
 
 /* Drawer forms - stack fields on narrow screens */
+.erp-wizard-modal .ant-modal-content {
+  max-height: calc(100vh - 48px);
+}
+
+.erp-wizard-modal .ant-modal-body {
+  overflow-y: auto;
+}
+
 @media (max-width: 767px) {
   .erp-drawer-form .ant-picker,
   .erp-drawer-form .ant-select,

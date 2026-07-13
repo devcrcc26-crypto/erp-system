@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import TaskDetailContent from '@/components/modules/projects/schedule/TaskDetailContent';
+import TaskFormDrawer from '@/components/modules/projects/schedule/TaskFormDrawer';
 import { useTask } from '@/lib/query/schedule';
 import { useProject } from '@/lib/query/projects';
+import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 
 export default function TaskDetailPageContent({
   projectId,
@@ -14,8 +17,11 @@ export default function TaskDetailPageContent({
   projectId: string;
   taskId: string;
 }): React.ReactNode {
+  const [taskFormOpen, setTaskFormOpen] = useState(false);
   const taskQuery = useTask(projectId, taskId);
   const projectQuery = useProject(projectId);
+  const pm = usePmCapabilities();
+  const canEditTask = pm.schedule.canEdit;
 
   if (taskQuery.isLoading) {
     return (
@@ -51,8 +57,19 @@ export default function TaskDetailPageContent({
           projectName={projectQuery.data?.name}
           projectNumber={projectQuery.data?.projectCode}
           task={taskQuery.data}
+          onEdit={canEditTask ? () => setTaskFormOpen(true) : undefined}
         />
       </div>
+
+      <TaskFormDrawer
+        open={taskFormOpen}
+        projectId={projectId}
+        task={taskQuery.data}
+        onClose={() => setTaskFormOpen(false)}
+        onSaved={() => {
+          void taskQuery.refetch();
+        }}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useAuthStore } from '@/stores/auth.store';
+import { wizardModalProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -119,7 +120,7 @@ export default function DesignPackageBuilder({
   const currentUserId = useAuthStore((state) => state.user?.id);
   const messageApi = useAppMessage();
   const isSubmitting = createPackage.isPending || updatePackage.isPending;
-  const isCreateFlow = !editing;
+  const isEditing = Boolean(editing);
   const reviewLevel = Form.useWatch('reviewLevel', form);
 
   useEffect(() => {
@@ -145,11 +146,8 @@ export default function DesignPackageBuilder({
     });
   }, [disciplineQuery.data, currentUserId, editing, form, open]);
 
-  async function handleSubmit(values: BuilderFormValues): Promise<void> {
-    const mergedValues =
-      isCreateFlow && step === 1
-        ? { ...form.getFieldsValue(true), ...values }
-        : values;
+  async function handleSubmit(): Promise<void> {
+    const mergedValues = form.getFieldsValue(true) as BuilderFormValues;
     const body: CreateDesignPackageRequest = {
       ...toPackagePayload(mergedValues),
       ...toSubtaskRolesPayload(mergedValues),
@@ -201,9 +199,6 @@ export default function DesignPackageBuilder({
   }
 
   function renderFooter(): React.ReactNode {
-    if (!isCreateFlow) {
-      return undefined;
-    }
     if (step === 0) {
       return (
         <div className="flex justify-end gap-2">
@@ -214,6 +209,7 @@ export default function DesignPackageBuilder({
         </div>
       );
     }
+
     return (
       <div className="flex justify-end gap-2">
         <Button onClick={() => setStep(0)}>Back</Button>
@@ -221,9 +217,9 @@ export default function DesignPackageBuilder({
         <Button
           type="primary"
           loading={isSubmitting}
-          onClick={() => form.submit()}
+          onClick={() => void handleSubmit()}
         >
-          Create subtask
+          {isEditing ? 'Save changes' : 'Create subtask'}
         </Button>
       </div>
     );
@@ -231,30 +227,21 @@ export default function DesignPackageBuilder({
 
   return (
     <Modal
+      {...wizardModalProps}
       open={open}
-      title={editing ? 'Edit subtask' : 'New subtask'}
-      centered
+      title={isEditing ? 'Edit subtask' : 'New subtask'}
       onCancel={onClose}
-      onOk={editing ? () => form.submit() : undefined}
-      okText={editing ? 'Save changes' : undefined}
-      confirmLoading={isSubmitting}
-      destroyOnHidden
-      width={720}
-      className="erp-responsive-modal"
-      styles={{ body: { overflow: 'visible' } }}
-      footer={isCreateFlow ? renderFooter() : undefined}
+      footer={renderFooter()}
     >
-      {isCreateFlow ? (
-        <Steps
-          size="small"
-          current={step}
-          className="mb-6"
-          items={[
-            { title: 'Subtask details' },
-            { title: 'Assign roles' },
-          ]}
-        />
-      ) : null}
+      <Steps
+        size="small"
+        current={step}
+        className="mb-6"
+        items={[
+          { title: 'Subtask details' },
+          { title: 'Assign roles' },
+        ]}
+      />
 
       <Form<BuilderFormValues>
         form={form}
@@ -262,15 +249,14 @@ export default function DesignPackageBuilder({
         preserve
         className="erp-drawer-form"
         initialValues={{ urgencyLevel: 'NORMAL', instituteChiefMode: 'SYSTEM_USER' }}
-        onFinish={(values: BuilderFormValues) => void handleSubmit(values)}
       >
-        {(isCreateFlow ? step === 0 : true) ? (
+        {step === 0 ? (
           <>
             {editing?.subtaskId ? (
               <Form.Item label="Subtask ID">
                 <Input readOnly value={editing.subtaskId} className="font-mono" />
               </Form.Item>
-            ) : isCreateFlow ? (
+            ) : !isEditing ? (
               <div className="mb-4 text-sm text-[#6B7280]">
                 Subtask number will be assigned automatically when created
               </div>
@@ -319,7 +305,7 @@ export default function DesignPackageBuilder({
           </>
         ) : null}
 
-        {!isCreateFlow || step === 1 ? (
+        {step === 1 ? (
           <SubtaskRolesFormFields
             projectId={projectId}
             reviewLevel={reviewLevel}

@@ -40,7 +40,6 @@ import { useCanViewMyWork, usePermissionsLoading } from '@/hooks/use-pm-capabili
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
-import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -92,7 +91,6 @@ export default function DesignPackagePanel({
   );
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
-  const [editingRoles, setEditingRoles] = useState<DesignPackage | null>(null);
   const [addItemPackageId, setAddItemPackageId] = useState<string | null>(null);
   const [addDepPackageId, setAddDepPackageId] = useState<string | null>(null);
   const [submittingPackageId, setSubmittingPackageId] = useState<string | null>(
@@ -263,15 +261,7 @@ export default function DesignPackagePanel({
             }}
             disabled={!canEditSubtask}
           >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => setEditingRoles(record)}
-            disabled={!canEditSubtask}
-          >
-            Edit roles
+            Edit subtask
           </Button>
           <Button
             type="link"
@@ -378,15 +368,6 @@ export default function DesignPackagePanel({
           setBuilderOpen(false);
           setEditing(null);
         }}
-        onSaved={() => void packagesQuery.refetch()}
-      />
-
-      <SubtaskRolesModal
-        open={Boolean(editingRoles)}
-        projectId={projectId}
-        taskDisciplineId={taskDisciplineId}
-        subtask={editingRoles}
-        onClose={() => setEditingRoles(null)}
         onSaved={() => void packagesQuery.refetch()}
       />
 

@@ -6,8 +6,10 @@ import { useEngineeringDisciplineOptions } from '@/lib/query/org';
 
 export default function DisciplineSimpleFormFields({
   projectId,
+  disciplineReadOnly = false,
 }: {
   projectId: string;
+  disciplineReadOnly?: boolean;
 }): React.ReactNode {
   const { options, isLoading } = useEngineeringDisciplineOptions(true);
 
@@ -20,6 +22,7 @@ export default function DisciplineSimpleFormFields({
       >
         <Select
           showSearch
+          disabled={disciplineReadOnly}
           loading={isLoading}
           placeholder="Select discipline"
           options={options}

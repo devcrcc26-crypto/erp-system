@@ -32,7 +32,7 @@ import {
 } from '@/components/modules/projects/design-packages/DesignPackagePanel';
 import DesignPackageCommentsSection from '@/components/modules/projects/design-packages/DesignPackageCommentsSection';
 import DesignPackageUploadModal from '@/components/modules/projects/design-packages/DesignPackageUploadModal';
-import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
+import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import VersionHistoryTimeline from '@/components/modules/projects/engineering/VersionHistoryTimeline';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
@@ -99,7 +99,7 @@ export default function DesignPackageDetailPageContent({
   const { data: profile } = useCurrentUser();
   const [returnOpen, setReturnOpen] = useState(false);
   const [closePackageOpen, setClosePackageOpen] = useState(false);
-  const [rolesModalOpen, setRolesModalOpen] = useState(false);
+  const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [returnForm] = Form.useForm<{ reason: string }>();
@@ -365,7 +365,7 @@ export default function DesignPackageDetailPageContent({
         extra={
           <Space wrap>
             {isDisciplineLeader && (
-              <Button onClick={() => setRolesModalOpen(true)}>Edit roles</Button>
+              <Button onClick={() => setEditSubtaskOpen(true)}>Edit subtask</Button>
             )}
             {reviewSessionId && packageLens.canAddReviewComment && (
               <Link href={reviewModeHref(projectId, taskDisciplineId, packageId)}>
@@ -759,12 +759,12 @@ export default function DesignPackageDetailPageContent({
         </Form>
       </Modal>
 
-      <SubtaskRolesModal
-        open={rolesModalOpen}
+      <DesignPackageBuilder
+        open={editSubtaskOpen}
         projectId={projectId}
         taskDisciplineId={taskDisciplineId}
-        subtask={pkg}
-        onClose={() => setRolesModalOpen(false)}
+        editing={pkg}
+        onClose={() => setEditSubtaskOpen(false)}
         onSaved={() => {
           void packageQuery.refetch();
         }}

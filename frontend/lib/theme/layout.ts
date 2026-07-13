@@ -1,6 +1,6 @@
 // UI polish pass - styles only, no logic changes
 
-import type { DrawerProps } from 'antd';
+import type { DrawerProps, ModalProps } from 'antd';
 import { tokens } from './tokens';
 
 /**
@@ -104,6 +104,27 @@ export const submittalDrawerProps: Pick<
   size: DRAWER_WIDTH_SUBMITTAL,
   className: responsiveDetailDrawerClassName,
   styles: detailDrawerStyles,
+};
+
+/** Two-step wizard modals (subtask / discipline edit) — fit within the viewport. */
+export const WIZARD_MODAL_WIDTH = 720;
+
+export const wizardModalProps: Pick<
+  ModalProps,
+  'width' | 'className' | 'centered' | 'destroyOnHidden' | 'styles'
+> = {
+  width: WIZARD_MODAL_WIDTH,
+  className: 'erp-responsive-modal erp-wizard-modal',
+  centered: true,
+  destroyOnHidden: true,
+  styles: {
+    body: {
+      maxHeight: 'calc(100vh - 220px)',
+      overflowY: 'auto',
+      paddingTop: 8,
+      paddingBottom: 8,
+    },
+  },
 };
 
 export const cardStyles = {

@@ -9,6 +9,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
+import DisciplineBuilder from '@/components/modules/projects/disciplines/DisciplineBuilder';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import type { Task, TaskDiscipline } from '@/lib/api/project-management.types';
 import type { User } from '@/lib/api/types';
@@ -16,15 +17,13 @@ import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
 import {
   useTaskDisciplines,
   useScheduleSubtasks,
-  useUpdateTaskDiscipline,
 } from '@/lib/query/schedule';
 import { useProjectTeam } from '@/lib/query/projects';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
 import { useAuthStore } from '@/stores/auth.store';
-import { useAppMessage } from '@/hooks/use-app-message';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatUserName, formatUserPickerLabel } from '@/lib/utils/user-display';
+import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { formatUserName } from '@/lib/utils/user-display';
 import {
   formatProjectDate,
   formatProjectDesignStage,
@@ -71,6 +70,18 @@ function canEditSubtaskRoles(
   return discipline.disciplineLeadUserId === currentUserId;
 }
 
+function canCreateSubtaskOnDiscipline(
+  discipline: TaskDiscipline,
+  currentUserId: string | undefined,
+  isSystemAdministrator: boolean,
+  canEditSchedule: boolean,
+): boolean {
+  if (isSystemAdministrator || canEditSchedule) {
+    return true;
+  }
+  return discipline.disciplineLeadUserId === currentUserId;
+}
+
 /**
  * Resolves the discipline leader's full name from the company directory,
  * falling back to the deprecated display-name string when the live user
@@ -106,21 +117,21 @@ export default function TaskDetailContent({
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
+  const pm = usePmCapabilities();
   const teamQuery = useProjectTeam(projectId);
   const disciplinesQuery = useTaskDisciplines(projectId, task.id);
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
   const usersQuery = useFullUsersDirectory();
-  const updateTaskDiscipline = useUpdateTaskDiscipline();
-  const messageApi = useAppMessage();
-  const [editingSubtask, setEditingSubtask] = useState<{
-    package: DesignPackage;
+  const [subtaskBuilder, setSubtaskBuilder] = useState<{
     taskDisciplineId: string;
+    editing: DesignPackage | null;
   } | null>(null);
-  const [editingDiscipline, setEditingDiscipline] =
-    useState<TaskDiscipline | null>(null);
-  const [selectedLeaderId, setSelectedLeaderId] = useState<
+  const [disciplinePickerOpen, setDisciplinePickerOpen] = useState(false);
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<
     string | undefined
   >(undefined);
+  const [editingDiscipline, setEditingDiscipline] =
+    useState<TaskDiscipline | null>(null);
   const leaderNameById = useMemo(
     () =>
       new Map(
@@ -148,27 +159,6 @@ export default function TaskDetailContent({
     [subtasks],
   );
 
-  const leaderOptions = useMemo(() => {
-    if (!editingDiscipline) {
-      return [];
-    }
-    const matching = users.filter(
-      (user) =>
-        user.isActive &&
-        user.engineeringDisciplineId === editingDiscipline.disciplineId,
-    );
-    const pool = matching.length > 0 ? matching : users.filter((user) => user.isActive);
-    return pool.map((user) => ({
-      value: user.id,
-      label: formatUserPickerLabel(user),
-    }));
-  }, [users, editingDiscipline]);
-
-  function openChangeLeaderModal(discipline: TaskDiscipline): void {
-    setEditingDiscipline(discipline);
-    setSelectedLeaderId(discipline.disciplineLeadUserId ?? undefined);
-  }
-
   const disciplineByTaskDisciplineId = useMemo(
     () => new Map(disciplines.map((discipline) => [discipline.id, discipline])),
     [disciplines],
@@ -183,6 +173,57 @@ export default function TaskDetailContent({
       ),
     [subtasks],
   );
+
+  const eligibleDisciplinesForCreate = useMemo(
+    () =>
+      disciplines.filter((discipline) =>
+        canCreateSubtaskOnDiscipline(
+          discipline,
+          currentUserId,
+          isSystemAdministrator,
+          pm.schedule.canEdit,
+        ),
+      ),
+    [disciplines, currentUserId, isSystemAdministrator, pm.schedule.canEdit],
+  );
+
+  const showAddSubtask =
+    !disciplinesQuery.isLoading && eligibleDisciplinesForCreate.length > 0;
+
+  const disciplinePickerOptions = useMemo(
+    () =>
+      eligibleDisciplinesForCreate.map((discipline) => ({
+        value: discipline.id,
+        label: resolveDisciplineDisplayLabel(discipline),
+      })),
+    [eligibleDisciplinesForCreate],
+  );
+
+  function openSubtaskBuilder(
+    taskDisciplineId: string,
+    editing: DesignPackage | null,
+  ): void {
+    setSubtaskBuilder({ taskDisciplineId, editing });
+  }
+
+  function handleAddSubtask(): void {
+    if (eligibleDisciplinesForCreate.length === 1) {
+      openSubtaskBuilder(eligibleDisciplinesForCreate[0].id, null);
+      return;
+    }
+
+    setSelectedDisciplineId(undefined);
+    setDisciplinePickerOpen(true);
+  }
+
+  function handleDisciplinePickerConfirm(): void {
+    if (!selectedDisciplineId) {
+      return;
+    }
+    setDisciplinePickerOpen(false);
+    openSubtaskBuilder(selectedDisciplineId, null);
+    setSelectedDisciplineId(undefined);
+  }
 
   const disciplineColumns: ColumnsType<TaskDiscipline> = [
     {
@@ -205,9 +246,9 @@ export default function TaskDetailContent({
           type="link"
           size="small"
           className="!px-0"
-          onClick={() => openChangeLeaderModal(discipline)}
+          onClick={() => setEditingDiscipline(discipline)}
         >
-          Change leader
+          Edit
         </Button>
       ),
     },
@@ -304,10 +345,7 @@ export default function TaskDetailContent({
                 size="small"
                 className="!px-0 text-[12px]"
                 onClick={() =>
-                  setEditingSubtask({
-                    package: entry.package,
-                    taskDisciplineId: entry.taskDisciplineId,
-                  })
+                  openSubtaskBuilder(entry.taskDisciplineId, entry.package)
                 }
               >
                 Edit subtask
@@ -324,32 +362,6 @@ export default function TaskDetailContent({
       },
     },
   ];
-
-  async function handleChangeLeader(): Promise<void> {
-    if (!editingDiscipline || !selectedLeaderId) {
-      messageApi.error('Select a new leader');
-      return;
-    }
-
-    try {
-      // Only updates TaskDiscipline.disciplineLeadUserId — who can create
-      // subtasks under this discipline and close it. Independent from
-      // DesignPackage.disciplinaryLeaderUserId (per-subtask review role),
-      // which is managed separately via "Edit subtask" on each subtask.
-      await updateTaskDiscipline.mutateAsync({
-        projectId,
-        taskId: task.id,
-        disciplineId: editingDiscipline.id,
-        body: { disciplineLeadUserId: selectedLeaderId },
-      });
-      await disciplinesQuery.refetch();
-      messageApi.success('Discipline leader updated');
-      setEditingDiscipline(null);
-      setSelectedLeaderId(undefined);
-    } catch (error) {
-      notifyApiError(error, 'Failed to update discipline leader', messageApi);
-    }
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -546,7 +558,21 @@ export default function TaskDetailContent({
         )}
       </FormLayout>
 
-      <FormLayout title="Subtasks">
+      <FormLayout
+        title="Subtasks"
+        extra={
+          showAddSubtask ? (
+            <Button
+              type="link"
+              size="small"
+              className="!px-0"
+              onClick={handleAddSubtask}
+            >
+              + Add subtask
+            </Button>
+          ) : undefined
+        }
+      >
         {subtasks.length === 0 ? (
           <p
             className="text-[13px]"
@@ -591,49 +617,55 @@ export default function TaskDetailContent({
       </FormLayout>
 
       <DesignPackageBuilder
-        open={Boolean(editingSubtask)}
+        open={Boolean(subtaskBuilder)}
         projectId={projectId}
-        taskDisciplineId={editingSubtask?.taskDisciplineId ?? ''}
-        editing={editingSubtask?.package ?? null}
-        onClose={() => setEditingSubtask(null)}
+        taskDisciplineId={subtaskBuilder?.taskDisciplineId ?? ''}
+        editing={subtaskBuilder?.editing ?? null}
+        onClose={() => setSubtaskBuilder(null)}
         onSaved={() => {
           void disciplinesQuery.refetch();
         }}
       />
 
       <Modal
-        open={Boolean(editingDiscipline)}
-        title={`Change discipline leader — ${editingDiscipline ? resolveDisciplineDisplayLabel(editingDiscipline) : ''}`}
-        okText="Save"
-        confirmLoading={updateTaskDiscipline.isPending}
+        open={disciplinePickerOpen}
+        title="Add subtask"
+        okText="Continue"
         onCancel={() => {
-          setEditingDiscipline(null);
-          setSelectedLeaderId(undefined);
+          setDisciplinePickerOpen(false);
+          setSelectedDisciplineId(undefined);
         }}
-        onOk={() => void handleChangeLeader()}
+        onOk={handleDisciplinePickerConfirm}
+        okButtonProps={{ disabled: !selectedDisciplineId }}
         destroyOnHidden
       >
-        {editingDiscipline && (
-          <div className="flex flex-col gap-3">
-            <p
-              className="text-[13px]"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              Current: {resolveDisciplineLeaderName(editingDiscipline, userById)}
-            </p>
-            <Select
-              className="w-full"
-              showSearch
-              placeholder="Select new leader"
-              value={selectedLeaderId}
-              onChange={setSelectedLeaderId}
-              loading={usersQuery.isLoading}
-              options={leaderOptions}
-              optionFilterProp="label"
-            />
-          </div>
-        )}
+        <p
+          className="mb-3 text-[13px]"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          Select the discipline this subtask belongs to.
+        </p>
+        <Select
+          className="w-full"
+          showSearch
+          placeholder="Select discipline"
+          value={selectedDisciplineId}
+          onChange={setSelectedDisciplineId}
+          options={disciplinePickerOptions}
+          optionFilterProp="label"
+        />
       </Modal>
+
+      <DisciplineBuilder
+        open={Boolean(editingDiscipline)}
+        projectId={projectId}
+        taskId={task.id}
+        discipline={editingDiscipline}
+        onClose={() => setEditingDiscipline(null)}
+        onSaved={() => {
+          void disciplinesQuery.refetch();
+        }}
+      />
 
     </div>
   );
