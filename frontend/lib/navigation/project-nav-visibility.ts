@@ -44,15 +44,20 @@ const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
 /**
  * True when the user may see the project context (second) sidebar.
- * FK-only discipline/subtask assignees use global workspaces only.
+ * Narrow design-cycle assignees (discipline lead, reviewer, designer,
+ * dept/institute chief, supporting designer) use global workspaces only.
  */
 export function hasProjectSidebarAccess(
   epc: EpcCapabilities,
   pm: PmCapabilities,
 ): boolean {
-  return (
-    epc.navFullAccess || epc.navDepartmentLeader || pm.projects.canView
-  );
+  if (epc.navFullAccess || epc.navDepartmentLeader) {
+    return true;
+  }
+  if (hasDesignCycleNavPersona(epc)) {
+    return false;
+  }
+  return pm.projects.canView;
 }
 
 /**

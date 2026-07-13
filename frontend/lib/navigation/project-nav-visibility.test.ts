@@ -81,6 +81,41 @@ describe('project-nav-visibility', () => {
     ).toBe(false);
   });
 
+  it('design-cycle assignee with projects.canView still has no project sidebar', () => {
+    const pmWithProjects = basePm({
+      projects: {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      },
+    });
+
+    for (const epc of [
+      { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+      { ...EMPTY_EPC_CAPABILITIES, navReviewerTier: true },
+      { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+      { ...EMPTY_EPC_CAPABILITIES, navSupportingDesigner: true },
+    ]) {
+      expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(false);
+      expect(
+        canShowProjectContextSidebar('/projects/p1/schedule', epc, pmWithProjects),
+      ).toBe(false);
+    }
+  });
+
+  it('department leader keeps project sidebar without projects.canView', () => {
+    const epc = {
+      ...EMPTY_EPC_CAPABILITIES,
+      navDepartmentLeader: true,
+    };
+    const pm = basePm();
+
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
+  });
+
   it('project viewer keeps project sidebar access', () => {
     const epc = EMPTY_EPC_CAPABILITIES;
     const pm = basePm({
