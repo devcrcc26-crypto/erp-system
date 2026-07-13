@@ -1561,6 +1561,7 @@ model Task {
   successorLinks     TaskDependency[]  @relation("SuccessorTask")
   disciplines        TaskDiscipline[]
 
+  @@unique([projectId, overseasTaskNumber], map: "uq_task_project_overseas_task_number")
   @@index([projectId], map: "idx_task_project_id")
   @@index([projectId, deletedAt], map: "idx_task_project_deleted")
   @@index([milestoneId], map: "idx_task_milestone_id")

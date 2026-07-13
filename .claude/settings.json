@@ -3,7 +3,9 @@
     "allow": [
       "Bash(psql postgresql://postgres.sqirbwhvtuvtngzpjlfg:5S%2A%2BF%23fY%40T%2BA4Jc@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require -c ' *)",
       "Bash(npx tsc *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(xargs grep -l \"UNIQUE INDEX\")",
+      "Bash(npx prisma *)"
     ]
   }
 }
