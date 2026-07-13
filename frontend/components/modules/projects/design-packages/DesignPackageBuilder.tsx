@@ -98,6 +98,7 @@ export default function DesignPackageBuilder({
   projectId,
   taskDisciplineId,
   editing,
+  disciplineChoices,
   onClose,
   onSaved,
 }: {
@@ -105,17 +106,30 @@ export default function DesignPackageBuilder({
   projectId: string;
   taskDisciplineId: string;
   editing: DesignPackage | null;
+  /** When creating a subtask under multiple disciplines, pick on step 1. */
+  disciplineChoices?: Array<{ value: string; label: string }>;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<BuilderFormValues>();
   const [step, setStep] = useState(0);
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<
+    string | undefined
+  >(undefined);
   const createPackage = useCreateDesignPackage();
   const updatePackage = useUpdateDesignPackage();
+  const isEditing = Boolean(editing);
+  const requiresDisciplinePick =
+    !isEditing && (disciplineChoices?.length ?? 0) > 1;
+  const effectiveDisciplineId = isEditing
+    ? taskDisciplineId
+    : requiresDisciplinePick
+      ? selectedDisciplineId
+      : taskDisciplineId || disciplineChoices?.[0]?.value || '';
   const disciplineQuery = useProjectDiscipline(
     projectId,
-    taskDisciplineId,
-    open,
+    effectiveDisciplineId,
+    open && Boolean(effectiveDisciplineId),
   );
   const currentUserId = useAuthStore((state) => state.user?.id);
   const messageApi = useAppMessage();
@@ -126,6 +140,7 @@ export default function DesignPackageBuilder({
   useEffect(() => {
     if (!open) {
       setStep(0);
+      setSelectedDisciplineId(undefined);
       return;
     }
     if (editing) {
@@ -136,15 +151,29 @@ export default function DesignPackageBuilder({
       return;
     }
     form.resetFields();
-    const defaults = disciplineQuery.data
-      ? defaultRolesFromDiscipline(disciplineQuery.data, currentUserId)
-      : {};
+    const initialDisciplineId =
+      disciplineChoices?.length === 1
+        ? disciplineChoices[0].value
+        : taskDisciplineId || undefined;
+    setSelectedDisciplineId(initialDisciplineId);
     form.setFieldsValue({
       urgencyLevel: 'NORMAL',
       instituteChiefMode: 'SYSTEM_USER',
-      ...defaults,
     });
-  }, [disciplineQuery.data, currentUserId, editing, form, open]);
+  }, [disciplineChoices, editing, form, open, taskDisciplineId]);
+
+  useEffect(() => {
+    if (!open || isEditing || !disciplineQuery.data) {
+      return;
+    }
+    const defaults = defaultRolesFromDiscipline(disciplineQuery.data, currentUserId);
+    form.setFieldsValue((current) => ({
+      ...current,
+      ...defaults,
+      urgencyLevel: current.urgencyLevel ?? 'NORMAL',
+      instituteChiefMode: current.instituteChiefMode ?? 'SYSTEM_USER',
+    }));
+  }, [currentUserId, disciplineQuery.data, form, isEditing, open]);
 
   async function handleSubmit(): Promise<void> {
     const mergedValues = form.getFieldsValue(true) as BuilderFormValues;
@@ -163,9 +192,13 @@ export default function DesignPackageBuilder({
         });
         messageApi.success('Subtask updated successfully');
       } else {
+        if (!effectiveDisciplineId) {
+          messageApi.error('Select a discipline for this subtask');
+          return;
+        }
         await createPackage.mutateAsync({
           projectId,
-          taskDisciplineId,
+          taskDisciplineId: effectiveDisciplineId,
           body,
         });
         messageApi.success('Subtask created successfully');
@@ -183,6 +216,11 @@ export default function DesignPackageBuilder({
   }
 
   async function handleNext(): Promise<void> {
+    if (requiresDisciplinePick && !selectedDisciplineId) {
+      messageApi.error('Select a discipline for this subtask');
+      return;
+    }
+
     try {
       await form.validateFields([
         'name',
@@ -192,6 +230,16 @@ export default function DesignPackageBuilder({
         'urgencyLevel',
         'reviewLevel',
       ]);
+      if (!isEditing && disciplineQuery.data) {
+        const defaults = defaultRolesFromDiscipline(
+          disciplineQuery.data,
+          currentUserId,
+        );
+        form.setFieldsValue((current) => ({
+          ...current,
+          ...defaults,
+        }));
+      }
       setStep(1);
     } catch {
       // validation messages shown by ant form
@@ -252,6 +300,19 @@ export default function DesignPackageBuilder({
       >
         {step === 0 ? (
           <>
+            {requiresDisciplinePick ? (
+              <Form.Item label="Discipline" required>
+                <Select
+                  showSearch
+                  placeholder="Select discipline"
+                  value={selectedDisciplineId}
+                  onChange={setSelectedDisciplineId}
+                  options={disciplineChoices}
+                  optionFilterProp="label"
+                />
+              </Form.Item>
+            ) : null}
+
             {editing?.subtaskId ? (
               <Form.Item label="Subtask ID">
                 <Input readOnly value={editing.subtaskId} className="font-mono" />

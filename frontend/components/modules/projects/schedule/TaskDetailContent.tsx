@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Collapse, Descriptions, Modal, Select, Table } from 'antd';
+import { Button, Collapse, Descriptions, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -126,10 +126,6 @@ export default function TaskDetailContent({
     taskDisciplineId: string;
     editing: DesignPackage | null;
   } | null>(null);
-  const [disciplinePickerOpen, setDisciplinePickerOpen] = useState(false);
-  const [selectedDisciplineId, setSelectedDisciplineId] = useState<
-    string | undefined
-  >(undefined);
   const [editingDiscipline, setEditingDiscipline] =
     useState<TaskDiscipline | null>(null);
   const leaderNameById = useMemo(
@@ -207,22 +203,11 @@ export default function TaskDetailContent({
   }
 
   function handleAddSubtask(): void {
-    if (eligibleDisciplinesForCreate.length === 1) {
-      openSubtaskBuilder(eligibleDisciplinesForCreate[0].id, null);
-      return;
-    }
-
-    setSelectedDisciplineId(undefined);
-    setDisciplinePickerOpen(true);
-  }
-
-  function handleDisciplinePickerConfirm(): void {
-    if (!selectedDisciplineId) {
-      return;
-    }
-    setDisciplinePickerOpen(false);
-    openSubtaskBuilder(selectedDisciplineId, null);
-    setSelectedDisciplineId(undefined);
+    const taskDisciplineId =
+      eligibleDisciplinesForCreate.length === 1
+        ? eligibleDisciplinesForCreate[0].id
+        : '';
+    openSubtaskBuilder(taskDisciplineId, null);
   }
 
   const disciplineColumns: ColumnsType<TaskDiscipline> = [
@@ -617,44 +602,23 @@ export default function TaskDetailContent({
       </FormLayout>
 
       <DesignPackageBuilder
+        key={
+          subtaskBuilder
+            ? `${subtaskBuilder.editing?.id ?? 'new'}-${subtaskBuilder.taskDisciplineId}`
+            : 'closed'
+        }
         open={Boolean(subtaskBuilder)}
         projectId={projectId}
         taskDisciplineId={subtaskBuilder?.taskDisciplineId ?? ''}
         editing={subtaskBuilder?.editing ?? null}
+        disciplineChoices={
+          subtaskBuilder?.editing ? undefined : disciplinePickerOptions
+        }
         onClose={() => setSubtaskBuilder(null)}
         onSaved={() => {
           void disciplinesQuery.refetch();
         }}
       />
-
-      <Modal
-        open={disciplinePickerOpen}
-        title="Add subtask"
-        okText="Continue"
-        onCancel={() => {
-          setDisciplinePickerOpen(false);
-          setSelectedDisciplineId(undefined);
-        }}
-        onOk={handleDisciplinePickerConfirm}
-        okButtonProps={{ disabled: !selectedDisciplineId }}
-        destroyOnHidden
-      >
-        <p
-          className="mb-3 text-[13px]"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          Select the discipline this subtask belongs to.
-        </p>
-        <Select
-          className="w-full"
-          showSearch
-          placeholder="Select discipline"
-          value={selectedDisciplineId}
-          onChange={setSelectedDisciplineId}
-          options={disciplinePickerOptions}
-          optionFilterProp="label"
-        />
-      </Modal>
 
       <DisciplineBuilder
         open={Boolean(editingDiscipline)}
