@@ -1,38 +1,61 @@
-import { DesignPackageStatus } from '@prisma/client';
-import { toDateString } from './pm-mapper.util';
-
-export interface TaskSubtaskDateSummary {
-  computedPlannedFinish: string | null;
-  computedActualFinish: string | null;
+/**
+ * Calendar days between two dates (inclusive-style ceil, matching subtask close logic).
+ */
+export function computeCalendarDaysBetween(
+  start: Date,
+  finish: Date,
+): number {
+  return Math.ceil(
+    (finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+  );
 }
 
-export interface SubtaskDateRow {
+/**
+ * Planned work days from subtask planned start → planned finish.
+ */
+export function computePlannedWorkDays(
+  plannedStartDate: Date | null,
+  plannedFinishDate: Date | null,
+): number | null {
+  if (!plannedStartDate || !plannedFinishDate) {
+    return null;
+  }
+  const days = computeCalendarDaysBetween(plannedStartDate, plannedFinishDate);
+  return days >= 0 ? days : null;
+}
+
+export interface TaskSubtaskWorkDaysSummary {
+  computedPlannedWorkDays: number | null;
+  computedActualWorkDays: number | null;
+}
+
+export interface SubtaskWorkDaysRow {
   taskId: string;
+  plannedStartDate: Date | null;
   plannedFinishDate: Date | null;
-  packageClosedAt: Date | null;
-  packageStatus: DesignPackageStatus;
+  actualWorkDays: number | null;
 }
 
-const EMPTY_SUMMARY: TaskSubtaskDateSummary = {
-  computedPlannedFinish: null,
-  computedActualFinish: null,
+const EMPTY_SUMMARY: TaskSubtaskWorkDaysSummary = {
+  computedPlannedWorkDays: null,
+  computedActualWorkDays: null,
 };
 
 /**
- * Derives task-level planned/actual finish from subtask design packages.
+ * Sums planned work days (start→finish per subtask) and actual work days per task.
  */
-export function buildTaskSubtaskDateSummaries(
+export function buildTaskSubtaskWorkDaysSummaries(
   taskIds: readonly string[],
-  rows: readonly SubtaskDateRow[],
-): Map<string, TaskSubtaskDateSummary> {
-  const byTaskId = new Map<string, SubtaskDateRow[]>();
+  rows: readonly SubtaskWorkDaysRow[],
+): Map<string, TaskSubtaskWorkDaysSummary> {
+  const byTaskId = new Map<string, SubtaskWorkDaysRow[]>();
   for (const row of rows) {
     const existing = byTaskId.get(row.taskId) ?? [];
     existing.push(row);
     byTaskId.set(row.taskId, existing);
   }
 
-  const summaryByTaskId = new Map<string, TaskSubtaskDateSummary>();
+  const summaryByTaskId = new Map<string, TaskSubtaskWorkDaysSummary>();
   for (const taskId of taskIds) {
     const pkgs = byTaskId.get(taskId) ?? [];
     if (pkgs.length === 0) {
@@ -40,33 +63,31 @@ export function buildTaskSubtaskDateSummaries(
       continue;
     }
 
-    const plannedDates = pkgs
-      .map((pkg) => pkg.plannedFinishDate)
-      .filter((value): value is Date => value !== null)
-      .sort((a, b) => a.getTime() - b.getTime());
-    const computedPlannedFinish =
-      plannedDates.length > 0
-        ? toDateString(plannedDates[plannedDates.length - 1])
-        : null;
+    let plannedSum = 0;
+    let hasPlanned = false;
+    for (const pkg of pkgs) {
+      const days = computePlannedWorkDays(
+        pkg.plannedStartDate,
+        pkg.plannedFinishDate,
+      );
+      if (days !== null) {
+        plannedSum += days;
+        hasPlanned = true;
+      }
+    }
 
-    const allClosed = pkgs.every(
-      (pkg) => pkg.packageStatus === DesignPackageStatus.CLOSED,
-    );
-    let computedActualFinish: string | null = null;
-    if (allClosed) {
-      const closedDates = pkgs
-        .map((pkg) => pkg.packageClosedAt)
-        .filter((value): value is Date => value !== null)
-        .sort((a, b) => a.getTime() - b.getTime());
-      computedActualFinish =
-        closedDates.length > 0
-          ? toDateString(closedDates[closedDates.length - 1])
-          : null;
+    let actualSum = 0;
+    let hasActual = false;
+    for (const pkg of pkgs) {
+      if (pkg.actualWorkDays !== null) {
+        actualSum += pkg.actualWorkDays;
+        hasActual = true;
+      }
     }
 
     summaryByTaskId.set(taskId, {
-      computedPlannedFinish,
-      computedActualFinish,
+      computedPlannedWorkDays: hasPlanned ? plannedSum : null,
+      computedActualWorkDays: hasActual ? actualSum : null,
     });
   }
 

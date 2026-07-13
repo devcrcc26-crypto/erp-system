@@ -306,22 +306,24 @@ export default function TasksPanel({
           : null,
     },
     {
-      title: 'Subtask planned finish',
-      key: 'computedPlannedFinish',
+      title: 'Planned work days',
+      key: 'computedPlannedWorkDays',
+      align: 'right',
       render: (_value, record) =>
         record.rowType === 'task'
-          ? record.task.computedPlannedFinish
-            ? formatProjectDate(record.task.computedPlannedFinish)
+          ? record.task.computedPlannedWorkDays != null
+            ? record.task.computedPlannedWorkDays
             : '-'
           : null,
     },
     {
-      title: 'Subtask actual finish',
-      key: 'computedActualFinish',
+      title: 'Actual work days',
+      key: 'computedActualWorkDays',
+      align: 'right',
       render: (_value, record) =>
         record.rowType === 'task'
-          ? record.task.computedActualFinish
-            ? formatProjectDate(record.task.computedActualFinish)
+          ? record.task.computedActualWorkDays != null
+            ? record.task.computedActualWorkDays
             : '-'
           : null,
     },

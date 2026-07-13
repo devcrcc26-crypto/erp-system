@@ -43,7 +43,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
-import { buildTaskSubtaskDateSummaries } from '../utils/task-subtask-date-summary.util';
+import { buildTaskSubtaskWorkDaysSummaries } from '../utils/task-subtask-date-summary.util';
 import { DocumentNumberService } from './document-number.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
@@ -253,17 +253,23 @@ export class ScheduleService {
     ]);
 
     const taskIds = rows.map((task) => task.id);
-    const subtaskDateSummaries =
+    const subtaskWorkDaysSummaries =
       taskIds.length > 0
-        ? await this.loadSubtaskDateSummariesForTasks(ctx.companyId, taskIds)
-        : new Map<string, { computedPlannedFinish: string | null; computedActualFinish: string | null }>();
+        ? await this.loadSubtaskWorkDaysSummariesForTasks(ctx.companyId, taskIds)
+        : new Map<
+            string,
+            {
+              computedPlannedWorkDays: number | null;
+              computedActualWorkDays: number | null;
+            }
+          >();
 
     return buildPaginatedResult(
       rows.map((task) => ({
         ...mapTask(task),
-        ...(subtaskDateSummaries.get(task.id) ?? {
-          computedPlannedFinish: null,
-          computedActualFinish: null,
+        ...(subtaskWorkDaysSummaries.get(task.id) ?? {
+          computedPlannedWorkDays: null,
+          computedActualWorkDays: null,
         }),
       })),
       total,
@@ -273,13 +279,21 @@ export class ScheduleService {
   }
 
   /**
-   * Batch-loads subtask dates for task list computed finish columns.
+   * Batch-loads subtask work-day totals for task list columns.
    */
-  private async loadSubtaskDateSummariesForTasks(
+  private async loadSubtaskWorkDaysSummariesForTasks(
     companyId: string,
     taskIds: string[],
-  ): Promise<Map<string, { computedPlannedFinish: string | null; computedActualFinish: string | null }>> {
-    const subtaskDates = await this.prisma.designPackage.findMany({
+  ): Promise<
+    Map<
+      string,
+      {
+        computedPlannedWorkDays: number | null;
+        computedActualWorkDays: number | null;
+      }
+    >
+  > {
+    const subtaskRows = await this.prisma.designPackage.findMany({
       where: activeOnly({
         companyId,
         taskDiscipline: activeOnly({
@@ -287,22 +301,22 @@ export class ScheduleService {
         }),
       }),
       select: {
+        plannedStartDate: true,
         plannedFinishDate: true,
-        packageClosedAt: true,
-        packageStatus: true,
+        actualWorkDays: true,
         taskDiscipline: {
           select: { taskId: true },
         },
       },
     });
 
-    return buildTaskSubtaskDateSummaries(
+    return buildTaskSubtaskWorkDaysSummaries(
       taskIds,
-      subtaskDates.map((row) => ({
+      subtaskRows.map((row) => ({
         taskId: row.taskDiscipline.taskId,
+        plannedStartDate: row.plannedStartDate,
         plannedFinishDate: row.plannedFinishDate,
-        packageClosedAt: row.packageClosedAt,
-        packageStatus: row.packageStatus,
+        actualWorkDays: row.actualWorkDays,
       })),
     );
   }
@@ -525,21 +539,9 @@ export class ScheduleService {
     }
 
     if (dto.disciplineIdsToRemove?.length) {
-      for (const disciplineId of dto.disciplineIdsToRemove) {
-        await this.getTaskDisciplineOrThrow(ctx, projectId, taskId, disciplineId);
-
-        const packageCount = await this.prisma.designPackage.count({
-          where: activeOnly({
-            taskDisciplineId: disciplineId,
-            companyId: ctx.companyId,
-          }),
-        });
-        if (packageCount > 0) {
-          throw new BadRequestException(
-            `Cannot remove discipline: it has ${packageCount} design package(s)`,
-          );
-        }
-      }
+      throw new BadRequestException(
+        'Cannot remove an assigned discipline leader. Change roles on subtasks instead.',
+      );
     }
 
     const createdDisciplines: Array<{ id: string; disciplineName: string }> =

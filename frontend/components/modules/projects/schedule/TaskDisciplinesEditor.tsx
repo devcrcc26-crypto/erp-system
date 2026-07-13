@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Select } from 'antd';
+import { Select, Tag } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -69,22 +69,27 @@ export default function TaskDisciplinesEditor({
     return base;
   }, [eligibleEmployees, selectedUserIds, userById, disciplines]);
 
-  const lockedEntries = disciplines.filter(
-    (entry) => entry.isExisting && (entry.packageCount ?? 0) > 0,
+  const lockedLeaderUserIds = useMemo(
+    () =>
+      new Set(
+        disciplines
+          .filter((entry) => entry.isExisting)
+          .map((entry) => entry.disciplineLeadUserId),
+      ),
+    [disciplines],
   );
+
+  const lockedEntries = disciplines.filter((entry) => entry.isExisting);
 
   function handleSelectionChange(nextUserIds: string[]): void {
     const currentUserIds = disciplines.map((entry) => entry.disciplineLeadUserId);
     const removedIds = currentUserIds.filter((id) => !nextUserIds.includes(id));
 
-    const blockedRemoval = removedIds.some((id) => {
-      const entry = disciplines.find((d) => d.disciplineLeadUserId === id);
-      return Boolean(entry?.isExisting) && (entry?.packageCount ?? 0) > 0;
-    });
+    const blockedRemoval = removedIds.some((id) => lockedLeaderUserIds.has(id));
 
     if (blockedRemoval) {
       messageApi.error(
-        'Cannot remove a discipline leader who already has packages under their discipline.',
+        'Cannot remove an assigned discipline leader. Change roles on subtask roles instead.',
       );
       return;
     }
@@ -123,6 +128,18 @@ export default function TaskDisciplinesEditor({
         optionFilterProp="label"
         value={selectedUserIds}
         onChange={handleSelectionChange}
+        tagRender={({ label, value, closable, onClose }) => {
+          const isLocked = lockedLeaderUserIds.has(String(value));
+          return (
+            <Tag
+              closable={!isLocked && closable}
+              onClose={onClose}
+              className="mr-1"
+            >
+              {label}
+            </Tag>
+          );
+        }}
         notFoundContent={usersQuery.isLoading ? 'Loading…' : 'No eligible employees found'}
       />
       {disciplines.length === 0 && (
@@ -134,18 +151,13 @@ export default function TaskDisciplinesEditor({
         </p>
       )}
       {lockedEntries.length > 0 && (
-        <ul className="mt-2 space-y-1">
-          {lockedEntries.map((entry) => (
-            <li
-              key={entry.key}
-              className="text-[11px]"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              [{entry.disciplineName}] has {entry.packageCount} package(s) —
-              cannot remove
-            </li>
-          ))}
-        </ul>
+        <p
+          className="mt-2 text-[11px]"
+          style={{ color: tokens.colorTextTertiary }}
+        >
+          Assigned discipline leaders cannot be removed. To change who performs
+          work on a subtask, use subtask roles.
+        </p>
       )}
     </FormLayout>
   );

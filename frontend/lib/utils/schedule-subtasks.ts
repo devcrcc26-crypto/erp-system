@@ -14,50 +14,74 @@ export interface ScheduleSubtaskRollup {
 }
 
 export interface TaskSubtaskTimelineSummary {
-  computedPlannedFinish: string | null;
-  computedActualFinish: string | null;
-  allClosed: boolean;
+  totalPlannedWorkDays: number | null;
+  totalActualWorkDays: number | null;
 }
 
 /**
- * MAX planned finish and actual finish (when all closed) across subtasks.
+ * Calendar days between two date strings (YYYY-MM-DD or ISO).
  */
-export function computeTaskSubtaskTimelineSummary(
+export function computePlannedWorkDaysFromDates(
+  plannedStartDate: string | null | undefined,
+  plannedFinishDate: string | null | undefined,
+): number | null {
+  if (!plannedStartDate || !plannedFinishDate) {
+    return null;
+  }
+  const start = new Date(plannedStartDate);
+  const finish = new Date(plannedFinishDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(finish.getTime())) {
+    return null;
+  }
+  const days = Math.ceil(
+    (finish.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return days >= 0 ? days : null;
+}
+
+/**
+ * Sums planned work days (start→finish per subtask) and actual work days.
+ */
+export function computeTaskSubtaskWorkDaysSummary(
   packages: Pick<
     DesignPackage,
-    'plannedFinishDate' | 'packageClosedAt' | 'packageStatus'
+    | 'plannedStartDate'
+    | 'plannedFinishDate'
+    | 'actualWorkDays'
   >[],
 ): TaskSubtaskTimelineSummary {
   if (packages.length === 0) {
     return {
-      computedPlannedFinish: null,
-      computedActualFinish: null,
-      allClosed: false,
+      totalPlannedWorkDays: null,
+      totalActualWorkDays: null,
     };
   }
 
-  const plannedDates = packages
-    .map((pkg) => pkg.plannedFinishDate)
-    .filter((value): value is string => Boolean(value))
-    .sort();
-  const computedPlannedFinish =
-    plannedDates.length > 0 ? plannedDates[plannedDates.length - 1] : null;
+  let plannedSum = 0;
+  let hasPlanned = false;
+  for (const pkg of packages) {
+    const days = computePlannedWorkDaysFromDates(
+      pkg.plannedStartDate,
+      pkg.plannedFinishDate,
+    );
+    if (days !== null) {
+      plannedSum += days;
+      hasPlanned = true;
+    }
+  }
 
-  const allClosed = packages.every((pkg) => pkg.packageStatus === 'CLOSED');
-  let computedActualFinish: string | null = null;
-  if (allClosed) {
-    const closedDates = packages
-      .map((pkg) => pkg.packageClosedAt)
-      .filter((value): value is string => Boolean(value))
-      .sort();
-    computedActualFinish =
-      closedDates.length > 0 ? closedDates[closedDates.length - 1] : null;
+  let actualSum = 0;
+  let hasActual = false;
+  for (const pkg of packages) {
+    if (pkg.actualWorkDays != null) {
+      actualSum += pkg.actualWorkDays;
+      hasActual = true;
+    }
   }
 
   return {
-    computedPlannedFinish,
-    computedActualFinish,
-    allClosed,
+    totalPlannedWorkDays: hasPlanned ? plannedSum : null,
+    totalActualWorkDays: hasActual ? actualSum : null,
   };
 }
 

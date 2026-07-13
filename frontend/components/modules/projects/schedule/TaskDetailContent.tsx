@@ -8,7 +8,6 @@ import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
-import DisciplineDetailDrawer from '@/components/modules/projects/disciplines/DisciplineDetailDrawer';
 import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import type { Task, TaskDiscipline } from '@/lib/api/project-management.types';
@@ -19,7 +18,6 @@ import {
 } from '@/lib/query/schedule';
 import { useProjectTeam } from '@/lib/query/projects';
 import { useAuthStore } from '@/stores/auth.store';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import {
   formatProjectDate,
   formatProjectDesignStage,
@@ -37,7 +35,8 @@ import {
   urgencyBadgeVariant,
 } from '@/lib/constants/task-comment8';
 import {
-  computeTaskSubtaskTimelineSummary,
+  computePlannedWorkDaysFromDates,
+  computeTaskSubtaskWorkDaysSummary,
   getScheduleSubtaskDisplayStatus,
   scheduleDisciplineWorkspaceHref,
   scheduleSubtaskWorkspaceHref,
@@ -66,21 +65,6 @@ function canEditSubtaskRoles(
   return discipline.disciplineLeadUserId === currentUserId;
 }
 
-function canAddTaskDiscipline(
-  task: Task,
-  currentUserId: string | undefined,
-  isSystemAdministrator: boolean,
-  canEditSchedule: boolean,
-): boolean {
-  if (isSystemAdministrator) {
-    return true;
-  }
-  if (task.dispatcherUserId && task.dispatcherUserId === currentUserId) {
-    return true;
-  }
-  return canEditSchedule;
-}
-
 export default function TaskDetailContent({
   projectId,
   projectName,
@@ -98,7 +82,6 @@ export default function TaskDetailContent({
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
-  const pm = usePmCapabilities();
   const teamQuery = useProjectTeam(projectId);
   const disciplinesQuery = useTaskDisciplines(projectId, task.id);
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
@@ -106,8 +89,6 @@ export default function TaskDetailContent({
     package: DesignPackage;
     taskDisciplineId: string;
   } | null>(null);
-  const [addDisciplineOpen, setAddDisciplineOpen] = useState(false);
-
   const leaderNameById = useMemo(
     () =>
       new Map(
@@ -123,7 +104,7 @@ export default function TaskDetailContent({
 
   const timelineSummary = useMemo(
     () =>
-      computeTaskSubtaskTimelineSummary(
+      computeTaskSubtaskWorkDaysSummary(
         subtasks.map((entry) => entry.package),
       ),
     [subtasks],
@@ -177,12 +158,16 @@ export default function TaskDetailContent({
           : '-',
     },
     {
-      title: 'Planned finish',
-      key: 'plannedFinishDate',
-      render: (_value, entry) =>
-        entry.package.plannedFinishDate
-          ? formatProjectDate(entry.package.plannedFinishDate)
-          : '-',
+      title: 'Planned work days',
+      key: 'plannedWorkDays',
+      align: 'right',
+      render: (_value, entry) => {
+        const days = computePlannedWorkDaysFromDates(
+          entry.package.plannedStartDate,
+          entry.package.plannedFinishDate,
+        );
+        return days != null ? days : '-';
+      },
     },
     {
       title: 'Actual work days',
@@ -213,13 +198,6 @@ export default function TaskDetailContent({
     }
     return map;
   }, [subtasks]);
-
-  const showAddDiscipline = canAddTaskDiscipline(
-    task,
-    currentUserId,
-    isSystemAdministrator,
-    pm.schedule.canEdit,
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -394,21 +372,7 @@ export default function TaskDetailContent({
         ]}
       />
 
-      <FormLayout
-        title="Disciplines & subtasks"
-        extra={
-          showAddDiscipline ? (
-            <Button
-              type="link"
-              size="small"
-              className="!px-0"
-              onClick={() => setAddDisciplineOpen(true)}
-            >
-              + Add discipline
-            </Button>
-          ) : undefined
-        }
-      >
+      <FormLayout title="Disciplines & subtasks">
         {disciplinesQuery.isLoading ? (
           <div className="erp-page-skeleton h-20 w-full rounded" />
         ) : disciplines.length === 0 ? (
@@ -548,7 +512,7 @@ export default function TaskDetailContent({
             className="text-[13px]"
             style={{ color: tokens.colorTextSecondary }}
           >
-            No subtasks yet — planned and actual finish will appear here once
+            No subtasks yet — planned and actual work days will appear here once
             subtasks are created.
           </p>
         ) : (
@@ -567,19 +531,19 @@ export default function TaskDetailContent({
             >
               <p>
                 <span className="font-medium text-slate-700">
-                  Overall planned finish:
+                  Total planned work days:
                 </span>{' '}
-                {timelineSummary.computedPlannedFinish
-                  ? formatProjectDate(timelineSummary.computedPlannedFinish)
+                {timelineSummary.totalPlannedWorkDays != null
+                  ? timelineSummary.totalPlannedWorkDays
                   : '-'}
               </p>
               <p>
                 <span className="font-medium text-slate-700">
-                  Overall actual finish:
+                  Total actual work days:
                 </span>{' '}
-                {timelineSummary.allClosed && timelineSummary.computedActualFinish
-                  ? `${formatProjectDate(timelineSummary.computedActualFinish)} (all subtasks complete)`
-                  : 'In progress'}
+                {timelineSummary.totalActualWorkDays != null
+                  ? timelineSummary.totalActualWorkDays
+                  : '-'}
               </p>
             </div>
           </>
@@ -597,16 +561,6 @@ export default function TaskDetailContent({
         }}
       />
 
-      <DisciplineDetailDrawer
-        open={addDisciplineOpen}
-        projectId={projectId}
-        taskId={task.id}
-        discipline={null}
-        onClose={() => setAddDisciplineOpen(false)}
-        onSaved={() => {
-          void disciplinesQuery.refetch();
-        }}
-      />
     </div>
   );
 }
