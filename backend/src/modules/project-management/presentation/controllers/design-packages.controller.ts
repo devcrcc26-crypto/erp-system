@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -59,7 +60,7 @@ export class DesignPackagesController {
   }
 
   @Post()
-  @RequirePermission('schedule', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create design package' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -110,7 +111,7 @@ export class DesignPackagesController {
   }
 
   @Patch(':packageId')
-  @RequirePermission('schedule', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update design package' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -316,7 +317,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/submit-for-review')
-  @RequirePermission('schedule', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Submit package for review - opens session + frozen snapshot' })
   submitForReview(
     @CurrentUser() user: AuthenticatedUser,
@@ -335,7 +336,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/review-sessions/:reviewSessionId/approve')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Approve review session at current tier' })
   approveReviewSession(
     @CurrentUser() user: AuthenticatedUser,
@@ -415,7 +416,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/return-for-rework')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Return package for rework - closes session, EDVs to DRAFT' })
   returnForRework(
     @CurrentUser() user: AuthenticatedUser,

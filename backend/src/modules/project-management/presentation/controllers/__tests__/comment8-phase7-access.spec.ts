@@ -123,6 +123,109 @@ describe('Comment 8 Phase 7 — API access scoping (supertest)', () => {
         taskDisciplineId,
       );
     });
+
+    it('(iii) discipline leader can create subtask without RBAC schedule.create', async () => {
+      const moduleRef: TestingModule = await Test.createTestingModule({
+        controllers: [DesignPackagesController],
+        providers: [
+          {
+            provide: DesignPackagesService,
+            useValue: {
+              ...designPackagesService,
+              create: jest.fn().mockResolvedValue({
+                id: 'pkg-new',
+                name: 'New subtask',
+                subtaskId: 'OS-TEST-01-01',
+              }),
+            },
+          },
+          { provide: ProjectScopeService, useValue: { getProjectOrThrow: jest.fn() } },
+          PermissionsGuard,
+          {
+            provide: PermissionService,
+            useValue: { hasPermission: jest.fn().mockResolvedValue(false) },
+          },
+          Reflector,
+        ],
+      })
+        .overrideGuard(PmModuleAccessGuard)
+        .useValue({ canActivate: () => true })
+        .compile();
+
+      const createApp = moduleRef.createNestApplication();
+      createApp.useGlobalGuards(new TestUserGuard('leader-a'));
+      createApp.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
+      createApp.useGlobalPipes(
+        new ValidationPipe({
+          whitelist: true,
+          forbidNonWhitelisted: true,
+          transform: true,
+        }),
+      );
+      await createApp.init();
+
+      const response = await request(createApp.getHttpServer())
+        .post(
+          `/projects/${projectId}/task-disciplines/${taskDisciplineId}/design-packages`,
+        )
+        .send({ name: 'New subtask' })
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.subtaskId).toBe('OS-TEST-01-01');
+
+      await createApp.close();
+    });
+
+    it('(iv) unassigned user create is blocked by service assertDisciplineWritable', async () => {
+      const moduleRef: TestingModule = await Test.createTestingModule({
+        controllers: [DesignPackagesController],
+        providers: [
+          {
+            provide: DesignPackagesService,
+            useValue: {
+              ...designPackagesService,
+              create: jest
+                .fn()
+                .mockRejectedValue(
+                  new NotFoundException('Task discipline not found'),
+                ),
+            },
+          },
+          { provide: ProjectScopeService, useValue: { getProjectOrThrow: jest.fn() } },
+          PermissionsGuard,
+          {
+            provide: PermissionService,
+            useValue: { hasPermission: jest.fn().mockResolvedValue(false) },
+          },
+          Reflector,
+        ],
+      })
+        .overrideGuard(PmModuleAccessGuard)
+        .useValue({ canActivate: () => true })
+        .compile();
+
+      const createApp = moduleRef.createNestApplication();
+      createApp.useGlobalGuards(new TestUserGuard('random-user'));
+      createApp.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
+      createApp.useGlobalPipes(
+        new ValidationPipe({
+          whitelist: true,
+          forbidNonWhitelisted: true,
+          transform: true,
+        }),
+      );
+      await createApp.init();
+
+      await request(createApp.getHttpServer())
+        .post(
+          `/projects/${projectId}/task-disciplines/${taskDisciplineId}/design-packages`,
+        )
+        .send({ name: 'Should fail' })
+        .expect(404);
+
+      await createApp.close();
+    });
   });
 
   describe('ScheduleController task list', () => {
