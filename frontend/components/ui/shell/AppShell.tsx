@@ -11,10 +11,10 @@ import MainContentHeader from '@/components/ui/shell/MainContentHeader';
 import {
   extractProjectId,
   resolveRouteMeta,
-  shouldShowContextSidebar,
 } from '@/config/navConfig';
+import { canShowProjectContextSidebar } from '@/lib/navigation/project-nav-visibility';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
+import { useCapabilitiesReady, useEpcCapabilities, usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { useProject, toProjectSummary } from '@/lib/query/projects';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
@@ -36,10 +36,14 @@ export default function AppShell({
 
   const capabilitiesReady = useCapabilitiesReady();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
 
   const projectId = extractProjectId(pathname);
   const showContextSidebar =
-    showContextSidebarProp ?? (projectId !== null && shouldShowContextSidebar(pathname));
+    showContextSidebarProp ??
+    (capabilitiesReady &&
+      canShowProjectContextSidebar(pathname, epc, pm));
 
   const setActiveProject = useProjectContextStore((state) => state.setActiveProject);
   const clearProjectContext = useProjectContextStore(

@@ -7,7 +7,12 @@ import PlaceholderPage from '@/components/PlaceholderPage';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProject } from '@/lib/query/projects';
-import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import {
+  useEpcCapabilities,
+  usePermissionsLoading,
+  usePmCapabilities,
+} from '@/hooks/use-pm-capabilities';
+import { hasProjectSidebarAccess } from '@/lib/navigation/project-nav-visibility';
 
 /**
  * Project route wrapper - loading/error gates; layout lives in AppShell.
@@ -21,6 +26,13 @@ export default function ProjectShell({
 }): React.ReactNode {
   const projectQuery = useProject(projectId);
   const permLoading = usePermissionsLoading();
+  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const projectSidebarAccess = hasProjectSidebarAccess(epc, pm);
+
+  if (!projectSidebarAccess) {
+    return <div className="flex flex-col gap-4">{children}</div>;
+  }
 
   if (projectQuery.isLoading || permLoading) {
     return <PageLoadingSkeleton />;

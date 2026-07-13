@@ -4,7 +4,15 @@ import type {
   PmModuleKey,
 } from '@/lib/api/project-management.types';
 import type { EpcCapabilities } from '@/lib/api/types';
+import { extractProjectId } from '@/config/navConfig';
 import type { ProjectWorkspaceNavItem } from '@/lib/navigation/project-workspace-nav';
+
+/** Global icon-rail only — never shown in the project context sidebar. */
+export const GLOBAL_ONLY_PROJECT_NAV_KEYS = new Set([
+  'my-work',
+  'review-inbox',
+  'my-comments',
+]);
 
 export interface ProjectNavVisibilityContext {
   pm: PmCapabilities;
@@ -25,23 +33,41 @@ export function isProjectNavReady(
 }
 
 /** Project nav keys for discipline leaders (union can widen). */
-const DISCIPLINE_LEADER_PROJECT_KEYS = new Set([
-  'disciplines',
-  'my-work',
-  'review-inbox',
-  'my-comments',
-]);
+const DISCIPLINE_LEADER_PROJECT_KEYS = new Set(['disciplines']);
 
 /** Reviewer / dept·inst chief (and multi-role union with designer). */
-const REVIEWER_TIER_PROJECT_KEYS = new Set([
-  'my-work',
-  'review-inbox',
-  'my-comments',
-]);
+const REVIEWER_TIER_PROJECT_KEYS = new Set<string>();
 
-const DESIGNER_PROJECT_KEYS = new Set(['my-work', 'my-comments']);
+const DESIGNER_PROJECT_KEYS = new Set<string>();
 
-const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set(['my-work']);
+const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
+
+/**
+ * True when the user may see the project context (second) sidebar.
+ * FK-only discipline/subtask assignees use global workspaces only.
+ */
+export function hasProjectSidebarAccess(
+  epc: EpcCapabilities,
+  pm: PmCapabilities,
+): boolean {
+  return (
+    epc.navFullAccess || epc.navDepartmentLeader || pm.projects.canView
+  );
+}
+
+/**
+ * Whether the project context sidebar should render for this route and session.
+ */
+export function canShowProjectContextSidebar(
+  pathname: string,
+  epc: EpcCapabilities,
+  pm: PmCapabilities,
+): boolean {
+  return (
+    extractProjectId(pathname) !== null &&
+    hasProjectSidebarAccess(epc, pm)
+  );
+}
 
 /**
  * Whether EPC nav probes indicate a narrowed design-cycle persona.
@@ -107,6 +133,10 @@ export function canViewProjectNavItem(
   item: ProjectWorkspaceNavItem,
   ctx: ProjectNavVisibilityContext,
 ): boolean {
+  if (GLOBAL_ONLY_PROJECT_NAV_KEYS.has(item.key)) {
+    return false;
+  }
+
   const allowlist = resolveProjectNavKeyAllowlist(ctx.epc);
   if (allowlist !== null && !allowlist.has(item.key)) {
     return false;
@@ -131,26 +161,7 @@ export function canViewProjectNavItem(
   }
 
   if (!cap?.canView) {
-    // Design-cycle My Work / My Comments when module schedule view is absent.
-    if (
-      (item.key === 'my-work' &&
-        (ctx.epc.navDesigner ||
-          ctx.epc.navSupportingDesigner ||
-          ctx.epc.navReviewerTier ||
-          ctx.epc.navDisciplineLeader ||
-          ctx.epc.navDepartmentLeader ||
-          ctx.epc.navFullAccess)) ||
-      (item.key === 'my-comments' &&
-        (ctx.epc.navDesigner ||
-          ctx.epc.navReviewerTier ||
-          ctx.epc.navDisciplineLeader ||
-          ctx.epc.navDepartmentLeader ||
-          ctx.epc.navFullAccess))
-    ) {
-      // fall through to epcCapability checks
-    } else {
-      return false;
-    }
+    return false;
   }
 
   if (item.epcSurface === 'engineering' && !ctx.epc.canViewEngineering) {

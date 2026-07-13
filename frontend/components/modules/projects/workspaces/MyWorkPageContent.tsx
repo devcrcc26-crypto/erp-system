@@ -13,10 +13,14 @@ import { useMyWork } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanViewMyWork,
+  useEpcCapabilities,
   usePermissionsLoading,
+  usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
+import { hasProjectSidebarAccess } from '@/lib/navigation/project-nav-visibility';
 import {
   reviewModeHref,
+  scheduleDisciplineWorkspaceHref,
   scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
 
@@ -27,7 +31,20 @@ const REVIEWER_TIER_ROLES = new Set([
   'INSTITUTE_CHIEF',
 ]);
 
-function workItemHref(item: MyWorkItem): string {
+function workItemHref(
+  item: MyWorkItem,
+  hasProjectAccess: boolean,
+): string {
+  if (item.kind === 'DISCIPLINE_LEAD') {
+    if (hasProjectAccess) {
+      return scheduleDisciplineWorkspaceHref(
+        item.projectId,
+        item.taskDisciplineId,
+      );
+    }
+    return '/my-work';
+  }
+
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
     // DESIGNER/SUPPORTING_DESIGNER -> Designer View; REVIEWER/DISCIPLINE_LEAD/
     // DEPT_CHIEF/INSTITUTE_CHIEF -> Review Mode when submitted; DISCIPLINE_OWNER (or
@@ -59,6 +76,9 @@ export default function MyWorkPageContent({
 } = {}): React.ReactNode {
   const permLoading = usePermissionsLoading();
   const canViewMyWork = useCanViewMyWork();
+  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const hasProjectAccess = hasProjectSidebarAccess(epc, pm);
   const workQuery = useMyWork(projectId);
   const { t } = useEpcTranslation();
   const [addSubtaskFor, setAddSubtaskFor] = useState<string | null>(null);
@@ -157,11 +177,13 @@ export default function MyWorkPageContent({
       render: (_value, record) =>
         record.kind === 'DISCIPLINE_LEAD' ? (
           <Space size="small">
-            <Link href={workItemHref(record)}>
-              <Button type="link" className="!px-0">
-                View task
-              </Button>
-            </Link>
+            {hasProjectAccess ? (
+              <Link href={workItemHref(record, hasProjectAccess)}>
+                <Button type="link" className="!px-0">
+                  View task
+                </Button>
+              </Link>
+            ) : null}
             <Button
               type="link"
               className="!px-0"
@@ -171,7 +193,7 @@ export default function MyWorkPageContent({
             </Button>
           </Space>
         ) : (
-          <Link href={workItemHref(record)}>
+          <Link href={workItemHref(record, hasProjectAccess)}>
             <Button type="link" className="!px-0">
               Open
             </Button>
