@@ -954,6 +954,8 @@ export interface MappedTask {
   actualWorkdays: number | null;
   completionStatus: Task['completionStatus'];
   remark: string | null;
+  computedPlannedFinish?: string | null;
+  computedActualFinish?: string | null;
   createdAt: string;
   updatedAt: string;
 }

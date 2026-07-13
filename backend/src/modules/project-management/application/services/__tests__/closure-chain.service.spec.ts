@@ -145,6 +145,7 @@ describe('Closure chain (closure-chain)', () => {
       expect(designPackageRepository.closePackage).toHaveBeenCalledWith(
         packageId,
         leaderUserId,
+        expect.any(Number),
       );
       expect(result.packageStatus).toBe(DesignPackageStatus.CLOSED);
     });

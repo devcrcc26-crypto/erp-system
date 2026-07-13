@@ -816,9 +816,19 @@ export class DesignPackagesService {
       );
     }
 
+    const closedAt = new Date();
+    const start = pkg.plannedStartDate ?? pkg.submittedAt;
+    const actualWorkDays = start
+      ? Math.ceil(
+          (closedAt.getTime() - new Date(start).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : null;
+
     const closed = await this.designPackageRepository.closePackage(
       packageId,
       ctx.userId,
+      actualWorkDays,
     );
 
     return mapDesignPackage({ ...closed, items: pkg.items });

@@ -306,6 +306,26 @@ export default function TasksPanel({
           : null,
     },
     {
+      title: 'Subtask planned finish',
+      key: 'computedPlannedFinish',
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.computedPlannedFinish
+            ? formatProjectDate(record.task.computedPlannedFinish)
+            : '-'
+          : null,
+    },
+    {
+      title: 'Subtask actual finish',
+      key: 'computedActualFinish',
+      render: (_value, record) =>
+        record.rowType === 'task'
+          ? record.task.computedActualFinish
+            ? formatProjectDate(record.task.computedActualFinish)
+            : '-'
+          : null,
+    },
+    {
       title: 'Progress',
       key: 'progressPct',
       width: 140,

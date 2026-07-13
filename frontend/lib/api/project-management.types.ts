@@ -273,6 +273,8 @@ export interface Task {
   actualWorkdays: number | null;
   completionStatus: CompletionStatus | null;
   remark: string | null;
+  computedPlannedFinish?: string | null;
+  computedActualFinish?: string | null;
   createdAt: string;
   updatedAt: string;
 }

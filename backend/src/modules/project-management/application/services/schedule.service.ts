@@ -43,6 +43,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { buildTaskSubtaskDateSummaries } from '../utils/task-subtask-date-summary.util';
 import { DocumentNumberService } from './document-number.service';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { formatLocalizedName } from '../../../../shared/utils/bilingual-name.util';
@@ -251,11 +252,58 @@ export class ScheduleService {
       this.prisma.task.count({ where }),
     ]);
 
+    const taskIds = rows.map((task) => task.id);
+    const subtaskDateSummaries =
+      taskIds.length > 0
+        ? await this.loadSubtaskDateSummariesForTasks(ctx.companyId, taskIds)
+        : new Map<string, { computedPlannedFinish: string | null; computedActualFinish: string | null }>();
+
     return buildPaginatedResult(
-      rows.map(mapTask),
+      rows.map((task) => ({
+        ...mapTask(task),
+        ...(subtaskDateSummaries.get(task.id) ?? {
+          computedPlannedFinish: null,
+          computedActualFinish: null,
+        }),
+      })),
       total,
       query.page,
       query.limit,
+    );
+  }
+
+  /**
+   * Batch-loads subtask dates for task list computed finish columns.
+   */
+  private async loadSubtaskDateSummariesForTasks(
+    companyId: string,
+    taskIds: string[],
+  ): Promise<Map<string, { computedPlannedFinish: string | null; computedActualFinish: string | null }>> {
+    const subtaskDates = await this.prisma.designPackage.findMany({
+      where: activeOnly({
+        companyId,
+        taskDiscipline: activeOnly({
+          taskId: { in: taskIds },
+        }),
+      }),
+      select: {
+        plannedFinishDate: true,
+        packageClosedAt: true,
+        packageStatus: true,
+        taskDiscipline: {
+          select: { taskId: true },
+        },
+      },
+    });
+
+    return buildTaskSubtaskDateSummaries(
+      taskIds,
+      subtaskDates.map((row) => ({
+        taskId: row.taskDiscipline.taskId,
+        plannedFinishDate: row.plannedFinishDate,
+        packageClosedAt: row.packageClosedAt,
+        packageStatus: row.packageStatus,
+      })),
     );
   }
 

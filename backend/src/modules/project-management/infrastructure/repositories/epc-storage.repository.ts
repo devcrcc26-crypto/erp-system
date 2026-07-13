@@ -346,7 +346,11 @@ export class DesignPackageRepository {
   /**
    * Marks a design package as closed.
    */
-  async closePackage(id: string, closedBy: string): Promise<DesignPackage> {
+  async closePackage(
+    id: string,
+    closedBy: string,
+    actualWorkDays: number | null,
+  ): Promise<DesignPackage> {
     return this.prisma.designPackage.update({
       where: { id },
       data: {
@@ -354,6 +358,7 @@ export class DesignPackageRepository {
         packageClosedAt: new Date(),
         packageClosedBy: closedBy,
         updatedBy: closedBy,
+        actualWorkDays: actualWorkDays ?? undefined,
       },
     });
   }

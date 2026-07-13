@@ -13,6 +13,54 @@ export interface ScheduleSubtaskRollup {
   total: number;
 }
 
+export interface TaskSubtaskTimelineSummary {
+  computedPlannedFinish: string | null;
+  computedActualFinish: string | null;
+  allClosed: boolean;
+}
+
+/**
+ * MAX planned finish and actual finish (when all closed) across subtasks.
+ */
+export function computeTaskSubtaskTimelineSummary(
+  packages: Pick<
+    DesignPackage,
+    'plannedFinishDate' | 'packageClosedAt' | 'packageStatus'
+  >[],
+): TaskSubtaskTimelineSummary {
+  if (packages.length === 0) {
+    return {
+      computedPlannedFinish: null,
+      computedActualFinish: null,
+      allClosed: false,
+    };
+  }
+
+  const plannedDates = packages
+    .map((pkg) => pkg.plannedFinishDate)
+    .filter((value): value is string => Boolean(value))
+    .sort();
+  const computedPlannedFinish =
+    plannedDates.length > 0 ? plannedDates[plannedDates.length - 1] : null;
+
+  const allClosed = packages.every((pkg) => pkg.packageStatus === 'CLOSED');
+  let computedActualFinish: string | null = null;
+  if (allClosed) {
+    const closedDates = packages
+      .map((pkg) => pkg.packageClosedAt)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+    computedActualFinish =
+      closedDates.length > 0 ? closedDates[closedDates.length - 1] : null;
+  }
+
+  return {
+    computedPlannedFinish,
+    computedActualFinish,
+    allClosed,
+  };
+}
+
 /**
  * Maps a design package to a simplified status for the schedule task list.
  */

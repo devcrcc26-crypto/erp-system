@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Collapse, Descriptions } from 'antd';
+import { Button, Collapse, Descriptions, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -36,6 +37,7 @@ import {
   urgencyBadgeVariant,
 } from '@/lib/constants/task-comment8';
 import {
+  computeTaskSubtaskTimelineSummary,
   getScheduleSubtaskDisplayStatus,
   scheduleDisciplineWorkspaceHref,
   scheduleSubtaskWorkspaceHref,
@@ -118,6 +120,89 @@ export default function TaskDetailContent({
 
   const disciplines = disciplinesQuery.data ?? [];
   const subtasks = subtasksByTaskId.get(task.id) ?? [];
+
+  const timelineSummary = useMemo(
+    () =>
+      computeTaskSubtaskTimelineSummary(
+        subtasks.map((entry) => entry.package),
+      ),
+    [subtasks],
+  );
+
+  const timelineRows = useMemo(
+    () =>
+      [...subtasks].sort((a, b) =>
+        (a.package.subtaskId ?? a.package.packageCode).localeCompare(
+          b.package.subtaskId ?? b.package.packageCode,
+        ),
+      ),
+    [subtasks],
+  );
+
+  const timelineColumns: ColumnsType<ScheduleSubtaskEntry> = [
+    {
+      title: 'Subtask ID',
+      key: 'subtaskId',
+      render: (_value, entry) =>
+        entry.package.subtaskId ?? entry.package.packageCode,
+    },
+    {
+      title: 'Subtask name',
+      key: 'name',
+      render: (_value, entry) => (
+        <div>
+          <div className="text-[13px] font-medium">{entry.package.name}</div>
+          {entry.package.nameZh ? (
+            <div
+              className="text-[12px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {entry.package.nameZh}
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: 'Discipline',
+      key: 'discipline',
+      dataIndex: 'disciplineName',
+    },
+    {
+      title: 'Planned start',
+      key: 'plannedStartDate',
+      render: (_value, entry) =>
+        entry.package.plannedStartDate
+          ? formatProjectDate(entry.package.plannedStartDate)
+          : '-',
+    },
+    {
+      title: 'Planned finish',
+      key: 'plannedFinishDate',
+      render: (_value, entry) =>
+        entry.package.plannedFinishDate
+          ? formatProjectDate(entry.package.plannedFinishDate)
+          : '-',
+    },
+    {
+      title: 'Actual work days',
+      key: 'actualWorkDays',
+      render: (_value, entry) =>
+        entry.package.packageStatus === 'CLOSED' &&
+        entry.package.actualWorkDays != null
+          ? entry.package.actualWorkDays
+          : '-',
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_value, entry) => (
+        <ScheduleSubtaskStatusBadge
+          status={getScheduleSubtaskDisplayStatus(entry.package)}
+        />
+      ),
+    },
+  ];
 
   const packagesByDisciplineId = useMemo(() => {
     const map = new Map<string, ScheduleSubtaskEntry[]>();
@@ -454,6 +539,50 @@ export default function TaskDetailContent({
               );
             })}
           </ul>
+        )}
+      </FormLayout>
+
+      <FormLayout title="Timeline">
+        {subtasks.length === 0 ? (
+          <p
+            className="text-[13px]"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            No subtasks yet — planned and actual finish will appear here once
+            subtasks are created.
+          </p>
+        ) : (
+          <>
+            <Table<ScheduleSubtaskEntry>
+              rowKey={(entry) => entry.package.id}
+              columns={timelineColumns}
+              dataSource={timelineRows}
+              pagination={false}
+              size="small"
+              scroll={{ x: 'max-content' }}
+            />
+            <div
+              className="mt-4 space-y-1 text-[13px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              <p>
+                <span className="font-medium text-slate-700">
+                  Overall planned finish:
+                </span>{' '}
+                {timelineSummary.computedPlannedFinish
+                  ? formatProjectDate(timelineSummary.computedPlannedFinish)
+                  : '-'}
+              </p>
+              <p>
+                <span className="font-medium text-slate-700">
+                  Overall actual finish:
+                </span>{' '}
+                {timelineSummary.allClosed && timelineSummary.computedActualFinish
+                  ? `${formatProjectDate(timelineSummary.computedActualFinish)} (all subtasks complete)`
+                  : 'In progress'}
+              </p>
+            </div>
+          </>
         )}
       </FormLayout>
 
