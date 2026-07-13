@@ -24,7 +24,8 @@ import type {
   ProjectTeamMember,
   UpdateProjectRequest,
 } from '@/lib/api/project-management.types';
-import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
+import type { MessageResponse, PaginationMeta, PaginationParams, User } from '@/lib/api/types';
+import { USER_DIRECTORY_PAGE_LIMIT } from '@/lib/query/users';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
@@ -43,6 +44,8 @@ export const projectKeys = {
   detail: (id: string) => [...projectKeys.details(), id] as const,
   dashboard: (id: string) => [...projectKeys.all, 'dashboard', id] as const,
   team: (id: string) => [...projectKeys.all, 'team', id] as const,
+  assignableUsers: (id: string) =>
+    [...projectKeys.all, 'assignable-users', id] as const,
 };
 
 export function useProjects(
@@ -167,6 +170,52 @@ export function useProjectTeam(projectId: string, enabled = true) {
       apiGet<ProjectTeamMember[]>(`${projectPath(projectId)}/team`),
     enabled: Boolean(projectId) && enabled,
     retry: false,
+  });
+}
+
+/**
+ * Loads every active company user assignable on a project (paginates until complete).
+ */
+export async function fetchAllProjectAssignableUsers(
+  projectId: string,
+): Promise<User[]> {
+  const limit = USER_DIRECTORY_PAGE_LIMIT;
+  let page = 1;
+  let pages = 1;
+  const users: User[] = [];
+
+  do {
+    const result = await apiGetPaginated<User>(
+      `${projectPath(projectId)}/assignable-users${toQueryString({
+        page,
+        limit,
+        sortBy: 'lastName',
+        sortOrder: 'asc',
+      })}`,
+    );
+    users.push(...result.data);
+    pages = result.meta.pages;
+    page += 1;
+  } while (page <= pages);
+
+  return users;
+}
+
+/**
+ * Project-scoped user directory for role assignment pickers.
+ * Works for discipline-scoped users without global projects.view.
+ */
+export function useProjectAssignableUsers(
+  projectId: string,
+  options?: Omit<UseQueryOptions<User[]>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: [...projectKeys.assignableUsers(projectId), 'all'] as const,
+    queryFn: () => fetchAllProjectAssignableUsers(projectId),
+    enabled: Boolean(projectId),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    ...options,
   });
 }
 

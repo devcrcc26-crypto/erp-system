@@ -97,6 +97,34 @@ describe('permission-context-builder', () => {
       );
       expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
     });
+
+    it('ALLOW review tier for task discipline lead when subtask lead reassigned', () => {
+      const result = evaluateDisciplineAssignmentLayer(
+        baseContext({
+          action: EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
+          userId: 'lead-1',
+          disciplineLeadUserId: 'lead-1',
+          subtaskDisciplinaryLeaderUserId: 'other-lead',
+          grantedActions: new Set([EpcWorkflowAction.REVIEW_COMMENT_ASSIGN]),
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    });
+
+    it('ALLOW designer actions for task discipline designer when subtask designer reassigned', () => {
+      const result = evaluateDisciplineAssignmentLayer(
+        baseContext({
+          action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+          userId: 'designer-1',
+          disciplineDesignerUserId: 'designer-1',
+          subtaskDesignerUserId: 'other-designer',
+          grantedActions: new Set([
+            EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
+          ]),
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    });
   });
 
   describe('evaluateWorkflowStateLayer', () => {

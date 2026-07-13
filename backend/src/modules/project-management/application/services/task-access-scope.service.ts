@@ -374,7 +374,17 @@ export class TaskAccessScopeService {
       }
     }
 
-    return { OR: subtaskRoleOr(ctx.userId) };
+    return {
+      OR: [
+        ...subtaskRoleOr(ctx.userId),
+        {
+          taskDiscipline: activeOnly({
+            companyId: ctx.companyId,
+            OR: disciplineAssigneeOr(ctx.userId),
+          }),
+        },
+      ],
+    };
   }
 
   /**

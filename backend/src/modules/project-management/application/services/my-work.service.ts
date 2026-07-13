@@ -7,7 +7,7 @@ import {
   SUBTASK_ROLE_LABELS,
   type SubtaskRoleField,
 } from '../constants/my-work.constants';
-import { subtaskRoleOr } from '../../domain/task-access-scope.util';
+import { disciplineAssigneeOr, subtaskRoleOr } from '../../domain/task-access-scope.util';
 import { getEffectiveApprovalChain } from '../../domain/approval-chain.util';
 import {
   resolveSubtaskRoles,
@@ -92,7 +92,15 @@ export class MyWorkService {
       this.prisma.designPackage.findMany({
         where: activeOnly({
           companyId: ctx.companyId,
-          OR: subtaskRoleOr(ctx.userId),
+          OR: [
+            ...subtaskRoleOr(ctx.userId),
+            {
+              taskDiscipline: activeOnly({
+                companyId: ctx.companyId,
+                OR: disciplineAssigneeOr(ctx.userId),
+              }),
+            },
+          ],
           taskDiscipline: {
             task: taskRelationFilter,
           },

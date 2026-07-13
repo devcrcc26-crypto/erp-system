@@ -1,14 +1,18 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Form, Modal } from 'antd';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import SubtaskRolesFormFields from '@/components/modules/projects/design-packages/SubtaskRolesFormFields';
 import {
   type SubtaskRolesFormValues,
+  mergeSubtaskRolesWithDisciplineDefaults,
   toSubtaskRolesFormValues,
   toSubtaskRolesPayload,
 } from '@/components/modules/projects/design-packages/subtask-roles-form.util';
 import { useUpdateDesignPackage } from '@/lib/query/design-packages';
+import { useProjectDiscipline } from '@/lib/query/disciplines';
+import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -30,6 +34,30 @@ export default function SubtaskRolesModal({
   const [form] = Form.useForm<SubtaskRolesFormValues>();
   const updateSubtask = useUpdateDesignPackage();
   const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const disciplineQuery = useProjectDiscipline(
+    projectId,
+    taskDisciplineId,
+    open,
+  );
+
+  useEffect(() => {
+    if (!open || !subtask) {
+      return;
+    }
+    const values = toSubtaskRolesFormValues(subtask);
+    if (!disciplineQuery.data) {
+      form.setFieldsValue(values);
+      return;
+    }
+    form.setFieldsValue(
+      mergeSubtaskRolesWithDisciplineDefaults(
+        values,
+        disciplineQuery.data,
+        currentUserId,
+      ),
+    );
+  }, [open, subtask, disciplineQuery.data, currentUserId, form]);
 
   async function handleSubmit(values: SubtaskRolesFormValues): Promise<void> {
     if (!subtask) {
@@ -64,11 +92,6 @@ export default function SubtaskRolesModal({
       width={720}
       className="erp-responsive-modal"
       styles={{ body: { overflow: 'visible' } }}
-      afterOpenChange={(visible: boolean) => {
-        if (visible && subtask) {
-          form.setFieldsValue(toSubtaskRolesFormValues(subtask));
-        }
-      }}
     >
       <Form<SubtaskRolesFormValues>
         form={form}

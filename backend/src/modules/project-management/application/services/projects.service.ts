@@ -15,7 +15,9 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import {
+  buildOrderBy,
   buildPaginatedResult,
   buildPrismaPagination,
   PaginatedResult,
@@ -425,6 +427,31 @@ export class ProjectsService {
   }
 
   /**
+   * Returns active company users for role assignment pickers on a readable project.
+   */
+  async listAssignableUsers(
+    ctx: PmContext,
+    projectId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<unknown>> {
+    await this.taskAccessScopeService.assertProjectReadable(ctx, projectId);
+
+    const where = activeOnly({ companyId: ctx.companyId });
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy: buildOrderBy(query.sortBy, query.sortOrder),
+        select: this.assignableUserSelect(),
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
    * Returns active team members assigned to a project.
    */
   async listTeam(
@@ -822,5 +849,27 @@ export class ProjectsService {
 
   private clampPercent(value: number): number {
     return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  private assignableUserSelect(): Prisma.UserSelect {
+    return {
+      id: true,
+      firstName: true,
+      lastName: true,
+      chineseName: true,
+      email: true,
+      discipline: true,
+      engineeringDisciplineId: true,
+      engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
+      isActive: true,
+      userRoles: {
+        where: activeOnly({}),
+        select: {
+          id: true,
+          roleId: true,
+          role: { select: { id: true, name: true } },
+        },
+      },
+    };
   }
 }

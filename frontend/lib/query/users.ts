@@ -105,7 +105,8 @@ export async function fetchAllUsersDirectory(): Promise<User[]> {
 }
 
 /**
- * Company user directory for assignment pickers - available with projects.view.
+ * Company user directory for assignment pickers - available with projects.view,
+ * schedule.view, design_packages.view, or users.view.
  */
 export function useUsersDirectory(
   params: PaginationParams = { page: 1, limit: 100 },

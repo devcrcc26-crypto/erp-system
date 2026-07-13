@@ -12,6 +12,7 @@ import type { CreateDesignPackageRequest } from '@/lib/api/epc.types';
 import SubtaskRolesFormFields from '@/components/modules/projects/design-packages/SubtaskRolesFormFields';
 import {
   type SubtaskRolesFormValues,
+  defaultSubtaskRolesFromDiscipline,
   toSubtaskRolesPayload,
 } from '@/components/modules/projects/design-packages/subtask-roles-form.util';
 import {
@@ -19,6 +20,7 @@ import {
   useUpdateDesignPackage,
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
+import { useAuthStore } from '@/stores/auth.store';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -84,17 +86,9 @@ function toPackageFormValues(pkg: DesignPackage): PackageFormValues {
 
 function defaultRolesFromDiscipline(
   discipline: NonNullable<ReturnType<typeof useProjectDiscipline>['data']>,
+  currentUserId?: string,
 ): SubtaskRolesFormValues {
-  return {
-    designerUserId: discipline.designerUserId ?? undefined,
-    supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
-    disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
-    reviewerUserId: discipline.reviewerUserId ?? undefined,
-    disciplinaryLeaderUserId: discipline.disciplineLeadUserId ?? undefined,
-    deptDeputyChiefUserId: discipline.chiefUserId ?? undefined,
-    instituteChiefMode: 'SYSTEM_USER',
-    instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
-  };
+  return defaultSubtaskRolesFromDiscipline(discipline, currentUserId);
 }
 
 export default function DesignPackageBuilder({
@@ -121,6 +115,7 @@ export default function DesignPackageBuilder({
     taskDisciplineId,
     open,
   );
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const messageApi = useAppMessage();
   const isSubmitting = createPackage.isPending || updatePackage.isPending;
   const isCreateFlow = !editing;
@@ -142,14 +137,14 @@ export default function DesignPackageBuilder({
     }
     form.resetFields();
     const defaults = disciplineQuery.data
-      ? defaultRolesFromDiscipline(disciplineQuery.data)
+      ? defaultRolesFromDiscipline(disciplineQuery.data, currentUserId)
       : {};
     form.setFieldsValue({
       urgencyLevel: 'NORMAL',
       instituteChiefMode: 'SYSTEM_USER',
       ...defaults,
     });
-  }, [disciplineQuery.data, editing, form, open]);
+  }, [disciplineQuery.data, currentUserId, editing, form, open]);
 
   async function handleSubmit(values: BuilderFormValues): Promise<void> {
     const mergedValues =

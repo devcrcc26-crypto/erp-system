@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
@@ -104,6 +105,25 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
   ): Promise<unknown> {
     return this.projectsService.listTeam(this.ctx(user), projectId);
+  }
+
+  @Get(':projectId/assignable-users')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'List users for role assignment pickers on a project',
+    description:
+      'Returns active company users for subtask role assignment. Accessible to discipline-scoped users with project read access.',
+  })
+  listAssignableUsers(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Query() query: PaginationQueryDto,
+  ): Promise<unknown> {
+    return this.projectsService.listAssignableUsers(
+      this.ctx(user),
+      projectId,
+      query,
+    );
   }
 
   @Put(':projectId/team')

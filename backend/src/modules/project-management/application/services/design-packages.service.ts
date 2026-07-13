@@ -434,30 +434,36 @@ export class DesignPackagesService {
     }
 
     const nextPackageOverrides = {
-      designerUserId:
-        dto.designerUserId !== undefined
-          ? dto.designerUserId
-          : existing.designerUserId,
-      supportingDesignerUserId:
-        dto.supportingDesignerUserId !== undefined
-          ? dto.supportingDesignerUserId
-          : existing.supportingDesignerUserId,
-      disciplineOwnerUserId:
-        dto.disciplineOwnerUserId !== undefined
-          ? dto.disciplineOwnerUserId
-          : existing.disciplineOwnerUserId,
-      reviewerUserId:
-        dto.reviewerUserId !== undefined
-          ? dto.reviewerUserId
-          : existing.reviewerUserId,
-      disciplinaryLeaderUserId:
-        dto.disciplinaryLeaderUserId !== undefined
-          ? dto.disciplinaryLeaderUserId
-          : existing.disciplinaryLeaderUserId,
-      deptDeputyChiefUserId:
-        dto.deptDeputyChiefUserId !== undefined
-          ? dto.deptDeputyChiefUserId
-          : existing.deptDeputyChiefUserId,
+      designerUserId: this.resolveRoleOnUpdate(
+        dto.designerUserId,
+        existing.designerUserId,
+        discipline.designerUserId,
+      ),
+      supportingDesignerUserId: this.resolveRoleOnUpdate(
+        dto.supportingDesignerUserId,
+        existing.supportingDesignerUserId,
+        discipline.supportingDesignerUserId,
+      ),
+      disciplineOwnerUserId: this.resolveRoleOnUpdate(
+        dto.disciplineOwnerUserId,
+        existing.disciplineOwnerUserId,
+        discipline.ownerUserId,
+      ),
+      reviewerUserId: this.resolveRoleOnUpdate(
+        dto.reviewerUserId,
+        existing.reviewerUserId,
+        discipline.reviewerUserId,
+      ),
+      disciplinaryLeaderUserId: this.resolveRoleOnUpdate(
+        dto.disciplinaryLeaderUserId,
+        existing.disciplinaryLeaderUserId,
+        discipline.disciplineLeadUserId,
+      ),
+      deptDeputyChiefUserId: this.resolveRoleOnUpdate(
+        dto.deptDeputyChiefUserId,
+        existing.deptDeputyChiefUserId,
+        discipline.chiefUserId,
+      ),
       instituteChiefUserId: nextInstituteChiefUserId,
       instituteChiefName: nextInstituteChiefName,
     };
@@ -1259,6 +1265,17 @@ export class DesignPackagesService {
         ? { connect: { id: overrides.instituteChiefUserId } }
         : { disconnect: true },
     };
+  }
+
+  private resolveRoleOnUpdate(
+    dtoValue: string | undefined,
+    existingValue: string | null,
+    disciplineDefault: string | null,
+  ): string | null {
+    if (dtoValue === undefined) {
+      return existingValue;
+    }
+    return dtoValue ?? disciplineDefault;
   }
 
   private getEffectiveApprovalChain(

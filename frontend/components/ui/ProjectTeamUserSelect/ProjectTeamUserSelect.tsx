@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Select, Spin } from 'antd';
 import type { SelectProps } from 'antd';
-import { useProjectTeam } from '@/lib/query/projects';
+import { useProjectAssignableUsers, useProjectTeam } from '@/lib/query/projects';
 import { useFullUsersDirectory, useUser } from '@/lib/query/users';
 import {
   formatUserPickerLabel,
@@ -44,10 +44,19 @@ export default function ProjectTeamUserSelect({
     projectId,
     Boolean(projectId) && !disabled && !isRestricted && !useCompanyDirectory,
   );
-  const usersQuery = useFullUsersDirectory({
-    enabled: !disabled && Boolean(projectId),
+  const assignableUsersQuery = useProjectAssignableUsers(projectId, {
+    enabled: !disabled && Boolean(projectId) && useCompanyDirectory,
   });
-  const valueUserQuery = useUser(value ?? '', Boolean(value) && !disabled);
+  const usersDirectoryQuery = useFullUsersDirectory({
+    enabled: !disabled && Boolean(projectId) && !useCompanyDirectory,
+  });
+  const usersQuery = useCompanyDirectory
+    ? assignableUsersQuery
+    : usersDirectoryQuery;
+  const valueUserQuery = useUser(
+    value ?? '',
+    Boolean(value) && !disabled && !useCompanyDirectory,
+  );
 
   const teamUserIds = useMemo(
     () => new Set((teamQuery.data ?? []).map((member) => member.userId)),
@@ -75,10 +84,15 @@ export default function ProjectTeamUserSelect({
           label: formatUserPickerLabel(user),
         }));
 
+      const selectedUser =
+        value && users.find((user) => user.id === value)
+          ? users.find((user) => user.id === value)
+          : valueUserQuery.data;
+
       return withSelectedUserOption(
         baseOptions,
         value,
-        valueUserQuery.data,
+        selectedUser,
         formatUserPickerLabel,
         undefined,
       );
@@ -94,10 +108,15 @@ export default function ProjectTeamUserSelect({
           label: formatUserPickerLabel(user),
         }));
 
+      const selectedUser =
+        value && users.find((user) => user.id === value)
+          ? users.find((user) => user.id === value)
+          : undefined;
+
       return withSelectedUserOption(
         baseOptions,
         value,
-        valueUserQuery.data,
+        selectedUser,
         formatUserPickerLabel,
         undefined,
       );
@@ -152,7 +171,9 @@ export default function ProjectTeamUserSelect({
   const isLoading =
     (!useCompanyDirectory && !isRestricted && teamQuery.isLoading) ||
     usersQuery.isLoading ||
-    (Boolean(value) && valueUserQuery.isLoading);
+    (!useCompanyDirectory && Boolean(value) && valueUserQuery.isLoading);
+
+  const usersLoadFailed = usersQuery.isError;
 
   return (
     <Select
@@ -173,6 +194,8 @@ export default function ProjectTeamUserSelect({
       notFoundContent={
         isLoading ? (
           <Spin size="small" />
+        ) : usersLoadFailed ? (
+          'Unable to load users'
         ) : teamEmpty ? (
           'Add members on the project team first'
         ) : (

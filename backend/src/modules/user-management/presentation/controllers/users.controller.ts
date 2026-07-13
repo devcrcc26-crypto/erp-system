@@ -14,6 +14,7 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AssignUserRoleDto,
@@ -45,7 +46,12 @@ export class UsersController {
   }
 
   @Get('directory')
-  @RequirePermission('projects', 'view')
+  @RequireAnyPermission(
+    { module: 'projects', action: 'view' },
+    { module: 'schedule', action: 'view' },
+    { module: 'design_packages', action: 'view' },
+    { module: 'users', action: 'view' },
+  )
   @ApiOperation({
     summary: 'List users for assignment pickers',
     description:

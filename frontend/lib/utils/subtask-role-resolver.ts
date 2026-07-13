@@ -112,5 +112,33 @@ export function resolvePackageRoles(
     return { primaryRole: 'DISCIPLINE_OWNER', secondaryReviewRole: null };
   }
 
+  if (taskDiscipline.designerUserId === currentUserId) {
+    return {
+      primaryRole: 'DESIGNER',
+      secondaryReviewRole: resolveReviewerTier(chain, currentUserId),
+    };
+  }
+  if (taskDiscipline.supportingDesignerUserId === currentUserId) {
+    return {
+      primaryRole: 'SUPPORTING_DESIGNER',
+      secondaryReviewRole: resolveReviewerTier(chain, currentUserId),
+    };
+  }
+  if (taskDiscipline.reviewerUserId === currentUserId) {
+    return { primaryRole: 'REVIEWER', secondaryReviewRole: null };
+  }
+  if (taskDiscipline.disciplineLeadUserId === currentUserId) {
+    return { primaryRole: 'DISCIPLINE_LEAD', secondaryReviewRole: null };
+  }
+  if (taskDiscipline.chiefUserId === currentUserId) {
+    return { primaryRole: 'DEPT_CHIEF', secondaryReviewRole: null };
+  }
+  if (taskDiscipline.instituteChiefUserId === currentUserId) {
+    return { primaryRole: 'INSTITUTE_CHIEF', secondaryReviewRole: null };
+  }
+  if (taskDiscipline.ownerUserId === currentUserId) {
+    return { primaryRole: 'DISCIPLINE_OWNER', secondaryReviewRole: null };
+  }
+
   return { primaryRole: null, secondaryReviewRole: null };
 }

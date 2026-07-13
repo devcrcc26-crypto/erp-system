@@ -31,6 +31,71 @@ export function toSubtaskRolesFormValues(
   };
 }
 
+export interface TaskDisciplineRoleDefaults {
+  designerUserId?: string | null;
+  supportingDesignerUserId?: string | null;
+  ownerUserId?: string | null;
+  reviewerUserId?: string | null;
+  disciplineLeadUserId?: string | null;
+  chiefUserId?: string | null;
+  instituteChiefUserId?: string | null;
+}
+
+/**
+ * Default subtask role pickers from the parent task-discipline row.
+ * When the current user is the discipline leader, they are pre-filled as subtask disciplinary leader.
+ */
+export function defaultSubtaskRolesFromDiscipline(
+  discipline: TaskDisciplineRoleDefaults,
+  currentUserId?: string,
+): SubtaskRolesFormValues {
+  const isDisciplineLeader =
+    Boolean(currentUserId) &&
+    discipline.disciplineLeadUserId === currentUserId;
+
+  return {
+    designerUserId: discipline.designerUserId ?? undefined,
+    supportingDesignerUserId: discipline.supportingDesignerUserId ?? undefined,
+    disciplineOwnerUserId: discipline.ownerUserId ?? undefined,
+    reviewerUserId: discipline.reviewerUserId ?? undefined,
+    disciplinaryLeaderUserId: isDisciplineLeader
+      ? currentUserId
+      : (discipline.disciplineLeadUserId ?? undefined),
+    deptDeputyChiefUserId: discipline.chiefUserId ?? undefined,
+    instituteChiefMode: 'SYSTEM_USER',
+    instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+  };
+}
+
+/**
+ * Merges task-discipline defaults into role form values when fields are empty
+ * (e.g. after an admin cleared a picker).
+ */
+export function mergeSubtaskRolesWithDisciplineDefaults(
+  values: SubtaskRolesFormValues,
+  discipline: TaskDisciplineRoleDefaults,
+  currentUserId?: string,
+): SubtaskRolesFormValues {
+  const defaults = defaultSubtaskRolesFromDiscipline(discipline, currentUserId);
+  return {
+    ...defaults,
+    ...values,
+    disciplinaryLeaderUserId:
+      values.disciplinaryLeaderUserId ??
+      defaults.disciplinaryLeaderUserId,
+    designerUserId: values.designerUserId ?? defaults.designerUserId,
+    supportingDesignerUserId:
+      values.supportingDesignerUserId ?? defaults.supportingDesignerUserId,
+    disciplineOwnerUserId:
+      values.disciplineOwnerUserId ?? defaults.disciplineOwnerUserId,
+    reviewerUserId: values.reviewerUserId ?? defaults.reviewerUserId,
+    deptDeputyChiefUserId:
+      values.deptDeputyChiefUserId ?? defaults.deptDeputyChiefUserId,
+    instituteChiefUserId:
+      values.instituteChiefUserId ?? defaults.instituteChiefUserId,
+  };
+}
+
 export function toSubtaskRolesPayload(
   values: SubtaskRolesFormValues,
 ): UpdateDesignPackageRequest {
