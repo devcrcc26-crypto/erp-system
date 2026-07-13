@@ -9,7 +9,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
-import type { MyWorkItem, MyWorkItemKind } from '@/lib/api/epc.types';
+import type { DesignPackageProjectedStatus, MyWorkItem } from '@/lib/api/epc.types';
 import { useMyWork } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -24,6 +24,20 @@ import {
   scheduleDisciplineWorkspaceHref,
   scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
+import { PROJECTED_STATUS_LABELS } from '@/lib/utils/epc-display';
+
+const PROJECTED_STATUS_OPTIONS: DesignPackageProjectedStatus[] = [
+  'IN_PROGRESS',
+  'PENDING_LEAD',
+  'APPROVED',
+  'REWORK_REQUIRED',
+  'LOCKED',
+];
+
+const STATUS_FILTER_OPTIONS = PROJECTED_STATUS_OPTIONS.map((status) => ({
+  value: status,
+  label: PROJECTED_STATUS_LABELS[status],
+}));
 
 const REVIEWER_TIER_ROLES = new Set([
   'REVIEWER',
@@ -31,11 +45,6 @@ const REVIEWER_TIER_ROLES = new Set([
   'DEPT_CHIEF',
   'INSTITUTE_CHIEF',
 ]);
-
-const TYPE_FILTER_OPTIONS: Array<{ value: MyWorkItemKind; label: string }> = [
-  { value: 'DISCIPLINE_LEAD', label: 'Discipline lead' },
-  { value: 'SUBTASK_ROLE', label: 'Subtask' },
-];
 
 function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'DISCIPLINE_LEAD') {
@@ -99,9 +108,10 @@ export default function MyWorkPageContent({
   const { t } = useEpcTranslation();
   const [addSubtaskFor, setAddSubtaskFor] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<MyWorkItemKind | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [statusFilter, setStatusFilter] = useState<
+    DesignPackageProjectedStatus | undefined
+  >();
   const [showSubtasks, setShowSubtasks] = useState(true);
 
   const allItems = workQuery.data ?? [];
@@ -116,28 +126,10 @@ export default function MyWorkPageContent({
       .sort((left, right) => left.label.localeCompare(right.label));
   }, [allItems]);
 
-  const statusOptions = useMemo(() => {
-    const statuses = new Set<string>();
-    for (const item of allItems) {
-      if (item.projectedStatus) {
-        statuses.add(item.projectedStatus);
-      }
-    }
-    return [...statuses]
-      .sort()
-      .map((status) => ({
-        value: status,
-        label: status.replace(/_/g, ' '),
-      }));
-  }, [allItems]);
-
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     return allItems.filter((item) => {
       if (!showSubtasks && item.kind === 'SUBTASK_ROLE') {
-        return false;
-      }
-      if (typeFilter && item.kind !== typeFilter) {
         return false;
       }
       if (projectFilter && item.projectId !== projectFilter) {
@@ -148,14 +140,7 @@ export default function MyWorkPageContent({
       }
       return matchesSearch(item, term);
     });
-  }, [
-    allItems,
-    projectFilter,
-    search,
-    showSubtasks,
-    statusFilter,
-    typeFilter,
-  ]);
+  }, [allItems, projectFilter, search, showSubtasks, statusFilter]);
 
   if (permLoading || workQuery.isLoading) {
     return <PageLoadingSkeleton />;
@@ -294,14 +279,6 @@ export default function MyWorkPageContent({
             committedValue={search}
             onCommit={setSearch}
           />
-          <Select
-            allowClear
-            placeholder="Type"
-            className="w-full min-w-[140px] sm:w-40"
-            options={TYPE_FILTER_OPTIONS}
-            value={typeFilter}
-            onChange={(value: MyWorkItemKind | undefined) => setTypeFilter(value)}
-          />
           {!projectId ? (
             <Select
               allowClear
@@ -318,9 +295,11 @@ export default function MyWorkPageContent({
             allowClear
             placeholder="Status"
             className="w-full min-w-[140px] sm:w-40"
-            options={statusOptions}
+            options={STATUS_FILTER_OPTIONS}
             value={statusFilter}
-            onChange={(value: string | undefined) => setStatusFilter(value)}
+            onChange={(value: DesignPackageProjectedStatus | undefined) =>
+              setStatusFilter(value)
+            }
           />
         </div>
         <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
