@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Collapse, Descriptions, Table } from 'antd';
+import { Button, Collapse, Descriptions, Modal, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -11,13 +11,19 @@ import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/S
 import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import type { Task, TaskDiscipline } from '@/lib/api/project-management.types';
+import type { User } from '@/lib/api/types';
 import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
 import {
   useTaskDisciplines,
   useScheduleSubtasks,
+  useUpdateTaskDiscipline,
 } from '@/lib/query/schedule';
 import { useProjectTeam } from '@/lib/query/projects';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import { useAuthStore } from '@/stores/auth.store';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatUserName, formatUserPickerLabel } from '@/lib/utils/user-display';
 import {
   formatProjectDate,
   formatProjectDesignStage,
@@ -65,6 +71,24 @@ function canEditSubtaskRoles(
   return discipline.disciplineLeadUserId === currentUserId;
 }
 
+/**
+ * Resolves the discipline leader's full name from the company directory,
+ * falling back to the deprecated display-name string when the live user
+ * record isn't found (e.g. deactivated since assignment).
+ */
+function resolveDisciplineLeaderName(
+  discipline: TaskDiscipline,
+  userById: Map<string, User>,
+): string {
+  if (discipline.disciplineLeadUserId) {
+    const user = userById.get(discipline.disciplineLeadUserId);
+    if (user) {
+      return formatUserName(user);
+    }
+  }
+  return discipline.disciplinaryLeader ?? 'Unassigned';
+}
+
 export default function TaskDetailContent({
   projectId,
   projectName,
@@ -85,10 +109,18 @@ export default function TaskDetailContent({
   const teamQuery = useProjectTeam(projectId);
   const disciplinesQuery = useTaskDisciplines(projectId, task.id);
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
+  const usersQuery = useFullUsersDirectory();
+  const updateTaskDiscipline = useUpdateTaskDiscipline();
+  const messageApi = useAppMessage();
   const [rolesSubtask, setRolesSubtask] = useState<{
     package: DesignPackage;
     taskDisciplineId: string;
   } | null>(null);
+  const [editingDiscipline, setEditingDiscipline] =
+    useState<TaskDiscipline | null>(null);
+  const [selectedLeaderId, setSelectedLeaderId] = useState<
+    string | undefined
+  >(undefined);
   const leaderNameById = useMemo(
     () =>
       new Map(
@@ -97,6 +129,12 @@ export default function TaskDetailContent({
           .map((member) => [member.userId, member.userName as string]),
       ),
     [teamQuery.data],
+  );
+
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+  const userById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
   );
 
   const disciplines = disciplinesQuery.data ?? [];
@@ -198,6 +236,87 @@ export default function TaskDetailContent({
     }
     return map;
   }, [subtasks]);
+
+  const leaderOptions = useMemo(() => {
+    if (!editingDiscipline) {
+      return [];
+    }
+    const matching = users.filter(
+      (user) =>
+        user.isActive &&
+        user.engineeringDisciplineId === editingDiscipline.disciplineId,
+    );
+    const pool = matching.length > 0 ? matching : users.filter((user) => user.isActive);
+    return pool.map((user) => ({
+      value: user.id,
+      label: formatUserPickerLabel(user),
+    }));
+  }, [users, editingDiscipline]);
+
+  const disciplineLeaderColumns: ColumnsType<TaskDiscipline> = [
+    {
+      title: 'Discipline',
+      dataIndex: 'disciplineName',
+      key: 'disciplineName',
+    },
+    {
+      title: 'Current leader',
+      key: 'leader',
+      render: (_value, discipline) =>
+        resolveDisciplineLeaderName(discipline, userById),
+    },
+    {
+      title: 'Subtasks',
+      key: 'subtaskCount',
+      width: 100,
+      render: (_value, discipline) =>
+        packagesByDisciplineId.get(discipline.id)?.length ?? 0,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 140,
+      render: (_value, discipline) => (
+        <Button
+          type="link"
+          size="small"
+          className="!px-0"
+          onClick={() => {
+            setEditingDiscipline(discipline);
+            setSelectedLeaderId(discipline.disciplineLeadUserId ?? undefined);
+          }}
+        >
+          Change leader
+        </Button>
+      ),
+    },
+  ];
+
+  async function handleChangeLeader(): Promise<void> {
+    if (!editingDiscipline || !selectedLeaderId) {
+      messageApi.error('Select a new leader');
+      return;
+    }
+
+    try {
+      // Only updates TaskDiscipline.disciplineLeadUserId — who can create
+      // subtasks under this discipline and close it. Independent from
+      // DesignPackage.disciplinaryLeaderUserId (per-subtask review role),
+      // which is managed separately via "Edit roles" on each subtask.
+      await updateTaskDiscipline.mutateAsync({
+        projectId,
+        taskId: task.id,
+        disciplineId: editingDiscipline.id,
+        body: { disciplineLeadUserId: selectedLeaderId },
+      });
+      await disciplinesQuery.refetch();
+      messageApi.success('Discipline leader updated');
+      setEditingDiscipline(null);
+      setSelectedLeaderId(undefined);
+    } catch (error) {
+      notifyApiError(error, 'Failed to update discipline leader', messageApi);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -373,6 +492,16 @@ export default function TaskDetailContent({
       />
 
       <FormLayout title="Disciplines & subtasks">
+        {disciplines.length > 0 && (
+          <Table<TaskDiscipline>
+            rowKey="id"
+            size="small"
+            className="mb-4"
+            columns={disciplineLeaderColumns}
+            dataSource={disciplines}
+            pagination={false}
+          />
+        )}
         {disciplinesQuery.isLoading ? (
           <div className="erp-page-skeleton h-20 w-full rounded" />
         ) : disciplines.length === 0 ? (
@@ -560,6 +689,40 @@ export default function TaskDetailContent({
           void disciplinesQuery.refetch();
         }}
       />
+
+      <Modal
+        open={Boolean(editingDiscipline)}
+        title={`Change discipline leader — ${editingDiscipline?.disciplineName ?? ''}`}
+        okText="Save"
+        confirmLoading={updateTaskDiscipline.isPending}
+        onCancel={() => {
+          setEditingDiscipline(null);
+          setSelectedLeaderId(undefined);
+        }}
+        onOk={() => void handleChangeLeader()}
+        destroyOnHidden
+      >
+        {editingDiscipline && (
+          <div className="flex flex-col gap-3">
+            <p
+              className="text-[13px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              Current: {resolveDisciplineLeaderName(editingDiscipline, userById)}
+            </p>
+            <Select
+              className="w-full"
+              showSearch
+              placeholder="Select new leader"
+              value={selectedLeaderId}
+              onChange={setSelectedLeaderId}
+              loading={usersQuery.isLoading}
+              options={leaderOptions}
+              optionFilterProp="label"
+            />
+          </div>
+        )}
+      </Modal>
 
     </div>
   );
