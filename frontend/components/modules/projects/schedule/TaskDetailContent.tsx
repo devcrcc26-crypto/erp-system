@@ -8,7 +8,7 @@ import { ArrowRightOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScheduleSubtaskStatusBadge from '@/components/modules/projects/schedule/ScheduleSubtaskStatusBadge';
-import SubtaskRolesModal from '@/components/modules/projects/design-packages/SubtaskRolesModal';
+import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import type { Task, TaskDiscipline } from '@/lib/api/project-management.types';
 import type { User } from '@/lib/api/types';
@@ -112,7 +112,7 @@ export default function TaskDetailContent({
   const usersQuery = useFullUsersDirectory();
   const updateTaskDiscipline = useUpdateTaskDiscipline();
   const messageApi = useAppMessage();
-  const [rolesSubtask, setRolesSubtask] = useState<{
+  const [editingSubtask, setEditingSubtask] = useState<{
     package: DesignPackage;
     taskDisciplineId: string;
   } | null>(null);
@@ -304,13 +304,13 @@ export default function TaskDetailContent({
                 size="small"
                 className="!px-0 text-[12px]"
                 onClick={() =>
-                  setRolesSubtask({
+                  setEditingSubtask({
                     package: entry.package,
                     taskDisciplineId: entry.taskDisciplineId,
                   })
                 }
               >
-                Edit roles
+                Edit subtask
               </Button>
             )}
             <Link href={packageHref}>
@@ -335,7 +335,7 @@ export default function TaskDetailContent({
       // Only updates TaskDiscipline.disciplineLeadUserId — who can create
       // subtasks under this discipline and close it. Independent from
       // DesignPackage.disciplinaryLeaderUserId (per-subtask review role),
-      // which is managed separately via "Edit roles" on each subtask.
+      // which is managed separately via "Edit subtask" on each subtask.
       await updateTaskDiscipline.mutateAsync({
         projectId,
         taskId: task.id,
@@ -590,12 +590,12 @@ export default function TaskDetailContent({
         )}
       </FormLayout>
 
-      <SubtaskRolesModal
-        open={Boolean(rolesSubtask)}
+      <DesignPackageBuilder
+        open={Boolean(editingSubtask)}
         projectId={projectId}
-        taskDisciplineId={rolesSubtask?.taskDisciplineId ?? ''}
-        subtask={rolesSubtask?.package ?? null}
-        onClose={() => setRolesSubtask(null)}
+        taskDisciplineId={editingSubtask?.taskDisciplineId ?? ''}
+        editing={editingSubtask?.package ?? null}
+        onClose={() => setEditingSubtask(null)}
         onSaved={() => {
           void disciplinesQuery.refetch();
         }}

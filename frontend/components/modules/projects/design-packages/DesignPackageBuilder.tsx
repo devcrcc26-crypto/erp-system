@@ -13,6 +13,7 @@ import SubtaskRolesFormFields from '@/components/modules/projects/design-package
 import {
   type SubtaskRolesFormValues,
   defaultSubtaskRolesFromDiscipline,
+  toSubtaskRolesFormValues,
   toSubtaskRolesPayload,
 } from '@/components/modules/projects/design-packages/subtask-roles-form.util';
 import {
@@ -129,9 +130,7 @@ export default function DesignPackageBuilder({
     if (editing) {
       form.setFieldsValue({
         ...toPackageFormValues(editing),
-        instituteChiefMode: editing.instituteChiefName
-          ? 'EXTERNAL_PERSON'
-          : 'SYSTEM_USER',
+        ...toSubtaskRolesFormValues(editing),
       });
       return;
     }
@@ -320,7 +319,7 @@ export default function DesignPackageBuilder({
           </>
         ) : null}
 
-        {isCreateFlow && step === 1 ? (
+        {!isCreateFlow || step === 1 ? (
           <SubtaskRolesFormFields
             projectId={projectId}
             reviewLevel={reviewLevel}
