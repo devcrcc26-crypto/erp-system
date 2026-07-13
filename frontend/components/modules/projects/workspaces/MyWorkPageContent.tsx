@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Button, Space } from 'antd';
+import { Alert, Button, Select, Space, Switch } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
-import type { MyWorkItem } from '@/lib/api/epc.types';
+import type { MyWorkItem, MyWorkItemKind } from '@/lib/api/epc.types';
 import { useMyWork } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -31,6 +32,11 @@ const REVIEWER_TIER_ROLES = new Set([
   'INSTITUTE_CHIEF',
 ]);
 
+const TYPE_FILTER_OPTIONS: Array<{ value: MyWorkItemKind; label: string }> = [
+  { value: 'DISCIPLINE_LEAD', label: 'Discipline lead' },
+  { value: 'SUBTASK_ROLE', label: 'Subtask' },
+];
+
 function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'DISCIPLINE_LEAD') {
     return scheduleDisciplineWorkspaceHref(
@@ -40,10 +46,6 @@ function workItemHref(item: MyWorkItem): string {
   }
 
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
-    // DESIGNER/SUPPORTING_DESIGNER -> Designer View; REVIEWER/DISCIPLINE_LEAD/
-    // DEPT_CHIEF/INSTITUTE_CHIEF -> Review Mode when submitted; DISCIPLINE_OWNER (or
-    // unresolved) -> the same read-only detail page as Designer View, since no
-    // separate read-only route exists today.
     if (item.primaryRole && REVIEWER_TIER_ROLES.has(item.primaryRole)) {
       if (item.packageStatus === 'SUBMITTED') {
         return reviewModeHref(item.projectId, item.taskDisciplineId, item.designPackageId);
@@ -64,6 +66,25 @@ function workItemHref(item: MyWorkItem): string {
   return '/my-work';
 }
 
+function matchesSearch(item: MyWorkItem, term: string): boolean {
+  if (!term) {
+    return true;
+  }
+  const haystack = [
+    item.taskName,
+    item.disciplineName,
+    item.subtaskName,
+    item.projectName,
+    item.projectNumber,
+    item.roleLabel,
+    item.projectedStatus,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(term);
+}
+
 export default function MyWorkPageContent({
   projectId,
 }: {
@@ -77,6 +98,64 @@ export default function MyWorkPageContent({
   const workQuery = useMyWork(projectId);
   const { t } = useEpcTranslation();
   const [addSubtaskFor, setAddSubtaskFor] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<MyWorkItemKind | undefined>();
+  const [projectFilter, setProjectFilter] = useState<string | undefined>();
+  const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [showSubtasks, setShowSubtasks] = useState(true);
+
+  const allItems = workQuery.data ?? [];
+
+  const projectOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of allItems) {
+      seen.set(item.projectId, item.projectName);
+    }
+    return [...seen.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [allItems]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = new Set<string>();
+    for (const item of allItems) {
+      if (item.projectedStatus) {
+        statuses.add(item.projectedStatus);
+      }
+    }
+    return [...statuses]
+      .sort()
+      .map((status) => ({
+        value: status,
+        label: status.replace(/_/g, ' '),
+      }));
+  }, [allItems]);
+
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allItems.filter((item) => {
+      if (!showSubtasks && item.kind === 'SUBTASK_ROLE') {
+        return false;
+      }
+      if (typeFilter && item.kind !== typeFilter) {
+        return false;
+      }
+      if (projectFilter && item.projectId !== projectFilter) {
+        return false;
+      }
+      if (statusFilter && item.projectedStatus !== statusFilter) {
+        return false;
+      }
+      return matchesSearch(item, term);
+    });
+  }, [
+    allItems,
+    projectFilter,
+    search,
+    showSubtasks,
+    statusFilter,
+    typeFilter,
+  ]);
 
   if (permLoading || workQuery.isLoading) {
     return <PageLoadingSkeleton />;
@@ -128,7 +207,7 @@ export default function MyWorkPageContent({
       width: 220,
       ellipsis: true,
     },
-  ...(projectId
+    ...(projectId
       ? []
       : [
           {
@@ -206,6 +285,54 @@ export default function MyWorkPageContent({
       title={t('pages.myWork.title')}
       description="Tasks you lead and subtasks where you hold a role."
     >
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <ListSearchInput
+            live
+            placeholder="Search task, discipline, subtask, project…"
+            className="w-full max-w-xs"
+            committedValue={search}
+            onCommit={setSearch}
+          />
+          <Select
+            allowClear
+            placeholder="Type"
+            className="w-full min-w-[140px] sm:w-40"
+            options={TYPE_FILTER_OPTIONS}
+            value={typeFilter}
+            onChange={(value: MyWorkItemKind | undefined) => setTypeFilter(value)}
+          />
+          {!projectId ? (
+            <Select
+              allowClear
+              showSearch
+              placeholder="Project"
+              className="w-full min-w-[160px] sm:w-48"
+              options={projectOptions}
+              value={projectFilter}
+              onChange={(value: string | undefined) => setProjectFilter(value)}
+              optionFilterProp="label"
+            />
+          ) : null}
+          <Select
+            allowClear
+            placeholder="Status"
+            className="w-full min-w-[140px] sm:w-40"
+            options={statusOptions}
+            value={statusFilter}
+            onChange={(value: string | undefined) => setStatusFilter(value)}
+          />
+        </div>
+        <label className="flex shrink-0 items-center gap-2 text-xs text-slate-600">
+          <Switch
+            size="small"
+            checked={showSubtasks}
+            onChange={setShowSubtasks}
+          />
+          Show subtasks
+        </label>
+      </div>
+
       <DataTable<MyWorkItem>
         rowKey={(record) =>
           record.designPackageId
@@ -214,9 +341,15 @@ export default function MyWorkPageContent({
         }
         size="middle"
         columns={columns}
-        dataSource={workQuery.data ?? []}
+        dataSource={filteredItems}
         scroll={{ x: 960 }}
         locale={{ emptyText: t('empty.noAssignedWork') }}
+        onRow={(record) => ({
+          className:
+            record.kind === 'DISCIPLINE_LEAD'
+              ? 'my-work-lead-row border-l-4 !border-l-[#3b82f6]'
+              : 'my-work-subtask-row border-l-4 !border-l-amber-400 bg-[#fffbeb]/40',
+        })}
       />
 
       {addSubtaskFor && activeItem && (
