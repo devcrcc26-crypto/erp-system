@@ -124,7 +124,7 @@ export default function DesignPackageBuilder({
   const effectiveDisciplineId = isEditing
     ? taskDisciplineId
     : requiresDisciplinePick
-      ? selectedDisciplineId
+      ? (selectedDisciplineId ?? '')
       : taskDisciplineId || disciplineChoices?.[0]?.value || '';
   const disciplineQuery = useProjectDiscipline(
     projectId,
@@ -134,7 +134,6 @@ export default function DesignPackageBuilder({
   const currentUserId = useAuthStore((state) => state.user?.id);
   const messageApi = useAppMessage();
   const isSubmitting = createPackage.isPending || updatePackage.isPending;
-  const isEditing = Boolean(editing);
   const reviewLevel = Form.useWatch('reviewLevel', form);
 
   useEffect(() => {
@@ -167,12 +166,13 @@ export default function DesignPackageBuilder({
       return;
     }
     const defaults = defaultRolesFromDiscipline(disciplineQuery.data, currentUserId);
-    form.setFieldsValue((current) => ({
+    const current = form.getFieldsValue(true) as BuilderFormValues;
+    form.setFieldsValue({
       ...current,
       ...defaults,
       urgencyLevel: current.urgencyLevel ?? 'NORMAL',
       instituteChiefMode: current.instituteChiefMode ?? 'SYSTEM_USER',
-    }));
+    });
   }, [currentUserId, disciplineQuery.data, form, isEditing, open]);
 
   async function handleSubmit(): Promise<void> {
@@ -235,10 +235,11 @@ export default function DesignPackageBuilder({
           disciplineQuery.data,
           currentUserId,
         );
-        form.setFieldsValue((current) => ({
+        const current = form.getFieldsValue(true) as BuilderFormValues;
+        form.setFieldsValue({
           ...current,
           ...defaults,
-        }));
+        });
       }
       setStep(1);
     } catch {
