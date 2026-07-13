@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
@@ -24,14 +25,14 @@ export class EpcWorkspaceController {
   }
 
   @Get('my-work')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Tasks and subtasks assigned to the current user' })
   myWork(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
     return this.myWorkService.getMyWork(this.ctx(user));
   }
 
   @Get('projects/:projectId/my-work')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Assigned work scoped to a project' })
   projectMyWork(
     @CurrentUser() user: AuthenticatedUser,
