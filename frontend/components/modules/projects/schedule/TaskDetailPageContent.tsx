@@ -40,9 +40,9 @@ export default function TaskDetailPageContent({
 
   return (
     <div className="p-6">
-      <Link href={`/projects/${projectId}/schedule`}>
+      <Link href={`/projects/${projectId}/schedule/tasks`}>
         <Button type="link" className="!px-0" icon={<ArrowLeftOutlined />}>
-          Back to schedule
+          Back to task
         </Button>
       </Link>
       <div className="mt-4">
