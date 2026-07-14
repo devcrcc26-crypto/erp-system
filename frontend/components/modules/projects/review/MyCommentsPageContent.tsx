@@ -50,6 +50,7 @@ export default function MyCommentsPageContent({
   const transitionComment = useTransitionReviewComment();
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
+  const [pendingCommentId, setPendingCommentId] = useState<string | null>(null);
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
 
@@ -68,6 +69,7 @@ export default function MyCommentsPageContent({
     targetStatus: MyCommentItem['status'],
     successMessage: string,
   ): Promise<boolean> {
+    setPendingCommentId(comment.commentId);
     try {
       await transitionComment.mutateAsync({
         commentId: comment.commentId,
@@ -79,6 +81,8 @@ export default function MyCommentsPageContent({
     } catch (error) {
       notifyApiError(error, 'Request failed', messageApi);
       return false;
+    } finally {
+      setPendingCommentId(null);
     }
   }
 
@@ -167,7 +171,7 @@ export default function MyCommentsPageContent({
             <Button
               type="link"
               className="!px-0"
-              loading={transitionComment.isPending}
+              loading={pendingCommentId === record.commentId}
               onClick={() =>
                 void handleTransition(record, 'ACKNOWLEDGED', 'Comment acknowledged')
               }
@@ -179,7 +183,7 @@ export default function MyCommentsPageContent({
             <Button
               type="link"
               className="!px-0"
-              loading={transitionComment.isPending}
+              loading={pendingCommentId === record.commentId}
               onClick={() =>
                 void handleTransition(record, 'IN_PROGRESS', 'Marked in progress')
               }

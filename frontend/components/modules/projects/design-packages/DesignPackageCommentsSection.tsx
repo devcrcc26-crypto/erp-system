@@ -99,12 +99,14 @@ export default function DesignPackageCommentsSection({
     null,
   );
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
+  const [pendingCommentId, setPendingCommentId] = useState<string | null>(null);
 
   async function handleTransition(
     comment: ReviewModeComment,
     targetStatus: MyCommentItem['status'],
     successMessage: string,
   ): Promise<boolean> {
+    setPendingCommentId(comment.id);
     try {
       await transitionComment.mutateAsync({
         commentId: comment.id,
@@ -116,6 +118,8 @@ export default function DesignPackageCommentsSection({
     } catch (error) {
       notifyApiError(error, 'Request failed', messageApi);
       return false;
+    } finally {
+      setPendingCommentId(null);
     }
   }
 
@@ -206,7 +210,7 @@ export default function DesignPackageCommentsSection({
                         type="link"
                         size="small"
                         className="!px-1"
-                        loading={transitionComment.isPending}
+                        loading={pendingCommentId === comment.id}
                         onClick={() =>
                           void handleTransition(comment, 'ACKNOWLEDGED', 'Comment acknowledged')
                         }
@@ -219,7 +223,7 @@ export default function DesignPackageCommentsSection({
                         type="link"
                         size="small"
                         className="!px-1"
-                        loading={transitionComment.isPending}
+                        loading={pendingCommentId === comment.id}
                         onClick={() =>
                           void handleTransition(comment, 'IN_PROGRESS', 'Marked in progress')
                         }

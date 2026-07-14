@@ -416,7 +416,20 @@ export class ReviewWorkflowService {
         command.companyId,
         command.reviewCommentId,
       );
-      if (!comment || comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+      if (!comment) {
+        throw new NotFoundException('Review comment not found');
+      }
+
+      const from = comment.status as CommentStatus;
+      const to = command.targetStatus;
+      const isAssignee = comment.assignedToUserId === command.actorId;
+      if (
+        !this.canTransitionCommentInSession(
+          comment.reviewSession.status,
+          to,
+          isAssignee,
+        )
+      ) {
         throw new NotFoundException('Review comment not found');
       }
 
@@ -430,10 +443,6 @@ export class ReviewWorkflowService {
         comment,
         discipline?.taskDiscipline,
       );
-
-      const from = comment.status as CommentStatus;
-      const to = command.targetStatus;
-      const isAssignee = comment.assignedToUserId === command.actorId;
       const designerTargets = new Set<CommentStatus>([
         CommentStatus.ACKNOWLEDGED,
         CommentStatus.IN_PROGRESS,
@@ -1570,6 +1579,30 @@ export class ReviewWorkflowService {
     }
 
     return null;
+  }
+
+  /**
+   * Designers may progress comments after return-for-rework even though the session is closed.
+   */
+  private canTransitionCommentInSession(
+    sessionStatus: ReviewSessionStatus,
+    targetStatus: CommentStatus,
+    isAssignee: boolean,
+  ): boolean {
+    if (sessionStatus === ReviewSessionStatus.ACTIVE) {
+      return true;
+    }
+
+    if (sessionStatus === ReviewSessionStatus.RETURNED_FOR_REWORK) {
+      const designerTargets = new Set<CommentStatus>([
+        CommentStatus.ACKNOWLEDGED,
+        CommentStatus.IN_PROGRESS,
+        CommentStatus.RESOLVED,
+      ]);
+      return isAssignee && designerTargets.has(targetStatus);
+    }
+
+    return false;
   }
 
   private resolveCommentActor(
