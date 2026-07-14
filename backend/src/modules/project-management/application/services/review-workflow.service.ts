@@ -41,6 +41,7 @@ import {
 } from '../../domain/comment-state-machine';
 import {
   getEffectiveApprovalChain,
+  type DisciplineApprovalChain,
   type PackageApprovalChainOverrides,
 } from '../../domain/approval-chain.util';
 import { isExternalInstituteChief } from '../../domain/institute-chief.util';
@@ -493,7 +494,8 @@ export class ReviewWorkflowService {
       const actor = this.resolveCommentActor(
         command.actorId,
         comment,
-        discipline?.taskDiscipline,
+        discipline,
+        to,
       );
       const designerTargets = new Set<CommentStatus>([
         CommentStatus.ACKNOWLEDGED,
@@ -1934,34 +1936,55 @@ export class ReviewWorkflowService {
     );
   }
 
+  /**
+   * Resolves whether the actor should apply designer or reviewer comment transitions.
+   * After RESOLVED, assignee flips to the comment author — they must still act as reviewer
+   * when verifying, not as designer.
+   */
   private resolveCommentActor(
     userId: string,
     comment: { assignedToUserId: string; createdBy: string },
-    discipline?: {
-      designerUserId: string | null;
-      ownerUserId: string | null;
-      reviewerUserId: string | null;
-      disciplineLeadUserId: string | null;
-      chiefUserId: string | null;
-      instituteChiefUserId: string | null;
-    },
+    packageWithDiscipline?: (PackageApprovalChainOverrides & {
+      taskDiscipline: DisciplineApprovalChain;
+    }) | null,
+    targetStatus?: CommentStatus,
   ): CommentActorRole {
+    const effectiveChain = packageWithDiscipline
+      ? getEffectiveApprovalChain(
+          packageWithDiscipline,
+          packageWithDiscipline.taskDiscipline,
+        )
+      : null;
+
+    const isReviewChain =
+      comment.createdBy === userId ||
+      effectiveChain?.ownerUserId === userId ||
+      effectiveChain?.reviewerUserId === userId ||
+      effectiveChain?.disciplineLeadUserId === userId ||
+      effectiveChain?.chiefUserId === userId ||
+      effectiveChain?.instituteChiefUserId === userId;
+
+    // Prefer reviewer identity for verify, and whenever the actor is the author
+    // or a governance-tier holder (assignee may have flipped back to the author).
     if (
-      comment.assignedToUserId === userId ||
-      discipline?.designerUserId === userId
-    ) {
-      return 'designer';
-    }
-    if (
-      discipline?.ownerUserId === userId ||
-      discipline?.reviewerUserId === userId ||
-      discipline?.disciplineLeadUserId === userId ||
-      discipline?.chiefUserId === userId ||
-      discipline?.instituteChiefUserId === userId ||
-      comment.createdBy === userId
+      isReviewChain &&
+      (targetStatus === CommentStatus.VERIFIED || comment.createdBy === userId)
     ) {
       return 'reviewer';
     }
+
+    if (
+      comment.assignedToUserId === userId ||
+      effectiveChain?.designerUserId === userId ||
+      effectiveChain?.supportingDesignerUserId === userId
+    ) {
+      return 'designer';
+    }
+
+    if (isReviewChain) {
+      return 'reviewer';
+    }
+
     throw new ForbiddenException(
       'You are not permitted to act on this review comment',
     );
