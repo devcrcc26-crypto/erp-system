@@ -584,6 +584,26 @@ export class TaskDisciplineScopeRepository {
   }
 
   /**
+   * True when the user is designer or supporting designer on any active
+   * design package (subtask) under the discipline.
+   */
+  async hasPackageDesignerAssignment(
+    companyId: string,
+    taskDisciplineId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const row = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        companyId,
+        taskDisciplineId,
+        OR: [{ designerUserId: userId }, { supportingDesignerUserId: userId }],
+      }),
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
+  /**
    * Verifies a source entity exists within the given project and company.
    */
   async findSourceEntityInProject(

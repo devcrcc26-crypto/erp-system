@@ -45,25 +45,51 @@ export class DocumentPermissionService {
       return;
     }
 
-    if (folder.contextType === FolderContextType.TASK_DISCIPLINE && folder.contextId) {
-      const discipline = await this.prisma.taskDiscipline.findFirst({
-        where: activeOnly({ id: folder.contextId, companyId }),
-        select: {
-          disciplineLeadUserId: true,
-          designerUserId: true,
-          supportingDesignerUserId: true,
-        },
-      });
-      if (
-        discipline?.disciplineLeadUserId === userId ||
-        discipline?.designerUserId === userId ||
-        discipline?.supportingDesignerUserId === userId
-      ) {
-        return;
-      }
+    if (
+      folder.contextType === FolderContextType.TASK_DISCIPLINE &&
+      folder.contextId &&
+      (await this.isAssignedDisciplineUploader(userId, companyId, folder.contextId))
+    ) {
+      return;
     }
 
     throw new ForbiddenException('Missing permission: documents.create');
+  }
+
+  /**
+   * True when the user is a discipline-level lead/designer, or a designer
+   * (primary or supporting) on any active subtask under the discipline.
+   */
+  private async isAssignedDisciplineUploader(
+    userId: string,
+    companyId: string,
+    taskDisciplineId: string,
+  ): Promise<boolean> {
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({ id: taskDisciplineId, companyId }),
+      select: {
+        disciplineLeadUserId: true,
+        designerUserId: true,
+        supportingDesignerUserId: true,
+      },
+    });
+    if (
+      discipline?.disciplineLeadUserId === userId ||
+      discipline?.designerUserId === userId ||
+      discipline?.supportingDesignerUserId === userId
+    ) {
+      return true;
+    }
+
+    const packageAssignment = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        companyId,
+        taskDisciplineId,
+        OR: [{ designerUserId: userId }, { supportingDesignerUserId: userId }],
+      }),
+      select: { id: true },
+    });
+    return packageAssignment !== null;
   }
 
   /**

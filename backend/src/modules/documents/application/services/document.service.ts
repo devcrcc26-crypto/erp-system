@@ -434,35 +434,11 @@ export class DocumentService {
       throw new NotFoundException('Document not found');
     }
 
-    if (
-      document.folder.contextType === FolderContextType.TASK_DISCIPLINE &&
-      document.folder.contextId
-    ) {
-      const discipline = await this.prisma.taskDiscipline.findFirst({
-        where: activeOnly({
-          id: document.folder.contextId,
-          companyId: ctx.companyId,
-        }),
-        select: {
-          disciplineLeadUserId: true,
-          designerUserId: true,
-          supportingDesignerUserId: true,
-        },
-      });
-      const isAssigned =
-        discipline?.disciplineLeadUserId === ctx.userId ||
-        discipline?.designerUserId === ctx.userId ||
-        discipline?.supportingDesignerUserId === ctx.userId;
-      if (!isAssigned) {
-        throw new ForbiddenException('You are not assigned to this discipline');
-      }
-    } else {
-      await this.documentPermissionService.assertCanUpload(
-        ctx.userId,
-        ctx.companyId,
-        document.folderId,
-      );
-    }
+    await this.documentPermissionService.assertCanUpload(
+      ctx.userId,
+      ctx.companyId,
+      document.folderId,
+    );
 
     await this.validateUpload(ctx.companyId, file);
     const nextVersion = document.version + 1;

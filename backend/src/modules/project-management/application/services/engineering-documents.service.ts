@@ -116,7 +116,7 @@ export class EngineeringDocumentsService {
       projectId,
       taskDisciplineId,
     );
-    this.assertDesignerAssignment(ctx, discipline);
+    await this.assertDesignerAssignment(ctx, discipline);
 
     if (!dto.documentNumber?.trim()) {
       throw new BadRequestException(
@@ -190,7 +190,7 @@ export class EngineeringDocumentsService {
     dto: UploadEngineeringDocumentVersionDto,
   ): Promise<MappedEngineeringDocumentVersion> {
     const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
-    this.assertDesignerAssignment(ctx, discipline);
+    await this.assertDesignerAssignment(ctx, discipline);
 
     const document = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
@@ -288,7 +288,7 @@ export class EngineeringDocumentsService {
     dto: UpdateEngineeringDocumentDto,
   ): Promise<MappedEngineeringDocument> {
     const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
-    this.assertDesignerAssignment(ctx, discipline);
+    await this.assertDesignerAssignment(ctx, discipline);
     const existing = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
       id,
@@ -326,7 +326,7 @@ export class EngineeringDocumentsService {
     dto: UpdateEngineeringDocumentVersionDto,
   ): Promise<MappedEngineeringDocumentVersion> {
     const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
-    this.assertDesignerAssignment(ctx, discipline);
+    await this.assertDesignerAssignment(ctx, discipline);
 
     const document = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
@@ -527,18 +527,30 @@ export class EngineeringDocumentsService {
 
   /**
    * Asserts the caller is the discipline lead, designer, or supporting designer —
-   * the roles permitted to create/mutate engineering documents on this discipline.
+   * or a designer / supporting designer on any active subtask under this discipline.
    */
-  private assertDesignerAssignment(
+  private async assertDesignerAssignment(
     ctx: PmContext,
     discipline: TaskDisciplineReviewRoles,
-  ): void {
-    const isAssigned =
+  ): Promise<void> {
+    const isDisciplineAssigned =
       discipline.disciplineLeadUserId === ctx.userId ||
       discipline.designerUserId === ctx.userId ||
       discipline.supportingDesignerUserId === ctx.userId;
-    if (!isAssigned) {
-      throw new ForbiddenException('You are not assigned to this discipline');
+    if (isDisciplineAssigned) {
+      return;
     }
+
+    const onPackage =
+      await this.taskDisciplineScopeRepository.hasPackageDesignerAssignment(
+        ctx.companyId,
+        discipline.id,
+        ctx.userId,
+      );
+    if (onPackage) {
+      return;
+    }
+
+    throw new ForbiddenException('You are not assigned to this discipline');
   }
 }
