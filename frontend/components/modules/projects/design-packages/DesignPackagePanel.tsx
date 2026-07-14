@@ -36,7 +36,7 @@ import {
 import { useEngineeringDocuments } from '@/lib/query/engineering-documents';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
-import { useCanViewMyWork, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { useCanViewMyWork, useEpcCapabilities, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
@@ -84,10 +84,19 @@ export default function DesignPackagePanel({
   const canAccessEngineering = lens.canViewEngineering || canViewMyWork;
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const epc = useEpcCapabilities();
+  const hasElevatedAccess =
+    useAuthStore((state) => state.capabilities.isSystemAdministrator) ||
+    epc.navFullAccess;
   const disciplineQuery = useProjectDiscipline(
     projectId,
     taskDisciplineId,
     !permLoading && canAccessEngineering,
+  );
+  const canCreateSubtask = canManageSubtaskAsDisciplineLeader(
+    disciplineQuery.data,
+    currentUserId,
+    hasElevatedAccess,
   );
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editing, setEditing] = useState<DesignPackage | null>(null);
@@ -209,12 +218,11 @@ export default function DesignPackagePanel({
         const canUploadToPackage =
           roles?.primaryRole === 'DESIGNER' ||
           roles?.primaryRole === 'SUPPORTING_DESIGNER';
-        const canEditSubtask =
-          lens.canEditEngineering ||
-          canManageSubtaskAsDisciplineLeader(
-            disciplineQuery.data,
-            currentUserId,
-          );
+        const canEditSubtask = canManageSubtaskAsDisciplineLeader(
+          disciplineQuery.data,
+          currentUserId,
+          hasElevatedAccess,
+        );
         const canSubmitPackage = roles?.primaryRole === 'DESIGNER';
         const submitEligibility = getPackageSubmitEligibility(
           record,
@@ -294,11 +302,7 @@ export default function DesignPackagePanel({
           : 'Packages grouped by projected workflow status - not folder hierarchy.'
       }
       extra={
-        lens.canCreateEngineering ||
-        canManageSubtaskAsDisciplineLeader(
-          disciplineQuery.data,
-          currentUserId,
-        ) ? (
+        canCreateSubtask ? (
           <Button
             type="primary"
             size="small"
@@ -342,11 +346,7 @@ export default function DesignPackagePanel({
           title="No subtasks"
           description="Create a package to begin the review workflow"
           action={
-            lens.canCreateEngineering ||
-            canManageSubtaskAsDisciplineLeader(
-              disciplineQuery.data,
-              currentUserId,
-            )
+            canCreateSubtask
               ? {
                   label: 'New subtask',
                   onClick: () => {

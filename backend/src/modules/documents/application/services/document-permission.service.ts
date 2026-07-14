@@ -57,8 +57,9 @@ export class DocumentPermissionService {
   }
 
   /**
-   * True when the user is a discipline-level lead/designer, or a designer
-   * (primary or supporting) on any active subtask under the discipline.
+   * True when the user may upload into a TASK_DISCIPLINE folder: discipline-level
+   * lead/designer, or any package-chain assignee on an active subtask (designers
+   * and review-tier holders who attach markup during approve/return).
    */
   private async isAssignedDisciplineUploader(
     userId: string,
@@ -85,7 +86,15 @@ export class DocumentPermissionService {
       where: activeOnly({
         companyId,
         taskDisciplineId,
-        OR: [{ designerUserId: userId }, { supportingDesignerUserId: userId }],
+        OR: [
+          { designerUserId: userId },
+          { supportingDesignerUserId: userId },
+          { reviewerUserId: userId },
+          { disciplinaryLeaderUserId: userId },
+          { deptDeputyChiefUserId: userId },
+          { instituteChiefUserId: userId },
+          { disciplineOwnerUserId: userId },
+        ],
       }),
       select: { id: true },
     });

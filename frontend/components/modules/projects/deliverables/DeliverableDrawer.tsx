@@ -2,7 +2,6 @@
 
 'use client';
 
-import Link from 'next/link';
 import { Descriptions, Drawer } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -77,16 +76,15 @@ export default function DeliverableDrawer({
             </Descriptions.Item>
             {item.taskDisciplineName && item.taskDisciplineId && (
               <Descriptions.Item label="Discipline">
-                <Link
-                  href={`/projects/${projectId}/disciplines/${item.taskDisciplineId}`}
-                  className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium no-underline"
+                <span
+                  className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium"
                   style={{
                     backgroundColor: tokens.colorTeal50,
                     color: tokens.colorTeal600,
                   }}
                 >
                   {item.taskDisciplineName}
-                </Link>
+                </span>
               </Descriptions.Item>
             )}
             {item.designPackageName && (

@@ -22,8 +22,9 @@ import { useProjectTeam } from '@/lib/query/projects';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
 import { useAuthStore } from '@/stores/auth.store';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { formatUserName } from '@/lib/utils/user-display';
+import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 import {
   formatProjectDate,
   formatProjectDesignStage,
@@ -62,24 +63,25 @@ function resolveTeamMemberName(
 function canEditSubtaskRoles(
   discipline: TaskDiscipline,
   currentUserId: string | undefined,
-  isSystemAdministrator: boolean,
+  hasElevatedAccess: boolean,
 ): boolean {
-  if (isSystemAdministrator) {
-    return true;
-  }
-  return discipline.disciplineLeadUserId === currentUserId;
+  return canManageSubtaskAsDisciplineLeader(
+    discipline,
+    currentUserId,
+    hasElevatedAccess,
+  );
 }
 
 function canCreateSubtaskOnDiscipline(
   discipline: TaskDiscipline,
   currentUserId: string | undefined,
-  isSystemAdministrator: boolean,
-  canEditSchedule: boolean,
+  hasElevatedAccess: boolean,
 ): boolean {
-  if (isSystemAdministrator || canEditSchedule) {
-    return true;
-  }
-  return discipline.disciplineLeadUserId === currentUserId;
+  return canManageSubtaskAsDisciplineLeader(
+    discipline,
+    currentUserId,
+    hasElevatedAccess,
+  );
 }
 
 /**
@@ -117,7 +119,8 @@ export default function TaskDetailContent({
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
-  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const hasElevatedAccess = isSystemAdministrator || epc.navFullAccess;
   const teamQuery = useProjectTeam(projectId);
   const disciplinesQuery = useTaskDisciplines(projectId, task.id);
   const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
@@ -176,11 +179,10 @@ export default function TaskDetailContent({
         canCreateSubtaskOnDiscipline(
           discipline,
           currentUserId,
-          isSystemAdministrator,
-          pm.schedule.canEdit,
+          hasElevatedAccess,
         ),
       ),
-    [disciplines, currentUserId, isSystemAdministrator, pm.schedule.canEdit],
+    [disciplines, currentUserId, hasElevatedAccess],
   );
 
   const showAddSubtask =
@@ -315,7 +317,7 @@ export default function TaskDetailContent({
       render: (_value, entry) => {
         const discipline = disciplineByTaskDisciplineId.get(entry.taskDisciplineId);
         const showEditSubtaskRoles = discipline
-          ? canEditSubtaskRoles(discipline, currentUserId, isSystemAdministrator)
+          ? canEditSubtaskRoles(discipline, currentUserId, hasElevatedAccess)
           : false;
         const packageHref = scheduleSubtaskWorkspaceHref(
           projectId,

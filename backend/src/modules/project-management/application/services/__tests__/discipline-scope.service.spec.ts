@@ -28,6 +28,7 @@ describe('DisciplineScopeService', () => {
       resolveProfile: jest.fn().mockResolvedValue({
         hasFullProjectAccess: false,
         isProjectAdmin: false,
+        canManageSubtasks: false,
         ledDepartmentIds: [],
         isDepartmentLeader: false,
       }),

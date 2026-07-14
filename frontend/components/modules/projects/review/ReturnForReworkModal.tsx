@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Input, Modal, Select, Space, Upload } from 'antd';
 import { CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -24,17 +24,15 @@ interface CommentRow {
   selectedDocs: string[];
   summary: string;
   severity: CommentSeverity;
-  assigneeId: string;
   files: CommentRowFile[];
 }
 
-function newEmptyRow(defaultAssigneeId: string): CommentRow {
+function newEmptyRow(): CommentRow {
   return {
     id: crypto.randomUUID(),
     selectedDocs: [],
     summary: '',
     severity: 'MODERATE',
-    assigneeId: defaultAssigneeId,
     files: [],
   };
 }
@@ -72,11 +70,18 @@ export default function ReturnForReworkModal({
   const returnPackage = useReturnPackageForRework();
   const uploadDocument = useUploadDocumentToFolder();
   const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
-  const [rows, setRows] = useState<CommentRow[]>([newEmptyRow(defaultAssigneeId)]);
+  const [rows, setRows] = useState<CommentRow[]>([newEmptyRow()]);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (open) {
+      setRows([newEmptyRow()]);
+      setSubmitting(false);
+    }
+  }, [open, defaultAssigneeId]);
+
   function resetState(): void {
-    setRows([newEmptyRow(defaultAssigneeId)]);
+    setRows([newEmptyRow()]);
   }
 
   function updateRow(rowId: string, patch: Partial<CommentRow>): void {
@@ -103,7 +108,7 @@ export default function ReturnForReworkModal({
   }
 
   function addRow(): void {
-    setRows((prev) => [...prev, newEmptyRow(defaultAssigneeId)]);
+    setRows((prev) => [...prev, newEmptyRow()]);
   }
 
   function removeRow(rowId: string): void {
@@ -142,7 +147,10 @@ export default function ReturnForReworkModal({
   }
 
   const canSubmit =
-    rows.length >= 1 && rows.every(isRowValid) && !submitting;
+    rows.length >= 1 &&
+    rows.every(isRowValid) &&
+    !submitting &&
+    Boolean(defaultAssigneeId);
 
   async function uploadPendingFiles(): Promise<CommentRow[] | null> {
     const folderId = uploadFolderQuery.data?.id;
@@ -201,6 +209,11 @@ export default function ReturnForReworkModal({
   }
 
   async function handleSubmit(): Promise<void> {
+    if (!defaultAssigneeId) {
+      messageApi.error('No designer is assigned on this subtask');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const resolvedRows = await uploadPendingFiles();
@@ -224,7 +237,7 @@ export default function ReturnForReworkModal({
               .slice(1)
               .map((f) => f.versionId)
               .filter((id): id is string => Boolean(id)),
-            assignedToUserId: row.assigneeId,
+            assignedToUserId: defaultAssigneeId,
           })),
         },
       });
@@ -336,8 +349,10 @@ export default function ReturnForReworkModal({
             <div>
               <label className="mb-1 block text-sm font-medium">Assigned to</label>
               <UserSelect
-                value={row.assigneeId}
-                onChange={(value) => updateRow(row.id, { assigneeId: value ?? '' })}
+                value={defaultAssigneeId || undefined}
+                disabled
+                allowClear={false}
+                placeholder="No designer assigned on this subtask"
               />
             </div>
 

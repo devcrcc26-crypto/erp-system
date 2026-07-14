@@ -119,6 +119,7 @@ describe('Closure chain (closure-chain)', () => {
           resolveProfile: jest.fn().mockResolvedValue({
             hasFullProjectAccess: true,
             isProjectAdmin: false,
+            canManageSubtasks: true,
             ledDepartmentIds: [],
             isDepartmentLeader: false,
           }),

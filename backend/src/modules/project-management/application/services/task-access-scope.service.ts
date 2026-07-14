@@ -6,6 +6,7 @@ import { PermissionService } from '../../../../shared/permissions/permission.ser
 import {
   hasFullProjectDataAccess,
   hasProjectAdminAccess,
+  isProjectAdministrator,
   isProjectAdminWritable,
 } from '../../../../shared/permissions/project-admin.util';
 import {
@@ -17,6 +18,12 @@ import { PmContext } from '../types/pm-context.type';
 export interface TaskAccessProfile {
   hasFullProjectAccess: boolean;
   isProjectAdmin: boolean;
+  /**
+   * May create/manage subtasks and open the discipline workspace:
+   * SysAdmin / Managing Director / Project Manager / Project Administrator.
+   * Excludes Site Coordinator / Document Controller (project-admin-class readers).
+   */
+  canManageSubtasks: boolean;
   ledDepartmentIds: string[];
   isDepartmentLeader: boolean;
 }
@@ -50,9 +57,12 @@ export class TaskAccessScopeService {
       select: { id: true },
     });
 
+    const hasFullProjectAccess = hasFullProjectDataAccess(roleNames);
     return {
-      hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
+      hasFullProjectAccess,
       isProjectAdmin: hasProjectAdminAccess(roleNames),
+      canManageSubtasks:
+        hasFullProjectAccess || isProjectAdministrator(roleNames),
       ledDepartmentIds: ledDepartments.map((row) => row.id),
       isDepartmentLeader: ledDepartments.length > 0,
     };
@@ -308,7 +318,9 @@ export class TaskAccessScopeService {
   }
 
   /**
-   * Asserts the user may manage a discipline (leader or full access).
+   * Asserts the user may manage a discipline / create subtasks.
+   * Allowed: discipline lead, System Admin, Managing Director, Project Manager,
+   * Project Administrator. Approval-tier assignees and designers cannot.
    */
   async assertDisciplineWritable(
     ctx: PmContext,
@@ -316,7 +328,7 @@ export class TaskAccessScopeService {
     taskDisciplineId: string,
   ): Promise<void> {
     const profile = await this.resolveProfile(ctx);
-    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
+    if (profile.canManageSubtasks) {
       return;
     }
 

@@ -33,7 +33,6 @@ import DesignPackageBuilder from '@/components/modules/projects/design-packages/
 import VersionHistoryTimeline from '@/components/modules/projects/engineering/VersionHistoryTimeline';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import {
-  useApproveReviewSession,
   useBatchApprovePackageEdvs,
   useCloseDesignPackage,
   useDesignPackage,
@@ -46,12 +45,9 @@ import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading, useCanViewMyWork } from '@/hooks/use-pm-capabilities';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
-import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
 import { getPackageLockGuidance, getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
 import {
   canBatchApprovePackageEdvs,
-  getSessionApproveLabel,
-  isFinalReviewTier,
 } from '@/lib/utils/review-governance';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -61,11 +57,11 @@ import type { ReviewTier } from '@/lib/api/epc.types';
 import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
 import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
 import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
-import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 import {
-  reviewModeHref,
-  scheduleDisciplineWorkspaceHref,
-} from '@/lib/utils/schedule-subtasks';
+  canAccessDisciplineWorkspace,
+  canManageSubtaskAsDisciplineLeader,
+} from '@/lib/utils/subtask-permissions';
+import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -92,6 +88,10 @@ export default function DesignPackageDetailPageContent({
   const canViewMyWork = useCanViewMyWork();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const isSystemAdministrator = useAuthStore(
+    (state) => state.capabilities.isSystemAdministrator,
+  );
+  const hasElevatedAccess = isSystemAdministrator || epc.navFullAccess;
   const { data: profile } = useCurrentUser();
   const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
@@ -134,7 +134,6 @@ export default function DesignPackageDetailPageContent({
 
   const submitForReview = useSubmitPackageForReview();
   const lockEdvs = useLockPackageEdvs();
-  const approveSession = useApproveReviewSession();
   const batchLock = useBatchLockEngineeringDocuments();
   const batchApproveEdvs = useBatchApprovePackageEdvs();
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
@@ -169,9 +168,6 @@ export default function DesignPackageDetailPageContent({
   const sessionComments = reviewMode?.comments ?? [];
   const lastReturnedComments = reviewMode?.lastReturnedSessionComments ?? [];
   const commentsToCheck = reviewSessionId ? sessionComments : lastReturnedComments;
-  const approvalAllowed = canApproveReviewSession(
-    sessionComments.map((comment) => comment.status),
-  );
   const hasUnacknowledgedComments = commentsToCheck.some(
     (comment) => comment.status === 'OPEN' || comment.status === 'IN_PROGRESS',
   );
@@ -216,6 +212,12 @@ export default function DesignPackageDetailPageContent({
   const isDisciplineLeader = canManageSubtaskAsDisciplineLeader(
     discipline,
     currentUserId,
+    hasElevatedAccess,
+  );
+  const canLinkDisciplineWorkspace = canAccessDisciplineWorkspace(
+    discipline,
+    currentUserId,
+    hasElevatedAccess,
   );
   const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
   const isDeptDeputyChief =
@@ -295,25 +297,6 @@ export default function DesignPackageDetailPageContent({
     }
   }
 
-  async function handleApproveSession(): Promise<void> {
-    if (!reviewSessionId) {
-      return;
-    }
-    try {
-      await approveSession.mutateAsync({
-        projectId,
-        taskDisciplineId,
-        packageId,
-        reviewSessionId,
-      });
-      messageApi.success('Review session approved');
-      void packageQuery.refetch();
-      void reviewModeQuery.refetch();
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-    }
-  }
-
   async function handleBatchLockPackage(): Promise<void> {
     try {
       await batchLock.mutateAsync({
@@ -333,10 +316,12 @@ export default function DesignPackageDetailPageContent({
       <Breadcrumb
         items={[
           {
-            title: (
-              <Link href={scheduleDisciplineWorkspaceHref(projectId, taskDisciplineId)}>
+            title: canLinkDisciplineWorkspace ? (
+              <Link href={`/projects/${projectId}/disciplines/${taskDisciplineId}`}>
                 {disciplineLabel}
               </Link>
+            ) : (
+              disciplineLabel
             ),
           },
           { title: pkg.subtaskId ?? pkg.name },
@@ -382,16 +367,6 @@ export default function DesignPackageDetailPageContent({
                   Submit for review
                 </Button>
               </Tooltip>
-            )}
-            {packageLens.canApproveAtTier && reviewSessionId && (
-              <Button
-                type="primary"
-                disabled={!approvalAllowed}
-                loading={approveSession.isPending}
-                onClick={() => void handleApproveSession()}
-              >
-                {getSessionApproveLabel(reviewMode?.currentTier, pkg.requiredTiers)}
-              </Button>
             )}
             {canApproveAllInReview && (
               <Button
@@ -492,17 +467,6 @@ export default function DesignPackageDetailPageContent({
         </div>
 
         <ProjectionLagHelper pending={pkg.projectionPending} />
-
-        {reviewSessionId && !isFinalReviewTier(reviewMode?.currentTier, pkg.requiredTiers) && (
-          <div className="mb-4">
-            <Alert
-              type="info"
-              showIcon
-              title="Advance governance tier"
-              description="Use Approve & escalate to send this package to the next reviewer. Do not use Approve all EDVs until the department chief tier."
-            />
-          </div>
-        )}
 
         {reviewSessionId && (
           <div className="mb-4">

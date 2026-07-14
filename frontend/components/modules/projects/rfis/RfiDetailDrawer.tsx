@@ -39,6 +39,7 @@ import {
   RFI_VALID_TRANSITIONS,
 } from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { buildRevisionTriggerQuery } from '@/lib/utils/revision-trigger-url';
@@ -68,7 +69,10 @@ export default function RfiDetailDrawer({
   const updateRfi = useUpdateRfi();
   const addResponse = useAddRfiResponse();
   const messageApi = useAppMessage();
+  const epc = useEpcCapabilities();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const canOpenDisciplineWorkspace =
+    epc.navFullAccess || epc.navDisciplineLeader;
 
   const rfi = rfiQuery.data;
   const responses = responsesQuery.data ?? [];
@@ -297,11 +301,13 @@ export default function RfiDetailDrawer({
             title="EPC revision"
             description={
               rfi.taskDisciplineId
-                ? 'If this RFI requires a new engineering document revision, open the linked discipline, choose the document, then trigger an external revision on the document detail page.'
-                : 'Link this RFI to an engineering discipline when raising it so designers can start a controlled document revision from the discipline workspace.'
+                ? canOpenDisciplineWorkspace
+                  ? 'If this RFI requires a new engineering document revision, open the linked discipline, choose the document, then trigger an external revision on the document detail page.'
+                  : 'If this RFI requires a new engineering document revision, open the affected subtask from My Work, choose the document, then trigger an external revision on the document detail page.'
+                : 'Link this RFI to an engineering discipline when raising it so designers can start a controlled document revision from their subtask workspace.'
             }
             action={
-              rfi.taskDisciplineId ? (
+              rfi.taskDisciplineId && canOpenDisciplineWorkspace ? (
                 <Link
                   href={`/projects/${projectId}/disciplines/${rfi.taskDisciplineId}${buildRevisionTriggerQuery({
                     triggerSource: 'RFI',

@@ -28,7 +28,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatActingAsLabel } from '@/lib/utils/subtask-role-display';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
-import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
+import { canAccessDisciplineWorkspace, canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 import type { SubtaskRole } from '@/lib/api/epc.types';
 
@@ -64,6 +64,9 @@ export default function DisciplineDetailPageContent({
 
   const leaderUserId = disciplineQuery.data?.disciplineLeadUserId ?? '';
   const leaderQuery = useUser(leaderUserId, Boolean(leaderUserId));
+  const hasElevatedAccess =
+    useAuthStore((state) => state.capabilities.isSystemAdministrator) ||
+    epc.navFullAccess;
 
   useEffect(() => {
     if (
@@ -73,12 +76,38 @@ export default function DisciplineDetailPageContent({
       !lens.disciplineScopeBypass
     ) {
       messageApi.warning('You do not have access to this discipline');
-      router.replace(`/projects/${projectId}/disciplines`);
+      router.replace(epc.navFullAccess ? `/projects/${projectId}/disciplines` : '/my-work');
     }
   }, [
     disciplineQuery.error,
     disciplineQuery.isError,
+    epc.navFullAccess,
     lens.disciplineScopeBypass,
+    messageApi,
+    projectId,
+    router,
+  ]);
+
+  useEffect(() => {
+    const discipline = disciplineQuery.data;
+    if (!discipline || disciplineQuery.isLoading) {
+      return;
+    }
+    if (
+      !canAccessDisciplineWorkspace(
+        discipline,
+        currentUserId,
+        hasElevatedAccess,
+      )
+    ) {
+      messageApi.warning('You do not have access to this discipline workspace');
+      router.replace(hasElevatedAccess ? `/projects/${projectId}/disciplines` : '/my-work');
+    }
+  }, [
+    currentUserId,
+    disciplineQuery.data,
+    disciplineQuery.isLoading,
+    hasElevatedAccess,
     messageApi,
     projectId,
     router,
@@ -132,9 +161,20 @@ export default function DisciplineDetailPageContent({
     );
   }
 
+  if (
+    !canAccessDisciplineWorkspace(
+      discipline,
+      currentUserId,
+      hasElevatedAccess,
+    )
+  ) {
+    return <PageLoadingSkeleton />;
+  }
+
   const isDisciplineLeader = canManageSubtaskAsDisciplineLeader(
     discipline,
     currentUserId,
+    hasElevatedAccess,
   );
   const disciplineLabel = formatDisciplineLabel(discipline.disciplineIndex);
   const canCloseDiscipline =

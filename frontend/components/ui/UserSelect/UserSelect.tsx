@@ -35,7 +35,8 @@ export default function UserSelect({
   const usersQuery = useFullUsersDirectory({
     enabled: !disabled,
   });
-  const valueUserQuery = useUser(value ?? '', Boolean(value) && !disabled);
+  // Always resolve the selected user so a disabled control still shows a name, not a bare UUID.
+  const valueUserQuery = useUser(value ?? '', Boolean(value));
 
   const options = useMemo(() => {
     const users = usersQuery.data ?? [];
