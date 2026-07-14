@@ -257,7 +257,8 @@ export class PermissionResolverService {
   }
 
   /**
-   * Actions that Layer 3 scopes to package/discipline designer FKs.
+   * Actions that Layer 3 scopes to package/discipline assignee FKs.
+   * Designer file actions + review-tier actions (approve/comment/verify/return).
    */
   private grantAssigneeScopedDesignerActions(
     granted: Set<EpcWorkflowAction>,
@@ -271,6 +272,12 @@ export class PermissionResolverService {
     granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE);
     granted.add(EpcWorkflowAction.REVIEW_COMMENT_RESOLVE);
+    // Reviewer / tier holders — Layer 3 enforces matching assignment
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN);
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_VERIFY);
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
+    granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
   }
 
   private grantReviewApprovalActions(

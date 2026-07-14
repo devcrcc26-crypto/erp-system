@@ -209,7 +209,7 @@ export class EngineeringDocumentsController {
   }
 
   @Get(':id/versions/:versionId/events')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List workflow event log for EDV' })
   listVersionEvents(
     @CurrentUser() user: AuthenticatedUser,

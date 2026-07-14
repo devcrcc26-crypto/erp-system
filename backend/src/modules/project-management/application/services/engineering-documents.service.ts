@@ -370,11 +370,12 @@ export class EngineeringDocumentsService {
       throw new NotFoundException('Engineering document not found');
     }
 
-    await this.assertDisciplineScope(
+    const discipline = await this.assertDisciplineScope(
       ctx,
       projectId,
       document.taskDisciplineId,
     );
+    await this.assertDesignerAssignment(ctx, discipline);
 
     const existing = await this.engineeringDocumentVersionRepository.findById(
       ctx.companyId,

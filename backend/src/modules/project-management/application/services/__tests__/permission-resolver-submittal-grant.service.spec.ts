@@ -67,6 +67,9 @@ describe('PermissionResolverService submittal grants', () => {
     expect(granted.has(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD)).toBe(
       true,
     );
+    expect(granted.has(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_APPROVE)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN)).toBe(true);
     expect(granted.has(EpcWorkflowAction.SUBMITTAL_CREATE)).toBe(false);
   });
 

@@ -114,6 +114,18 @@ describe('Closure chain (closure-chain)', () => {
             findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
           },
         } as never,
+        {
+          assertDisciplineReadable: jest.fn().mockResolvedValue(undefined),
+          resolveProfile: jest.fn().mockResolvedValue({
+            hasFullProjectAccess: true,
+            isProjectAdmin: false,
+            ledDepartmentIds: [],
+            isDepartmentLeader: false,
+          }),
+        } as never,
+        { notifySubtaskRolesAssigned: jest.fn() } as never,
+        { getNextNumber: jest.fn() } as never,
+        { hasPermission: jest.fn().mockResolvedValue(false) } as never,
       );
     });
 

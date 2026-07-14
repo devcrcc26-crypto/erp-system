@@ -111,6 +111,13 @@ export class DocumentPermissionService {
     if (await this.hasScheduleReadForFolder(userId, companyId, folder.contextType)) {
       return;
     }
+    if (
+      folder.contextType === FolderContextType.TASK_DISCIPLINE &&
+      folder.contextId &&
+      (await this.isAssignedDisciplineViewer(userId, companyId, folder.contextId))
+    ) {
+      return;
+    }
 
     throw new ForbiddenException('Missing permission: documents.view');
   }
@@ -131,7 +138,7 @@ export class DocumentPermissionService {
       where: activeOnly({ id: documentId, companyId }),
       select: {
         folder: {
-          select: { contextType: true },
+          select: { contextType: true, contextId: true },
         },
       },
     });
@@ -159,6 +166,18 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      document.folder.contextType === FolderContextType.TASK_DISCIPLINE &&
+      document.folder.contextId &&
+      (await this.isAssignedDisciplineViewer(
+        userId,
+        companyId,
+        document.folder.contextId,
+      ))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.view');
   }
 
@@ -182,6 +201,50 @@ export class DocumentPermissionService {
     }
 
     await this.assertCanViewDocument(userId, companyId, version.documentId);
+  }
+
+  /**
+   * True when the user is assigned on the discipline row or any active
+   * subtask under it (designer, supporting, reviewer, or review-tier FKs).
+   */
+  private async isAssignedDisciplineViewer(
+    userId: string,
+    companyId: string,
+    taskDisciplineId: string,
+  ): Promise<boolean> {
+    const discipline = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({ id: taskDisciplineId, companyId }),
+      select: {
+        disciplineLeadUserId: true,
+        designerUserId: true,
+        supportingDesignerUserId: true,
+      },
+    });
+    if (
+      discipline?.disciplineLeadUserId === userId ||
+      discipline?.designerUserId === userId ||
+      discipline?.supportingDesignerUserId === userId
+    ) {
+      return true;
+    }
+
+    const packageAssignment = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        companyId,
+        taskDisciplineId,
+        OR: [
+          { designerUserId: userId },
+          { supportingDesignerUserId: userId },
+          { reviewerUserId: userId },
+          { disciplinaryLeaderUserId: userId },
+          { deptDeputyChiefUserId: userId },
+          { instituteChiefUserId: userId },
+          { disciplineOwnerUserId: userId },
+        ],
+      }),
+      select: { id: true },
+    });
+    return packageAssignment !== null;
   }
 
   private async hasPmModuleWriteForFolder(

@@ -236,7 +236,7 @@ export class ScheduleController {
   }
 
   @Get('tasks/:taskId/disciplines')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List task disciplines' })
   listTaskDisciplines(
     @CurrentUser() user: AuthenticatedUser,

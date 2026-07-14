@@ -95,7 +95,7 @@ export class EpcWorkspaceController {
   }
 
   @Get('projects/:projectId/review-sessions')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List review sessions across all disciplines in a project' })
   listProjectReviewSessions(
     @CurrentUser() user: AuthenticatedUser,
@@ -120,7 +120,7 @@ export class EpcWorkspaceController {
   }
 
   @Get('engineering-documents/:engineeringDocumentId/version-history')
-  @RequirePermission('schedule', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'EDV version history with workflow events' })
   versionHistory(
     @CurrentUser() user: AuthenticatedUser,

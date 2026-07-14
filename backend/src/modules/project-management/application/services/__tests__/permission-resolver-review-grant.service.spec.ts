@@ -12,24 +12,34 @@ describe('PermissionResolverService review approval grants', () => {
   const taskDisciplineId = 'task-discipline-1';
 
   let getUserModulePermissions: jest.Mock;
+  let getUserRoleNames: jest.Mock;
   let prisma: { project: { findFirst: jest.Mock } };
   let epcWorkflowRepository: {
     findProjectTeamRole: jest.Mock;
     findTaskDisciplineContext: jest.Mock;
+    resolvePackageApprovalOverrides?: jest.Mock;
   };
   let service: PermissionResolverService;
 
-  const discipline = {
+  const disciplineAssigned = {
     id: taskDisciplineId,
     designerUserId: 'designer-1',
+    supportingDesignerUserId: null,
     reviewerUserId: userId,
     disciplineLeadUserId: null,
     chiefUserId: null,
     ownerUserId: null,
+    instituteChiefUserId: null,
+  };
+
+  const disciplineUnrelated = {
+    ...disciplineAssigned,
+    reviewerUserId: 'other-reviewer',
   };
 
   beforeEach(() => {
     getUserModulePermissions = jest.fn();
+    getUserRoleNames = jest.fn().mockResolvedValue([]);
     prisma = {
       project: {
         findFirst: jest.fn().mockResolvedValue({
@@ -39,17 +49,20 @@ describe('PermissionResolverService review approval grants', () => {
     };
     epcWorkflowRepository = {
       findProjectTeamRole: jest.fn().mockResolvedValue('OTHER'),
-      findTaskDisciplineContext: jest.fn().mockResolvedValue(discipline),
+      findTaskDisciplineContext: jest.fn().mockResolvedValue(disciplineAssigned),
     };
 
     service = new PermissionResolverService(
-      { getUserModulePermissions } as unknown as PermissionService,
+      {
+        getUserModulePermissions,
+        getUserRoleNames,
+      } as unknown as PermissionService,
       epcWorkflowRepository as unknown as EpcWorkflowRepository,
       prisma as unknown as PrismaService,
     );
   });
 
-  it('denies review session approval when user only has schedule.canView', async () => {
+  it('grants review approve actions at Layer 1 without schedule.canApprove (Layer 3 scopes)', async () => {
     getUserModulePermissions.mockResolvedValue({
       canView: true,
       canCreate: false,
@@ -59,7 +72,46 @@ describe('PermissionResolverService review approval grants', () => {
     });
 
     const granted = await service.resolveGrantedActions(userId, companyId);
-    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_APPROVE)).toBe(false);
+    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_APPROVE)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.REVIEW_COMMENT_ASSIGN)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN)).toBe(true);
+  });
+
+  it('allows review session approval for FK reviewer without schedule.canApprove', async () => {
+    getUserModulePermissions.mockResolvedValue({
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+    });
+    epcWorkflowRepository.findTaskDisciplineContext.mockResolvedValue(
+      disciplineAssigned,
+    );
+
+    await expect(
+      service.assertActionAllowed({
+        companyId,
+        userId,
+        projectId,
+        action: EpcWorkflowAction.REVIEW_SESSION_APPROVE,
+        taskDisciplineId,
+        currentAssigneeUserId: userId,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('denies review session approval when user is not assigned to the discipline', async () => {
+    getUserModulePermissions.mockResolvedValue({
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+    });
+    epcWorkflowRepository.findTaskDisciplineContext.mockResolvedValue(
+      disciplineUnrelated,
+    );
 
     await expect(
       service.assertActionAllowed({
@@ -96,7 +148,7 @@ describe('PermissionResolverService review approval grants', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('leaves schedule.canView-only users without workflow mutation grants so read-only views remain available', async () => {
+  it('does not grant SUBMITTAL_CREATE to schedule.canView-only users', async () => {
     getUserModulePermissions.mockResolvedValue({
       canView: true,
       canCreate: false,
@@ -107,11 +159,7 @@ describe('PermissionResolverService review approval grants', () => {
 
     const granted = await service.resolveGrantedActions(userId, companyId);
 
-    expect(granted.size).toBe(0);
-    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_APPROVE)).toBe(false);
-    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE)).toBe(false);
-    expect(granted.has(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN)).toBe(false);
-    expect(granted.has(EpcWorkflowAction.REVIEW_COMMENT_VERIFY)).toBe(false);
-    // Read-only workflow event/snapshot endpoints rely on schedule.canView, not action grants.
+    expect(granted.has(EpcWorkflowAction.SUBMITTAL_CREATE)).toBe(false);
+    expect(granted.has(EpcWorkflowAction.SUBMITTAL_ISSUE)).toBe(false);
   });
 });

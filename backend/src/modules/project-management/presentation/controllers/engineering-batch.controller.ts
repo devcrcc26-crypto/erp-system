@@ -12,7 +12,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
@@ -94,10 +93,7 @@ export class EngineeringBatchController {
   }
 
   @Patch('engineering-documents/:id/versions/:versionId/replace-draft-file')
-  @RequireAnyPermission(
-    { module: 'schedule', action: 'edit' },
-    { module: 'engineering_documents', action: 'edit' },
-  )
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Attach a new file to an active draft EDV revision' })
   replaceDraftVersionFile(
     @CurrentUser() user: AuthenticatedUser,
