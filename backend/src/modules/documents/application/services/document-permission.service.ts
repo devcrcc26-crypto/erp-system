@@ -45,6 +45,24 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (folder.contextType === FolderContextType.TASK_DISCIPLINE && folder.contextId) {
+      const discipline = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({ id: folder.contextId, companyId }),
+        select: {
+          disciplineLeadUserId: true,
+          designerUserId: true,
+          supportingDesignerUserId: true,
+        },
+      });
+      if (
+        discipline?.disciplineLeadUserId === userId ||
+        discipline?.designerUserId === userId ||
+        discipline?.supportingDesignerUserId === userId
+      ) {
+        return;
+      }
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -217,10 +235,10 @@ export class DocumentPermissionService {
   private async findFolderOrThrow(
     folderId: string,
     companyId: string,
-  ): Promise<{ contextType: FolderContextType }> {
+  ): Promise<{ contextType: FolderContextType; contextId: string | null }> {
     const folder = await this.prisma.documentFolder.findFirst({
       where: activeOnly({ id: folderId, companyId }),
-      select: { contextType: true },
+      select: { contextType: true, contextId: true },
     });
     if (!folder) {
       throw new NotFoundException('Folder not found');

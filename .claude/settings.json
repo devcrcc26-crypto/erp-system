@@ -5,7 +5,14 @@
       "Bash(npx tsc *)",
       "Bash(npx eslint *)",
       "Bash(xargs grep -l \"UNIQUE INDEX\")",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('pg'\\)\\)\")",
+      "Bash(powershell -NoProfile -Command \"Test-NetConnection -ComputerName aws-0-eu-west-1.pooler.supabase.com -Port 5432 | Select-Object ComputerName,RemotePort,TcpTestSucceeded\")",
+      "Bash(npx ts-node *)",
+      "Bash(rm -f \"c:\\\\Users\\\\PAVILION\\\\Documents\\\\ERP System\\\\backend\\\\scratch-query-folder.ts\" \"/tmp/query_folder.ts\" 2>&1)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }
