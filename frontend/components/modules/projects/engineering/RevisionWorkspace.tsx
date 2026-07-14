@@ -124,7 +124,9 @@ export default function RevisionWorkspace({
         },
       });
 
-      messageApi.success('Comment marked resolved');
+      messageApi.success(
+        'Comment marked resolved. When all comments are resolved, the package returns to the reviewer inbox.',
+      );
       form.resetFields();
       setPendingFile(null);
       onResolved();

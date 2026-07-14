@@ -10,6 +10,7 @@ import {
   CommentSeverity,
   CommentStatus as PrismaCommentStatus,
   Prisma,
+  ReviewSession,
   ReviewSessionOutcome,
   ReviewSessionStatus,
   ReviewTier,
@@ -124,6 +125,12 @@ export class ReviewWorkflowService {
     });
 
     return this.runTx(command.companyId, correlationId, async (tx) => {
+      await this.syncPackageItemsToCurrentDrafts(
+        tx,
+        command.companyId,
+        command.designPackageId,
+      );
+
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
         command.companyId,
@@ -143,6 +150,51 @@ export class ReviewWorkflowService {
         command.companyId,
         command.designPackageId,
       );
+
+      const returnedSession = await tx.reviewSession.findFirst({
+        where: activeOnly({
+          companyId: command.companyId,
+          designPackageId: command.designPackageId,
+          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+        }),
+        orderBy: { closedAt: 'desc' },
+      });
+
+      if (returnedSession) {
+        const previousCommentStatuses =
+          await this.epcReviewRepository.listCommentStatusesForSession(
+            tx,
+            command.companyId,
+            returnedSession.id,
+          );
+        const hasUnacknowledgedComments = previousCommentStatuses.some(
+          (status) =>
+            status === PrismaCommentStatus.OPEN ||
+            status === PrismaCommentStatus.IN_PROGRESS,
+        );
+        if (hasUnacknowledgedComments) {
+          throw new BadRequestException(
+            'All review comments must be acknowledged before resubmitting.',
+          );
+        }
+
+        const projectId = await this.resolveProjectIdFromDiscipline(
+          tx,
+          command.taskDisciplineId,
+          command.companyId,
+        );
+
+        return this.reopenReturnedSessionInTx(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          correlationId,
+          projectId,
+          designPackageId: command.designPackageId,
+          taskDisciplineId: command.taskDisciplineId,
+          session: returnedSession,
+          action: 'RESUBMIT_PACKAGE_FOR_REVIEW',
+        });
+      }
 
       const previousSession = await tx.reviewSession.findFirst({
         where: activeOnly({
@@ -495,6 +547,46 @@ export class ReviewWorkflowService {
         },
         correlationId,
       });
+
+      if (
+        to === CommentStatus.RESOLVED &&
+        comment.reviewSession.status === ReviewSessionStatus.RETURNED_FOR_REWORK
+      ) {
+        const statuses =
+          await this.epcReviewRepository.listCommentStatusesForSession(
+            tx,
+            command.companyId,
+            comment.reviewSessionId,
+          );
+        const allResolved = statuses.every(
+          (status) =>
+            status === PrismaCommentStatus.RESOLVED ||
+            status === PrismaCommentStatus.VERIFIED ||
+            status === PrismaCommentStatus.CLOSED,
+        );
+        if (allResolved) {
+          await this.syncPackageItemsToCurrentDrafts(
+            tx,
+            command.companyId,
+            comment.reviewSession.designPackageId,
+          );
+          const projectId = await this.resolveProjectIdFromDiscipline(
+            tx,
+            comment.reviewSession.taskDisciplineId,
+            command.companyId,
+          );
+          return this.reopenReturnedSessionInTx(tx, {
+            companyId: command.companyId,
+            actorId: command.actorId,
+            correlationId,
+            projectId,
+            designPackageId: comment.reviewSession.designPackageId,
+            taskDisciplineId: comment.reviewSession.taskDisciplineId,
+            session: comment.reviewSession,
+            action: 'RESUBMIT_AFTER_COMMENT_RESOLUTION',
+          });
+        }
+      }
 
       return {
         commandType: 'TransitionCommentStatus',
@@ -1603,6 +1695,222 @@ export class ReviewWorkflowService {
     }
 
     return false;
+  }
+
+  /**
+   * After rework, move package items off SUPERSEDED EDVs onto the current draft.
+   */
+  private async syncPackageItemsToCurrentDrafts(
+    tx: PrismaTx,
+    companyId: string,
+    designPackageId: string,
+  ): Promise<void> {
+    const items = await tx.designPackageItem.findMany({
+      where: { companyId, designPackageId },
+      include: {
+        engineeringDocumentVersion: {
+          select: {
+            id: true,
+            status: true,
+            engineeringDocumentId: true,
+          },
+        },
+      },
+    });
+
+    for (const item of items) {
+      const edv = item.engineeringDocumentVersion;
+      if (
+        edv.status === EdvStatus.DRAFT ||
+        edv.status === EdvStatus.IN_REVIEW
+      ) {
+        continue;
+      }
+
+      const currentDraft = await tx.engineeringDocumentVersion.findFirst({
+        where: activeOnly({
+          companyId,
+          engineeringDocumentId: edv.engineeringDocumentId,
+          status: EdvStatus.DRAFT,
+          isCurrent: true,
+        }),
+        select: { id: true },
+      });
+      if (!currentDraft || currentDraft.id === item.engineeringDocumentVersionId) {
+        continue;
+      }
+
+      const conflict = await tx.designPackageItem.findFirst({
+        where: {
+          companyId,
+          designPackageId,
+          engineeringDocumentVersionId: currentDraft.id,
+          NOT: { id: item.id },
+        },
+        select: { id: true },
+      });
+      if (conflict) {
+        await tx.designPackageItem.delete({ where: { id: item.id } });
+        continue;
+      }
+
+      await tx.designPackageItem.update({
+        where: { id: item.id },
+        data: { engineeringDocumentVersionId: currentDraft.id },
+      });
+    }
+  }
+
+  /**
+   * Reopens a RETURNED_FOR_REWORK session so revised work reappears in the
+   * returning reviewer's inbox with existing comments intact.
+   */
+  private async reopenReturnedSessionInTx(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      actorId: string;
+      correlationId: string;
+      projectId: string;
+      designPackageId: string;
+      taskDisciplineId: string;
+      session: ReviewSession;
+      action: string;
+    },
+  ): Promise<WorkflowResultSnapshot> {
+    if (input.session.status !== ReviewSessionStatus.RETURNED_FOR_REWORK) {
+      throw new BadRequestException('Only returned sessions can be reopened');
+    }
+
+    const pkg = await this.epcWorkflowRepository.findPackageWithItems(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+    if (!pkg) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const edvIds = pkg.items.map((i) => i.engineeringDocumentVersionId);
+    const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
+      tx,
+      input.companyId,
+      edvIds,
+    );
+    this.conflictGuard.assertBatchEdvsResolved(edvIds, loaded);
+    this.conflictGuard.assertPackageSubmitEdvStates(
+      loaded.map((e) => e.status as EdvStatus),
+    );
+
+    const discipline = await this.epcReviewRepository.findPackageWithDiscipline(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+    const taskDiscipline = discipline?.taskDiscipline;
+    const effectiveChain =
+      discipline && taskDiscipline
+        ? getEffectiveApprovalChain(discipline, taskDiscipline)
+        : null;
+    const reopenTier = input.session.currentTier;
+    const assignedToUserId =
+      effectiveChain
+        ? this.reviewSla.resolveAssigneeForTier(reopenTier, effectiveChain)
+        : input.session.assignedToUserId;
+    const openedAt = new Date();
+    const slaDeadlineAt = this.reviewSla.computeDeadline(openedAt, reopenTier);
+
+    await this.epcReviewRepository.updateReviewSession(tx, input.session.id, {
+      status: ReviewSessionStatus.ACTIVE,
+      outcome: ReviewSessionOutcome.PENDING,
+      closedAt: null,
+      closedReason: null,
+      openedAt,
+      slaDeadlineAt,
+      slaEscalatedAt: null,
+      assignedToUser: assignedToUserId
+        ? { connect: { id: assignedToUserId } }
+        : { disconnect: true },
+      updatedBy: input.actorId,
+    });
+
+    const frozen = await this.reviewContextSnapshot.buildFrozenContext(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+    await this.epcReviewRepository.upsertContextSnapshot(tx, {
+      companyId: input.companyId,
+      reviewSessionId: input.session.id,
+      referencedVersionIds: frozen.referencedVersionIds,
+      contentHash: frozen.contentHash,
+      capturedBy: input.actorId,
+    });
+
+    await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+      companyId: input.companyId,
+      actorId: input.actorId,
+      entityType: WorkflowEntityType.ReviewSession,
+      entityId: input.session.id,
+      action: input.action,
+      beforeState: {
+        status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+      },
+      afterState: {
+        status: ReviewSessionStatus.ACTIVE,
+        currentTier: reopenTier,
+        assignedToUserId,
+        snapshotHash: frozen.contentHash,
+      },
+      correlationId: input.correlationId,
+    });
+
+    await this.upsertTaskDisciplineReviewInTx(tx, {
+      companyId: input.companyId,
+      taskDisciplineId: input.taskDisciplineId,
+      tier: reopenTier,
+      status: TaskDisciplineReviewStatus.IN_REVIEW,
+      actorId: input.actorId,
+    });
+
+    const results = await this.edvTransitionService.applyInTx(tx, {
+      companyId: input.companyId,
+      actorId: input.actorId,
+      correlationId: input.correlationId,
+      projectId: input.projectId,
+      designPackageId: input.designPackageId,
+      permissionActionOverride: EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
+      transitions: loaded
+        .filter((edv) => (edv.status as EdvStatus) === EdvStatus.DRAFT)
+        .map((edv) => ({
+          engineeringDocumentVersionId: edv.id,
+          targetStatus: EdvStatus.IN_REVIEW,
+          reason: `${input.action} session=${input.session.id}`,
+        })),
+    });
+
+    await this.epcReviewRepository.markPackageSubmitted(
+      tx,
+      input.designPackageId,
+      input.actorId,
+    );
+
+    const phaseB = await this.stateProjection.recomputeDirtyInTx(
+      tx,
+      input.companyId,
+      input.actorId,
+      { packageIds: [input.designPackageId] },
+    );
+
+    return this.buildReviewSnapshot(
+      'SubmitPackageForReview',
+      input.correlationId,
+      results,
+      phaseB,
+      input.session.id,
+      input.designPackageId,
+      input.taskDisciplineId,
+    );
   }
 
   private resolveCommentActor(

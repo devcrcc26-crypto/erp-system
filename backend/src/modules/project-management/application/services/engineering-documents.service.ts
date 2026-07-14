@@ -265,6 +265,14 @@ export class EngineeringDocumentsService {
       ctx.userId,
     );
 
+    await this.engineeringDocumentVersionRepository.retargetPackageItemsToNewEdv(
+      ctx.companyId,
+      existingVersions
+        .filter((prior) => prior.status !== EdvStatus.LOCKED)
+        .map((prior) => prior.id),
+      version.id,
+    );
+
     await this.workflowEventLogService.logCrud(
       ctx,
       WorkflowEntityType.EngineeringDocumentVersion,

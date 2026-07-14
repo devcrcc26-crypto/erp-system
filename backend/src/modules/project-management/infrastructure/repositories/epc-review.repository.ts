@@ -160,6 +160,35 @@ export class EpcReviewRepository {
     });
   }
 
+  /**
+   * Refreshes the frozen context for a reopened review session.
+   */
+  async upsertContextSnapshot(
+    tx: PrismaTx,
+    input: {
+      companyId: string;
+      reviewSessionId: string;
+      referencedVersionIds: readonly string[];
+      contentHash: string;
+      capturedBy: string;
+    },
+  ): Promise<ReviewContextSnapshot> {
+    const existing = await tx.reviewContextSnapshot.findUnique({
+      where: { reviewSessionId: input.reviewSessionId },
+    });
+    if (!existing) {
+      return this.createContextSnapshot(tx, input);
+    }
+    return tx.reviewContextSnapshot.update({
+      where: { id: existing.id },
+      data: {
+        referencedVersionIds: [...input.referencedVersionIds],
+        contentHash: input.contentHash,
+        capturedBy: input.capturedBy,
+      },
+    });
+  }
+
   async updateReviewSession(
     tx: PrismaTx,
     reviewSessionId: string,

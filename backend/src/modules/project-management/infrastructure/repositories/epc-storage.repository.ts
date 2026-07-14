@@ -168,6 +168,27 @@ export class EngineeringDocumentVersionRepository {
     });
   }
 
+  /**
+   * Points package items at the new EDV when older revisions of the same document
+   * are superseded by a designer upload.
+   */
+  async retargetPackageItemsToNewEdv(
+    companyId: string,
+    previousEdvIds: readonly string[],
+    newEdvId: string,
+  ): Promise<void> {
+    if (previousEdvIds.length === 0) {
+      return;
+    }
+    await this.prisma.designPackageItem.updateMany({
+      where: {
+        companyId,
+        engineeringDocumentVersionId: { in: [...previousEdvIds] },
+      },
+      data: { engineeringDocumentVersionId: newEdvId },
+    });
+  }
+
   async update(
     id: string,
     data: Prisma.EngineeringDocumentVersionUpdateInput,
