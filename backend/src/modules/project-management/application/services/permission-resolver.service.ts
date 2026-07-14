@@ -183,22 +183,33 @@ export class PermissionResolverService {
   }
 
   /**
-   * Maps schedule module RBAC to EPC workflow actions until dedicated seed exists.
+   * Maps RBAC module flags to EPC workflow actions.
+   * Assignee-gated designer actions are always granted at Layer 1 —
+   * Layer 3 (discipline/subtask FKs) is the real gate for those.
    */
   async resolveGrantedActions(
     userId: string,
     companyId: string,
   ): Promise<ReadonlySet<EpcWorkflowAction>> {
-    const [schedule, engineeringDocuments] = await Promise.all([
+    const [schedule, engineeringDocuments, designPackages] = await Promise.all([
       this.permissionService.getUserModulePermissions(userId, companyId, 'schedule'),
       this.permissionService.getUserModulePermissions(
         userId,
         companyId,
         'engineering_documents',
       ),
+      this.permissionService.getUserModulePermissions(
+        userId,
+        companyId,
+        'design_packages',
+      ),
     ]);
 
     const granted = new Set<EpcWorkflowAction>();
+
+    // FK-assigned designers (often Employee / Designer without schedule.*)
+    // must clear system-role Layer 1; assignment Layer 3 still enforces scope.
+    this.grantAssigneeScopedDesignerActions(granted);
 
     if (schedule.canCreate) {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
@@ -234,7 +245,32 @@ export class PermissionResolverService {
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER);
     }
 
+    if (designPackages.canCreate || designPackages.canEdit) {
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD);
+      granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE);
+      granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+      granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
+    }
+
     return granted;
+  }
+
+  /**
+   * Actions that Layer 3 scopes to package/discipline designer FKs.
+   */
+  private grantAssigneeScopedDesignerActions(
+    granted: Set<EpcWorkflowAction>,
+  ): void {
+    granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD);
+    granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER);
+    granted.add(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT);
+    granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD);
+    granted.add(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE);
+    granted.add(EpcWorkflowAction.REVISION_TRIGGER);
+    granted.add(EpcWorkflowAction.REVISION_TRIGGER_CREATE);
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE);
+    granted.add(EpcWorkflowAction.REVIEW_COMMENT_RESOLVE);
   }
 
   private grantReviewApprovalActions(

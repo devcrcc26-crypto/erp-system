@@ -51,6 +51,25 @@ describe('PermissionResolverService submittal grants', () => {
     expect(granted.has(EpcWorkflowAction.SUBMITTAL_ISSUE)).toBe(true);
   });
 
+  it('grants assignee-scoped designer actions without schedule create/edit', async () => {
+    getUserModulePermissions.mockResolvedValue({
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+    });
+
+    const granted = await service.resolveGrantedActions(userId, companyId);
+
+    expect(granted.has(EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.DESIGN_PACKAGE_ITEM_ADD)).toBe(true);
+    expect(granted.has(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD)).toBe(
+      true,
+    );
+    expect(granted.has(EpcWorkflowAction.SUBMITTAL_CREATE)).toBe(false);
+  });
+
   it('does not grant SUBMITTAL_CREATE when schedule create and edit are absent', async () => {
     getUserModulePermissions.mockResolvedValue({
       canView: true,
