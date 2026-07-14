@@ -940,6 +940,22 @@ export class ReviewWorkflowService {
         returnDiscipline,
       );
 
+      const projectId = await this.resolveProjectIdFromDiscipline(
+        tx,
+        session.taskDisciplineId,
+        command.companyId,
+      );
+
+      await this.permissionResolver.assertActionAllowed({
+        companyId: command.companyId,
+        userId: command.actorId,
+        projectId,
+        action: EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
+        taskDisciplineId: session.taskDisciplineId,
+        designPackageId: command.designPackageId,
+        currentAssigneeUserId: session.assignedToUserId ?? undefined,
+      });
+
       const pkg = await this.epcWorkflowRepository.findPackageWithItems(
         tx,
         command.companyId,
@@ -1029,12 +1045,6 @@ export class ReviewWorkflowService {
         correlationId,
       });
 
-      const projectId = await this.resolveProjectIdFromDiscipline(
-        tx,
-        session.taskDisciplineId,
-        command.companyId,
-      );
-
       const edvIds = pkg.items.map((i) => i.engineeringDocumentVersionId);
       const loaded = await this.epcWorkflowRepository.findEdvsWithDiscipline(
         tx,
@@ -1048,6 +1058,9 @@ export class ReviewWorkflowService {
         correlationId,
         projectId,
         designPackageId: command.designPackageId,
+        currentAssigneeUserId: session.assignedToUserId ?? undefined,
+        // IN_REVIEW → DRAFT would otherwise map to revision.trigger (designer-only).
+        permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
         transitions: loaded
           .filter((e) => (e.status as EdvStatus) === EdvStatus.IN_REVIEW)
           .map((edv) => ({
@@ -1118,6 +1131,7 @@ export class ReviewWorkflowService {
         action: EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
         taskDisciplineId: session.taskDisciplineId,
         designPackageId: command.designPackageId,
+        currentAssigneeUserId: session.assignedToUserId ?? undefined,
       });
 
       const requestedIds = command.engineeringDocumentVersionIds;
@@ -1167,6 +1181,8 @@ export class ReviewWorkflowService {
         correlationId,
         projectId,
         designPackageId: command.designPackageId,
+        // IN_REVIEW → DRAFT would otherwise map to revision.trigger (designer-only).
+        permissionActionOverride: EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
         transitions: plan.map((p) => ({
           engineeringDocumentVersionId: p.edvId,
           targetStatus: EdvStatus.DRAFT,

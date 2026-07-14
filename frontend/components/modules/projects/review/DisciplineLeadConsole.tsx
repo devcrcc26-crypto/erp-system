@@ -22,6 +22,7 @@ import {
   canApproveReviewSession,
   getCommentsBlockingApproval,
   resolveDefaultCommentAssignee,
+  resolveDefaultCommentAssigneeLabel,
 } from '@/lib/utils/comment-workflow';
 import ReturnForReworkModal from '@/components/modules/projects/review/ReturnForReworkModal';
 import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
@@ -182,6 +183,12 @@ export default function DisciplineLeadConsole({
     ? reviewTierBilingualLabel(previousTier)
     : null;
   const escalationDate = recentEscalation?.at ?? null;
+  const defaultAssigneeId =
+    resolveDefaultCommentAssignee(packageQuery.data, currentTier) ?? '';
+  const defaultAssigneeLabel = resolveDefaultCommentAssigneeLabel(
+    defaultAssigneeId || undefined,
+    disciplineQuery.data,
+  );
 
   function resetApproveModalState(): void {
     setApproveNote('');
@@ -308,9 +315,8 @@ export default function DisciplineLeadConsole({
         packageId={packageId}
         reviewSessionId={reviewSessionId}
         availableDocuments={availableDocuments}
-        defaultAssigneeId={
-          resolveDefaultCommentAssignee(packageQuery.data, currentTier) ?? ''
-        }
+        defaultAssigneeId={defaultAssigneeId}
+        defaultAssigneeLabel={defaultAssigneeLabel}
         onSuccess={() => {
           setReturnModalOpen(false);
           onAction();

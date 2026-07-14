@@ -49,12 +49,16 @@ const ALL_FALSE: PackageRoleLens = {
 };
 
 function heldReviewTier(lens: {
+  isPackageDisciplineOwner: boolean;
   isPackageReviewer: boolean;
   isPackageDisciplineLeader: boolean;
   isPackageDeptChief: boolean;
   isPackageInstChief: boolean;
 }): ReadonlySet<ReviewTier> {
   const held = new Set<ReviewTier>();
+  if (lens.isPackageDisciplineOwner) {
+    held.add('DISCIPLINE_OWNER');
+  }
   if (lens.isPackageReviewer) {
     held.add('REVIEWER');
   }
@@ -93,6 +97,9 @@ export function usePackageRoleLens(
 
     const isPackageDesigner = primaryRole === 'DESIGNER';
     const isPackageSupportingDesigner = primaryRole === 'SUPPORTING_DESIGNER';
+    const isPackageDisciplineOwner =
+      primaryRole === 'DISCIPLINE_OWNER' ||
+      secondaryReviewRole === 'DISCIPLINE_OWNER';
     const isPackageReviewer =
       primaryRole === 'REVIEWER' || secondaryReviewRole === 'REVIEWER';
     const isPackageDisciplineLeader =
@@ -105,12 +112,14 @@ export function usePackageRoleLens(
       secondaryReviewRole === 'INSTITUTE_CHIEF';
 
     const canAddReviewComment =
+      isPackageDisciplineOwner ||
       isPackageReviewer ||
       isPackageDisciplineLeader ||
       isPackageDeptChief ||
       isPackageInstChief;
 
     const held = heldReviewTier({
+      isPackageDisciplineOwner,
       isPackageReviewer,
       isPackageDisciplineLeader,
       isPackageDeptChief,

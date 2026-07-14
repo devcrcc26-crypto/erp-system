@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Drawer, Input, Select, Space, Upload } from 'antd';
 import { CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type { CommentSeverity } from '@/lib/api/epc.types';
 import { useReturnPackageForRework } from '@/lib/query/design-packages';
 import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
@@ -55,6 +54,7 @@ export default function ReturnForReworkModal({
   reviewSessionId,
   availableDocuments,
   defaultAssigneeId,
+  defaultAssigneeLabel,
   onSuccess,
 }: {
   open: boolean;
@@ -65,6 +65,7 @@ export default function ReturnForReworkModal({
   reviewSessionId: string;
   availableDocuments: readonly { value: string; label: string }[];
   defaultAssigneeId: string;
+  defaultAssigneeLabel: string;
   onSuccess: () => void;
 }): React.ReactNode {
   const messageApi = useAppMessage();
@@ -364,10 +365,9 @@ export default function ReturnForReworkModal({
 
             <div>
               <label className="mb-1 block text-sm font-medium">Assigned to</label>
-              <UserSelect
-                value={defaultAssigneeId || undefined}
+              <Input
                 disabled
-                allowClear={false}
+                value={defaultAssigneeLabel}
                 placeholder="No designer assigned on this subtask"
               />
             </div>
