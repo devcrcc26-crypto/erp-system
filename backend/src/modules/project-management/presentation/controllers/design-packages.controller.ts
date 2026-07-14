@@ -148,7 +148,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/items')
-  @RequirePermission('schedule', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add EDV to design package' })
   addItem(
     @CurrentUser() user: AuthenticatedUser,
@@ -167,7 +167,7 @@ export class DesignPackagesController {
   }
 
   @Delete(':packageId/items/:itemId')
-  @RequirePermission('schedule', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove item from design package' })
   async removeItem(
     @CurrentUser() user: AuthenticatedUser,

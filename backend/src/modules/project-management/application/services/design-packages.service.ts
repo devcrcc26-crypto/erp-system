@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,6 +15,7 @@ import {
   ReviewTier,
   WorkflowEntityType,
 } from '@prisma/client';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   AddDesignPackageItemDto,
   BatchApproveEdvsDto,
@@ -100,6 +102,7 @@ export class DesignPackagesService {
     private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly taskAssignmentNotificationService: TaskAssignmentNotificationService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /**
@@ -577,6 +580,8 @@ export class DesignPackagesService {
       throw new NotFoundException('Design package not found');
     }
 
+    await this.assertCanManagePackageItems(ctx, projectId, taskDisciplineId, pkg);
+
     const edv = await this.engineeringDocumentVersionRepository.findById(
       ctx.companyId,
       dto.engineeringDocumentVersionId,
@@ -632,6 +637,7 @@ export class DesignPackagesService {
     if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
       throw new NotFoundException('Design package not found');
     }
+    await this.assertCanManagePackageItems(ctx, projectId, taskDisciplineId, pkg);
     await this.designPackageRepository.removeItem(ctx.companyId, itemId);
   }
 
@@ -1333,6 +1339,66 @@ export class DesignPackagesService {
       projectId,
       taskDisciplineId,
     );
+  }
+
+  /**
+   * Allows package item mutations for schedule writers, full project access,
+   * or primary/supporting designers on the package (or discipline defaults).
+   */
+  private async assertCanManagePackageItems(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    pkg: {
+      designerUserId: string | null;
+      supportingDesignerUserId: string | null;
+      disciplineOwnerUserId: string | null;
+      reviewerUserId: string | null;
+      disciplinaryLeaderUserId: string | null;
+      deptDeputyChiefUserId: string | null;
+      instituteChiefUserId: string | null;
+      instituteChiefName: string | null;
+    },
+  ): Promise<void> {
+    const [canEdit, canCreate, profile] = await Promise.all([
+      this.permissionService.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'schedule',
+        'edit',
+      ),
+      this.permissionService.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'schedule',
+        'create',
+      ),
+      this.taskAccessScopeService.resolveProfile(ctx),
+    ]);
+    if (canEdit || canCreate || profile.hasFullProjectAccess) {
+      return;
+    }
+
+    const discipline = await this.taskDisciplineScopeRepository.findWithReviewRoles(
+      ctx.companyId,
+      taskDisciplineId,
+      projectId,
+    );
+    if (!discipline) {
+      throw new NotFoundException('Task discipline not found');
+    }
+
+    const chain = this.getEffectiveApprovalChain(pkg, discipline);
+    if (
+      chain.designerUserId === ctx.userId ||
+      chain.supportingDesignerUserId === ctx.userId ||
+      discipline.designerUserId === ctx.userId ||
+      discipline.supportingDesignerUserId === ctx.userId
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Missing permission: schedule.edit');
   }
 
   private async notifySubtaskRoleChanges(

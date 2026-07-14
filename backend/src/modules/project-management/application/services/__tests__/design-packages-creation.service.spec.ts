@@ -151,6 +151,9 @@ describe('DesignPackagesService create (design-packages-creation)', () => {
       taskAccessScopeService as never,
       taskAssignmentNotificationService as never,
       documentNumberService as never,
+      {
+        hasPermission: jest.fn().mockResolvedValue(false),
+      } as never,
     );
   });
 

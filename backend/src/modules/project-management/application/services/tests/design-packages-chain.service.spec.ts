@@ -148,6 +148,9 @@ describe('DesignPackagesService approval chain (design-packages-chain)', () => {
       taskAccessScopeService as never,
       taskAssignmentNotificationService as never,
       documentNumberService as never,
+      {
+        hasPermission: jest.fn().mockResolvedValue(false),
+      } as never,
     );
   });
 
