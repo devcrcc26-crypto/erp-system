@@ -1674,7 +1674,7 @@ export class ReviewWorkflowService {
   }
 
   /**
-   * Designers may progress comments after return-for-rework even though the session is closed.
+   * Designers may progress comments after return-for-rework; reviewers may verify.
    */
   private canTransitionCommentInSession(
     sessionStatus: ReviewSessionStatus,
@@ -1691,7 +1691,11 @@ export class ReviewWorkflowService {
         CommentStatus.IN_PROGRESS,
         CommentStatus.RESOLVED,
       ]);
-      return isAssignee && designerTargets.has(targetStatus);
+      if (isAssignee && designerTargets.has(targetStatus)) {
+        return true;
+      }
+      // Reviewer verifies revised comments without requiring a new ACTIVE session.
+      return targetStatus === CommentStatus.VERIFIED;
     }
 
     return false;
@@ -1732,8 +1736,8 @@ export class ReviewWorkflowService {
           companyId,
           engineeringDocumentId: edv.engineeringDocumentId,
           status: EdvStatus.DRAFT,
-          isCurrent: true,
         }),
+        orderBy: [{ isCurrent: 'desc' }, { createdAt: 'desc' }],
         select: { id: true },
       });
       if (!currentDraft || currentDraft.id === item.engineeringDocumentVersionId) {
@@ -1782,6 +1786,12 @@ export class ReviewWorkflowService {
       throw new BadRequestException('Only returned sessions can be reopened');
     }
 
+    await this.syncPackageItemsToCurrentDrafts(
+      tx,
+      input.companyId,
+      input.designPackageId,
+    );
+
     const pkg = await this.epcWorkflowRepository.findPackageWithItems(
       tx,
       input.companyId,
@@ -1798,9 +1808,15 @@ export class ReviewWorkflowService {
       edvIds,
     );
     this.conflictGuard.assertBatchEdvsResolved(edvIds, loaded);
-    this.conflictGuard.assertPackageSubmitEdvStates(
-      loaded.map((e) => e.status as EdvStatus),
-    );
+
+    for (const edv of loaded) {
+      const status = edv.status as EdvStatus;
+      if (status !== EdvStatus.DRAFT && status !== EdvStatus.IN_REVIEW) {
+        throw new ConflictException(
+          `Package EDV ${edv.id} must be DRAFT before resubmitting; found ${status}. Upload a new revision first.`,
+        );
+      }
+    }
 
     const discipline = await this.epcReviewRepository.findPackageWithDiscipline(
       tx,
@@ -1813,10 +1829,17 @@ export class ReviewWorkflowService {
         ? getEffectiveApprovalChain(discipline, taskDiscipline)
         : null;
     const reopenTier = input.session.currentTier;
+    // Prefer the reviewer who held the session when it was returned.
     const assignedToUserId =
-      effectiveChain
+      input.session.assignedToUserId ??
+      (effectiveChain
         ? this.reviewSla.resolveAssigneeForTier(reopenTier, effectiveChain)
-        : input.session.assignedToUserId;
+        : null);
+    if (!assignedToUserId) {
+      throw new BadRequestException(
+        'Cannot reopen review session: no assignee for the returning tier',
+      );
+    }
     const openedAt = new Date();
     const slaDeadlineAt = this.reviewSla.computeDeadline(openedAt, reopenTier);
 
@@ -1828,9 +1851,7 @@ export class ReviewWorkflowService {
       openedAt,
       slaDeadlineAt,
       slaEscalatedAt: null,
-      assignedToUser: assignedToUserId
-        ? { connect: { id: assignedToUserId } }
-        : { disconnect: true },
+      assignedToUser: { connect: { id: assignedToUserId } },
       updatedBy: input.actorId,
     });
 

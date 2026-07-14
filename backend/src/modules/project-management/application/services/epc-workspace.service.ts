@@ -170,7 +170,8 @@ export class EpcWorkspaceService {
 
   /**
    * Review inbox for the active governance tier holder only.
-   * A session is visible when its currentTier matches the user's discipline role.
+   * Includes ACTIVE sessions plus RETURNED sessions with resolved comments
+   * ready for the returning reviewer to verify revisions.
    */
   async getReviewInbox(
     ctx: PmContext,
@@ -181,18 +182,44 @@ export class EpcWorkspaceService {
     }
 
     const now = new Date();
+    const projectFilter = projectId
+      ? {
+          designPackage: {
+            taskDiscipline: { task: { projectId, deletedAt: null } },
+          },
+        }
+      : {};
+
     const sessions = await this.prisma.reviewSession.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
-        status: ReviewSessionStatus.ACTIVE,
-        assignedToUserId: ctx.userId,
-        ...(projectId
-          ? {
-              designPackage: {
-                taskDiscipline: { task: { projectId, deletedAt: null } },
+        OR: [
+          {
+            status: ReviewSessionStatus.ACTIVE,
+            assignedToUserId: ctx.userId,
+          },
+          {
+            status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+            assignedToUserId: ctx.userId,
+            comments: {
+              some: {
+                deletedAt: null,
+                status: CommentStatus.RESOLVED,
               },
-            }
-          : {}),
+            },
+          },
+          {
+            status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+            comments: {
+              some: {
+                deletedAt: null,
+                status: CommentStatus.RESOLVED,
+                createdBy: ctx.userId,
+              },
+            },
+          },
+        ],
+        ...projectFilter,
       }),
       include: {
         designPackage: {
@@ -500,85 +527,87 @@ export class EpcWorkspaceService {
       throw new NotFoundException('Design package not found');
     }
 
-    const [session, packageItems] = await Promise.all([
+    const sessionInclude = {
+      contextSnapshot: true,
+      reviewSessionAttachments: {
+        where: { deletedAt: null },
+        orderBy: { attachedAt: 'asc' as const },
+        include: {
+          attachedByUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+            },
+          },
+          document: { select: { id: true, name: true } },
+        },
+      },
+      comments: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' as const },
+        include: {
+          author: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+              email: true,
+            },
+          },
+          assignedToUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+              email: true,
+            },
+          },
+          documents: {
+            select: {
+              engineeringDocumentVersionId: true,
+              engineeringDocumentVersion: {
+                select: {
+                  id: true,
+                  revisionLabel: true,
+                  engineeringDocument: {
+                    select: {
+                      title: true,
+                      documentNumber: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          files: {
+            select: {
+              id: true,
+              documentVersionId: true,
+              fileName: true,
+            },
+          },
+          commentDocumentVersion: {
+            select: {
+              id: true,
+              document: { select: { name: true } },
+            },
+          },
+        },
+      },
+    };
+
+    const [activeSession, packageItems] = await Promise.all([
       this.prisma.reviewSession.findFirst({
         where: activeOnly({
           companyId: ctx.companyId,
           designPackageId,
           status: ReviewSessionStatus.ACTIVE,
         }),
-        include: {
-          contextSnapshot: true,
-          reviewSessionAttachments: {
-            where: { deletedAt: null },
-            orderBy: { attachedAt: 'asc' },
-            include: {
-              attachedByUser: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  chineseName: true,
-                },
-              },
-              document: { select: { id: true, name: true } },
-            },
-          },
-          comments: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: 'asc' },
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  chineseName: true,
-                  email: true,
-                },
-              },
-              assignedToUser: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  chineseName: true,
-                  email: true,
-                },
-              },
-              documents: {
-                select: {
-                  engineeringDocumentVersionId: true,
-                  engineeringDocumentVersion: {
-                    select: {
-                      id: true,
-                      revisionLabel: true,
-                      engineeringDocument: {
-                        select: {
-                          title: true,
-                          documentNumber: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              files: {
-                select: {
-                  id: true,
-                  documentVersionId: true,
-                  fileName: true,
-                },
-              },
-              commentDocumentVersion: {
-                select: {
-                  id: true,
-                  document: { select: { name: true } },
-                },
-              },
-            },
-          },
-        },
+        include: sessionInclude,
       }),
       this.prisma.designPackageItem.findMany({
         where: { companyId: ctx.companyId, designPackageId },
@@ -586,6 +615,25 @@ export class EpcWorkspaceService {
         select: { engineeringDocumentVersionId: true },
       }),
     ]);
+
+    let session = activeSession;
+    if (!session) {
+      session = await this.prisma.reviewSession.findFirst({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          designPackageId,
+          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+          comments: {
+            some: {
+              deletedAt: null,
+              status: CommentStatus.RESOLVED,
+            },
+          },
+        }),
+        orderBy: { closedAt: 'desc' },
+        include: sessionInclude,
+      });
+    }
 
     let lastReturnedSessionComments: { status: CommentStatus }[] = [];
     let lastReturnedSession: ReviewModeView['lastReturnedSession'] = null;

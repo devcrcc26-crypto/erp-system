@@ -141,11 +141,14 @@ export default function DisciplineLeadConsole({
     instituteChiefName,
     lens.canApproveReview,
   );
-  const isActiveSession = sessionStatus === 'ACTIVE';
-  const showActionConsole = canActAtCurrentTier && isActiveSession;
-  const showReadOnlyConsole = !showActionConsole && isActiveSession;
+  const showActionConsole =
+    canActAtCurrentTier && sessionStatus === 'ACTIVE';
+  const showVerifyOnlyConsole =
+    canActAtCurrentTier && sessionStatus === 'RETURNED_FOR_REWORK';
+  const showReadOnlyConsole =
+    sessionStatus === 'ACTIVE' && !showActionConsole;
 
-  if (!showActionConsole && !showReadOnlyConsole) {
+  if (!showActionConsole && !showReadOnlyConsole && !showVerifyOnlyConsole) {
     return null;
   }
 
@@ -244,6 +247,21 @@ export default function DisciplineLeadConsole({
     } finally {
       setIsConfirmingApproval(false);
     }
+  }
+
+  if (showVerifyOnlyConsole) {
+    return (
+      <FormLayout
+        title={`${tierLabel} console`}
+        description="Designer revisions are ready. Verify each resolved comment below."
+      >
+        <ReviewApprovalBlockedAlert comments={comments} />
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Revisions are waiting for your verification. Use Verify on each RESOLVED
+          comment in the list below.
+        </div>
+      </FormLayout>
+    );
   }
 
   if (showReadOnlyConsole) {

@@ -67,6 +67,9 @@ export function useTransitionReviewComment() {
         queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
       });
       void queryClient.invalidateQueries({
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
+      });
+      void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
       });
     },
@@ -91,6 +94,9 @@ export function useVerifyReviewComment() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: [...epcWorkspaceKeys.all, 'my-comments'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...epcWorkspaceKeys.all, 'review-inbox'],
       });
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.all,
