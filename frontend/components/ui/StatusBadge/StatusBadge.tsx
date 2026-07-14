@@ -11,7 +11,8 @@ export type StatusBadgeVariant =
   | 'warning'
   | 'error'
   | 'info'
-  | 'orange';
+  | 'orange'
+  | 'cyan';
 
 const VARIANT_COLORS: Record<
   StatusBadgeVariant,
@@ -23,6 +24,7 @@ const VARIANT_COLORS: Record<
   error: { color: tokens.colorRed600, bg: tokens.colorRed50 },
   info: { color: tokens.colorBlue400, bg: tokens.colorBlue50 },
   orange: { color: tokens.colorAmber400, bg: tokens.colorAmber50 },
+  cyan: { color: tokens.colorCyan400, bg: tokens.colorCyan50 },
 };
 
 export default function StatusBadge({

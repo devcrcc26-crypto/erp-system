@@ -8,9 +8,6 @@ import {
   Alert,
   Breadcrumb,
   Button,
-  Form,
-  Input,
-  Modal,
   Space,
   Tooltip,
   Typography,
@@ -43,7 +40,6 @@ import {
   useDesignPackageDependencies,
   useDesignPackages,
   useLockPackageEdvs,
-  useReturnPackageForRework,
   useSubmitPackageForReview,
 } from '@/lib/query/design-packages';
 import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib/query/engineering-documents';
@@ -97,12 +93,10 @@ export default function DesignPackageDetailPageContent({
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const { data: profile } = useCurrentUser();
-  const [returnOpen, setReturnOpen] = useState(false);
   const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [returnForm] = Form.useForm<{ reason: string }>();
 
   const canViewPackage =
     !permLoading &&
@@ -141,7 +135,6 @@ export default function DesignPackageDetailPageContent({
   const submitForReview = useSubmitPackageForReview();
   const lockEdvs = useLockPackageEdvs();
   const approveSession = useApproveReviewSession();
-  const returnPackage = useReturnPackageForRework();
   const batchLock = useBatchLockEngineeringDocuments();
   const batchApproveEdvs = useBatchApprovePackageEdvs();
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
@@ -427,11 +420,6 @@ export default function DesignPackageDetailPageContent({
                 Batch lock
               </Button>
             )}
-            {packageLens.canReturnForRework && reviewSessionId && (
-              <Button danger onClick={() => setReturnOpen(true)}>
-                Return for rework
-              </Button>
-            )}
             {canClosePackage && (
               <Button onClick={() => setClosePackageOpen(true)}>
                 Close Package
@@ -714,50 +702,6 @@ export default function DesignPackageDetailPageContent({
         onClose={() => setAddDependencyOpen(false)}
         onAdded={() => void dependenciesQuery.refetch()}
       />
-
-      <Modal
-        title="Return package for rework"
-        open={returnOpen}
-        onCancel={() => setReturnOpen(false)}
-        onOk={() => returnForm.submit()}
-        okText="Return for rework"
-        confirmLoading={returnPackage.isPending}
-      >
-        <Form
-          form={returnForm}
-          layout="vertical"
-          onFinish={async (values: { reason: string }) => {
-            if (!reviewSessionId) {
-              return;
-            }
-            try {
-              await returnPackage.mutateAsync({
-                projectId,
-                taskDisciplineId,
-                packageId,
-                body: {
-                  reviewSessionId,
-                  reason: values.reason.trim(),
-                },
-              });
-              messageApi.success('Package returned for rework');
-              setReturnOpen(false);
-              void packageQuery.refetch();
-              void reviewModeQuery.refetch();
-            } catch (error) {
-              notifyApiError(error, 'Failed to return package for rework', messageApi);
-            }
-          }}
-        >
-          <Form.Item
-            name="reason"
-            label="Reason"
-            rules={[{ required: true, message: 'Reason is required' }]}
-          >
-            <Input.TextArea rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       <DesignPackageBuilder
         open={editSubtaskOpen}

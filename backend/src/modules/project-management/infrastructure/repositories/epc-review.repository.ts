@@ -201,6 +201,60 @@ export class EpcReviewRepository {
     });
   }
 
+  /**
+   * Links additional (non-primary) EDVs to a review comment created via ReturnPackageForRework.
+   */
+  async createReviewCommentDocuments(
+    tx: PrismaTx,
+    input: {
+      reviewCommentId: string;
+      engineeringDocumentVersionIds: readonly string[];
+      createdBy: string;
+    },
+  ): Promise<void> {
+    if (input.engineeringDocumentVersionIds.length === 0) {
+      return;
+    }
+    await tx.reviewCommentDocument.createMany({
+      data: input.engineeringDocumentVersionIds.map((engineeringDocumentVersionId) => ({
+        reviewCommentId: input.reviewCommentId,
+        engineeringDocumentVersionId,
+        createdBy: input.createdBy,
+      })),
+    });
+  }
+
+  /**
+   * Links additional (non-primary) attachment files to a review comment created via ReturnPackageForRework.
+   * fileName is resolved from the linked Document's registered name (same convention as the primary
+   * commentDocumentVersion attachment display name).
+   */
+  async createReviewCommentFiles(
+    tx: PrismaTx,
+    input: {
+      reviewCommentId: string;
+      documentVersionIds: readonly string[];
+      createdBy: string;
+    },
+  ): Promise<void> {
+    if (input.documentVersionIds.length === 0) {
+      return;
+    }
+    const versions = await tx.documentVersion.findMany({
+      where: { id: { in: [...input.documentVersionIds] } },
+      select: { id: true, document: { select: { name: true } } },
+    });
+    const nameById = new Map(versions.map((v) => [v.id, v.document.name]));
+    await tx.reviewCommentFile.createMany({
+      data: input.documentVersionIds.map((documentVersionId) => ({
+        reviewCommentId: input.reviewCommentId,
+        documentVersionId,
+        fileName: nameById.get(documentVersionId) ?? 'Attachment',
+        createdBy: input.createdBy,
+      })),
+    });
+  }
+
   async findCommentById(
     tx: PrismaTx,
     companyId: string,

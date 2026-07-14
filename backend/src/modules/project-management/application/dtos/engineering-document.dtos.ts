@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   IsArray,
   IsDateString,
   IsEnum,
@@ -12,6 +13,7 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import {
   ApprovalLevel,
@@ -202,15 +204,53 @@ export class SubmitPackageForReviewDto {
   idempotencyKey?: string;
 }
 
+export class ReturnPackageForReworkCommentDto {
+  @ApiProperty({ format: 'uuid', description: 'Primary document this comment targets' })
+  @IsEntityUuid()
+  engineeringDocumentVersionId!: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Additional documents this comment also applies to' })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  engineeringDocumentVersionIds?: string[];
+
+  @ApiPropertyOptional({ description: 'Text summary when no comment file is attached' })
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @ApiProperty({ enum: CommentSeverity })
+  @IsEnum(CommentSeverity)
+  severity!: CommentSeverity;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Primary uploaded comment/markup file version' })
+  @IsOptional()
+  @IsEntityUuid()
+  commentDocumentVersionId?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Additional uploaded comment/markup file versions' })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  commentFileIds?: string[];
+
+  @ApiProperty({ format: 'uuid' })
+  @IsEntityUuid()
+  assignedToUserId!: string;
+}
+
 export class ReturnPackageForReworkDto {
   @ApiProperty({ format: 'uuid' })
   @IsEntityUuid()
   reviewSessionId!: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  reason!: string;
+  @ApiProperty({ type: [ReturnPackageForReworkCommentDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ReturnPackageForReworkCommentDto)
+  comments!: ReturnPackageForReworkCommentDto[];
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -23,6 +23,9 @@ export const tokens = {
   colorBlue50: '#E6F1FB',
   colorBlue800: '#1A4A7A',
 
+  colorCyan400: '#0891B2',
+  colorCyan50: '#ECFEFF',
+
   colorRed400: '#E24B4A',
   colorRed50: '#FCEBEB',
   colorRed600: '#C43D3C',

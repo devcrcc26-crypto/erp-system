@@ -42,7 +42,7 @@ function mergeFallbackComment(
       revisionLabel: '-',
     },
     responseRevision: fallbackComment.responseRevision ?? null,
-    attachment: null,
+    attachment: fallbackComment.attachment ?? null,
     responseAttachment: null,
   };
 }

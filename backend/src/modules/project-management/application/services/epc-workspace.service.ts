@@ -109,6 +109,21 @@ export interface ReviewModeView {
     verifiedAt: string | null;
     commentedOn: CommentEdvSnapshot;
     responseRevision: CommentEdvSnapshot | null;
+    attachment: {
+      documentVersionId: string;
+      name: string;
+    } | null;
+    documents: readonly {
+      engineeringDocumentVersionId: string;
+      revisionLabel: string;
+      documentTitle: string;
+      documentNumber: string;
+    }[];
+    files: readonly {
+      id: string;
+      documentVersionId: string;
+      fileName: string;
+    }[];
   }[];
   /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
   readonly lastReturnedSessionComments: readonly { status: CommentStatus }[];
@@ -531,6 +546,36 @@ export class EpcWorkspaceService {
                   email: true,
                 },
               },
+              documents: {
+                select: {
+                  engineeringDocumentVersionId: true,
+                  engineeringDocumentVersion: {
+                    select: {
+                      id: true,
+                      revisionLabel: true,
+                      engineeringDocument: {
+                        select: {
+                          title: true,
+                          documentNumber: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              files: {
+                select: {
+                  id: true,
+                  documentVersionId: true,
+                  fileName: true,
+                },
+              },
+              commentDocumentVersion: {
+                select: {
+                  id: true,
+                  document: { select: { name: true } },
+                },
+              },
             },
           },
         },
@@ -646,6 +691,23 @@ export class EpcWorkspaceService {
           verifiedAt: revision?.verifiedAt ?? c.verifiedAt?.toISOString() ?? null,
           commentedOn,
           responseRevision: revision?.responseRevision ?? null,
+          attachment: c.commentDocumentVersion
+            ? {
+                documentVersionId: c.commentDocumentVersion.id,
+                name: c.commentDocumentVersion.document.name,
+              }
+            : null,
+          documents: c.documents.map((d) => ({
+            engineeringDocumentVersionId: d.engineeringDocumentVersionId,
+            revisionLabel: d.engineeringDocumentVersion.revisionLabel,
+            documentTitle: d.engineeringDocumentVersion.engineeringDocument.title,
+            documentNumber: d.engineeringDocumentVersion.engineeringDocument.documentNumber,
+          })),
+          files: c.files.map((f) => ({
+            id: f.id,
+            documentVersionId: f.documentVersionId,
+            fileName: f.fileName,
+          })),
         };
       }),
       lastReturnedSessionComments,

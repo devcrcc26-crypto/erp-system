@@ -442,6 +442,7 @@ export default function ReviewModePanel({
         instituteChiefName={packageQuery.data?.instituteChiefName ?? null}
         comments={sessionComments}
         allDocumentsApproved={allDocumentsApproved}
+        availableDocuments={edvCommentOptions}
         onAction={refetchAll}
       />
       <ReviewSessionAttachmentsSection

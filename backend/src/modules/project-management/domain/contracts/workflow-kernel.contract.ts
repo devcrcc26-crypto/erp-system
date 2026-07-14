@@ -71,11 +71,21 @@ export interface ApproveReviewSessionCommand extends WorkflowCommandBase {
   readonly approvedOnBehalfOfName?: string;
 }
 
+export interface ReturnPackageForReworkCommentInput {
+  readonly engineeringDocumentVersionId: string;
+  readonly engineeringDocumentVersionIds?: readonly string[];
+  readonly body?: string;
+  readonly severity: 'MINOR' | 'MODERATE' | 'MAJOR';
+  readonly commentDocumentVersionId?: string;
+  readonly commentFileIds?: readonly string[];
+  readonly assignedToUserId: string;
+}
+
 export interface ReturnPackageForReworkCommand extends WorkflowCommandBase {
   readonly type: 'ReturnPackageForRework';
   readonly designPackageId: string;
   readonly reviewSessionId: string;
-  readonly reason: string;
+  readonly comments: readonly ReturnPackageForReworkCommentInput[];
 }
 
 /** v1: one tx per package unit - all-or-nothing. */

@@ -9,7 +9,6 @@ import {
   useAddSessionAttachment,
   useApproveReviewSession,
   useDesignPackage,
-  useReturnPackageForRework,
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
@@ -19,7 +18,12 @@ import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensPr
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import type { ReviewModeComment, ReviewTier } from '@/lib/api/epc.types';
-import { canApproveReviewSession } from '@/lib/utils/comment-workflow';
+import {
+  canApproveReviewSession,
+  getCommentsBlockingApproval,
+  resolveDefaultCommentAssignee,
+} from '@/lib/utils/comment-workflow';
+import ReturnForReworkModal from '@/components/modules/projects/review/ReturnForReworkModal';
 import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -47,6 +51,7 @@ export default function DisciplineLeadConsole({
   instituteChiefName,
   comments,
   allDocumentsApproved,
+  availableDocuments,
   onAction,
 }: {
   projectId: string;
@@ -60,6 +65,7 @@ export default function DisciplineLeadConsole({
   instituteChiefName: string | null;
   comments: readonly ReviewModeComment[];
   allDocumentsApproved: boolean;
+  availableDocuments: readonly { value: string; label: string }[];
   onAction: () => void;
 }): React.ReactNode {
   const lens = useRoleLens();
@@ -79,7 +85,6 @@ export default function DisciplineLeadConsole({
     (currentTier as ReviewTier | null | undefined) ?? null,
   );
   const approveSession = useApproveReviewSession();
-  const returnPackage = useReturnPackageForRework();
   const addSessionAttachment = useAddSessionAttachment(
     projectId,
     taskDisciplineId,
@@ -96,6 +101,7 @@ export default function DisciplineLeadConsole({
   const [attachmentDocumentId, setAttachmentDocumentId] = useState<string | null>(null);
   const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [recentEscalation, setRecentEscalation] = useState<{
     fromTier: string;
     at: string;
@@ -159,11 +165,12 @@ export default function DisciplineLeadConsole({
     (!approveOnBehalf || onBehalfOfName.trim().length > 0);
   const approveEscalateLabel = isFinalTier ? 'Approve' : 'Approve & escalate';
   const approveEscalateDisabled = !canSubmitApproval || approveButtonLocked;
+  const openCommentCount = getCommentsBlockingApproval(comments).length;
   const approveEscalateTooltip =
     !allDocumentsApproved
       ? 'Approve all documents before escalating.'
       : !approvalAllowed
-        ? 'Resolve blocking comments before approving.'
+        ? `All comments must be verified before escalating. ${openCommentCount} comment(s) still open.`
         : undefined;
   const approveModalTitle = isFinalTier
     ? 'Approve — close package'
@@ -288,32 +295,27 @@ export default function DisciplineLeadConsole({
             </Button>
           </span>
         </Tooltip>
-        <Button
-          danger
-          loading={returnPackage.isPending}
-          onClick={() => {
-            void returnPackage
-              .mutateAsync({
-                projectId,
-                taskDisciplineId,
-                packageId,
-                body: {
-                  reviewSessionId,
-                  reason: `Returned by ${tierLabel}`,
-                },
-              })
-              .then(() => {
-                messageApi.success('Package returned');
-                onAction();
-              })
-              .catch((error: unknown) => {
-                notifyApiError(error, 'Request failed', messageApi);
-              });
-          }}
-        >
+        <Button danger onClick={() => setReturnModalOpen(true)}>
           Return for rework
         </Button>
       </Space>
+
+      <ReturnForReworkModal
+        open={returnModalOpen}
+        onClose={() => setReturnModalOpen(false)}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        packageId={packageId}
+        reviewSessionId={reviewSessionId}
+        availableDocuments={availableDocuments}
+        defaultAssigneeId={
+          resolveDefaultCommentAssignee(packageQuery.data, currentTier) ?? ''
+        }
+        onSuccess={() => {
+          setReturnModalOpen(false);
+          onAction();
+        }}
+      />
 
       <Modal
         title={approveModalTitle}

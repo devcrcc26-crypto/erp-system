@@ -954,7 +954,15 @@ export class DesignPackagesService {
       actorId: ctx.userId,
       designPackageId: packageId,
       reviewSessionId: dto.reviewSessionId,
-      reason: dto.reason,
+      comments: dto.comments.map((comment) => ({
+        engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
+        engineeringDocumentVersionIds: comment.engineeringDocumentVersionIds,
+        body: comment.body,
+        severity: comment.severity,
+        commentDocumentVersionId: comment.commentDocumentVersionId,
+        commentFileIds: comment.commentFileIds,
+        assignedToUserId: comment.assignedToUserId,
+      })),
       idempotencyKey: dto.idempotencyKey,
     });
   }

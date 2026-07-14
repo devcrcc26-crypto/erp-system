@@ -1,34 +1,37 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Form, Input, Select, Upload } from 'antd';
+import { Button, Form, Input, Select, Tag, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { MessageSquare } from 'lucide-react';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import StatusBadge, {
+  type StatusBadgeVariant,
+} from '@/components/ui/StatusBadge/StatusBadge';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
+import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
 import ReviewCommentEditDrawer from '@/components/modules/projects/review/ReviewCommentEditDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import type { CommentSeverity, ReviewModeComment, ReviewModeView, ReviewTier } from '@/lib/api/epc.types';
+import type {
+  CommentSeverity,
+  CommentStatus,
+  ReviewModeComment,
+  ReviewModeView,
+} from '@/lib/api/epc.types';
 import {
   useAddReviewComment,
   useDeleteReviewComment,
   useVerifyReviewComment,
 } from '@/lib/query/review-comments';
-import {
-  useDesignPackage,
-  useReturnPackageForRework,
-} from '@/lib/query/design-packages';
-import { useProjectDiscipline } from '@/lib/query/disciplines';
+import { useDesignPackage } from '@/lib/query/design-packages';
 import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useAuthStore } from '@/stores/auth.store';
-import { canUserActAtCurrentReviewTier } from '@/lib/utils/review-governance';
-import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
+import { resolveDefaultCommentAssignee } from '@/lib/utils/comment-workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -46,6 +49,23 @@ function canMutateOwnOpenComment(
   currentUserId: string | undefined,
 ): boolean {
   return comment.createdBy === currentUserId && comment.status === 'OPEN';
+}
+
+function commentStatusVariant(status: string): StatusBadgeVariant {
+  switch (status) {
+    case 'ACKNOWLEDGED':
+      return 'info';
+    case 'IN_PROGRESS':
+      return 'orange';
+    case 'RESOLVED':
+      return 'cyan';
+    case 'VERIFIED':
+      return 'success';
+    case 'CLOSED':
+    case 'OPEN':
+    default:
+      return 'default';
+  }
 }
 
 export default function ReviewCommentPanel({
@@ -67,7 +87,6 @@ export default function ReviewCommentPanel({
   const addComment = useAddReviewComment();
   const verifyComment = useVerifyReviewComment();
   const deleteComment = useDeleteReviewComment();
-  const returnPackage = useReturnPackageForRework();
   const uploadDocument = useUploadDocumentToFolder();
   const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
   const designPackageId = reviewMode?.designPackageId ?? '';
@@ -76,12 +95,6 @@ export default function ReviewCommentPanel({
     taskDisciplineId,
     designPackageId,
     Boolean(projectId) && Boolean(taskDisciplineId) && Boolean(designPackageId),
-  );
-  const disciplineQuery = useProjectDiscipline(projectId, taskDisciplineId);
-  const packageLens = usePackageRoleLens(
-    packageQuery.data,
-    disciplineQuery.data,
-    (reviewMode?.currentTier as ReviewTier | null | undefined) ?? null,
   );
   const [commentFileVersionId, setCommentFileVersionId] = useState<string | null>(
     null,
@@ -95,39 +108,15 @@ export default function ReviewCommentPanel({
   );
   const [editTarget, setEditTarget] = useState<ReviewModeComment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ReviewModeComment | null>(null);
-  const [returningCommentId, setReturningCommentId] = useState<string | null>(null);
+  const [verifyingCommentId, setVerifyingCommentId] = useState<string | null>(null);
+  const [statusOverrides, setStatusOverrides] = useState<
+    Record<string, CommentStatus>
+  >({});
 
-  const canReturnForComment =
-    reviewMode?.sessionStatus === 'ACTIVE' &&
-    Boolean(reviewMode?.reviewSessionId) &&
-    canUserActAtCurrentReviewTier(
-      packageLens,
-      disciplineQuery.data,
-      currentUserId,
-      reviewMode?.currentTier,
-      packageQuery.data?.instituteChiefUserId ?? null,
-      packageQuery.data?.instituteChiefName,
-      lens.canApproveReview,
-    );
-
-  const defaultAssignee = useMemo(() => {
-    const pkg = packageQuery.data;
-    const tier = reviewMode?.currentTier;
-    if (!pkg) {
-      return undefined;
-    }
-
-    if (tier === 'INSTITUTE_CHIEF' && isExternalInstituteChief(pkg)) {
-      return (
-        pkg.deptDeputyChiefUserId ??
-        pkg.disciplinaryLeaderUserId ??
-        pkg.designerUserId ??
-        undefined
-      );
-    }
-
-    return pkg.designerUserId ?? undefined;
-  }, [packageQuery.data, reviewMode?.currentTier]);
+  const defaultAssignee = useMemo(
+    () => resolveDefaultCommentAssignee(packageQuery.data, reviewMode?.currentTier),
+    [packageQuery.data, reviewMode?.currentTier],
+  );
 
   useEffect(() => {
     if (defaultAssignee) {
@@ -196,37 +185,17 @@ export default function ReviewCommentPanel({
     setEditTarget(comment);
   }
 
-  async function handleReturnForComment(comment: ReviewModeComment): Promise<void> {
-    if (!reviewMode?.reviewSessionId || !designPackageId) {
-      messageApi.error('No active review session');
-      return;
-    }
-
-    const reason =
-      comment.body?.trim() ||
-      `Return for rework — comment on ${resolveEdvDisplayLabel(
-        comment.engineeringDocumentVersionId,
-        [],
-        snapshotEdvLabels,
-      )}`;
-
-    setReturningCommentId(comment.id);
+  async function handleVerifyComment(comment: ReviewModeComment): Promise<void> {
+    setVerifyingCommentId(comment.id);
     try {
-      await returnPackage.mutateAsync({
-        projectId,
-        taskDisciplineId,
-        packageId: designPackageId,
-        body: {
-          reviewSessionId: reviewMode.reviewSessionId,
-          reason,
-        },
-      });
-      messageApi.success('Package returned for rework');
+      await verifyComment.mutateAsync({ commentId: comment.id });
+      setStatusOverrides((prev) => ({ ...prev, [comment.id]: 'VERIFIED' }));
+      messageApi.success('Comment verified');
       onCommentAdded();
     } catch (error) {
-      notifyApiError(error, 'Failed to return package', messageApi);
+      notifyApiError(error, 'Request failed', messageApi);
     } finally {
-      setReturningCommentId(null);
+      setVerifyingCommentId(null);
     }
   }
 
@@ -322,7 +291,18 @@ export default function ReviewCommentPanel({
             />
           ) : (
             reviewMode?.comments.map((comment) => {
+              const displayStatus = statusOverrides[comment.id] ?? comment.status;
               const canMutate = canMutateOwnOpenComment(comment, currentUserId);
+              const canVerify =
+                displayStatus === 'RESOLVED' &&
+                (comment.createdBy === currentUserId || lens.canApproveReview);
+              const additionalDocs = (comment.documents ?? []).filter(
+                (d) =>
+                  d.engineeringDocumentVersionId !== comment.engineeringDocumentVersionId,
+              );
+              const primaryAttachment = comment.attachment ?? null;
+              const additionalFiles = comment.files ?? [];
+
               return (
                 <div
                   key={comment.id}
@@ -331,9 +311,10 @@ export default function ReviewCommentPanel({
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 flex flex-wrap items-center gap-2">
                       <CommentSeverityTag severity={comment.severity} />
-                      <span className="text-xs text-slate-500">
-                        {comment.status.replace(/_/g, ' ')}
-                      </span>
+                      <StatusBadge
+                        label={displayStatus.replace(/_/g, ' ')}
+                        variant={commentStatusVariant(displayStatus)}
+                      />
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-1">
                       <Button
@@ -365,37 +346,15 @@ export default function ReviewCommentPanel({
                           Remove
                         </Button>
                       )}
-                      {lens.canApproveReview && comment.status === 'RESOLVED' && (
+                      {canVerify && (
                         <Button
                           type="link"
                           size="small"
                           className="!px-1"
-                          loading={verifyComment.isPending}
-                          onClick={() => {
-                            void verifyComment
-                              .mutateAsync({ commentId: comment.id })
-                              .then(() => {
-                                messageApi.success('Comment verified');
-                                onCommentAdded();
-                              })
-                              .catch((error: unknown) => {
-                                notifyApiError(error, 'Request failed', messageApi);
-                              });
-                          }}
+                          loading={verifyingCommentId === comment.id}
+                          onClick={() => void handleVerifyComment(comment)}
                         >
                           Verify
-                        </Button>
-                      )}
-                      {canReturnForComment && (
-                        <Button
-                          type="link"
-                          size="small"
-                          danger
-                          className="!px-1"
-                          loading={returningCommentId === comment.id}
-                          onClick={() => void handleReturnForComment(comment)}
-                        >
-                          Return for rework
                         </Button>
                       )}
                     </div>
@@ -403,7 +362,7 @@ export default function ReviewCommentPanel({
                   <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
                   {comment.responseRevision && (
                     <p className="mb-1 text-xs text-emerald-700">
-                      {comment.status === 'RESOLVED' || comment.status === 'VERIFIED'
+                      {displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED'
                         ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
                         : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
                       {comment.resolutionNote?.trim()
@@ -412,13 +371,49 @@ export default function ReviewCommentPanel({
                     </p>
                   )}
                   {!comment.responseRevision &&
-                    (comment.status === 'RESOLVED' || comment.status === 'VERIFIED') && (
+                    (displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED') && (
                     <p className="mb-1 text-xs text-emerald-700">
                       Resolved
                       {comment.resolutionNote?.trim()
                         ? ` - ${comment.resolutionNote.trim()}`
                         : ''}
                     </p>
+                  )}
+                  {additionalDocs.length > 0 && (
+                    <div className="mb-1 flex flex-wrap gap-1">
+                      {additionalDocs.map((doc) => (
+                        <Tag key={doc.engineeringDocumentVersionId} className="!m-0">
+                          {doc.documentTitle} · Rev {doc.revisionLabel}
+                        </Tag>
+                      ))}
+                    </div>
+                  )}
+                  {(primaryAttachment || additionalFiles.length > 0) && (
+                    <div className="mb-1 space-y-1">
+                      {primaryAttachment && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                          <span className="min-w-0 truncate">{primaryAttachment.name}</span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={primaryAttachment.documentVersionId}
+                            fileName={primaryAttachment.name}
+                          />
+                        </div>
+                      )}
+                      {additionalFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+                        >
+                          <span className="min-w-0 truncate">{file.fileName}</span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={file.documentVersionId}
+                            fileName={file.fileName}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
                   <p className="text-xs text-slate-500">
                     {comment.commentedOn

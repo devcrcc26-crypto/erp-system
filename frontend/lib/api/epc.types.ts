@@ -323,6 +323,21 @@ export interface ReviewModeComment {
   verifiedAt?: string | null;
   commentedOn?: CommentEdvSnapshot;
   responseRevision?: CommentEdvSnapshot | null;
+  /** Primary markup file (commentDocumentVersion FK) — backward compat. */
+  attachment?: ReviewCommentAttachment | null;
+  /** Additional documents beyond the primary EDV FK. */
+  documents?: readonly {
+    engineeringDocumentVersionId: string;
+    revisionLabel: string;
+    documentTitle: string;
+    documentNumber: string;
+  }[];
+  /** Additional attachment files beyond the primary commentDocumentVersion FK. */
+  files?: readonly {
+    id: string;
+    documentVersionId: string;
+    fileName: string;
+  }[];
 }
 
 export interface ReviewCommentAttachment {
@@ -546,9 +561,19 @@ export interface ApproveReviewSessionRequest {
   approvedOnBehalfOfName?: string;
 }
 
+export interface ReturnPackageForReworkCommentInput {
+  engineeringDocumentVersionId: string;
+  engineeringDocumentVersionIds?: string[];
+  body?: string;
+  severity: CommentSeverity;
+  commentDocumentVersionId?: string;
+  commentFileIds?: string[];
+  assignedToUserId: string;
+}
+
 export interface ReturnPackageForReworkRequest {
   reviewSessionId: string;
-  reason: string;
+  comments: ReturnPackageForReworkCommentInput[];
   idempotencyKey?: string;
 }
 

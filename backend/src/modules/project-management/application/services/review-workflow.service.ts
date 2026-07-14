@@ -910,6 +910,12 @@ export class ReviewWorkflowService {
     command: ReturnPackageForReworkCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
+    if (command.comments.length === 0) {
+      throw new BadRequestException(
+        'At least one comment is required to return a package for rework',
+      );
+    }
+
     return this.runTx(command.companyId, correlationId, async (tx) => {
       const session = await this.epcReviewRepository.findSessionById(
         tx,
@@ -943,6 +949,55 @@ export class ReviewWorkflowService {
         throw new NotFoundException('Design package not found');
       }
 
+      for (const commentInput of command.comments) {
+        const comment = await this.epcReviewRepository.createReviewComment(tx, {
+          companyId: command.companyId,
+          reviewSessionId: command.reviewSessionId,
+          engineeringDocumentVersionId: commentInput.engineeringDocumentVersionId,
+          body: commentInput.body,
+          commentDocumentVersionId: commentInput.commentDocumentVersionId,
+          severity: commentInput.severity as CommentSeverity,
+          reviewTier: session.currentTier,
+          assignedToUserId: commentInput.assignedToUserId,
+          createdBy: command.actorId,
+        });
+
+        if (commentInput.engineeringDocumentVersionIds?.length) {
+          await this.epcReviewRepository.createReviewCommentDocuments(tx, {
+            reviewCommentId: comment.id,
+            engineeringDocumentVersionIds: commentInput.engineeringDocumentVersionIds,
+            createdBy: command.actorId,
+          });
+        }
+
+        if (commentInput.commentFileIds?.length) {
+          await this.epcReviewRepository.createReviewCommentFiles(tx, {
+            reviewCommentId: comment.id,
+            documentVersionIds: commentInput.commentFileIds,
+            createdBy: command.actorId,
+          });
+        }
+
+        await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          entityType: WorkflowEntityType.ReviewComment,
+          entityId: comment.id,
+          action: 'ADD_REVIEW_COMMENT',
+          beforeState: {},
+          afterState: {
+            status: comment.status,
+            severity: comment.severity,
+            assignedToUserId: comment.assignedToUserId,
+          } as Prisma.InputJsonValue,
+          correlationId,
+        });
+      }
+
+      const closedReason =
+        command.comments[0]?.body?.trim() ||
+        `Returned with ${command.comments.length} comments`;
+
       await this.upsertTaskDisciplineReviewInTx(tx, {
         companyId: command.companyId,
         taskDisciplineId: session.taskDisciplineId,
@@ -955,7 +1010,7 @@ export class ReviewWorkflowService {
         status: ReviewSessionStatus.RETURNED_FOR_REWORK,
         outcome: ReviewSessionOutcome.RETURNED,
         closedAt: new Date(),
-        closedReason: command.reason,
+        closedReason,
         updatedBy: command.actorId,
       });
 
@@ -998,7 +1053,7 @@ export class ReviewWorkflowService {
           .map((edv) => ({
             engineeringDocumentVersionId: edv.id,
             targetStatus: EdvStatus.DRAFT,
-            reason: command.reason,
+            reason: closedReason,
           })),
       });
 

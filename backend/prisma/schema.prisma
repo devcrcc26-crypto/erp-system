@@ -883,6 +883,7 @@ model DocumentVersion {
   engineeringDocumentVersions EngineeringDocumentVersion[]
   reviewCommentFiles          ReviewComment[]              @relation("ReviewCommentFile")
   reviewCommentResponseFiles  ReviewComment[]              @relation("ReviewCommentResponseFile")
+  reviewCommentFileAttachments ReviewCommentFile[]
 
   @@unique([documentId, versionNumber], map: "uq_document_version_doc_number")
   @@index([documentId], map: "idx_document_version_document_id")
@@ -1681,6 +1682,7 @@ model EngineeringDocumentVersion {
   documentVersion     DocumentVersion     @relation(fields: [documentVersionId], references: [id])
   designPackageItems  DesignPackageItem[]
   reviewComments      ReviewComment[]
+  reviewCommentDocuments ReviewCommentDocument[]
 
   @@unique([engineeringDocumentId, revisionLabel], map: "uq_edv_document_revision_label")
   @@index([companyId], map: "idx_engineering_document_version_company_id")
@@ -1919,6 +1921,8 @@ model ReviewComment {
   responseDocumentVersion  DocumentVersion?           @relation("ReviewCommentResponseFile", fields: [responseDocumentVersionId], references: [id])
   assignedToUser             User                       @relation("ReviewCommentAssignee", fields: [assignedToUserId], references: [id])
   author                     User                       @relation("ReviewCommentAuthor", fields: [createdBy], references: [id])
+  documents                  ReviewCommentDocument[]
+  files                      ReviewCommentFile[]
 
   @@index([companyId], map: "idx_review_comment_company_id")
   @@index([companyId, deletedAt], map: "idx_review_comment_company_deleted")
@@ -1927,6 +1931,36 @@ model ReviewComment {
   @@index([assignedToUserId], map: "idx_review_comment_assigned_to_user_id")
   @@index([status], map: "idx_review_comment_status")
   @@map("review_comment")
+}
+
+model ReviewCommentDocument {
+  id                           String   @id @default(uuid())
+  reviewCommentId              String   @map("review_comment_id")
+  engineeringDocumentVersionId String   @map("engineering_document_version_id")
+  createdAt                    DateTime @default(now()) @map("created_at")
+  createdBy                    String   @map("created_by")
+
+  reviewComment              ReviewComment              @relation(fields: [reviewCommentId], references: [id])
+  engineeringDocumentVersion EngineeringDocumentVersion @relation(fields: [engineeringDocumentVersionId], references: [id])
+
+  @@unique([reviewCommentId, engineeringDocumentVersionId])
+  @@index([reviewCommentId])
+  @@map("review_comment_document")
+}
+
+model ReviewCommentFile {
+  id                String   @id @default(uuid())
+  reviewCommentId   String   @map("review_comment_id")
+  documentVersionId String   @map("document_version_id")
+  fileName          String   @map("file_name")
+  createdAt         DateTime @default(now()) @map("created_at")
+  createdBy         String   @map("created_by")
+
+  reviewComment   ReviewComment   @relation(fields: [reviewCommentId], references: [id])
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id])
+
+  @@index([reviewCommentId])
+  @@map("review_comment_file")
 }
 
 model TaskDependency {

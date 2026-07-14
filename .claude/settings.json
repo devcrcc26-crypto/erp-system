@@ -9,7 +9,11 @@
       "Bash(node -e \"console.log\\(require.resolve\\('pg'\\)\\)\")",
       "Bash(powershell -NoProfile -Command \"Test-NetConnection -ComputerName aws-0-eu-west-1.pooler.supabase.com -Port 5432 | Select-Object ComputerName,RemotePort,TcpTestSucceeded\")",
       "Bash(npx ts-node *)",
-      "Bash(rm -f \"c:\\\\Users\\\\PAVILION\\\\Documents\\\\ERP System\\\\backend\\\\scratch-query-folder.ts\" \"/tmp/query_folder.ts\" 2>&1)"
+      "Bash(rm -f \"c:\\\\Users\\\\PAVILION\\\\Documents\\\\ERP System\\\\backend\\\\scratch-query-folder.ts\" \"/tmp/query_folder.ts\" 2>&1)",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_tables.js\")",
+      "Bash(cp '/c/Users/PAVILION/Documents/ERP System/backend/prisma/schema.prisma' /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/schema_after.prisma)",
+      "Read(//c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/**)",
+      "Bash(node /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/make_before.js)"
     ],
     "additionalDirectories": [
       "\\tmp"
