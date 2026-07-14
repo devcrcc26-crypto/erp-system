@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Select, Space, Upload } from 'antd';
+import { Button, Drawer, Input, Select, Space, Upload } from 'antd';
 import { CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import type { CommentSeverity } from '@/lib/api/epc.types';
@@ -10,6 +10,7 @@ import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { wideDetailDrawerProps } from '@/lib/theme/layout';
 
 interface CommentRowFile {
   tempId: string;
@@ -252,19 +253,34 @@ export default function ReturnForReworkModal({
     }
   }
 
+  function handleClose(): void {
+    resetState();
+    onClose();
+  }
+
   return (
-    <Modal
+    <Drawer
+      {...wideDetailDrawerProps}
       title="Return for rework"
       open={open}
-      onCancel={() => {
-        resetState();
-        onClose();
-      }}
-      onOk={() => void handleSubmit()}
-      okText="Return for rework"
-      okButtonProps={{ danger: true, disabled: !canSubmit, loading: submitting }}
-      width={640}
+      onClose={handleClose}
       destroyOnHidden
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button onClick={handleClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            danger
+            type="primary"
+            disabled={!canSubmit}
+            loading={submitting}
+            onClick={() => void handleSubmit()}
+          >
+            Return for rework
+          </Button>
+        </div>
+      }
     >
       <p className="mb-4 text-sm text-slate-600">
         Add at least one comment before returning.
@@ -368,6 +384,6 @@ export default function ReturnForReworkModal({
       <Space className="mt-4">
         <Button onClick={addRow}>+ Add another comment</Button>
       </Space>
-    </Modal>
+    </Drawer>
   );
 }
