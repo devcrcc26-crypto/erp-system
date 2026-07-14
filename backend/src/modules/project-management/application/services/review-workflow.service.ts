@@ -551,7 +551,7 @@ export class ReviewWorkflowService {
       });
 
       if (
-        to === CommentStatus.RESOLVED &&
+        (to === CommentStatus.RESOLVED || to === CommentStatus.VERIFIED) &&
         comment.reviewSession.status === ReviewSessionStatus.RETURNED_FOR_REWORK
       ) {
         const statuses =

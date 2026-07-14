@@ -13,7 +13,10 @@
       "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_tables.js\")",
       "Bash(cp '/c/Users/PAVILION/Documents/ERP System/backend/prisma/schema.prisma' /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/schema_after.prisma)",
       "Read(//c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/**)",
-      "Bash(node /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/make_before.js)"
+      "Bash(node /c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/make_before.js)",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/find_stuck_sessions.js\")",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_edvs.js\")",
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/reopen_stuck_session.js\")"
     ],
     "additionalDirectories": [
       "\\tmp"
