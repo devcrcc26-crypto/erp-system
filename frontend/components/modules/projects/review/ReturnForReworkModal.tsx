@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Input, Select, Space, Upload } from 'antd';
+import { Button, Drawer, Input, Select, Space, Tooltip, Upload } from 'antd';
 import { CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import type { CommentSeverity } from '@/lib/api/epc.types';
 import { useReturnPackageForRework } from '@/lib/query/design-packages';
@@ -154,6 +154,23 @@ export default function ReturnForReworkModal({
     !submitting &&
     Boolean(defaultAssigneeId);
 
+  const disabledReasons: string[] = [];
+  if (!defaultAssigneeId) {
+    disabledReasons.push('No designer is assigned on this subtask.');
+  }
+  rows.forEach((row, index) => {
+    const label = rows.length > 1 ? `Row ${index + 1}: ` : '';
+    if (row.selectedDocs.length === 0) {
+      disabledReasons.push(`${label}select at least one document.`);
+    }
+    if (row.summary.trim().length === 0 && row.files.length === 0) {
+      disabledReasons.push(`${label}add a comment summary or attach a file.`);
+    }
+    if (row.files.some((f) => f.status === 'error')) {
+      disabledReasons.push(`${label}remove or retry the failed file upload.`);
+    }
+  });
+
   async function uploadPendingFiles(): Promise<CommentRow[] | null> {
     const folderId = uploadFolderQuery.data?.id;
     if (!folderId) {
@@ -267,19 +284,32 @@ export default function ReturnForReworkModal({
       onClose={handleClose}
       destroyOnHidden
       footer={
-        <div className="flex justify-end gap-2">
-          <Button onClick={handleClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            danger
-            type="primary"
-            disabled={!canSubmit}
-            loading={submitting}
-            onClick={() => void handleSubmit()}
-          >
-            Return for rework
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          {!canSubmit && !submitting && disabledReasons.length > 0 && (
+            <ul className="w-full list-disc pl-5 text-xs text-red-500">
+              {disabledReasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button onClick={handleClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Tooltip title={!canSubmit ? disabledReasons.join(' ') : undefined}>
+              <span>
+                <Button
+                  danger
+                  type="primary"
+                  disabled={!canSubmit}
+                  loading={submitting}
+                  onClick={() => void handleSubmit()}
+                >
+                  Return for rework
+                </Button>
+              </span>
+            </Tooltip>
+          </div>
         </div>
       }
     >
