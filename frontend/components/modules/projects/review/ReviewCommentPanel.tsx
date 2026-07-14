@@ -201,7 +201,7 @@ export default function ReviewCommentPanel({
 
   return (
     <>
-      {lens.canApproveReview ? (
+      {/* {lens.canApproveReview ? (
         <FormLayout title="Add comment" description="Severity drives review routing.">
           <Form<CommentFormValues>
             form={form}
@@ -276,7 +276,7 @@ export default function ReviewCommentPanel({
             </Button>
           </Form>
         </FormLayout>
-      ) : null}
+      ) : null} */}
 
       <FormLayout
         title="Session comments"
