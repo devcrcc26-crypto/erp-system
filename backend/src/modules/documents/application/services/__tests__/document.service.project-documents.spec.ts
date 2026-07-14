@@ -28,11 +28,15 @@ describe('DocumentService.listProjectDocuments', () => {
       document: { findMany: jest.fn(), count: jest.fn() },
     };
 
-    service = new DocumentService(prisma as unknown as PrismaService, {
-      upload: jest.fn(),
-      delete: jest.fn(),
-      getSignedUrl: jest.fn(),
-    } as never);
+    service = new DocumentService(
+      prisma as unknown as PrismaService,
+      {
+        upload: jest.fn(),
+        delete: jest.fn(),
+        getSignedUrl: jest.fn(),
+      } as never,
+      { assertCanUpload: jest.fn() } as never,
+    );
   });
 
   it('returns empty results when the project folder tree does not exist', async () => {

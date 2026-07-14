@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EdvStatus, Prisma, WorkflowEntityType } from '@prisma/client';
 import {
   buildPaginatedResult,
@@ -26,6 +31,7 @@ import {
 import {
   EngineeringDocumentRepository,
   EngineeringDocumentVersionRepository,
+  TaskDisciplineReviewRoles,
   TaskDisciplineScopeRepository,
 } from '../../infrastructure/repositories/epc-storage.repository';
 import { EngineeringDocumentFolderService, type DocumentFolderRef } from './engineering-document-folder.service';
@@ -110,6 +116,7 @@ export class EngineeringDocumentsService {
       projectId,
       taskDisciplineId,
     );
+    this.assertDesignerAssignment(ctx, discipline);
 
     if (!dto.documentNumber?.trim()) {
       throw new BadRequestException(
@@ -182,7 +189,8 @@ export class EngineeringDocumentsService {
     engineeringDocumentId: string,
     dto: UploadEngineeringDocumentVersionDto,
   ): Promise<MappedEngineeringDocumentVersion> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    this.assertDesignerAssignment(ctx, discipline);
 
     const document = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
@@ -279,7 +287,8 @@ export class EngineeringDocumentsService {
     id: string,
     dto: UpdateEngineeringDocumentDto,
   ): Promise<MappedEngineeringDocument> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    this.assertDesignerAssignment(ctx, discipline);
     const existing = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
       id,
@@ -316,7 +325,8 @@ export class EngineeringDocumentsService {
     versionId: string,
     dto: UpdateEngineeringDocumentVersionDto,
   ): Promise<MappedEngineeringDocumentVersion> {
-    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    const discipline = await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+    this.assertDesignerAssignment(ctx, discipline);
 
     const document = await this.engineeringDocumentRepository.findById(
       ctx.companyId,
@@ -503,8 +513,8 @@ export class EngineeringDocumentsService {
     ctx: PmContext,
     projectId: string,
     taskDisciplineId: string,
-  ): Promise<{ id: string; disciplineName: string; taskId: string }> {
-    const discipline = await this.taskDisciplineScopeRepository.findScoped(
+  ): Promise<TaskDisciplineReviewRoles> {
+    const discipline = await this.taskDisciplineScopeRepository.findWithReviewRoles(
       ctx.companyId,
       taskDisciplineId,
       projectId,
@@ -513,5 +523,22 @@ export class EngineeringDocumentsService {
       throw new NotFoundException('Task discipline not found');
     }
     return discipline;
+  }
+
+  /**
+   * Asserts the caller is the discipline lead, designer, or supporting designer —
+   * the roles permitted to create/mutate engineering documents on this discipline.
+   */
+  private assertDesignerAssignment(
+    ctx: PmContext,
+    discipline: TaskDisciplineReviewRoles,
+  ): void {
+    const isAssigned =
+      discipline.disciplineLeadUserId === ctx.userId ||
+      discipline.designerUserId === ctx.userId ||
+      discipline.supportingDesignerUserId === ctx.userId;
+    if (!isAssigned) {
+      throw new ForbiddenException('You are not assigned to this discipline');
+    }
   }
 }

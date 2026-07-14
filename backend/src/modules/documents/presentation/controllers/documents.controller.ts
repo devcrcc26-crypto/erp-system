@@ -90,7 +90,7 @@ export class DocumentsController {
   }
 
   @Post(':id/versions')
-  @RequirePermission('documents', 'create')
+  @DelegatePermissionCheck()
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
