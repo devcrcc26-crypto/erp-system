@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import { Alert, Button, Space } from 'antd';
+import { useMemo, useState } from 'react';
+import { Alert, Badge, Button, Space, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -13,7 +13,7 @@ import RevisionWorkspace from '@/components/modules/projects/engineering/Revisio
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { CommentSeverity, MyCommentItem, ReviewModeComment } from '@/lib/api/epc.types';
 import { useMyComments } from '@/lib/query/epc-workspace';
-import { useTransitionReviewComment } from '@/lib/query/review-comments';
+import { useTransitionReviewComment, useVerifyReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
@@ -48,11 +48,24 @@ export default function MyCommentsPageContent({
   const canViewMyComments = useCanViewMyComments();
   const commentsQuery = useMyComments(projectId);
   const transitionComment = useTransitionReviewComment();
+  const verifyComment = useVerifyReviewComment();
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
   const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
   const [pendingCommentId, setPendingCommentId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<'PENDING' | 'COMPLETED'>(
+    'PENDING',
+  );
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+
+  const pendingItems = useMemo(
+    () => (commentsQuery.data ?? []).filter((c) => c.commentInboxStatus === 'PENDING'),
+    [commentsQuery.data],
+  );
+  const completedItems = useMemo(
+    () => (commentsQuery.data ?? []).filter((c) => c.commentInboxStatus === 'COMPLETED'),
+    [commentsQuery.data],
+  );
 
   if (permLoading || commentsQuery.isLoading) {
     return <PageLoadingSkeleton />;
@@ -86,6 +99,19 @@ export default function MyCommentsPageContent({
     }
   }
 
+  async function handleVerify(comment: MyCommentItem): Promise<void> {
+    setPendingCommentId(comment.commentId);
+    try {
+      await verifyComment.mutateAsync({ commentId: comment.commentId });
+      messageApi.success('Comment verified');
+      void commentsQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Request failed', messageApi);
+    } finally {
+      setPendingCommentId(null);
+    }
+  }
+
   async function openRevisionWorkspace(comment: MyCommentItem): Promise<void> {
     if (comment.status === 'ACKNOWLEDGED') {
       const started = await handleTransition(comment, 'IN_PROGRESS', 'Marked in progress');
@@ -98,7 +124,7 @@ export default function MyCommentsPageContent({
     setRevisionComment(comment);
   }
 
-  const columns: ColumnsType<MyCommentItem> = [
+  const baseColumns: ColumnsType<MyCommentItem> = [
     {
       title: 'Document',
       key: 'document',
@@ -153,6 +179,10 @@ export default function MyCommentsPageContent({
       width: 120,
       render: (value: string) => formatProjectDate(value),
     },
+  ];
+
+  const pendingColumns: ColumnsType<MyCommentItem> = [
+    ...baseColumns,
     {
       title: '',
       key: 'actions',
@@ -201,12 +231,45 @@ export default function MyCommentsPageContent({
             </Button>
           )}
           {record.status === 'RESOLVED' && (
-            <span className="text-xs text-slate-500">Awaiting reviewer</span>
-          )}
-          {record.status === 'VERIFIED' && (
-            <span className="text-xs text-emerald-700">Verified by reviewer</span>
+            <Button
+              type="link"
+              className="!px-0"
+              loading={pendingCommentId === record.commentId}
+              onClick={() => void handleVerify(record)}
+            >
+              Verify
+            </Button>
           )}
         </Space>
+      ),
+    },
+  ];
+
+  const completedColumns: ColumnsType<MyCommentItem> = [
+    ...baseColumns,
+    {
+      title: 'Resolution note',
+      dataIndex: 'resolutionNote',
+      key: 'resolutionNote',
+      ellipsis: true,
+      render: (value: string | null) => value ?? '-',
+    },
+    {
+      title: 'Verified',
+      dataIndex: 'verifiedAt',
+      key: 'verifiedAt',
+      width: 120,
+      render: (value: string | null) => (value ? formatProjectDate(value) : '-'),
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 90,
+      fixed: 'right',
+      render: (_value, record) => (
+        <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
+          View
+        </Button>
       ),
     },
   ];
@@ -217,13 +280,47 @@ export default function MyCommentsPageContent({
         title={t('pages.myComments.title')}
         description="Review comments assigned to you. Acknowledge, upload a revised document, then mark resolved."
       >
-        <DataTable<MyCommentItem>
-          rowKey="commentId"
-          size="middle"
-          columns={columns}
-          dataSource={commentsQuery.data ?? []}
-          scroll={{ x: 960 }}
-          locale={{ emptyText: t('empty.noComments') }}
+        <Tabs
+          activeKey={activeSection}
+          onChange={(key) => setActiveSection(key as 'PENDING' | 'COMPLETED')}
+          items={[
+            {
+              key: 'PENDING',
+              label: (
+                <Badge count={pendingItems.length} size="small" offset={[8, 0]}>
+                  <span>Pending</span>
+                </Badge>
+              ),
+              children: (
+                <DataTable<MyCommentItem>
+                  rowKey="commentId"
+                  size="middle"
+                  columns={pendingColumns}
+                  dataSource={pendingItems}
+                  scroll={{ x: 960 }}
+                  locale={{ emptyText: t('empty.noComments') }}
+                />
+              ),
+            },
+            {
+              key: 'COMPLETED',
+              label: (
+                <Badge count={completedItems.length} size="small" offset={[8, 0]}>
+                  <span>Completed</span>
+                </Badge>
+              ),
+              children: (
+                <DataTable<MyCommentItem>
+                  rowKey="commentId"
+                  size="middle"
+                  columns={completedColumns}
+                  dataSource={completedItems}
+                  scroll={{ x: 960 }}
+                  locale={{ emptyText: t('empty.noComments') }}
+                />
+              ),
+            },
+          ]}
         />
       </FormLayout>
 

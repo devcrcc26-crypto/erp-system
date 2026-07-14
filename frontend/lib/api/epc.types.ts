@@ -225,6 +225,10 @@ export interface ReviewInboxItem {
   slaDeadlineAt: string | null;
   slaOverdue: boolean;
   openedAt: string;
+  inboxStatus: 'PENDING' | 'COMPLETED';
+  sessionStatus: string;
+  actionTakenAt: string | null;
+  completedAction: 'APPROVED' | 'RETURNED' | null;
 }
 
 export type MyWorkItemKind = 'DISCIPLINE_LEAD' | 'SUBTASK_ROLE';
@@ -278,6 +282,9 @@ export interface MyCommentItem {
   reviewSessionId: string;
   authorName: string;
   createdAt: string;
+  commentInboxStatus: 'PENDING' | 'COMPLETED';
+  resolutionNote: string | null;
+  verifiedAt: string | null;
 }
 
 export interface ProjectStatusBoard {

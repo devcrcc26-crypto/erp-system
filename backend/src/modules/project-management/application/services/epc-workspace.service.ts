@@ -41,6 +41,10 @@ export interface ReviewInboxItem {
   readonly slaDeadlineAt: string | null;
   readonly slaOverdue: boolean;
   readonly openedAt: string;
+  readonly inboxStatus: 'PENDING' | 'COMPLETED';
+  readonly sessionStatus: string;
+  readonly actionTakenAt: string | null;
+  readonly completedAction: 'APPROVED' | 'RETURNED' | null;
 }
 
 export interface MyCommentItem {
@@ -62,6 +66,9 @@ export interface MyCommentItem {
   readonly reviewSessionId: string;
   readonly authorName: string;
   readonly createdAt: string;
+  readonly commentInboxStatus: 'PENDING' | 'COMPLETED';
+  readonly resolutionNote: string | null;
+  readonly verifiedAt: string | null;
 }
 
 export interface ProjectStatusBoard {
@@ -169,9 +176,9 @@ export class EpcWorkspaceService {
   ) {}
 
   /**
-   * Review inbox for the active governance tier holder only.
-   * Includes ACTIVE sessions plus RETURNED sessions with resolved comments
-   * ready for the returning reviewer to verify revisions.
+   * Review inbox for the current user - PENDING sessions awaiting their
+   * action at the current tier, plus COMPLETED sessions they previously
+   * approved, escalated, or returned (full history, nothing disappears).
    */
   async getReviewInbox(
     ctx: PmContext,
@@ -190,67 +197,134 @@ export class EpcWorkspaceService {
         }
       : {};
 
-    const sessions = await this.prisma.reviewSession.findMany({
-      where: activeOnly({
-        companyId: ctx.companyId,
-        OR: [
-          {
-            status: ReviewSessionStatus.ACTIVE,
-            assignedToUserId: ctx.userId,
-          },
-          {
-            status: ReviewSessionStatus.RETURNED_FOR_REWORK,
-            assignedToUserId: ctx.userId,
-            comments: {
-              some: {
-                deletedAt: null,
-                status: CommentStatus.RESOLVED,
-              },
-            },
-          },
-          {
-            status: ReviewSessionStatus.RETURNED_FOR_REWORK,
-            comments: {
-              some: {
-                deletedAt: null,
-                status: CommentStatus.RESOLVED,
-                createdBy: ctx.userId,
-              },
-            },
-          },
-        ],
-        ...projectFilter,
-      }),
-      include: {
-        designPackage: {
-          include: {
-            taskDiscipline: {
-              include: { task: { include: { project: true } } },
-            },
+    const sessionInclude = {
+      designPackage: {
+        include: {
+          taskDiscipline: {
+            include: { task: { include: { project: true } } },
           },
         },
       },
-      orderBy: { slaDeadlineAt: 'asc' },
+    } as const;
+
+    const [pendingSessions, completedEvents] = await Promise.all([
+      this.prisma.reviewSession.findMany({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          status: ReviewSessionStatus.ACTIVE,
+          assignedToUserId: ctx.userId,
+          ...projectFilter,
+        }),
+        include: sessionInclude,
+        orderBy: { slaDeadlineAt: 'asc' },
+      }),
+      this.prisma.workflowEventLog.findMany({
+        where: {
+          companyId: ctx.companyId,
+          entityType: WorkflowEntityType.ReviewSession,
+          actorId: ctx.userId,
+          action: {
+            in: ['APPROVE_REVIEW_SESSION', 'ADVANCE_REVIEW_TIER', 'RETURN_FOR_REWORK'],
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { entityId: true, action: true, createdAt: true },
+      }),
+    ]);
+
+    const pendingIds = new Set(pendingSessions.map((s) => s.id));
+    const latestActionBySession = new Map<
+      string,
+      { action: string; createdAt: Date }
+    >();
+    for (const event of completedEvents) {
+      if (!latestActionBySession.has(event.entityId)) {
+        latestActionBySession.set(event.entityId, {
+          action: event.action,
+          createdAt: event.createdAt,
+        });
+      }
+    }
+    const completedIds = [...latestActionBySession.keys()].filter(
+      (id) => !pendingIds.has(id),
+    );
+
+    const completedSessions = completedIds.length
+      ? await this.prisma.reviewSession.findMany({
+          where: activeOnly({
+            id: { in: completedIds },
+            companyId: ctx.companyId,
+            ...projectFilter,
+          }),
+          include: sessionInclude,
+        })
+      : [];
+
+    const mapSession = (
+      s: ReviewSession & {
+        designPackage: {
+          name: string;
+          taskDiscipline: {
+            disciplineName: string;
+            disciplineIndex: number | null;
+            task: { projectId: string; project: { name: string } };
+          };
+        };
+      },
+      inboxStatus: 'PENDING' | 'COMPLETED',
+    ): ReviewInboxItem => {
+      const completedEvent = latestActionBySession.get(s.id);
+      const completedAction: ReviewInboxItem['completedAction'] =
+        !completedEvent
+          ? null
+          : completedEvent.action === 'RETURN_FOR_REWORK'
+            ? 'RETURNED'
+            : 'APPROVED';
+
+      return {
+        reviewSessionId: s.id,
+        designPackageId: s.designPackageId,
+        designPackageName: s.designPackage.name,
+        taskDisciplineId: s.taskDisciplineId,
+        disciplineName: s.designPackage.taskDiscipline.disciplineName,
+        disciplineIndex: s.designPackage.taskDiscipline.disciplineIndex,
+        projectId: s.designPackage.taskDiscipline.task.projectId,
+        projectName: s.designPackage.taskDiscipline.task.project.name,
+        currentTier: s.currentTier,
+        slaDeadlineAt: s.slaDeadlineAt?.toISOString() ?? null,
+        slaOverdue: s.slaDeadlineAt ? s.slaDeadlineAt < now : false,
+        openedAt: s.openedAt.toISOString(),
+        inboxStatus,
+        sessionStatus: s.status,
+        actionTakenAt: completedEvent?.createdAt.toISOString() ?? null,
+        completedAction,
+      };
+    };
+
+    const items = [
+      ...pendingSessions.map((s) => mapSession(s, 'PENDING')),
+      ...completedSessions.map((s) => mapSession(s, 'COMPLETED')),
+    ];
+
+    items.sort((a, b) => {
+      if (a.inboxStatus !== b.inboxStatus) {
+        return a.inboxStatus === 'PENDING' ? -1 : 1;
+      }
+      if (a.inboxStatus === 'PENDING') {
+        if (!a.slaDeadlineAt) return 1;
+        if (!b.slaDeadlineAt) return -1;
+        return a.slaDeadlineAt.localeCompare(b.slaDeadlineAt);
+      }
+      return (b.actionTakenAt ?? '').localeCompare(a.actionTakenAt ?? '');
     });
 
-    return sessions.map((s) => ({
-      reviewSessionId: s.id,
-      designPackageId: s.designPackageId,
-      designPackageName: s.designPackage.name,
-      taskDisciplineId: s.taskDisciplineId,
-      disciplineName: s.designPackage.taskDiscipline.disciplineName,
-      disciplineIndex: s.designPackage.taskDiscipline.disciplineIndex,
-      projectId: s.designPackage.taskDiscipline.task.projectId,
-      projectName: s.designPackage.taskDiscipline.task.project.name,
-      currentTier: s.currentTier,
-      slaDeadlineAt: s.slaDeadlineAt?.toISOString() ?? null,
-      slaOverdue: s.slaDeadlineAt ? s.slaDeadlineAt < now : false,
-      openedAt: s.openedAt.toISOString(),
-    }));
+    return items;
   }
 
   /**
-   * Designer comment queue - assigned comments awaiting designer action.
+   * Comment queue for the current user - everything they're assigned to or
+   * authored, across all statuses. PENDING/COMPLETED grouping is computed
+   * per row so the frontend can section rather than filter items away.
    */
   async getMyComments(
     ctx: PmContext,
@@ -263,16 +337,7 @@ export class EpcWorkspaceService {
     const rows = await this.prisma.reviewComment.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
-        assignedToUserId: ctx.userId,
-        status: {
-          in: [
-            CommentStatus.OPEN,
-            CommentStatus.ACKNOWLEDGED,
-            CommentStatus.IN_PROGRESS,
-            CommentStatus.RESOLVED,
-            CommentStatus.VERIFIED,
-          ],
-        },
+        OR: [{ assignedToUserId: ctx.userId }, { createdBy: ctx.userId }],
         ...(projectId
           ? {
               reviewSession: {
@@ -322,6 +387,11 @@ export class EpcWorkspaceService {
       const discipline = doc.taskDiscipline;
       const project = discipline.task.project;
 
+      const commentInboxStatus: MyCommentItem['commentInboxStatus'] =
+        row.status === CommentStatus.VERIFIED || row.status === CommentStatus.CLOSED
+          ? 'COMPLETED'
+          : 'PENDING';
+
       return {
         commentId: row.id,
         body: row.body,
@@ -341,6 +411,9 @@ export class EpcWorkspaceService {
         reviewSessionId: row.reviewSessionId,
         authorName: formatReviewerName(row.author),
         createdAt: row.createdAt.toISOString(),
+        commentInboxStatus,
+        resolutionNote: row.resolutionNote,
+        verifiedAt: row.verifiedAt?.toISOString() ?? null,
       };
     });
   }

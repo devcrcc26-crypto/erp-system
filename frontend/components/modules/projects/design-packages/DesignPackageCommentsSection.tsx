@@ -63,6 +63,12 @@ function toMyCommentItem(
     reviewSessionId,
     authorName: comment.authorName,
     createdAt: comment.createdAt,
+    commentInboxStatus:
+      comment.status === 'VERIFIED' || comment.status === 'CLOSED'
+        ? 'COMPLETED'
+        : 'PENDING',
+    resolutionNote: comment.resolutionNote ?? null,
+    verifiedAt: comment.verifiedAt ?? null,
   };
 }
 

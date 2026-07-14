@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Badge, Tabs } from 'antd';
 import { Inbox } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -28,6 +29,9 @@ export default function ReviewInboxTable({
   const permLoading = usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
   const inboxQuery = useReviewInbox(projectId);
+  const [activeSection, setActiveSection] = useState<'PENDING' | 'COMPLETED'>(
+    'PENDING',
+  );
 
   const filtered = useMemo(() => {
     const items = inboxQuery.data ?? [];
@@ -37,6 +41,15 @@ export default function ReviewInboxTable({
     return items.filter((item) => item.currentTier === tierFilter);
   }, [inboxQuery.data, tierFilter]);
 
+  const pendingItems = useMemo(
+    () => filtered.filter((item) => item.inboxStatus === 'PENDING'),
+    [filtered],
+  );
+  const completedItems = useMemo(
+    () => filtered.filter((item) => item.inboxStatus === 'COMPLETED'),
+    [filtered],
+  );
+
   if (permLoading || inboxQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
@@ -45,7 +58,7 @@ export default function ReviewInboxTable({
     return null;
   }
 
-  const columns: ColumnsType<ReviewInboxItem> = [
+  const baseColumns: ColumnsType<ReviewInboxItem> = [
     {
       title: 'Package',
       dataIndex: 'designPackageName',
@@ -86,6 +99,10 @@ export default function ReviewInboxTable({
       key: 'currentTier',
       render: (tier: string) => tier.replace(/_/g, ' '),
     },
+  ];
+
+  const pendingColumns: ColumnsType<ReviewInboxItem> = [
+    ...baseColumns,
     {
       title: 'SLA deadline',
       dataIndex: 'slaDeadlineAt',
@@ -119,22 +136,83 @@ export default function ReviewInboxTable({
     },
   ];
 
+  const completedColumns: ColumnsType<ReviewInboxItem> = [
+    ...baseColumns,
+    {
+      title: 'Session status',
+      dataIndex: 'sessionStatus',
+      key: 'sessionStatus',
+      render: (value: string) => value.replace(/_/g, ' '),
+    },
+    {
+      title: 'Action taken',
+      dataIndex: 'completedAction',
+      key: 'completedAction',
+      render: (action: ReviewInboxItem['completedAction']) =>
+        action === 'RETURNED' ? (
+          <StatusBadge label="Returned" variant="warning" />
+        ) : action === 'APPROVED' ? (
+          <StatusBadge label="Approved" variant="success" />
+        ) : (
+          '-'
+        ),
+    },
+    {
+      title: 'Action date',
+      dataIndex: 'actionTakenAt',
+      key: 'actionTakenAt',
+      render: (value: string | null) => (value ? formatProjectDate(value) : '-'),
+    },
+  ];
+
+  const emptyState = (
+    <TableEmptyState
+      icon={<Inbox />}
+      title="Nothing here"
+      description="Packages assigned to you will appear here"
+    />
+  );
+
   return (
     <div data-testid="review-inbox-table">
-    <DataTable<ReviewInboxItem>
-      rowKey="reviewSessionId"
-      columns={columns}
-      dataSource={filtered}
-      locale={{
-        emptyText: (
-          <TableEmptyState
-            icon={<Inbox />}
-            title="Nothing to review"
-            description="Packages assigned to you will appear here"
-          />
-        ),
-      }}
-    />
+      <Tabs
+        activeKey={activeSection}
+        onChange={(key) => setActiveSection(key as 'PENDING' | 'COMPLETED')}
+        items={[
+          {
+            key: 'PENDING',
+            label: (
+              <Badge count={pendingItems.length} size="small" offset={[8, 0]}>
+                <span>Pending</span>
+              </Badge>
+            ),
+            children: (
+              <DataTable<ReviewInboxItem>
+                rowKey="reviewSessionId"
+                columns={pendingColumns}
+                dataSource={pendingItems}
+                locale={{ emptyText: emptyState }}
+              />
+            ),
+          },
+          {
+            key: 'COMPLETED',
+            label: (
+              <Badge count={completedItems.length} size="small" offset={[8, 0]}>
+                <span>Completed</span>
+              </Badge>
+            ),
+            children: (
+              <DataTable<ReviewInboxItem>
+                rowKey="reviewSessionId"
+                columns={completedColumns}
+                dataSource={completedItems}
+                locale={{ emptyText: emptyState }}
+              />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
