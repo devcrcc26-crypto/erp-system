@@ -347,6 +347,8 @@ export interface ReviewModeComment {
   responseRevision?: CommentEdvSnapshot | null;
   /** Primary markup file (commentDocumentVersion FK) — backward compat. */
   attachment?: ReviewCommentAttachment | null;
+  /** Response file attached when the comment was resolved (responseDocumentVersion FK). */
+  responseAttachment?: ReviewCommentAttachment | null;
   /** Additional documents beyond the primary EDV FK. */
   documents?: readonly {
     engineeringDocumentVersionId: string;

@@ -141,6 +141,10 @@ export interface ReviewModeView {
       documentVersionId: string;
       name: string;
     } | null;
+    responseAttachment: {
+      documentVersionId: string;
+      name: string;
+    } | null;
     documents: readonly {
       engineeringDocumentVersionId: string;
       revisionLabel: string;
@@ -767,6 +771,12 @@ export class EpcWorkspaceService {
               document: { select: { name: true } },
             },
           },
+          responseDocumentVersion: {
+            select: {
+              id: true,
+              document: { select: { name: true } },
+            },
+          },
         },
       },
     };
@@ -955,6 +965,12 @@ export class EpcWorkspaceService {
             ? {
                 documentVersionId: c.commentDocumentVersion.id,
                 name: c.commentDocumentVersion.document.name,
+              }
+            : null,
+          responseAttachment: c.responseDocumentVersion
+            ? {
+                documentVersionId: c.responseDocumentVersion.id,
+                name: c.responseDocumentVersion.document.name,
               }
             : null,
           documents: c.documents.map((d) => ({

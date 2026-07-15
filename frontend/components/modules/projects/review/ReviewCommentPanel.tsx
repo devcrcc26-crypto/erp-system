@@ -379,6 +379,21 @@ export default function ReviewCommentPanel({
                         : ''}
                     </p>
                   )}
+                  {(displayStatus === 'RESOLVED' ||
+                    displayStatus === 'VERIFIED' ||
+                    displayStatus === 'CLOSED') &&
+                    comment.responseAttachment && (
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                      <span className="min-w-0 truncate">
+                        Response attachment: {comment.responseAttachment.name}
+                      </span>
+                      <EdvFileActions
+                        compact
+                        documentVersionId={comment.responseAttachment.documentVersionId}
+                        fileName={comment.responseAttachment.name}
+                      />
+                    </div>
+                  )}
                   {additionalDocs.length > 0 && (
                     <div className="mb-1 flex flex-wrap gap-1">
                       {additionalDocs.map((doc) => (
