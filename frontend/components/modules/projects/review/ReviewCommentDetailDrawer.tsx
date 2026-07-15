@@ -4,20 +4,81 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Descriptions, Drawer } from 'antd';
+import { Button, Descriptions, Drawer, Tag } from 'antd';
 import CommentRevisionSection from '@/components/modules/projects/review/CommentRevisionSection';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { MyCommentItem, ReviewCommentDetail, ReviewModeComment } from '@/lib/api/epc.types';
+import type {
+  MyCommentItem,
+  ReviewCommentDetail,
+  ReviewModeComment,
+} from '@/lib/api/epc.types';
 import { useReviewComment, useTransitionReviewComment } from '@/lib/query/review-comments';
+import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
+
+function RaisedCommentCard({ comment }: { comment: ReviewModeComment }): React.ReactNode {
+  const docChips =
+    comment.documents && comment.documents.length > 0
+      ? comment.documents.map((doc) => (
+          <Tag key={doc.engineeringDocumentVersionId} className="!m-0">
+            {doc.documentTitle} · Rev {doc.revisionLabel}
+          </Tag>
+        ))
+      : comment.commentedOn
+        ? [
+            <Tag key={comment.commentedOn.engineeringDocumentVersionId} className="!m-0">
+              {comment.commentedOn.documentTitle} · Rev {comment.commentedOn.revisionLabel}
+            </Tag>,
+          ]
+        : [];
+
+  return (
+    <div className="rounded-md border border-slate-200 p-3 text-sm">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <CommentSeverityTag severity={comment.severity} />
+        <StatusBadge label={comment.status.replace(/_/g, ' ')} variant="info" />
+      </div>
+      <p className="mb-2 whitespace-pre-wrap text-slate-800">{comment.body}</p>
+      {docChips.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">{docChips}</div>
+      )}
+      {comment.attachment && (
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+          <span className="min-w-0 truncate">Comment file: {comment.attachment.name}</span>
+          <EdvFileActions
+            compact
+            documentVersionId={comment.attachment.documentVersionId}
+            fileName={comment.attachment.name}
+          />
+        </div>
+      )}
+      {comment.responseAttachment && (
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+          <span className="min-w-0 truncate">
+            Response attachment: {comment.responseAttachment.name}
+          </span>
+          <EdvFileActions
+            compact
+            documentVersionId={comment.responseAttachment.documentVersionId}
+            fileName={comment.responseAttachment.name}
+          />
+        </div>
+      )}
+      <p className={`mt-1 ${layout.drawerMutedText}`}>
+        {comment.status.replace(/_/g, ' ')} · {formatProjectDate(comment.createdAt)}
+      </p>
+    </div>
+  );
+}
 
 function mergeFallbackComment(
   fallbackComment: ReviewModeComment,
@@ -85,10 +146,34 @@ export default function ReviewCommentDetailDrawer({
   onChanged?: () => void;
 }): React.ReactNode {
   const messageApi = useAppMessage();
-  const detailQuery = useReviewComment(commentId ?? '', open && Boolean(commentId));
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const isRaisedByMe = mode === 'raised-by-me';
+  const detailQuery = useReviewComment(
+    commentId ?? '',
+    open && Boolean(commentId) && !isRaisedByMe,
+  );
   const transitionComment = useTransitionReviewComment();
   const [transitioning, setTransitioning] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const sessionCommentsQuery = useDesignPackageReviewMode(
+    myCommentItem?.designPackageId ?? '',
+    open && isRaisedByMe && Boolean(myCommentItem),
+    myCommentItem?.reviewSessionId ?? null,
+  );
+
+  const myRaisedComments = useMemo(() => {
+    if (!isRaisedByMe) {
+      return [];
+    }
+    const all = (sessionCommentsQuery.data?.comments ?? []).filter(
+      (c) => c.createdBy === currentUserId,
+    );
+    return [...all].sort((a, b) => {
+      if (a.id === commentId) return -1;
+      if (b.id === commentId) return 1;
+      return a.createdAt.localeCompare(b.createdAt);
+    });
+  }, [isRaisedByMe, sessionCommentsQuery.data, currentUserId, commentId]);
 
   const comment = useMemo((): ReviewCommentDetail | null => {
     if (detailQuery.data) {
@@ -108,8 +193,9 @@ export default function ReviewCommentDetailDrawer({
         ? resolveEdvDisplayLabel(comment.engineeringDocumentVersionId, [])
         : '-');
 
-  const drawerTitle =
-    resolvedDocumentLabel !== '-'
+  const drawerTitle = isRaisedByMe
+    ? `Comments I raised — ${myCommentItem?.subtaskId ?? myCommentItem?.packageCode ?? ''}`
+    : resolvedDocumentLabel !== '-'
       ? `Comment - ${resolvedDocumentLabel}`
       : 'Comment detail';
 
@@ -183,7 +269,23 @@ export default function ReviewCommentDetailDrawer({
           ) : undefined
         }
       >
-        {detailQuery.isLoading && !comment ? (
+        {isRaisedByMe ? (
+          sessionCommentsQuery.isLoading ? (
+            <div className="flex flex-col gap-3">
+              <div className="erp-page-skeleton h-10 w-full rounded" />
+              <div className="erp-page-skeleton h-10 w-full rounded" />
+              <div className="erp-page-skeleton h-24 w-full rounded" />
+            </div>
+          ) : myRaisedComments.length === 0 ? (
+            <p className={layout.drawerMutedText}>No comments found for this session.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {myRaisedComments.map((c) => (
+                <RaisedCommentCard key={c.id} comment={c} />
+              ))}
+            </div>
+          )
+        ) : detailQuery.isLoading && !comment ? (
           <div className="flex flex-col gap-3">
             <div className="erp-page-skeleton h-10 w-full rounded" />
             <div className="erp-page-skeleton h-10 w-full rounded" />

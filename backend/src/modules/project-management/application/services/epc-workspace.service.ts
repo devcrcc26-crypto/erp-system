@@ -818,10 +818,19 @@ export class EpcWorkspaceService {
           },
         },
       });
+      const hasCommentOnSession = await this.prisma.reviewComment.findFirst({
+        where: {
+          reviewSessionId: requested.id,
+          deletedAt: null,
+          OR: [{ createdBy: ctx.userId }, { assignedToUserId: ctx.userId }],
+        },
+        select: { id: true },
+      });
       const authorized =
         seesAllSessions ||
         userTiers.includes(requested.currentTier as ReviewTier) ||
-        completedByMe > 0;
+        completedByMe > 0 ||
+        Boolean(hasCommentOnSession);
       if (!authorized) {
         throw new NotFoundException('Review session not found');
       }

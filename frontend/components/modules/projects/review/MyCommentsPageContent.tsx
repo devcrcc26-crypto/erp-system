@@ -3,27 +3,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Alert, Badge, Button, Collapse, Space } from 'antd';
+import { Alert, Badge, Button, Collapse } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import CommentSeverityTag from '@/components/modules/projects/review/CommentSeverityTag';
 import ReviewCommentDetailDrawer from '@/components/modules/projects/review/ReviewCommentDetailDrawer';
-import RevisionWorkspace from '@/components/modules/projects/engineering/RevisionWorkspace';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { CommentSeverity, MyCommentItem, ReviewModeComment } from '@/lib/api/epc.types';
 import { useMyComments } from '@/lib/query/epc-workspace';
-import { useTransitionReviewComment, useVerifyReviewComment } from '@/lib/query/review-comments';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanViewMyComments,
   usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useAppMessage } from '@/hooks/use-app-message';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 
@@ -64,13 +58,8 @@ export default function MyCommentsPageContent({
   const canViewMyComments = useCanViewMyComments();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const commentsQuery = useMyComments(projectId);
-  const transitionComment = useTransitionReviewComment();
-  const verifyComment = useVerifyReviewComment();
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
-  const [revisionComment, setRevisionComment] = useState<MyCommentItem | null>(null);
-  const [pendingCommentId, setPendingCommentId] = useState<string | null>(null);
   const { t } = useEpcTranslation();
-  const messageApi = useAppMessage();
 
   const raisedByMe = useMemo(
     () => (commentsQuery.data ?? []).filter((c) => c.createdBy === currentUserId),
@@ -107,69 +96,6 @@ export default function MyCommentsPageContent({
     );
   }
 
-  async function handleTransition(
-    comment: MyCommentItem,
-    targetStatus: MyCommentItem['status'],
-    successMessage: string,
-  ): Promise<boolean> {
-    setPendingCommentId(comment.commentId);
-    try {
-      await transitionComment.mutateAsync({
-        commentId: comment.commentId,
-        body: { targetStatus },
-      });
-      messageApi.success(successMessage);
-      void commentsQuery.refetch();
-      return true;
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-      return false;
-    } finally {
-      setPendingCommentId(null);
-    }
-  }
-
-  async function handleVerify(comment: MyCommentItem): Promise<void> {
-    setPendingCommentId(comment.commentId);
-    try {
-      await verifyComment.mutateAsync({ commentId: comment.commentId });
-      messageApi.success('Comment verified');
-      void commentsQuery.refetch();
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-    } finally {
-      setPendingCommentId(null);
-    }
-  }
-
-  async function openRevisionWorkspace(comment: MyCommentItem): Promise<void> {
-    if (comment.status === 'ACKNOWLEDGED') {
-      const started = await handleTransition(comment, 'IN_PROGRESS', 'Marked in progress');
-      if (!started) {
-        return;
-      }
-      setRevisionComment({ ...comment, status: 'IN_PROGRESS' });
-      return;
-    }
-    setRevisionComment(comment);
-  }
-
-  function viewInReviewModeLink(record: MyCommentItem): React.ReactNode {
-    return (
-      <Link
-        href={reviewModeHref(
-          record.projectId,
-          record.taskDisciplineId,
-          record.designPackageId,
-          record.reviewSessionId,
-          { readOnly: true },
-        )}
-      >
-        View in review mode
-      </Link>
-    );
-  }
-
   const baseColumns: ColumnsType<MyCommentItem> = [
     {
       title: 'Task',
@@ -189,8 +115,16 @@ export default function MyCommentsPageContent({
     {
       title: 'Discipline',
       key: 'discipline',
-      width: 100,
-      render: (_value, record) => formatDisciplineNumber(record.disciplineIndex),
+      width: 130,
+      render: (_value, record) => (
+        <div>
+          <p>
+            {record.overseasTaskNumber ?? record.taskIdCode ?? '-'}-
+            {formatDisciplineNumber(record.disciplineIndex)}
+          </p>
+          <p className="text-xs text-slate-500">{record.disciplineName}</p>
+        </div>
+      ),
     },
     {
       title: 'Document',
@@ -284,124 +218,42 @@ export default function MyCommentsPageContent({
     },
   ];
 
-  // "Directed to me" pending: assignee-side workflow actions (Acknowledge/Start/Revise).
+  const viewActionColumn: ColumnsType<MyCommentItem>[number] = {
+    title: '',
+    key: 'actions',
+    width: 90,
+    fixed: 'right',
+    render: (_value, record) => (
+      <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
+        View
+      </Button>
+    ),
+  };
+
   const directedPendingColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
     raisedByColumn,
-    {
-      title: '',
-      key: 'actions',
-      width: 360,
-      fixed: 'right',
-      render: (_value, record) => (
-        <Space size="small" wrap>
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => setSelectedComment(record)}
-          >
-            View
-          </Button>
-          {record.status === 'OPEN' && (
-            <Button
-              type="link"
-              className="!px-0"
-              loading={pendingCommentId === record.commentId}
-              onClick={() =>
-                void handleTransition(record, 'ACKNOWLEDGED', 'Comment acknowledged')
-              }
-            >
-              Acknowledge
-            </Button>
-          )}
-          {record.status === 'ACKNOWLEDGED' && (
-            <Button
-              type="link"
-              className="!px-0"
-              loading={pendingCommentId === record.commentId}
-              onClick={() =>
-                void handleTransition(record, 'IN_PROGRESS', 'Marked in progress')
-              }
-            >
-              Start
-            </Button>
-          )}
-          {(record.status === 'IN_PROGRESS' || record.status === 'ACKNOWLEDGED') && (
-            <Button
-              type="link"
-              className="!px-0"
-              onClick={() => void openRevisionWorkspace(record)}
-            >
-              Revise
-            </Button>
-          )}
-          {viewInReviewModeLink(record)}
-        </Space>
-      ),
-    },
+    viewActionColumn,
   ];
 
-  // "I raised" pending: raiser-side workflow action (Verify a RESOLVED comment).
   const raisedPendingColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
     assignedToColumn,
-    {
-      title: '',
-      key: 'actions',
-      width: 280,
-      fixed: 'right',
-      render: (_value, record) => (
-        <Space size="small" wrap>
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => setSelectedComment(record)}
-          >
-            View
-          </Button>
-          {record.status === 'RESOLVED' && (
-            <Button
-              type="link"
-              className="!px-0"
-              loading={pendingCommentId === record.commentId}
-              onClick={() => void handleVerify(record)}
-            >
-              Verify
-            </Button>
-          )}
-          {viewInReviewModeLink(record)}
-        </Space>
-      ),
-    },
+    viewActionColumn,
   ];
-
-  const completedActionsColumn: ColumnsType<MyCommentItem>[number] = {
-    title: '',
-    key: 'actions',
-    width: 280,
-    fixed: 'right',
-    render: (_value, record) => (
-      <Space size="small" wrap>
-        <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
-          View
-        </Button>
-        {viewInReviewModeLink(record)}
-      </Space>
-    ),
-  };
 
   const raisedCompletedColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
     assignedToColumn,
     ...completedExtraColumns,
-    completedActionsColumn,
+    viewActionColumn,
   ];
 
   const directedCompletedColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
     raisedByColumn,
     ...completedExtraColumns,
-    completedActionsColumn,
+    viewActionColumn,
   ];
 
   const emptyText = 'No comments in this section';
@@ -524,16 +376,6 @@ export default function MyCommentsPageContent({
         }
         myCommentItem={selectedComment}
         onChanged={() => void commentsQuery.refetch()}
-      />
-
-      <RevisionWorkspace
-        open={Boolean(revisionComment)}
-        comment={revisionComment}
-        onClose={() => setRevisionComment(null)}
-        onResolved={() => {
-          setRevisionComment(null);
-          void commentsQuery.refetch();
-        }}
       />
     </>
   );
