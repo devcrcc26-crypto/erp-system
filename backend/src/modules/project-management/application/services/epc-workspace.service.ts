@@ -9,6 +9,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import {
+  hasFullProjectDataAccess,
+  isProjectAdministrator,
+} from '../../../../shared/permissions/project-admin.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -188,6 +193,7 @@ export class EpcWorkspaceService {
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /**
@@ -653,10 +659,42 @@ export class EpcWorkspaceService {
   ): Promise<ReviewModeView> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId: ctx.companyId }),
+      include: {
+        taskDiscipline: { select: { disciplineLeadUserId: true } },
+      },
     });
     if (!pkg) {
       throw new NotFoundException('Design package not found');
     }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isFullAccess =
+      hasFullProjectDataAccess(roleNames) || isProjectAdministrator(roleNames);
+    const isDesigner =
+      pkg.designerUserId === ctx.userId ||
+      pkg.supportingDesignerUserId === ctx.userId;
+    const isDisciplineLeader =
+      pkg.taskDiscipline?.disciplineLeadUserId === ctx.userId;
+    const seesAllSessions = isFullAccess || isDesigner || isDisciplineLeader;
+
+    const tierRoleHolder: Partial<Record<ReviewTier, string | null>> = {
+      [ReviewTier.REVIEWER]: pkg.reviewerUserId,
+      [ReviewTier.DISCIPLINE_LEAD]: pkg.disciplinaryLeaderUserId,
+      [ReviewTier.DEPT_CHIEF]: pkg.deptDeputyChiefUserId,
+      [ReviewTier.INSTITUTE_CHIEF]: pkg.instituteChiefUserId,
+    };
+    const userTiers = (Object.keys(tierRoleHolder) as ReviewTier[]).filter(
+      (tier) => tierRoleHolder[tier] === ctx.userId,
+    );
+
+    if (!seesAllSessions && userTiers.length === 0) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const tierScope = seesAllSessions ? {} : { currentTier: { in: userTiers } };
 
     const sessionInclude = {
       contextSnapshot: true,
@@ -737,6 +775,7 @@ export class EpcWorkspaceService {
           companyId: ctx.companyId,
           designPackageId,
           status: ReviewSessionStatus.ACTIVE,
+          ...tierScope,
         }),
         include: sessionInclude,
       }),
@@ -760,6 +799,7 @@ export class EpcWorkspaceService {
               status: CommentStatus.RESOLVED,
             },
           },
+          ...tierScope,
         }),
         orderBy: { closedAt: 'desc' },
         include: sessionInclude,
@@ -774,6 +814,7 @@ export class EpcWorkspaceService {
           companyId: ctx.companyId,
           designPackageId,
           status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+          ...tierScope,
         }),
         orderBy: { closedAt: 'desc' },
         select: {
