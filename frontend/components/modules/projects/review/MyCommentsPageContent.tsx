@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Badge, Button, Collapse } from 'antd';
+import { Alert, Button, Collapse, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -12,7 +12,6 @@ import ReviewCommentDetailDrawer from '@/components/modules/projects/review/Revi
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { CommentSeverity, MyCommentItem, ReviewModeComment } from '@/lib/api/epc.types';
 import { useMyComments } from '@/lib/query/epc-workspace';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   useCanViewMyComments,
@@ -59,6 +58,7 @@ export default function MyCommentsPageContent({
   const currentUserId = useAuthStore((state) => state.user?.id);
   const commentsQuery = useMyComments(projectId);
   const [selectedComment, setSelectedComment] = useState<MyCommentItem | null>(null);
+  const [activeTab, setActiveTab] = useState<'directed' | 'raised'>('directed');
   const { t } = useEpcTranslation();
 
   const raisedByMe = useMemo(
@@ -96,258 +96,161 @@ export default function MyCommentsPageContent({
     );
   }
 
-  const baseColumns: ColumnsType<MyCommentItem> = [
-    {
-      title: 'Task',
-      key: 'task',
-      width: 120,
-      ellipsis: true,
-      render: (_value, record) =>
-        record.overseasTaskNumber ?? record.taskIdCode ?? '-',
-    },
-    {
-      title: 'Subtask',
-      key: 'subtask',
-      width: 140,
-      ellipsis: true,
-      render: (_value, record) => record.subtaskId ?? record.packageCode ?? '-',
-    },
-    {
-      title: 'Discipline',
-      key: 'discipline',
-      width: 130,
-      render: (_value, record) => (
+  function buildColumns(identityKind: 'assigned' | 'raised'): ColumnsType<MyCommentItem> {
+    return [
+      {
+        title: 'Task',
+        key: 'task',
+        width: 140,
+        ellipsis: { showTitle: true },
+        render: (_value, record) => record.overseasTaskNumber ?? record.taskIdCode ?? '-',
+      },
+      {
+        title: 'Subtask',
+        key: 'subtask',
+        width: 160,
+        ellipsis: { showTitle: true },
+        render: (_value, record) => record.subtaskId ?? record.packageCode ?? '-',
+      },
+      {
+        title: 'Discipline',
+        key: 'discipline',
+        width: 140,
+        render: (_value, record) => (
+          <div className="min-w-0">
+            <p className="truncate">
+              {record.overseasTaskNumber ?? record.taskIdCode ?? '-'}-
+              {formatDisciplineNumber(record.disciplineIndex)}
+            </p>
+            <p className="truncate text-xs text-slate-500">{record.disciplineName}</p>
+          </div>
+        ),
+      },
+      {
+        title: 'Severity',
+        dataIndex: 'severity',
+        key: 'severity',
+        width: 90,
+        render: (severity: CommentSeverity | string) => (
+          <CommentSeverityTag severity={severity as CommentSeverity} />
+        ),
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        key: 'status',
+        width: 120,
+        render: (status: string) => (
+          <StatusBadge label={status.replace(/_/g, ' ')} variant="info" />
+        ),
+      },
+      identityKind === 'assigned'
+        ? {
+            title: 'Assigned to',
+            key: 'assignee',
+            width: 130,
+            ellipsis: { showTitle: true },
+            render: (_value, record) =>
+              record.assigneeId === currentUserId
+                ? 'You'
+                : `${record.assigneeFirstName} ${record.assigneeLastName}`.trim() || '-',
+          }
+        : {
+            title: 'Raised by',
+            dataIndex: 'authorName',
+            key: 'authorName',
+            width: 130,
+            ellipsis: { showTitle: true },
+          },
+      {
+        title: '',
+        key: 'view',
+        width: 70,
+        fixed: 'right',
+        render: (_value, record) => (
+          <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
+            View
+          </Button>
+        ),
+      },
+    ];
+  }
+
+  const raisedColumns = buildColumns('assigned');
+  const directedColumns = buildColumns('raised');
+
+  function renderTabContent(
+    pendingTitle: string,
+    pendingItems: MyCommentItem[],
+    completedItems: MyCommentItem[],
+    columns: ColumnsType<MyCommentItem>,
+  ): React.ReactNode {
+    return (
+      <div className="flex flex-col gap-4">
         <div>
-          <p>
-            {record.overseasTaskNumber ?? record.taskIdCode ?? '-'}-
-            {formatDisciplineNumber(record.disciplineIndex)}
-          </p>
-          <p className="text-xs text-slate-500">{record.disciplineName}</p>
+          <h3 className="mb-2 text-sm font-semibold text-slate-900">{pendingTitle}</h3>
+          <DataTable<MyCommentItem>
+            rowKey="commentId"
+            size="middle"
+            columns={columns}
+            dataSource={pendingItems}
+            locale={{ emptyText: 'No pending comments' }}
+          />
         </div>
-      ),
-    },
-    {
-      title: 'Document',
-      key: 'document',
-      ellipsis: true,
-      render: (_value, record) => (
-        <div>
-          <p className="font-medium text-slate-900">{record.documentTitle}</p>
-          <p className="text-xs text-slate-500">
-            Rev {record.revisionLabel} · {record.designPackageName}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: 'Comment',
-      dataIndex: 'body',
-      key: 'body',
-      ellipsis: true,
-    },
-    {
-      title: 'Severity',
-      dataIndex: 'severity',
-      key: 'severity',
-      width: 110,
-      render: (severity: CommentSeverity | string) => (
-        <CommentSeverityTag severity={severity as CommentSeverity} />
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (status: string) => (
-        <StatusBadge label={status.replace(/_/g, ' ')} variant="info" />
-      ),
-    },
-    ...(projectId
-      ? []
-      : [
-          {
-            title: 'Project',
-            key: 'project',
-            ellipsis: true,
-            render: (_value: unknown, record: MyCommentItem) => record.projectName,
-          } as const,
-        ]),
-    {
-      title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-  ];
-
-  const assignedToColumn: ColumnsType<MyCommentItem>[number] = {
-    title: 'Assigned to',
-    key: 'assignee',
-    width: 160,
-    ellipsis: true,
-    render: (_value, record) =>
-      record.assigneeId === currentUserId
-        ? 'You'
-        : `${record.assigneeFirstName} ${record.assigneeLastName}`.trim() || '-',
-  };
-
-  const raisedByColumn: ColumnsType<MyCommentItem>[number] = {
-    title: 'Raised by',
-    dataIndex: 'authorName',
-    key: 'authorName',
-    width: 160,
-    ellipsis: true,
-  };
-
-  const completedExtraColumns: ColumnsType<MyCommentItem> = [
-    {
-      title: 'Resolution note',
-      dataIndex: 'resolutionNote',
-      key: 'resolutionNote',
-      ellipsis: true,
-      render: (value: string | null) => value ?? '-',
-    },
-    {
-      title: 'Verified',
-      dataIndex: 'verifiedAt',
-      key: 'verifiedAt',
-      width: 120,
-      render: (value: string | null) => (value ? formatProjectDate(value) : '-'),
-    },
-  ];
-
-  const viewActionColumn: ColumnsType<MyCommentItem>[number] = {
-    title: '',
-    key: 'actions',
-    width: 90,
-    fixed: 'right',
-    render: (_value, record) => (
-      <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
-        View
-      </Button>
-    ),
-  };
-
-  const directedPendingColumns: ColumnsType<MyCommentItem> = [
-    ...baseColumns,
-    raisedByColumn,
-    viewActionColumn,
-  ];
-
-  const raisedPendingColumns: ColumnsType<MyCommentItem> = [
-    ...baseColumns,
-    assignedToColumn,
-    viewActionColumn,
-  ];
-
-  const raisedCompletedColumns: ColumnsType<MyCommentItem> = [
-    ...baseColumns,
-    assignedToColumn,
-    ...completedExtraColumns,
-    viewActionColumn,
-  ];
-
-  const directedCompletedColumns: ColumnsType<MyCommentItem> = [
-    ...baseColumns,
-    raisedByColumn,
-    ...completedExtraColumns,
-    viewActionColumn,
-  ];
-
-  const emptyText = 'No comments in this section';
-
-  const collapseItems = [
-    {
-      key: 'raised-pending',
-      label: (
-        <span className="inline-flex items-center gap-2">
-          Comments I raised — Awaiting verification
-          <Badge count={raisedPending.length} size="small" />
-        </span>
-      ),
-      children: (
-        <DataTable<MyCommentItem>
-          rowKey="commentId"
-          size="middle"
-          columns={raisedPendingColumns}
-          dataSource={raisedPending}
-          scroll={{ x: 960 }}
-          locale={{ emptyText }}
+        <Collapse
+          bordered={false}
+          className="bg-transparent"
+          items={[
+            {
+              key: 'completed',
+              label: `Completed (${completedItems.length})`,
+              children: (
+                <DataTable<MyCommentItem>
+                  rowKey="commentId"
+                  size="middle"
+                  columns={columns}
+                  dataSource={completedItems}
+                  locale={{ emptyText: 'No completed comments' }}
+                />
+              ),
+            },
+          ]}
         />
-      ),
-    },
-    {
-      key: 'raised-completed',
-      label: (
-        <span className="inline-flex items-center gap-2">
-          Comments I raised — Completed
-          <Badge count={raisedCompleted.length} size="small" />
-        </span>
-      ),
-      children: (
-        <DataTable<MyCommentItem>
-          rowKey="commentId"
-          size="middle"
-          columns={raisedCompletedColumns}
-          dataSource={raisedCompleted}
-          scroll={{ x: 960 }}
-          locale={{ emptyText }}
-        />
-      ),
-    },
-    {
-      key: 'directed-pending',
-      label: (
-        <span className="inline-flex items-center gap-2">
-          Comments directed to me — Action needed
-          <Badge count={directedPending.length} size="small" />
-        </span>
-      ),
-      children: (
-        <DataTable<MyCommentItem>
-          rowKey="commentId"
-          size="middle"
-          columns={directedPendingColumns}
-          dataSource={directedPending}
-          scroll={{ x: 960 }}
-          locale={{ emptyText }}
-        />
-      ),
-    },
-    {
-      key: 'directed-completed',
-      label: (
-        <span className="inline-flex items-center gap-2">
-          Comments directed to me — Resolved
-          <Badge count={directedCompleted.length} size="small" />
-        </span>
-      ),
-      children: (
-        <DataTable<MyCommentItem>
-          rowKey="commentId"
-          size="middle"
-          columns={directedCompletedColumns}
-          dataSource={directedCompleted}
-          scroll={{ x: 960 }}
-          locale={{ emptyText }}
-        />
-      ),
-    },
-  ];
+      </div>
+    );
+  }
 
   return (
     <>
       <FormLayout
         title={t('pages.myComments.title')}
-        description="Review comments assigned to you. Acknowledge, upload a revised document, then mark resolved."
+        description="Comments you have raised or received on subtask reviews."
       >
-        <Collapse
-          bordered={false}
-          className="bg-transparent"
-          defaultActiveKey={['raised-pending', 'directed-pending']}
-          items={collapseItems}
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'directed' | 'raised')}
+          items={[
+            {
+              key: 'directed',
+              label: 'Directed to me',
+              children: renderTabContent(
+                'Action needed',
+                directedPending,
+                directedCompleted,
+                directedColumns,
+              ),
+            },
+            {
+              key: 'raised',
+              label: 'Raised by me',
+              children: renderTabContent(
+                'Pending verification',
+                raisedPending,
+                raisedCompleted,
+                raisedColumns,
+              ),
+            },
+          ]}
         />
       </FormLayout>
 
