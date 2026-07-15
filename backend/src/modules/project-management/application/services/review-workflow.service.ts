@@ -513,6 +513,12 @@ export class ReviewWorkflowService {
         throw new BadRequestException(check.message ?? 'Invalid comment transition');
       }
 
+      if (to === CommentStatus.RESOLVED && !command.resolutionNote?.trim()) {
+        throw new BadRequestException(
+          'Resolution note is required. Please describe what was changed before resolving.',
+        );
+      }
+
       const timestamps = this.buildCommentTimestamps(from, to);
       const resolutionNote =
         to === CommentStatus.RESOLVED && command.resolutionNote?.trim()

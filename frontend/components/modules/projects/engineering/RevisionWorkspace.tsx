@@ -225,6 +225,14 @@ export default function RevisionWorkspace({
                 name="resolutionNote"
                 label="Resolution note"
                 className="!mb-3"
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message:
+                      'Resolution note is required. Please describe what was changed before resolving.',
+                  },
+                ]}
               >
                 <Input.TextArea
                   rows={3}

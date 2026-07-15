@@ -248,6 +248,25 @@ export default function MyCommentsPageContent({
     },
   ];
 
+  const assignedToColumn: ColumnsType<MyCommentItem>[number] = {
+    title: 'Assigned to',
+    key: 'assignee',
+    width: 160,
+    ellipsis: true,
+    render: (_value, record) =>
+      record.assigneeId === currentUserId
+        ? 'You'
+        : `${record.assigneeFirstName} ${record.assigneeLastName}`.trim() || '-',
+  };
+
+  const raisedByColumn: ColumnsType<MyCommentItem>[number] = {
+    title: 'Raised by',
+    dataIndex: 'authorName',
+    key: 'authorName',
+    width: 160,
+    ellipsis: true,
+  };
+
   const completedExtraColumns: ColumnsType<MyCommentItem> = [
     {
       title: 'Resolution note',
@@ -268,6 +287,7 @@ export default function MyCommentsPageContent({
   // "Directed to me" pending: assignee-side workflow actions (Acknowledge/Start/Revise).
   const directedPendingColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
+    raisedByColumn,
     {
       title: '',
       key: 'actions',
@@ -324,6 +344,7 @@ export default function MyCommentsPageContent({
   // "I raised" pending: raiser-side workflow action (Verify a RESOLVED comment).
   const raisedPendingColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
+    assignedToColumn,
     {
       title: '',
       key: 'actions',
@@ -354,23 +375,33 @@ export default function MyCommentsPageContent({
     },
   ];
 
-  const completedColumns: ColumnsType<MyCommentItem> = [
+  const completedActionsColumn: ColumnsType<MyCommentItem>[number] = {
+    title: '',
+    key: 'actions',
+    width: 280,
+    fixed: 'right',
+    render: (_value, record) => (
+      <Space size="small" wrap>
+        <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
+          View
+        </Button>
+        {viewInReviewModeLink(record)}
+      </Space>
+    ),
+  };
+
+  const raisedCompletedColumns: ColumnsType<MyCommentItem> = [
     ...baseColumns,
+    assignedToColumn,
     ...completedExtraColumns,
-    {
-      title: '',
-      key: 'actions',
-      width: 280,
-      fixed: 'right',
-      render: (_value, record) => (
-        <Space size="small" wrap>
-          <Button type="link" className="!px-0" onClick={() => setSelectedComment(record)}>
-            View
-          </Button>
-          {viewInReviewModeLink(record)}
-        </Space>
-      ),
-    },
+    completedActionsColumn,
+  ];
+
+  const directedCompletedColumns: ColumnsType<MyCommentItem> = [
+    ...baseColumns,
+    raisedByColumn,
+    ...completedExtraColumns,
+    completedActionsColumn,
   ];
 
   const emptyText = 'No comments in this section';
@@ -407,7 +438,7 @@ export default function MyCommentsPageContent({
         <DataTable<MyCommentItem>
           rowKey="commentId"
           size="middle"
-          columns={completedColumns}
+          columns={raisedCompletedColumns}
           dataSource={raisedCompleted}
           scroll={{ x: 960 }}
           locale={{ emptyText }}
@@ -445,7 +476,7 @@ export default function MyCommentsPageContent({
         <DataTable<MyCommentItem>
           rowKey="commentId"
           size="middle"
-          columns={completedColumns}
+          columns={directedCompletedColumns}
           dataSource={directedCompleted}
           scroll={{ x: 960 }}
           locale={{ emptyText }}
