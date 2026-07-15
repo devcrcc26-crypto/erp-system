@@ -26,11 +26,17 @@ export default function ReviewModePageContent({
   projectId,
   taskDisciplineId,
   expectedReviewSessionId = null,
+  readOnly = false,
+  actionTaken = null,
+  actionTakenAt = null,
 }: {
   packageId: string;
   projectId: string;
   taskDisciplineId: string;
   expectedReviewSessionId?: string | null;
+  readOnly?: boolean;
+  actionTaken?: 'APPROVED' | 'RETURNED' | null;
+  actionTakenAt?: string | null;
 }): React.ReactNode {
   const permLoading = usePermissionsLoading();
   const canViewReviewInbox = useCanViewReviewInbox();
@@ -160,6 +166,9 @@ export default function ReviewModePageContent({
             projectId={projectId}
             taskDisciplineId={taskDisciplineId}
             expectedReviewSessionId={expectedReviewSessionId}
+            readOnly={readOnly}
+            actionTaken={actionTaken}
+            actionTakenAt={actionTakenAt}
           />
         )}
       </div>

@@ -112,6 +112,7 @@ export default function ReviewSessionAttachmentsSection({
   reviewSessionId,
   currentTier,
   requiredTiers,
+  readOnly = false,
 }: {
   projectId: string;
   taskDisciplineId: string;
@@ -119,6 +120,7 @@ export default function ReviewSessionAttachmentsSection({
   reviewSessionId: string;
   currentTier: ReviewTier | string | null;
   requiredTiers: readonly ReviewTier[];
+  readOnly?: boolean;
 }): React.ReactNode {
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -152,6 +154,7 @@ export default function ReviewSessionAttachmentsSection({
     ? resolveTierActorUserId(disciplineQuery.data, currentTier)
     : null;
   const canAddAttachment =
+    !readOnly &&
     Boolean(currentUserId) &&
     Boolean(currentTier) &&
     tierActorUserId === currentUserId;

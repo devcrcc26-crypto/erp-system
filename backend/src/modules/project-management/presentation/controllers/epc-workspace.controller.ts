@@ -115,8 +115,13 @@ export class EpcWorkspaceController {
   reviewMode(
     @CurrentUser() user: AuthenticatedUser,
     @Param('designPackageId') designPackageId: string,
+    @Query('reviewSessionId') reviewSessionId?: string,
   ): Promise<unknown> {
-    return this.epcWorkspaceService.getReviewMode(this.ctx(user), designPackageId);
+    return this.epcWorkspaceService.getReviewMode(
+      this.ctx(user),
+      designPackageId,
+      reviewSessionId,
+    );
   }
 
   @Get('engineering-documents/:engineeringDocumentId/version-history')

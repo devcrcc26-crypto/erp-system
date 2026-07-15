@@ -50,8 +50,13 @@ export const epcWorkspaceKeys = {
       projectId,
       taskDisciplineId,
     ] as const,
-  reviewMode: (designPackageId: string) =>
-    [...epcWorkspaceKeys.all, 'review-mode', designPackageId] as const,
+  reviewMode: (designPackageId: string, reviewSessionId?: string | null) =>
+    [
+      ...epcWorkspaceKeys.all,
+      'review-mode',
+      designPackageId,
+      reviewSessionId ?? null,
+    ] as const,
   versionHistory: (engineeringDocumentId: string) =>
     [...epcWorkspaceKeys.all, 'version-history', engineeringDocumentId] as const,
 };
@@ -214,14 +219,21 @@ export function useDisciplineReviewSessions(
 export function useDesignPackageReviewMode(
   designPackageId: string,
   enabled = true,
+  reviewSessionId?: string | null,
   options?: Omit<UseQueryOptions<ReviewModeView>, 'queryKey' | 'queryFn'>,
 ) {
   const capabilitiesReady = useCapabilitiesReady();
 
   return useQuery({
-    queryKey: epcWorkspaceKeys.reviewMode(designPackageId),
+    queryKey: epcWorkspaceKeys.reviewMode(designPackageId, reviewSessionId),
     queryFn: () =>
-      apiGet<ReviewModeView>(`/design-packages/${designPackageId}/review-mode`),
+      apiGet<ReviewModeView>(
+        `/design-packages/${designPackageId}/review-mode${
+          reviewSessionId
+            ? `?reviewSessionId=${encodeURIComponent(reviewSessionId)}`
+            : ''
+        }`,
+      ),
     enabled: Boolean(designPackageId) && enabled && capabilitiesReady,
     retry: false,
     staleTime: 0,

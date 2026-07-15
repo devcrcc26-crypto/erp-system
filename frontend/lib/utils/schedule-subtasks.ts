@@ -151,6 +151,11 @@ export function reviewModeHref(
   taskDisciplineId: string,
   packageId: string,
   reviewSessionId?: string,
+  options?: {
+    readOnly?: boolean;
+    actionTaken?: 'APPROVED' | 'RETURNED' | null;
+    actionTakenAt?: string | null;
+  },
 ): string {
   const params = new URLSearchParams({
     projectId,
@@ -158,6 +163,15 @@ export function reviewModeHref(
   });
   if (reviewSessionId) {
     params.set('reviewSessionId', reviewSessionId);
+  }
+  if (options?.readOnly) {
+    params.set('readOnly', 'true');
+  }
+  if (options?.actionTaken) {
+    params.set('actionTaken', options.actionTaken.toLowerCase());
+  }
+  if (options?.actionTakenAt) {
+    params.set('actionTakenAt', options.actionTakenAt);
   }
   return `/design-packages/${packageId}/review?${params.toString()}`;
 }

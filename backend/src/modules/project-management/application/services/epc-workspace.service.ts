@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   CommentStatus,
+  Prisma,
   ReviewSession,
   ReviewSessionStatus,
   ReviewTier,
@@ -656,6 +657,7 @@ export class EpcWorkspaceService {
   async getReviewMode(
     ctx: PmContext,
     designPackageId: string,
+    reviewSessionId?: string,
   ): Promise<ReviewModeView> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId: ctx.companyId }),
@@ -769,8 +771,53 @@ export class EpcWorkspaceService {
       },
     };
 
-    const [activeSession, packageItems] = await Promise.all([
-      this.prisma.reviewSession.findFirst({
+    const packageItemsPromise = this.prisma.designPackageItem.findMany({
+      where: { companyId: ctx.companyId, designPackageId },
+      orderBy: { sortOrder: 'asc' },
+      select: { engineeringDocumentVersionId: true },
+    });
+
+    type SessionWithInclude = Prisma.ReviewSessionGetPayload<{
+      include: typeof sessionInclude;
+    }>;
+
+    let session: SessionWithInclude | null = null;
+    let lastReturnedSessionComments: { status: CommentStatus }[] = [];
+    let lastReturnedSession: ReviewModeView['lastReturnedSession'] = null;
+
+    if (reviewSessionId) {
+      const requested = await this.prisma.reviewSession.findFirst({
+        where: activeOnly({
+          id: reviewSessionId,
+          companyId: ctx.companyId,
+          designPackageId,
+        }),
+        include: sessionInclude,
+      });
+      if (!requested) {
+        throw new NotFoundException('Review session not found');
+      }
+      const completedByMe = await this.prisma.workflowEventLog.count({
+        where: {
+          companyId: ctx.companyId,
+          entityType: WorkflowEntityType.ReviewSession,
+          entityId: requested.id,
+          actorId: ctx.userId,
+          action: {
+            in: ['APPROVE_REVIEW_SESSION', 'ADVANCE_REVIEW_TIER', 'RETURN_FOR_REWORK'],
+          },
+        },
+      });
+      const authorized =
+        seesAllSessions ||
+        userTiers.includes(requested.currentTier as ReviewTier) ||
+        completedByMe > 0;
+      if (!authorized) {
+        throw new NotFoundException('Review session not found');
+      }
+      session = requested;
+    } else {
+      session = await this.prisma.reviewSession.findFirst({
         where: activeOnly({
           companyId: ctx.companyId,
           designPackageId,
@@ -778,38 +825,29 @@ export class EpcWorkspaceService {
           ...tierScope,
         }),
         include: sessionInclude,
-      }),
-      this.prisma.designPackageItem.findMany({
-        where: { companyId: ctx.companyId, designPackageId },
-        orderBy: { sortOrder: 'asc' },
-        select: { engineeringDocumentVersionId: true },
-      }),
-    ]);
-
-    let session = activeSession;
-    if (!session) {
-      session = await this.prisma.reviewSession.findFirst({
-        where: activeOnly({
-          companyId: ctx.companyId,
-          designPackageId,
-          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
-          comments: {
-            some: {
-              deletedAt: null,
-              status: CommentStatus.RESOLVED,
-            },
-          },
-          ...tierScope,
-        }),
-        orderBy: { closedAt: 'desc' },
-        include: sessionInclude,
       });
-    }
 
-    let lastReturnedSessionComments: { status: CommentStatus }[] = [];
-    let lastReturnedSession: ReviewModeView['lastReturnedSession'] = null;
-    if (!session) {
-      const lastReturned = await this.prisma.reviewSession.findFirst({
+      if (!session) {
+        session = await this.prisma.reviewSession.findFirst({
+          where: activeOnly({
+            companyId: ctx.companyId,
+            designPackageId,
+            status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+            comments: {
+              some: {
+                deletedAt: null,
+                status: CommentStatus.RESOLVED,
+              },
+            },
+            ...tierScope,
+          }),
+          orderBy: { closedAt: 'desc' },
+          include: sessionInclude,
+        });
+      }
+
+      if (!session) {
+        const lastReturned = await this.prisma.reviewSession.findFirst({
         where: activeOnly({
           companyId: ctx.companyId,
           designPackageId,
@@ -859,8 +897,10 @@ export class EpcWorkspaceService {
           })),
         };
       }
+      }
     }
 
+    const packageItems = await packageItemsPromise;
     const sessionComments = session?.comments ?? [];
     const revisionContexts = await resolveCommentRevisionContexts(
       this.prisma,

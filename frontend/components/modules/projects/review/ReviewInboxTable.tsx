@@ -71,6 +71,13 @@ export default function ReviewInboxTable({
             record.taskDisciplineId,
             record.designPackageId,
             record.reviewSessionId,
+            record.inboxStatus === 'COMPLETED'
+              ? {
+                  readOnly: true,
+                  actionTaken: record.completedAction,
+                  actionTakenAt: record.actionTakenAt,
+                }
+              : undefined,
           )}
         >
           {name}

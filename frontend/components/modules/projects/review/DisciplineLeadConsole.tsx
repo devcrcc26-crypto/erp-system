@@ -54,6 +54,7 @@ export default function DisciplineLeadConsole({
   allDocumentsApproved,
   availableDocuments,
   onAction,
+  readOnly = false,
 }: {
   projectId: string;
   taskDisciplineId: string;
@@ -68,6 +69,7 @@ export default function DisciplineLeadConsole({
   allDocumentsApproved: boolean;
   availableDocuments: readonly { value: string; label: string }[];
   onAction: () => void;
+  readOnly?: boolean;
 }): React.ReactNode {
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
@@ -119,6 +121,10 @@ export default function DisciplineLeadConsole({
   }, [reviewSessionId]);
 
   if (permLoading) {
+    return null;
+  }
+
+  if (readOnly) {
     return null;
   }
 

@@ -31,6 +31,7 @@ import {
 } from '@/lib/utils/review-governance';
 import { resolveEdvDisplayLabel } from '@/lib/utils/edv-display';
 import { tokens } from '@/lib/theme/tokens';
+import { formatProjectDate } from '@/lib/utils/project-display';
 import type { EngineeringDocument, ReviewTier } from '@/lib/api/epc.types';
 
 export default function ReviewModePanel({
@@ -38,15 +39,25 @@ export default function ReviewModePanel({
   projectId,
   taskDisciplineId,
   expectedReviewSessionId = null,
+  readOnly = false,
+  actionTaken = null,
+  actionTakenAt = null,
 }: {
   packageId: string;
   projectId: string;
   taskDisciplineId: string;
   expectedReviewSessionId?: string | null;
+  readOnly?: boolean;
+  actionTaken?: 'APPROVED' | 'RETURNED' | null;
+  actionTakenAt?: string | null;
 }): React.ReactNode {
   const lens = useRoleLens();
   const currentUserId = useAuthStore((state) => state.user?.id);
-  const reviewModeQuery = useDesignPackageReviewMode(packageId, Boolean(packageId));
+  const reviewModeQuery = useDesignPackageReviewMode(
+    packageId,
+    Boolean(packageId),
+    expectedReviewSessionId,
+  );
   const packageQuery = useDesignPackage(
     projectId,
     taskDisciplineId,
@@ -213,6 +224,7 @@ export default function ReviewModePanel({
   const totalDocs = packageDocumentRows.length;
   const allDocumentsApproved = approvedDocIds.size === totalDocs && totalDocs > 0;
   const canShowPerDocumentApprove =
+    !readOnly &&
     reviewMode?.sessionStatus === 'ACTIVE' &&
     isGovernanceReviewTier(reviewMode?.currentTier) &&
     canUserActAtCurrentReviewTier(
@@ -303,6 +315,23 @@ export default function ReviewModePanel({
 
   return (
     <div className="flex flex-col space-y-4 overflow-x-hidden" data-testid="review-mode-panel">
+      {readOnly && (
+        <Alert
+          type="info"
+          showIcon
+          message="Viewing completed review — actions disabled"
+          description={
+            <>
+              {actionTaken
+                ? `You ${actionTaken === 'APPROVED' ? 'approved' : 'returned'} this package${
+                    actionTakenAt ? ` on ${formatProjectDate(actionTakenAt)}` : ''
+                  }. `
+                : ''}
+              You can still add comments.
+            </>
+          }
+        />
+      )}
       <ReviewApprovalBlockedAlert comments={sessionComments} />
       {!isFinalReviewTier(reviewMode?.currentTier, packageQuery.data?.requiredTiers) && (
         <Alert
@@ -333,15 +362,17 @@ export default function ReviewModePanel({
               view or download each file.
             </p>
           </div>
-          <Button
-            size="small"
-            type="default"
-            className="shrink-0"
-            onClick={approveAllDocuments}
-            disabled={!canShowPerDocumentApprove || allDocumentsApproved}
-          >
-            Approve all
-          </Button>
+          {!readOnly && (
+            <Button
+              size="small"
+              type="default"
+              className="shrink-0"
+              onClick={approveAllDocuments}
+              disabled={!canShowPerDocumentApprove || allDocumentsApproved}
+            >
+              Approve all
+            </Button>
+          )}
         </div>
         {packageDocumentRows.length === 0 ? (
           <Alert
@@ -444,6 +475,7 @@ export default function ReviewModePanel({
         allDocumentsApproved={allDocumentsApproved}
         availableDocuments={edvCommentOptions}
         onAction={refetchAll}
+        readOnly={readOnly}
       />
       <ReviewSessionAttachmentsSection
         projectId={projectId}
@@ -452,6 +484,7 @@ export default function ReviewModePanel({
         reviewSessionId={reviewSessionId}
         currentTier={reviewMode?.currentTier ?? null}
         requiredTiers={packageQuery.data?.requiredTiers ?? []}
+        readOnly={readOnly}
       />
       <DependencySnapshotPanel
         dependencies={dependenciesQuery.data ?? []}
