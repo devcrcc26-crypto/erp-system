@@ -102,6 +102,9 @@ export default function ReviewInboxDrawer({
 
   const reviewMode = reviewModeQuery.data;
   const pkg = packageQuery.data;
+  const isDesignerRole =
+    pkg?.designerUserId === currentUserId ||
+    pkg?.supportingDesignerUserId === currentUserId;
 
   const edvMap = useMemo(() => {
     const map = new Map<
@@ -436,23 +439,25 @@ export default function ReviewInboxDrawer({
             </Tooltip>
           </>
         )}
-        <Link
-          href={reviewModeHref(
-            item.projectId,
-            item.taskDisciplineId,
-            item.designPackageId,
-            item.reviewSessionId,
-            isCompleted
-              ? {
-                  readOnly: true,
-                  actionTaken: item.completedAction,
-                  actionTakenAt: item.actionTakenAt,
-                }
-              : undefined,
-          )}
-        >
-          <Button>Open full review mode</Button>
-        </Link>
+        {!isDesignerRole && (
+          <Link
+            href={reviewModeHref(
+              item.projectId,
+              item.taskDisciplineId,
+              item.designPackageId,
+              item.reviewSessionId,
+              isCompleted
+                ? {
+                    readOnly: true,
+                    actionTaken: item.completedAction,
+                    actionTakenAt: item.actionTakenAt,
+                  }
+                : undefined,
+            )}
+          >
+            <Button>Open full review mode</Button>
+          </Link>
+        )}
       </div>
 
       {item.reviewSessionId && (

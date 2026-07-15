@@ -66,7 +66,10 @@ export default function MyCommentsPageContent({
     [commentsQuery.data, currentUserId],
   );
   const directedToMe = useMemo(
-    () => (commentsQuery.data ?? []).filter((c) => c.assigneeId === currentUserId),
+    () =>
+      (commentsQuery.data ?? []).filter(
+        (c) => c.assigneeId === currentUserId && c.createdBy !== currentUserId,
+      ),
     [commentsQuery.data, currentUserId],
   );
   const raisedPending = useMemo(
