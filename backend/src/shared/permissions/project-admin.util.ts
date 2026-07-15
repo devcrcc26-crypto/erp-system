@@ -12,7 +12,7 @@ export function isProjectAdministrator(roleNames: readonly string[]): boolean {
 
 /**
  * Company-wide unrestricted project/task data access
- * (System Admin, Managing Director, Project Manager).
+ * (System Admin, Managing Director, Project Manager, Project Administrator).
  */
 export function hasFullProjectDataAccess(
   roleNames: readonly string[],
@@ -22,14 +22,17 @@ export function hasFullProjectDataAccess(
       SYSTEM_ADMINISTRATOR_ROLE,
       'Managing Director',
       'Project Manager',
+      PROJECT_ADMINISTRATOR_ROLE,
     ].includes(name),
   );
 }
 
 /**
- * Project Admin-class roles: all projects readable; write gated by creator
- * for Project Administrator. Site Coordinator / Document Controller included
- * for company-wide project read scope after ProjectTeam bypass removal.
+ * Project Admin-class roles: all projects readable. Site Coordinator /
+ * Document Controller included for company-wide project read scope after
+ * ProjectTeam bypass removal — write for these two remains gated by creator
+ * via isProjectAdminWritable. Project Administrator now has unrestricted
+ * write via hasFullProjectDataAccess above.
  */
 export function hasProjectAdminAccess(
   roleNames: readonly string[],
