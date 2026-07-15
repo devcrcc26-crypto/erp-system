@@ -71,6 +71,7 @@ export interface ReassignReviewSessionCommand {
 
 const REASSIGNMENT_ADMIN_ROLES = new Set([
   'System Administrator',
+  'Project Administrator',
   'Managing Director',
 ]);
 

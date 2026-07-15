@@ -40,6 +40,7 @@ const DISCIPLINE_SCOPE_BYPASS_ROLE_NAMES = new Set([
   'System Administrator',
   'Managing Director',
   'Project Manager',
+  PROJECT_ADMINISTRATOR_ROLE,
 ]);
 
 /** Full design-cycle sidebar — Project Manager ≡ Project Admin per product. */

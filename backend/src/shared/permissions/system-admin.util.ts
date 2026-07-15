@@ -1,6 +1,13 @@
 import { PermissionFlags } from './permission.types';
 
 export const SYSTEM_ADMINISTRATOR_ROLE = 'System Administrator';
+export const PROJECT_ADMINISTRATOR_ROLE = 'Project Administrator';
+
+/** Roles that receive unrestricted system-wide access. */
+const FULL_ACCESS_ROLES = new Set([
+  SYSTEM_ADMINISTRATOR_ROLE,
+  PROJECT_ADMINISTRATOR_ROLE,
+]);
 
 export const FULL_PERMISSION_FLAGS: PermissionFlags = {
   canView: true,
@@ -12,8 +19,9 @@ export const FULL_PERMISSION_FLAGS: PermissionFlags = {
 };
 
 /**
- * Returns true when the user holds the System Administrator role.
+ * Returns true when the user holds a full-access role
+ * (System Administrator or Project Administrator).
  */
 export function isSystemAdministrator(roleNames: readonly string[]): boolean {
-  return roleNames.includes(SYSTEM_ADMINISTRATOR_ROLE);
+  return roleNames.some((name) => FULL_ACCESS_ROLES.has(name));
 }

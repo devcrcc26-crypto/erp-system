@@ -514,49 +514,18 @@ function extendedPmModulePermissionFlags(
 
 function projectAdministratorPermissionFlags(
   roleName: string,
-  module: string,
-  action: string,
+  _module: string,
+  _action: string,
 ): PermissionFlags | null {
   if (roleName !== 'Project Administrator') {
     return null;
   }
 
-  const blockedModules = new Set([
-    'users',
-    'roles',
-    'departments',
-    'branches',
-    'company_settings',
-    'financial_periods',
-    'audit',
-    'notifications',
-  ]);
-  if (blockedModules.has(module)) {
-    return null;
-  }
-
-  if (action === 'delete') {
-    return null;
-  }
-
-  if (module === 'company' && action === 'view') {
-    return viewOnlyFlags();
-  }
-
-  if (
-    PM_MODULES.includes(module as (typeof PM_MODULES)[number]) ||
-    EXTENDED_PM_MODULES.includes(module as (typeof EXTENDED_PM_MODULES)[number])
-  ) {
-    if (action === 'view' || action === 'create' || action === 'edit' || action === 'approve' || action === 'export') {
-      return singleActionFlags(action);
-    }
-  }
-
-  if (module === 'documents') {
-    return documentsPermissionFlags('Project Manager', action);
-  }
-
-  return null;
+  // Project Administrators receive full system access at runtime via
+  // isSystemAdministrator() in PermissionService, so seed-time flags are
+  // only a fallback.  Grant everything so the seeded RolePermission rows
+  // don't artificially restrict anything if the bypass is ever disabled.
+  return fullPermissionFlags();
 }
 
 function pmPermissionFlags(
