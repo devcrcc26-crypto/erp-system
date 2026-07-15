@@ -58,10 +58,19 @@ function toMyCommentItem(
     projectName: '',
     taskDisciplineId,
     disciplineName: '',
+    disciplineIndex: null,
+    overseasTaskNumber: null,
+    taskIdCode: null,
+    subtaskId: null,
+    packageCode: null,
     designPackageId,
     designPackageName: packageName,
     reviewSessionId,
     authorName: comment.authorName,
+    assigneeId: comment.assignedToUserId,
+    assigneeFirstName: comment.assigneeName,
+    assigneeLastName: '',
+    createdBy: comment.createdBy,
     createdAt: comment.createdAt,
     commentInboxStatus:
       comment.status === 'VERIFIED' || comment.status === 'CLOSED'
@@ -69,6 +78,8 @@ function toMyCommentItem(
         : 'PENDING',
     resolutionNote: comment.resolutionNote ?? null,
     verifiedAt: comment.verifiedAt ?? null,
+    responseDocumentVersionId: null,
+    responseDocumentTitle: null,
   };
 }
 

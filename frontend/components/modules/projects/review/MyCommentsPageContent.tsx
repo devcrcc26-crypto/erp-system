@@ -22,8 +22,13 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
+import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 
-function toReviewModeComment(comment: MyCommentItem): ReviewModeComment {
+function toReviewModeComment(
+  comment: MyCommentItem,
+  currentUserId?: string,
+): ReviewModeComment {
   return {
     id: comment.commentId,
     body: comment.body,
@@ -31,11 +36,14 @@ function toReviewModeComment(comment: MyCommentItem): ReviewModeComment {
     severity: comment.severity,
     reviewTier: null,
     engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
-    createdBy: '',
+    createdBy: comment.createdBy,
     createdAt: comment.createdAt,
-    assignedToUserId: '',
+    assignedToUserId: comment.assigneeId,
     authorName: comment.authorName,
-    assigneeName: 'You',
+    assigneeName:
+      comment.assigneeId === currentUserId
+        ? 'You'
+        : `${comment.assigneeFirstName} ${comment.assigneeLastName}`.trim(),
   };
 }
 
@@ -46,6 +54,7 @@ export default function MyCommentsPageContent({
 } = {}): React.ReactNode {
   const permLoading = usePermissionsLoading();
   const canViewMyComments = useCanViewMyComments();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const commentsQuery = useMyComments(projectId);
   const transitionComment = useTransitionReviewComment();
   const verifyComment = useVerifyReviewComment();
@@ -125,6 +134,27 @@ export default function MyCommentsPageContent({
   }
 
   const baseColumns: ColumnsType<MyCommentItem> = [
+    {
+      title: 'Task',
+      key: 'task',
+      width: 120,
+      ellipsis: true,
+      render: (_value, record) =>
+        record.overseasTaskNumber ?? record.taskIdCode ?? '-',
+    },
+    {
+      title: 'Subtask',
+      key: 'subtask',
+      width: 140,
+      ellipsis: true,
+      render: (_value, record) => record.subtaskId ?? record.packageCode ?? '-',
+    },
+    {
+      title: 'Discipline',
+      key: 'discipline',
+      width: 100,
+      render: (_value, record) => formatDisciplineNumber(record.disciplineIndex),
+    },
     {
       title: 'Document',
       key: 'document',
@@ -328,7 +358,9 @@ export default function MyCommentsPageContent({
         open={Boolean(selectedComment)}
         commentId={selectedComment?.commentId ?? null}
         fallbackComment={
-          selectedComment ? toReviewModeComment(selectedComment) : null
+          selectedComment
+            ? toReviewModeComment(selectedComment, currentUserId)
+            : null
         }
         documentLabel={
           selectedComment

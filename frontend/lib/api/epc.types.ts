@@ -219,6 +219,10 @@ export interface ReviewInboxItem {
   taskDisciplineId: string;
   disciplineName: string;
   disciplineIndex: number | null;
+  overseasTaskNumber: string | null;
+  taskIdCode: string | null;
+  subtaskId: string | null;
+  packageCode: string | null;
   projectId: string;
   projectName: string;
   currentTier: ReviewTier | string;
@@ -277,14 +281,25 @@ export interface MyCommentItem {
   projectName: string;
   taskDisciplineId: string;
   disciplineName: string;
+  disciplineIndex: number | null;
+  overseasTaskNumber: string | null;
+  taskIdCode: string | null;
+  subtaskId: string | null;
+  packageCode: string | null;
   designPackageId: string;
   designPackageName: string;
   reviewSessionId: string;
   authorName: string;
+  assigneeId: string;
+  assigneeFirstName: string;
+  assigneeLastName: string;
+  createdBy: string;
   createdAt: string;
   commentInboxStatus: 'PENDING' | 'COMPLETED';
   resolutionNote: string | null;
   verifiedAt: string | null;
+  responseDocumentVersionId: string | null;
+  responseDocumentTitle: string | null;
 }
 
 export interface ProjectStatusBoard {

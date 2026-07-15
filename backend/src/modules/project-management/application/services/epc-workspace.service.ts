@@ -35,6 +35,10 @@ export interface ReviewInboxItem {
   readonly taskDisciplineId: string;
   readonly disciplineName: string;
   readonly disciplineIndex: number | null;
+  readonly overseasTaskNumber: string | null;
+  readonly taskIdCode: string | null;
+  readonly subtaskId: string | null;
+  readonly packageCode: string | null;
   readonly projectId: string;
   readonly projectName: string;
   readonly currentTier: string;
@@ -61,14 +65,25 @@ export interface MyCommentItem {
   readonly projectName: string;
   readonly taskDisciplineId: string;
   readonly disciplineName: string;
+  readonly disciplineIndex: number | null;
+  readonly overseasTaskNumber: string | null;
+  readonly taskIdCode: string | null;
+  readonly subtaskId: string | null;
+  readonly packageCode: string | null;
   readonly designPackageId: string;
   readonly designPackageName: string;
   readonly reviewSessionId: string;
   readonly authorName: string;
+  readonly assigneeId: string;
+  readonly assigneeFirstName: string;
+  readonly assigneeLastName: string;
+  readonly createdBy: string;
   readonly createdAt: string;
   readonly commentInboxStatus: 'PENDING' | 'COMPLETED';
   readonly resolutionNote: string | null;
   readonly verifiedAt: string | null;
+  readonly responseDocumentVersionId: string | null;
+  readonly responseDocumentTitle: string | null;
 }
 
 export interface ProjectStatusBoard {
@@ -264,10 +279,17 @@ export class EpcWorkspaceService {
       s: ReviewSession & {
         designPackage: {
           name: string;
+          subtaskId: string | null;
+          packageCode: string;
           taskDiscipline: {
             disciplineName: string;
             disciplineIndex: number | null;
-            task: { projectId: string; project: { name: string } };
+            task: {
+              projectId: string;
+              overseasTaskNumber: string | null;
+              taskIdCode: string;
+              project: { name: string };
+            };
           };
         };
       },
@@ -288,6 +310,10 @@ export class EpcWorkspaceService {
         taskDisciplineId: s.taskDisciplineId,
         disciplineName: s.designPackage.taskDiscipline.disciplineName,
         disciplineIndex: s.designPackage.taskDiscipline.disciplineIndex,
+        overseasTaskNumber: s.designPackage.taskDiscipline.task.overseasTaskNumber ?? null,
+        taskIdCode: s.designPackage.taskDiscipline.task.taskIdCode ?? null,
+        subtaskId: s.designPackage.subtaskId ?? null,
+        packageCode: s.designPackage.packageCode,
         projectId: s.designPackage.taskDiscipline.task.projectId,
         projectName: s.designPackage.taskDiscipline.task.project.name,
         currentTier: s.currentTier,
@@ -358,6 +384,19 @@ export class EpcWorkspaceService {
             email: true,
           },
         },
+        assignedToUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        responseDocumentVersion: {
+          select: {
+            id: true,
+            document: { select: { id: true, name: true } },
+          },
+        },
         engineeringDocumentVersion: {
           include: {
             engineeringDocument: {
@@ -375,7 +414,14 @@ export class EpcWorkspaceService {
         },
         reviewSession: {
           include: {
-            designPackage: { select: { id: true, name: true } },
+            designPackage: {
+              select: {
+                id: true,
+                name: true,
+                subtaskId: true,
+                packageCode: true,
+              },
+            },
           },
         },
       },
@@ -386,6 +432,7 @@ export class EpcWorkspaceService {
       const doc = edv.engineeringDocument;
       const discipline = doc.taskDiscipline;
       const project = discipline.task.project;
+      const designPackage = row.reviewSession.designPackage;
 
       const commentInboxStatus: MyCommentItem['commentInboxStatus'] =
         row.status === CommentStatus.VERIFIED || row.status === CommentStatus.CLOSED
@@ -406,10 +453,21 @@ export class EpcWorkspaceService {
         projectName: project.name,
         taskDisciplineId: discipline.id,
         disciplineName: discipline.disciplineName,
+        disciplineIndex: discipline.disciplineIndex,
+        overseasTaskNumber: discipline.task.overseasTaskNumber ?? null,
+        taskIdCode: discipline.task.taskIdCode ?? null,
+        subtaskId: designPackage.subtaskId ?? null,
+        packageCode: designPackage.packageCode,
         designPackageId: row.reviewSession.designPackageId,
-        designPackageName: row.reviewSession.designPackage.name,
+        designPackageName: designPackage.name,
         reviewSessionId: row.reviewSessionId,
         authorName: formatReviewerName(row.author),
+        assigneeId: row.assignedToUser.id,
+        assigneeFirstName: row.assignedToUser.firstName,
+        assigneeLastName: row.assignedToUser.lastName,
+        createdBy: row.createdBy,
+        responseDocumentVersionId: row.responseDocumentVersion?.id ?? null,
+        responseDocumentTitle: row.responseDocumentVersion?.document.name ?? null,
         createdAt: row.createdAt.toISOString(),
         commentInboxStatus,
         resolutionNote: row.resolutionNote,
