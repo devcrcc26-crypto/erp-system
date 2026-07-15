@@ -385,7 +385,20 @@ export default function ReviewInboxDrawer({
                         />
                       </div>
                     )}
-                    {comment.responseAttachment && (
+                    {comment.responseRevision && (
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-700">
+                        <span className="min-w-0 truncate">
+                          Revised file: {comment.responseRevision.documentTitle} · Rev {comment.responseRevision.revisionLabel}
+                        </span>
+                        <EdvFileActions
+                          compact
+                          documentVersionId={comment.responseRevision.documentVersionId}
+                          fileName={comment.responseRevision.documentTitle}
+                        />
+                      </div>
+                    )}
+                    {comment.responseAttachment &&
+                      comment.responseAttachment.documentVersionId !== comment.responseRevision?.documentVersionId && (
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                         <span className="min-w-0 truncate">
                           Response attachment: {comment.responseAttachment.name}

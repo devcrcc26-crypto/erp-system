@@ -525,6 +525,33 @@ export class ReviewWorkflowService {
           ? command.resolutionNote.trim()
           : undefined;
 
+      let responseDocVersionId = command.responseDocumentVersionId;
+      if (to === CommentStatus.RESOLVED && !responseDocVersionId) {
+        const commentedEdv =
+          await this.prisma.engineeringDocumentVersion.findFirst({
+            where: activeOnly({
+              id: comment.engineeringDocumentVersionId,
+              companyId: command.companyId,
+            }),
+            select: { engineeringDocumentId: true, createdAt: true },
+          });
+        if (commentedEdv) {
+          const latestEdv =
+            await this.prisma.engineeringDocumentVersion.findFirst({
+              where: activeOnly({
+                companyId: command.companyId,
+                engineeringDocumentId: commentedEdv.engineeringDocumentId,
+                createdAt: { gt: commentedEdv.createdAt },
+              }),
+              orderBy: { createdAt: 'desc' },
+              select: { documentVersionId: true },
+            });
+          if (latestEdv) {
+            responseDocVersionId = latestEdv.documentVersionId;
+          }
+        }
+      }
+
       await this.epcReviewRepository.updateReviewComment(
         tx,
         comment.id,
@@ -535,8 +562,8 @@ export class ReviewWorkflowService {
           ...(to === CommentStatus.RESOLVED
             ? { assignedToUserId: comment.createdBy }
             : {}),
-          ...(to === CommentStatus.RESOLVED && command.responseDocumentVersionId
-            ? { responseDocumentVersionId: command.responseDocumentVersionId }
+          ...(to === CommentStatus.RESOLVED && responseDocVersionId
+            ? { responseDocumentVersionId: responseDocVersionId }
             : {}),
           ...timestamps,
         },

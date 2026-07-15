@@ -361,14 +361,21 @@ export default function ReviewCommentPanel({
                   </div>
                   <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
                   {comment.responseRevision && (
-                    <p className="mb-1 text-xs text-emerald-700">
-                      {displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED'
-                        ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
-                        : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
-                      {comment.resolutionNote?.trim()
-                        ? ` - ${comment.resolutionNote.trim()}`
-                        : ''}
-                    </p>
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-700">
+                      <span className="min-w-0 truncate">
+                        {displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED'
+                          ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
+                          : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
+                        {comment.resolutionNote?.trim()
+                          ? ` - ${comment.resolutionNote.trim()}`
+                          : ''}
+                      </span>
+                      <EdvFileActions
+                        compact
+                        documentVersionId={comment.responseRevision.documentVersionId}
+                        fileName={comment.responseRevision.documentTitle}
+                      />
+                    </div>
                   )}
                   {!comment.responseRevision &&
                     (displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED') && (
@@ -382,7 +389,8 @@ export default function ReviewCommentPanel({
                   {(displayStatus === 'RESOLVED' ||
                     displayStatus === 'VERIFIED' ||
                     displayStatus === 'CLOSED') &&
-                    comment.responseAttachment && (
+                    comment.responseAttachment &&
+                    comment.responseAttachment.documentVersionId !== comment.responseRevision?.documentVersionId && (
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                       <span className="min-w-0 truncate">
                         Response attachment: {comment.responseAttachment.name}
