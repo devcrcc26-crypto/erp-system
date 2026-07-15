@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Badge, Tabs } from 'antd';
+import { Badge, Button, Tabs } from 'antd';
 import { Inbox } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
+import ReviewInboxDrawer from '@/components/modules/projects/review/ReviewInboxDrawer';
 import type { ReviewInboxItem } from '@/lib/api/epc.types';
 import { useReviewInbox } from '@/lib/query/epc-workspace';
 import {
@@ -32,6 +33,7 @@ export default function ReviewInboxTable({
   const [activeSection, setActiveSection] = useState<'PENDING' | 'COMPLETED'>(
     'PENDING',
   );
+  const [drawerItem, setDrawerItem] = useState<ReviewInboxItem | null>(null);
 
   const filtered = useMemo(() => {
     const items = inboxQuery.data ?? [];
@@ -105,6 +107,15 @@ export default function ReviewInboxTable({
       dataIndex: 'currentTier',
       key: 'currentTier',
       render: (tier: string) => tier.replace(/_/g, ' '),
+    },
+    {
+      key: 'view',
+      width: 80,
+      render: (_value, record) => (
+        <Button size="small" onClick={() => setDrawerItem(record)}>
+          View
+        </Button>
+      ),
     },
   ];
 
@@ -219,6 +230,16 @@ export default function ReviewInboxTable({
             ),
           },
         ]}
+      />
+
+      <ReviewInboxDrawer
+        open={drawerItem !== null}
+        onClose={() => setDrawerItem(null)}
+        item={drawerItem}
+        onActionComplete={() => {
+          void inboxQuery.refetch();
+          setDrawerItem(null);
+        }}
       />
     </div>
   );

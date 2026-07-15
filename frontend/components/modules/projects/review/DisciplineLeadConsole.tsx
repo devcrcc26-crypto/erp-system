@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Checkbox, Input, Modal, Space, Tooltip, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ReviewApprovalBlockedAlert from '@/components/modules/projects/review/ReviewApprovalBlockedAlert';
 import {
@@ -11,8 +10,6 @@ import {
   useDesignPackage,
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
-import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
-import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { usePackageRoleLens } from '@/lib/hooks/use-package-role-lens';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -25,6 +22,7 @@ import {
   resolveDefaultCommentAssigneeLabel,
 } from '@/lib/utils/comment-workflow';
 import ReturnForReworkModal from '@/components/modules/projects/review/ReturnForReworkModal';
+import ApproveReviewSessionModal from '@/components/modules/projects/review/ApproveReviewSessionModal';
 import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -94,15 +92,8 @@ export default function DisciplineLeadConsole({
     packageId,
     reviewSessionId ?? '',
   );
-  const uploadDocument = useUploadDocumentToFolder();
-  const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
-  const [approveOnBehalf, setApproveOnBehalf] = useState(false);
-  const [onBehalfOfName, setOnBehalfOfName] = useState(instituteChiefName ?? '');
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [approveButtonLocked, setApproveButtonLocked] = useState(false);
-  const [approveNote, setApproveNote] = useState('');
-  const [attachmentDocumentId, setAttachmentDocumentId] = useState<string | null>(null);
-  const [attachmentFileName, setAttachmentFileName] = useState<string | null>(null);
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [recentEscalation, setRecentEscalation] = useState<{
@@ -169,10 +160,7 @@ export default function DisciplineLeadConsole({
       instituteChiefUserId,
       instituteChiefName,
     });
-  const canSubmitApproval =
-    approvalAllowed &&
-    allDocumentsApproved &&
-    (!approveOnBehalf || onBehalfOfName.trim().length > 0);
+  const canSubmitApproval = approvalAllowed && allDocumentsApproved;
   const approveEscalateLabel = isFinalTier ? 'Approve' : 'Approve & escalate';
   const approveEscalateDisabled = !canSubmitApproval || approveButtonLocked;
   const openCommentCount = getCommentsBlockingApproval(comments).length;
@@ -182,9 +170,6 @@ export default function DisciplineLeadConsole({
       : !approvalAllowed
         ? `All comments must be verified before escalating. ${openCommentCount} comment(s) still open.`
         : undefined;
-  const approveModalTitle = isFinalTier
-    ? 'Approve — close package'
-    : `Approve & escalate to ${nextTierLabel ?? 'next tier'}`;
   const previousTier =
     recentEscalation?.fromTier ??
     getPreviousReviewTier(currentTier, requiredTierList);
@@ -199,16 +184,9 @@ export default function DisciplineLeadConsole({
     disciplineQuery.data,
   );
 
-  function resetApproveModalState(): void {
-    setApproveNote('');
-    setAttachmentDocumentId(null);
-    setAttachmentFileName(null);
-  }
-
   function closeApproveModal(): void {
     setApproveModalOpen(false);
     setApproveButtonLocked(false);
-    resetApproveModalState();
   }
 
   function openApproveModal(): void {
@@ -216,17 +194,21 @@ export default function DisciplineLeadConsole({
     setApproveModalOpen(true);
   }
 
-  async function handleConfirmApproval(): Promise<void> {
+  async function handleConfirmApproval(params: {
+    approvedOnBehalfOfName?: string;
+    attachmentDocumentVersionId?: string;
+    note?: string;
+  }): Promise<void> {
     if (!reviewSessionId || !canSubmitApproval || !currentTier) {
       return;
     }
 
     setIsConfirmingApproval(true);
     try {
-      if (attachmentDocumentId) {
+      if (params.attachmentDocumentVersionId) {
         await addSessionAttachment.mutateAsync({
-          documentId: attachmentDocumentId,
-          note: approveNote.trim() || undefined,
+          documentId: params.attachmentDocumentVersionId,
+          note: params.note,
         });
       }
 
@@ -235,8 +217,8 @@ export default function DisciplineLeadConsole({
         taskDisciplineId,
         packageId,
         reviewSessionId,
-        body: approveOnBehalf
-          ? { approvedOnBehalfOfName: onBehalfOfName.trim() }
+        body: params.approvedOnBehalfOfName
+          ? { approvedOnBehalfOfName: params.approvedOnBehalfOfName }
           : undefined,
       });
 
@@ -297,23 +279,6 @@ export default function DisciplineLeadConsole({
       description={`Approve or return at the ${tierLabel} tier.`}
     >
       <ReviewApprovalBlockedAlert comments={comments} />
-      {isInstituteChiefProxyEligible && (
-        <div className="mb-3 space-y-2">
-          <Checkbox
-            checked={approveOnBehalf}
-            onChange={(event) => setApproveOnBehalf(event.target.checked)}
-          >
-            Approve on behalf of Institute Chief
-          </Checkbox>
-          {approveOnBehalf && (
-            <Input
-              placeholder="Institute Chief's name"
-              value={onBehalfOfName}
-              onChange={(event) => setOnBehalfOfName(event.target.value)}
-            />
-          )}
-        </div>
-      )}
       <Space wrap>
         <Tooltip title={approveEscalateTooltip}>
           <span>
@@ -347,77 +312,18 @@ export default function DisciplineLeadConsole({
         }}
       />
 
-      <Modal
-        title={approveModalTitle}
+      <ApproveReviewSessionModal
         open={approveModalOpen}
-        onCancel={closeApproveModal}
-        destroyOnHidden
-        footer={
-          <Space>
-            <Button onClick={closeApproveModal} disabled={isConfirmingApproval}>
-              Cancel
-            </Button>
-            <Button
-              type="primary"
-              loading={isConfirmingApproval}
-              disabled={!canSubmitApproval}
-              onClick={() => void handleConfirmApproval()}
-            >
-              Confirm
-            </Button>
-          </Space>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-sm text-slate-700">Optional file attachment</p>
-            <Upload
-              maxCount={1}
-              showUploadList={false}
-              disabled={!uploadFolderQuery.data?.id || uploadDocument.isPending || isConfirmingApproval}
-              beforeUpload={(file: File) => {
-                const folderId = uploadFolderQuery.data?.id;
-                if (!folderId) {
-                  messageApi.error('Upload folder is not ready');
-                  return Upload.LIST_IGNORE;
-                }
-                void uploadDocument
-                  .mutateAsync({ folderId, file })
-                  .then((record) => {
-                    setAttachmentDocumentId(record.id);
-                    setAttachmentFileName(file.name);
-                    messageApi.success('File attached');
-                  })
-                  .catch((error: unknown) => {
-                    notifyApiError(error, 'Failed to upload file', messageApi);
-                  });
-                return false;
-              }}
-            >
-              <Button
-                icon={<UploadOutlined />}
-                loading={uploadDocument.isPending}
-                disabled={isConfirmingApproval}
-              >
-                Attach file
-              </Button>
-            </Upload>
-            {attachmentFileName ? (
-              <p className="mt-2 text-sm text-slate-600">Attached: {attachmentFileName}</p>
-            ) : null}
-          </div>
-          <div>
-            <p className="mb-2 text-sm text-slate-700">Note for next reviewer</p>
-            <Input.TextArea
-              rows={3}
-              value={approveNote}
-              placeholder="Add a note for the next reviewer (optional)"
-              disabled={isConfirmingApproval}
-              onChange={(event) => setApproveNote(event.target.value)}
-            />
-          </div>
-        </div>
-      </Modal>
+        onClose={closeApproveModal}
+        onConfirm={handleConfirmApproval}
+        isFinalTier={isFinalTier}
+        nextTierLabel={nextTierLabel ?? 'next tier'}
+        isInstituteChiefProxy={isInstituteChiefProxyEligible}
+        loading={isConfirmingApproval}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
+        instituteChiefName={instituteChiefName}
+      />
     </FormLayout>
   );
 }

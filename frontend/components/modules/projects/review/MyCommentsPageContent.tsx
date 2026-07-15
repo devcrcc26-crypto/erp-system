@@ -515,6 +515,15 @@ export default function MyCommentsPageContent({
         canEdit={false}
         canDelete={false}
         onClose={() => setSelectedComment(null)}
+        mode={
+          selectedComment
+            ? selectedComment.createdBy === currentUserId
+              ? 'raised-by-me'
+              : 'directed-to-me'
+            : undefined
+        }
+        myCommentItem={selectedComment}
+        onChanged={() => void commentsQuery.refetch()}
       />
 
       <RevisionWorkspace
