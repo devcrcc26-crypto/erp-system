@@ -97,7 +97,7 @@ export default function ReviewModePageContent({
               <Link
                 href={`/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${packageId}`}
               >
-                <Button size="small">Back to package</Button>
+                <Button size="small">Back to subtask</Button>
               </Link>
             ) : (
               <Link href={`/projects/${projectId}/my-comments`}>
@@ -132,7 +132,7 @@ export default function ReviewModePageContent({
               className="mt-1 text-[12px]"
               style={{ color: tokens.colorTextSecondary }}
             >
-              Review package documents, add comments, and run batch actions.
+              Review subtask documents, add comments, and run batch actions.
             </p>
             {actingAsLabel ? (
               <div className="mt-2">
@@ -147,7 +147,7 @@ export default function ReviewModePageContent({
             <Link
               href={`/projects/${projectId}/disciplines/${taskDisciplineId}/packages/${packageId}`}
             >
-              <Button className="shrink-0">Back to package</Button>
+              <Button className="shrink-0">Back to subtask</Button>
             </Link>
           ) : null}
         </div>

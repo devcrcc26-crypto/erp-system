@@ -21,7 +21,7 @@ export const DEMO_LOGIN_ACCOUNTS: DemoLoginAccount[] = [
   { email: 'deputychief@company.local', role: 'Deputy Chief', name: 'Youssef Hamdan' },
   { email: 'sitecoord@company.local', role: 'Site Coordinator', name: 'Maya Fahad' },
   { email: 'consultant@company.local', role: 'Client Consultant', name: 'Elena Petrova' },
-  { email: 'demo.seed.designer@company.local', role: 'Designer', name: 'Wei Chen', highlight: 'Creates packages — LJZ' },
+  { email: 'demo.seed.designer@company.local', role: 'Designer', name: 'Wei Chen', highlight: 'Creates subtasks — LJZ' },
   { email: 'demo.seed.dispatcher@company.local', role: 'Dispatcher', name: 'Jun Wang' },
   { email: 'demo.seed.institute@company.local', role: 'Institute Chief', name: 'Li Zhang', highlight: 'Institute tier — LJZ' },
   { email: 'demo.seed.gm@company.local', role: 'General Manager', name: 'David Wu' },

@@ -38,19 +38,21 @@ import {
   useDesignPackage,
   useDesignPackageDependencies,
   useDesignPackages,
-  useLockPackageEdvs,
   useReopenDesignPackage,
   useSubmitPackageForReview,
 } from '@/lib/query/design-packages';
 import {
   useEngineeringDocuments,
-  useBatchLockEngineeringDocuments,
   useTransitionEdvStatus,
 } from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading, useCanViewMyWork } from '@/hooks/use-pm-capabilities';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
-import { getPackageLockGuidance, getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
+import {
+  getPackageLockGuidance,
+  getPackageSubmitEligibility,
+  isPackageReadyToClose,
+} from '@/lib/utils/package-workflow';
 import {
   canBatchApprovePackageEdvs,
 } from '@/lib/utils/review-governance';
@@ -100,7 +102,7 @@ export default function DesignPackageDetailPageContent({
   const { data: profile } = useCurrentUser();
   const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [reopenPackageOpen, setReopenPackageOpen] = useState(false);
-  const [unlockingEdvId, setUnlockingEdvId] = useState<string | null>(null);
+  const [lockUnlockEdvId, setLockUnlockEdvId] = useState<string | null>(null);
   const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -140,12 +142,10 @@ export default function DesignPackageDetailPageContent({
   );
 
   const submitForReview = useSubmitPackageForReview();
-  const lockEdvs = useLockPackageEdvs();
-  const batchLock = useBatchLockEngineeringDocuments();
   const batchApproveEdvs = useBatchApprovePackageEdvs();
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
   const reopenDesignPackage = useReopenDesignPackage(projectId, taskDisciplineId);
-  const unlockEdv = useTransitionEdvStatus();
+  const transitionEdv = useTransitionEdvStatus();
 
   const pkg = packageQuery.data;
   const discipline = disciplineQuery.data;
@@ -229,16 +229,21 @@ export default function DesignPackageDetailPageContent({
     hasElevatedAccess,
   );
   const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
-  const canLockPackageEdvs =
+  const canManageLockUnlockClose =
     isDisciplineLeader || packageLens.isPackageDisciplineLeader;
+  const canLockUnlockEdvs =
+    canManageLockUnlockClose && pkg.packageStatus !== 'CLOSED';
   const canClosePackage =
-    canLockPackageEdvs &&
-    pkg.projectedStatus === 'LOCKED' &&
-    pkg.packageStatus !== 'CLOSED';
+    canManageLockUnlockClose &&
+    isPackageReadyToClose({
+      packageStatus: pkg.packageStatus,
+      projectedStatus: pkg.projectedStatus,
+      sessionStatus: reviewMode?.sessionStatus,
+      items: pkg.items,
+      documents: documentsQuery.data?.data ?? [],
+    });
   const canReopenPackage =
-    canLockPackageEdvs && pkg.packageStatus === 'CLOSED';
-  const canUnlockEdvs =
-    canLockPackageEdvs && pkg.packageStatus !== 'CLOSED';
+    canManageLockUnlockClose && pkg.packageStatus === 'CLOSED';
 
   const { primaryRole, secondaryReviewRole } = resolvePackageRoles(
     pkg,
@@ -271,12 +276,12 @@ export default function DesignPackageDetailPageContent({
           engineeringDocumentVersionIds: lockGuidance.inReviewEdvIds,
         },
       });
-      messageApi.success('Package EDVs approved');
+      messageApi.success('Subtask documents approved');
       void packageQuery.refetch();
       void documentsQuery.refetch();
       void reviewModeQuery.refetch();
     } catch (error) {
-      notifyApiError(error, 'Failed to approve package EDVs', messageApi);
+      notifyApiError(error, 'Failed to approve subtask documents', messageApi);
     }
   }
 
@@ -287,7 +292,7 @@ export default function DesignPackageDetailPageContent({
         taskDisciplineId,
         packageId,
       });
-      messageApi.success('Package submitted for review');
+      messageApi.success('Subtask submitted for review');
       void packageQuery.refetch();
       void reviewModeQuery.refetch();
     } catch (error) {
@@ -295,31 +300,29 @@ export default function DesignPackageDetailPageContent({
     }
   }
 
-  async function handleLockEdvs(): Promise<void> {
+  async function handleLockEdv(item: {
+    engineeringDocumentId: string;
+    engineeringDocumentVersionId: string;
+  }): Promise<void> {
+    setLockUnlockEdvId(item.engineeringDocumentVersionId);
     try {
-      await lockEdvs.mutateAsync({
+      await transitionEdv.mutateAsync({
         projectId,
         taskDisciplineId,
-        packageId,
+        engineeringDocumentId: item.engineeringDocumentId,
+        versionId: item.engineeringDocumentVersionId,
+        body: {
+          targetStatus: 'LOCKED',
+          reason: 'Discipline leader lock',
+        },
       });
-      messageApi.success('Package EDVs locked');
-      void packageQuery.refetch();
-    } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
-    }
-  }
-
-  async function handleBatchLockPackage(): Promise<void> {
-    try {
-      await batchLock.mutateAsync({
-        projectId,
-        body: { designPackageIds: [packageId] },
-      });
-      messageApi.success('Batch lock requested');
+      messageApi.success('Document locked');
       void packageQuery.refetch();
       void documentsQuery.refetch();
     } catch (error) {
-      notifyApiError(error, 'Request failed', messageApi);
+      notifyApiError(error, 'Failed to lock document', messageApi);
+    } finally {
+      setLockUnlockEdvId(null);
     }
   }
 
@@ -327,9 +330,9 @@ export default function DesignPackageDetailPageContent({
     engineeringDocumentId: string;
     engineeringDocumentVersionId: string;
   }): Promise<void> {
-    setUnlockingEdvId(item.engineeringDocumentVersionId);
+    setLockUnlockEdvId(item.engineeringDocumentVersionId);
     try {
-      await unlockEdv.mutateAsync({
+      await transitionEdv.mutateAsync({
         projectId,
         taskDisciplineId,
         engineeringDocumentId: item.engineeringDocumentId,
@@ -345,7 +348,7 @@ export default function DesignPackageDetailPageContent({
     } catch (error) {
       notifyApiError(error, 'Failed to unlock document', messageApi);
     } finally {
-      setUnlockingEdvId(null);
+      setLockUnlockEdvId(null);
     }
   }
 
@@ -416,27 +419,9 @@ export default function DesignPackageDetailPageContent({
                 Approve all EDVs
               </Button>
             )}
-            {canLockPackageEdvs && (
-              <Button
-                loading={lockEdvs.isPending}
-                disabled={!lockGuidance.eligible}
-                onClick={() => void handleLockEdvs()}
-              >
-                Lock EDVs
-              </Button>
-            )}
-            {canLockPackageEdvs && (
-              <Button
-                loading={batchLock.isPending}
-                disabled={!lockGuidance.eligible}
-                onClick={() => void handleBatchLockPackage()}
-              >
-                Batch lock
-              </Button>
-            )}
             {canClosePackage && (
               <Button onClick={() => setClosePackageOpen(true)}>
-                Close Package
+                Close subtask
               </Button>
             )}
             {canReopenPackage && (
@@ -524,12 +509,15 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        {canLockPackageEdvs && !lockGuidance.eligible && lockGuidance.reason && (
+        {canLockUnlockEdvs &&
+          lockGuidance.statusSummary.approved === 0 &&
+          lockGuidance.statusSummary.locked < lockGuidance.statusSummary.total &&
+          lockGuidance.reason && (
           <div className="mb-4">
             <Alert
               type="info"
               showIcon
-              title="Lock not available"
+              title="Files not ready to lock"
               description={
                 <div className="space-y-1">
                   <p>{lockGuidance.reason}</p>
@@ -551,7 +539,7 @@ export default function DesignPackageDetailPageContent({
             />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Package status</p>
+            <p className="text-xs text-slate-500">Subtask status</p>
             <PackageStatusBadge status={pkg.packageStatus} />
           </div>
           <div>
@@ -583,7 +571,7 @@ export default function DesignPackageDetailPageContent({
       </FormLayout>
 
       <FormLayout
-        title="Package items"
+        title="Subtask items"
         extra={
           packageLens.canUploadToPackage ? (
             <Button
@@ -603,8 +591,9 @@ export default function DesignPackageDetailPageContent({
           items={pkg.items ?? []}
           documents={documentsQuery.data?.data ?? []}
           canEdit={packageLens.canUploadToPackage}
-          canUnlock={canUnlockEdvs}
-          unlockingEdvId={unlockingEdvId}
+          canLockUnlock={canLockUnlockEdvs}
+          lockUnlockEdvId={lockUnlockEdvId}
+          onLock={(item) => void handleLockEdv(item)}
           onUnlock={(item) => void handleUnlockEdv(item)}
           onChanged={() => void packageQuery.refetch()}
         />
@@ -683,7 +672,7 @@ export default function DesignPackageDetailPageContent({
         open={closePackageOpen}
         title="Close subtask?"
         description="This confirms all documents are locked and all linked RFIs, issues, and change requests are resolved. The discipline leader can reopen later to unlock documents."
-        confirmLabel="Close Package"
+        confirmLabel="Close subtask"
         confirmLoading={closeDesignPackage.isPending}
         onConfirm={() => {
           void closeDesignPackage

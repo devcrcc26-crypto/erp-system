@@ -208,7 +208,7 @@ export default function RevisionWorkspace({
       });
 
       messageApi.success(
-        'Comment marked resolved. When all comments are resolved, the package returns to the reviewer inbox.',
+        'Comment marked resolved. When all comments are resolved, the subtask returns to the reviewer inbox.',
       );
       form.resetFields();
       setPendingFiles([]);

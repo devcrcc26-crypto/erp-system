@@ -115,7 +115,7 @@ export default function ProjectStatusBoard({
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <StatusBreakdownCard
-          title="Packages by status"
+          title="Subtasks by status"
           data={board?.packagesByStatus ?? {}}
         />
         <StatusBreakdownCard
@@ -165,7 +165,7 @@ function StatusBreakdownCard({
         <TableEmptyState
           icon={<BarChart3 />}
           title="No data"
-          description="Status counts will appear when packages or disciplines are active"
+          description="Status counts will appear when subtasks or disciplines are active"
         />
       ) : (
         <ul className="space-y-2">

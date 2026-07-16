@@ -112,8 +112,8 @@ export default function SubmittalPackageDrawer({
         title="Select approved subtasks"
         description={
           isDeputy
-            ? 'Deputy chief submittals may bundle locked-ready packages across disciplines.'
-            : 'Discipline lead submittals must use packages from a single assigned discipline.'
+            ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
+            : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
         }
       />
 
@@ -223,7 +223,7 @@ function SubmittalPackageForm({
   }, []);
 
   const packageColumns: ColumnsType<DesignPackage> = [
-    { title: 'Package', dataIndex: 'name', key: 'name' },
+    { title: 'Subtask', dataIndex: 'name', key: 'name' },
     {
       title: 'Status',
       key: 'status',
@@ -291,13 +291,13 @@ function SubmittalPackageForm({
       </Form.Item>
 
       {(isDeputy || taskDisciplineId) && (
-        <FormLayout title="Approved packages" className="mb-4">
+        <FormLayout title="Approved subtasks" className="mb-4">
           <DataTable<DesignPackage>
             rowKey="id"
             size="small"
             columns={packageColumns}
             dataSource={lockablePackages}
-            locale={{ emptyText: 'No approved packages available' }}
+            locale={{ emptyText: 'No approved subtasks available' }}
           />
         </FormLayout>
       )}
@@ -305,11 +305,11 @@ function SubmittalPackageForm({
       <Form.Item
         name="designPackageIds"
         label="Subtasks"
-        rules={[{ required: true, message: 'Select at least one package' }]}
+        rules={[{ required: true, message: 'Select at least one subtask' }]}
       >
         <Select
           mode="multiple"
-          placeholder="Select approved packages"
+          placeholder="Select approved subtasks"
           options={lockablePackages.map((pkg) => ({
             value: pkg.id,
             label: pkg.name,

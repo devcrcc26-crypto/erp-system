@@ -42,7 +42,7 @@ const QUICK_LINKS = [
     href: 'submittals',
     navIconKey: 'submittals',
     label: 'Submittals',
-    description: 'Design issue and release packages',
+    description: 'Design issue and release subtasks',
   },
   {
     href: 'schedule',

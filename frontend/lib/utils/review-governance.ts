@@ -41,7 +41,7 @@ export function getSessionApproveLabel(
   tier: ReviewTier | string | null | undefined,
   requiredTiers?: ReadonlyArray<ReviewTier | string> | null,
 ): string {
-  return isFinalReviewTier(tier, requiredTiers) ? 'Approve package' : 'Approve & escalate';
+  return isFinalReviewTier(tier, requiredTiers) ? 'Approve subtask' : 'Approve & escalate';
 }
 
 /**

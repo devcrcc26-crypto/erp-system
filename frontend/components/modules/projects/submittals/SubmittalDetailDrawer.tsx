@@ -355,7 +355,7 @@ export default function SubmittalDetailDrawer({
               <div className="erp-drawer-list">
                 {submittal.items.map((item) => (
                   <div key={item.id} className={`px-4 py-3 ${layout.drawerMutedText}`}>
-                    Package {item.sortOrder + 1}
+                    Subtask {item.sortOrder + 1}
                     {item.snapshotCaptured ? ' (snapshot captured)' : ''}
                   </div>
                 ))}

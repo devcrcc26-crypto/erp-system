@@ -85,7 +85,7 @@ export default function ConstructionSubmittalDrawer({
 
   const packageColumns: ColumnsType<DesignPackage> = useMemo(
     () => [
-      { title: 'Package', dataIndex: 'name', key: 'name' },
+      { title: 'Subtask', dataIndex: 'name', key: 'name' },
       {
         title: 'Status',
         key: 'status',

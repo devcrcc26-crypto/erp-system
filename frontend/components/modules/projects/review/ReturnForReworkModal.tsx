@@ -260,11 +260,11 @@ export default function ReturnForReworkModal({
         },
       });
 
-      messageApi.success('Package returned for rework');
+      messageApi.success('Subtask returned for rework');
       resetState();
       onSuccess();
     } catch (error) {
-      notifyApiError(error, 'Failed to return package for rework', messageApi);
+      notifyApiError(error, 'Failed to return subtask for rework', messageApi);
     } finally {
       setSubmitting(false);
     }

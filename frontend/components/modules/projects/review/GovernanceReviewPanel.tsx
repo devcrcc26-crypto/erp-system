@@ -19,10 +19,10 @@ export default function GovernanceReviewPanel({
   return (
     <FormLayout
       title="Governance view"
-      description="Aggregated package status for department and institute chiefs."
+      description="Aggregated subtask status for department and institute chiefs."
     >
       <Descriptions bordered size="small" column={1}>
-        <Descriptions.Item label="Package">{designPackage.name}</Descriptions.Item>
+        <Descriptions.Item label="Subtask">{designPackage.name}</Descriptions.Item>
         <Descriptions.Item label="Projected status">
           <ProjectedStatusBadge
             status={designPackage.projectedStatus}
@@ -35,7 +35,7 @@ export default function GovernanceReviewPanel({
         <Descriptions.Item label="Session status">
           {reviewMode?.sessionStatus?.replace(/_/g, ' ') ?? '-'}
         </Descriptions.Item>
-        <Descriptions.Item label="Package items">
+        <Descriptions.Item label="Subtask items">
           {reviewMode?.packageEdvIds.length ?? 0}
         </Descriptions.Item>
         <Descriptions.Item label="Upstream snapshot">

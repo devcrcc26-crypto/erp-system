@@ -116,7 +116,7 @@ export default function CreateDeliverableDrawer({
         <Form.Item label="Subtask" name="designPackageId">
           <Select
             allowClear
-            placeholder="Select package"
+            placeholder="Select subtask"
             disabled={!taskDisciplineId}
             loading={packagesQuery.isLoading}
             options={packageOptions}

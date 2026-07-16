@@ -34,7 +34,7 @@ export default function DependencySnapshotPanel({
   return (
     <FormLayout
       title="Upstream dependencies"
-      description="Cross-discipline packages this submission depends on."
+      description="Cross-discipline subtasks this submission depends on."
     >
       <ul className="mb-4 divide-y divide-slate-100 rounded border border-slate-200">
         {dependencies.map((dependency) => (
@@ -42,7 +42,7 @@ export default function DependencySnapshotPanel({
             <span className="font-medium text-slate-900">
               {dependency.dependsOnPackageName ??
                 packageNameById.get(dependency.dependsOnPackageId) ??
-                'Upstream package'}
+                'Upstream subtask'}
             </span>
             <span className="ml-2 text-xs text-slate-500">
               {dependency.dependencyType.replace(/_/g, ' ')}
@@ -60,8 +60,8 @@ export default function DependencySnapshotPanel({
 
       {snapshotEdvIds.length === 0 ? (
         <p className="text-sm text-slate-500">
-          No locked revisions from upstream packages were captured when this
-          session opened. Upstream packages may still be in progress.
+          No locked revisions from upstream subtasks were captured when this
+          session opened. Upstream subtasks may still be in progress.
         </p>
       ) : (
         <div>

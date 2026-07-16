@@ -168,7 +168,7 @@ export default function DesignPackageCommentsSection({
       <FormLayout title="Review comments" description="Comments raised during the active review session.">
         <TableEmptyState
           icon={<MessageSquare />}
-          title="No comments on this package yet"
+          title="No comments on this subtask yet"
           description={`Review comments for ${packageName} will appear here during the active session`}
         />
       </FormLayout>

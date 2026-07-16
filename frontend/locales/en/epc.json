@@ -79,7 +79,7 @@
     },
     "statusBoard": {
       "title": "Status Board",
-      "description": "EPC workflow KPIs and package/discipline breakdown."
+      "description": "EPC workflow KPIs and subtask/discipline breakdown."
     },
     "workload": {
       "title": "Reviewer Workload",
@@ -249,7 +249,7 @@
         "siteOps": "Site operations workload",
         "siteOpsHint": "Open RFIs, overdue RFIs, issues, and punch items",
         "packagesByStatus": "Subtasks by status",
-        "packagesByStatusHint": "EPC package projected status breakdown",
+        "packagesByStatusHint": "EPC subtask projected status breakdown",
         "disciplinesByStatus": "Disciplines by status",
         "disciplinesByStatusHint": "Task discipline projected status breakdown"
       },
@@ -303,7 +303,7 @@
   },
   "projection": {
     "lagPendingTitle": "Status projection in progress",
-    "lagPendingDescription": "Workflow committed - package and discipline badges refresh automatically when projection completes."
+    "lagPendingDescription": "Workflow committed - subtask and discipline badges refresh automatically when projection completes."
   },
   "empty": {
     "noModules": "No project modules available for your role.",
@@ -311,7 +311,7 @@
     "noReviewInbox": "No review sessions in your inbox",
     "noComments": "No comments assigned to you",
     "noAssignedWork": "No tasks or subtasks assigned to you",
-    "noDeliverables": "No deliverable packages found",
+    "noDeliverables": "No deliverable subtasks found",
     "noWorkload": "No reviewer workload data"
   },
   "actions": {

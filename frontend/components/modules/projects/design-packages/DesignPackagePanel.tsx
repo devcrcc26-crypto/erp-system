@@ -179,7 +179,7 @@ export default function DesignPackagePanel({
 
   const packageColumns: ColumnsType<DesignPackage> = [
     {
-      title: 'Package',
+      title: 'Subtask',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record) => (
@@ -247,11 +247,11 @@ export default function DesignPackagePanel({
                     packageId: record.id,
                   })
                   .then(() => {
-                    messageApi.success('Package submitted for review');
+                    messageApi.success('Subtask submitted for review');
                     void packagesQuery.refetch();
                   })
                   .catch((error) => {
-                    notifyApiError(error, 'Failed to submit package', messageApi);
+                    notifyApiError(error, 'Failed to submit subtask', messageApi);
                   })
                   .finally(() => {
                     setSubmittingPackageId(null);
@@ -300,7 +300,7 @@ export default function DesignPackagePanel({
       description={
         compact
           ? undefined
-          : 'Packages grouped by projected workflow status - not folder hierarchy.'
+          : 'Subtasks grouped by projected workflow status - not folder hierarchy.'
       }
       extra={
         canCreateSubtask ? (
@@ -345,7 +345,7 @@ export default function DesignPackagePanel({
         <TableEmptyState
           icon={<Package />}
           title="No subtasks"
-          description="Create a package to begin the review workflow"
+          description="Create a subtask to begin the review workflow"
           action={
             canCreateSubtask
               ? {
@@ -374,7 +374,7 @@ export default function DesignPackagePanel({
 
       {addItemPackageId && (
         <Modal
-          title="Add document version to package"
+          title="Add document version to subtask"
           open
           onCancel={() => setAddItemPackageId(null)}
           footer={null}
@@ -391,7 +391,7 @@ export default function DesignPackagePanel({
                   packageId: addItemPackageId,
                   body: { engineeringDocumentVersionId: values.engineeringDocumentVersionId },
                 });
-                messageApi.success('Document version added to package');
+                messageApi.success('Document version added to subtask');
                 itemForm.resetFields();
                 setAddItemPackageId(null);
                 void packagesQuery.refetch();
@@ -477,7 +477,7 @@ export function DesignPackageAddDependencyModal({
 
   return (
     <Modal
-      title="Add package dependency"
+      title="Add subtask dependency"
       open={open}
       onCancel={onClose}
       footer={null}
@@ -506,19 +506,19 @@ export function DesignPackageAddDependencyModal({
                 dependencyType: values.dependencyType,
               },
             });
-            messageApi.success('Package dependency added');
+            messageApi.success('Subtask dependency added');
             form.resetFields();
             onClose();
             onAdded();
           } catch (error) {
-            notifyApiError(error, 'Failed to add package dependency', messageApi);
+            notifyApiError(error, 'Failed to add subtask dependency', messageApi);
           }
         }}
       >
         <Form.Item
-          label="Depends on package"
+          label="Depends on subtask"
           name="dependsOnPackageId"
-          rules={[{ required: true, message: 'Select a package' }]}
+          rules={[{ required: true, message: 'Select a subtask' }]}
         >
           <Select
             showSearch
@@ -526,8 +526,8 @@ export function DesignPackageAddDependencyModal({
             options={packageOptions}
             placeholder={
               packageOptions.length > 0
-                ? 'Select prerequisite package'
-                : 'No other packages available'
+                ? 'Select prerequisite subtask'
+                : 'No other subtasks available'
             }
             disabled={packageOptions.length === 0}
           />
@@ -562,8 +562,9 @@ export function DesignPackageItemsTable({
   items,
   documents,
   canEdit,
-  canUnlock = false,
-  unlockingEdvId = null,
+  canLockUnlock = false,
+  lockUnlockEdvId = null,
+  onLock,
   onUnlock,
   onChanged,
 }: {
@@ -573,8 +574,13 @@ export function DesignPackageItemsTable({
   items: DesignPackageItem[];
   documents: EngineeringDocument[];
   canEdit: boolean;
-  canUnlock?: boolean;
-  unlockingEdvId?: string | null;
+  /** Discipline leader may lock APPROVED / unlock LOCKED files. */
+  canLockUnlock?: boolean;
+  lockUnlockEdvId?: string | null;
+  onLock?: (item: {
+    engineeringDocumentId: string;
+    engineeringDocumentVersionId: string;
+  }) => void;
   onUnlock?: (item: {
     engineeringDocumentId: string;
     engineeringDocumentVersionId: string;
@@ -645,27 +651,43 @@ export function DesignPackageItemsTable({
     {
       title: '',
       key: 'actions',
-      width: canEdit || canUnlock ? 260 : 180,
+      width: canEdit || canLockUnlock ? 280 : 180,
       render: (_value, record) => {
         const info = edvMap.get(record.engineeringDocumentVersionId);
-        const isLocked = info?.displayStatus === 'LOCKED';
+        const itemStatus = info?.status;
+        const isLocked = itemStatus === 'LOCKED';
+        const isApproved = itemStatus === 'APPROVED';
+        const lockUnlockPayload =
+          info != null
+            ? {
+                engineeringDocumentId: info.engineeringDocumentId,
+                engineeringDocumentVersionId: record.engineeringDocumentVersionId,
+              }
+            : null;
+        const showLock = canLockUnlock && isApproved && onLock && lockUnlockPayload;
+        const showUnlock = canLockUnlock && isLocked && onUnlock && lockUnlockPayload;
         return (
           <Space size={4} wrap>
             <EdvFileActions
               documentVersionId={info?.displayDocumentVersionId}
               fileName={info?.doc.title}
             />
-            {canUnlock && isLocked && info && onUnlock ? (
+            {showLock ? (
               <Button
                 type="link"
                 className="!px-1"
-                loading={unlockingEdvId === record.engineeringDocumentVersionId}
-                onClick={() =>
-                  onUnlock({
-                    engineeringDocumentId: info.engineeringDocumentId,
-                    engineeringDocumentVersionId: record.engineeringDocumentVersionId,
-                  })
-                }
+                loading={lockUnlockEdvId === record.engineeringDocumentVersionId}
+                onClick={() => onLock(lockUnlockPayload)}
+              >
+                Lock
+              </Button>
+            ) : null}
+            {showUnlock ? (
+              <Button
+                type="link"
+                className="!px-1"
+                loading={lockUnlockEdvId === record.engineeringDocumentVersionId}
+                onClick={() => onUnlock(lockUnlockPayload)}
               >
                 Unlock
               </Button>
@@ -701,7 +723,7 @@ export function DesignPackageItemsTable({
       size="middle"
       columns={columns}
       dataSource={items}
-      locale={{ emptyText: 'No items in package' }}
+      locale={{ emptyText: 'No items in subtask' }}
     />
   );
 }
@@ -737,7 +759,7 @@ export function DesignPackageDependenciesTable({
       render: (_id: string, record: DesignPackageDependency) =>
         record.dependsOnPackageName ??
         nameById.get(record.dependsOnPackageId) ??
-        'Upstream package',
+        'Upstream subtask',
     },
     {
       title: 'Type',

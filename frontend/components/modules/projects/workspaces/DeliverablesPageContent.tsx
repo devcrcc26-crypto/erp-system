@@ -78,7 +78,7 @@ export default function DeliverablesPageContent({
   const columns: ColumnsType<DeliverableRow> = useMemo(
     () => [
       {
-        title: 'Deliverable (package)',
+        title: 'Deliverable (subtask)',
         dataIndex: 'name',
         key: 'name',
         render: (name: string, record) => (
@@ -148,7 +148,7 @@ export default function DeliverablesPageContent({
         columns={columns}
         dataSource={deliverablesQuery.data ?? []}
         loading={disciplinesQuery.isLoading || deliverablesQuery.isLoading}
-        locale={{ emptyText: 'No deliverable packages found' }}
+        locale={{ emptyText: 'No deliverable subtasks found' }}
       />
     </FormLayout>
     </ProjectModuleGate>

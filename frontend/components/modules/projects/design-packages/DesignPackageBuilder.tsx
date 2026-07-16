@@ -335,7 +335,7 @@ export default function DesignPackageBuilder({
               name="name"
               rules={[{ required: true, message: 'Subtask name is required' }]}
             >
-              <Input placeholder="e.g. Structural IFC package" />
+              <Input placeholder="e.g. Structural IFC subtask" />
             </Form.Item>
 
             <Form.Item label="Subtask name (中文)" name="nameZh">

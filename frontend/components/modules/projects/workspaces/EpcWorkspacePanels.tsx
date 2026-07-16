@@ -371,7 +371,7 @@ export default function EpcWorkspacePanels({
           Revise existing documents (creates new draft from locked version)
         </Radio>
         <Radio value="NEW_PACKAGE">
-          Create a new subtask (blank package for leader to configure)
+          Create a new subtask (blank subtask for leader to configure)
         </Radio>
       </Radio.Group>
     </Modal>

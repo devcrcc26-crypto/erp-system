@@ -57,7 +57,7 @@ export default function ApproveReviewSessionModal({
 
   const canConfirm = !approveOnBehalf || onBehalfOfName.trim().length > 0;
   const title = isFinalTier
-    ? 'Approve — close package'
+    ? 'Approve — close subtask'
     : `Approve & escalate to ${nextTierLabel}`;
 
   return (

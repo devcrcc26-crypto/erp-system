@@ -305,7 +305,7 @@ export default function ReviewModePanel({
           type="warning"
           showIcon
           title="Review session not found"
-          description="This package was opened from your review inbox, but its active session could not be loaded."
+          description="This subtask was opened from your review inbox, but its active session could not be loaded."
           action={
             <Button size="small" onClick={() => void reviewModeQuery.refetch()}>
               Retry
@@ -335,7 +335,7 @@ export default function ReviewModePanel({
           description={
             <>
               {actionTaken
-                ? `You ${actionTaken === 'APPROVED' ? 'approved' : 'returned'} this package${
+                ? `You ${actionTaken === 'APPROVED' ? 'approved' : 'returned'} this subtask${
                     actionTakenAt ? ` on ${formatProjectDate(actionTakenAt)}` : ''
                   }. `
                 : ''}
@@ -392,7 +392,7 @@ export default function ReviewModePanel({
           <Alert
             type="info"
             showIcon
-            title="No documents in package"
+            title="No documents in subtask"
             description="The subtask has no engineering document versions linked yet."
           />
         ) : (

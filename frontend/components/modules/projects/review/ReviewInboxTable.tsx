@@ -62,7 +62,7 @@ export default function ReviewInboxTable({
 
   const baseColumns: ColumnsType<ReviewInboxItem> = [
     {
-      title: 'Package',
+      title: 'Subtask',
       dataIndex: 'designPackageName',
       key: 'designPackageName',
       ellipsis: { showTitle: true },
@@ -194,7 +194,7 @@ export default function ReviewInboxTable({
     <TableEmptyState
       icon={<Inbox />}
       title="Nothing here"
-      description="Packages assigned to you will appear here"
+      description="Subtasks assigned to you will appear here"
     />
   );
 

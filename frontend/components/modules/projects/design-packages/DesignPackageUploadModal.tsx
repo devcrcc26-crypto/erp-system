@@ -181,7 +181,7 @@ export default function DesignPackageUploadModal({
 
       if (!edvId) {
         setInlineError(
-          'Upload and registration succeeded, but the new EDV id was missing from the response. Attach the document to this package manually from Add EDV.',
+          'Upload and registration succeeded, but the new EDV id was missing from the response. Attach the document to this subtask manually from Add EDV.',
         );
         setStep('idle');
         return;
@@ -209,7 +209,7 @@ export default function DesignPackageUploadModal({
         );
       } else {
         setInlineError(
-          `Upload and registration succeeded, but attaching to the package failed: ${errorMessage(error, 'unknown error')}. Use Add EDV to attach the registered document.`,
+          `Upload and registration succeeded, but attaching to the subtask failed: ${errorMessage(error, 'unknown error')}. Use Add EDV to attach the registered document.`,
         );
       }
       setStep('idle');

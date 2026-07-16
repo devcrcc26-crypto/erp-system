@@ -100,22 +100,22 @@ function resolveNextStep(
   hasReviewSession: boolean,
 ): string | null {
   if (summary.total === 0) {
-    return 'Add engineering document versions to this package first.';
+    return 'Add engineering document versions to this subtask first.';
   }
 
   if (summary.draft > 0) {
-    return 'Submit the package for review to move draft EDVs into review.';
+    return 'Submit the subtask for review to move draft EDVs into review.';
   }
 
   if (summary.inReview > 0) {
     if (hasReviewSession) {
       return 'Approve each EDV in review mode, or use Approve all EDVs on this page.';
     }
-    return 'Submit the package for review before EDVs can be approved.';
+    return 'Submit the subtask for review before EDVs can be approved.';
   }
 
   if (summary.approved > 0 && summary.approved < summary.total) {
-    return 'Every package EDV must reach Approved before you can lock.';
+    return 'Every subtask EDV must reach Approved before you can lock.';
   }
 
   if (summary.locked > 0 && summary.locked < summary.total) {
@@ -154,14 +154,14 @@ export function getPackageSubmitEligibility(
   if (!isPackageProjectedStatusSubmittable(pkg)) {
     return {
       submittable: false,
-      reason: `Package must be In Progress or Rework Required to submit. Current status: ${formatProjectedStatus(pkg.projectedStatus)}.`,
+      reason: `Subtask must be In Progress or Rework Required to submit. Current status: ${formatProjectedStatus(pkg.projectedStatus)}.`,
     };
   }
 
   if (hasActiveReviewSession) {
     return {
       submittable: false,
-      reason: 'This package already has an active review session.',
+      reason: 'This subtask already has an active review session.',
     };
   }
 
@@ -190,7 +190,7 @@ export function getPackageSubmitEligibility(
   if (blockingStatuses.length > 0) {
     return {
       submittable: false,
-      reason: `All package EDVs must be Draft before submitting. Found: ${blockingStatuses.map(formatEdvStatus).join(', ')}.`,
+      reason: `All subtask EDVs must be Draft before submitting. Found: ${blockingStatuses.map(formatEdvStatus).join(', ')}.`,
     };
   }
 
@@ -201,7 +201,7 @@ export function getPackageSubmitEligibility(
   ) {
     return {
       submittable: false,
-      reason: 'Package references EDVs that could not be resolved. Refresh and try again.',
+      reason: 'Subtask references EDVs that could not be resolved. Refresh and try again.',
     };
   }
 
@@ -230,6 +230,46 @@ export function isPackageSubmittable(
 }
 
 /**
+ * True when every package item EDV is LOCKED.
+ */
+export function areAllPackageEdvsLocked(
+  items: readonly DesignPackageItem[] | undefined,
+  documents: readonly EngineeringDocument[],
+): boolean {
+  const packageItems = items ?? [];
+  if (packageItems.length === 0) {
+    return false;
+  }
+  const statusByEdvId = buildEdvStatusMap(documents);
+  return packageItems.every(
+    (item) => statusByEdvId.get(item.engineeringDocumentVersionId) === 'LOCKED',
+  );
+}
+
+/**
+ * Close is allowed after all required review tiers finished and every file is locked.
+ */
+export function isPackageReadyToClose(params: {
+  packageStatus: DesignPackage['packageStatus'];
+  projectedStatus: DesignPackage['projectedStatus'];
+  sessionStatus: string | null | undefined;
+  items: readonly DesignPackageItem[] | undefined;
+  documents: readonly EngineeringDocument[];
+}): boolean {
+  if (params.packageStatus === 'CLOSED') {
+    return false;
+  }
+  if (!areAllPackageEdvsLocked(params.items, params.documents)) {
+    return false;
+  }
+  const reviewComplete =
+    params.sessionStatus === 'APPROVED' ||
+    params.sessionStatus === 'CLOSED' ||
+    params.projectedStatus === 'LOCKED';
+  return reviewComplete;
+}
+
+/**
  * Mirrors backend `assertPackageLockEligible` for UI gating.
  */
 export function getPackageLockEligibility(
@@ -251,8 +291,8 @@ export function getPackageLockGuidance(
   if (packageItems.length === 0) {
     return {
       eligible: false,
-      reason: 'Add at least one EDV to the package before locking.',
-      nextStep: 'Add engineering document versions to this package first.',
+      reason: 'Add at least one EDV to the subtask before locking.',
+      nextStep: 'Add engineering document versions to this subtask first.',
       statusSummary: summarizeEdvStatuses([]),
       inReviewEdvIds: [],
     };
@@ -274,7 +314,7 @@ export function getPackageLockGuidance(
   if (statuses.some((status) => !status)) {
     return {
       eligible: false,
-      reason: 'Package references EDVs that could not be resolved.',
+      reason: 'Subtask references EDVs that could not be resolved.',
       nextStep: 'Refresh the page or re-link the missing engineering documents.',
       statusSummary,
       inReviewEdvIds,
@@ -301,7 +341,7 @@ export function getPackageLockGuidance(
 
   return {
     eligible: false,
-    reason: `All package EDVs must be Approved before locking. Current: ${formatStatusCounts(statusSummary)}.`,
+    reason: `All subtask EDVs must be Approved before locking. Current: ${formatStatusCounts(statusSummary)}.`,
     nextStep: resolveNextStep(statusSummary, hasReviewSession),
     statusSummary,
     inReviewEdvIds,

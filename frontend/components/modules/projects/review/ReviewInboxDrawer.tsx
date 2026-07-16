@@ -254,7 +254,7 @@ export default function ReviewInboxDrawer({
 
   if (!item) {
     return (
-      <Drawer {...wideDetailDrawerProps} open={open} onClose={onClose} title="Review package" />
+      <Drawer {...wideDetailDrawerProps} open={open} onClose={onClose} title="Review subtask" />
     );
   }
 
@@ -280,7 +280,7 @@ export default function ReviewInboxDrawer({
           <Alert
             type="warning"
             showIcon
-            message={`You ${item.completedAction === 'RETURNED' ? 'returned' : 'approved'} this package${
+            message={`You ${item.completedAction === 'RETURNED' ? 'returned' : 'approved'} this subtask${
               item.actionTakenAt ? ` on ${formatProjectDate(item.actionTakenAt)}` : ''
             }.`}
           />
@@ -300,7 +300,7 @@ export default function ReviewInboxDrawer({
           {documentsQuery.isLoading ? (
             <p className="text-xs text-slate-500">Loading documents…</p>
           ) : packageEdvIds.length === 0 ? (
-            <p className="text-xs text-slate-500">No documents in this package.</p>
+            <p className="text-xs text-slate-500">No documents in this subtask.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {packageEdvIds.map((edvId) => {
