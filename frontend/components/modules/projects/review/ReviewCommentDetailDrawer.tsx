@@ -43,8 +43,19 @@ function RaisedCommentCard({ comment }: { comment: ReviewModeComment }): React.R
 
   const responseFiles = (comment.files ?? []).filter((f) => f.isResponseFile);
   const markupFiles = (comment.files ?? []).filter((f) => !f.isResponseFile);
+  const primaryRevisedFile = comment.responseAttachment
+    ? {
+        documentVersionId: comment.responseAttachment.documentVersionId,
+        name: comment.responseAttachment.name,
+      }
+    : comment.responseRevision
+      ? {
+          documentVersionId: comment.responseRevision.documentVersionId,
+          name: `${comment.responseRevision.documentTitle} · Rev ${comment.responseRevision.revisionLabel}`,
+        }
+      : null;
   const hasDesignerResponse =
-    Boolean(comment.responseAttachment) || responseFiles.length > 0;
+    Boolean(primaryRevisedFile) || responseFiles.length > 0;
   const hasCommentAttachment =
     Boolean(comment.attachment) || markupFiles.length > 0;
 
@@ -93,15 +104,15 @@ function RaisedCommentCard({ comment }: { comment: ReviewModeComment }): React.R
           <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
             Designer response
           </p>
-          {comment.responseAttachment && (
+          {primaryRevisedFile && (
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
               <span className="min-w-0 truncate">
-                Revised file: {comment.responseAttachment.name}
+                Revised file: {primaryRevisedFile.name}
               </span>
               <EdvFileActions
                 compact
-                documentVersionId={comment.responseAttachment.documentVersionId}
-                fileName={comment.responseAttachment.name}
+                documentVersionId={primaryRevisedFile.documentVersionId}
+                fileName={primaryRevisedFile.name}
               />
             </div>
           )}
@@ -476,6 +487,7 @@ export default function ReviewCommentDetailDrawer({
               <section className={layout.drawerSection}>
                 <CommentRevisionSection
                   commentedOn={comment.commentedOn}
+                  responseRevision={comment.responseRevision}
                   responseAttachment={comment.responseAttachment}
                   responseFiles={(comment.files ?? []).filter((f) => f.isResponseFile)}
                   resolutionNote={comment.resolutionNote}

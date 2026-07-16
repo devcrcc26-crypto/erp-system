@@ -165,11 +165,16 @@ export default function RevisionWorkspace({
     }
 
     try {
+      const primaryVersionId = pendingFiles.find(
+        (f) => f.status === 'done' && Boolean(f.documentVersionId),
+      )?.documentVersionId;
+
       await transitionComment.mutateAsync({
         commentId: comment.commentId,
         body: {
           targetStatus: 'RESOLVED',
           resolutionNote: values.resolutionNote.trim() || undefined,
+          responseDocumentVersionId: primaryVersionId,
           additionalResponseDocumentVersionIds: pendingFiles
             .slice(1)
             .filter((f) => f.status === 'done' && Boolean(f.documentVersionId))

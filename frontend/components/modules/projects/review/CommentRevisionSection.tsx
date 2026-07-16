@@ -12,6 +12,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 export default function CommentRevisionSection({
   commentedOn,
+  responseRevision,
   responseAttachment,
   responseFiles,
   resolutionNote,
@@ -19,6 +20,7 @@ export default function CommentRevisionSection({
   verifiedAt,
 }: {
   commentedOn?: CommentEdvSnapshot;
+  responseRevision?: CommentEdvSnapshot | null;
   responseAttachment?: ReviewCommentAttachment | null;
   responseFiles?: readonly {
     id: string;
@@ -30,8 +32,22 @@ export default function CommentRevisionSection({
   verifiedAt?: string | null;
 }): React.ReactNode {
   const additionalResponseFiles = responseFiles ?? [];
+
+  /** Prefer explicit response attachment; fall back to EDV revision snapshot. */
+  const primaryRevisedFile = responseAttachment
+    ? {
+        documentVersionId: responseAttachment.documentVersionId,
+        name: responseAttachment.name,
+      }
+    : responseRevision
+      ? {
+          documentVersionId: responseRevision.documentVersionId,
+          name: `${responseRevision.documentTitle} · Rev ${responseRevision.revisionLabel}`,
+        }
+      : null;
+
   const hasResolution =
-    Boolean(responseAttachment) ||
+    Boolean(primaryRevisedFile) ||
     additionalResponseFiles.length > 0 ||
     Boolean(resolutionNote?.trim()) ||
     Boolean(resolvedAt);
@@ -53,19 +69,19 @@ export default function CommentRevisionSection({
         </div>
       )}
 
-      {responseAttachment ? (
+      {primaryRevisedFile ? (
         <div className="flex flex-col gap-2">
           <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-teal-600)]">
             Revised file
           </p>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[12px] font-medium text-[var(--color-text-primary)]">
-              {responseAttachment.name}
+              {primaryRevisedFile.name}
             </p>
             <EdvFileActions
               compact
-              documentVersionId={responseAttachment.documentVersionId}
-              fileName={responseAttachment.name}
+              documentVersionId={primaryRevisedFile.documentVersionId}
+              fileName={primaryRevisedFile.name}
             />
           </div>
         </div>

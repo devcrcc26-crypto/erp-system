@@ -413,27 +413,44 @@ export default function ReviewInboxDrawer({
                           ))}
                       </div>
                     )}
-                    {(comment.responseAttachment ||
-                      (comment.files ?? []).some((f) => f.isResponseFile)) && (
-                      <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
-                          Designer response
-                        </p>
-                        {comment.responseAttachment && (
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-                            <span className="min-w-0 truncate">
-                              Revised file: {comment.responseAttachment.name}
-                            </span>
-                            <EdvFileActions
-                              compact
-                              documentVersionId={comment.responseAttachment.documentVersionId}
-                              fileName={comment.responseAttachment.name}
-                            />
-                          </div>
-                        )}
-                        {(comment.files ?? [])
-                          .filter((f) => f.isResponseFile)
-                          .map((file) => (
+                    {(() => {
+                      const responseFiles = (comment.files ?? []).filter(
+                        (f) => f.isResponseFile,
+                      );
+                      const primaryRevised = comment.responseAttachment
+                        ? {
+                            documentVersionId:
+                              comment.responseAttachment.documentVersionId,
+                            name: comment.responseAttachment.name,
+                          }
+                        : comment.responseRevision
+                          ? {
+                              documentVersionId:
+                                comment.responseRevision.documentVersionId,
+                              name: `${comment.responseRevision.documentTitle} · Rev ${comment.responseRevision.revisionLabel}`,
+                            }
+                          : null;
+                      if (!primaryRevised && responseFiles.length === 0) {
+                        return null;
+                      }
+                      return (
+                        <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                            Designer response
+                          </p>
+                          {primaryRevised && (
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                              <span className="min-w-0 truncate">
+                                Revised file: {primaryRevised.name}
+                              </span>
+                              <EdvFileActions
+                                compact
+                                documentVersionId={primaryRevised.documentVersionId}
+                                fileName={primaryRevised.name}
+                              />
+                            </div>
+                          )}
+                          {responseFiles.map((file) => (
                             <div
                               key={file.id}
                               className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
@@ -446,8 +463,9 @@ export default function ReviewInboxDrawer({
                               />
                             </div>
                           ))}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
                     {showVerify && (
                       <Button
                         size="small"

@@ -530,7 +530,7 @@ export class ReviewWorkflowService {
       let responseDocVersionId = command.responseDocumentVersionId;
       if (to === CommentStatus.RESOLVED && !responseDocVersionId) {
         const commentedEdv =
-          await this.prisma.engineeringDocumentVersion.findFirst({
+          await tx.engineeringDocumentVersion.findFirst({
             where: activeOnly({
               id: comment.engineeringDocumentVersionId,
               companyId: command.companyId,
@@ -539,7 +539,7 @@ export class ReviewWorkflowService {
           });
         if (commentedEdv) {
           const latestEdv =
-            await this.prisma.engineeringDocumentVersion.findFirst({
+            await tx.engineeringDocumentVersion.findFirst({
               where: activeOnly({
                 companyId: command.companyId,
                 engineeringDocumentId: commentedEdv.engineeringDocumentId,
