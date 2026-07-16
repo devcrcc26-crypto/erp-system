@@ -715,8 +715,13 @@ export class ReviewWorkflowService {
         command.companyId,
         command.reviewCommentId,
       );
-      if (!comment || comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+      if (!comment) {
         throw new NotFoundException('Review comment not found');
+      }
+      if (comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+        throw new ConflictException(
+          'Comments can only be removed while the review session is active',
+        );
       }
 
       if (comment.createdBy !== command.actorId) {
@@ -771,8 +776,13 @@ export class ReviewWorkflowService {
         command.companyId,
         command.reviewCommentId,
       );
-      if (!comment || comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+      if (!comment) {
         throw new NotFoundException('Review comment not found');
+      }
+      if (comment.reviewSession.status !== ReviewSessionStatus.ACTIVE) {
+        throw new ConflictException(
+          'Comments can only be edited while the review session is active',
+        );
       }
 
       if (comment.createdBy !== command.actorId) {
@@ -814,7 +824,11 @@ export class ReviewWorkflowService {
         {
           body: body || null,
           ...(command.commentDocumentVersionId
-            ? { commentDocumentVersionId: command.commentDocumentVersionId }
+            ? {
+                commentDocumentVersion: {
+                  connect: { id: command.commentDocumentVersionId },
+                },
+              }
             : {}),
           severity: command.severity as CommentSeverity,
           engineeringDocumentVersion: {

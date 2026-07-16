@@ -38,7 +38,11 @@ export default function ReviewCommentEditDrawer({
   const [form] = Form.useForm<EditCommentFormValues>();
   const updateComment = useUpdateReviewComment();
   const uploadDocument = useUploadDocumentToFolder();
-  const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
+  const uploadFolderQuery = useDisciplineUploadFolder(
+    projectId,
+    taskDisciplineId,
+    open && Boolean(projectId) && Boolean(taskDisciplineId),
+  );
   const messageApi = useAppMessage();
   const [commentFileVersionId, setCommentFileVersionId] = useState<string | null>(
     null,
@@ -82,16 +86,24 @@ export default function ReviewCommentEditDrawer({
     if (!comment) {
       return;
     }
+    const bodyText = values.body.trim();
+    const nextFileVersionId =
+      commentFileVersionId ??
+      (!bodyText ? comment.attachment?.documentVersionId : undefined);
+    if (!bodyText && !nextFileVersionId) {
+      messageApi.error('Add comment text or attach a markup file');
+      return;
+    }
     try {
       await updateComment.mutateAsync({
         commentId: comment.id,
         body: {
           engineeringDocumentVersionId: values.engineeringDocumentVersionId,
-          body: values.body.trim(),
+          body: bodyText,
           severity: values.severity,
           assignedToUserId: comment.assignedToUserId,
-          ...(commentFileVersionId
-            ? { commentDocumentVersionId: commentFileVersionId }
+          ...(nextFileVersionId
+            ? { commentDocumentVersionId: nextFileVersionId }
             : {}),
         },
       });
@@ -195,7 +207,20 @@ export default function ReviewCommentEditDrawer({
             </Upload>
           </div>
         </Form.Item>
-        <Form.Item name="body" label="Comment" rules={[{ required: true }]}>
+        <Form.Item
+          name="body"
+          label="Comment"
+          rules={[
+            {
+              validator: async (_, value: string | undefined) => {
+                if (value?.trim() || effectiveFileName) {
+                  return;
+                }
+                throw new Error('Add comment text or attach a markup file');
+              },
+            },
+          ]}
+        >
           <Input.TextArea rows={4} />
         </Form.Item>
         <Form.Item name="severity" label="Severity" rules={[{ required: true }]}>

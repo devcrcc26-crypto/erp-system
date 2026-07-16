@@ -47,8 +47,13 @@ interface CommentFormValues {
 function canMutateOwnOpenComment(
   comment: ReviewModeComment,
   currentUserId: string | undefined,
+  sessionStatus: string | null | undefined,
 ): boolean {
-  return comment.createdBy === currentUserId && comment.status === 'OPEN';
+  return (
+    sessionStatus === 'ACTIVE' &&
+    comment.createdBy === currentUserId &&
+    comment.status === 'OPEN'
+  );
 }
 
 function commentStatusVariant(status: string): StatusBadgeVariant {
@@ -292,7 +297,11 @@ export default function ReviewCommentPanel({
           ) : (
             reviewMode?.comments.map((comment) => {
               const displayStatus = statusOverrides[comment.id] ?? comment.status;
-              const canMutate = canMutateOwnOpenComment(comment, currentUserId);
+              const canMutate = canMutateOwnOpenComment(
+                comment,
+                currentUserId,
+                reviewMode?.sessionStatus,
+              );
               const canVerify =
                 displayStatus === 'RESOLVED' &&
                 (comment.createdBy === currentUserId || lens.canApproveReview);
@@ -494,12 +503,20 @@ export default function ReviewCommentPanel({
         }
         canEdit={
           selectedComment
-            ? canMutateOwnOpenComment(selectedComment, currentUserId)
+            ? canMutateOwnOpenComment(
+                selectedComment,
+                currentUserId,
+                reviewMode?.sessionStatus,
+              )
             : false
         }
         canDelete={
           selectedComment
-            ? canMutateOwnOpenComment(selectedComment, currentUserId)
+            ? canMutateOwnOpenComment(
+                selectedComment,
+                currentUserId,
+                reviewMode?.sessionStatus,
+              )
             : false
         }
         deleteLoading={deleteComment.isPending}

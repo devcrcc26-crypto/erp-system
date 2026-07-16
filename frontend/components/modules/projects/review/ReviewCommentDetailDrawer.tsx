@@ -209,7 +209,11 @@ export default function ReviewCommentDetailDrawer({
   const isRaisedByMe = mode === 'raised-by-me';
   const detailQuery = useReviewComment(
     commentId ?? '',
-    open && Boolean(commentId) && !isRaisedByMe,
+    open &&
+      Boolean(commentId) &&
+      !isRaisedByMe &&
+      // Review-mode panel already has a full comment payload — avoid a redundant GET.
+      !(fallbackComment && mode == null),
   );
   const transitionComment = useTransitionReviewComment();
   const [transitioning, setTransitioning] = useState(false);
