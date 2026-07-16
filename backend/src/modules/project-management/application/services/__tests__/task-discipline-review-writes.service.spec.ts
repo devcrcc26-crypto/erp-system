@@ -52,6 +52,7 @@ describe('ReviewWorkflowService TaskDisciplineReview writes', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
   });
 

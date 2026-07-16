@@ -42,6 +42,7 @@ export interface TransitionCommentStatusCommand extends WorkflowCommandBase {
   readonly targetStatus: CommentStatus;
   readonly resolutionNote?: string;
   readonly responseDocumentVersionId?: string;
+  readonly additionalResponseDocumentVersionIds?: readonly string[];
 }
 
 export interface VerifyReviewCommentCommand extends WorkflowCommandBase {
@@ -73,7 +74,6 @@ export interface ApproveReviewSessionCommand extends WorkflowCommandBase {
 
 export interface ReturnPackageForReworkCommentInput {
   readonly engineeringDocumentVersionId: string;
-  readonly engineeringDocumentVersionIds?: readonly string[];
   readonly body?: string;
   readonly severity: 'MINOR' | 'MODERATE' | 'MAJOR';
   readonly commentDocumentVersionId?: string;

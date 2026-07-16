@@ -956,7 +956,6 @@ export class DesignPackagesService {
       reviewSessionId: dto.reviewSessionId,
       comments: dto.comments.map((comment) => ({
         engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
-        engineeringDocumentVersionIds: comment.engineeringDocumentVersionIds,
         body: comment.body,
         severity: comment.severity,
         commentDocumentVersionId: comment.commentDocumentVersionId,

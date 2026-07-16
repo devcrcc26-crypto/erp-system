@@ -21,7 +21,7 @@ interface CommentRowFile {
 
 interface CommentRow {
   id: string;
-  selectedDocs: string[];
+  selectedDoc: string;
   summary: string;
   severity: CommentSeverity;
   files: CommentRowFile[];
@@ -30,7 +30,7 @@ interface CommentRow {
 function newEmptyRow(): CommentRow {
   return {
     id: crypto.randomUUID(),
-    selectedDocs: [],
+    selectedDoc: '',
     summary: '',
     severity: 'MODERATE',
     files: [],
@@ -39,7 +39,7 @@ function newEmptyRow(): CommentRow {
 
 function isRowValid(row: CommentRow): boolean {
   return (
-    row.selectedDocs.length >= 1 &&
+    Boolean(row.selectedDoc) &&
     (row.summary.trim().length > 0 || row.files.length >= 1) &&
     row.files.every((f) => f.status !== 'error')
   );
@@ -160,8 +160,8 @@ export default function ReturnForReworkModal({
   }
   rows.forEach((row, index) => {
     const label = rows.length > 1 ? `Row ${index + 1}: ` : '';
-    if (row.selectedDocs.length === 0) {
-      disabledReasons.push(`${label}select at least one document.`);
+    if (!row.selectedDoc) {
+      disabledReasons.push(`${label}select a document.`);
     }
     if (row.summary.trim().length === 0 && row.files.length === 0) {
       disabledReasons.push(`${label}add a comment summary or attach a file.`);
@@ -247,8 +247,7 @@ export default function ReturnForReworkModal({
         body: {
           reviewSessionId,
           comments: resolvedRows.map((row) => ({
-            engineeringDocumentVersionId: row.selectedDocs[0],
-            engineeringDocumentVersionIds: row.selectedDocs.slice(1),
+            engineeringDocumentVersionId: row.selectedDoc,
             body: row.summary.trim() || undefined,
             severity: row.severity,
             commentDocumentVersionId: row.files[0]?.versionId,
@@ -320,14 +319,13 @@ export default function ReturnForReworkModal({
         {rows.map((row) => (
           <div key={row.id} className="rounded-md border border-slate-200 p-3 space-y-3">
             <div>
-              <label className="mb-1 block text-sm font-medium">Documents (required)</label>
+              <label className="mb-1 block text-sm font-medium">Document (required)</label>
               <Select
-                mode="multiple"
                 className="w-full"
-                placeholder="Select documents"
+                placeholder="Select document"
                 options={[...availableDocuments]}
-                value={row.selectedDocs}
-                onChange={(value: string[]) => updateRow(row.id, { selectedDocs: value })}
+                value={row.selectedDoc || undefined}
+                onChange={(value: string) => updateRow(row.id, { selectedDoc: value })}
               />
             </div>
 

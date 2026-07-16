@@ -42,6 +42,12 @@ export interface MappedReviewCommentDetail {
   responseRevision: CommentEdvSnapshot | null;
   attachment: MappedCommentAttachment | null;
   responseAttachment: MappedCommentAttachment | null;
+  files: readonly {
+    id: string;
+    documentVersionId: string;
+    fileName: string;
+    isResponseFile: boolean;
+  }[];
 }
 
 /**
@@ -122,6 +128,7 @@ export class ReviewCommentsService {
       targetStatus: dto.targetStatus as CommentStatus,
       resolutionNote: dto.resolutionNote,
       responseDocumentVersionId: dto.responseDocumentVersionId,
+      additionalResponseDocumentVersionIds: dto.additionalResponseDocumentVersionIds,
       idempotencyKey: dto.idempotencyKey,
     });
   }
@@ -240,5 +247,11 @@ function mapReviewCommentDetail(
           name: comment.responseDocumentVersion.document.name,
         }
       : null,
+    files: comment.files.map((f) => ({
+      id: f.id,
+      documentVersionId: f.documentVersionId,
+      fileName: f.fileName,
+      isResponseFile: f.isResponseFile,
+    })),
   };
 }

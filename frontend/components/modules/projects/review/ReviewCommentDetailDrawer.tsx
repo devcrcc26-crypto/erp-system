@@ -41,6 +41,13 @@ function RaisedCommentCard({ comment }: { comment: ReviewModeComment }): React.R
           ]
         : [];
 
+  const responseFiles = (comment.files ?? []).filter((f) => f.isResponseFile);
+  const markupFiles = (comment.files ?? []).filter((f) => !f.isResponseFile);
+  const hasDesignerResponse =
+    Boolean(comment.responseAttachment) || responseFiles.length > 0;
+  const hasCommentAttachment =
+    Boolean(comment.attachment) || markupFiles.length > 0;
+
   return (
     <div className="rounded-md border border-slate-200 p-3 text-sm">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -51,39 +58,66 @@ function RaisedCommentCard({ comment }: { comment: ReviewModeComment }): React.R
       {docChips.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">{docChips}</div>
       )}
-      {comment.attachment && (
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-          <span className="min-w-0 truncate">Comment file: {comment.attachment.name}</span>
-          <EdvFileActions
-            compact
-            documentVersionId={comment.attachment.documentVersionId}
-            fileName={comment.attachment.name}
-          />
+      {hasCommentAttachment && (
+        <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+            Comment attachment
+          </p>
+          {comment.attachment && (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+              <span className="min-w-0 truncate">{comment.attachment.name}</span>
+              <EdvFileActions
+                compact
+                documentVersionId={comment.attachment.documentVersionId}
+                fileName={comment.attachment.name}
+              />
+            </div>
+          )}
+          {markupFiles.map((file) => (
+            <div
+              key={file.id}
+              className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+            >
+              <span className="min-w-0 truncate">{file.fileName}</span>
+              <EdvFileActions
+                compact
+                documentVersionId={file.documentVersionId}
+                fileName={file.fileName}
+              />
+            </div>
+          ))}
         </div>
       )}
-      {comment.responseRevision && (
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-700">
-          <span className="min-w-0 truncate">
-            Revised file: {comment.responseRevision.documentTitle} · Rev {comment.responseRevision.revisionLabel}
-          </span>
-          <EdvFileActions
-            compact
-            documentVersionId={comment.responseRevision.documentVersionId}
-            fileName={comment.responseRevision.documentTitle}
-          />
-        </div>
-      )}
-      {comment.responseAttachment &&
-        comment.responseAttachment.documentVersionId !== comment.responseRevision?.documentVersionId && (
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-          <span className="min-w-0 truncate">
-            Response attachment: {comment.responseAttachment.name}
-          </span>
-          <EdvFileActions
-            compact
-            documentVersionId={comment.responseAttachment.documentVersionId}
-            fileName={comment.responseAttachment.name}
-          />
+      {hasDesignerResponse && (
+        <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+            Designer response
+          </p>
+          {comment.responseAttachment && (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+              <span className="min-w-0 truncate">
+                Revised file: {comment.responseAttachment.name}
+              </span>
+              <EdvFileActions
+                compact
+                documentVersionId={comment.responseAttachment.documentVersionId}
+                fileName={comment.responseAttachment.name}
+              />
+            </div>
+          )}
+          {responseFiles.map((file) => (
+            <div
+              key={file.id}
+              className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+            >
+              <span className="min-w-0 truncate">{file.fileName}</span>
+              <EdvFileActions
+                compact
+                documentVersionId={file.documentVersionId}
+                fileName={file.fileName}
+              />
+            </div>
+          ))}
         </div>
       )}
       <p className={`mt-1 ${layout.drawerMutedText}`}>
@@ -123,6 +157,7 @@ function mergeFallbackComment(
     responseRevision: fallbackComment.responseRevision ?? null,
     attachment: fallbackComment.attachment ?? null,
     responseAttachment: fallbackComment.responseAttachment ?? null,
+    files: fallbackComment.files ?? [],
   };
 }
 
@@ -216,6 +251,7 @@ export default function ReviewCommentDetailDrawer({
     comment &&
     (Boolean(comment.responseRevision) ||
       Boolean(comment.responseAttachment) ||
+      (comment.files ?? []).some((f) => f.isResponseFile) ||
       Boolean(comment.resolutionNote?.trim()) ||
       Boolean(comment.resolvedAt) ||
       comment.status === 'RESOLVED' ||
@@ -341,16 +377,57 @@ export default function ReviewCommentDetailDrawer({
                 </p>
               </Descriptions.Item>
               {comment.attachment ? (
-                <Descriptions.Item label="Attachment">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[12px] text-[var(--color-text-primary)]">
-                      {comment.attachment.name}
-                    </span>
-                    <EdvFileActions
-                      compact
-                      documentVersionId={comment.attachment.documentVersionId}
-                      fileName={comment.attachment.name}
-                    />
+                <Descriptions.Item label="Comment attachment">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--color-text-primary)]">
+                        {comment.attachment.name}
+                      </span>
+                      <EdvFileActions
+                        compact
+                        documentVersionId={comment.attachment.documentVersionId}
+                        fileName={comment.attachment.name}
+                      />
+                    </div>
+                    {(comment.files ?? [])
+                      .filter((f) => !f.isResponseFile)
+                      .map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex flex-wrap items-center justify-between gap-2"
+                        >
+                          <span className="text-[12px] text-[var(--color-text-primary)]">
+                            {file.fileName}
+                          </span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={file.documentVersionId}
+                            fileName={file.fileName}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </Descriptions.Item>
+              ) : (comment.files ?? []).some((f) => !f.isResponseFile) ? (
+                <Descriptions.Item label="Comment attachment">
+                  <div className="flex flex-col gap-2">
+                    {(comment.files ?? [])
+                      .filter((f) => !f.isResponseFile)
+                      .map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex flex-wrap items-center justify-between gap-2"
+                        >
+                          <span className="text-[12px] text-[var(--color-text-primary)]">
+                            {file.fileName}
+                          </span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={file.documentVersionId}
+                            fileName={file.fileName}
+                          />
+                        </div>
+                      ))}
                   </div>
                 </Descriptions.Item>
               ) : null}
@@ -398,12 +475,12 @@ export default function ReviewCommentDetailDrawer({
             {showResponse ? (
               <section className={layout.drawerSection}>
                 <CommentRevisionSection
-                commentedOn={comment.commentedOn}
-                responseRevision={comment.responseRevision}
-                responseAttachment={comment.responseAttachment}
-                resolutionNote={comment.resolutionNote}
-                resolvedAt={comment.resolvedAt}
-                verifiedAt={comment.verifiedAt}
+                  commentedOn={comment.commentedOn}
+                  responseAttachment={comment.responseAttachment}
+                  responseFiles={(comment.files ?? []).filter((f) => f.isResponseFile)}
+                  resolutionNote={comment.resolutionNote}
+                  resolvedAt={comment.resolvedAt}
+                  verifiedAt={comment.verifiedAt}
                 />
               </section>
             ) : null}

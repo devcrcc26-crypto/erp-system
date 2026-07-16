@@ -301,7 +301,12 @@ export default function ReviewCommentPanel({
                   d.engineeringDocumentVersionId !== comment.engineeringDocumentVersionId,
               );
               const primaryAttachment = comment.attachment ?? null;
-              const additionalFiles = comment.files ?? [];
+              const markupFiles = (comment.files ?? []).filter((f) => !f.isResponseFile);
+              const responseFiles = (comment.files ?? []).filter((f) => f.isResponseFile);
+              const hasDesignerResponse =
+                Boolean(comment.responseAttachment) || responseFiles.length > 0;
+              const hasCommentAttachment =
+                Boolean(primaryAttachment) || markupFiles.length > 0;
 
               return (
                 <div
@@ -360,44 +365,6 @@ export default function ReviewCommentPanel({
                     </div>
                   </div>
                   <p className="mb-1 line-clamp-2 text-slate-800">{comment.body}</p>
-                  {comment.responseRevision && (
-                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-700">
-                      <span className="min-w-0 truncate">
-                        {displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED'
-                          ? `Revised to Rev ${comment.responseRevision.revisionLabel}`
-                          : `Draft revision Rev ${comment.responseRevision.revisionLabel} uploaded`}
-                        {comment.resolutionNote?.trim()
-                          ? ` - ${comment.resolutionNote.trim()}`
-                          : ''}
-                      </span>
-                      <EdvFileActions
-                        compact
-                        documentVersionId={comment.responseRevision.documentVersionId}
-                        fileName={comment.responseRevision.documentTitle}
-                      />
-                    </div>
-                  )}
-                  {!comment.responseRevision &&
-                    (displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED') && (
-                    <p className="mb-1 text-xs text-emerald-700">
-                      Resolved
-                      {comment.resolutionNote?.trim()
-                        ? ` - ${comment.resolutionNote.trim()}`
-                        : ''}
-                    </p>
-                  )}
-                  {comment.responseAttachment && (
-                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-                      <span className="min-w-0 truncate">
-                        Designer response: {comment.responseAttachment.name}
-                      </span>
-                      <EdvFileActions
-                        compact
-                        documentVersionId={comment.responseAttachment.documentVersionId}
-                        fileName={comment.responseAttachment.name}
-                      />
-                    </div>
-                  )}
                   {additionalDocs.length > 0 && (
                     <div className="mb-1 flex flex-wrap gap-1">
                       {additionalDocs.map((doc) => (
@@ -407,8 +374,11 @@ export default function ReviewCommentPanel({
                       ))}
                     </div>
                   )}
-                  {(primaryAttachment || additionalFiles.length > 0) && (
-                    <div className="mb-1 space-y-1">
+                  {hasCommentAttachment && (
+                    <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                        Comment attachment
+                      </p>
                       {primaryAttachment && (
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                           <span className="min-w-0 truncate">{primaryAttachment.name}</span>
@@ -419,7 +389,7 @@ export default function ReviewCommentPanel({
                           />
                         </div>
                       )}
-                      {additionalFiles.map((file) => (
+                      {markupFiles.map((file) => (
                         <div
                           key={file.id}
                           className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
@@ -433,6 +403,52 @@ export default function ReviewCommentPanel({
                         </div>
                       ))}
                     </div>
+                  )}
+                  {hasDesignerResponse && (
+                    <div className="mb-2 space-y-1 border-t border-slate-100 pt-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                        Designer response
+                      </p>
+                      {comment.responseAttachment && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                          <span className="min-w-0 truncate">
+                            Revised file: {comment.responseAttachment.name}
+                          </span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={comment.responseAttachment.documentVersionId}
+                            fileName={comment.responseAttachment.name}
+                          />
+                        </div>
+                      )}
+                      {responseFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+                        >
+                          <span className="min-w-0 truncate">{file.fileName}</span>
+                          <EdvFileActions
+                            compact
+                            documentVersionId={file.documentVersionId}
+                            fileName={file.fileName}
+                          />
+                        </div>
+                      ))}
+                      {comment.resolutionNote?.trim() ? (
+                        <p className="text-xs text-slate-500">
+                          {comment.resolutionNote.trim()}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                  {!hasDesignerResponse &&
+                    (displayStatus === 'RESOLVED' || displayStatus === 'VERIFIED') && (
+                    <p className="mb-1 text-xs text-emerald-700">
+                      Resolved
+                      {comment.resolutionNote?.trim()
+                        ? ` - ${comment.resolutionNote.trim()}`
+                        : ''}
+                    </p>
                   )}
                   <p className="text-xs text-slate-500">
                     {comment.commentedOn

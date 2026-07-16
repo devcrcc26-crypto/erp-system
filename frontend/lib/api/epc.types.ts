@@ -369,6 +369,7 @@ export interface ReviewModeComment {
     id: string;
     documentVersionId: string;
     fileName: string;
+    isResponseFile: boolean;
   }[];
 }
 
@@ -398,6 +399,12 @@ export interface ReviewCommentDetail {
   responseRevision: CommentEdvSnapshot | null;
   attachment: ReviewCommentAttachment | null;
   responseAttachment: ReviewCommentAttachment | null;
+  files?: readonly {
+    id: string;
+    documentVersionId: string;
+    fileName: string;
+    isResponseFile: boolean;
+  }[];
 }
 
 export interface ReviewModeView {
@@ -595,7 +602,6 @@ export interface ApproveReviewSessionRequest {
 
 export interface ReturnPackageForReworkCommentInput {
   engineeringDocumentVersionId: string;
-  engineeringDocumentVersionIds?: string[];
   body?: string;
   severity: CommentSeverity;
   commentDocumentVersionId?: string;
@@ -638,6 +644,7 @@ export interface TransitionReviewCommentRequest {
   targetStatus: CommentStatus;
   resolutionNote?: string;
   responseDocumentVersionId?: string;
+  additionalResponseDocumentVersionIds?: string[];
   idempotencyKey?: string;
 }
 

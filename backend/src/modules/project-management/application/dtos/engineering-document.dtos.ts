@@ -205,15 +205,9 @@ export class SubmitPackageForReviewDto {
 }
 
 export class ReturnPackageForReworkCommentDto {
-  @ApiProperty({ format: 'uuid', description: 'Primary document this comment targets' })
+  @ApiProperty({ format: 'uuid', description: 'Document this comment targets' })
   @IsEntityUuid()
   engineeringDocumentVersionId!: string;
-
-  @ApiPropertyOptional({ type: [String], description: 'Additional documents this comment also applies to' })
-  @IsOptional()
-  @IsArray()
-  @IsEntityUuid({ each: true })
-  engineeringDocumentVersionIds?: string[];
 
   @ApiPropertyOptional({ description: 'Text summary when no comment file is attached' })
   @IsOptional()
@@ -320,6 +314,15 @@ export class TransitionReviewCommentDto {
   @IsOptional()
   @IsEntityUuid()
   responseDocumentVersionId?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Additional designer response file versions (beyond primary)',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  additionalResponseDocumentVersionIds?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -264,6 +264,7 @@ export class EpcReviewRepository {
       reviewCommentId: string;
       documentVersionIds: readonly string[];
       createdBy: string;
+      isResponseFile?: boolean;
     },
   ): Promise<void> {
     if (input.documentVersionIds.length === 0) {
@@ -279,6 +280,7 @@ export class EpcReviewRepository {
         reviewCommentId: input.reviewCommentId,
         documentVersionId,
         fileName: nameById.get(documentVersionId) ?? 'Attachment',
+        isResponseFile: input.isResponseFile ?? false,
         createdBy: input.createdBy,
       })),
     });
@@ -317,6 +319,12 @@ export class EpcReviewRepository {
         reviewSession: { id: string; designPackageId: string; status: ReviewSessionStatus };
         commentDocumentVersion: { id: string; document: { id: string; name: string } } | null;
         responseDocumentVersion: { id: string; document: { id: string; name: string } } | null;
+        files: {
+          id: string;
+          documentVersionId: string;
+          fileName: string;
+          isResponseFile: boolean;
+        }[];
       })
     | null
   > {
@@ -349,6 +357,14 @@ export class EpcReviewRepository {
         },
         responseDocumentVersion: {
           select: { id: true, document: { select: { id: true, name: true } } },
+        },
+        files: {
+          select: {
+            id: true,
+            documentVersionId: true,
+            fileName: true,
+            isResponseFile: true,
+          },
         },
       },
     });

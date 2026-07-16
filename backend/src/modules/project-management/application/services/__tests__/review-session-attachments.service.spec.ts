@@ -96,6 +96,7 @@ describe('review-session-attachments', () => {
     service = new ReviewWorkflowService(
       {} as unknown as EpcWorkflowRepository,
       epcReviewRepository as unknown as EpcReviewRepository,
+      {} as never,
       {} as unknown as EdvTransitionService,
       {} as unknown as ConflictGuardService,
       {} as unknown as DefinitionOfDoneService,

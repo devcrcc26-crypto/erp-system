@@ -51,6 +51,7 @@ import {
   EpcWorkflowRepository,
   PrismaTx,
 } from '../../infrastructure/repositories/epc-workflow.repository';
+import { EngineeringDocumentVersionRepository } from '../../infrastructure/repositories/epc-storage.repository';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -82,6 +83,7 @@ export class ReviewWorkflowService {
   constructor(
     private readonly epcWorkflowRepository: EpcWorkflowRepository,
     private readonly epcReviewRepository: EpcReviewRepository,
+    private readonly engineeringDocumentVersionRepository: EngineeringDocumentVersionRepository,
     private readonly edvTransitionService: EdvTransitionService,
     private readonly conflictGuard: ConflictGuardService,
     private readonly definitionOfDone: DefinitionOfDoneService,
@@ -559,7 +561,7 @@ export class ReviewWorkflowService {
           status: to as PrismaCommentStatus,
           updatedBy: command.actorId,
           ...(resolutionNote !== undefined ? { resolutionNote } : {}),
-          ...(to === CommentStatus.RESOLVED
+          ...(to === CommentStatus.RESOLVED || to === CommentStatus.VERIFIED
             ? { assignedToUserId: comment.createdBy }
             : {}),
           ...(to === CommentStatus.RESOLVED && responseDocVersionId
@@ -568,6 +570,54 @@ export class ReviewWorkflowService {
           ...timestamps,
         },
       );
+
+      if (
+        to === CommentStatus.RESOLVED &&
+        command.additionalResponseDocumentVersionIds?.length
+      ) {
+        await this.epcReviewRepository.createReviewCommentFiles(tx, {
+          reviewCommentId: comment.id,
+          documentVersionIds: command.additionalResponseDocumentVersionIds,
+          createdBy: command.actorId,
+          isResponseFile: true,
+        });
+      }
+
+      if (to === CommentStatus.VERIFIED && comment.responseDocumentVersionId) {
+        const responseEdv = await tx.engineeringDocumentVersion.findFirst({
+          where: {
+            companyId: command.companyId,
+            documentVersionId: comment.responseDocumentVersionId,
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+            engineeringDocumentId: true,
+          },
+        });
+
+        if (responseEdv) {
+          await tx.engineeringDocumentVersion.updateMany({
+            where: {
+              companyId: command.companyId,
+              engineeringDocumentId: responseEdv.engineeringDocumentId,
+              id: { not: responseEdv.id },
+              deletedAt: null,
+            },
+            data: { isCurrent: false },
+          });
+          await tx.engineeringDocumentVersion.update({
+            where: { id: responseEdv.id },
+            data: { isCurrent: true },
+          });
+
+          await this.engineeringDocumentVersionRepository.retargetPackageItemsToNewEdv(
+            comment.companyId,
+            [comment.engineeringDocumentVersionId],
+            responseEdv.id,
+          );
+        }
+      }
 
       await this.epcReviewRepository.appendWorkflowIntentEvent(tx, {
         companyId: command.companyId,
@@ -1113,14 +1163,6 @@ export class ReviewWorkflowService {
           assignedToUserId: commentInput.assignedToUserId,
           createdBy: command.actorId,
         });
-
-        if (commentInput.engineeringDocumentVersionIds?.length) {
-          await this.epcReviewRepository.createReviewCommentDocuments(tx, {
-            reviewCommentId: comment.id,
-            engineeringDocumentVersionIds: commentInput.engineeringDocumentVersionIds,
-            createdBy: command.actorId,
-          });
-        }
 
         if (commentInput.commentFileIds?.length) {
           await this.epcReviewRepository.createReviewCommentFiles(tx, {

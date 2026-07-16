@@ -1957,6 +1957,8 @@ model ReviewCommentFile {
   reviewCommentId   String   @map("review_comment_id")
   documentVersionId String   @map("document_version_id")
   fileName          String   @map("file_name")
+  /** false = comment markup from return-for-rework; true = designer response on resolve */
+  isResponseFile    Boolean  @default(false) @map("is_response_file")
   createdAt         DateTime @default(now()) @map("created_at")
   createdBy         String   @map("created_by")
 

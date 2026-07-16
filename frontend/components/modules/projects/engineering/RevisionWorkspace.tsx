@@ -1,7 +1,7 @@
 'use client';
 
-import { Alert, Button, Form, Input, Modal, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Alert, Button, Form, Input, Modal, Tag, Upload } from 'antd';
+import { CloseCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import type { RcFile } from 'antd/es/upload';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import type { MyCommentItem } from '@/lib/api/epc.types';
@@ -21,6 +21,13 @@ interface DocumentWithVersions {
   id: string;
   versions?: { id: string; versionNumber: number }[];
 }
+
+type PendingFile = {
+  uid: string;
+  file: File;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  documentVersionId?: string;
+};
 
 async function resolveLatestDocumentVersionId(
   documentId: string,
@@ -49,7 +56,7 @@ export default function RevisionWorkspace({
   const uploadDocument = useUploadDocumentToFolder();
   const uploadEdvVersion = useUploadEngineeringDocumentVersion();
   const messageApi = useAppMessage();
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
 
   const uploadFolderQuery = useDisciplineUploadFolder(
     comment?.projectId ?? '',
@@ -57,23 +64,40 @@ export default function RevisionWorkspace({
     open && Boolean(comment),
   );
 
-  const uploading = uploadDocument.isPending || uploadEdvVersion.isPending;
+  const uploading = pendingFiles.some((f) => f.status === 'uploading');
   const resolving = transitionComment.isPending;
+  const allUploaded =
+    pendingFiles.length > 0 && pendingFiles.every((f) => f.status === 'done');
+  const canResolve = allUploaded && !uploading && !resolving;
+
+  function updateFile(uid: string, patch: Partial<PendingFile>): void {
+    setPendingFiles((prev) =>
+      prev.map((f) => (f.uid === uid ? { ...f, ...patch } : f)),
+    );
+  }
+
+  function removeFile(uid: string): void {
+    setPendingFiles((prev) => prev.filter((f) => f.uid !== uid));
+  }
 
   function handleClose(): void {
     if (uploading || resolving) {
       return;
     }
-    setPendingFile(null);
+    setPendingFiles([]);
     form.resetFields();
     onClose();
   }
 
-  async function handleUploadRevision(): Promise<void> {
-    if (!comment || !pendingFile) {
-      messageApi.error('Select a file to upload');
+  async function handleUploadRevision(
+    pending: PendingFile,
+    isPrimary: boolean,
+  ): Promise<void> {
+    if (!comment) {
       return;
     }
+
+    updateFile(pending.uid, { status: 'uploading' });
 
     try {
       let folderId = uploadFolderQuery.data?.id;
@@ -82,28 +106,49 @@ export default function RevisionWorkspace({
         folderId = folder.data?.id;
       }
       if (!folderId) {
-        messageApi.error('Document folder could not be prepared for upload');
-        return;
+        throw new Error('Document folder could not be prepared for upload');
       }
 
       const uploaded = await uploadDocument.mutateAsync({
         folderId,
-        file: pendingFile,
+        file: pending.file,
       });
       const documentVersionId = await resolveLatestDocumentVersionId(uploaded.id);
 
-      await uploadEdvVersion.mutateAsync({
-        projectId: comment.projectId,
-        taskDisciplineId: comment.taskDisciplineId,
-        engineeringDocumentId: comment.engineeringDocumentId,
-        body: { documentVersionId },
-      });
+      if (isPrimary) {
+        await uploadEdvVersion.mutateAsync({
+          projectId: comment.projectId,
+          taskDisciplineId: comment.taskDisciplineId,
+          engineeringDocumentId: comment.engineeringDocumentId,
+          body: { documentVersionId },
+        });
+      }
 
-      messageApi.success('New revision uploaded');
-      setPendingFile(null);
+      updateFile(pending.uid, { status: 'done', documentVersionId });
+      messageApi.success(
+        isPrimary ? 'Revised file uploaded' : 'Additional file uploaded',
+      );
     } catch (error) {
+      updateFile(pending.uid, { status: 'error' });
       notifyApiError(error, 'Failed to upload revision', messageApi);
     }
+  }
+
+  function handleAddFile(file: RcFile): boolean {
+    const uid = crypto.randomUUID();
+    const pending: PendingFile = {
+      uid,
+      file,
+      status: 'pending',
+    };
+
+    setPendingFiles((prev) => {
+      const isPrimary = prev.length === 0;
+      void handleUploadRevision(pending, isPrimary);
+      return [...prev, pending];
+    });
+
+    return false;
   }
 
   async function handleResolve(values: { resolutionNote: string }): Promise<void> {
@@ -114,6 +159,10 @@ export default function RevisionWorkspace({
       messageApi.warning('Start the comment before marking it resolved.');
       return;
     }
+    if (!allUploaded) {
+      messageApi.error('Upload all revised files before resolving');
+      return;
+    }
 
     try {
       await transitionComment.mutateAsync({
@@ -121,6 +170,10 @@ export default function RevisionWorkspace({
         body: {
           targetStatus: 'RESOLVED',
           resolutionNote: values.resolutionNote.trim() || undefined,
+          additionalResponseDocumentVersionIds: pendingFiles
+            .slice(1)
+            .filter((f) => f.status === 'done' && Boolean(f.documentVersionId))
+            .map((f) => f.documentVersionId as string),
         },
       });
 
@@ -128,10 +181,23 @@ export default function RevisionWorkspace({
         'Comment marked resolved. When all comments are resolved, the package returns to the reviewer inbox.',
       );
       form.resetFields();
-      setPendingFile(null);
+      setPendingFiles([]);
       onResolved();
     } catch (error) {
       notifyApiError(error, 'Request failed', messageApi);
+    }
+  }
+
+  function statusLabel(status: PendingFile['status']): string {
+    switch (status) {
+      case 'uploading':
+        return 'Uploading…';
+      case 'done':
+        return 'Done';
+      case 'error':
+        return 'Failed';
+      default:
+        return 'Pending';
     }
   }
 
@@ -174,39 +240,57 @@ export default function RevisionWorkspace({
 
           <div className="flex flex-col gap-2">
             <p className="text-[13px] font-medium text-slate-900">
-              1. Upload revised file
+              1. Upload revised file(s)
             </p>
             <p className="text-xs text-slate-500">
-              Attach the updated drawing or document, then upload it as a new
-              revision before marking the comment resolved.
+              Attach one or more updated drawings or documents. The first file
+              becomes the primary revision; additional files are stored with the
+              response. Upload starts automatically on select.
             </p>
             <Upload
-              maxCount={1}
-              disabled={uploading || resolving}
-              beforeUpload={(file: RcFile) => {
-                setPendingFile(file);
-                return false;
-              }}
-              onRemove={() => setPendingFile(null)}
-              fileList={
-                pendingFile
-                  ? [{ uid: 'revision', name: pendingFile.name, status: 'done' }]
-                  : []
-              }
+              multiple
+              showUploadList={false}
+              disabled={resolving}
+              beforeUpload={(file: RcFile) => handleAddFile(file)}
               accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.dwg"
             >
-              <Button icon={<UploadOutlined />} disabled={uploading || resolving}>
-                Select revised file
+              <Button icon={<UploadOutlined />} disabled={resolving}>
+                + Add revised file
               </Button>
             </Upload>
-            <Button
-              type="default"
-              loading={uploading}
-              disabled={!pendingFile || resolving}
-              onClick={() => void handleUploadRevision()}
-            >
-              Upload new revision
-            </Button>
+            {pendingFiles.length > 0 && (
+              <ul className="mt-2 space-y-2">
+                {pendingFiles.map((f) => (
+                  <li
+                    key={f.uid}
+                    className="flex items-center justify-between gap-2 text-sm text-slate-700"
+                  >
+                    <span className="min-w-0 truncate">{f.file.name}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Tag
+                        color={
+                          f.status === 'done'
+                            ? 'success'
+                            : f.status === 'error'
+                              ? 'error'
+                              : f.status === 'uploading'
+                                ? 'processing'
+                                : 'default'
+                        }
+                      >
+                        {statusLabel(f.status)}
+                      </Tag>
+                      {(f.status === 'pending' || f.status === 'error') && (
+                        <CloseCircleOutlined
+                          className="cursor-pointer text-slate-400 hover:text-red-500"
+                          onClick={() => removeFile(f.uid)}
+                        />
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 border-t border-slate-200 pt-4">
@@ -247,7 +331,7 @@ export default function RevisionWorkspace({
                 <Button
                   type="primary"
                   loading={resolving}
-                  disabled={uploading}
+                  disabled={!canResolve}
                   onClick={() => form.submit()}
                 >
                   Mark resolved

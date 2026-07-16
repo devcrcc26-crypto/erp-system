@@ -155,6 +155,7 @@ export interface ReviewModeView {
       id: string;
       documentVersionId: string;
       fileName: string;
+      isResponseFile: boolean;
     }[];
   }[];
   /** Status-only comments from the most recent RETURNED_FOR_REWORK session (when no ACTIVE session). */
@@ -771,6 +772,7 @@ export class EpcWorkspaceService {
               id: true,
               documentVersionId: true,
               fileName: true,
+              isResponseFile: true,
             },
           },
           commentDocumentVersion: {
@@ -1021,6 +1023,7 @@ export class EpcWorkspaceService {
             id: f.id,
             documentVersionId: f.documentVersionId,
             fileName: f.fileName,
+            isResponseFile: f.isResponseFile,
           })),
         };
       }),
