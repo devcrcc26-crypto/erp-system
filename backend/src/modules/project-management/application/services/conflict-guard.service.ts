@@ -176,11 +176,21 @@ export class ConflictGuardService {
 
   /**
    * Blocks new revision upload when document is in active review.
+   * Allows uploads when the package is RETURNED_FOR_REWORK (designer rework path).
    */
   async assertNoActiveSessionForEngineeringDocument(
     companyId: string,
     engineeringDocumentId: string,
   ): Promise<void> {
+    const returned =
+      await this.epcReviewRepository.findReturnedSessionForEngineeringDocument(
+        companyId,
+        engineeringDocumentId,
+      );
+    if (returned) {
+      return;
+    }
+
     const active =
       await this.epcReviewRepository.findActiveSessionForEngineeringDocument(
         companyId,

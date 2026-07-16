@@ -111,6 +111,37 @@ export class EpcReviewRepository {
     return null;
   }
 
+  /**
+   * Finds a RETURNED_FOR_REWORK session covering any version of this document
+   * (designer is expected to upload revisions while the package is returned).
+   */
+  async findReturnedSessionForEngineeringDocument(
+    companyId: string,
+    engineeringDocumentId: string,
+  ): Promise<ReviewSession | null> {
+    const versions = await this.prisma.engineeringDocumentVersion.findMany({
+      where: activeOnly({ companyId, engineeringDocumentId }),
+      select: { id: true },
+    });
+
+    for (const version of versions) {
+      const session = await this.prisma.reviewSession.findFirst({
+        where: activeOnly({
+          companyId,
+          status: ReviewSessionStatus.RETURNED_FOR_REWORK,
+          designPackage: {
+            items: { some: { engineeringDocumentVersionId: version.id } },
+          },
+        }),
+      });
+      if (session) {
+        return session;
+      }
+    }
+
+    return null;
+  }
+
   async createReviewSession(
     tx: PrismaTx,
     input: {

@@ -31,6 +31,7 @@ import type {
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
 import { engineeringDocumentsPath } from '@/lib/query/epc-query-utils';
 import { epcWorkspaceKeys } from '@/lib/query/epc-workspace';
+import { designPackageKeys } from '@/lib/query/design-packages';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
@@ -351,7 +352,19 @@ export function useUploadEngineeringDocumentVersion() {
         ),
       });
       void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.lists(
+          variables.projectId,
+          variables.taskDisciplineId,
+        ),
+      });
+      void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.versionHistory(variables.engineeringDocumentId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: designPackageKeys.all,
       });
     },
   });

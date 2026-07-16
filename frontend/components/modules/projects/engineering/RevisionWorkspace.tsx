@@ -27,6 +27,8 @@ type PendingFile = {
   file: File;
   status: 'pending' | 'uploading' | 'done' | 'error';
   documentVersionId?: string;
+  /** True when this file created (or is creating) the primary engineering revision. */
+  createdEdv?: boolean;
 };
 
 async function resolveLatestDocumentVersionId(
@@ -68,7 +70,8 @@ export default function RevisionWorkspace({
   const resolving = transitionComment.isPending;
   const allUploaded =
     pendingFiles.length > 0 && pendingFiles.every((f) => f.status === 'done');
-  const canResolve = allUploaded && !uploading && !resolving;
+  const hasPrimaryEdv = pendingFiles.some((f) => f.status === 'done' && f.createdEdv);
+  const canResolve = allUploaded && hasPrimaryEdv && !uploading && !resolving;
 
   function updateFile(uid: string, patch: Partial<PendingFile>): void {
     setPendingFiles((prev) =>
@@ -91,7 +94,7 @@ export default function RevisionWorkspace({
 
   async function handleUploadRevision(
     pending: PendingFile,
-    isPrimary: boolean,
+    createEdv: boolean,
   ): Promise<void> {
     if (!comment) {
       return;
@@ -115,7 +118,7 @@ export default function RevisionWorkspace({
       });
       const documentVersionId = await resolveLatestDocumentVersionId(uploaded.id);
 
-      if (isPrimary) {
+      if (createEdv) {
         await uploadEdvVersion.mutateAsync({
           projectId: comment.projectId,
           taskDisciplineId: comment.taskDisciplineId,
@@ -124,27 +127,37 @@ export default function RevisionWorkspace({
         });
       }
 
-      updateFile(pending.uid, { status: 'done', documentVersionId });
+      updateFile(pending.uid, {
+        status: 'done',
+        documentVersionId,
+        createdEdv: createEdv,
+      });
       messageApi.success(
-        isPrimary ? 'Revised file uploaded' : 'Additional file uploaded',
+        createEdv ? 'Revised file uploaded' : 'Additional file uploaded',
       );
     } catch (error) {
-      updateFile(pending.uid, { status: 'error' });
+      updateFile(pending.uid, { status: 'error', createdEdv: false });
       notifyApiError(error, 'Failed to upload revision', messageApi);
     }
   }
 
   function handleAddFile(file: RcFile): boolean {
     const uid = crypto.randomUUID();
-    const pending: PendingFile = {
-      uid,
-      file,
-      status: 'pending',
-    };
 
     setPendingFiles((prev) => {
-      const isPrimary = prev.length === 0;
-      void handleUploadRevision(pending, isPrimary);
+      const hasPrimaryEdv = prev.some(
+        (f) =>
+          f.createdEdv === true &&
+          (f.status === 'done' || f.status === 'uploading' || f.status === 'pending'),
+      );
+      const createEdv = !hasPrimaryEdv;
+      const pending: PendingFile = {
+        uid,
+        file,
+        status: 'pending',
+        createdEdv: createEdv,
+      };
+      void handleUploadRevision(pending, createEdv);
       return [...prev, pending];
     });
 
@@ -163,11 +176,26 @@ export default function RevisionWorkspace({
       messageApi.error('Upload all revised files before resolving');
       return;
     }
+    if (!hasPrimaryEdv) {
+      messageApi.error(
+        'Upload a primary revised file for this document before resolving',
+      );
+      return;
+    }
 
     try {
       const primaryVersionId = pendingFiles.find(
-        (f) => f.status === 'done' && Boolean(f.documentVersionId),
+        (f) => f.status === 'done' && f.createdEdv && Boolean(f.documentVersionId),
       )?.documentVersionId;
+
+      const additionalIds = pendingFiles
+        .filter(
+          (f) =>
+            f.status === 'done' &&
+            !f.createdEdv &&
+            Boolean(f.documentVersionId),
+        )
+        .map((f) => f.documentVersionId as string);
 
       await transitionComment.mutateAsync({
         commentId: comment.commentId,
@@ -175,10 +203,7 @@ export default function RevisionWorkspace({
           targetStatus: 'RESOLVED',
           resolutionNote: values.resolutionNote.trim() || undefined,
           responseDocumentVersionId: primaryVersionId,
-          additionalResponseDocumentVersionIds: pendingFiles
-            .slice(1)
-            .filter((f) => f.status === 'done' && Boolean(f.documentVersionId))
-            .map((f) => f.documentVersionId as string),
+          additionalResponseDocumentVersionIds: additionalIds,
         },
       });
 

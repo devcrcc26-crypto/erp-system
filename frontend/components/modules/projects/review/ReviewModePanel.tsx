@@ -110,11 +110,14 @@ export default function ReviewModePanel({
   const snapshotContentHash =
     contextSnapshotQuery.data?.contentHash ?? reviewMode?.contentHash ?? null;
   const packageEdvIds = useMemo(() => {
-    const fromPackage = (packageQuery.data?.items ?? []).map(
+    // Prefer review-mode IDs (already resolved to isCurrent drafts after rework).
+    const fromReviewMode = reviewMode?.packageEdvIds ?? [];
+    if (fromReviewMode.length > 0) {
+      return [...fromReviewMode];
+    }
+    return (packageQuery.data?.items ?? []).map(
       (item) => item.engineeringDocumentVersionId,
     );
-    const fromReviewMode = reviewMode?.packageEdvIds ?? [];
-    return [...new Set([...fromPackage, ...fromReviewMode])];
   }, [packageQuery.data?.items, reviewMode?.packageEdvIds]);
 
   const edvMap = useMemo(() => {
@@ -190,7 +193,13 @@ export default function ReviewModePanel({
         pinned.doc.versions?.[0],
       );
 
-      const displayEdvId = latestVersion?.id ?? packageEdvId;
+      // Prefer the package/review-mode EDV when it is already the newest;
+      // otherwise surface the newest uploaded revision for download/display.
+      const displayEdvId =
+        latestVersion &&
+        new Date(latestVersion.createdAt) > new Date(pinned.createdAt)
+          ? latestVersion.id
+          : packageEdvId;
       const displayInfo = edvMap.get(displayEdvId) ?? pinned;
 
       return [
