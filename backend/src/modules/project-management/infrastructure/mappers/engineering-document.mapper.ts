@@ -187,10 +187,23 @@ export function mapEngineeringDocument(
   };
 }
 
-type DesignPackageItemWithEdv = DesignPackageItem & {
-  engineeringDocumentVersion?: EngineeringDocumentVersionWithFile & {
-    engineeringDocument?: { id: string; title: string } | null;
+/** Partial EDV payload accepted by package item mapping (full include or close-path select). */
+type DesignPackageItemEdvPayload = {
+  id?: string;
+  status?: EngineeringDocumentVersion['status'];
+  revisionLabel?: string;
+  documentVersionId?: string;
+  engineeringDocumentId?: string;
+  isCurrent?: boolean;
+  engineeringDocument?: { id?: string; title: string } | null;
+  documentVersion?: {
+    versionNumber: number;
+    document?: { name: string } | null;
   } | null;
+};
+
+type DesignPackageItemWithEdv = DesignPackageItem & {
+  engineeringDocumentVersion?: DesignPackageItemEdvPayload | null;
 };
 
 export function mapDesignPackageItem(
