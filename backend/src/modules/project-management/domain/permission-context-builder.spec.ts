@@ -84,7 +84,21 @@ describe('permission-context-builder', () => {
       expect(result.verdict).toBe(PermissionLayerVerdict.DENY);
     });
 
-    it('ALLOW lock for discipline chief', () => {
+    it('ALLOW lock for discipline leader', () => {
+      const result = evaluateDisciplineAssignmentLayer(
+        baseContext({
+          action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
+          userId: 'lead-1',
+          grantedActions: new Set([
+            EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
+          ]),
+          edvStatus: EdvStatus.APPROVED,
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    });
+
+    it('DENY lock for discipline chief', () => {
       const result = evaluateDisciplineAssignmentLayer(
         baseContext({
           action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
@@ -95,7 +109,7 @@ describe('permission-context-builder', () => {
           edvStatus: EdvStatus.APPROVED,
         }),
       );
-      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+      expect(result.verdict).toBe(PermissionLayerVerdict.DENY);
     });
 
     it('ALLOW review tier for task discipline lead when subtask lead reassigned', () => {
@@ -132,7 +146,7 @@ describe('permission-context-builder', () => {
       const result = evaluateWorkflowStateLayer(
         baseContext({
           action: EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
-          userId: 'chief-1',
+          userId: 'lead-1',
           edvStatus: EdvStatus.IN_REVIEW,
           grantedActions: new Set([
             EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,

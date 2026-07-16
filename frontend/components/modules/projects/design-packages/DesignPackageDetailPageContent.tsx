@@ -220,9 +220,8 @@ export default function DesignPackageDetailPageContent({
     hasElevatedAccess,
   );
   const disciplineLabel = resolveDisciplineDisplayLabel(discipline);
-  const isDeptDeputyChief =
-    Boolean(currentUserId) &&
-    (pkg.deptDeputyChiefUserId ?? discipline.chiefUserId) === currentUserId;
+  const canLockPackageEdvs =
+    isDisciplineLeader || packageLens.isPackageDisciplineLeader;
   const canClosePackage =
     isDisciplineLeader &&
     pkg.projectedStatus === 'LOCKED' &&
@@ -377,7 +376,7 @@ export default function DesignPackageDetailPageContent({
                 Approve all EDVs
               </Button>
             )}
-            {isDeptDeputyChief && (
+            {canLockPackageEdvs && (
               <Button
                 loading={lockEdvs.isPending}
                 disabled={!lockGuidance.eligible}
@@ -386,7 +385,7 @@ export default function DesignPackageDetailPageContent({
                 Lock EDVs
               </Button>
             )}
-            {isDeptDeputyChief && (
+            {canLockPackageEdvs && (
               <Button
                 loading={batchLock.isPending}
                 disabled={!lockGuidance.eligible}
@@ -480,7 +479,7 @@ export default function DesignPackageDetailPageContent({
           </div>
         )}
 
-        {isDeptDeputyChief && !lockGuidance.eligible && lockGuidance.reason && (
+        {canLockPackageEdvs && !lockGuidance.eligible && lockGuidance.reason && (
           <div className="mb-4">
             <Alert
               type="info"

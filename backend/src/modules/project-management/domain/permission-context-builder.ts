@@ -184,7 +184,8 @@ const REVIEW_TIER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
 ]);
 
-const CHIEF_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
+/** Discipline leader locks EDVs after the approval chain completes. */
+const DISCIPLINE_LEAD_LOCK_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
 ]);
 
@@ -302,13 +303,13 @@ export function evaluateDisciplineAssignmentLayer(
     };
   }
 
-  if (CHIEF_ACTIONS.has(action)) {
+  if (DISCIPLINE_LEAD_LOCK_ACTIONS.has(action)) {
     const chain = resolveEffectiveChain(input);
-    const match = userMatchesChief(userId, chain, input);
+    const match = userMatchesDisciplineLead(userId, chain, input);
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
-      reason: match ? undefined : 'User is not discipline chief',
+      reason: match ? undefined : 'User is not the discipline leader',
     };
   }
 

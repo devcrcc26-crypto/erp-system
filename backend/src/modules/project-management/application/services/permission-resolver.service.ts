@@ -278,6 +278,8 @@ export class PermissionResolverService {
     granted.add(EpcWorkflowAction.REVIEW_SESSION_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_APPROVE);
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
+    // Discipline leader — Layer 3 enforces matching assignment
+    granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
   }
 
   private grantReviewApprovalActions(
