@@ -561,9 +561,6 @@ export class ReviewWorkflowService {
           status: to as PrismaCommentStatus,
           updatedBy: command.actorId,
           ...(resolutionNote !== undefined ? { resolutionNote } : {}),
-          ...(to === CommentStatus.RESOLVED || to === CommentStatus.VERIFIED
-            ? { assignedToUserId: comment.createdBy }
-            : {}),
           ...(to === CommentStatus.RESOLVED && responseDocVersionId
             ? { responseDocumentVersionId: responseDocVersionId }
             : {}),
@@ -2013,8 +2010,8 @@ export class ReviewWorkflowService {
 
   /**
    * Resolves whether the actor should apply designer or reviewer comment transitions.
-   * After RESOLVED, assignee flips to the comment author — they must still act as reviewer
-   * when verifying, not as designer.
+   * Assignee stays the designer (directed-to); authors/governance tiers verify as reviewers
+   * via createdBy / approval-chain match — not via assignee flip.
    */
   private resolveCommentActor(
     userId: string,
@@ -2040,7 +2037,7 @@ export class ReviewWorkflowService {
       effectiveChain?.instituteChiefUserId === userId;
 
     // Prefer reviewer identity for verify, and whenever the actor is the author
-    // or a governance-tier holder (assignee may have flipped back to the author).
+    // or a governance-tier holder.
     if (
       isReviewChain &&
       (targetStatus === CommentStatus.VERIFIED || comment.createdBy === userId)

@@ -280,7 +280,7 @@ export default function ReviewCommentPanel({
 
       <FormLayout
         title="Session comments"
-        description="All comments remain visible with their status until verified and closed."
+        description="Comments from your review tier on this session."
       >
         <div className="space-y-3">
           {(reviewMode?.comments ?? []).length === 0 ? (

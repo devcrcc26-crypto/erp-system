@@ -446,8 +446,12 @@ export class EpcWorkspaceService {
       const project = discipline.task.project;
       const designPackage = row.reviewSession.designPackage;
 
+      const isDirectedToMe =
+        row.assignedToUserId === ctx.userId && row.createdBy !== ctx.userId;
       const commentInboxStatus: MyCommentItem['commentInboxStatus'] =
-        row.status === CommentStatus.VERIFIED || row.status === CommentStatus.CLOSED
+        row.status === CommentStatus.VERIFIED ||
+        row.status === CommentStatus.CLOSED ||
+        (isDirectedToMe && row.status === CommentStatus.RESOLVED)
           ? 'COMPLETED'
           : 'PENDING';
 
@@ -694,6 +698,9 @@ export class EpcWorkspaceService {
       pkg.taskDiscipline?.task.supervisingChiefUserId === ctx.userId;
     const seesAllSessions =
       isFullAccess || isDesigner || isDisciplineLeader || isResponsiblePerson;
+    // Approvers only see comments they authored, were assigned, or raised at their
+    // tier / this session's current tier. Designers and full-access roles see all.
+    const seesAllComments = isFullAccess || isDesigner;
 
     const tierRoleHolder: Partial<Record<ReviewTier, string | null>> = {
       [ReviewTier.REVIEWER]: pkg.reviewerUserId,
@@ -916,13 +923,23 @@ export class EpcWorkspaceService {
           },
         },
       });
-      lastReturnedSessionComments = lastReturned?.comments ?? [];
+      const returnedCommentsRaw = lastReturned?.comments ?? [];
+      const returnedCommentsVisible = seesAllComments
+        ? returnedCommentsRaw
+        : returnedCommentsRaw.filter(
+            (c) =>
+              userTiers.includes(c.reviewTier as ReviewTier) ||
+              (lastReturned != null && c.reviewTier === lastReturned.currentTier),
+          );
+      lastReturnedSessionComments = returnedCommentsVisible.map((c) => ({
+        status: c.status,
+      }));
       if (lastReturned) {
         lastReturnedSession = {
           closedReason: lastReturned.closedReason,
           closedAt: lastReturned.closedAt?.toISOString() ?? null,
           returnedByTier: lastReturned.currentTier,
-          comments: lastReturned.comments.map((c) => ({
+          comments: returnedCommentsVisible.map((c) => ({
             body: c.body,
             reviewTier: c.reviewTier,
             authorName: formatReviewerName(c.author),
@@ -948,7 +965,18 @@ export class EpcWorkspaceService {
     const currentVersionMap = new Map(
       currentVersions.map((v) => [v.engineeringDocumentId, v.id]),
     );
-    const sessionComments = session?.comments ?? [];
+    // Approvers only see comments they authored, were assigned, or raised at their
+    // tier / this session's current tier. Designers and full-access roles see all.
+    const sessionCommentsRaw = session?.comments ?? [];
+    const sessionComments = seesAllComments
+      ? sessionCommentsRaw
+      : sessionCommentsRaw.filter(
+          (c) =>
+            c.createdBy === ctx.userId ||
+            c.assignedToUserId === ctx.userId ||
+            (session != null && c.reviewTier === session.currentTier) ||
+            userTiers.includes(c.reviewTier as ReviewTier),
+        );
     const revisionContexts = await resolveCommentRevisionContexts(
       this.prisma,
       ctx.companyId,

@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Form, Input, Modal, Select, Space } from 'antd';
-import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Modal, Space, Upload } from 'antd';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import {
@@ -10,7 +10,8 @@ import {
   useSessionAttachments,
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
-import { useProjectDocuments } from '@/lib/query/documents';
+import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import type { ReviewTier } from '@/lib/api/project-management.types';
 import type { ReviewSessionAttachment } from '@/lib/api/project-management.types';
 import { useAuthStore } from '@/stores/auth.store';
@@ -125,8 +126,8 @@ export default function ReviewSessionAttachmentsSection({
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [addOpen, setAddOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [form] = Form.useForm<{
-    documentId: string;
     purpose?: string;
     note?: string;
   }>();
@@ -138,11 +139,12 @@ export default function ReviewSessionAttachmentsSection({
     packageId,
     reviewSessionId,
   );
-  const documentsQuery = useProjectDocuments(
+  const uploadFolderQuery = useDisciplineUploadFolder(
     projectId,
-    { page: 1, limit: 100, taskDisciplineId },
+    taskDisciplineId,
     addOpen,
   );
+  const uploadDocument = useUploadDocumentToFolder();
   const addAttachment = useAddSessionAttachment(
     projectId,
     taskDisciplineId,
@@ -173,15 +175,6 @@ export default function ReviewSessionAttachmentsSection({
     return map;
   }, [attachmentsQuery.data, requiredTiers]);
 
-  const documentOptions = useMemo(
-    () =>
-      (documentsQuery.data?.data ?? []).map((doc) => ({
-        value: doc.id,
-        label: doc.name,
-      })),
-    [documentsQuery.data],
-  );
-
   const visibleTiers = useMemo(() => {
     const tiers = new Set(orderedRequiredTiers(requiredTiers));
     for (const attachment of attachmentsQuery.data ?? []) {
@@ -189,6 +182,53 @@ export default function ReviewSessionAttachmentsSection({
     }
     return REVIEW_TIER_ORDER.filter((tier) => tiers.has(tier));
   }, [attachmentsQuery.data, requiredTiers]);
+
+  const submitting = uploadDocument.isPending || addAttachment.isPending;
+
+  function resetAddModal(): void {
+    setAddOpen(false);
+    setPendingFile(null);
+    form.resetFields();
+  }
+
+  async function handleSubmit(values: {
+    purpose?: string;
+    note?: string;
+  }): Promise<void> {
+    if (!pendingFile) {
+      messageApi.error('Select a file to upload');
+      return;
+    }
+
+    try {
+      let folderId = uploadFolderQuery.data?.id;
+      if (!folderId) {
+        const folder = await uploadFolderQuery.refetch();
+        folderId = folder.data?.id;
+      }
+      if (!folderId) {
+        messageApi.error('Upload folder is not ready');
+        return;
+      }
+
+      const uploaded = await uploadDocument.mutateAsync({
+        folderId,
+        file: pendingFile,
+      });
+
+      await addAttachment.mutateAsync({
+        documentId: uploaded.id,
+        purpose: values.purpose?.trim() || undefined,
+        note: values.note?.trim() || undefined,
+      });
+
+      messageApi.success('Attachment added');
+      resetAddModal();
+      void attachmentsQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to add attachment', messageApi);
+    }
+  }
 
   return (
     <FormLayout
@@ -225,44 +265,38 @@ export default function ReviewSessionAttachmentsSection({
       <Modal
         title="Add review attachment"
         open={addOpen}
-        onCancel={() => {
-          setAddOpen(false);
-          form.resetFields();
-        }}
+        onCancel={resetAddModal}
         footer={null}
         destroyOnHidden
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={async (values) => {
-            try {
-              await addAttachment.mutateAsync({
-                documentId: values.documentId,
-                purpose: values.purpose?.trim() || undefined,
-                note: values.note?.trim() || undefined,
-              });
-              messageApi.success('Attachment added');
-              form.resetFields();
-              setAddOpen(false);
-              void attachmentsQuery.refetch();
-            } catch (error) {
-              notifyApiError(error, 'Failed to add attachment', messageApi);
-            }
-          }}
-        >
-          <Form.Item
-            label="Document"
-            name="documentId"
-            rules={[{ required: true, message: 'Select a document' }]}
-          >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="Select project document"
-              options={documentOptions}
-              loading={documentsQuery.isLoading}
-            />
+        <Form form={form} layout="vertical" onFinish={(values) => void handleSubmit(values)}>
+          <Form.Item label="File" required>
+            <Upload
+              maxCount={1}
+              showUploadList={false}
+              disabled={submitting}
+              beforeUpload={(file: File) => {
+                setPendingFile(file);
+                return false;
+              }}
+              onRemove={() => setPendingFile(null)}
+              fileList={
+                pendingFile
+                  ? [{ uid: 'attachment', name: pendingFile.name, status: 'done' }]
+                  : []
+              }
+            >
+              <Button icon={<UploadOutlined />} disabled={submitting}>
+                {pendingFile ? 'Replace file' : 'Select file'}
+              </Button>
+            </Upload>
+            {pendingFile ? (
+              <p className="mt-2 text-sm text-slate-600">{pendingFile.name}</p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">
+                Upload a file from your computer (not an existing project document).
+              </p>
+            )}
           </Form.Item>
           <Form.Item label="Purpose" name="purpose">
             <Input placeholder="e.g. Markup, Reference" />
@@ -271,15 +305,15 @@ export default function ReviewSessionAttachmentsSection({
             <Input.TextArea rows={2} placeholder="Optional note" />
           </Form.Item>
           <Space>
-            <Button
-              onClick={() => {
-                setAddOpen(false);
-                form.resetFields();
-              }}
-            >
+            <Button onClick={resetAddModal} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="primary" htmlType="submit" loading={addAttachment.isPending}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={submitting}
+              disabled={!pendingFile}
+            >
               Add attachment
             </Button>
           </Space>
