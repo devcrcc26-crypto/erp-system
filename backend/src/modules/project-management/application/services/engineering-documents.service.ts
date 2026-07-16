@@ -219,20 +219,58 @@ export class EngineeringDocumentsService {
         engineeringDocumentId,
       );
 
-    // Return-for-rework reverts IN_REVIEW → DRAFT on the same EDV. Designer must
-    // be allowed to supersede that returned draft and create a new revision.
+    // Return-for-rework reverts IN_REVIEW → DRAFT on the same EDV. Creating a
+    // second draft via TransitionEdvStatus requires revision.trigger (primary
+    // designer only) and fails for package/supporting designers. Replace the
+    // returned draft's file instead — same permission model as upload itself.
     const isReworkUpload = await this.conflictGuard.isReturnedForRework(
       ctx.companyId,
       engineeringDocumentId,
     );
 
-    if (!isReworkUpload) {
-      const lockstep = validateNewRevisionUpload({
-        existingEdvStatuses: existingVersions.map((v) => v.status as DomainEdvStatus),
-      });
-      if (!lockstep.allowed) {
-        throw new BadRequestException(lockstep.message);
+    if (isReworkUpload) {
+      const returnedDraft =
+        existingVersions.find(
+          (v) => v.status === EdvStatus.DRAFT && v.isCurrent,
+        ) ?? existingVersions.find((v) => v.status === EdvStatus.DRAFT);
+
+      if (returnedDraft) {
+        const previousDocumentVersionId = returnedDraft.documentVersionId;
+        const row = await this.engineeringDocumentVersionRepository.update(
+          returnedDraft.id,
+          {
+            documentVersion: { connect: { id: dto.documentVersionId } },
+            updatedBy: ctx.userId,
+          },
+        );
+
+        await this.engineeringDocumentVersionRepository.retargetPackageItemsToNewEdv(
+          ctx.companyId,
+          existingVersions
+            .filter((prior) => prior.id !== returnedDraft.id)
+            .filter((prior) => prior.status !== EdvStatus.LOCKED)
+            .map((prior) => prior.id),
+          returnedDraft.id,
+        );
+
+        await this.workflowEventLogService.logCrud(
+          ctx,
+          WorkflowEntityType.EngineeringDocumentVersion,
+          returnedDraft.id,
+          'VERSION_FILE_REPLACED',
+          { documentVersionId: previousDocumentVersionId },
+          { documentVersionId: dto.documentVersionId, reason: 'rework_upload' },
+        );
+
+        return mapEngineeringDocumentVersion(row);
       }
+    }
+
+    const lockstep = validateNewRevisionUpload({
+      existingEdvStatuses: existingVersions.map((v) => v.status as DomainEdvStatus),
+    });
+    if (!lockstep.allowed) {
+      throw new BadRequestException(lockstep.message);
     }
 
     for (const prior of existingVersions) {
@@ -246,9 +284,7 @@ export class EngineeringDocumentsService {
           actorId: ctx.userId,
           engineeringDocumentVersionId: prior.id,
           targetStatus: DomainEdvStatus.SUPERSEDED,
-          reason: isReworkUpload
-            ? 'Superseded by designer rework revision upload'
-            : 'Superseded by new revision upload',
+          reason: 'Superseded by new revision upload',
         });
       }
     }
