@@ -219,11 +219,20 @@ export class EngineeringDocumentsService {
         engineeringDocumentId,
       );
 
-    const lockstep = validateNewRevisionUpload({
-      existingEdvStatuses: existingVersions.map((v) => v.status as DomainEdvStatus),
-    });
-    if (!lockstep.allowed) {
-      throw new BadRequestException(lockstep.message);
+    // Return-for-rework reverts IN_REVIEW → DRAFT on the same EDV. Designer must
+    // be allowed to supersede that returned draft and create a new revision.
+    const isReworkUpload = await this.conflictGuard.isReturnedForRework(
+      ctx.companyId,
+      engineeringDocumentId,
+    );
+
+    if (!isReworkUpload) {
+      const lockstep = validateNewRevisionUpload({
+        existingEdvStatuses: existingVersions.map((v) => v.status as DomainEdvStatus),
+      });
+      if (!lockstep.allowed) {
+        throw new BadRequestException(lockstep.message);
+      }
     }
 
     for (const prior of existingVersions) {
@@ -237,7 +246,9 @@ export class EngineeringDocumentsService {
           actorId: ctx.userId,
           engineeringDocumentVersionId: prior.id,
           targetStatus: DomainEdvStatus.SUPERSEDED,
-          reason: 'Superseded by new revision upload',
+          reason: isReworkUpload
+            ? 'Superseded by designer rework revision upload'
+            : 'Superseded by new revision upload',
         });
       }
     }

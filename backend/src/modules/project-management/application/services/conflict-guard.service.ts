@@ -204,6 +204,22 @@ export class ConflictGuardService {
   }
 
   /**
+   * True when the document's package is RETURNED_FOR_REWORK — designer may
+   * supersede the returned DRAFT and upload a replacement revision.
+   */
+  async isReturnedForRework(
+    companyId: string,
+    engineeringDocumentId: string,
+  ): Promise<boolean> {
+    const returned =
+      await this.epcReviewRepository.findReturnedSessionForEngineeringDocument(
+        companyId,
+        engineeringDocumentId,
+      );
+    return Boolean(returned);
+  }
+
+  /**
    * Ensures all EDVs exist and match expected count for batch operations.
    */
   assertBatchEdvsResolved(
