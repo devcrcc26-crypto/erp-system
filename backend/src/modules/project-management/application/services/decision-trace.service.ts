@@ -6,7 +6,6 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
-import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { PmContext } from '../types/pm-context.type';
 import { loadUserDisplayNameMap } from '../utils/pm-user-names.util';
 
@@ -44,6 +43,12 @@ const EXTERNAL_ACTION_PREFIXES = [
   'TRIGGER_REVISION',
 ] as const;
 
+const TRACE_PHASES: readonly WorkflowEventPhase[] = [
+  WorkflowEventPhase.INTENT,
+  WorkflowEventPhase.COMMITTED,
+  WorkflowEventPhase.CORRECTION,
+];
+
 /**
  * Event-log query builder for DecisionTraceView lineage.
  */
@@ -52,7 +57,8 @@ export class DecisionTraceService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Builds chronological decision trace across all EDV revisions for a document.
+   * Builds chronological decision trace across EDV revisions and related
+   * review-session / review-comment approval lineage for a document.
    */
   async buildForEngineeringDocument(
     ctx: PmContext,
@@ -81,21 +87,54 @@ export class DecisionTraceService {
       document.versions.map((v) => [v.id, v.revisionLabel]),
     );
 
+    const relatedIds = await this.resolveRelatedWorkflowEntityIds(
+      ctx.companyId,
+      edvIds,
+    );
+
     const events =
-      edvIds.length === 0
+      edvIds.length === 0 &&
+      relatedIds.sessionIds.length === 0 &&
+      relatedIds.commentIds.length === 0
         ? []
         : await this.prisma.workflowEventLog.findMany({
             where: {
               companyId: ctx.companyId,
-              entityType: WorkflowEntityType.EngineeringDocumentVersion,
-              entityId: { in: edvIds },
-              phase: {
-                in: [
-                  WorkflowEventPhase.INTENT,
-                  WorkflowEventPhase.COMMITTED,
-                  WorkflowEventPhase.CORRECTION,
-                ],
-              },
+              phase: { in: [...TRACE_PHASES] },
+              OR: [
+                ...(edvIds.length > 0
+                  ? [
+                      {
+                        entityType: WorkflowEntityType.EngineeringDocumentVersion,
+                        entityId: { in: edvIds },
+                      },
+                    ]
+                  : []),
+                ...(relatedIds.sessionIds.length > 0
+                  ? [
+                      {
+                        entityType: WorkflowEntityType.ReviewSession,
+                        entityId: { in: relatedIds.sessionIds },
+                      },
+                    ]
+                  : []),
+                ...(relatedIds.commentIds.length > 0
+                  ? [
+                      {
+                        entityType: WorkflowEntityType.ReviewComment,
+                        entityId: { in: relatedIds.commentIds },
+                      },
+                    ]
+                  : []),
+                ...(relatedIds.packageIds.length > 0
+                  ? [
+                      {
+                        entityType: WorkflowEntityType.DesignPackage,
+                        entityId: { in: relatedIds.packageIds },
+                      },
+                    ]
+                  : []),
+              ],
             },
             orderBy: { createdAt: 'asc' },
           });
@@ -114,11 +153,105 @@ export class DecisionTraceService {
       entries: events.map((event) =>
         this.mapEvent(
           event,
-          revisionByEdvId.get(event.entityId) ?? null,
+          this.resolveRevisionLabel(event, revisionByEdvId),
           actorNameMap.get(event.actorId) ?? null,
         ),
       ),
     };
+  }
+
+  /**
+   * Resolves review sessions, comments, and packages linked to this document's EDVs.
+   */
+  private async resolveRelatedWorkflowEntityIds(
+    companyId: string,
+    edvIds: readonly string[],
+  ): Promise<{
+    sessionIds: string[];
+    commentIds: string[];
+    packageIds: string[];
+  }> {
+    if (edvIds.length === 0) {
+      return { sessionIds: [], commentIds: [], packageIds: [] };
+    }
+
+    const [packageItems, comments, snapshotSessions] = await Promise.all([
+      this.prisma.designPackageItem.findMany({
+        where: {
+          companyId,
+          engineeringDocumentVersionId: { in: [...edvIds] },
+        },
+        select: { designPackageId: true },
+      }),
+      this.prisma.reviewComment.findMany({
+        where: activeOnly({
+          companyId,
+          engineeringDocumentVersionId: { in: [...edvIds] },
+        }),
+        select: { id: true, reviewSessionId: true },
+      }),
+      this.prisma.reviewContextSnapshot.findMany({
+        where: {
+          companyId,
+          referencedVersionIds: { hasSome: [...edvIds] },
+        },
+        select: { reviewSessionId: true },
+      }),
+    ]);
+
+    const packageIds = [
+      ...new Set(packageItems.map((item) => item.designPackageId)),
+    ];
+
+    const packageSessions =
+      packageIds.length === 0
+        ? []
+        : await this.prisma.reviewSession.findMany({
+            where: activeOnly({
+              companyId,
+              designPackageId: { in: packageIds },
+            }),
+            select: { id: true },
+          });
+
+    const sessionIds = [
+      ...new Set([
+        ...packageSessions.map((session) => session.id),
+        ...snapshotSessions.map((snapshot) => snapshot.reviewSessionId),
+        ...comments.map((comment) => comment.reviewSessionId),
+      ]),
+    ];
+
+    return {
+      sessionIds,
+      commentIds: comments.map((comment) => comment.id),
+      packageIds,
+    };
+  }
+
+  private resolveRevisionLabel(
+    event: WorkflowEventLog,
+    revisionByEdvId: Map<string, string>,
+  ): string | null {
+    if (event.entityType === WorkflowEntityType.EngineeringDocumentVersion) {
+      return revisionByEdvId.get(event.entityId) ?? null;
+    }
+
+    const after = event.afterState as Record<string, unknown> | null;
+    const before = event.beforeState as Record<string, unknown> | null;
+    const edvIdCandidate =
+      (typeof after?.engineeringDocumentVersionId === 'string'
+        ? after.engineeringDocumentVersionId
+        : null) ??
+      (typeof before?.engineeringDocumentVersionId === 'string'
+        ? before.engineeringDocumentVersionId
+        : null);
+
+    if (edvIdCandidate) {
+      return revisionByEdvId.get(edvIdCandidate) ?? null;
+    }
+
+    return null;
   }
 
   private mapEvent(

@@ -47,6 +47,7 @@ import { getPackageSubmitEligibility } from '@/lib/utils/package-workflow';
 import { resolvePackageRoles } from '@/lib/utils/subtask-role-resolver';
 import { reviewModeHref, scheduleSubtaskWorkspaceHref } from '@/lib/utils/schedule-subtasks';
 import { canManageSubtaskAsDisciplineLeader } from '@/lib/utils/subtask-permissions';
+import { getLatestEngineeringDocumentVersion } from '@/lib/utils/engineering-document-versions';
 
 const REVIEWER_TIER_ROLES = new Set([
   'REVIEWER',
@@ -581,15 +582,23 @@ export function DesignPackageItemsTable({
         revisionLabel: string;
         status: string;
         documentVersionId: string;
+        displayRevisionLabel: string;
+        displayStatus: string;
+        displayDocumentVersionId: string;
       }
     >();
     for (const doc of documents) {
+      const current = getLatestEngineeringDocumentVersion(doc.versions);
       for (const version of doc.versions ?? []) {
         map.set(version.id, {
           doc,
           revisionLabel: version.revisionLabel,
           status: version.status,
           documentVersionId: version.documentVersionId,
+          displayRevisionLabel: current?.revisionLabel ?? version.revisionLabel,
+          displayStatus: current?.status ?? version.status,
+          displayDocumentVersionId:
+            current?.documentVersionId ?? version.documentVersionId,
         });
       }
     }
@@ -610,13 +619,15 @@ export function DesignPackageItemsTable({
       key: 'revision',
       align: 'right',
       render: (_value, record) =>
-        edvMap.get(record.engineeringDocumentVersionId)?.revisionLabel ?? '-',
+        edvMap.get(record.engineeringDocumentVersionId)?.displayRevisionLabel ??
+        '-',
     },
     {
       title: 'Status',
       key: 'status',
       render: (_value, record) => {
-        const status = edvMap.get(record.engineeringDocumentVersionId)?.status;
+        const status = edvMap.get(record.engineeringDocumentVersionId)
+          ?.displayStatus;
         return status ? <EdvStatusBadge status={status} /> : '-';
       },
     },
@@ -629,7 +640,7 @@ export function DesignPackageItemsTable({
         return (
           <Space size={4} wrap>
             <EdvFileActions
-              documentVersionId={info?.documentVersionId}
+              documentVersionId={info?.displayDocumentVersionId}
               fileName={info?.doc.title}
             />
             {canEdit ? (

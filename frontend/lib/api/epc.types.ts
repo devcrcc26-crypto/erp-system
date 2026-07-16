@@ -86,6 +86,7 @@ export interface EngineeringDocumentVersion {
   documentVersionId: string;
   revisionLabel: string;
   status: EdvStatus;
+  isCurrent: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -304,6 +305,8 @@ export interface MyCommentItem {
   createdBy: string;
   createdAt: string;
   commentInboxStatus: 'PENDING' | 'COMPLETED';
+  /** True when this row belongs in the designer "Directed to me" queue. */
+  isDirectedToMe: boolean;
   resolutionNote: string | null;
   verifiedAt: string | null;
   responseDocumentVersionId: string | null;
@@ -657,6 +660,7 @@ export interface UpdateReviewCommentRequest {
   body: string;
   severity: CommentSeverity;
   assignedToUserId: string;
+  commentDocumentVersionId?: string;
   idempotencyKey?: string;
 }
 

@@ -86,6 +86,8 @@ export interface MyCommentItem {
   readonly createdBy: string;
   readonly createdAt: string;
   readonly commentInboxStatus: 'PENDING' | 'COMPLETED';
+  /** True when this row belongs in the designer "Directed to me" queue. */
+  readonly isDirectedToMe: boolean;
   readonly resolutionNote: string | null;
   readonly verifiedAt: string | null;
   readonly responseDocumentVersionId: string | null;
@@ -375,7 +377,36 @@ export class EpcWorkspaceService {
     const rows = await this.prisma.reviewComment.findMany({
       where: activeOnly({
         companyId: ctx.companyId,
-        OR: [{ assignedToUserId: ctx.userId }, { createdBy: ctx.userId }],
+        OR: [
+          { assignedToUserId: ctx.userId },
+          { createdBy: ctx.userId },
+          // Recover designer queue after historical assignee-flip on resolve:
+          // resolved+ comments on packages they design, even if assignee is the author.
+          {
+            AND: [
+              { createdBy: { not: ctx.userId } },
+              {
+                status: {
+                  in: [
+                    CommentStatus.RESOLVED,
+                    CommentStatus.VERIFIED,
+                    CommentStatus.CLOSED,
+                  ],
+                },
+              },
+              {
+                reviewSession: {
+                  designPackage: {
+                    OR: [
+                      { designerUserId: ctx.userId },
+                      { supportingDesignerUserId: ctx.userId },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
         ...(projectId
           ? {
               reviewSession: {
@@ -432,6 +463,8 @@ export class EpcWorkspaceService {
                 name: true,
                 subtaskId: true,
                 packageCode: true,
+                designerUserId: true,
+                supportingDesignerUserId: true,
               },
             },
           },
@@ -446,8 +479,13 @@ export class EpcWorkspaceService {
       const project = discipline.task.project;
       const designPackage = row.reviewSession.designPackage;
 
-      const isDirectedToMe =
-        row.assignedToUserId === ctx.userId && row.createdBy !== ctx.userId;
+      const isAuthor = row.createdBy === ctx.userId;
+      const isAssignee = row.assignedToUserId === ctx.userId;
+      const isPackageDesigner =
+        designPackage.designerUserId === ctx.userId ||
+        designPackage.supportingDesignerUserId === ctx.userId;
+      // Directed = designer work queue (assignee or package designer, not author).
+      const isDirectedToMe = !isAuthor && (isAssignee || isPackageDesigner);
       const commentInboxStatus: MyCommentItem['commentInboxStatus'] =
         row.status === CommentStatus.VERIFIED ||
         row.status === CommentStatus.CLOSED ||
@@ -488,6 +526,7 @@ export class EpcWorkspaceService {
         commentInboxStatus,
         resolutionNote: row.resolutionNote,
         verifiedAt: row.verifiedAt?.toISOString() ?? null,
+        isDirectedToMe,
       };
     });
   }

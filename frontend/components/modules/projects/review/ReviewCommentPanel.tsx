@@ -520,6 +520,8 @@ export default function ReviewCommentPanel({
         open={Boolean(editTarget)}
         comment={editTarget}
         edvOptions={edvSelectOptions}
+        projectId={projectId}
+        taskDisciplineId={taskDisciplineId}
         onClose={() => setEditTarget(null)}
         onSaved={onCommentAdded}
       />

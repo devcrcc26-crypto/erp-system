@@ -17,6 +17,7 @@ export interface MappedEngineeringDocumentVersion {
   documentVersionId: string;
   revisionLabel: string;
   status: EngineeringDocumentVersion['status'];
+  isCurrent: boolean;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -137,6 +138,7 @@ export function mapEngineeringDocumentVersion(
     documentVersionId: row.documentVersionId,
     revisionLabel: row.revisionLabel,
     status: row.status,
+    isCurrent: row.isCurrent,
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,
     updatedAt: row.updatedAt.toISOString(),

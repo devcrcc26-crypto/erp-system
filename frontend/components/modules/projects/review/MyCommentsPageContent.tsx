@@ -67,8 +67,10 @@ export default function MyCommentsPageContent({
   );
   const directedToMe = useMemo(
     () =>
-      (commentsQuery.data ?? []).filter(
-        (c) => c.assigneeId === currentUserId && c.createdBy !== currentUserId,
+      (commentsQuery.data ?? []).filter((c) =>
+        c.isDirectedToMe === true
+          ? true
+          : c.assigneeId === currentUserId && c.createdBy !== currentUserId,
       ),
     [commentsQuery.data, currentUserId],
   );

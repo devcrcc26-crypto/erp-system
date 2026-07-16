@@ -404,6 +404,12 @@ export function useUpdateEngineeringDocumentVersion() {
           variables.engineeringDocumentId,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.lists(
+          variables.projectId,
+          variables.taskDisciplineId,
+        ),
+      });
     },
   });
 }
@@ -440,6 +446,12 @@ export function useTransitionEdvStatus() {
           variables.projectId,
           variables.taskDisciplineId,
           variables.engineeringDocumentId,
+        ),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.lists(
+          variables.projectId,
+          variables.taskDisciplineId,
         ),
       });
       void queryClient.invalidateQueries({

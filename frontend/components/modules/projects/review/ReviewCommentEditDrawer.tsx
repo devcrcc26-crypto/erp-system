@@ -1,12 +1,13 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Button, Drawer, Form, Input, Select } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Drawer, Form, Input, Select, Upload } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import type { CommentSeverity, ReviewModeComment } from '@/lib/api/epc.types';
 import { useUpdateReviewComment } from '@/lib/query/review-comments';
+import { useDisciplineUploadFolder } from '@/lib/query/engineering-documents';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { standardDetailDrawerProps } from '@/lib/theme/layout';
@@ -21,18 +22,28 @@ export default function ReviewCommentEditDrawer({
   open,
   comment,
   edvOptions,
+  projectId,
+  taskDisciplineId,
   onClose,
   onSaved,
 }: {
   open: boolean;
   comment: ReviewModeComment | null;
   edvOptions: readonly { value: string; label: string }[];
+  projectId: string;
+  taskDisciplineId: string;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<EditCommentFormValues>();
   const updateComment = useUpdateReviewComment();
+  const uploadDocument = useUploadDocumentToFolder();
+  const uploadFolderQuery = useDisciplineUploadFolder(projectId, taskDisciplineId);
   const messageApi = useAppMessage();
+  const [commentFileVersionId, setCommentFileVersionId] = useState<string | null>(
+    null,
+  );
+  const [commentFileName, setCommentFileName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !comment) {
@@ -40,9 +51,11 @@ export default function ReviewCommentEditDrawer({
     }
     form.setFieldsValue({
       engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
-      body: comment.body,
+      body: comment.body ?? '',
       severity: comment.severity as CommentSeverity,
     });
+    setCommentFileVersionId(null);
+    setCommentFileName(null);
   }, [comment, form, open]);
 
   const documentContext = useMemo((): string | null => {
@@ -62,6 +75,9 @@ export default function ReviewCommentEditDrawer({
     ? `Edit comment - ${documentContext}`
     : 'Edit comment';
 
+  const existingAttachment = comment?.attachment ?? null;
+  const effectiveFileName = commentFileName ?? existingAttachment?.name ?? null;
+
   async function handleSubmit(values: EditCommentFormValues): Promise<void> {
     if (!comment) {
       return;
@@ -74,6 +90,9 @@ export default function ReviewCommentEditDrawer({
           body: values.body.trim(),
           severity: values.severity,
           assignedToUserId: comment.assignedToUserId,
+          ...(commentFileVersionId
+            ? { commentDocumentVersionId: commentFileVersionId }
+            : {}),
         },
       });
       messageApi.success('Comment updated');
@@ -116,17 +135,66 @@ export default function ReviewCommentEditDrawer({
         >
           <Select options={[...edvOptions]} placeholder="Select document" />
         </Form.Item>
-        {comment?.attachment && (
-          <Form.Item label="Attached file">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{comment.attachment.name}</span>
-              <EdvFileActions
-                documentVersionId={comment.attachment.documentVersionId}
-                fileName={comment.attachment.name}
-              />
-            </div>
-          </Form.Item>
-        )}
+        <Form.Item label="Attached file">
+          <div className="space-y-2">
+            {effectiveFileName ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-slate-700">{effectiveFileName}</span>
+                {existingAttachment && !commentFileVersionId ? (
+                  <EdvFileActions
+                    documentVersionId={existingAttachment.documentVersionId}
+                    fileName={existingAttachment.name}
+                  />
+                ) : null}
+                {commentFileVersionId ? (
+                  <Button
+                    type="link"
+                    className="!px-0"
+                    onClick={() => {
+                      setCommentFileVersionId(null);
+                      setCommentFileName(null);
+                    }}
+                  >
+                    Undo new file
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No file attached</p>
+            )}
+            <Upload
+              maxCount={1}
+              showUploadList={false}
+              disabled={!uploadFolderQuery.data?.id || uploadDocument.isPending}
+              beforeUpload={(file: File) => {
+                const folderId = uploadFolderQuery.data?.id;
+                if (!folderId) {
+                  messageApi.error('Upload folder is not ready');
+                  return Upload.LIST_IGNORE;
+                }
+                void uploadDocument
+                  .mutateAsync({ folderId, file })
+                  .then((record) => {
+                    if (record.currentVersionId) {
+                      setCommentFileVersionId(record.currentVersionId);
+                      setCommentFileName(file.name);
+                      messageApi.success('Comment file ready to save');
+                    } else {
+                      messageApi.error('Upload did not return a file version');
+                    }
+                  })
+                  .catch((error: unknown) => {
+                    notifyApiError(error, 'Failed to upload comment file', messageApi);
+                  });
+                return false;
+              }}
+            >
+              <Button icon={<UploadOutlined />} loading={uploadDocument.isPending}>
+                {effectiveFileName ? 'Replace file' : 'Attach markup file'}
+              </Button>
+            </Upload>
+          </div>
+        </Form.Item>
         <Form.Item name="body" label="Comment" rules={[{ required: true }]}>
           <Input.TextArea rows={4} />
         </Form.Item>

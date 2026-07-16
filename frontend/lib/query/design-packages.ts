@@ -29,6 +29,7 @@ import type { MessageResponse } from '@/lib/api/types';
 import { designPackagesPath, PROJECTION_POLL_MS } from '@/lib/query/epc-query-utils';
 import { epcWorkspaceKeys } from '@/lib/query/epc-workspace';
 import { disciplineKeys } from '@/lib/query/disciplines';
+import { engineeringDocumentKeys } from '@/lib/query/engineering-documents';
 import { projectPath } from '@/lib/query/pm-query-utils';
 import { scheduleKeys } from '@/lib/query/schedule';
 
@@ -170,6 +171,9 @@ function invalidatePackageQueries(
   });
   void queryClient.invalidateQueries({
     queryKey: disciplineKeys.find(projectId, taskDisciplineId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: engineeringDocumentKeys.lists(projectId, taskDisciplineId),
   });
 }
 

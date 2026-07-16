@@ -47,6 +47,7 @@ export default function DecisionTraceView({
                 <span className="font-medium">{entry.action}</span>
                 <StatusBadge label={entry.phase} variant="default" />
                 <StatusBadge label={entry.loop} variant="info" />
+                <span className="text-xs text-slate-500">{entry.entityType}</span>
                 {entry.revisionLabel && (
                   <span className="text-xs text-slate-500">
                     Rev {entry.revisionLabel}

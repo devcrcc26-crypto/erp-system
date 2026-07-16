@@ -73,13 +73,16 @@ function toMyCommentItem(
     createdBy: comment.createdBy,
     createdAt: comment.createdAt,
     commentInboxStatus:
-      comment.status === 'VERIFIED' || comment.status === 'CLOSED'
+      comment.status === 'VERIFIED' ||
+      comment.status === 'CLOSED' ||
+      comment.status === 'RESOLVED'
         ? 'COMPLETED'
         : 'PENDING',
     resolutionNote: comment.resolutionNote ?? null,
     verifiedAt: comment.verifiedAt ?? null,
     responseDocumentVersionId: null,
     responseDocumentTitle: null,
+    isDirectedToMe: comment.assignedToUserId !== comment.createdBy,
   };
 }
 
