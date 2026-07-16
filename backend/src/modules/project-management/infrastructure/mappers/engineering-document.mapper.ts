@@ -18,6 +18,10 @@ export interface MappedEngineeringDocumentVersion {
   revisionLabel: string;
   status: EngineeringDocumentVersion['status'];
   isCurrent: boolean;
+  /** DocumentVersion.versionNumber when loaded. */
+  fileVersionNumber: number | null;
+  /** Uploaded file name when loaded. */
+  fileName: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -47,6 +51,13 @@ export interface MappedDesignPackageItem {
   sortOrder: number;
   createdAt: string;
   createdBy: string;
+  engineeringDocumentId: string | null;
+  documentTitle: string | null;
+  revisionLabel: string | null;
+  status: EngineeringDocumentVersion['status'] | null;
+  documentVersionId: string | null;
+  fileVersionNumber: number | null;
+  fileName: string | null;
 }
 
 export interface MappedDesignPackage {
@@ -128,8 +139,15 @@ function jsonRecord(value: Prisma.JsonValue): Record<string, unknown> {
   return {};
 }
 
+type EngineeringDocumentVersionWithFile = EngineeringDocumentVersion & {
+  documentVersion?: {
+    versionNumber: number;
+    document?: { name: string } | null;
+  } | null;
+};
+
 export function mapEngineeringDocumentVersion(
-  row: EngineeringDocumentVersion,
+  row: EngineeringDocumentVersionWithFile,
 ): MappedEngineeringDocumentVersion {
   return {
     id: row.id,
@@ -139,6 +157,8 @@ export function mapEngineeringDocumentVersion(
     revisionLabel: row.revisionLabel,
     status: row.status,
     isCurrent: row.isCurrent,
+    fileVersionNumber: row.documentVersion?.versionNumber ?? null,
+    fileName: row.documentVersion?.document?.name ?? null,
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,
     updatedAt: row.updatedAt.toISOString(),
@@ -147,7 +167,9 @@ export function mapEngineeringDocumentVersion(
 }
 
 export function mapEngineeringDocument(
-  row: EngineeringDocument & { versions?: EngineeringDocumentVersion[] },
+  row: EngineeringDocument & {
+    versions?: EngineeringDocumentVersionWithFile[];
+  },
 ): MappedEngineeringDocument {
   return {
     id: row.id,
@@ -165,7 +187,16 @@ export function mapEngineeringDocument(
   };
 }
 
-export function mapDesignPackageItem(row: DesignPackageItem): MappedDesignPackageItem {
+type DesignPackageItemWithEdv = DesignPackageItem & {
+  engineeringDocumentVersion?: EngineeringDocumentVersionWithFile & {
+    engineeringDocument?: { id: string; title: string } | null;
+  } | null;
+};
+
+export function mapDesignPackageItem(
+  row: DesignPackageItemWithEdv,
+): MappedDesignPackageItem {
+  const edv = row.engineeringDocumentVersion;
   return {
     id: row.id,
     companyId: row.companyId,
@@ -174,11 +205,18 @@ export function mapDesignPackageItem(row: DesignPackageItem): MappedDesignPackag
     sortOrder: row.sortOrder,
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdBy,
+    engineeringDocumentId: edv?.engineeringDocument?.id ?? edv?.engineeringDocumentId ?? null,
+    documentTitle: edv?.engineeringDocument?.title ?? null,
+    revisionLabel: edv?.revisionLabel ?? null,
+    status: edv?.status ?? null,
+    documentVersionId: edv?.documentVersionId ?? null,
+    fileVersionNumber: edv?.documentVersion?.versionNumber ?? null,
+    fileName: edv?.documentVersion?.document?.name ?? null,
   };
 }
 
 export function mapDesignPackage(
-  row: DesignPackage & { items?: DesignPackageItem[] },
+  row: DesignPackage & { items?: DesignPackageItemWithEdv[] },
 ): MappedDesignPackage {
   return {
     id: row.id,

@@ -34,6 +34,8 @@ export interface SubtaskWorkDaysRow {
   plannedStartDate: Date | null;
   plannedFinishDate: Date | null;
   actualWorkDays: number | null;
+  /** Only CLOSED subtasks contribute to task actual work days. */
+  packageStatus: string;
 }
 
 const EMPTY_SUMMARY: TaskSubtaskWorkDaysSummary = {
@@ -78,10 +80,14 @@ export function buildTaskSubtaskWorkDaysSummaries(
 
     let actualSum = 0;
     let hasActual = false;
-    for (const pkg of pkgs) {
-      if (pkg.actualWorkDays !== null) {
-        actualSum += pkg.actualWorkDays;
-        hasActual = true;
+    const allClosed =
+      pkgs.length > 0 && pkgs.every((pkg) => pkg.packageStatus === 'CLOSED');
+    if (allClosed) {
+      for (const pkg of pkgs) {
+        if (pkg.actualWorkDays !== null) {
+          actualSum += pkg.actualWorkDays;
+          hasActual = true;
+        }
       }
     }
 

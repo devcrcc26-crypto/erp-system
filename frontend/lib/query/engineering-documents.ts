@@ -457,6 +457,9 @@ export function useTransitionEdvStatus() {
       void queryClient.invalidateQueries({
         queryKey: epcWorkspaceKeys.versionHistory(variables.engineeringDocumentId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: designPackageKeys.all,
+      });
     },
   });
 }

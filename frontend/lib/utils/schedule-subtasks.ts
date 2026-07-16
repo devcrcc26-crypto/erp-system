@@ -48,6 +48,7 @@ export function computeTaskSubtaskWorkDaysSummary(
     | 'plannedStartDate'
     | 'plannedFinishDate'
     | 'actualWorkDays'
+    | 'packageStatus'
   >[],
 ): TaskSubtaskTimelineSummary {
   if (packages.length === 0) {
@@ -72,10 +73,13 @@ export function computeTaskSubtaskWorkDaysSummary(
 
   let actualSum = 0;
   let hasActual = false;
-  for (const pkg of packages) {
-    if (pkg.actualWorkDays != null) {
-      actualSum += pkg.actualWorkDays;
-      hasActual = true;
+  const allClosed = packages.every((pkg) => pkg.packageStatus === 'CLOSED');
+  if (allClosed) {
+    for (const pkg of packages) {
+      if (pkg.actualWorkDays != null) {
+        actualSum += pkg.actualWorkDays;
+        hasActual = true;
+      }
     }
   }
 

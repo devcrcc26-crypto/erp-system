@@ -27,7 +27,6 @@ import {
   scheduleSubtaskWorkspaceHref,
   type ScheduleSubtaskDisplayStatus,
 } from '@/lib/utils/schedule-subtasks';
-import { summarizeSubtaskRoles } from '@/lib/utils/subtask-roles-summary';
 import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
@@ -43,7 +42,6 @@ interface SubtaskTableRow {
   projectName: string;
   status: ScheduleSubtaskDisplayStatus;
   dueDate: string | null;
-  rolesSummary: string;
   package: DesignPackage;
 }
 
@@ -146,7 +144,6 @@ export default function DisciplinesPageContent({
           projectName,
           status: getScheduleSubtaskDisplayStatus(entry.package),
           dueDate: taskDueDateById.get(taskId) ?? null,
-          rolesSummary: summarizeSubtaskRoles(entry.package),
           package: entry.package,
         });
       }
@@ -174,7 +171,11 @@ export default function DisciplinesPageContent({
       if (!term) {
         return true;
       }
-      return row.name.toLowerCase().includes(term);
+      return (
+        row.name.toLowerCase().includes(term) ||
+        (row.package.subtaskId?.toLowerCase().includes(term) ?? false) ||
+        row.package.packageCode.toLowerCase().includes(term)
+      );
     });
   }, [disciplineFilter, rows, search, statusFilter]);
 
@@ -188,13 +189,13 @@ export default function DisciplinesPageContent({
 
   const columns: ColumnsType<SubtaskTableRow> = [
     {
-      title: 'Code',
-      key: 'packageCode',
-      width: 120,
+      title: 'Nos',
+      key: 'subtaskId',
+      width: 140,
       ellipsis: true,
       render: (_value, record) => (
         <span className="font-mono text-[11px] text-slate-600">
-          {record.package.packageCode}
+          {record.package.subtaskId ?? record.package.packageCode}
         </span>
       ),
     },
@@ -262,13 +263,6 @@ export default function DisciplinesPageContent({
       key: 'dueDate',
       width: 110,
       render: (_value, record) => record.dueDate ?? '—',
-    },
-    {
-      title: 'Roles',
-      dataIndex: 'rolesSummary',
-      key: 'rolesSummary',
-      width: 150,
-      ellipsis: true,
     },
     {
       title: 'EPC Workspace',

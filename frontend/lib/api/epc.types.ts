@@ -87,6 +87,8 @@ export interface EngineeringDocumentVersion {
   revisionLabel: string;
   status: EdvStatus;
   isCurrent: boolean;
+  fileVersionNumber?: number | null;
+  fileName?: string | null;
   createdAt: string;
   createdBy: string;
   updatedAt: string;
@@ -116,6 +118,13 @@ export interface DesignPackageItem {
   sortOrder: number;
   createdAt: string;
   createdBy: string;
+  engineeringDocumentId?: string | null;
+  documentTitle?: string | null;
+  revisionLabel?: string | null;
+  status?: EdvStatus | string | null;
+  documentVersionId?: string | null;
+  fileVersionNumber?: number | null;
+  fileName?: string | null;
 }
 
 export interface DesignPackage {
@@ -462,6 +471,9 @@ export interface VersionHistoryEntry {
   status: EdvStatus | string;
   createdAt: string;
   loop: WorkflowLoop;
+  documentVersionId: string;
+  fileVersionNumber: number | null;
+  fileName: string | null;
   events: readonly VersionHistoryEvent[];
 }
 

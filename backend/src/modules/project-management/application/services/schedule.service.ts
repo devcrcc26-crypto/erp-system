@@ -304,6 +304,7 @@ export class ScheduleService {
         plannedStartDate: true,
         plannedFinishDate: true,
         actualWorkDays: true,
+        packageStatus: true,
         taskDiscipline: {
           select: { taskId: true },
         },
@@ -317,6 +318,7 @@ export class ScheduleService {
         plannedStartDate: row.plannedStartDate,
         plannedFinishDate: row.plannedFinishDate,
         actualWorkDays: row.actualWorkDays,
+        packageStatus: row.packageStatus,
       })),
     );
   }

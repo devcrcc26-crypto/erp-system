@@ -17,6 +17,27 @@ import {
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 
+const edvFileInclude = {
+  documentVersion: {
+    select: {
+      versionNumber: true,
+      document: { select: { name: true } },
+    },
+  },
+} as const;
+
+const packageItemInclude = {
+  orderBy: { sortOrder: 'asc' as const },
+  include: {
+    engineeringDocumentVersion: {
+      include: {
+        ...edvFileInclude,
+        engineeringDocument: { select: { id: true, title: true } },
+      },
+    },
+  },
+};
+
 @Injectable()
 export class EngineeringDocumentRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,6 +57,7 @@ export class EngineeringDocumentRepository {
         versions: {
           where: activeOnly({}),
           orderBy: { createdAt: 'desc' },
+          include: edvFileInclude,
         },
       },
     });
@@ -60,6 +82,7 @@ export class EngineeringDocumentRepository {
         versions: {
           where: activeOnly({}),
           orderBy: { createdAt: 'desc' },
+          include: edvFileInclude,
         },
       },
     });
@@ -209,7 +232,7 @@ export class DesignPackageRepository {
     return this.prisma.designPackage.findMany({
       where: activeOnly({ companyId, taskDisciplineId, ...extraWhere }),
       orderBy: { createdAt: 'desc' },
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: { items: packageItemInclude },
     });
   }
 
@@ -219,7 +242,7 @@ export class DesignPackageRepository {
   ): Promise<(DesignPackage & { items: DesignPackageItem[] }) | null> {
     return this.prisma.designPackage.findFirst({
       where: activeOnly({ id, companyId }),
-      include: { items: { orderBy: { sortOrder: 'asc' } } },
+      include: { items: packageItemInclude },
     });
   }
 

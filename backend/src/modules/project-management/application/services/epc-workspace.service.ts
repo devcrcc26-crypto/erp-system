@@ -185,6 +185,12 @@ export interface VersionHistoryEntry {
   readonly status: string;
   readonly createdAt: string;
   readonly loop: 'INTERNAL' | 'EXTERNAL';
+  /** Storage document version used for download. */
+  readonly documentVersionId: string;
+  /** File version number from DocumentVersion. */
+  readonly fileVersionNumber: number | null;
+  /** Original uploaded file name. */
+  readonly fileName: string | null;
   readonly events: readonly {
     action: string;
     phase: WorkflowEventPhase;
@@ -1113,6 +1119,15 @@ export class EpcWorkspaceService {
         versions: {
           where: activeOnly({}),
           orderBy: { createdAt: 'asc' },
+          include: {
+            documentVersion: {
+              select: {
+                id: true,
+                versionNumber: true,
+                document: { select: { name: true } },
+              },
+            },
+          },
         },
       },
     });
@@ -1141,6 +1156,9 @@ export class EpcWorkspaceService {
         status: version.status,
         createdAt: version.createdAt.toISOString(),
         loop: hasExternal ? 'EXTERNAL' : 'INTERNAL',
+        documentVersionId: version.documentVersionId,
+        fileVersionNumber: version.documentVersion?.versionNumber ?? null,
+        fileName: version.documentVersion?.document?.name ?? null,
         events: events.map((e) => ({
           action: e.action,
           phase: e.phase,

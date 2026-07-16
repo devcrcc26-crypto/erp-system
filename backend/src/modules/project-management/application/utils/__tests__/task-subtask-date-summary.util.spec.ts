@@ -38,12 +38,14 @@ describe('buildTaskSubtaskWorkDaysSummaries', () => {
           plannedStartDate: new Date('2026-01-01'),
           plannedFinishDate: new Date('2026-01-11'),
           actualWorkDays: null,
+          packageStatus: 'OPEN',
         },
         {
           taskId: 'task-1',
           plannedStartDate: new Date('2026-02-01'),
           plannedFinishDate: new Date('2026-02-06'),
           actualWorkDays: null,
+          packageStatus: 'OPEN',
         },
       ],
     );
@@ -51,7 +53,7 @@ describe('buildTaskSubtaskWorkDaysSummaries', () => {
     expect(result.get('task-1')?.computedActualWorkDays).toBeNull();
   });
 
-  it('sums actual work days from subtasks', () => {
+  it('sums actual work days only when all subtasks are closed', () => {
     const result = buildTaskSubtaskWorkDaysSummaries(
       ['task-1'],
       [
@@ -60,15 +62,40 @@ describe('buildTaskSubtaskWorkDaysSummaries', () => {
           plannedStartDate: null,
           plannedFinishDate: null,
           actualWorkDays: 12,
+          packageStatus: 'CLOSED',
         },
         {
           taskId: 'task-1',
           plannedStartDate: null,
           plannedFinishDate: null,
           actualWorkDays: 8,
+          packageStatus: 'CLOSED',
         },
       ],
     );
     expect(result.get('task-1')?.computedActualWorkDays).toBe(20);
+  });
+
+  it('keeps task actual work days null until every subtask is closed', () => {
+    const result = buildTaskSubtaskWorkDaysSummaries(
+      ['task-1'],
+      [
+        {
+          taskId: 'task-1',
+          plannedStartDate: null,
+          plannedFinishDate: null,
+          actualWorkDays: 12,
+          packageStatus: 'CLOSED',
+        },
+        {
+          taskId: 'task-1',
+          plannedStartDate: null,
+          plannedFinishDate: null,
+          actualWorkDays: 8,
+          packageStatus: 'OPEN',
+        },
+      ],
+    );
+    expect(result.get('task-1')?.computedActualWorkDays).toBeNull();
   });
 });

@@ -149,6 +149,18 @@ export default function EngineeringDocumentPanel({
       },
     },
     {
+      title: 'File ver.',
+      key: 'fileVersion',
+      align: 'right',
+      width: 90,
+      render: (_value, record) => {
+        const latest = getLatestEngineeringDocumentVersion(record.versions);
+        return latest?.fileVersionNumber != null
+          ? latest.fileVersionNumber
+          : '-';
+      },
+    },
+    {
       title: 'Versions',
       key: 'versionCount',
       align: 'right',

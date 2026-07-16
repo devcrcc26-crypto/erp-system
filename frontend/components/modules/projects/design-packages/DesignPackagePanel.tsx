@@ -601,6 +601,8 @@ export function DesignPackageItemsTable({
         displayStatus: string;
         displayDocumentVersionId: string;
         engineeringDocumentId: string;
+        fileVersionNumber: number | null;
+        fileName: string | null;
       }
     >();
     for (const doc of documents) {
@@ -616,6 +618,9 @@ export function DesignPackageItemsTable({
           displayDocumentVersionId:
             current?.documentVersionId ?? version.documentVersionId,
           engineeringDocumentId: doc.id,
+          fileVersionNumber:
+            version.fileVersionNumber ?? current?.fileVersionNumber ?? null,
+          fileName: version.fileName ?? current?.fileName ?? null,
         });
       }
     }
@@ -628,23 +633,45 @@ export function DesignPackageItemsTable({
       key: 'title',
       render: (_value, record) => {
         const info = edvMap.get(record.engineeringDocumentVersionId);
-        return info?.doc.title ?? record.engineeringDocumentVersionId;
+        return (
+          record.documentTitle ??
+          info?.doc.title ??
+          record.engineeringDocumentVersionId
+        );
       },
     },
     {
       title: 'Revision',
       key: 'revision',
       align: 'right',
-      render: (_value, record) =>
-        edvMap.get(record.engineeringDocumentVersionId)?.displayRevisionLabel ??
-        '-',
+      render: (_value, record) => {
+        const info = edvMap.get(record.engineeringDocumentVersionId);
+        return (
+          record.revisionLabel ??
+          info?.revisionLabel ??
+          info?.displayRevisionLabel ??
+          '-'
+        );
+      },
+    },
+    {
+      title: 'File ver.',
+      key: 'fileVersion',
+      align: 'right',
+      width: 90,
+      render: (_value, record) => {
+        const info = edvMap.get(record.engineeringDocumentVersionId);
+        const versionNumber =
+          record.fileVersionNumber ?? info?.fileVersionNumber ?? null;
+        return versionNumber != null ? versionNumber : '-';
+      },
     },
     {
       title: 'Status',
       key: 'status',
       render: (_value, record) => {
-        const status = edvMap.get(record.engineeringDocumentVersionId)
-          ?.displayStatus;
+        const info = edvMap.get(record.engineeringDocumentVersionId);
+        const status = record.status ?? info?.status ?? info?.displayStatus;
         return status ? <EdvStatusBadge status={status} /> : '-';
       },
     },
@@ -654,23 +681,35 @@ export function DesignPackageItemsTable({
       width: canEdit || canLockUnlock ? 280 : 180,
       render: (_value, record) => {
         const info = edvMap.get(record.engineeringDocumentVersionId);
-        const itemStatus = info?.status;
+        const itemStatus = record.status ?? info?.status;
         const isLocked = itemStatus === 'LOCKED';
         const isApproved = itemStatus === 'APPROVED';
-        const lockUnlockPayload =
-          info != null
-            ? {
-                engineeringDocumentId: info.engineeringDocumentId,
-                engineeringDocumentVersionId: record.engineeringDocumentVersionId,
-              }
-            : null;
-        const showLock = canLockUnlock && isApproved && onLock && lockUnlockPayload;
-        const showUnlock = canLockUnlock && isLocked && onUnlock && lockUnlockPayload;
+        const lockUnlockPayload = {
+          engineeringDocumentId:
+            record.engineeringDocumentId ??
+            info?.engineeringDocumentId ??
+            '',
+          engineeringDocumentVersionId: record.engineeringDocumentVersionId,
+        };
+        const showLock =
+          canLockUnlock &&
+          isApproved &&
+          onLock &&
+          Boolean(lockUnlockPayload.engineeringDocumentId);
+        const showUnlock =
+          canLockUnlock &&
+          isLocked &&
+          onUnlock &&
+          Boolean(lockUnlockPayload.engineeringDocumentId);
         return (
           <Space size={4} wrap>
             <EdvFileActions
-              documentVersionId={info?.displayDocumentVersionId}
-              fileName={info?.doc.title}
+              documentVersionId={
+                record.documentVersionId ??
+                info?.documentVersionId ??
+                info?.displayDocumentVersionId
+              }
+              fileName={record.fileName ?? info?.fileName ?? info?.doc.title}
             />
             {showLock ? (
               <Button
