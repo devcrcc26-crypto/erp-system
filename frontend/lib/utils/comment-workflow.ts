@@ -2,7 +2,7 @@ import type { CommentStatus } from '@/lib/api/epc.types';
 import type { TaskDiscipline } from '@/lib/api/project-management.types';
 import { isExternalInstituteChief } from './institute-chief';
 
-const APPROVE_BLOCKING_STATUSES: ReadonlySet<CommentStatus> = new Set([
+export const APPROVE_BLOCKING_STATUSES: ReadonlySet<CommentStatus> = new Set([
   'OPEN',
   'ACKNOWLEDGED',
   'IN_PROGRESS',

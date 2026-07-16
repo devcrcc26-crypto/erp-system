@@ -9,6 +9,7 @@ describe('MyWorkService', () => {
   let prisma: {
     taskDiscipline: { findMany: jest.Mock };
     designPackage: { findMany: jest.Mock; groupBy: jest.Mock };
+    task: { findMany: jest.Mock };
   };
   let taskAccessScopeService: {
     getVisibleProjectIds: jest.Mock;
@@ -22,6 +23,7 @@ describe('MyWorkService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      task: { findMany: jest.fn().mockResolvedValue([]) },
     };
     taskAccessScopeService = {
       getVisibleProjectIds: jest.fn().mockResolvedValue(null),

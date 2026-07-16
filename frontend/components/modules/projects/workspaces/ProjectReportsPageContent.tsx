@@ -31,7 +31,7 @@ import type { Task, TaskStatus } from '@/lib/api/project-management.types';
 import type { ProjectReportPdfLabels } from '@/lib/api/reporting.types';
 import { useProject, useProjectDashboardStats } from '@/lib/query/projects';
 import { useProjectStatusBoard } from '@/lib/query/epc-workspace';
-import { useAllTasks } from '@/lib/query/schedule';
+import { useAllTasks, useScheduleSubtasks } from '@/lib/query/schedule';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -420,6 +420,7 @@ export default function ProjectReportsPageContent({
   const statsQuery = useProjectDashboardStats(projectId);
   const boardQuery = useProjectStatusBoard(projectId);
   const tasksQuery = useAllTasks(projectId);
+  const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(projectId);
 
   const statsApiUnavailable =
     statsQuery.isError &&
@@ -444,8 +445,8 @@ export default function ProjectReportsPageContent({
 
   const hasStats = stats != null;
   const scheduleFromTasks = useMemo(
-    (): ScheduleMetrics => computeScheduleMetrics(tasks),
-    [tasks],
+    (): ScheduleMetrics => computeScheduleMetrics(tasks, subtasksByTaskId),
+    [tasks, subtasksByTaskId],
   );
 
   const plannedProgressPct =

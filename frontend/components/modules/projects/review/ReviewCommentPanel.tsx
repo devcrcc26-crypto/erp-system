@@ -386,14 +386,10 @@ export default function ReviewCommentPanel({
                         : ''}
                     </p>
                   )}
-                  {(displayStatus === 'RESOLVED' ||
-                    displayStatus === 'VERIFIED' ||
-                    displayStatus === 'CLOSED') &&
-                    comment.responseAttachment &&
-                    comment.responseAttachment.documentVersionId !== comment.responseRevision?.documentVersionId && (
+                  {comment.responseAttachment && (
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                       <span className="min-w-0 truncate">
-                        Response attachment: {comment.responseAttachment.name}
+                        Designer response: {comment.responseAttachment.name}
                       </span>
                       <EdvFileActions
                         compact

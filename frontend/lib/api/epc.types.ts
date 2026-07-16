@@ -235,7 +235,10 @@ export interface ReviewInboxItem {
   completedAction: 'APPROVED' | 'RETURNED' | null;
 }
 
-export type MyWorkItemKind = 'DISCIPLINE_LEAD' | 'SUBTASK_ROLE';
+export type MyWorkItemKind =
+  | 'DISCIPLINE_LEAD'
+  | 'SUBTASK_ROLE'
+  | 'RESPONSIBLE_PERSON';
 
 export type SubtaskRole =
   | 'DESIGNER'
@@ -253,10 +256,15 @@ export interface MyWorkItem {
   projectNumber: string;
   taskId: string;
   taskName: string;
+  taskIdCode: string;
+  overseasTaskNumber: string | null;
   taskDisciplineId: string;
   disciplineName: string;
+  disciplineIndex: number | null;
   designPackageId: string | null;
   subtaskName: string | null;
+  subtaskId: string | null;
+  packageCode: string | null;
   roleLabel: string | null;
   /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
   primaryRole: SubtaskRole | null;

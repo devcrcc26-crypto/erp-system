@@ -834,6 +834,7 @@ model DocumentFolder {
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
   @@index([parentId], map: "idx_document_folder_parent_id")
   @@index([contextType, contextId], map: "idx_document_folder_context")
+  @@index([contextType, contextId, deletedAt], map: "idx_document_folder_context_deleted")
   @@map("document_folder")
 }
 
@@ -1659,6 +1660,7 @@ model EngineeringDocument {
   @@index([companyId], map: "idx_engineering_document_company_id")
   @@index([companyId, deletedAt], map: "idx_engineering_document_company_deleted")
   @@index([taskDisciplineId], map: "idx_engineering_document_task_discipline_id")
+  @@index([taskDisciplineId, deletedAt], map: "idx_engineering_document_task_discipline_deleted")
   @@map("engineering_document")
 }
 
@@ -1688,6 +1690,8 @@ model EngineeringDocumentVersion {
   @@index([companyId], map: "idx_engineering_document_version_company_id")
   @@index([companyId, deletedAt], map: "idx_engineering_document_version_company_deleted")
   @@index([engineeringDocumentId], map: "idx_engineering_document_version_document_id")
+  @@index([engineeringDocumentId, deletedAt], map: "idx_engineering_document_version_document_deleted")
+  @@index([engineeringDocumentId, isCurrent, deletedAt], map: "idx_engineering_document_version_document_current_deleted")
   @@index([documentVersionId], map: "idx_engineering_document_version_doc_version_id")
   @@index([status], map: "idx_engineering_document_version_status")
   @@map("engineering_document_version")

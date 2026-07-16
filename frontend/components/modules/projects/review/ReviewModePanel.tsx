@@ -209,15 +209,18 @@ export default function ReviewModePanel({
 
   const edvCommentOptions = useMemo(
     () =>
-      packageEdvIds.map((edvId) => ({
-        value: edvId,
-        label: resolveEdvDisplayLabel(
-          edvId,
-          documentsQuery.data?.data ?? [],
-          snapshotEdvs,
-        ),
-      })),
-    [packageEdvIds, documentsQuery.data?.data, snapshotEdvs],
+      packageDocumentRows.map((row) => {
+        const resolvedEdvId = row.displayEdvId ?? row.packageEdvId;
+        return {
+          value: resolvedEdvId,
+          label: resolveEdvDisplayLabel(
+            resolvedEdvId,
+            documentsQuery.data?.data ?? [],
+            snapshotEdvs,
+          ),
+        };
+      }),
+    [packageDocumentRows, documentsQuery.data?.data, snapshotEdvs],
   );
 
   const sessionComments = reviewMode?.comments ?? [];
@@ -345,13 +348,15 @@ export default function ReviewModePanel({
         designPackage={packageQuery.data}
         reviewMode={reviewMode}
       />
-      <FormLayout title="Required review tiers">
-        <RequiredTiersStepIndicator
-          requiredTiers={packageQuery.data?.requiredTiers ?? []}
-          currentTier={reviewMode?.currentTier}
-          sessionStatus={reviewMode?.sessionStatus}
-        />
-      </FormLayout>
+      {reviewMode?.sessionStatus && (
+        <FormLayout title="Required review tiers">
+          <RequiredTiersStepIndicator
+            requiredTiers={packageQuery.data?.requiredTiers ?? []}
+            currentTier={reviewMode?.currentTier}
+            sessionStatus={reviewMode?.sessionStatus}
+          />
+        </FormLayout>
+      )}
 
       <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4">
         <div className="mb-4 flex items-start justify-between gap-3">

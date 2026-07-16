@@ -1,4 +1,6 @@
 import type { Task } from '@/lib/api/project-management.types';
+import type { ScheduleSubtaskEntry } from '@/lib/query/schedule';
+import { computeScheduleSubtaskRollup } from './schedule-subtasks';
 
 export interface ScheduleMetrics {
   taskCount: number;
@@ -73,7 +75,26 @@ function computePlannedProgress(task: Task, today: Date): number | null {
   return clampPercent(((today.getTime() - start.getTime()) / total) * 100);
 }
 
-export function computeScheduleMetrics(tasks: Task[]): ScheduleMetrics {
+/**
+ * Task progress derived from subtask (design package) completion: closed/total,
+ * rounded. Returns null when the task has no subtasks (no computable progress).
+ */
+export function computeTaskProgressPct(
+  subtasks: readonly ScheduleSubtaskEntry[],
+): number | null {
+  const rollup = computeScheduleSubtaskRollup(
+    subtasks.map((entry) => entry.package),
+  );
+  if (!rollup || rollup.total === 0) {
+    return null;
+  }
+  return clampPercent((rollup.closed / rollup.total) * 100);
+}
+
+export function computeScheduleMetrics(
+  tasks: Task[],
+  subtasksByTaskId: ReadonlyMap<string, ScheduleSubtaskEntry[]>,
+): ScheduleMetrics {
   if (tasks.length === 0) {
     return {
       taskCount: 0,
@@ -85,9 +106,16 @@ export function computeScheduleMetrics(tasks: Task[]): ScheduleMetrics {
   }
 
   const today = new Date();
-  const actualProgressPct = clampPercent(
-    tasks.reduce((sum, task) => sum + task.progressPct, 0) / tasks.length,
-  );
+  const progressValues = tasks
+    .map((task) => computeTaskProgressPct(subtasksByTaskId.get(task.id) ?? []))
+    .filter((value): value is number => value !== null);
+  const actualProgressPct =
+    progressValues.length > 0
+      ? clampPercent(
+          progressValues.reduce((sum, value) => sum + value, 0) /
+            progressValues.length,
+        )
+      : null;
 
   const plannedValues = tasks
     .map((task) => computePlannedProgress(task, today))
@@ -102,7 +130,7 @@ export function computeScheduleMetrics(tasks: Task[]): ScheduleMetrics {
       : null;
 
   const scheduleVariancePct =
-    plannedProgressPct !== null
+    plannedProgressPct !== null && actualProgressPct !== null
       ? actualProgressPct - plannedProgressPct
       : null;
 

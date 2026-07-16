@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { Button, Drawer, Form, Input, Select } from 'antd';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import EdvFileActions from '@/components/modules/projects/engineering/EdvFileActions';
 import type { CommentSeverity, ReviewModeComment } from '@/lib/api/epc.types';
 import { useUpdateReviewComment } from '@/lib/query/review-comments';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -15,7 +15,6 @@ interface EditCommentFormValues {
   engineeringDocumentVersionId: string;
   body: string;
   severity: CommentSeverity;
-  assignedToUserId: string;
 }
 
 export default function ReviewCommentEditDrawer({
@@ -43,7 +42,6 @@ export default function ReviewCommentEditDrawer({
       engineeringDocumentVersionId: comment.engineeringDocumentVersionId,
       body: comment.body,
       severity: comment.severity as CommentSeverity,
-      assignedToUserId: comment.assignedToUserId,
     });
   }, [comment, form, open]);
 
@@ -75,7 +73,7 @@ export default function ReviewCommentEditDrawer({
           engineeringDocumentVersionId: values.engineeringDocumentVersionId,
           body: values.body.trim(),
           severity: values.severity,
-          assignedToUserId: values.assignedToUserId,
+          assignedToUserId: comment.assignedToUserId,
         },
       });
       messageApi.success('Comment updated');
@@ -118,6 +116,17 @@ export default function ReviewCommentEditDrawer({
         >
           <Select options={[...edvOptions]} placeholder="Select document" />
         </Form.Item>
+        {comment?.attachment && (
+          <Form.Item label="Attached file">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{comment.attachment.name}</span>
+              <EdvFileActions
+                documentVersionId={comment.attachment.documentVersionId}
+                fileName={comment.attachment.name}
+              />
+            </div>
+          </Form.Item>
+        )}
         <Form.Item name="body" label="Comment" rules={[{ required: true }]}>
           <Input.TextArea rows={4} />
         </Form.Item>
@@ -130,12 +139,10 @@ export default function ReviewCommentEditDrawer({
             ]}
           />
         </Form.Item>
-        <Form.Item
-          name="assignedToUserId"
-          label="Assign to designer"
-          rules={[{ required: true }]}
-        >
-          <UserSelect />
+        <Form.Item label="Assigned to">
+          <span className="text-sm text-slate-700">
+            {comment?.assigneeName ?? 'Not assigned'}
+          </span>
         </Form.Item>
       </Form>
     </Drawer>

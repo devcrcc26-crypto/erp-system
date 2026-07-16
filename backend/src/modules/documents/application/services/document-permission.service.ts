@@ -227,12 +227,14 @@ export class DocumentPermissionService {
         disciplineLeadUserId: true,
         designerUserId: true,
         supportingDesignerUserId: true,
+        task: { select: { supervisingChiefUserId: true } },
       },
     });
     if (
       discipline?.disciplineLeadUserId === userId ||
       discipline?.designerUserId === userId ||
-      discipline?.supportingDesignerUserId === userId
+      discipline?.supportingDesignerUserId === userId ||
+      discipline?.task.supervisingChiefUserId === userId
     ) {
       return true;
     }

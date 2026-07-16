@@ -13,7 +13,7 @@ import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useProjectDashboardStats } from '@/lib/query/projects';
-import { useAllTasks } from '@/lib/query/schedule';
+import { useAllTasks, useScheduleSubtasks } from '@/lib/query/schedule';
 import { useChangeRequests } from '@/lib/query/change-requests';
 import { useDeliverables } from '@/lib/query/deliverables';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
@@ -82,6 +82,10 @@ export default function ProjectDashboard({
     (statsQuery.error.status === 404 || statsQuery.error.status === 0);
 
   const tasksQuery = useAllTasks(projectId, statsApiUnavailable);
+  const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(
+    projectId,
+    statsApiUnavailable,
+  );
 
   const changeRequestsQuery = useChangeRequests(
     projectId,
@@ -129,7 +133,7 @@ export default function ProjectDashboard({
   const hasStats = stats != null;
   const scheduleFallback =
     statsApiUnavailable && tasksQuery.data?.data
-      ? computeScheduleMetrics(tasksQuery.data.data)
+      ? computeScheduleMetrics(tasksQuery.data.data, subtasksByTaskId)
       : null;
 
   const plannedProgressPct =

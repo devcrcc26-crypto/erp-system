@@ -316,6 +316,8 @@ describe('Trigger linkage (trigger-linkage)', () => {
         {} as never,
         {} as never,
         {} as never,
+        {} as never,
+        {} as never,
       );
       jest
         .spyOn(orchestrator, 'triggerRevision')

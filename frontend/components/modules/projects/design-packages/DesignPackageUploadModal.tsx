@@ -222,6 +222,13 @@ export default function DesignPackageUploadModal({
       open={open}
       onCancel={handleClose}
       destroyOnHidden
+      style={{ top: 20 }}
+      styles={{
+        body: {
+          maxHeight: 'calc(100vh - 160px)',
+          overflowY: 'auto',
+        },
+      }}
       footer={
         <Space>
           <Button onClick={handleClose} disabled={busy}>

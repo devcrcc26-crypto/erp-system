@@ -16,7 +16,10 @@ import {
 import { PmContext } from '../types/pm-context.type';
 import { TaskAccessScopeService } from './task-access-scope.service';
 
-export type MyWorkItemKind = 'DISCIPLINE_LEAD' | 'SUBTASK_ROLE';
+export type MyWorkItemKind =
+  | 'DISCIPLINE_LEAD'
+  | 'SUBTASK_ROLE'
+  | 'RESPONSIBLE_PERSON';
 
 export interface MyWorkItem {
   kind: MyWorkItemKind;
@@ -25,10 +28,15 @@ export interface MyWorkItem {
   projectNumber: string;
   taskId: string;
   taskName: string;
+  taskIdCode: string;
+  overseasTaskNumber: string | null;
   taskDisciplineId: string;
   disciplineName: string;
+  disciplineIndex: number | null;
   designPackageId: string | null;
   subtaskName: string | null;
+  subtaskId: string | null;
+  packageCode: string | null;
   roleLabel: string | null;
   /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
   primaryRole: SubtaskRole | null;
@@ -71,7 +79,7 @@ export class MyWorkService {
               },
             };
 
-    const [ledDisciplines, subtaskPackages] = await Promise.all([
+    const [ledDisciplines, subtaskPackages, responsibleTasks] = await Promise.all([
       this.prisma.taskDiscipline.findMany({
         where: activeOnly({
           companyId: ctx.companyId,
@@ -125,6 +133,19 @@ export class MyWorkService {
         },
         orderBy: [{ name: 'asc' }],
       }),
+      this.prisma.task.findMany({
+        where: {
+          ...taskRelationFilter,
+          supervisingChiefUserId: ctx.userId,
+          project: { companyId: ctx.companyId, deletedAt: null },
+        },
+        include: {
+          project: {
+            select: { id: true, name: true, nameZh: true, projectCode: true },
+          },
+        },
+        orderBy: [{ project: { name: 'asc' } }, { name: 'asc' }],
+      }),
     ]);
 
     const subtaskCounts = await this.prisma.designPackage.groupBy({
@@ -153,10 +174,15 @@ export class MyWorkService {
           discipline.task.name,
           discipline.task.nameZh,
         ),
+        taskIdCode: discipline.task.taskIdCode,
+        overseasTaskNumber: discipline.task.overseasTaskNumber,
         taskDisciplineId: discipline.id,
         disciplineName: discipline.disciplineName,
+        disciplineIndex: discipline.disciplineIndex,
         designPackageId: null,
         subtaskName: null,
+        subtaskId: null,
+        packageCode: null,
         roleLabel: 'Discipline leader (专册)',
         primaryRole: null,
         secondaryReviewRole: null,
@@ -183,15 +209,45 @@ export class MyWorkService {
           discipline.task.name,
           discipline.task.nameZh,
         ),
+        taskIdCode: discipline.task.taskIdCode,
+        overseasTaskNumber: discipline.task.overseasTaskNumber,
         taskDisciplineId: discipline.id,
         disciplineName: discipline.disciplineName,
+        disciplineIndex: discipline.disciplineIndex,
         designPackageId: pkg.id,
         subtaskName: pkg.name,
+        subtaskId: pkg.subtaskId,
+        packageCode: pkg.packageCode,
         roleLabel: this.resolveSubtaskRoleLabel(pkg, ctx.userId),
         primaryRole,
         secondaryReviewRole,
         projectedStatus: pkg.projectedStatus,
         packageStatus: pkg.packageStatus,
+      });
+    }
+
+    for (const task of responsibleTasks) {
+      items.push({
+        kind: 'RESPONSIBLE_PERSON',
+        projectId: task.projectId,
+        projectName: task.project.name,
+        projectNumber: task.project.projectCode,
+        taskId: task.id,
+        taskName: formatLocalizedName(task.name, task.nameZh),
+        taskIdCode: task.taskIdCode,
+        overseasTaskNumber: task.overseasTaskNumber,
+        taskDisciplineId: '',
+        disciplineName: '',
+        disciplineIndex: null,
+        designPackageId: null,
+        subtaskName: null,
+        subtaskId: null,
+        packageCode: null,
+        roleLabel: 'Responsible person',
+        primaryRole: null,
+        secondaryReviewRole: null,
+        projectedStatus: null,
+        packageStatus: null,
       });
     }
 

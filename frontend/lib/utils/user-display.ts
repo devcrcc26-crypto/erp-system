@@ -77,6 +77,5 @@ export function formatUserRoleNames(user: User): string {
  * Label for user pickers — name, roles, and discipline.
  */
 export function formatUserPickerLabel(user: User): string {
-  const roles = formatUserRoleNames(user);
-  return `${formatUserName(user)} — ${roles} (${formatUserDiscipline(user)})`;
+  return `${formatUserName(user)} (${formatUserDiscipline(user)})`;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, DatePicker, Form, Input, InputNumber, Modal, Select, Steps } from 'antd';
+import { Button, DatePicker, Drawer, Form, Input, InputNumber, Select, Steps } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { DesignPackage } from '@/lib/api/epc.types';
 import type {
@@ -22,7 +22,6 @@ import {
 } from '@/lib/query/design-packages';
 import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useAuthStore } from '@/stores/auth.store';
-import { wizardModalProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -275,12 +274,19 @@ export default function DesignPackageBuilder({
   }
 
   return (
-    <Modal
-      {...wizardModalProps}
+    <Drawer
       open={open}
       title={isEditing ? 'Edit subtask' : 'New subtask'}
-      onCancel={onClose}
+      onClose={onClose}
+      width={560}
+      placement="right"
       footer={renderFooter()}
+      styles={{
+        body: {
+          overflowY: 'auto',
+          paddingBottom: 80,
+        },
+      }}
     >
       <Steps
         size="small"
@@ -374,6 +380,6 @@ export default function DesignPackageBuilder({
           />
         ) : null}
       </Form>
-    </Modal>
+    </Drawer>
   );
 }

@@ -21,7 +21,10 @@ import {
   WorkflowResultSnapshot,
 } from '../../domain/contracts/workflow-kernel.contract';
 import { validateNewRevisionUpload } from '../../domain/edv-state-machine';
-import { DesignPackageRepository } from '../../infrastructure/repositories/epc-storage.repository';
+import {
+  DesignPackageRepository,
+  EngineeringDocumentVersionRepository,
+} from '../../infrastructure/repositories/epc-storage.repository';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 import { DocumentNumberService } from './document-number.service';
 import {
@@ -64,6 +67,7 @@ export class RevisionOrchestratorService {
     private readonly stateProjection: StateProjectionService,
     private readonly workflowTransactionRunner: WorkflowTransactionRunner,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly engineeringDocumentVersionRepository: EngineeringDocumentVersionRepository,
   ) {}
 
   /**
@@ -73,7 +77,9 @@ export class RevisionOrchestratorService {
     command: TriggerRevisionCommand,
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
-    return this.workflowTransactionRunner.runPhaseAB(
+    let priorEdvIds: string[] = [];
+
+    const result = await this.workflowTransactionRunner.runPhaseAB<WorkflowResultSnapshot>(
       async (tx) => {
       const document = await tx.engineeringDocument.findFirst({
         where: {
@@ -153,6 +159,8 @@ export class RevisionOrchestratorService {
         ],
       });
 
+      priorEdvIds = existingVersions.map((v) => v.id);
+
       const revisionLabel = String(existingVersions.length);
       const newEdv = await tx.engineeringDocumentVersion.create({
         data: {
@@ -164,6 +172,19 @@ export class RevisionOrchestratorService {
           createdBy: command.actorId,
           updatedBy: command.actorId,
         },
+      });
+
+      await tx.engineeringDocumentVersion.updateMany({
+        where: {
+          engineeringDocumentId: newEdv.engineeringDocumentId,
+          id: { not: newEdv.id },
+          deletedAt: null,
+        },
+        data: { isCurrent: false },
+      });
+      await tx.engineeringDocumentVersion.update({
+        where: { id: newEdv.id },
+        data: { isCurrent: true },
       });
 
       await tx.workflowEventLog.create({
@@ -213,6 +234,16 @@ export class RevisionOrchestratorService {
     },
     { companyId: command.companyId, correlationId },
     );
+
+    if (result.newEdvId) {
+      await this.engineeringDocumentVersionRepository.retargetPackageItemsToNewEdv(
+        command.companyId,
+        priorEdvIds,
+        result.newEdvId,
+      );
+    }
+
+    return result;
   }
 
   /**

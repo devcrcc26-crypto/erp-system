@@ -666,7 +666,12 @@ export class EpcWorkspaceService {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId: ctx.companyId }),
       include: {
-        taskDiscipline: { select: { disciplineLeadUserId: true } },
+        taskDiscipline: {
+          select: {
+            disciplineLeadUserId: true,
+            task: { select: { supervisingChiefUserId: true } },
+          },
+        },
       },
     });
     if (!pkg) {
@@ -684,7 +689,10 @@ export class EpcWorkspaceService {
       pkg.supportingDesignerUserId === ctx.userId;
     const isDisciplineLeader =
       pkg.taskDiscipline?.disciplineLeadUserId === ctx.userId;
-    const seesAllSessions = isFullAccess || isDesigner || isDisciplineLeader;
+    const isResponsiblePerson =
+      pkg.taskDiscipline?.task.supervisingChiefUserId === ctx.userId;
+    const seesAllSessions =
+      isFullAccess || isDesigner || isDisciplineLeader || isResponsiblePerson;
 
     const tierRoleHolder: Partial<Record<ReviewTier, string | null>> = {
       [ReviewTier.REVIEWER]: pkg.reviewerUserId,
@@ -784,7 +792,12 @@ export class EpcWorkspaceService {
     const packageItemsPromise = this.prisma.designPackageItem.findMany({
       where: { companyId: ctx.companyId, designPackageId },
       orderBy: { sortOrder: 'asc' },
-      select: { engineeringDocumentVersionId: true },
+      select: {
+        engineeringDocumentVersionId: true,
+        engineeringDocumentVersion: {
+          select: { engineeringDocumentId: true },
+        },
+      },
     });
 
     type SessionWithInclude = Prisma.ReviewSessionGetPayload<{
@@ -920,6 +933,19 @@ export class EpcWorkspaceService {
     }
 
     const packageItems = await packageItemsPromise;
+    const currentVersions = await this.prisma.engineeringDocumentVersion.findMany({
+      where: {
+        engineeringDocumentId: {
+          in: packageItems.map((p) => p.engineeringDocumentVersion.engineeringDocumentId),
+        },
+        isCurrent: true,
+        deletedAt: null,
+      },
+      select: { id: true, engineeringDocumentId: true },
+    });
+    const currentVersionMap = new Map(
+      currentVersions.map((v) => [v.engineeringDocumentId, v.id]),
+    );
     const sessionComments = session?.comments ?? [];
     const revisionContexts = await resolveCommentRevisionContexts(
       this.prisma,
@@ -939,7 +965,10 @@ export class EpcWorkspaceService {
       sessionStatus: session?.status ?? null,
       currentTier: session?.currentTier ?? null,
       packageEdvIds: packageItems.map(
-        (item) => item.engineeringDocumentVersionId,
+        (item) =>
+          currentVersionMap.get(
+            item.engineeringDocumentVersion.engineeringDocumentId,
+          ) ?? item.engineeringDocumentVersionId,
       ),
       snapshotEdvIds: session?.contextSnapshot?.referencedVersionIds ?? [],
       contentHash: session?.contextSnapshot?.contentHash ?? null,

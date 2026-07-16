@@ -591,9 +591,6 @@ export default function TaskFormDrawer({
                         >
                           <InputNumber className="!w-full" min={0} disabled />
                         </Form.Item>
-                        <Form.Item label="Progress %" name="progressPct">
-                          <InputNumber className="!w-full" min={0} max={100} />
-                        </Form.Item>
                       </div>
                       <Form.Item name="isCritical" valuePropName="checked">
                         <Checkbox>Critical path task</Checkbox>

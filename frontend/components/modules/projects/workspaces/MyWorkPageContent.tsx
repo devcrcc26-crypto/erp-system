@@ -25,6 +25,7 @@ import {
   scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
 import { PROJECTED_STATUS_LABELS } from '@/lib/utils/epc-display';
+import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 
 const PROJECTED_STATUS_OPTIONS: DesignPackageProjectedStatus[] = [
   'IN_PROGRESS',
@@ -52,6 +53,10 @@ function workItemHref(item: MyWorkItem): string {
       item.projectId,
       item.taskDisciplineId,
     );
+  }
+
+  if (item.kind === 'RESPONSIBLE_PERSON') {
+    return `/projects/${item.projectId}/schedule`;
   }
 
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
@@ -161,29 +166,64 @@ export default function MyWorkPageContent({
       title: 'Type',
       key: 'kind',
       width: 140,
-      render: (_value, record) => (
-        <StatusBadge
-          label={record.kind === 'DISCIPLINE_LEAD' ? 'Discipline lead' : 'Subtask'}
-          variant={record.kind === 'DISCIPLINE_LEAD' ? 'info' : 'orange'}
-        />
-      ),
+      render: (_value, record) => {
+        if (record.kind === 'DISCIPLINE_LEAD') {
+          return <StatusBadge label="Discipline lead" variant="info" />;
+        }
+        if (record.kind === 'RESPONSIBLE_PERSON') {
+          return <StatusBadge label="Responsible person" variant="default" />;
+        }
+        return <StatusBadge label="Subtask" variant="orange" />;
+      },
     },
     {
       title: 'Task',
       key: 'task',
       ellipsis: true,
-      render: (_value, record) => (
-        <div>
-          <p className="font-medium text-slate-900">{record.taskName}</p>
-          <p className="text-xs text-slate-500">{record.disciplineName}</p>
-        </div>
-      ),
+      render: (_value, record) => {
+        const taskCode = record.overseasTaskNumber ?? record.taskIdCode;
+        return (
+          <div>
+            <p className="font-medium text-slate-900">{record.taskName}</p>
+            {taskCode && <p className="text-xs text-slate-500">{taskCode}</p>}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Discipline',
+      key: 'discipline',
+      ellipsis: true,
+      render: (_value, record) => {
+        if (!record.disciplineName) {
+          return '—';
+        }
+        return (
+          <div>
+            <p className="font-medium text-slate-900">{record.disciplineName}</p>
+            <p className="text-xs text-slate-500">
+              {formatDisciplineNumber(record.disciplineIndex)}
+            </p>
+          </div>
+        );
+      },
     },
     {
       title: 'Subtask',
       key: 'subtask',
       ellipsis: true,
-      render: (_value, record) => record.subtaskName ?? '—',
+      render: (_value, record) => {
+        if (!record.subtaskName) {
+          return '—';
+        }
+        const subtaskCode = record.subtaskId ?? record.packageCode;
+        return (
+          <div>
+            <p className="font-medium text-slate-900">{record.subtaskName}</p>
+            {subtaskCode && <p className="text-xs text-slate-500">{subtaskCode}</p>}
+          </div>
+        );
+      },
     },
     {
       title: 'Your role',

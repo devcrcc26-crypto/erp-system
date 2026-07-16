@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Collapse } from 'antd';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useAllTasks } from '@/lib/query/schedule';
+import { useAllTasks, useScheduleSubtasks } from '@/lib/query/schedule';
 import { computeScheduleMetrics } from '@/lib/utils/schedule-metrics';
 import MilestonesPanel from '@/components/modules/projects/schedule/MilestonesPanel';
 import ScheduleGantt from '@/components/modules/projects/schedule/ScheduleGantt';
@@ -24,6 +24,10 @@ export default function SchedulePageContent({
 
   const permLoading = usePermissionsLoading();
   const tasksQuery = useAllTasks(projectId, !permLoading);
+  const { byTaskId: subtasksByTaskId } = useScheduleSubtasks(
+    projectId,
+    !permLoading,
+  );
 
   const isLoading = permLoading || tasksQuery.isLoading;
 
@@ -34,7 +38,10 @@ export default function SchedulePageContent({
 
   const tasks = tasksQuery.data?.data ?? [];
 
-  const metrics = useMemo(() => computeScheduleMetrics(tasks), [tasks]);
+  const metrics = useMemo(
+    () => computeScheduleMetrics(tasks, subtasksByTaskId),
+    [tasks, subtasksByTaskId],
+  );
 
   if (isLoading) {
     return <PageLoadingSkeleton />;

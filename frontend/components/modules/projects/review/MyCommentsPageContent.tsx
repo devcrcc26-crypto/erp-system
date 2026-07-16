@@ -206,14 +206,14 @@ export default function MyCommentsPageContent({
           items={[
             {
               key: 'completed',
-              label: `Completed (${completedItems.length})`,
+              label: `No action required (${completedItems.length})`,
               children: (
                 <DataTable<MyCommentItem>
                   rowKey="commentId"
                   size="middle"
                   columns={columns}
                   dataSource={completedItems}
-                  locale={{ emptyText: 'No completed comments' }}
+                  locale={{ emptyText: 'No resolved comments' }}
                 />
               ),
             },

@@ -29,6 +29,8 @@ import { getNextReviewTier, reviewTierBilingualLabel } from '@/lib/utils/review-
 import { isFinalReviewTier } from '@/lib/utils/review-governance';
 import { isExternalInstituteChief } from '@/lib/utils/institute-chief';
 import {
+  APPROVE_BLOCKING_STATUSES,
+  canApproveReviewSession,
   resolveDefaultCommentAssignee,
   resolveDefaultCommentAssigneeLabel,
 } from '@/lib/utils/comment-workflow';
@@ -159,7 +161,12 @@ export default function ReviewInboxDrawer({
     );
   }
 
-  const allMyCommentsVerified = myComments.every((comment) => isCommentVerified(comment));
+  const allCommentsVerified = canApproveReviewSession(
+    (reviewMode?.comments ?? []).map((c) => c.status),
+  );
+  const openCount = (reviewMode?.comments ?? []).filter((c) =>
+    APPROVE_BLOCKING_STATUSES.has(c.status),
+  ).length;
 
   async function handleVerify(comment: ReviewModeComment): Promise<void> {
     setVerifyingCommentId(comment.id);
@@ -208,7 +215,7 @@ export default function ReviewInboxDrawer({
     disciplineQuery.data,
   );
 
-  const canSubmitApproval = allDocumentsApproved && allMyCommentsVerified;
+  const canSubmitApproval = allDocumentsApproved && allCommentsVerified;
 
   async function handleConfirmApproval(params: {
     approvedOnBehalfOfName?: string;
@@ -397,11 +404,10 @@ export default function ReviewInboxDrawer({
                         />
                       </div>
                     )}
-                    {comment.responseAttachment &&
-                      comment.responseAttachment.documentVersionId !== comment.responseRevision?.documentVersionId && (
+                    {comment.responseAttachment && (
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                         <span className="min-w-0 truncate">
-                          Response attachment: {comment.responseAttachment.name}
+                          Designer response: {comment.responseAttachment.name}
                         </span>
                         <EdvFileActions
                           compact
@@ -435,9 +441,11 @@ export default function ReviewInboxDrawer({
             <Button onClick={() => setReturnModalOpen(true)}>Return for rework</Button>
             <Tooltip
               title={
-                !canSubmitApproval
-                  ? 'Approve all documents and verify all comments first.'
-                  : undefined
+                !allDocumentsApproved
+                  ? 'Approve all documents before escalating.'
+                  : !allCommentsVerified
+                    ? `All comments must be verified before escalating. ${openCount} comment(s) still open.`
+                    : undefined
               }
             >
               <span>

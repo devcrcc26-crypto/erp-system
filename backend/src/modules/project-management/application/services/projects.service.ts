@@ -415,7 +415,10 @@ export class ProjectsService {
         }),
       ]);
 
-    const scheduleMetrics = this.computeScheduleMetrics(tasks);
+    const taskProgressById = await this.computeTaskProgressMap(
+      tasks.map((task) => task.id),
+    );
+    const scheduleMetrics = this.computeScheduleMetrics(tasks, taskProgressById);
 
     return {
       openRfis,
@@ -750,21 +753,36 @@ export class ProjectsService {
   private async loadTaskProgressByProjectId(
     projectIds: readonly string[],
   ): Promise<Map<string, number>> {
+    const progressByProjectId = new Map<string, number>();
     if (projectIds.length === 0) {
-      return new Map();
+      return progressByProjectId;
     }
 
-    const groups = await this.prisma.task.groupBy({
-      by: ['projectId'],
+    const tasks = await this.prisma.task.findMany({
       where: activeOnly({ projectId: { in: [...projectIds] } }),
-      _avg: { progressPct: true },
+      select: { id: true, projectId: true },
     });
 
-    const progressByProjectId = new Map<string, number>();
-    for (const group of groups) {
-      if (group._avg.progressPct != null) {
-        progressByProjectId.set(group.projectId, group._avg.progressPct);
+    const taskProgressById = await this.computeTaskProgressMap(
+      tasks.map((task) => task.id),
+    );
+
+    const valuesByProjectId = new Map<string, number[]>();
+    for (const task of tasks) {
+      const progress = taskProgressById.get(task.id);
+      if (progress == null) {
+        continue;
       }
+      const values = valuesByProjectId.get(task.projectId) ?? [];
+      values.push(progress);
+      valuesByProjectId.set(task.projectId, values);
+    }
+
+    for (const [projectId, values] of valuesByProjectId) {
+      progressByProjectId.set(
+        projectId,
+        this.clampPercent(values.reduce((sum, value) => sum + value, 0) / values.length),
+      );
     }
 
     return progressByProjectId;
@@ -784,7 +802,10 @@ export class ProjectsService {
     };
   }
 
-  private computeScheduleMetrics(tasks: Task[]): {
+  private computeScheduleMetrics(
+    tasks: Task[],
+    taskProgressById: ReadonlyMap<string, number>,
+  ): {
     scheduleVariancePct: number | null;
     plannedProgressPct: number | null;
     actualProgressPct: number | null;
@@ -798,9 +819,16 @@ export class ProjectsService {
     }
 
     const today = new Date();
-    const actualProgressPct = this.clampPercent(
-      tasks.reduce((sum, task) => sum + task.progressPct, 0) / tasks.length,
-    );
+    const progressValues = tasks
+      .map((task) => taskProgressById.get(task.id))
+      .filter((value): value is number => value != null);
+    const actualProgressPct =
+      progressValues.length > 0
+        ? this.clampPercent(
+            progressValues.reduce((sum, value) => sum + value, 0) /
+              progressValues.length,
+          )
+        : null;
 
     const plannedValues = tasks
       .map((task) => this.computePlannedProgress(task, today))
@@ -815,7 +843,7 @@ export class ProjectsService {
         : null;
 
     const scheduleVariancePct =
-      plannedProgressPct !== null
+      plannedProgressPct !== null && actualProgressPct !== null
         ? actualProgressPct - plannedProgressPct
         : null;
 
@@ -824,6 +852,49 @@ export class ProjectsService {
       plannedProgressPct,
       actualProgressPct,
     };
+  }
+
+  /**
+   * Per-task progress derived from subtask (design package) completion:
+   * closed packages / total packages, rounded. Tasks with no subtasks are
+   * omitted (no computable progress) rather than defaulting to 0.
+   */
+  private async computeTaskProgressMap(
+    taskIds: readonly string[],
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    if (taskIds.length === 0) {
+      return result;
+    }
+
+    const disciplines = await this.prisma.taskDiscipline.findMany({
+      where: activeOnly({ taskId: { in: [...taskIds] } }),
+      select: {
+        taskId: true,
+        designPackages: {
+          where: activeOnly({}),
+          select: { packageStatus: true },
+        },
+      },
+    });
+
+    const totals = new Map<string, { closed: number; total: number }>();
+    for (const discipline of disciplines) {
+      const entry = totals.get(discipline.taskId) ?? { closed: 0, total: 0 };
+      entry.total += discipline.designPackages.length;
+      entry.closed += discipline.designPackages.filter(
+        (pkg) => pkg.packageStatus === 'CLOSED',
+      ).length;
+      totals.set(discipline.taskId, entry);
+    }
+
+    for (const [taskId, { closed, total }] of totals) {
+      if (total > 0) {
+        result.set(taskId, this.clampPercent((closed / total) * 100));
+      }
+    }
+
+    return result;
   }
 
   private computePlannedProgress(task: Task, today: Date): number | null {

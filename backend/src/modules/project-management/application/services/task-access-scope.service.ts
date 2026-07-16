@@ -200,6 +200,9 @@ export class TaskAccessScopeService {
       },
     });
 
+    // Read-only: task responsible person sees their own tasks.
+    orConditions.push({ supervisingChiefUserId: ctx.userId });
+
     return {
       AND: [base, { OR: orConditions }],
     };
@@ -279,6 +282,8 @@ export class TaskAccessScopeService {
           }),
         },
       },
+      // Read-only: task responsible person sees all disciplines under their task.
+      { task: { supervisingChiefUserId: ctx.userId } },
     ];
 
     if (profile.isDepartmentLeader) {
@@ -395,6 +400,8 @@ export class TaskAccessScopeService {
             OR: disciplineAssigneeOr(ctx.userId),
           }),
         },
+        // Read-only: task responsible person sees all subtasks under their task.
+        { taskDiscipline: { task: { supervisingChiefUserId: ctx.userId } } },
       ],
     };
   }

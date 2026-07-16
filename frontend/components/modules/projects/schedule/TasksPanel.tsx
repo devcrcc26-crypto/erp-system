@@ -45,6 +45,7 @@ import {
   getScheduleSubtaskDisplayStatus,
   scheduleSubtaskWorkspaceHref,
 } from '@/lib/utils/schedule-subtasks';
+import { computeTaskProgressPct } from '@/lib/utils/schedule-metrics';
 import { tokens } from '@/lib/theme/tokens';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -332,14 +333,16 @@ export default function TasksPanel({
       key: 'progressPct',
       width: 140,
       align: 'right',
-      render: (_value, record) =>
-        record.rowType === 'task' ? (
-          <Progress
-            percent={record.task.progressPct}
-            size="small"
-            strokeColor="#f97316"
-          />
-        ) : null,
+      render: (_value, record) => {
+        if (record.rowType !== 'task') {
+          return null;
+        }
+        const subtasks = subtasksByTaskId.get(record.task.id) ?? [];
+        const progressPct = computeTaskProgressPct(subtasks);
+        return progressPct !== null ? (
+          <Progress percent={progressPct} size="small" strokeColor="#f97316" />
+        ) : null;
+      },
     },
     {
       title: 'Status',
