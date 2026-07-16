@@ -75,6 +75,9 @@ export const WORKFLOW_STATE_ACTION_GATES: Readonly<
   [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK]: [
     EdvStatus.APPROVED,
   ],
+  [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK]: [
+    EdvStatus.LOCKED,
+  ],
 };
 
 export interface PermissionResolverContract {

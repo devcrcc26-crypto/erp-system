@@ -116,6 +116,7 @@ const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK,
   EpcWorkflowAction.REVIEW_COMMENT_ASSIGN,
   EpcWorkflowAction.REVIEW_COMMENT_VERIFY,
   EpcWorkflowAction.REVIEW_COMMENT_ACKNOWLEDGE,
@@ -184,9 +185,10 @@ const REVIEW_TIER_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN,
 ]);
 
-/** Discipline leader locks EDVs after the approval chain completes. */
+/** Discipline leader locks/unlocks EDVs after the approval chain completes. */
 const DISCIPLINE_LEAD_LOCK_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK,
+  EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK,
 ]);
 
 function isDisciplineAssignee(input: PermissionContextInput): boolean {

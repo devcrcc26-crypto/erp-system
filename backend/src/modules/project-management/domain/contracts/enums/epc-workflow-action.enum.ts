@@ -3,6 +3,7 @@ export enum EpcWorkflowAction {
   ENGINEERING_DOCUMENT_VERSION_UPLOAD = 'engineering_document.version.upload',
   ENGINEERING_DOCUMENT_VERSION_REGISTER = 'engineering_document.version.register',
   ENGINEERING_DOCUMENT_VERSION_LOCK = 'engineering_document.version.lock',
+  ENGINEERING_DOCUMENT_VERSION_UNLOCK = 'engineering_document.version.unlock',
   REVIEW_COMMENT_ASSIGN = 'review.comment.assign',
   REVIEW_COMMENT_VERIFY = 'review.comment.verify',
   REVIEW_COMMENT_ACKNOWLEDGE = 'review.comment.acknowledge',

@@ -237,6 +237,7 @@ export class PermissionResolverService {
     if (schedule.canApprove) {
       this.grantReviewApprovalActions(granted);
       granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
+      granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK);
       granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
     }
 
@@ -280,6 +281,7 @@ export class PermissionResolverService {
     granted.add(EpcWorkflowAction.REVIEW_SESSION_BATCH_RETURN);
     // Discipline leader — Layer 3 enforces matching assignment
     granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
+    granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK);
   }
 
   private grantReviewApprovalActions(
@@ -314,6 +316,9 @@ export class PermissionResolverService {
     from: EdvStatus,
     to: EdvStatus,
   ): EpcWorkflowAction {
+    if (from === EdvStatus.LOCKED && to === EdvStatus.APPROVED) {
+      return EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK;
+    }
     if (to === EdvStatus.LOCKED) {
       return EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK;
     }

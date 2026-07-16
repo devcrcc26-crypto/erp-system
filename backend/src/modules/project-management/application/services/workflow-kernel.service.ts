@@ -238,11 +238,40 @@ export class WorkflowKernelService {
     correlationId: string,
   ): Promise<WorkflowResultSnapshot> {
     return this.workflowTransactionRunner.runPhaseAB(async (tx) => {
+      const packageCtx = await this.epcWorkflowRepository.findPackageContextByEdvId(
+        tx,
+        command.companyId,
+        command.engineeringDocumentVersionId,
+      );
+
+      const existingEdv = await this.epcWorkflowRepository.findEdvWithDiscipline(
+        tx,
+        command.companyId,
+        command.engineeringDocumentVersionId,
+      );
+      if (
+        existingEdv?.status === PrismaEdvStatus.LOCKED &&
+        command.targetStatus === EdvStatus.APPROVED &&
+        packageCtx?.designPackageId
+      ) {
+        const pkg = await this.epcWorkflowRepository.findPackageWithItems(
+          tx,
+          command.companyId,
+          packageCtx.designPackageId,
+        );
+        if (pkg?.packageStatus === 'CLOSED') {
+          throw new BadRequestException(
+            'Reopen the subtask before unlocking engineering document versions',
+          );
+        }
+      }
+
       const results = await this.edvTransitionService.applyInTx(tx, {
         companyId: command.companyId,
         actorId: command.actorId,
         correlationId,
         projectId: await this.resolveProjectId(tx, command),
+        designPackageId: packageCtx?.designPackageId,
         transitions: [
           {
             engineeringDocumentVersionId: command.engineeringDocumentVersionId,
@@ -258,20 +287,14 @@ export class WorkflowKernelService {
         command.actorId,
       );
 
-      const ctx = await this.epcWorkflowRepository.findPackageContextByEdvId(
-        tx,
-        command.companyId,
-        command.engineeringDocumentVersionId,
-      );
-
       return this.buildSnapshot(
         'TransitionEdvStatus',
         correlationId,
         results,
         phaseB,
         {
-          packageId: ctx?.designPackageId,
-          disciplineId: ctx?.taskDisciplineId,
+          packageId: packageCtx?.designPackageId,
+          disciplineId: packageCtx?.taskDisciplineId,
         },
       );
     }, { companyId: command.companyId, correlationId });

@@ -39,10 +39,19 @@ describe('edv-state-machine', () => {
       ).toBe(true);
     });
 
-    it('blocks LOCKED → any', () => {
+    it('blocks LOCKED → DRAFT', () => {
       expect(canTransitionEdvStatus(EdvStatus.LOCKED, EdvStatus.DRAFT).allowed).toBe(
         false,
       );
+    });
+
+    it('allows LOCKED → APPROVED unlock', () => {
+      expect(
+        canTransitionEdvStatus(EdvStatus.APPROVED, EdvStatus.LOCKED).allowed,
+      ).toBe(true);
+      expect(
+        canTransitionEdvStatus(EdvStatus.LOCKED, EdvStatus.APPROVED).allowed,
+      ).toBe(true);
     });
 
     it('blocks SUPERSEDED → any', () => {
@@ -67,6 +76,9 @@ describe('edv-state-machine', () => {
 
     it('throws on invalid transition', () => {
       expect(() => transitionEdvStatus(EdvStatus.LOCKED, EdvStatus.DRAFT)).toThrow();
+      expect(transitionEdvStatus(EdvStatus.LOCKED, EdvStatus.APPROVED)).toBe(
+        EdvStatus.APPROVED,
+      );
     });
   });
 
@@ -104,8 +116,10 @@ describe('edv-state-machine', () => {
   });
 
   describe('getAllowedEdvTransitions', () => {
-    it('returns empty for LOCKED', () => {
-      expect(getAllowedEdvTransitions(EdvStatus.LOCKED)).toEqual([]);
+    it('returns APPROVED unlock for LOCKED', () => {
+      expect(getAllowedEdvTransitions(EdvStatus.LOCKED)).toEqual([
+        EdvStatus.APPROVED,
+      ]);
     });
   });
 });

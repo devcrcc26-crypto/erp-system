@@ -39,9 +39,14 @@ import {
   useDesignPackageDependencies,
   useDesignPackages,
   useLockPackageEdvs,
+  useReopenDesignPackage,
   useSubmitPackageForReview,
 } from '@/lib/query/design-packages';
-import { useEngineeringDocuments, useBatchLockEngineeringDocuments } from '@/lib/query/engineering-documents';
+import {
+  useEngineeringDocuments,
+  useBatchLockEngineeringDocuments,
+  useTransitionEdvStatus,
+} from '@/lib/query/engineering-documents';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading, useCanViewMyWork } from '@/hooks/use-pm-capabilities';
 import { useDesignPackageReviewMode } from '@/lib/query/epc-workspace';
@@ -94,6 +99,8 @@ export default function DesignPackageDetailPageContent({
   const hasElevatedAccess = isSystemAdministrator || epc.navFullAccess;
   const { data: profile } = useCurrentUser();
   const [closePackageOpen, setClosePackageOpen] = useState(false);
+  const [reopenPackageOpen, setReopenPackageOpen] = useState(false);
+  const [unlockingEdvId, setUnlockingEdvId] = useState<string | null>(null);
   const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -137,6 +144,8 @@ export default function DesignPackageDetailPageContent({
   const batchLock = useBatchLockEngineeringDocuments();
   const batchApproveEdvs = useBatchApprovePackageEdvs();
   const closeDesignPackage = useCloseDesignPackage(projectId, taskDisciplineId);
+  const reopenDesignPackage = useReopenDesignPackage(projectId, taskDisciplineId);
+  const unlockEdv = useTransitionEdvStatus();
 
   const pkg = packageQuery.data;
   const discipline = disciplineQuery.data;
@@ -223,9 +232,13 @@ export default function DesignPackageDetailPageContent({
   const canLockPackageEdvs =
     isDisciplineLeader || packageLens.isPackageDisciplineLeader;
   const canClosePackage =
-    isDisciplineLeader &&
+    canLockPackageEdvs &&
     pkg.projectedStatus === 'LOCKED' &&
     pkg.packageStatus !== 'CLOSED';
+  const canReopenPackage =
+    canLockPackageEdvs && pkg.packageStatus === 'CLOSED';
+  const canUnlockEdvs =
+    canLockPackageEdvs && pkg.packageStatus !== 'CLOSED';
 
   const { primaryRole, secondaryReviewRole } = resolvePackageRoles(
     pkg,
@@ -304,8 +317,35 @@ export default function DesignPackageDetailPageContent({
       });
       messageApi.success('Batch lock requested');
       void packageQuery.refetch();
+      void documentsQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Request failed', messageApi);
+    }
+  }
+
+  async function handleUnlockEdv(item: {
+    engineeringDocumentId: string;
+    engineeringDocumentVersionId: string;
+  }): Promise<void> {
+    setUnlockingEdvId(item.engineeringDocumentVersionId);
+    try {
+      await unlockEdv.mutateAsync({
+        projectId,
+        taskDisciplineId,
+        engineeringDocumentId: item.engineeringDocumentId,
+        versionId: item.engineeringDocumentVersionId,
+        body: {
+          targetStatus: 'APPROVED',
+          reason: 'Discipline leader unlock after subtask reopen',
+        },
+      });
+      messageApi.success('Document unlocked');
+      void packageQuery.refetch();
+      void documentsQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to unlock document', messageApi);
+    } finally {
+      setUnlockingEdvId(null);
     }
   }
 
@@ -397,6 +437,11 @@ export default function DesignPackageDetailPageContent({
             {canClosePackage && (
               <Button onClick={() => setClosePackageOpen(true)}>
                 Close Package
+              </Button>
+            )}
+            {canReopenPackage && (
+              <Button onClick={() => setReopenPackageOpen(true)}>
+                Reopen subtask
               </Button>
             )}
           </Space>
@@ -558,6 +603,9 @@ export default function DesignPackageDetailPageContent({
           items={pkg.items ?? []}
           documents={documentsQuery.data?.data ?? []}
           canEdit={packageLens.canUploadToPackage}
+          canUnlock={canUnlockEdvs}
+          unlockingEdvId={unlockingEdvId}
+          onUnlock={(item) => void handleUnlockEdv(item)}
           onChanged={() => void packageQuery.refetch()}
         />
       </FormLayout>
@@ -634,7 +682,7 @@ export default function DesignPackageDetailPageContent({
       <ConfirmDialog
         open={closePackageOpen}
         title="Close subtask?"
-        description="This confirms all documents are locked and all linked RFIs, issues, and change requests are resolved. This cannot be undone."
+        description="This confirms all documents are locked and all linked RFIs, issues, and change requests are resolved. The discipline leader can reopen later to unlock documents."
         confirmLabel="Close Package"
         confirmLoading={closeDesignPackage.isPending}
         onConfirm={() => {
@@ -651,6 +699,28 @@ export default function DesignPackageDetailPageContent({
             });
         }}
         onCancel={() => setClosePackageOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={reopenPackageOpen}
+        title="Reopen subtask?"
+        description="Reopening lets the discipline leader unlock locked documents individually. Unlock documents only after reopening."
+        confirmLabel="Reopen"
+        confirmLoading={reopenDesignPackage.isPending}
+        onConfirm={() => {
+          void reopenDesignPackage
+            .mutateAsync({ packageId })
+            .then(() => {
+              messageApi.success('Subtask reopened — unlock documents as needed');
+              setReopenPackageOpen(false);
+              void packageQuery.refetch();
+              void documentsQuery.refetch();
+            })
+            .catch((error: unknown) => {
+              notifyApiError(error, 'Failed to reopen subtask', messageApi);
+            });
+        }}
+        onCancel={() => setReopenPackageOpen(false)}
       />
 
       <DesignPackageAddDependencyModal

@@ -29,12 +29,12 @@ const ALLOWED_EDV_TRANSITIONS: Readonly<
     EdvStatus.IN_REVIEW,
     EdvStatus.SUPERSEDED,
   ],
-  [EdvStatus.LOCKED]: [],
+  /** Unlock returns a locked revision to APPROVED for controlled rework. */
+  [EdvStatus.LOCKED]: [EdvStatus.APPROVED],
   [EdvStatus.SUPERSEDED]: [],
 };
 
 const TERMINAL_STATUSES: ReadonlySet<EdvStatus> = new Set([
-  EdvStatus.LOCKED,
   EdvStatus.SUPERSEDED,
 ]);
 
@@ -69,7 +69,7 @@ export function canTransitionEdvStatus(
       allowed: false,
       from,
       to,
-      code: from === EdvStatus.LOCKED ? 'LOCKED_IMMUTABLE' : 'SUPERSEDED_IMMUTABLE',
+      code: 'SUPERSEDED_IMMUTABLE',
       message: `Cannot transition from ${from}`,
     };
   }

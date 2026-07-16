@@ -786,6 +786,8 @@ export class DesignPackagesService {
       throw new NotFoundException('Design package not found');
     }
 
+    await this.assertCanCloseOrReopenPackage(ctx, pkg, 'close');
+
     if (pkg.packageStatus === DesignPackageStatus.CLOSED) {
       throw new ConflictException('Package is already closed.');
     }
@@ -838,6 +840,39 @@ export class DesignPackagesService {
     );
 
     return mapDesignPackage({ ...closed, items: pkg.items });
+  }
+
+  /**
+   * Reopens a closed design package so the discipline leader can unlock EDVs.
+   */
+  async reopenDesignPackage(
+    ctx: PmContext,
+    projectId: string,
+    taskDisciplineId: string,
+    packageId: string,
+  ): Promise<MappedDesignPackage> {
+    await this.assertDisciplineScope(ctx, projectId, taskDisciplineId);
+
+    const pkg = await this.designPackageRepository.findForClose(
+      ctx.companyId,
+      packageId,
+    );
+    if (!pkg || pkg.taskDisciplineId !== taskDisciplineId) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    await this.assertCanCloseOrReopenPackage(ctx, pkg, 'reopen');
+
+    if (pkg.packageStatus !== DesignPackageStatus.CLOSED) {
+      throw new ConflictException('Only closed packages can be reopened.');
+    }
+
+    const reopened = await this.designPackageRepository.reopenPackage(
+      packageId,
+      ctx.userId,
+    );
+
+    return mapDesignPackage({ ...reopened, items: pkg.items });
   }
 
   /**
@@ -1345,6 +1380,33 @@ export class DesignPackagesService {
       ctx,
       projectId,
       taskDisciplineId,
+    );
+  }
+
+  /**
+   * Close/reopen are restricted to the discipline (or package) leader, or full-access admins.
+   */
+  private async assertCanCloseOrReopenPackage(
+    ctx: PmContext,
+    pkg: {
+      disciplinaryLeaderUserId?: string | null;
+      taskDiscipline: { disciplineLeadUserId: string | null };
+    },
+    action: 'close' | 'reopen',
+  ): Promise<void> {
+    const profile = await this.taskAccessScopeService.resolveProfile(ctx);
+    if (profile.hasFullProjectAccess || profile.isProjectAdmin) {
+      return;
+    }
+
+    const leaderUserId =
+      pkg.disciplinaryLeaderUserId ?? pkg.taskDiscipline.disciplineLeadUserId;
+    if (leaderUserId === ctx.userId) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      `Only the discipline leader can ${action} a design package.`,
     );
   }
 

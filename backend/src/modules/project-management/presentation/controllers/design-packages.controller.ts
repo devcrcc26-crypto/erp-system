@@ -262,7 +262,7 @@ export class DesignPackagesController {
   }
 
   @Post(':packageId/close')
-  @RequirePermission('schedule', 'approve')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Close design package after all EDVs are locked' })
   closePackage(
     @CurrentUser() user: AuthenticatedUser,
@@ -271,6 +271,25 @@ export class DesignPackagesController {
     @Param('packageId') packageId: string,
   ): Promise<unknown> {
     return this.designPackagesService.closeDesignPackage(
+      this.ctx(user),
+      projectId,
+      taskDisciplineId,
+      packageId,
+    );
+  }
+
+  @Post(':packageId/reopen')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Reopen a closed design package so EDVs can be unlocked',
+  })
+  reopenPackage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('taskDisciplineId') taskDisciplineId: string,
+    @Param('packageId') packageId: string,
+  ): Promise<unknown> {
+    return this.designPackagesService.reopenDesignPackage(
       this.ctx(user),
       projectId,
       taskDisciplineId,

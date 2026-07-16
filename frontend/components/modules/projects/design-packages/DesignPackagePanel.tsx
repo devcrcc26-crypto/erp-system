@@ -562,6 +562,9 @@ export function DesignPackageItemsTable({
   items,
   documents,
   canEdit,
+  canUnlock = false,
+  unlockingEdvId = null,
+  onUnlock,
   onChanged,
 }: {
   projectId: string;
@@ -570,6 +573,12 @@ export function DesignPackageItemsTable({
   items: DesignPackageItem[];
   documents: EngineeringDocument[];
   canEdit: boolean;
+  canUnlock?: boolean;
+  unlockingEdvId?: string | null;
+  onUnlock?: (item: {
+    engineeringDocumentId: string;
+    engineeringDocumentVersionId: string;
+  }) => void;
   onChanged: () => void;
 }): React.ReactNode {
   const removeItem = useRemoveDesignPackageItem();
@@ -585,6 +594,7 @@ export function DesignPackageItemsTable({
         displayRevisionLabel: string;
         displayStatus: string;
         displayDocumentVersionId: string;
+        engineeringDocumentId: string;
       }
     >();
     for (const doc of documents) {
@@ -599,6 +609,7 @@ export function DesignPackageItemsTable({
           displayStatus: current?.status ?? version.status,
           displayDocumentVersionId:
             current?.documentVersionId ?? version.documentVersionId,
+          engineeringDocumentId: doc.id,
         });
       }
     }
@@ -634,15 +645,31 @@ export function DesignPackageItemsTable({
     {
       title: '',
       key: 'actions',
-      width: canEdit ? 220 : 180,
+      width: canEdit || canUnlock ? 260 : 180,
       render: (_value, record) => {
         const info = edvMap.get(record.engineeringDocumentVersionId);
+        const isLocked = info?.displayStatus === 'LOCKED';
         return (
           <Space size={4} wrap>
             <EdvFileActions
               documentVersionId={info?.displayDocumentVersionId}
               fileName={info?.doc.title}
             />
+            {canUnlock && isLocked && info && onUnlock ? (
+              <Button
+                type="link"
+                className="!px-1"
+                loading={unlockingEdvId === record.engineeringDocumentVersionId}
+                onClick={() =>
+                  onUnlock({
+                    engineeringDocumentId: info.engineeringDocumentId,
+                    engineeringDocumentVersionId: record.engineeringDocumentVersionId,
+                  })
+                }
+              >
+                Unlock
+              </Button>
+            ) : null}
             {canEdit ? (
               <Button
                 type="link"

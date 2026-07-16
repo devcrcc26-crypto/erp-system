@@ -617,6 +617,34 @@ export function useCloseDesignPackage(
   });
 }
 
+export function useReopenDesignPackage(
+  projectId: string,
+  taskDisciplineId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ packageId }: { packageId: string }) =>
+      apiPost<DesignPackage>(
+        designPackagesPath(projectId, taskDisciplineId, packageId, 'reopen'),
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePackageQueries(
+        queryClient,
+        projectId,
+        taskDisciplineId,
+        variables.packageId,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: engineeringDocumentKeys.lists(projectId, taskDisciplineId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: epcWorkspaceKeys.all,
+      });
+    },
+  });
+}
+
 export function useCloseTaskDiscipline(projectId: string) {
   const queryClient = useQueryClient();
 

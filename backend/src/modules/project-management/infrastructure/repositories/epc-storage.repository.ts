@@ -385,6 +385,21 @@ export class DesignPackageRepository {
   }
 
   /**
+   * Reopens a closed design package for unlock / further work.
+   */
+  async reopenPackage(id: string, reopenedBy: string): Promise<DesignPackage> {
+    return this.prisma.designPackage.update({
+      where: { id },
+      data: {
+        packageStatus: DesignPackageStatus.OPEN,
+        packageClosedAt: null,
+        packageClosedBy: null,
+        updatedBy: reopenedBy,
+      },
+    });
+  }
+
+  /**
    * Creates an empty revision design package from an external review trigger.
    */
   async createRevisionPackageFromTrigger(input: {
