@@ -122,18 +122,11 @@ export default function SubmittalDetailDrawer({
     submittal?.submittedBy === currentUserId &&
     (submittalsCap.canCreate || submittalsCap.canView);
 
-  const isSubmitter =
-    submittal !== undefined && submittal.submittedBy === currentUserId;
-  const canEditResubmission =
-    isConstruction &&
-    isSubmitter &&
-    submittal.status === 'REVISE_AND_RESUBMIT';
-
-  const canUploadAttachments =
+  const canUpload =
     submittal !== undefined &&
-    (canEditResubmission ||
-      canDesignerReview ||
-      canLeadApprove);
+    submittal.submittedBy === currentUserId &&
+    (submittal.status === 'DRAFT' ||
+      submittal.status === 'REVISE_AND_RESUBMIT');
 
   const showDirectStatusControl =
     submittal !== undefined &&
@@ -394,24 +387,17 @@ export default function SubmittalDetailDrawer({
             </div>
           )}
 
-          <DocumentAttachmentPanel
-            folderId={submittal.attachmentFolderId ?? undefined}
-            readOnly={!canUploadAttachments}
-            title={
-              canLeadApprove || canDesignerReview
-                ? 'Review attachments'
-                : canResubmitToLead
-                  ? 'Revised documents'
-                  : 'Supporting documents'
-            }
-            description={
-              canLeadApprove || canDesignerReview
-                ? 'Upload marked-up drawings, review comments, and other response files before recording your review.'
-                : canResubmitToLead
-                  ? 'Upload the revised shop drawings, product data, or other documents addressing the review comments.'
-                  : 'Upload shop drawings, product data sheets, samples photos, and other approval documents.'
-            }
-          />
+          {submittal.attachmentFolderId && (
+            <div className="mt-4">
+              <h4 className={`${layout.drawerHeading} mb-2`}>Attached files</h4>
+              <DocumentAttachmentPanel
+                folderId={submittal.attachmentFolderId}
+                readOnly={!canUpload}
+                title=""
+                description=""
+              />
+            </div>
+          )}
 
           {canResubmitToLead && submittalId && (
             <Alert

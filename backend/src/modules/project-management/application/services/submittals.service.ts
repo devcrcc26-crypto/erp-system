@@ -191,6 +191,15 @@ export class SubmittalsService {
       submittalId,
     );
 
+    const attachmentFolder =
+      folder ??
+      (await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+        ctx,
+        projectId,
+        row.id,
+        row.submittalNumber,
+      ));
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
@@ -198,7 +207,7 @@ export class SubmittalsService {
         ...mapSubmittal(row),
         disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
         items: row.items.map(mapSubmittalItem),
-        attachmentFolderId: folder?.id ?? null,
+        attachmentFolderId: attachmentFolder.id,
       },
       PM_SUBMITTAL_USER_NAMES,
     );

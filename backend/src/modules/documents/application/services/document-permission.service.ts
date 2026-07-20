@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { FolderContextType } from '@prisma/client';
+import { FolderContextType, SubmittalStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -49,6 +49,14 @@ export class DocumentPermissionService {
       folder.contextType === FolderContextType.TASK_DISCIPLINE &&
       folder.contextId &&
       (await this.isAssignedDisciplineUploader(userId, companyId, folder.contextId))
+    ) {
+      return;
+    }
+
+    if (
+      folder.contextType === FolderContextType.SUBMITTAL &&
+      folder.contextId &&
+      (await this.canUploadSubmittalFolder(userId, companyId, folder.contextId))
     ) {
       return;
     }
@@ -128,6 +136,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.SUBMITTAL &&
+      folder.contextId &&
+      (await this.isAssignedSubmittalViewer(userId, companyId, folder.contextId))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.view');
   }
 
@@ -179,6 +195,18 @@ export class DocumentPermissionService {
       document.folder.contextType === FolderContextType.TASK_DISCIPLINE &&
       document.folder.contextId &&
       (await this.isAssignedDisciplineViewer(
+        userId,
+        companyId,
+        document.folder.contextId,
+      ))
+    ) {
+      return;
+    }
+
+    if (
+      document.folder.contextType === FolderContextType.SUBMITTAL &&
+      document.folder.contextId &&
+      (await this.isAssignedSubmittalViewer(
         userId,
         companyId,
         document.folder.contextId,
@@ -256,6 +284,71 @@ export class DocumentPermissionService {
       select: { id: true },
     });
     return packageAssignment !== null;
+  }
+
+  /**
+   * Submittal attachment folders: creator, assignee, discipline lead, or TD lead.
+   */
+  private async isAssignedSubmittalViewer(
+    userId: string,
+    companyId: string,
+    submittalId: string,
+  ): Promise<boolean> {
+    const submittal = await this.prisma.submittal.findFirst({
+      where: activeOnly({
+        id: submittalId,
+        project: activeOnly({ companyId }),
+      }),
+      select: {
+        submittedBy: true,
+        assignedTo: true,
+        reviewedBy: true,
+        taskDiscipline: {
+          select: { disciplineLeadUserId: true },
+        },
+      },
+    });
+    if (!submittal) {
+      return false;
+    }
+
+    if (
+      submittal.submittedBy === userId ||
+      submittal.assignedTo === userId ||
+      submittal.reviewedBy === userId
+    ) {
+      return true;
+    }
+
+    return submittal.taskDiscipline?.disciplineLeadUserId === userId;
+  }
+
+  /**
+   * Submittal folder uploads: submitter only while draft or revise-and-resubmit.
+   */
+  private async canUploadSubmittalFolder(
+    userId: string,
+    companyId: string,
+    submittalId: string,
+  ): Promise<boolean> {
+    const submittal = await this.prisma.submittal.findFirst({
+      where: activeOnly({
+        id: submittalId,
+        project: activeOnly({ companyId }),
+      }),
+      select: {
+        submittedBy: true,
+        status: true,
+      },
+    });
+    if (!submittal || submittal.submittedBy !== userId) {
+      return false;
+    }
+
+    return (
+      submittal.status === SubmittalStatus.DRAFT ||
+      submittal.status === SubmittalStatus.REVISE_AND_RESUBMIT
+    );
   }
 
   private async hasPmModuleWriteForFolder(
