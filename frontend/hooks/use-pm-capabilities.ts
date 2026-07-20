@@ -71,6 +71,19 @@ export function useCanViewMyWork(): boolean {
 }
 
 /**
+ * Global construction submittals — designer / discipline-lead personas or PM module view.
+ */
+export function useCanViewSubmittals(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  return (
+    epc.navDesigner ||
+    epc.navDisciplineLeader ||
+    pm.submittals.canView
+  );
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {

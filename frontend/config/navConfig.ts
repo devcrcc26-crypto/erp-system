@@ -35,6 +35,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/review-inbox': 'pages.reviewInbox.title',
   '/my-comments': 'pages.myComments.title',
   '/my-work': 'pages.myWork.title',
+  '/submittals': 'nav.submittals',
   '/users': 'nav.users',
   '/teams': 'nav.teams',
   '/reports': 'nav.reports',
@@ -51,6 +52,7 @@ export interface IconRailVisibility {
   canViewReviewInbox: boolean;
   canViewMyComments: boolean;
   canViewMyWork: boolean;
+  canViewSubmittals: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -68,6 +70,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewReviewInbox,
     canViewMyComments,
     canViewMyWork,
+    canViewSubmittals,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -112,6 +115,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/my-work',
       iconKey: 'my-work',
       visible: canViewMyWork,
+    },
+    {
+      key: '/submittals',
+      labelKey: 'nav.submittals',
+      href: '/submittals',
+      iconKey: 'submittals',
+      visible: canViewSubmittals,
     },
     {
       key: '/departments',

@@ -3,6 +3,7 @@ import type { PmCapabilities } from '@/lib/api/project-management.types';
 import { EMPTY_EPC_CAPABILITIES } from '@/lib/api/types';
 import {
   canShowProjectContextSidebar,
+  canViewGlobalNavKey,
   canViewProjectNavItem,
   GLOBAL_ONLY_PROJECT_NAV_KEYS,
   hasProjectSidebarAccess,
@@ -141,5 +142,49 @@ describe('project-nav-visibility', () => {
     expect(
       canShowProjectContextSidebar('/projects/p1/schedule', epc, pm),
     ).toBe(true);
+  });
+});
+
+describe('canViewGlobalNavKey — submittals', () => {
+  it('allows designer and discipline leader to see /submittals', () => {
+    expect(
+      canViewGlobalNavKey('/submittals', {
+        ...EMPTY_EPC_CAPABILITIES,
+        navDesigner: true,
+      }),
+    ).toBe(true);
+    expect(
+      canViewGlobalNavKey('/submittals', {
+        ...EMPTY_EPC_CAPABILITIES,
+        navDisciplineLeader: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('hides /submittals from reviewer and supporting designer', () => {
+    expect(
+      canViewGlobalNavKey('/submittals', {
+        ...EMPTY_EPC_CAPABILITIES,
+        navReviewerTier: true,
+      }),
+    ).toBe(false);
+    expect(
+      canViewGlobalNavKey('/submittals', {
+        ...EMPTY_EPC_CAPABILITIES,
+        navSupportingDesigner: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('allows full-access and non-design-cycle users', () => {
+    expect(
+      canViewGlobalNavKey('/submittals', {
+        ...EMPTY_EPC_CAPABILITIES,
+        navFullAccess: true,
+      }),
+    ).toBe(true);
+    expect(canViewGlobalNavKey('/submittals', EMPTY_EPC_CAPABILITIES)).toBe(
+      true,
+    );
   });
 });

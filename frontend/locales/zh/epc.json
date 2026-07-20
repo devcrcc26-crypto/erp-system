@@ -15,6 +15,7 @@
     "reviewInbox": "审阅收件箱",
     "myComments": "全部我的意见",
     "myWork": "全部我的工作",
+    "submittals": "送审文件",
     "departments": "部门",
     "positions": "职位",
     "disciplinesCatalog": "专业",
@@ -100,6 +101,14 @@
     "myWork": {
       "title": "全部我的工作",
       "description": "您负责的专业及担任角色的子任务。"
+    },
+    "globalSubmittals": {
+      "title": "施工送审文件",
+      "description": "选择项目以创建、审阅并跟踪施工送审文件。",
+      "projectNumber": "项目编号",
+      "projectName": "项目",
+      "empty": "没有可用于送审文件的项目。",
+      "noAccess": "您无权访问施工送审文件。"
     },
     "reviewMode": {
       "title": "审阅模式",

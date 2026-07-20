@@ -212,6 +212,7 @@ const GLOBAL_DEPT_LEADER = new Set([
   '/my-work',
   '/review-inbox',
   '/my-comments',
+  '/submittals',
   '/kanban-board',
   '/reports',
 ]);
@@ -221,6 +222,7 @@ const GLOBAL_DISCIPLINE_LEADER = new Set([
   '/my-work',
   '/review-inbox',
   '/my-comments',
+  '/submittals',
 ]);
 
 const GLOBAL_REVIEWER = new Set([
@@ -230,7 +232,7 @@ const GLOBAL_REVIEWER = new Set([
   '/my-comments',
 ]);
 
-const GLOBAL_DESIGNER = new Set(['/', '/my-work', '/my-comments']);
+const GLOBAL_DESIGNER = new Set(['/', '/my-work', '/my-comments', '/submittals']);
 
 const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 

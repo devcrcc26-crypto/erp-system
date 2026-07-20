@@ -15,6 +15,7 @@
     "reviewInbox": "Review Inbox",
     "myComments": "All My Comments",
     "myWork": "All My Work",
+    "submittals": "Submittals",
     "departments": "Departments",
     "positions": "Positions",
     "disciplinesCatalog": "Disciplines",
@@ -100,6 +101,14 @@
     "myWork": {
       "title": "All My Work",
       "description": "Tasks you lead and subtasks where you hold a role."
+    },
+    "globalSubmittals": {
+      "title": "Construction Submittals",
+      "description": "Open a project to create, review, and track construction submittals.",
+      "projectNumber": "Project number",
+      "projectName": "Project",
+      "empty": "No projects available for submittals.",
+      "noAccess": "You do not have access to construction submittals."
     },
     "reviewMode": {
       "title": "Review Mode",
