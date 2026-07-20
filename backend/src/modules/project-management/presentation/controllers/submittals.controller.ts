@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateSubmittalDto,
@@ -80,7 +81,7 @@ export class SubmittalsController {
   }
 
   @Post('construction')
-  @RequirePermission('submittals', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'Create in-construction submittal with design packages and document folder',
@@ -173,7 +174,7 @@ export class SubmittalsController {
   }
 
   @Post(':id/reviews')
-  @RequirePermission('submittals', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add submittal review (assigned discipline lead)' })
   addReview(
     @CurrentUser() user: AuthenticatedUser,

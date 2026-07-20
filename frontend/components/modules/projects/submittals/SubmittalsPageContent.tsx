@@ -50,6 +50,9 @@ export default function SubmittalsPageContent({
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
   const resolveUserDisplay = useUserDisplayResolver();
+  const canCreateSubmittal =
+    lens.canCreateSubmittals || lens.canCreateEngineering;
+  const canAccessPage = lens.canViewSubmittals || lens.canCreateEngineering;
 
   const submittalsQuery = useSubmittals(
     projectId,
@@ -59,7 +62,7 @@ export default function SubmittalsPageContent({
       status: statusFilter,
       submittalPurpose: 'IN_CONSTRUCTION',
     },
-    !permLoading && lens.canViewSubmittals,
+    !permLoading && canAccessPage,
   );
 
   const columns: ColumnsType<Submittal> = useMemo(
@@ -146,7 +149,7 @@ export default function SubmittalsPageContent({
     return <PageLoadingSkeleton />;
   }
 
-  if (!lens.canViewSubmittals) {
+  if (!canAccessPage) {
     return null;
   }
 
@@ -169,7 +172,7 @@ export default function SubmittalsPageContent({
             <Link href={`/projects/${projectId}/submittals/external-release`}>
               <Button>External release</Button>
             </Link>
-            {lens.canCreateSubmittals && (
+            {canCreateSubmittal && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -230,7 +233,7 @@ export default function SubmittalsPageContent({
                 title="No construction submittals"
                 description="Create a submittal with subtasks and documents for discipline leader approval"
                 action={
-                  lens.canCreateSubmittals && !apiUnavailable
+                  canCreateSubmittal && !apiUnavailable
                     ? {
                         label: 'New submittal',
                         onClick: () => setCreateOpen(true),

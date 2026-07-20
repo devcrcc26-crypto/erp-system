@@ -659,7 +659,7 @@ function designWorkflowRolePermissionFlags(
     'submittals',
     'rfis',
   ];
-  const designModules = ['projects', 'schedule', 'drawings'];
+  const designModules = ['projects', 'schedule', 'drawings', 'submittals'];
   const dispatchModules = ['projects', 'schedule', 'issues'];
 
   let allowedModules: string[] = [];

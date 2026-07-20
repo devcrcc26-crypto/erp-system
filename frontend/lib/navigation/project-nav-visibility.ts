@@ -33,19 +33,20 @@ export function isProjectNavReady(
 }
 
 /** Project nav keys for discipline leaders (union can widen). */
-const DISCIPLINE_LEADER_PROJECT_KEYS = new Set(['disciplines']);
+const DISCIPLINE_LEADER_PROJECT_KEYS = new Set(['disciplines', 'submittals']);
 
 /** Reviewer / dept·inst chief (and multi-role union with designer). */
 const REVIEWER_TIER_PROJECT_KEYS = new Set<string>();
 
-const DESIGNER_PROJECT_KEYS = new Set<string>();
+const DESIGNER_PROJECT_KEYS = new Set(['submittals']);
 
 const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
 /**
  * True when the user may see the project context (second) sidebar.
  * Narrow design-cycle assignees (discipline lead, reviewer, designer,
- * dept/institute chief, supporting designer) use global workspaces only.
+ * dept/institute chief, supporting designer) use global workspaces only
+ * unless their persona allowlist includes project nav keys.
  */
 export function hasProjectSidebarAccess(
   epc: EpcCapabilities,
@@ -55,7 +56,8 @@ export function hasProjectSidebarAccess(
     return true;
   }
   if (hasDesignCycleNavPersona(epc)) {
-    return false;
+    const allowlist = resolveProjectNavKeyAllowlist(epc);
+    return allowlist !== null && allowlist.size > 0;
   }
   return pm.projects.canView;
 }
@@ -163,6 +165,12 @@ export function canViewProjectNavItem(
       return true;
     }
     return Boolean(cap?.canView || cap?.canEdit);
+  }
+
+  if (item.key === 'submittals') {
+    if (ctx.epc.navDisciplineLeader || ctx.epc.navDesigner) {
+      return true;
+    }
   }
 
   if (!cap?.canView) {

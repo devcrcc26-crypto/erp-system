@@ -865,11 +865,9 @@ export class CreateConstructionSubmittalDto {
   @IsEntityUuid()
   taskDisciplineId!: string;
 
-  @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsEntityUuid({ each: true })
-  designPackageIds?: string[];
+  @ApiProperty()
+  @IsEntityUuid()
+  designPackageId!: string;
 
   @ApiPropertyOptional()
   @IsOptional()

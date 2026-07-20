@@ -37,6 +37,7 @@ import { DisciplineScopeService } from './discipline-scope.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ExternalReviewTriggerService } from './external-review-trigger.service';
 import { ProjectScopeService } from './project-scope.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 
@@ -86,6 +87,7 @@ export class SubmittalsService {
     private readonly externalReviewTrigger: ExternalReviewTriggerService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly disciplineScopeService: DisciplineScopeService,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
   ) {}
 
   /**
@@ -224,19 +226,42 @@ export class SubmittalsService {
     }
   > {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    await this.assertCanCreateConstructionSubmittal(ctx, projectId);
     await this.disciplineScopeService.assertDisciplineAccess(
       ctx,
       projectId,
       dto.taskDisciplineId,
     );
 
-    const designPackageIds = dto.designPackageIds ?? [];
-    if (designPackageIds.length > 0) {
-      await this.assertPackagesBelongToDiscipline(
-        ctx.companyId,
-        projectId,
-        dto.taskDisciplineId,
-        designPackageIds,
+    await this.assertPackagesBelongToDiscipline(
+      ctx.companyId,
+      projectId,
+      dto.taskDisciplineId,
+      [dto.designPackageId],
+    );
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        id: dto.designPackageId,
+        companyId: ctx.companyId,
+      }),
+      select: {
+        designerUserId: true,
+        disciplinaryLeaderUserId: true,
+      },
+    });
+
+    if (!pkg) {
+      throw new NotFoundException('Subtask not found');
+    }
+    if (!pkg.designerUserId) {
+      throw new BadRequestException(
+        'Subtask has no designer assigned — cannot route for review',
+      );
+    }
+    if (!pkg.disciplinaryLeaderUserId) {
+      throw new BadRequestException(
+        'Subtask has no discipline leader assigned — cannot route for approval',
       );
     }
 
@@ -250,6 +275,8 @@ export class SubmittalsService {
         data: {
           projectId,
           submittedBy: ctx.userId,
+          assignedTo: pkg.designerUserId,
+          reviewedBy: pkg.disciplinaryLeaderUserId,
           submittalNumber,
           category: dto.category,
           title: dto.title,
@@ -261,27 +288,24 @@ export class SubmittalsService {
           specReference: dto.specReference,
           revisionNumber: dto.revisionNumber ?? 1,
           dueDate: parseOptionalDate(dto.dueDate),
-          status: SubmittalStatus.DRAFT,
+          status: SubmittalStatus.SUBMITTED,
+          submissionDate: this.todayDate(),
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
         },
       });
 
-      const items: MappedSubmittalItem[] = [];
-      for (let i = 0; i < designPackageIds.length; i++) {
-        const item = await tx.submittalItem.create({
-          data: {
-            companyId: ctx.companyId,
-            submittalId: submittal.id,
-            designPackageId: designPackageIds[i]!,
-            sortOrder: i,
-            createdBy: ctx.userId,
-          },
-        });
-        items.push(mapSubmittalItem(item));
-      }
+      const item = await tx.submittalItem.create({
+        data: {
+          companyId: ctx.companyId,
+          submittalId: submittal.id,
+          designPackageId: dto.designPackageId,
+          sortOrder: 0,
+          createdBy: ctx.userId,
+        },
+      });
 
-      return { submittal, items };
+      return { submittal, items: [mapSubmittalItem(item)] };
     });
 
     const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
@@ -347,6 +371,29 @@ export class SubmittalsService {
       );
     }
 
+    const linkedPackage = await this.prisma.submittalItem.findFirst({
+      where: { submittalId },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        designPackage: {
+          select: {
+            designerUserId: true,
+            disciplinaryLeaderUserId: true,
+          },
+        },
+      },
+    });
+    const designerUserId = linkedPackage?.designPackage.designerUserId;
+    const disciplinaryLeaderUserId =
+      linkedPackage?.designPackage.disciplinaryLeaderUserId ??
+      discipline.disciplineLeadUserId;
+
+    if (!designerUserId) {
+      throw new BadRequestException(
+        'Linked subtask has no designer assigned — cannot resubmit for review',
+      );
+    }
+
     const folder = await this.engineeringDocumentFolderService.findEntityFolder(
       ctx,
       FolderContextType.SUBMITTAL,
@@ -404,13 +451,13 @@ export class SubmittalsService {
     const row = await this.prisma.submittal.update({
       where: { id: submittalId },
       data: {
-        assignedTo: discipline.disciplineLeadUserId,
+        assignedTo: designerUserId,
+        reviewedBy: disciplinaryLeaderUserId,
         status: SubmittalStatus.SUBMITTED,
         submissionDate: this.todayDate(),
         revisionNumber: isResubmit
           ? submittal.revisionNumber + 1
           : submittal.revisionNumber,
-        reviewedBy: isResubmit ? null : submittal.reviewedBy,
         reviewDate: isResubmit ? null : submittal.reviewDate,
         updatedBy: ctx.userId,
       },
@@ -652,6 +699,8 @@ export class SubmittalsService {
 
   /**
    * Records external submittal review - trigger only, no EDV mutation.
+   * Construction flow: Designer APPROVED → UNDER_REVIEW (D.Lead);
+   * D.Lead final verdicts settle or return to submitter.
    */
   async addReview(
     ctx: PmContext,
@@ -665,6 +714,57 @@ export class SubmittalsService {
     if (!SUBMITTAL_REVIEW_OUTCOME_STATUSES.has(dto.status)) {
       throw new BadRequestException(
         `Invalid review status ${dto.status} for submittal review`,
+      );
+    }
+
+    const isConstruction =
+      submittal.submittalPurpose === SubmittalPurpose.IN_CONSTRUCTION;
+    const isDesignerStage =
+      isConstruction &&
+      submittal.status === SubmittalStatus.SUBMITTED &&
+      submittal.assignedTo === ctx.userId;
+    const isLeadStage =
+      isConstruction &&
+      submittal.status === SubmittalStatus.UNDER_REVIEW &&
+      submittal.reviewedBy === ctx.userId;
+
+    let nextStatus = dto.status;
+    let nextAssignedTo: string | null = submittal.assignedTo;
+
+    if (isDesignerStage) {
+      if (dto.status !== SubmittalStatus.APPROVED) {
+        throw new BadRequestException(
+          'Designer review may only approve and send to the discipline leader',
+        );
+      }
+      if (!submittal.reviewedBy) {
+        throw new BadRequestException(
+          'No discipline leader is stored on this submittal',
+        );
+      }
+      nextStatus = SubmittalStatus.UNDER_REVIEW;
+      nextAssignedTo = submittal.reviewedBy;
+    } else if (isLeadStage) {
+      const leadOutcomes = new Set<SubmittalStatus>([
+        SubmittalStatus.APPROVED,
+        SubmittalStatus.APPROVED_WITH_COMMENTS,
+        SubmittalStatus.REVISE_AND_RESUBMIT,
+        SubmittalStatus.REJECTED,
+      ]);
+      if (!leadOutcomes.has(dto.status)) {
+        throw new BadRequestException(
+          `Invalid discipline leader outcome ${dto.status}`,
+        );
+      }
+      if (dto.status === SubmittalStatus.REVISE_AND_RESUBMIT) {
+        nextAssignedTo = submittal.submittedBy;
+      } else {
+        nextAssignedTo = null;
+      }
+      nextStatus = dto.status;
+    } else if (isConstruction) {
+      throw new ForbiddenException(
+        'You are not authorized to review this submittal in its current stage',
       );
     }
 
@@ -690,8 +790,11 @@ export class SubmittalsService {
       await tx.submittal.update({
         where: { id: submittalId },
         data: {
-          status: dto.status,
-          reviewedBy: ctx.userId,
+          status: nextStatus,
+          assignedTo: nextAssignedTo,
+          reviewedBy: isConstruction
+            ? submittal.reviewedBy
+            : ctx.userId,
           revisionNumber,
           reviewDate: this.todayDate(),
           updatedBy: ctx.userId,
@@ -798,7 +901,8 @@ export class SubmittalsService {
   }
 
   /**
-   * Ensures only the assigned reviewer or discipline lead can record a review.
+   * Ensures only the assigned designer or stored discipline lead can review
+   * construction submittals at the correct stage.
    */
   private async assertCanReviewSubmittal(
     ctx: PmContext,
@@ -807,6 +911,7 @@ export class SubmittalsService {
       submittalPurpose: SubmittalPurpose | null;
       status: SubmittalStatus;
       assignedTo: string | null;
+      reviewedBy: string | null;
       taskDisciplineId: string | null;
     },
   ): Promise<void> {
@@ -817,24 +922,30 @@ export class SubmittalsService {
     }
 
     if (submittal.submittalPurpose === SubmittalPurpose.IN_CONSTRUCTION) {
-      const disciplineLeadUserId = submittal.taskDisciplineId
-        ? (
-            await this.prisma.taskDiscipline.findFirst({
-              where: activeOnly({
-                id: submittal.taskDisciplineId,
-                companyId: ctx.companyId,
-              }),
-              select: { disciplineLeadUserId: true },
-            })
-          )?.disciplineLeadUserId ?? null
-        : null;
-
       const isAssignee = submittal.assignedTo === ctx.userId;
-      const isDisciplineLead = disciplineLeadUserId === ctx.userId;
+      const isStoredLead = submittal.reviewedBy === ctx.userId;
 
-      if (!isAssignee && !isDisciplineLead) {
+      if (!isAssignee && !isStoredLead) {
         throw new ForbiddenException(
-          'Only the assigned discipline leader can review this submittal',
+          'Only the assigned designer or discipline leader can review this submittal',
+        );
+      }
+
+      if (
+        submittal.status === SubmittalStatus.SUBMITTED &&
+        !isAssignee
+      ) {
+        throw new ForbiddenException(
+          'Only the assigned designer can review this submittal',
+        );
+      }
+
+      if (
+        submittal.status === SubmittalStatus.UNDER_REVIEW &&
+        !isStoredLead
+      ) {
+        throw new ForbiddenException(
+          'Only the discipline leader can approve this submittal',
         );
       }
       return;
@@ -843,6 +954,47 @@ export class SubmittalsService {
     if (submittal.assignedTo !== ctx.userId) {
       throw new ForbiddenException(
         'Only the assigned reviewer can record a review for this submittal',
+      );
+    }
+  }
+
+  /**
+   * Full-access roles bypass; otherwise only FK discipline leads or designers.
+   */
+  private async assertCanCreateConstructionSubmittal(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<void> {
+    const profile = await this.taskAccessScopeService.resolveProfile(ctx);
+    if (profile.hasFullProjectAccess) {
+      return;
+    }
+
+    const [leadDiscipline, designerPkg] = await Promise.all([
+      this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          disciplineLeadUserId: ctx.userId,
+          task: { projectId, deletedAt: null },
+        }),
+        select: { id: true },
+      }),
+      this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          companyId: ctx.companyId,
+          designerUserId: ctx.userId,
+          taskDiscipline: {
+            deletedAt: null,
+            task: { projectId, deletedAt: null },
+          },
+        }),
+        select: { id: true },
+      }),
+    ]);
+
+    if (!leadDiscipline && !designerPkg) {
+      throw new ForbiddenException(
+        'Only discipline leaders and designers can create submittals',
       );
     }
   }

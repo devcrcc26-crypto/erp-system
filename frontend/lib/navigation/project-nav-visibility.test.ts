@@ -11,8 +11,9 @@ import { flattenProjectNavItems } from '@/lib/navigation/project-workspace-nav';
 
 const basePm = (overrides: Partial<PmCapabilities> = {}): PmCapabilities =>
   ({
-    projects: { canView: false, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false },
-    schedule: { canView: false, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false },
+    projects: { canView: false, canCreate: false, canEdit: false, canDelete: false },
+    schedule: { canView: false, canCreate: false, canEdit: false, canDelete: false },
+    submittals: { canView: false, canCreate: false, canEdit: false, canDelete: false },
     ...overrides,
   }) as PmCapabilities;
 
@@ -28,8 +29,8 @@ describe('project-nav-visibility', () => {
       expect(
         canViewProjectNavItem(item, {
           pm: basePm({
-            projects: { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canExport: true },
-            schedule: { canView: true, canCreate: true, canEdit: true, canDelete: true, canApprove: true, canExport: true },
+            projects: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+            schedule: { canView: true, canCreate: true, canEdit: true, canDelete: true },
           }),
           epc: { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true, canViewMyWork: true, canViewReviewInbox: true, canViewMyComments: true },
           hasAssignedDisciplines: true,
@@ -39,12 +40,16 @@ describe('project-nav-visibility', () => {
     }
   });
 
-  it('discipline leader allowlist only includes disciplines', () => {
+  it('discipline leader allowlist includes disciplines and submittals', () => {
     const disciplines = flattenProjectNavItems().find((item) => item.key === 'disciplines');
+    const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
     expect(disciplines).toBeDefined();
+    expect(submittals).toBeDefined();
 
     const ctx = {
-      pm: basePm(),
+      pm: basePm({
+        schedule: { canView: true, canCreate: false, canEdit: false, canDelete: false },
+      }),
       epc: {
         ...EMPTY_EPC_CAPABILITIES,
         navDisciplineLeader: true,
@@ -55,19 +60,11 @@ describe('project-nav-visibility', () => {
       disciplineScopeBypass: false,
     };
 
-    expect(canViewProjectNavItem(disciplines!, ctx)).toBe(false);
-
-    expect(
-      canViewProjectNavItem(disciplines!, {
-        ...ctx,
-        pm: basePm({
-          schedule: { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false },
-        }),
-      }),
-    ).toBe(true);
+    expect(canViewProjectNavItem(disciplines!, ctx)).toBe(true);
+    expect(canViewProjectNavItem(submittals!, ctx)).toBe(true);
   });
 
-  it('FK-only discipline leader has no project sidebar access', () => {
+  it('FK-only discipline leader has project sidebar when allowlist is non-empty', () => {
     const epc = {
       ...EMPTY_EPC_CAPABILITIES,
       navDisciplineLeader: true,
@@ -75,28 +72,46 @@ describe('project-nav-visibility', () => {
     };
     const pm = basePm();
 
-    expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
     expect(
-      canShowProjectContextSidebar('/projects/p1/disciplines', epc, pm),
-    ).toBe(false);
+      canShowProjectContextSidebar('/projects/p1/submittals', epc, pm),
+    ).toBe(true);
   });
 
-  it('design-cycle assignee with projects.canView still has no project sidebar', () => {
+  it('designer sees submittals in project sidebar', () => {
+    const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
+    expect(submittals).toBeDefined();
+
+    const epc = {
+      ...EMPTY_EPC_CAPABILITIES,
+      navDesigner: true,
+      canViewMyWork: true,
+    };
+    const pm = basePm();
+
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
+    expect(
+      canViewProjectNavItem(submittals!, {
+        pm,
+        epc,
+        hasAssignedDisciplines: true,
+        disciplineScopeBypass: false,
+      }),
+    ).toBe(true);
+  });
+
+  it('reviewer-only design-cycle assignee still has no project sidebar', () => {
     const pmWithProjects = basePm({
       projects: {
         canView: true,
         canCreate: false,
         canEdit: false,
         canDelete: false,
-        canApprove: false,
-        canExport: false,
       },
     });
 
     for (const epc of [
-      { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
       { ...EMPTY_EPC_CAPABILITIES, navReviewerTier: true },
-      { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
       { ...EMPTY_EPC_CAPABILITIES, navSupportingDesigner: true },
     ]) {
       expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(false);
@@ -119,7 +134,7 @@ describe('project-nav-visibility', () => {
   it('project viewer keeps project sidebar access', () => {
     const epc = EMPTY_EPC_CAPABILITIES;
     const pm = basePm({
-      projects: { canView: true, canCreate: false, canEdit: false, canDelete: false, canApprove: false, canExport: false },
+      projects: { canView: true, canCreate: false, canEdit: false, canDelete: false },
     });
 
     expect(hasProjectSidebarAccess(epc, pm)).toBe(true);

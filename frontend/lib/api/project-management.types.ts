@@ -977,7 +977,7 @@ export interface CreateConstructionSubmittalRequest {
   category: string;
   title: string;
   taskDisciplineId: string;
-  designPackageIds?: string[];
+  designPackageId: string;
   contractor?: string;
   supplier?: string;
   specReference?: string;

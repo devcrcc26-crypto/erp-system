@@ -10,6 +10,7 @@ import { SubmittalsService } from '../submittals.service';
 import { WorkflowKernelService } from '../workflow-kernel.service';
 import { PmContext } from '../../types/pm-context.type';
 import { ProjectScopeService } from '../project-scope.service';
+import { TaskAccessScopeService } from '../task-access-scope.service';
 
 describe('SubmittalsService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
@@ -48,11 +49,13 @@ describe('SubmittalsService', () => {
     submittal: { findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
     submittalItem: { findMany: jest.Mock };
     submittalReview: { create: jest.Mock };
+    user: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
   let workflowKernel: { execute: jest.Mock };
   let externalReviewTrigger: { recordFromSubmittalReview: jest.Mock };
+  let taskAccessScopeService: { resolveProfile: jest.Mock };
   let service: SubmittalsService;
 
   beforeEach(() => {
@@ -67,6 +70,16 @@ describe('SubmittalsService', () => {
       },
       submittalReview: {
         create: jest.fn(),
+      },
+      user: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: reviewerUserId,
+            firstName: 'Review',
+            lastName: 'Er',
+            chineseName: null,
+          },
+        ]),
       },
       $transaction: jest.fn(),
     };
@@ -86,6 +99,12 @@ describe('SubmittalsService', () => {
       recordFromSubmittalReview: jest.fn().mockResolvedValue(undefined),
     };
 
+    taskAccessScopeService = {
+      resolveProfile: jest.fn().mockResolvedValue({
+        hasFullProjectAccess: true,
+      }),
+    };
+
     service = new SubmittalsService(
       prisma as unknown as PrismaService,
       projectScopeService as unknown as ProjectScopeService,
@@ -100,6 +119,7 @@ describe('SubmittalsService', () => {
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/submittals/SUB-00001' }),
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
+      taskAccessScopeService as unknown as TaskAccessScopeService,
     );
   });
 

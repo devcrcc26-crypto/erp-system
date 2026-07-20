@@ -47,6 +47,7 @@ describe('Submittal status guard', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
   });
 

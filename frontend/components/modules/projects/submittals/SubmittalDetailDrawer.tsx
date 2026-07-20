@@ -49,17 +49,11 @@ interface ReviewFormValues {
   comments?: string;
 }
 
-const SUBMITTAL_REVIEW_STATUS_OPTIONS: SubmittalStatus[] = [
-  'UNDER_REVIEW',
-  'APPROVED',
-  'APPROVED_WITH_COMMENTS',
-  'REVISE_AND_RESUBMIT',
-  'REJECTED',
-];
-
-const REVIEWABLE_SUBMITTAL_STATUSES: SubmittalStatus[] = [
-  'SUBMITTED',
-  'UNDER_REVIEW',
+const LEAD_APPROVAL_OPTIONS: { value: SubmittalStatus; label: string }[] = [
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'APPROVED_WITH_COMMENTS', label: 'Approved with comments' },
+  { value: 'REVISE_AND_RESUBMIT', label: 'Revise and resubmit' },
+  { value: 'REJECTED', label: 'Rejected' },
 ];
 
 export default function SubmittalDetailDrawer({
@@ -73,7 +67,8 @@ export default function SubmittalDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
-  const [form] = Form.useForm<ReviewFormValues>();
+  const [designerForm] = Form.useForm<{ comments?: string }>();
+  const [leadForm] = Form.useForm<ReviewFormValues>();
   const open = Boolean(submittalId);
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
@@ -93,50 +88,53 @@ export default function SubmittalDetailDrawer({
   const isExternalRelease =
     submittal?.submittalPurpose === 'DISCIPLINE_SITE' ||
     submittal?.submittalPurpose === 'DISCIPLINE_CONSULTANT';
+
+  const isAssignedDesigner =
+    Boolean(submittal?.assignedTo) &&
+    submittal?.assignedTo === currentUserId;
+  const isStoredDisciplineLead =
+    Boolean(submittal?.reviewedBy) &&
+    submittal?.reviewedBy === currentUserId;
+
+  const canDesignerReview =
+    isConstruction &&
+    isAssignedDesigner &&
+    submittal?.status === 'SUBMITTED';
+
+  const canLeadApprove =
+    isConstruction &&
+    isStoredDisciplineLead &&
+    submittal?.status === 'UNDER_REVIEW';
+
   const isAssignedReviewer =
     Boolean(submittal?.assignedTo) &&
     submittal?.assignedTo === currentUserId;
-  const isDisciplineLead =
-    Boolean(submittal?.disciplineLeadUserId) &&
-    submittal?.disciplineLeadUserId === currentUserId;
-  const isConstructionReviewer =
-    isConstruction &&
-    (isAssignedReviewer || isDisciplineLead) &&
+  const canRecordExternalReview =
+    !isConstruction &&
+    submittalsCap.canCreate &&
+    isAssignedReviewer &&
     submittal !== undefined &&
-    REVIEWABLE_SUBMITTAL_STATUSES.includes(submittal.status);
-  const canRecordReview = isConstruction
-    ? isConstructionReviewer && (submittalsCap.canView || submittalsCap.canEdit)
-    : submittalsCap.canCreate &&
-      isAssignedReviewer &&
-      submittal !== undefined &&
-      REVIEWABLE_SUBMITTAL_STATUSES.includes(submittal.status);
-  const canSubmitToLead =
-    isConstruction &&
-    submittal?.status === 'DRAFT' &&
-    submittal?.submittedBy === currentUserId &&
-    submittalsCap.canCreate;
+    (submittal.status === 'SUBMITTED' || submittal.status === 'UNDER_REVIEW');
+
   const canResubmitToLead =
     isConstruction &&
     submittal?.status === 'REVISE_AND_RESUBMIT' &&
     submittal?.submittedBy === currentUserId &&
-    submittalsCap.canCreate;
+    (submittalsCap.canCreate || submittalsCap.canView);
+
   const isSubmitter =
     submittal !== undefined && submittal.submittedBy === currentUserId;
   const canEditResubmission =
     isConstruction &&
     isSubmitter &&
-    (submittal.status === 'DRAFT' ||
-      submittal.status === 'REVISE_AND_RESUBMIT');
-  const canRecallToDraft =
-    isConstruction &&
-    submittal?.status === 'SUBMITTED' &&
-    submittal?.submittedBy === currentUserId &&
-    submittalsCap.canEdit;
+    submittal.status === 'REVISE_AND_RESUBMIT';
+
   const canUploadAttachments =
     submittal !== undefined &&
-    ((canEditResubmission && submittalsCap.canCreate) ||
-      (isConstructionReviewer &&
-        (submittalsCap.canView || submittalsCap.canEdit)));
+    (canEditResubmission ||
+      canDesignerReview ||
+      canLeadApprove);
+
   const showDirectStatusControl =
     submittal !== undefined &&
     !isConstruction &&
@@ -146,8 +144,39 @@ export default function SubmittalDetailDrawer({
 
   const latestReview =
     reviews.length > 0 ? reviews[reviews.length - 1] : undefined;
+  const leadOutcome = Form.useWatch('status', leadForm) as
+    | SubmittalStatus
+    | undefined;
+  const commentsRequired =
+    leadOutcome === 'REVISE_AND_RESUBMIT' || leadOutcome === 'REJECTED';
 
-  async function handleAddReview(values: ReviewFormValues): Promise<void> {
+  async function handleDesignerApprove(values: {
+    comments?: string;
+  }): Promise<void> {
+    if (!submittalId || !submittal) {
+      return;
+    }
+    try {
+      await addReview.mutateAsync({
+        projectId,
+        submittalId,
+        body: {
+          status: 'APPROVED',
+          comments: values.comments?.trim() || undefined,
+          revisionNumber: submittal.revisionNumber,
+        },
+      });
+      designerForm.resetFields();
+      messageApi.success('Approved and sent to discipline leader');
+      onUpdated();
+      void reviewsQuery.refetch();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to record designer review', messageApi);
+    }
+  }
+
+  async function handleLeadApproval(values: ReviewFormValues): Promise<void> {
     if (!submittalId || !submittal) {
       return;
     }
@@ -161,7 +190,31 @@ export default function SubmittalDetailDrawer({
           revisionNumber: submittal.revisionNumber,
         },
       });
-      form.resetFields();
+      leadForm.resetFields();
+      messageApi.success('Approval recorded');
+      onUpdated();
+      void reviewsQuery.refetch();
+      void submittalQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to record approval', messageApi);
+    }
+  }
+
+  async function handleExternalReview(values: ReviewFormValues): Promise<void> {
+    if (!submittalId || !submittal) {
+      return;
+    }
+    try {
+      await addReview.mutateAsync({
+        projectId,
+        submittalId,
+        body: {
+          status: values.status,
+          comments: values.comments?.trim() || undefined,
+          revisionNumber: submittal.revisionNumber,
+        },
+      });
+      leadForm.resetFields();
       messageApi.success('Review recorded');
       onUpdated();
       void reviewsQuery.refetch();
@@ -177,33 +230,11 @@ export default function SubmittalDetailDrawer({
     }
     try {
       await submitToLead.mutateAsync({ projectId, submittalId });
-      messageApi.success(
-        submittal?.status === 'REVISE_AND_RESUBMIT'
-          ? 'Revised submittal resubmitted to discipline leader'
-          : 'Submittal submitted to discipline leader',
-      );
+      messageApi.success('Revised submittal resubmitted for designer review');
       onUpdated();
       void submittalQuery.refetch();
     } catch (error) {
       notifyApiError(error, 'Failed to submit submittal', messageApi);
-    }
-  }
-
-  async function handleRecallToDraft(): Promise<void> {
-    if (!submittalId) {
-      return;
-    }
-    try {
-      await updateSubmittal.mutateAsync({
-        projectId,
-        submittalId,
-        body: { status: 'DRAFT' },
-      });
-      messageApi.success('Submittal recalled to draft');
-      onUpdated();
-      void submittalQuery.refetch();
-    } catch (error) {
-      notifyApiError(error, 'Failed to recall submittal', messageApi);
     }
   }
 
@@ -292,7 +323,7 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Assigned to">
               {resolveUserDisplay(submittal.assignedTo, submittal.assignedToName, '-')}
             </Descriptions.Item>
-            <Descriptions.Item label="Reviewed by">
+            <Descriptions.Item label="Discipline leader">
               {resolveUserDisplay(submittal.reviewedBy, submittal.reviewedByName, '-')}
             </Descriptions.Item>
             <Descriptions.Item label="Submission date">
@@ -367,37 +398,20 @@ export default function SubmittalDetailDrawer({
             folderId={submittal.attachmentFolderId ?? undefined}
             readOnly={!canUploadAttachments}
             title={
-              isConstructionReviewer
+              canLeadApprove || canDesignerReview
                 ? 'Review attachments'
                 : canResubmitToLead
                   ? 'Revised documents'
                   : 'Supporting documents'
             }
             description={
-              isConstructionReviewer
+              canLeadApprove || canDesignerReview
                 ? 'Upload marked-up drawings, review comments, and other response files before recording your review.'
                 : canResubmitToLead
-                  ? 'Upload the revised shop drawings, product data, or other documents addressing the discipline leader comments.'
+                  ? 'Upload the revised shop drawings, product data, or other documents addressing the review comments.'
                   : 'Upload shop drawings, product data sheets, samples photos, and other approval documents.'
             }
           />
-
-          {canRecallToDraft && submittalId && (
-            <Alert
-              type="info"
-              showIcon
-              title="Submitted for review"
-              description="You can recall this submittal to draft if you need to make changes before the discipline leader reviews it."
-              action={
-                <Button
-                  loading={updateSubmittal.isPending}
-                  onClick={() => void handleRecallToDraft()}
-                >
-                  Recall to draft
-                </Button>
-              }
-            />
-          )}
 
           {canResubmitToLead && submittalId && (
             <Alert
@@ -407,7 +421,7 @@ export default function SubmittalDetailDrawer({
               description={
                 latestReview?.comments
                   ? `Discipline leader comments: ${latestReview.comments}`
-                  : 'Address the discipline leader comments, upload revised documents, then resubmit for review.'
+                  : 'Address the comments, upload revised documents, then resubmit for review.'
               }
               action={
                 <Button
@@ -415,25 +429,7 @@ export default function SubmittalDetailDrawer({
                   loading={submitToLead.isPending}
                   onClick={() => void handleSubmitToLead()}
                 >
-                  Resubmit to discipline leader
-                </Button>
-              }
-            />
-          )}
-
-          {canSubmitToLead && submittalId && (
-            <Alert
-              type="warning"
-              showIcon
-              title="Ready to submit?"
-              description="Attach subtasks and upload your document package, then submit directly to the discipline leader for approval."
-              action={
-                <Button
-                  type="primary"
-                  loading={submitToLead.isPending}
-                  onClick={() => void handleSubmitToLead()}
-                >
-                  Submit to discipline leader
+                  Resubmit for review
                 </Button>
               }
             />
@@ -475,14 +471,102 @@ export default function SubmittalDetailDrawer({
               />
             )}
 
-            {canRecordReview && (
+            {canDesignerReview && (
+              <div className="mt-4 rounded border border-[var(--color-border)] p-4">
+                <h4 className={`${layout.drawerHeading} mb-2`}>
+                  Designer review
+                </h4>
+                <p className={`mb-4 ${layout.drawerMutedText}`}>
+                  Review the attached files and approve to send to the
+                  discipline leader.
+                </p>
+                <Form
+                  form={designerForm}
+                  layout="vertical"
+                  className="erp-drawer-form"
+                  onFinish={(values: { comments?: string }) =>
+                    void handleDesignerApprove(values)
+                  }
+                >
+                  <Form.Item label="Comments (optional)" name="comments">
+                    <Input.TextArea
+                      rows={3}
+                      placeholder="Optional notes for the discipline leader"
+                    />
+                  </Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    loading={addReview.isPending}
+                  >
+                    Approve and send to Discipline Leader
+                  </Button>
+                </Form>
+              </div>
+            )}
+
+            {canLeadApprove && (
+              <div className="mt-4 rounded border border-[var(--color-border)] p-4">
+                <h4 className={`${layout.drawerHeading} mb-2`}>
+                  Discipline Leader approval
+                </h4>
+                <Form<ReviewFormValues>
+                  form={leadForm}
+                  layout="vertical"
+                  className="erp-drawer-form"
+                  initialValues={{ status: 'APPROVED' }}
+                  onFinish={(values: ReviewFormValues) =>
+                    void handleLeadApproval(values)
+                  }
+                >
+                  <Form.Item
+                    label="Response"
+                    name="status"
+                    rules={[
+                      { required: true, message: 'Select an approval outcome' },
+                    ]}
+                  >
+                    <Select options={LEAD_APPROVAL_OPTIONS} />
+                  </Form.Item>
+                  <Form.Item
+                    label="Comments"
+                    name="comments"
+                    rules={
+                      commentsRequired
+                        ? [
+                            {
+                              required: true,
+                              message: 'Enter comments for this outcome',
+                            },
+                          ]
+                        : undefined
+                    }
+                  >
+                    <Input.TextArea
+                      rows={4}
+                      placeholder="Review comments, conditions, and required revisions"
+                    />
+                  </Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={addReview.isPending}
+                  >
+                    Submit approval
+                  </Button>
+                </Form>
+              </div>
+            )}
+
+            {canRecordExternalReview && (
               <Form<ReviewFormValues>
-                form={form}
+                form={leadForm}
                 layout="vertical"
                 className="erp-drawer-form mt-4"
                 initialValues={{ status: 'APPROVED' }}
                 onFinish={(values: ReviewFormValues) =>
-                  void handleAddReview(values)
+                  void handleExternalReview(values)
                 }
               >
                 <Form.Item
@@ -492,9 +576,13 @@ export default function SubmittalDetailDrawer({
                 >
                   <Select
                     options={SUBMITTAL_WORKFLOW.filter((step) =>
-                      SUBMITTAL_REVIEW_STATUS_OPTIONS.includes(
-                        step.key as SubmittalStatus,
-                      ),
+                      [
+                        'UNDER_REVIEW',
+                        'APPROVED',
+                        'APPROVED_WITH_COMMENTS',
+                        'REVISE_AND_RESUBMIT',
+                        'REJECTED',
+                      ].includes(step.key),
                     ).map((step) => ({
                       value: step.key,
                       label: step.label,
@@ -505,21 +593,11 @@ export default function SubmittalDetailDrawer({
                   label="Comments"
                   name="comments"
                   rules={[
-                    {
-                      required: true,
-                      message: 'Enter review comments',
-                    },
+                    { required: true, message: 'Enter review comments' },
                   ]}
                 >
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="Review comments, conditions, and required revisions"
-                  />
+                  <Input.TextArea rows={4} />
                 </Form.Item>
-                <p className={`mb-3 ${layout.drawerMutedText}`}>
-                  Attach marked-up files in the section above, then record your
-                  review outcome.
-                </p>
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -530,31 +608,29 @@ export default function SubmittalDetailDrawer({
               </Form>
             )}
 
-            {!canRecordReview &&
+            {!canDesignerReview &&
+              !canLeadApprove &&
               isConstruction &&
-              submittal.status === 'SUBMITTED' &&
-              submittal.submittedBy === currentUserId && (
+              submittal.status === 'SUBMITTED' && (
                 <Alert
                   type="info"
                   showIcon
                   className="mt-4"
-                  title="Awaiting discipline leader review"
-                  description="Your submittal has been submitted. The assigned discipline leader will record the approval outcome."
+                  title="Awaiting designer review"
+                  description="This submittal is with the assigned subtask designer."
                 />
               )}
 
-            {!canRecordReview &&
+            {!canDesignerReview &&
+              !canLeadApprove &&
               isConstruction &&
-              submittal.status === 'SUBMITTED' &&
-              submittal.submittedBy !== currentUserId &&
-              !isDisciplineLead &&
-              !isAssignedReviewer && (
+              submittal.status === 'UNDER_REVIEW' && (
                 <Alert
                   type="info"
                   showIcon
                   className="mt-4"
-                  title="Awaiting discipline leader review"
-                  description="This submittal is with the assigned discipline leader for approval."
+                  title="Awaiting discipline leader approval"
+                  description="The designer has approved. Waiting for the discipline leader."
                 />
               )}
           </section>

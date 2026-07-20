@@ -43,7 +43,7 @@ interface ConstructionSubmittalFormValues {
   specReference?: string;
   revisionNumber?: number;
   dueDate?: Dayjs;
-  designPackageIds?: string[];
+  designPackageId: string;
 }
 
 function designPackagesPath(
@@ -155,6 +155,11 @@ export default function ConstructionSubmittalDrawer({
   async function handleSubmit(
     values: ConstructionSubmittalFormValues,
   ): Promise<void> {
+    if (!pendingUpload && queuedFiles.length === 0) {
+      messageApi.error('At least one file is required');
+      return;
+    }
+
     try {
       if (pendingUpload) {
         if (queuedFiles.length === 0) {
@@ -190,7 +195,7 @@ export default function ConstructionSubmittalDrawer({
           category: values.category.trim(),
           title: values.title.trim(),
           taskDisciplineId: values.taskDisciplineId,
-          designPackageIds: values.designPackageIds,
+          designPackageId: values.designPackageId,
           contractor: values.contractor?.trim() || undefined,
           supplier: values.supplier?.trim() || undefined,
           specReference: values.specReference?.trim() || undefined,
@@ -243,6 +248,7 @@ export default function ConstructionSubmittalDrawer({
           <Button
             type="primary"
             loading={createSubmittal.isPending || uploading}
+            disabled={queuedFiles.length === 0 && !pendingUpload}
             onClick={() => form.submit()}
           >
             {pendingUpload ? 'Retry upload' : 'Create submittal'}
@@ -254,8 +260,8 @@ export default function ConstructionSubmittalDrawer({
         type="info"
         showIcon
         className="mb-4"
-        title="Submit to discipline leader"
-        description="Attach subtasks from the system and upload your own shop drawings or product data. After creating, upload supporting documents and submit directly to the discipline leader for approval."
+        title="Submit for review"
+        description="Attach files and select a subtask. The submittal will be sent to the subtask designer for review, then to the discipline leader for final approval."
       />
 
       <Form<ConstructionSubmittalFormValues>
@@ -335,6 +341,7 @@ export default function ConstructionSubmittalDrawer({
 
         <Form.Item
           label="Attachments"
+          required
           extra="Upload shop drawings, product data or supporting documents."
         >
           <Upload
@@ -360,6 +367,11 @@ export default function ConstructionSubmittalDrawer({
           <div className="mt-1 text-xs text-slate-400">
             PDF, DWG, DOC, XLS, JPG, PNG
           </div>
+          {queuedFiles.length === 0 && (
+            <div className="mt-1 text-xs text-red-500">
+              At least one file is required.
+            </div>
+          )}
         </Form.Item>
 
         {taskDisciplineId && (
@@ -376,14 +388,14 @@ export default function ConstructionSubmittalDrawer({
         )}
 
         <Form.Item
-          name="designPackageIds"
-          label="Attach subtasks (optional)"
-          extra="Link existing subtasks from the discipline. You can also upload your own documents after creating."
+          name="designPackageId"
+          label="Subtask"
+          extra="Select the subtask this submittal relates to."
+          rules={[{ required: true, message: 'Select a subtask' }]}
         >
           <Select
-            mode="multiple"
             allowClear
-            placeholder="Select subtasks"
+            placeholder="Select subtask"
             loading={packagesQuery.isLoading}
             disabled={!taskDisciplineId}
             options={packages.map((pkg) => ({
