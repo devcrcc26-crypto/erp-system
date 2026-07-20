@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -27,14 +27,20 @@ import { SUBMITTAL_CATEGORIES } from '@/lib/constants/submittal';
 import { designPackageKeys } from '@/lib/query/design-packages';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useMyWork } from '@/lib/query/epc-workspace';
 import { useCreateConstructionSubmittal } from '@/lib/query/submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
+import {
+  useCanViewMyWork,
+  useCapabilitiesReady,
+} from '@/hooks/use-pm-capabilities';
 import { useQuery } from '@tanstack/react-query';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 
 interface ConstructionSubmittalFormValues {
+  projectId?: string;
   taskDisciplineId: string;
   category: string;
   title: string;
@@ -66,12 +72,14 @@ function formatDisciplineOptionNumber(
 
 export default function ConstructionSubmittalDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onCreated,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
   onCreated: (submittalId: string) => void;
 }): React.ReactNode {
@@ -82,7 +90,22 @@ export default function ConstructionSubmittalDrawer({
     submittalId: string;
     folderId: string;
   } | null>(null);
-  const disciplinesQuery = useProjectDisciplines(projectId, open);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewMyWork = useCanViewMyWork();
+  const myWorkQuery = useMyWork(
+    undefined,
+    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  );
+
+  const effectiveProjectId = selectedProjectId ?? '';
+  const disciplinesQuery = useProjectDisciplines(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
   const createSubmittal = useCreateConstructionSubmittal();
   const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
@@ -92,18 +115,34 @@ export default function ConstructionSubmittalDrawer({
 
   const packagesQuery = useQuery({
     queryKey: designPackageKeys.lists(
-      projectId,
+      effectiveProjectId,
       taskDisciplineId ?? '__none__',
     ),
     queryFn: () =>
       apiGet<DesignPackage[]>(
-        designPackagesPath(projectId, taskDisciplineId!),
+        designPackagesPath(effectiveProjectId, taskDisciplineId!),
       ),
-    enabled: Boolean(projectId) && Boolean(taskDisciplineId) && open,
+    enabled:
+      Boolean(effectiveProjectId) && Boolean(taskDisciplineId) && open,
     staleTime: 30_000,
   });
 
   const packages = packagesQuery.data ?? [];
+
+  const projectOptions = useMemo(() => {
+    const myWorkItems = myWorkQuery.data ?? [];
+    return Array.from(
+      new Map(
+        myWorkItems.map((item) => [
+          item.projectId,
+          {
+            value: item.projectId,
+            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
+          },
+        ]),
+      ).values(),
+    );
+  }, [myWorkQuery.data]);
 
   const disciplineOptions = useMemo(
     () =>
@@ -135,10 +174,30 @@ export default function ConstructionSubmittalDrawer({
     [],
   );
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setSelectedProjectId(projectIdProp ?? null);
+    if (projectIdProp) {
+      form.setFieldsValue({ projectId: projectIdProp });
+    }
+  }, [open, projectIdProp, form]);
+
+  function handleProjectChange(nextProjectId: string): void {
+    setSelectedProjectId(nextProjectId);
+    form.setFieldsValue({
+      projectId: nextProjectId,
+      taskDisciplineId: undefined,
+      designPackageId: undefined,
+    });
+  }
+
   function handleClose(): void {
     setQueuedFiles([]);
     setUploading(false);
     setPendingUpload(null);
+    setSelectedProjectId(projectIdProp ?? null);
     form.resetFields();
     onClose();
   }
@@ -157,6 +216,12 @@ export default function ConstructionSubmittalDrawer({
   ): Promise<void> {
     if (!pendingUpload && queuedFiles.length === 0) {
       messageApi.error('At least one file is required');
+      return;
+    }
+
+    const projectId = selectedProjectId ?? values.projectId ?? projectIdProp;
+    if (!projectId) {
+      messageApi.error('Select a project');
       return;
     }
 
@@ -273,6 +338,23 @@ export default function ConstructionSubmittalDrawer({
           void handleSubmit(values)
         }
       >
+        {showProjectSelector && (
+          <Form.Item
+            name="projectId"
+            label="Project"
+            rules={[{ required: true, message: 'Select a project' }]}
+          >
+            <Select
+              showSearch
+              placeholder="Select project"
+              options={projectOptions}
+              loading={myWorkQuery.isLoading}
+              optionFilterProp="label"
+              onChange={handleProjectChange}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item
           name="taskDisciplineId"
           label="Discipline"
@@ -281,7 +363,11 @@ export default function ConstructionSubmittalDrawer({
           <Select
             placeholder="Select discipline"
             loading={disciplinesQuery.isLoading}
+            disabled={!selectedProjectId}
             options={disciplineOptions}
+            onChange={() =>
+              form.setFieldsValue({ designPackageId: undefined })
+            }
             optionRender={(option) => (
               <div>
                 <div className="text-sm font-medium">{option.data.label}</div>
