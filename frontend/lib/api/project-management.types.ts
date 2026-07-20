@@ -452,6 +452,8 @@ export interface SubmittalReview {
   revisionNumber: number;
   status: SubmittalStatus;
   comments: string | null;
+  attachmentDocumentId?: string | null;
+  attachmentDocumentName?: string | null;
   reviewedAt: string;
   createdAt: string;
 }
@@ -1013,6 +1015,7 @@ export interface CreateDrawingLinkRequest {
 export interface CreateSubmittalReviewRequest {
   status: SubmittalStatus;
   comments?: string;
+  attachmentDocumentId?: string;
   revisionNumber?: number;
 }
 

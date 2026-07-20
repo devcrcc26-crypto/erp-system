@@ -862,6 +862,7 @@ model Document {
   versions                 DocumentVersion[]
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
+  submittalReviewAttachments SubmittalReview[]
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -2089,19 +2090,22 @@ model Submittal {
 }
 
 model SubmittalReview {
-  id             String          @id @default(uuid())
-  submittalId    String          @map("submittal_id")
-  reviewedBy     String          @map("reviewed_by")
-  revisionNumber Int             @map("revision_number")
-  status         SubmittalStatus
-  comments       String?
-  reviewedAt     DateTime        @default(now()) @map("reviewed_at")
-  createdAt      DateTime        @default(now()) @map("created_at")
+  id                    String          @id @default(uuid())
+  submittalId           String          @map("submittal_id")
+  reviewedBy            String          @map("reviewed_by")
+  revisionNumber        Int             @map("revision_number")
+  status                SubmittalStatus
+  comments              String?
+  attachmentDocumentId  String?         @map("attachment_document_id")
+  reviewedAt            DateTime        @default(now()) @map("reviewed_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
 
-  submittal Submittal @relation(fields: [submittalId], references: [id])
-  reviewer  User      @relation(fields: [reviewedBy], references: [id])
+  submittal            Submittal  @relation(fields: [submittalId], references: [id])
+  reviewer             User       @relation(fields: [reviewedBy], references: [id])
+  attachmentDocument   Document?  @relation(fields: [attachmentDocumentId], references: [id])
 
   @@index([submittalId], map: "idx_submittal_review_submittal_id")
+  @@index([attachmentDocumentId], map: "idx_submittal_review_attachment_document_id")
   @@map("submittal_review")
 }
 

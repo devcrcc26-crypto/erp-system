@@ -252,6 +252,8 @@ export interface MappedSubmittalReview {
   revisionNumber: number;
   status: SubmittalReview['status'];
   comments: string | null;
+  attachmentDocumentId: string | null;
+  attachmentDocumentName?: string | null;
   reviewedAt: string;
   createdAt: string;
 }
@@ -557,7 +559,11 @@ export function mapSubmittalItem(row: SubmittalItem): MappedSubmittalItem {
   };
 }
 
-export function mapSubmittalReview(row: SubmittalReview): MappedSubmittalReview {
+export function mapSubmittalReview(
+  row: SubmittalReview & {
+    attachmentDocument?: { name: string } | null;
+  },
+): MappedSubmittalReview {
   return {
     id: row.id,
     submittalId: row.submittalId,
@@ -565,6 +571,8 @@ export function mapSubmittalReview(row: SubmittalReview): MappedSubmittalReview 
     revisionNumber: row.revisionNumber,
     status: row.status,
     comments: row.comments,
+    attachmentDocumentId: row.attachmentDocumentId ?? null,
+    attachmentDocumentName: row.attachmentDocument?.name ?? null,
     reviewedAt: toIsoString(row.reviewedAt)!,
     createdAt: toIsoString(row.createdAt)!,
   };

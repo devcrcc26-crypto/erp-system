@@ -796,6 +796,14 @@ export class CreateSubmittalReviewDto {
   @IsString()
   comments?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Optional document id (already uploaded to the submittal folder) attached to this review',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  attachmentDocumentId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()

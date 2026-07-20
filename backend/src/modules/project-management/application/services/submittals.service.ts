@@ -495,19 +495,35 @@ export class SubmittalsService {
       }
     }
 
-    const row = await this.prisma.submittal.update({
-      where: { id: submittalId },
-      data: {
-        assignedTo: designerUserId,
-        reviewedBy: disciplinaryLeaderUserId,
-        status: SubmittalStatus.SUBMITTED,
-        submissionDate: this.todayDate(),
-        revisionNumber: isResubmit
-          ? submittal.revisionNumber + 1
-          : submittal.revisionNumber,
-        reviewDate: isResubmit ? null : submittal.reviewDate,
-        updatedBy: ctx.userId,
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.submittal.update({
+        where: { id: submittalId },
+        data: {
+          assignedTo: designerUserId,
+          reviewedBy: disciplinaryLeaderUserId,
+          status: SubmittalStatus.SUBMITTED,
+          submissionDate: this.todayDate(),
+          revisionNumber: isResubmit
+            ? submittal.revisionNumber + 1
+            : submittal.revisionNumber,
+          reviewDate: isResubmit ? null : submittal.reviewDate,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (isResubmit) {
+        await tx.submittalReview.create({
+          data: {
+            submittalId,
+            reviewedBy: ctx.userId,
+            revisionNumber: updated.revisionNumber,
+            status: SubmittalStatus.SUBMITTED,
+            comments: 'Resubmitted for designer review',
+          },
+        });
+      }
+
+      return updated;
     });
 
     return mapSubmittal(row);
@@ -734,6 +750,9 @@ export class SubmittalsService {
     const rows = await this.prisma.submittalReview.findMany({
       where: { submittalId },
       orderBy: { reviewedAt: 'asc' },
+      include: {
+        attachmentDocument: { select: { name: true } },
+      },
     });
 
     return enrichRowsWithUserDisplayNames(
@@ -745,9 +764,8 @@ export class SubmittalsService {
   }
 
   /**
-   * Records external submittal review - trigger only, no EDV mutation.
-   * Construction flow: Designer APPROVED → UNDER_REVIEW (D.Lead);
-   * D.Lead final verdicts settle or return to submitter.
+   * Records submittal review. Construction: Designer APPROVED → UNDER_REVIEW;
+   * Designer REJECTED settles; D.Lead final verdicts settle or return to submitter.
    */
   async addReview(
     ctx: PmContext,
@@ -761,6 +779,32 @@ export class SubmittalsService {
     if (!SUBMITTAL_REVIEW_OUTCOME_STATUSES.has(dto.status)) {
       throw new BadRequestException(
         `Invalid review status ${dto.status} for submittal review`,
+      );
+    }
+
+    const requiresCommentOrFile = (
+      [
+        SubmittalStatus.APPROVED_WITH_COMMENTS,
+        SubmittalStatus.REVISE_AND_RESUBMIT,
+        SubmittalStatus.REJECTED,
+      ] as SubmittalStatus[]
+    ).includes(dto.status);
+
+    if (
+      requiresCommentOrFile &&
+      !dto.comments?.trim() &&
+      !dto.attachmentDocumentId
+    ) {
+      throw new BadRequestException(
+        'A comment or file is required for this action.',
+      );
+    }
+
+    if (dto.attachmentDocumentId) {
+      await this.assertReviewAttachmentBelongsToSubmittal(
+        ctx,
+        submittalId,
+        dto.attachmentDocumentId,
       );
     }
 
@@ -779,18 +823,26 @@ export class SubmittalsService {
     let nextAssignedTo: string | null = submittal.assignedTo;
 
     if (isDesignerStage) {
-      if (dto.status !== SubmittalStatus.APPROVED) {
+      if (
+        dto.status !== SubmittalStatus.APPROVED &&
+        dto.status !== SubmittalStatus.REJECTED
+      ) {
         throw new BadRequestException(
-          'Designer review may only approve and send to the discipline leader',
+          'Designer review may only approve (send to discipline leader) or reject',
         );
       }
-      if (!submittal.reviewedBy) {
-        throw new BadRequestException(
-          'No discipline leader is stored on this submittal',
-        );
+      if (dto.status === SubmittalStatus.APPROVED) {
+        if (!submittal.reviewedBy) {
+          throw new BadRequestException(
+            'No discipline leader is stored on this submittal',
+          );
+        }
+        nextStatus = SubmittalStatus.UNDER_REVIEW;
+        nextAssignedTo = submittal.reviewedBy;
+      } else {
+        nextStatus = SubmittalStatus.REJECTED;
+        nextAssignedTo = null;
       }
-      nextStatus = SubmittalStatus.UNDER_REVIEW;
-      nextAssignedTo = submittal.reviewedBy;
     } else if (isLeadStage) {
       const leadOutcomes = new Set<SubmittalStatus>([
         SubmittalStatus.APPROVED,
@@ -830,7 +882,11 @@ export class SubmittalsService {
           reviewedBy: ctx.userId,
           revisionNumber,
           status: dto.status,
-          comments: dto.comments,
+          comments: dto.comments?.trim() || null,
+          attachmentDocumentId: dto.attachmentDocumentId ?? null,
+        },
+        include: {
+          attachmentDocument: { select: { name: true } },
         },
       });
 
@@ -997,6 +1053,40 @@ export class SubmittalsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
+  }
+
+  /**
+   * Ensures a review attachment belongs to this submittal's document folder.
+   */
+  private async assertReviewAttachmentBelongsToSubmittal(
+    ctx: PmContext,
+    submittalId: string,
+    documentId: string,
+  ): Promise<void> {
+    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
+      ctx,
+      FolderContextType.SUBMITTAL,
+      submittalId,
+    );
+    if (!folder) {
+      throw new BadRequestException(
+        'Submittal has no attachment folder for review files',
+      );
+    }
+
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({
+        id: documentId,
+        companyId: ctx.companyId,
+        folderId: folder.id,
+      }),
+      select: { id: true },
+    });
+    if (!document) {
+      throw new BadRequestException(
+        'Review attachment must be a document in this submittal folder',
+      );
+    }
   }
 
   /**
