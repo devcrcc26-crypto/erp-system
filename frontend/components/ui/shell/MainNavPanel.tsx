@@ -209,7 +209,7 @@ export default function MainNavPanel({
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
   const visibleNavItems = navItems.filter(
-    (item) => item.visible && canViewGlobalNavKey(item.key, epc),
+    (item) => item.visible && canViewGlobalNavKey(item.key, epc, pm),
   );
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';

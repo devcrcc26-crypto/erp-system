@@ -225,3 +225,32 @@ export class SubmittalsController {
     return { message: 'Submittal deleted' };
   }
 }
+
+/**
+ * Company-scoped submittals routes (no project path param).
+ * Separate controller so PmModuleAccessGuard is not applied without projectId.
+ */
+@ApiTags('Submittals')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@Controller('submittals')
+export class MySubmittalsController {
+  constructor(private readonly submittalsService: SubmittalsService) {}
+
+  private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('my')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'List construction submittals relevant to the current user across projects',
+  })
+  listMy(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PmListQueryDto,
+  ): Promise<unknown> {
+    return this.submittalsService.listMySubmittals(this.ctx(user), query);
+  }
+}

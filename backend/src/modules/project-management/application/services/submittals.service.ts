@@ -124,6 +124,44 @@ export class SubmittalsService {
   }
 
   /**
+   * Company-scoped construction submittals relevant to the current user.
+   */
+  async listMySubmittals(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedSubmittal>> {
+    const where = this.buildMyListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      SUBMITTAL_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.submittal.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { name: true, projectCode: true } },
+        },
+      }),
+      this.prisma.submittal.count({ where }),
+    ]);
+
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map(mapSubmittal),
+      PM_SUBMITTAL_USER_NAMES,
+    );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
    * Returns a single submittal by id scoped to a project.
    */
   async getSubmittal(
@@ -844,6 +882,58 @@ export class SubmittalsService {
         { title: { contains: term, mode: 'insensitive' } },
         { category: { contains: term, mode: 'insensitive' } },
         { contractor: { contains: term, mode: 'insensitive' } },
+      ];
+    }
+
+    return where;
+  }
+
+  private buildMyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.SubmittalWhereInput {
+    const relevanceOr: Prisma.SubmittalWhereInput[] = [
+      { assignedTo: ctx.userId },
+      { reviewedBy: ctx.userId },
+      { submittedBy: ctx.userId },
+      {
+        taskDiscipline: activeOnly({
+          disciplineLeadUserId: ctx.userId,
+        }),
+      },
+    ];
+
+    const where: Prisma.SubmittalWhereInput = activeOnly({
+      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+      project: activeOnly({ companyId: ctx.companyId }),
+      OR: relevanceOr,
+    });
+
+    if (query.status) {
+      where.status = query.status as SubmittalStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.AND = [
+        {
+          OR: [
+            { submittalNumber: { contains: term, mode: 'insensitive' } },
+            { title: { contains: term, mode: 'insensitive' } },
+            { category: { contains: term, mode: 'insensitive' } },
+            { contractor: { contains: term, mode: 'insensitive' } },
+            {
+              project: {
+                name: { contains: term, mode: 'insensitive' },
+              },
+            },
+            {
+              project: {
+                projectCode: { contains: term, mode: 'insensitive' },
+              },
+            },
+          ],
+        },
       ];
     }
 

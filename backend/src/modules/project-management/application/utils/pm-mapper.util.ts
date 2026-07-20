@@ -203,6 +203,8 @@ export function mapProjectTeamMember(member: ProjectTeam): MappedProjectTeamMemb
 export interface MappedSubmittal {
   id: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   taskDisciplineId: string | null;
   disciplineLeadUserId: string | null;
   submittedBy: string;
@@ -506,10 +508,16 @@ export interface MappedCloseoutDetail extends MappedCloseout {
   warranties: MappedWarranty[];
 }
 
-export function mapSubmittal(row: Submittal): MappedSubmittal {
+export function mapSubmittal(
+  row: Submittal & {
+    project?: { name: string; projectCode: string } | null;
+  },
+): MappedSubmittal {
   return {
     id: row.id,
     projectId: row.projectId,
+    projectName: row.project?.name ?? null,
+    projectCode: row.project?.projectCode ?? null,
     taskDisciplineId: row.taskDisciplineId,
     disciplineLeadUserId: null,
     submittedBy: row.submittedBy,

@@ -398,6 +398,8 @@ export interface RfiResponse {
 export interface Submittal {
   id: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   taskDisciplineId: string | null;
   disciplineLeadUserId?: string | null;
   submittedBy: string;

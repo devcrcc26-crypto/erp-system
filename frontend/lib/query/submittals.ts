@@ -34,6 +34,13 @@ const submittalsPath = (projectId: string): string =>
 
 export const submittalKeys = {
   all: ['pm', 'submittals'] as const,
+  myLists: () => [...submittalKeys.all, 'my', 'list'] as const,
+  myList: (
+    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...submittalKeys.myLists(), params] as const,
   lists: (projectId: string) =>
     [...submittalKeys.all, projectId, 'list'] as const,
   list: (
@@ -50,6 +57,30 @@ export const submittalKeys = {
   reviews: (projectId: string, submittalId: string) =>
     [...submittalKeys.detail(projectId, submittalId), 'reviews'] as const,
 };
+
+/**
+ * Cross-project construction submittals relevant to the signed-in user.
+ */
+export function useMySubmittals(
+  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Submittal>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: submittalKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<Submittal>(`/submittals/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
 
 export function useSubmittals(
   projectId: string,

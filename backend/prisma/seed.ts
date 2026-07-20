@@ -1133,16 +1133,39 @@ async function main(): Promise<void> {
     }
   }
 
-  // Employee gets read-only project portfolio access
+  // Employee gets read-only project portfolio access (not construction submittals —
+  // those are gated by Designer / Discipline Lead FK personas or admin roles).
   const employeePmViewFlags = viewOnlyFlags();
   for (const permission of permissions) {
     if (!PM_MODULES.includes(permission.module as (typeof PM_MODULES)[number])) {
+      continue;
+    }
+    if (permission.module === 'submittals') {
       continue;
     }
     if (permission.action !== 'view') {
       continue;
     }
     await upsertRolePermission(employeeRoleId, permission.id, employeePmViewFlags);
+  }
+
+  const employeeSubmittalsView = permissions.find(
+    (permission) =>
+      permission.module === 'submittals' && permission.action === 'view',
+  );
+  if (employeeRoleId && employeeSubmittalsView) {
+    await prisma.rolePermission.updateMany({
+      where: {
+        roleId: employeeRoleId,
+        permissionId: employeeSubmittalsView.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: SYSTEM_USER_ID,
+        updatedBy: SYSTEM_USER_ID,
+      },
+    });
   }
 
   // ── Organisation bootstrap ─────────────────────────────────────────────

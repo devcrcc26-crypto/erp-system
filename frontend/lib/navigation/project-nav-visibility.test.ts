@@ -146,45 +146,76 @@ describe('project-nav-visibility', () => {
 });
 
 describe('canViewGlobalNavKey — submittals', () => {
+  const pmCanView = {
+    submittals: {
+      canView: true,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+    },
+  };
+  const pmNoView = {
+    submittals: {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+    },
+  };
+
   it('allows designer and discipline leader to see /submittals', () => {
     expect(
-      canViewGlobalNavKey('/submittals', {
-        ...EMPTY_EPC_CAPABILITIES,
-        navDesigner: true,
-      }),
+      canViewGlobalNavKey(
+        '/submittals',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmNoView,
+      ),
     ).toBe(true);
     expect(
-      canViewGlobalNavKey('/submittals', {
-        ...EMPTY_EPC_CAPABILITIES,
-        navDisciplineLeader: true,
-      }),
+      canViewGlobalNavKey(
+        '/submittals',
+        { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+        pmNoView,
+      ),
     ).toBe(true);
   });
 
   it('hides /submittals from reviewer and supporting designer', () => {
     expect(
-      canViewGlobalNavKey('/submittals', {
-        ...EMPTY_EPC_CAPABILITIES,
-        navReviewerTier: true,
-      }),
+      canViewGlobalNavKey(
+        '/submittals',
+        { ...EMPTY_EPC_CAPABILITIES, navReviewerTier: true },
+        pmNoView,
+      ),
     ).toBe(false);
     expect(
-      canViewGlobalNavKey('/submittals', {
-        ...EMPTY_EPC_CAPABILITIES,
-        navSupportingDesigner: true,
-      }),
+      canViewGlobalNavKey(
+        '/submittals',
+        { ...EMPTY_EPC_CAPABILITIES, navSupportingDesigner: true },
+        pmNoView,
+      ),
     ).toBe(false);
   });
 
-  it('allows full-access and non-design-cycle users', () => {
+  it('hides /submittals from Employee-only (no FK, no module view)', () => {
     expect(
-      canViewGlobalNavKey('/submittals', {
-        ...EMPTY_EPC_CAPABILITIES,
-        navFullAccess: true,
-      }),
+      canViewGlobalNavKey('/submittals', EMPTY_EPC_CAPABILITIES, pmNoView),
+    ).toBe(false);
+  });
+
+  it('allows Project Admin via pm.submittals.canView without design persona', () => {
+    expect(
+      canViewGlobalNavKey('/submittals', EMPTY_EPC_CAPABILITIES, pmCanView),
     ).toBe(true);
-    expect(canViewGlobalNavKey('/submittals', EMPTY_EPC_CAPABILITIES)).toBe(
-      true,
-    );
+  });
+
+  it('allows full-access users', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/submittals',
+        { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
+        pmNoView,
+      ),
+    ).toBe(true);
   });
 });

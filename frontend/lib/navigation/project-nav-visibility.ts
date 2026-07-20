@@ -243,9 +243,19 @@ const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 export function canViewGlobalNavKey(
   key: string,
   epc: EpcCapabilities,
+  pm?: Pick<PmCapabilities, 'submittals'> | null,
 ): boolean {
   if (epc.navFullAccess) {
     return true;
+  }
+
+  // Submittals never use the "no design persona → allow all" shortcut.
+  if (key === '/submittals') {
+    return (
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.submittals.canView ?? false)
+    );
   }
 
   if (!hasDesignCycleNavPersona(epc)) {

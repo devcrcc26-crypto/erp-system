@@ -104,10 +104,10 @@
     },
     "globalSubmittals": {
       "title": "Construction Submittals",
-      "description": "Open a project to create, review, and track construction submittals.",
+      "description": "Submittals assigned to you, raised by you, or in your disciplines across all projects.",
       "projectNumber": "Project number",
       "projectName": "Project",
-      "empty": "No projects available for submittals.",
+      "empty": "No submittals relevant to you.",
       "noAccess": "You do not have access to construction submittals."
     },
     "reviewMode": {

@@ -104,10 +104,10 @@
     },
     "globalSubmittals": {
       "title": "施工送审文件",
-      "description": "选择项目以创建、审阅并跟踪施工送审文件。",
+      "description": "跨项目显示分配给您、由您提交或属于您专业的送审文件。",
       "projectNumber": "项目编号",
       "projectName": "项目",
-      "empty": "没有可用于送审文件的项目。",
+      "empty": "没有与您相关的送审文件。",
       "noAccess": "您无权访问施工送审文件。"
     },
     "reviewMode": {

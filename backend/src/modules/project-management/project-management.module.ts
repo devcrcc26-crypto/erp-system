@@ -89,7 +89,10 @@ import { ReviewCommentsController } from './presentation/controllers/review-comm
 import { RisksController } from './presentation/controllers/risks.controller';
 import { RfisController } from './presentation/controllers/rfis.controller';
 import { ScheduleController } from './presentation/controllers/schedule.controller';
-import { SubmittalsController } from './presentation/controllers/submittals.controller';
+import {
+  MySubmittalsController,
+  SubmittalsController,
+} from './presentation/controllers/submittals.controller';
 import { WorkflowEventsController } from './presentation/controllers/workflow-events.controller';
 import { ProjectionReconciliationCron } from './presentation/cron/projection-reconciliation.cron';
 import { ReviewSlaCron } from './presentation/cron/review-sla.cron';
@@ -120,6 +123,7 @@ const workflowBullProcessors = redisEnabled
     RfisController,
     IssuesController,
     SubmittalsController,
+    MySubmittalsController,
     DrawingsController,
     EngineeringDocumentsController,
     DesignPackagesController,
