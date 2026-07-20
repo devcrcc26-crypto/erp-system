@@ -44,7 +44,7 @@ export class SubmittalsController {
   }
 
   @Get()
-  @RequirePermission('submittals', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project submittals' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -99,7 +99,7 @@ export class SubmittalsController {
   }
 
   @Post(':id/submit-to-lead')
-  @RequirePermission('submittals', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
       'Submit or resubmit in-construction submittal to discipline leader',
@@ -163,7 +163,7 @@ export class SubmittalsController {
   }
 
   @Get(':id/reviews')
-  @RequirePermission('submittals', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List submittal reviews' })
   listReviews(
     @CurrentUser() user: AuthenticatedUser,
@@ -186,7 +186,7 @@ export class SubmittalsController {
   }
 
   @Get(':id')
-  @RequirePermission('submittals', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get submittal by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,

@@ -50,9 +50,8 @@ export default function SubmittalsPageContent({
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
   const resolveUserDisplay = useUserDisplayResolver();
-  const canCreateSubmittal =
-    lens.canCreateSubmittals || lens.canCreateEngineering;
-  const canAccessPage = lens.canViewSubmittals || lens.canCreateEngineering;
+  const canCreateSubmittal = lens.canCreateSubmittals;
+  const canAccessPage = lens.canViewSubmittals;
 
   const submittalsQuery = useSubmittals(
     projectId,

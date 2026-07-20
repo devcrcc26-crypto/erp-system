@@ -47,6 +47,8 @@ function buildRoleLens(
     canViewEngineering: boolean;
     canUploadEngineeringDocuments: boolean;
     disciplineScopeBypass: boolean;
+    navDisciplineLeader: boolean;
+    navDesigner: boolean;
   },
 ): RoleLens {
   const hasAssignedDesignAccess =
@@ -68,6 +70,10 @@ function buildRoleLens(
   const canViewReviewInbox = epc.canViewReviewInbox;
   const canViewMyComments = epc.canViewMyComments;
 
+  /** FK discipline lead / designer — construction submittals without RBAC module grants. */
+  const canAccessConstructionSubmittals =
+    epc.navDisciplineLeader || epc.navDesigner;
+
   return {
     canViewEngineering: engineeringView,
     canCreateEngineering:
@@ -78,8 +84,9 @@ function buildRoleLens(
     canSubmitDesignPackage,
     canApproveReview: canViewReviewInbox,
     canResolveAssignedComments: canViewMyComments,
-    canViewSubmittals: submittals.canView,
-    canCreateSubmittals: submittals.canCreate,
+    canViewSubmittals: submittals.canView || canAccessConstructionSubmittals,
+    canCreateSubmittals:
+      submittals.canCreate || canAccessConstructionSubmittals,
     canViewReviewInbox,
     canAccessReviewMode: canViewReviewInbox,
     disciplineScopeBypass: epc.disciplineScopeBypass,
