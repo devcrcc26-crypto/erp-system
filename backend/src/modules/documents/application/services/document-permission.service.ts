@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { FolderContextType, SubmittalStatus } from '@prisma/client';
+import { FolderContextType } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 
@@ -32,6 +33,7 @@ export class DocumentPermissionService {
     userId: string,
     companyId: string,
     folderId: string,
+    roleNames?: readonly string[],
   ): Promise<void> {
     if (await this.permissionService.hasPermission(userId, companyId, 'documents', 'create')) {
       return;
@@ -56,7 +58,7 @@ export class DocumentPermissionService {
     if (
       folder.contextType === FolderContextType.SUBMITTAL &&
       folder.contextId &&
-      (await this.canUploadSubmittalFolder(userId, companyId, folder.contextId))
+      (await this.canUploadSubmittalFolder(userId, companyId, folder, roleNames))
     ) {
       return;
     }
@@ -116,6 +118,7 @@ export class DocumentPermissionService {
     userId: string,
     companyId: string,
     folderId: string,
+    roleNames?: readonly string[],
   ): Promise<void> {
     if (await this.permissionService.hasPermission(userId, companyId, 'documents', 'view')) {
       return;
@@ -139,7 +142,7 @@ export class DocumentPermissionService {
     if (
       folder.contextType === FolderContextType.SUBMITTAL &&
       folder.contextId &&
-      (await this.isAssignedSubmittalViewer(userId, companyId, folder.contextId))
+      (await this.canAccessSubmittalFolder(userId, companyId, folder.contextId, roleNames))
     ) {
       return;
     }
@@ -154,6 +157,7 @@ export class DocumentPermissionService {
     userId: string,
     companyId: string,
     documentId: string,
+    roleNames?: readonly string[],
   ): Promise<void> {
     if (await this.permissionService.hasPermission(userId, companyId, 'documents', 'view')) {
       return;
@@ -206,10 +210,11 @@ export class DocumentPermissionService {
     if (
       document.folder.contextType === FolderContextType.SUBMITTAL &&
       document.folder.contextId &&
-      (await this.isAssignedSubmittalViewer(
+      (await this.canAccessSubmittalFolder(
         userId,
         companyId,
         document.folder.contextId,
+        roleNames,
       ))
     ) {
       return;
@@ -225,6 +230,7 @@ export class DocumentPermissionService {
     userId: string,
     companyId: string,
     documentVersionId: string,
+    roleNames?: readonly string[],
   ): Promise<void> {
     const version = await this.prisma.documentVersion.findFirst({
       where: {
@@ -237,7 +243,12 @@ export class DocumentPermissionService {
       throw new NotFoundException('Document version not found');
     }
 
-    await this.assertCanViewDocument(userId, companyId, version.documentId);
+    await this.assertCanViewDocument(
+      userId,
+      companyId,
+      version.documentId,
+      roleNames,
+    );
   }
 
   /**
@@ -287,13 +298,21 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Submittal attachment folders: creator, assignee, discipline lead, or TD lead.
+   * Submittal attachment folders: participants and project-admin-class roles.
    */
-  private async isAssignedSubmittalViewer(
+  private async canAccessSubmittalFolder(
     userId: string,
     companyId: string,
     submittalId: string,
+    roleNames?: readonly string[],
   ): Promise<boolean> {
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
     const submittal = await this.prisma.submittal.findFirst({
       where: activeOnly({
         id: submittalId,
@@ -312,42 +331,28 @@ export class DocumentPermissionService {
       return false;
     }
 
-    if (
+    return (
       submittal.submittedBy === userId ||
       submittal.assignedTo === userId ||
-      submittal.reviewedBy === userId
-    ) {
-      return true;
-    }
-
-    return submittal.taskDiscipline?.disciplineLeadUserId === userId;
+      submittal.reviewedBy === userId ||
+      submittal.taskDiscipline?.disciplineLeadUserId === userId
+    );
   }
 
-  /**
-   * Submittal folder uploads: submitter only while draft or revise-and-resubmit.
-   */
   private async canUploadSubmittalFolder(
     userId: string,
     companyId: string,
-    submittalId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
   ): Promise<boolean> {
-    const submittal = await this.prisma.submittal.findFirst({
-      where: activeOnly({
-        id: submittalId,
-        project: activeOnly({ companyId }),
-      }),
-      select: {
-        submittedBy: true,
-        status: true,
-      },
-    });
-    if (!submittal || submittal.submittedBy !== userId) {
+    if (!folder.contextId) {
       return false;
     }
-
-    return (
-      submittal.status === SubmittalStatus.DRAFT ||
-      submittal.status === SubmittalStatus.REVISE_AND_RESUBMIT
+    return this.canAccessSubmittalFolder(
+      userId,
+      companyId,
+      folder.contextId,
+      roleNames,
     );
   }
 
