@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Select, Space } from 'antd';
+import { Alert, Button, Modal, Select, Space } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -17,16 +18,20 @@ import type {
 } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useMySubmittals } from '@/lib/query/submittals';
+import { useMyWork } from '@/lib/query/epc-workspace';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
   isOverdue,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
+  useCanViewMyWork,
   useCanViewSubmittals,
+  useEpcCapabilities,
   usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
@@ -44,8 +49,16 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     projectId: string;
     submittalId: string;
   } | null>(null);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [pickerProjectId, setPickerProjectId] = useState<string | null>(null);
+
   const capabilitiesReady = !usePermissionsLoading();
   const canViewSubmittals = useCanViewSubmittals();
+  const canViewMyWork = useCanViewMyWork();
+  const epc = useEpcCapabilities();
+  const canCreate = epc.navDisciplineLeader || epc.navDesigner;
   const resolveUserDisplay = useUserDisplayResolver();
 
   const submittalsQuery = useMySubmittals(
@@ -56,6 +69,27 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     },
     capabilitiesReady && canViewSubmittals,
   );
+
+  const myWorkQuery = useMyWork(
+    undefined,
+    capabilitiesReady && canCreate && canViewMyWork,
+  );
+
+  const projects = useMemo(() => {
+    const myWork = myWorkQuery.data ?? [];
+    return Array.from(
+      new Map(
+        myWork.map((item) => [
+          item.projectId,
+          {
+            id: item.projectId,
+            name: item.projectName,
+            code: item.projectNumber,
+          },
+        ]),
+      ).values(),
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }, [myWorkQuery.data]);
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -148,6 +182,26 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     [resolveUserDisplay, t],
   );
 
+  function openProjectPicker(): void {
+    setPickerProjectId(null);
+    setProjectPickerOpen(true);
+  }
+
+  function handlePickerContinue(): void {
+    if (!pickerProjectId) {
+      return;
+    }
+    setSelectedProjectId(pickerProjectId);
+    setProjectPickerOpen(false);
+    setPickerProjectId(null);
+    setDrawerOpen(true);
+  }
+
+  function closeCreateDrawer(): void {
+    setDrawerOpen(false);
+    setSelectedProjectId(null);
+  }
+
   if (!capabilitiesReady || submittalsQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
@@ -175,6 +229,18 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
       <FormLayout
         title={t('pages.globalSubmittals.title')}
         description={t('pages.globalSubmittals.description')}
+        extra={
+          canCreate ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openProjectPicker}
+              disabled={apiUnavailable}
+            >
+              New submittal
+            </Button>
+          ) : undefined
+        }
       >
         {apiUnavailable && (
           <Alert
@@ -223,11 +289,66 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
                 icon={<Send />}
                 title={t('pages.globalSubmittals.empty')}
                 description="Submittals assigned to you, raised by you, or in your disciplines appear here."
+                action={
+                  canCreate && !apiUnavailable
+                    ? {
+                        label: 'New submittal',
+                        onClick: openProjectPicker,
+                      }
+                    : undefined
+                }
               />
             ),
           }}
         />
       </FormLayout>
+
+      <Modal
+        title="Select project"
+        open={projectPickerOpen}
+        onCancel={() => {
+          setProjectPickerOpen(false);
+          setPickerProjectId(null);
+        }}
+        onOk={handlePickerContinue}
+        okText="Continue"
+        okButtonProps={{ disabled: !pickerProjectId }}
+        destroyOnHidden
+      >
+        <Select
+          showSearch
+          className="w-full"
+          placeholder="Choose a project"
+          value={pickerProjectId ?? undefined}
+          onChange={(value: string) => setPickerProjectId(value)}
+          loading={myWorkQuery.isLoading}
+          optionFilterProp="label"
+          options={projects.map((project) => ({
+            value: project.id,
+            label: project.code
+              ? `${project.code} — ${project.name}`
+              : project.name,
+          }))}
+          notFoundContent={
+            myWorkQuery.isLoading
+              ? 'Loading projects…'
+              : 'No assigned projects found'
+          }
+        />
+      </Modal>
+
+      {selectedProjectId && (
+        <ConstructionSubmittalDrawer
+          open={drawerOpen}
+          projectId={selectedProjectId}
+          onClose={closeCreateDrawer}
+          onCreated={(submittalId) => {
+            void submittalsQuery.refetch();
+            closeCreateDrawer();
+            setSelected({ projectId: selectedProjectId, submittalId });
+          }}
+        />
+      )}
 
       {selected && (
         <SubmittalDetailDrawer
