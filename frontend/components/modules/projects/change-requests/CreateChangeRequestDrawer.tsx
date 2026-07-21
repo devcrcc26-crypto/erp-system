@@ -5,33 +5,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Drawer, Form, Input, Select, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { useQueries } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client';
-import type { CrSubtaskOption } from '@/lib/api/project-management.types';
 import {
-  changeRequestKeys,
   useCreateChangeRequest,
   useEligibleCrSubtasks,
+  useMyChangeRequestProjects,
   useNextCrNumber,
   usePackageCurrentEdvs,
 } from '@/lib/query/change-requests';
-import { projectPath } from '@/lib/query/pm-query-utils';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import type { ChangeRequestReason } from '@/lib/api/project-management.types';
 import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useMyWork } from '@/lib/query/epc-workspace';
 import {
-  useCanViewMyWork,
   useCapabilitiesReady,
 } from '@/hooks/use-pm-capabilities';
 
 const NO_REVIEWABLE_SUBTASKS_MESSAGE =
   'No subtasks with reviewable documents found. Documents must be submitted for review before a change request can be raised.';
-
-const changeRequestsEligibleSubtasksPath = (projectId: string): string =>
-  `${projectPath(projectId, 'change-requests')}/eligible-subtasks`;
 
 const CHANGE_REASON_OPTIONS: Array<{
   value: ChangeRequestReason;
@@ -70,67 +61,16 @@ export default function CreateChangeRequestDrawer({
   const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
 
   const capabilitiesReady = useCapabilitiesReady();
-  const canViewMyWork = useCanViewMyWork();
-  const myWorkQuery = useMyWork(
-    undefined,
-    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  const myProjectsQuery = useMyChangeRequestProjects(
+    open && showProjectSelector && capabilitiesReady,
   );
-
-  const myWorkItems = myWorkQuery.data ?? [];
-
-  const projectIdsForEligibility = useMemo(
-    () => [...new Set(myWorkItems.map((item) => item.projectId))],
-    [myWorkItems],
-  );
-
-  const eligibleSubtasksByProject = useQueries({
-    queries: projectIdsForEligibility.map((projectId) => ({
-      queryKey: changeRequestKeys.eligibleSubtasks(projectId),
-      queryFn: () =>
-        apiGet<CrSubtaskOption[]>(
-          changeRequestsEligibleSubtasksPath(projectId),
-        ),
-      enabled:
-        open &&
-        showProjectSelector &&
-        capabilitiesReady &&
-        Boolean(projectId),
-      staleTime: 30_000,
-    })),
-  });
-
-  const projectIdsWithReviewableSubtasks = useMemo(() => {
-    const eligible = new Set<string>();
-    projectIdsForEligibility.forEach((projectId, index) => {
-      const rows = eligibleSubtasksByProject[index]?.data;
-      if (rows && rows.length > 0) {
-        eligible.add(projectId);
-      }
-    });
-    return eligible;
-  }, [projectIdsForEligibility, eligibleSubtasksByProject]);
-
-  const projectsEligibilityLoading =
-    showProjectSelector &&
-    eligibleSubtasksByProject.some((query) => query.isLoading);
 
   const projectOptions = useMemo(() => {
-    return Array.from(
-      new Map(
-        myWorkItems.map((item) => [
-          item.projectId,
-          {
-            value: item.projectId,
-            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
-          },
-        ]),
-      ).values(),
-    ).filter((option) =>
-      showProjectSelector
-        ? projectIdsWithReviewableSubtasks.has(option.value)
-        : true,
-    );
-  }, [myWorkItems, showProjectSelector, projectIdsWithReviewableSubtasks]);
+    return (myProjectsQuery.data ?? []).map((project) => ({
+      value: project.id,
+      label: `${project.projectCode ?? ''} ${project.name ?? ''}`.trim(),
+    }));
+  }, [myProjectsQuery.data]);
 
   const [form] = Form.useForm<FormValues>();
   const createMutation = useCreateChangeRequest(effectiveProjectId);
@@ -175,8 +115,7 @@ export default function CreateChangeRequestDrawer({
   const createDisabled =
     noQualifyingSubtasks ||
     (showProjectSelector &&
-      !projectsEligibilityLoading &&
-      !myWorkQuery.isLoading &&
+      !myProjectsQuery.isLoading &&
       projectOptions.length === 0);
 
   const edvOptions = useMemo(
@@ -277,7 +216,7 @@ export default function CreateChangeRequestDrawer({
               showSearch
               placeholder="Select project"
               options={projectOptions}
-              loading={myWorkQuery.isLoading || projectsEligibilityLoading}
+              loading={myProjectsQuery.isLoading}
               optionFilterProp="label"
               value={selectedProjectId ?? undefined}
               onChange={(value: string) => {

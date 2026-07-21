@@ -82,6 +82,12 @@ export interface CrSubtaskOption {
   fullCode: string;
 }
 
+export interface CrProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
 export type MappedMyChangeRequest = MappedProjectChangeRequest & {
   projectName: string;
   projectCode: string;
@@ -183,6 +189,99 @@ export class ProjectChangeRequestService {
 
     const data = rows.map((row) => this.mapMyChangeRequestRow(row));
     return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Company-scoped projects where the current user has at least one CR-eligible
+   * subtask with reviewable documents.
+   */
+  async listMyChangeRequestProjects(
+    ctx: PmContext,
+  ): Promise<CrProjectOption[]> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isFullAccess = hasFullProjectDataAccess(roleNames);
+
+    const packages = await this.prisma.designPackage.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        taskDiscipline: {
+          deletedAt: null,
+          task: {
+            deletedAt: null,
+            project: {
+              deletedAt: null,
+            },
+          },
+        },
+        ...(isFullAccess
+          ? {}
+          : {
+              OR: [
+                { designerUserId: ctx.userId },
+                { supportingDesignerUserId: ctx.userId },
+                { reviewerUserId: ctx.userId },
+                { disciplinaryLeaderUserId: ctx.userId },
+                { deptDeputyChiefUserId: ctx.userId },
+                { instituteChiefUserId: ctx.userId },
+              ],
+            }),
+        items: {
+          some: {
+            companyId: ctx.companyId,
+            engineeringDocumentVersion: {
+              isCurrent: true,
+              deletedAt: null,
+              status: { not: EdvStatus.DRAFT },
+            },
+          },
+        },
+      }),
+      select: {
+        taskDiscipline: {
+          select: {
+            task: {
+              select: {
+                project: {
+                  select: {
+                    id: true,
+                    projectCode: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        taskDiscipline: {
+          task: {
+            project: {
+              projectCode: 'asc',
+            },
+          },
+        },
+      },
+    });
+
+    return Array.from(
+      new Map(
+        packages.map((pkg) => {
+          const project = pkg.taskDiscipline.task.project;
+          return [
+            project.id,
+            {
+              id: project.id,
+              projectCode: project.projectCode,
+              name: project.name,
+            },
+          ];
+        }),
+      ).values(),
+    );
   }
 
   /**

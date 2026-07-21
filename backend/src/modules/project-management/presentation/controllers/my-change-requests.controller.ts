@@ -35,4 +35,14 @@ export class MyChangeRequestsController {
   ): Promise<unknown> {
     return this.changeRequestService.listMyChangeRequests(this.ctx(user), query);
   }
+
+  @Get('my/projects')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'List projects where the current user can raise change requests',
+  })
+  listMyProjects(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.changeRequestService.listMyChangeRequestProjects(this.ctx(user));
+  }
 }

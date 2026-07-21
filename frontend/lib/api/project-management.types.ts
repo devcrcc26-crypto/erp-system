@@ -1228,6 +1228,12 @@ export interface CrSubtaskOption {
   fullCode: string;
 }
 
+export interface CrProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
 export interface ProjectChangeRequest {
   id: string;
   companyId: string;

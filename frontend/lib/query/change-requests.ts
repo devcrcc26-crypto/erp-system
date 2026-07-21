@@ -18,6 +18,7 @@ import {
 import type {
   ChangeRequestStatus,
   CreateChangeRequestDto,
+  CrProjectOption,
   CrSubtaskOption,
   CurrentEdvOption,
   PmListFilters,
@@ -61,6 +62,7 @@ export const changeRequestKeys = {
       limit: 20,
     },
   ) => [...changeRequestKeys.all, 'my', params] as const,
+  myProjects: () => [...changeRequestKeys.all, 'my', 'projects'] as const,
   eligibleSubtasks: (projectId: string) =>
     [...changeRequestKeys.all, projectId, 'eligible-subtasks'] as const,
   currentEdvs: (packageId: string) =>
@@ -127,6 +129,15 @@ export function useMyChangeRequests(
     enabled,
     retry: false,
     ...options,
+  });
+}
+
+export function useMyChangeRequestProjects(enabled = true) {
+  return useQuery({
+    queryKey: changeRequestKeys.myProjects(),
+    queryFn: () => apiGet<CrProjectOption[]>('/change-requests/my/projects'),
+    enabled,
+    retry: false,
   });
 }
 
