@@ -418,6 +418,20 @@ describe('ProjectChangeRequestService status transitions', () => {
           fullCode: '26-ETO-035-01-003',
         },
       ]);
+      expect(prisma.designPackage.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            items: expect.objectContaining({
+              some: expect.objectContaining({
+                engineeringDocumentVersion: expect.objectContaining({
+                  isCurrent: true,
+                  status: { not: 'DRAFT' },
+                }),
+              }),
+            }),
+          }),
+        }),
+      );
     });
   });
 });

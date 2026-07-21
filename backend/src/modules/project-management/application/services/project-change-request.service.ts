@@ -10,6 +10,7 @@ import {
 import {
   DesignPackageProjectedStatus,
   DesignPackageStatus,
+  EdvStatus,
   Prisma,
   ProjectChangeRequest,
   ProjectChangeRequestSource,
@@ -258,6 +259,11 @@ export class ProjectChangeRequestService {
     if (!isFullAccess && !assignedUserIds.includes(ctx.userId)) {
       throw new ForbiddenException('You are not assigned to this subtask');
     }
+
+    await this.assertPackageHasReviewableEdvs(
+      ctx.companyId,
+      dto.linkedDesignPackageId,
+    );
 
     const originEntityId = this.resolveOriginEntityId(dto);
     if (dto.sourceEntityType && originEntityId) {
@@ -767,6 +773,7 @@ export class ProjectChangeRequestService {
         engineeringDocumentId: { in: docIds },
         isCurrent: true,
         deletedAt: null,
+        status: { not: EdvStatus.DRAFT },
       },
       include: {
         engineeringDocument: { select: { title: true } },
@@ -847,6 +854,16 @@ export class ProjectChangeRequestService {
                 { instituteChiefUserId: ctx.userId },
               ],
             }),
+        items: {
+          some: {
+            companyId: ctx.companyId,
+            engineeringDocumentVersion: {
+              isCurrent: true,
+              deletedAt: null,
+              status: { not: EdvStatus.DRAFT },
+            },
+          },
+        },
       }),
       select: {
         id: true,
@@ -970,6 +987,31 @@ export class ProjectChangeRequestService {
     );
 
     return { affectedEdvSnapshot };
+  }
+
+  /**
+   * Ensures the subtask has at least one current non-DRAFT EDV linked via package items.
+   */
+  private async assertPackageHasReviewableEdvs(
+    companyId: string,
+    designPackageId: string,
+  ): Promise<void> {
+    const reviewableItemCount = await this.prisma.designPackageItem.count({
+      where: {
+        companyId,
+        designPackageId,
+        engineeringDocumentVersion: {
+          isCurrent: true,
+          deletedAt: null,
+          status: { not: EdvStatus.DRAFT },
+        },
+      },
+    });
+    if (reviewableItemCount === 0) {
+      throw new BadRequestException(
+        'This subtask has no reviewable documents. Documents must be submitted for review before a change request can be raised.',
+      );
+    }
   }
 
   private async enrichChangeRequest(
