@@ -458,9 +458,18 @@ export function buildPermissionLayerResults(
  * Full deterministic permission check - layers + assignee override.
  */
 export function canPerformFromContext(input: PermissionContextInput): boolean {
-  const layerAllowed = evaluatePermissionLayers(
-    buildPermissionLayerResults(input),
-  );
+  const results = buildPermissionLayerResults(input);
+  const layerAllowed = evaluatePermissionLayers(results);
+  // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
+  console.log('Permission check result:', {
+    action: input.action,
+    userId: input.userId,
+    layers: results.map((r) => ({
+      layer: r.layer,
+      verdict: r.verdict,
+      reason: r.reason,
+    })),
+  });
   if (!layerAllowed) {
     return false;
   }
