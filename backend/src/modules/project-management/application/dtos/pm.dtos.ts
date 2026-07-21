@@ -38,6 +38,7 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { SOURCE_ENTITY_TYPES } from '../utils/source-entity.util';
 import {
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -1544,6 +1545,11 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(SubmittalPurpose)
   submittalPurpose?: SubmittalPurpose;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  linkedDesignPackageId?: string;
 }
 
 export class DailyLogListQueryDto extends PmListQueryDto {
@@ -1565,6 +1571,15 @@ export class DeliverableListQueryDto extends PmListQueryDto {
   disciplineId?: string;
 }
 
+export const CHANGE_REQUEST_REASONS = [
+  'CLIENT_REQUEST',
+  'SITE_CONDITION',
+  'DESIGN_ERROR',
+  'REGULATORY_COMPLIANCE',
+] as const;
+
+export type ChangeRequestReason = (typeof CHANGE_REQUEST_REASONS)[number];
+
 export class CreateChangeRequestDto {
   @ApiProperty()
   @IsString()
@@ -1574,6 +1589,21 @@ export class CreateChangeRequestDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty()
+  @IsEntityUuid()
+  linkedDesignPackageId!: string;
+
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsEntityUuid({ each: true })
+  affectedEdvIds!: string[];
+
+  @ApiProperty({ enum: CHANGE_REQUEST_REASONS })
+  @IsString()
+  @IsIn([...CHANGE_REQUEST_REASONS])
+  changeReason!: ChangeRequestReason;
 
   @ApiPropertyOptional({ enum: ProjectChangeRequestSource })
   @IsOptional()

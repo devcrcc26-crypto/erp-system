@@ -14,6 +14,7 @@ const PM_FOLDER_MODULES: Partial<Record<FolderContextType, string>> = {
   CORRESPONDENCE: 'correspondence',
   RISK: 'risks',
   PUNCH_ITEM: 'punch_items',
+  CHANGE_REQUEST: 'change_requests',
 };
 
 /**
@@ -59,6 +60,14 @@ export class DocumentPermissionService {
       folder.contextType === FolderContextType.SUBMITTAL &&
       folder.contextId &&
       (await this.canUploadSubmittalFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
+    if (
+      folder.contextType === FolderContextType.CHANGE_REQUEST &&
+      folder.contextId &&
+      (await this.canUploadCrFolder(userId, companyId, folder, roleNames))
     ) {
       return;
     }
@@ -147,6 +156,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.CHANGE_REQUEST &&
+      folder.contextId &&
+      (await this.canUploadCrFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.view');
   }
 
@@ -214,6 +231,19 @@ export class DocumentPermissionService {
         userId,
         companyId,
         document.folder.contextId,
+        roleNames,
+      ))
+    ) {
+      return;
+    }
+
+    if (
+      document.folder.contextType === FolderContextType.CHANGE_REQUEST &&
+      document.folder.contextId &&
+      (await this.canUploadCrFolder(
+        userId,
+        companyId,
+        document.folder,
         roleNames,
       ))
     ) {
@@ -354,6 +384,80 @@ export class DocumentPermissionService {
       folder.contextId,
       roleNames,
     );
+  }
+
+  /**
+   * Change-request attachment folders: creator, assignee, package assignees, or full access.
+   */
+  private async canUploadCrFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const cr = await this.prisma.projectChangeRequest.findFirst({
+      where: {
+        id: folder.contextId,
+        companyId,
+        deletedAt: null,
+      },
+      select: {
+        createdBy: true,
+        assignedTo: true,
+        linkedDesignPackageId: true,
+      },
+    });
+    if (!cr) {
+      return false;
+    }
+
+    if (cr.createdBy === userId || cr.assignedTo === userId) {
+      return true;
+    }
+
+    if (!cr.linkedDesignPackageId) {
+      return false;
+    }
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        id: cr.linkedDesignPackageId,
+        companyId,
+      }),
+      select: {
+        designerUserId: true,
+        supportingDesignerUserId: true,
+        reviewerUserId: true,
+        disciplinaryLeaderUserId: true,
+        deptDeputyChiefUserId: true,
+        instituteChiefUserId: true,
+      },
+    });
+    if (!pkg) {
+      return false;
+    }
+
+    return [
+      pkg.designerUserId,
+      pkg.supportingDesignerUserId,
+      pkg.reviewerUserId,
+      pkg.disciplinaryLeaderUserId,
+      pkg.deptDeputyChiefUserId,
+      pkg.instituteChiefUserId,
+    ]
+      .filter((id): id is string => Boolean(id))
+      .includes(userId);
   }
 
   private async hasPmModuleWriteForFolder(

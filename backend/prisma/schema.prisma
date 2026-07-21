@@ -65,6 +65,7 @@ enum FolderContextType {
   CORRESPONDENCE
   RISK
   PUNCH_ITEM
+  CHANGE_REQUEST
 }
 
 enum NotificationChannel {
@@ -525,6 +526,7 @@ model User {
   authoredReviewComments   ReviewComment[] @relation("ReviewCommentAuthor")
   assignedReviewComments   ReviewComment[] @relation("ReviewCommentAssignee")
   capturedReviewSnapshots  ReviewContextSnapshot[] @relation("ReviewSnapshotCapturedBy")
+  assignedChangeRequests   ProjectChangeRequest[] @relation("ChangeRequestAssignedTo")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -829,6 +831,7 @@ model DocumentFolder {
   documents      Document[]
   documentAccess DocumentAccess[]
   drawings       Drawing[]
+  changeRequests ProjectChangeRequest[] @relation("ChangeRequestAttachmentFolder")
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -2234,6 +2237,11 @@ model ProjectChangeRequest {
   linkedDesignPackageId   String?                    @map("linked_design_package_id")
   originEntityType        String?                    @map("origin_entity_type")
   originEntityId          String?                    @map("origin_entity_id")
+  changeReason            String?                    @map("change_reason")
+  attachmentFolderId      String?                    @map("attachment_folder_id")
+  assignedTo              String?                    @map("assigned_to")
+  affectedEdvIds          String[]                   @default([]) @map("affected_edv_ids")
+  affectedEdvSnapshot     Json?                      @map("affected_edv_snapshot")
   createdAt               DateTime                   @default(now()) @map("created_at")
   createdBy               String                     @map("created_by")
   updatedAt               DateTime                   @updatedAt @map("updated_at")
@@ -2244,12 +2252,16 @@ model ProjectChangeRequest {
   company Company @relation(fields: [companyId], references: [id])
   project Project @relation(fields: [projectId], references: [id])
   linkedDesignPackage DesignPackage? @relation("ChangeRequestLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
+  attachmentFolder    DocumentFolder? @relation("ChangeRequestAttachmentFolder", fields: [attachmentFolderId], references: [id])
+  assignee            User?           @relation("ChangeRequestAssignedTo", fields: [assignedTo], references: [id])
 
   @@unique([companyId, changeNumber], map: "uq_project_change_request_company_number")
   @@index([companyId], map: "idx_project_change_request_company_id")
   @@index([companyId, deletedAt], map: "idx_project_change_request_company_deleted")
   @@index([projectId], map: "idx_project_change_request_project_id")
   @@index([linkedDesignPackageId], map: "idx_project_change_request_linked_package_id")
+  @@index([attachmentFolderId], map: "idx_project_change_request_attachment_folder_id")
+  @@index([assignedTo], map: "idx_project_change_request_assigned_to")
   @@index([status], map: "idx_project_change_request_status")
   @@map("project_change_request")
 }

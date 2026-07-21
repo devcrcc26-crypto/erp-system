@@ -1296,6 +1296,12 @@ export function mapIssue(issue: Issue): MappedIssue {
   };
 }
 
+export interface AffectedEdvSnapshotItem {
+  id: string;
+  title: string;
+  revisionLabel: string;
+}
+
 export interface MappedProjectChangeRequest {
   id: string;
   companyId: string;
@@ -1310,6 +1316,18 @@ export interface MappedProjectChangeRequest {
   originEntityId?: string | null;
   sourceEntitySummary?: SourceEntitySummary | null;
   externalReviewTriggerId: string | null;
+  linkedDesignPackageId: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+  } | null;
+  changeReason: string | null;
+  attachmentFolderId: string | null;
+  assignedTo: string | null;
+  affectedEdvIds: string[];
+  affectedEdvSnapshot: AffectedEdvSnapshotItem[];
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
   approvedBy: string | null;
@@ -1343,6 +1361,13 @@ export function mapProjectChangeRequest(
       ? { approvedBy: row.updatedBy, approvedAt: toIsoString(row.updatedAt) }
       : { approvedBy: null, approvedAt: null };
 
+  const snapshotRaw = row.affectedEdvSnapshot;
+  const affectedEdvSnapshot: AffectedEdvSnapshotItem[] = Array.isArray(
+    snapshotRaw,
+  )
+    ? (snapshotRaw as unknown as AffectedEdvSnapshotItem[])
+    : [];
+
   return {
     id: row.id,
     companyId: row.companyId,
@@ -1354,6 +1379,13 @@ export function mapProjectChangeRequest(
     sourceType: row.sourceType,
     sourceEntityId: row.sourceEntityId,
     externalReviewTriggerId: row.externalReviewTriggerId,
+    linkedDesignPackageId: row.linkedDesignPackageId,
+    changeReason: row.changeReason,
+    attachmentFolderId: row.attachmentFolderId,
+    assignedTo: row.assignedTo,
+    affectedEdvIds: row.affectedEdvIds ?? [],
+    affectedEdvSnapshot,
+    createdBy: row.createdBy,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
     ...approved,

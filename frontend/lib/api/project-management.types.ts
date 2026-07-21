@@ -1191,6 +1191,7 @@ export interface PmListFilters {
   search?: string;
   status?: string;
   submittalPurpose?: SubmittalPurpose;
+  linkedDesignPackageId?: string;
 }
 
 export type ChangeRequestStatus =
@@ -1199,6 +1200,32 @@ export type ChangeRequestStatus =
   | 'APPROVED'
   | 'REJECTED'
   | 'CLOSED';
+
+export type ChangeRequestReason =
+  | 'CLIENT_REQUEST'
+  | 'SITE_CONDITION'
+  | 'DESIGN_ERROR'
+  | 'REGULATORY_COMPLIANCE';
+
+export interface AffectedEdvSnapshotItem {
+  id: string;
+  title: string;
+  revisionLabel: string;
+}
+
+export interface CurrentEdvOption {
+  id: string;
+  title: string;
+  revisionLabel: string;
+  status: string;
+  display: string;
+}
+
+export interface CrSubtaskOption {
+  id: string;
+  packageCode: string;
+  name: string;
+}
 
 export interface ProjectChangeRequest {
   id: string;
@@ -1219,6 +1246,18 @@ export interface ProjectChangeRequest {
   originEntityId?: string | null;
   sourceEntitySummary?: SourceEntitySummary | null;
   externalReviewTriggerId: string | null;
+  linkedDesignPackageId: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+  } | null;
+  changeReason: ChangeRequestReason | string | null;
+  attachmentFolderId: string | null;
+  assignedTo: string | null;
+  affectedEdvIds: string[];
+  affectedEdvSnapshot: AffectedEdvSnapshotItem[];
+  createdBy: string;
   approvedBy: string | null;
   approvedAt: string | null;
   createdAt: string;
@@ -1228,6 +1267,9 @@ export interface ProjectChangeRequest {
 export interface CreateChangeRequestDto {
   title: string;
   description?: string;
+  linkedDesignPackageId: string;
+  affectedEdvIds: string[];
+  changeReason: ChangeRequestReason;
   sourceType?: string;
   sourceEntityId?: string;
   sourceEntityType?: string;

@@ -33,7 +33,16 @@ describe('Source entity links (source-entity-links)', () => {
       findMany: jest.Mock;
     };
     issue: { create: jest.Mock; findMany: jest.Mock };
-    projectChangeRequest: { create: jest.Mock; findMany: jest.Mock };
+    projectChangeRequest: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
+      update: jest.Mock;
+      findFirst: jest.Mock;
+    };
+    designPackage: { findFirst: jest.Mock };
+    designPackageItem: { findMany: jest.Mock };
+    engineeringDocumentVersion: { findMany: jest.Mock };
     project: { findFirst: jest.Mock };
     projectTeam: { findFirst: jest.Mock };
     user: { findFirst: jest.Mock };
@@ -60,7 +69,22 @@ describe('Source entity links (source-entity-links)', () => {
         findMany: jest.fn(),
       },
       issue: { create: jest.fn(), findMany: jest.fn() },
-      projectChangeRequest: { create: jest.fn(), findMany: jest.fn() },
+      projectChangeRequest: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+        update: jest.fn(),
+        findFirst: jest.fn(),
+      },
+      designPackage: {
+        findFirst: jest.fn(),
+      },
+      designPackageItem: {
+        findMany: jest.fn(),
+      },
+      engineeringDocumentVersion: {
+        findMany: jest.fn(),
+      },
       project: {
         findFirst: jest.fn().mockResolvedValue({
           id: projectId,
@@ -99,6 +123,7 @@ describe('Source entity links (source-entity-links)', () => {
       ensureIssueFolder: jest.fn().mockResolvedValue({ id: 'folder-2' }),
       ensureMeetingFolder: jest.fn().mockResolvedValue({ id: 'folder-3' }),
       ensureCorrespondenceFolder: jest.fn().mockResolvedValue({ id: 'folder-4' }),
+      ensureChangeRequestFolder: jest.fn().mockResolvedValue({ id: 'folder-cr' }),
       ensureProjectFolder: jest.fn().mockResolvedValue({ id: 'proj-folder' }),
       findEntityFolder: jest.fn().mockResolvedValue(null),
     } as unknown as EngineeringDocumentFolderService;
@@ -129,8 +154,11 @@ describe('Source entity links (source-entity-links)', () => {
     changeRequestService = new ProjectChangeRequestService(
       prisma as unknown as PrismaService,
       projectScopeService,
-      documentNumberService,
-      epcSubmittalRepository,
+      engineeringDocumentFolderService,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+      } as never,
+      { closeSessionAsSuperseded: jest.fn() } as never,
     );
 
     meetingsService = new MeetingsService(
@@ -262,11 +290,34 @@ describe('Source entity links (source-entity-links)', () => {
 
   it('5. Create CR with sourceEntityType=MEETING and valid meetingId → stored', async () => {
     prisma.meeting.findFirst.mockResolvedValue({ id: meetingId, title: 'Site Meeting' });
-    prisma.projectChangeRequest.create.mockResolvedValue({
+    prisma.designPackage.findFirst.mockResolvedValue({
+      id: 'pkg-1',
+      packageCode: 'LJZ-GEO-001',
+      designerUserId: ctx.userId,
+      supportingDesignerUserId: null,
+      reviewerUserId: null,
+      disciplinaryLeaderUserId: null,
+      deptDeputyChiefUserId: null,
+      instituteChiefUserId: null,
+      taskDiscipline: { task: { projectId } },
+    });
+    prisma.designPackageItem.findMany.mockResolvedValue([
+      {
+        engineeringDocumentVersion: { engineeringDocumentId: 'doc-1' },
+      },
+    ]);
+    prisma.engineeringDocumentVersion.findMany.mockResolvedValue([
+      {
+        id: 'edv-1',
+        revisionLabel: '1',
+        engineeringDocument: { title: 'Drawing A' },
+      },
+    ]);
+    const createdRow = {
       id: 'cr-1',
       companyId: ctx.companyId,
       projectId,
-      changeNumber: 'CR-001',
+      changeNumber: 'CR-LJZ-GEO-001-001',
       title: 'Scope change',
       description: null,
       status: 'DRAFT',
@@ -275,13 +326,49 @@ describe('Source entity links (source-entity-links)', () => {
       originEntityType: 'MEETING',
       originEntityId: meetingId,
       externalReviewTriggerId: null,
+      linkedDesignPackageId: 'pkg-1',
+      changeReason: 'CLIENT_REQUEST',
+      attachmentFolderId: 'folder-cr',
+      assignedTo: null,
+      affectedEdvIds: ['edv-1'],
+      affectedEdvSnapshot: [
+        { id: 'edv-1', title: 'Drawing A', revisionLabel: '1' },
+      ],
       createdAt: new Date(),
+      createdBy: ctx.userId,
       updatedAt: new Date(),
       updatedBy: ctx.userId,
-    });
+      deletedAt: null,
+      deletedBy: null,
+    };
+    prisma.projectChangeRequest.create.mockResolvedValue(createdRow);
+    prisma.projectChangeRequest.update.mockResolvedValue(createdRow);
+    prisma.designPackage.findFirst
+      .mockResolvedValueOnce({
+        id: 'pkg-1',
+        packageCode: 'LJZ-GEO-001',
+        designerUserId: ctx.userId,
+        supportingDesignerUserId: null,
+        reviewerUserId: null,
+        disciplinaryLeaderUserId: null,
+        deptDeputyChiefUserId: null,
+        instituteChiefUserId: null,
+        taskDiscipline: { task: { projectId } },
+      })
+      .mockResolvedValueOnce({
+        id: 'pkg-1',
+        packageCode: 'LJZ-GEO-001',
+        name: 'Geotech',
+      });
+    prisma.$transaction.mockImplementation(
+      async (work: (client: typeof prisma) => Promise<unknown>) => work(prisma),
+    );
 
     await changeRequestService.createChangeRequest(ctx, projectId, {
       title: 'Scope change',
+      linkedDesignPackageId: 'pkg-1',
+      affectedEdvIds: ['edv-1'],
+      changeReason: 'CLIENT_REQUEST',
       sourceEntityType: 'MEETING',
       originEntityId: meetingId,
     });
@@ -291,6 +378,8 @@ describe('Source entity links (source-entity-links)', () => {
         data: expect.objectContaining({
           originEntityType: 'MEETING',
           originEntityId: meetingId,
+          linkedDesignPackageId: 'pkg-1',
+          affectedEdvIds: ['edv-1'],
         }),
       }),
     );

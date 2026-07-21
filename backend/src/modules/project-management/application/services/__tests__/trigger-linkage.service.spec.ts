@@ -225,6 +225,37 @@ describe('Trigger linkage (trigger-linkage)', () => {
           update: jest.fn().mockResolvedValue({
             id: changeRequestId,
             status: ProjectChangeRequestStatus.APPROVED,
+            changeReason: null,
+            attachmentFolderId: null,
+            assignedTo: null,
+            affectedEdvIds: [],
+            affectedEdvSnapshot: [],
+            linkedDesignPackageId: packageId,
+            createdBy: ctx.userId,
+            sourceType: 'MANUAL',
+            sourceEntityId: null,
+            externalReviewTriggerId: null,
+            originEntityType: null,
+            originEntityId: null,
+            changeNumber: 'CR-001',
+            title: 'CR',
+            description: null,
+            companyId,
+            projectId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: ctx.userId,
+            deletedAt: null,
+            deletedBy: null,
+          }),
+        },
+        reviewSession: { findMany: jest.fn().mockResolvedValue([]) },
+        engineeringDocumentVersion: { updateMany: jest.fn() },
+        designPackage: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: packageId,
+            packageCode: 'PKG',
+            name: 'Package',
           }),
         },
       };
@@ -236,9 +267,29 @@ describe('Trigger linkage (trigger-linkage)', () => {
             projectId,
             status: ProjectChangeRequestStatus.SUBMITTED,
             linkedDesignPackageId: packageId,
+            assignedTo: ctx.userId,
+            affectedEdvIds: [],
+            affectedEdvSnapshot: [],
+            changeReason: 'CLIENT_REQUEST',
+            attachmentFolderId: null,
+            createdBy: ctx.userId,
+            sourceType: 'MANUAL',
+            sourceEntityId: null,
+            externalReviewTriggerId: null,
+            originEntityType: null,
+            originEntityId: null,
+            changeNumber: 'CR-001',
+            title: 'CR',
+            description: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: ctx.userId,
+            deletedAt: null,
+            deletedBy: null,
           }),
           update: tx.projectChangeRequest.update,
         },
+        designPackage: tx.designPackage,
         $transaction: jest.fn((work: (client: typeof tx) => Promise<unknown>) =>
           work(tx),
         ),
@@ -247,19 +298,21 @@ describe('Trigger linkage (trigger-linkage)', () => {
       const service = new ProjectChangeRequestService(
         prisma as unknown as PrismaService,
         { getProjectOrThrow: jest.fn() } as unknown as ProjectScopeService,
-        {} as unknown as DocumentNumberService,
-        epcSubmittalRepository as unknown as EpcSubmittalRepository,
+        {} as never,
+        {
+          getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        } as never,
+        { closeSessionAsSuperseded: jest.fn() } as never,
       );
 
       await service.approveChangeRequest(ctx, projectId, changeRequestId);
 
-      expect(epcSubmittalRepository.createLinkedEntityTrigger).toHaveBeenCalledWith(
-        tx,
+      expect(tx.projectChangeRequest.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          triggerType: ExternalReviewTriggerType.CHANGE_REQUEST,
-          sourceEntityType: 'CHANGE_REQUEST',
-          sourceEntityId: changeRequestId,
-          linkedDesignPackageId: packageId,
+          where: { id: changeRequestId },
+          data: expect.objectContaining({
+            status: ProjectChangeRequestStatus.APPROVED,
+          }),
         }),
       );
     });

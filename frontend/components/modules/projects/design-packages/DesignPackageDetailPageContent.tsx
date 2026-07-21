@@ -71,6 +71,8 @@ import {
 import { reviewModeHref } from '@/lib/utils/schedule-subtasks';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import ResourceRoleContextBadge from '@/components/modules/projects/workspaces/ResourceRoleContextBadge';
+import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
+import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout } from '@/lib/theme/layout';
@@ -103,6 +105,7 @@ export default function DesignPackageDetailPageContent({
   const [closePackageOpen, setClosePackageOpen] = useState(false);
   const [reopenPackageOpen, setReopenPackageOpen] = useState(false);
   const [lockUnlockEdvId, setLockUnlockEdvId] = useState<string | null>(null);
+  const [selectedCrId, setSelectedCrId] = useState<string | null>(null);
   const [editSubtaskOpen, setEditSubtaskOpen] = useState(false);
   const [addDependencyOpen, setAddDependencyOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -432,6 +435,13 @@ export default function DesignPackageDetailPageContent({
           </Space>
         }
       >
+        <ApprovedCrRevisionBanner
+          projectId={projectId}
+          designPackageId={packageId}
+          packageStatus={pkg.packageStatus}
+          onViewChangeRequest={(id) => setSelectedCrId(id)}
+        />
+
         <div className="mb-6 border-b border-slate-200 pb-6">
           <StackedName
             name={pkg.name}
@@ -734,6 +744,13 @@ export default function DesignPackageDetailPageContent({
         onSaved={() => {
           void packageQuery.refetch();
         }}
+      />
+
+      <ChangeRequestDrawer
+        projectId={projectId}
+        changeRequestId={selectedCrId}
+        onClose={() => setSelectedCrId(null)}
+        onUpdated={() => undefined}
       />
     </div>
     </ProjectModuleGate>

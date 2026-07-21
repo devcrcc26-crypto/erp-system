@@ -18,6 +18,8 @@ import {
 import type {
   ChangeRequestStatus,
   CreateChangeRequestDto,
+  CrSubtaskOption,
+  CurrentEdvOption,
   PmListFilters,
   ProjectChangeRequest,
   RejectChangeRequestDto,
@@ -38,7 +40,10 @@ export const changeRequestKeys = {
   list: (
     projectId: string,
     params: PaginationParams &
-      PmListFilters & { status?: ChangeRequestStatus } = {
+      PmListFilters & {
+        status?: ChangeRequestStatus;
+        linkedDesignPackageId?: string;
+      } = {
       page: 1,
       limit: 20,
     },
@@ -47,12 +52,21 @@ export const changeRequestKeys = {
     [...changeRequestKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, changeRequestId: string) =>
     [...changeRequestKeys.details(projectId), changeRequestId] as const,
+  eligibleSubtasks: (projectId: string) =>
+    [...changeRequestKeys.all, projectId, 'eligible-subtasks'] as const,
+  currentEdvs: (packageId: string) =>
+    [...changeRequestKeys.all, 'current-edvs', packageId] as const,
+  nextCrNumber: (packageId: string) =>
+    [...changeRequestKeys.all, 'next-cr-number', packageId] as const,
 };
 
 export function useChangeRequests(
   projectId: string,
   params: PaginationParams &
-    PmListFilters & { status?: ChangeRequestStatus } = {
+    PmListFilters & {
+      status?: ChangeRequestStatus;
+      linkedDesignPackageId?: string;
+    } = {
     page: 1,
     limit: 20,
     sortBy: 'createdAt',
@@ -88,6 +102,42 @@ export function useChangeRequest(
         `${changeRequestsPath(projectId)}/${changeRequestId}`,
       ),
     enabled: Boolean(projectId) && Boolean(changeRequestId) && enabled,
+    retry: false,
+  });
+}
+
+export function useEligibleCrSubtasks(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: changeRequestKeys.eligibleSubtasks(projectId),
+    queryFn: () =>
+      apiGet<CrSubtaskOption[]>(
+        `${changeRequestsPath(projectId)}/eligible-subtasks`,
+      ),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+  });
+}
+
+export function usePackageCurrentEdvs(packageId: string, enabled = true) {
+  return useQuery({
+    queryKey: changeRequestKeys.currentEdvs(packageId),
+    queryFn: () =>
+      apiGet<CurrentEdvOption[]>(
+        `/design-packages/${packageId}/current-edvs`,
+      ),
+    enabled: Boolean(packageId) && enabled,
+    retry: false,
+  });
+}
+
+export function useNextCrNumber(packageId: string, enabled = true) {
+  return useQuery({
+    queryKey: changeRequestKeys.nextCrNumber(packageId),
+    queryFn: () =>
+      apiGet<{ changeNumber: string }>(
+        `/design-packages/${packageId}/next-cr-number`,
+      ),
+    enabled: Boolean(packageId) && enabled,
     retry: false,
   });
 }
@@ -136,6 +186,52 @@ export function useUpdateChangeRequest(
       apiPatch<ProjectChangeRequest>(
         `${changeRequestsPath(projectId)}/${changeRequestId}`,
         body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: changeRequestKeys.lists(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: changeRequestKeys.detail(projectId, changeRequestId),
+      });
+    },
+  });
+}
+
+export function useSubmitChangeRequest(
+  projectId: string,
+  changeRequestId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiPatch<ProjectChangeRequest>(
+        `${changeRequestsPath(projectId)}/${changeRequestId}/submit`,
+        {},
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: changeRequestKeys.lists(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: changeRequestKeys.detail(projectId, changeRequestId),
+      });
+    },
+  });
+}
+
+export function useRecallChangeRequest(
+  projectId: string,
+  changeRequestId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiPatch<ProjectChangeRequest>(
+        `${changeRequestsPath(projectId)}/${changeRequestId}/recall`,
+        {},
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({

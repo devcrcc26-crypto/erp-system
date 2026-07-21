@@ -31,6 +31,7 @@ import {
   PROJECTED_STATUS_VARIANTS,
 } from '@/lib/utils/epc-display';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
+import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
 
 const TASKS_PER_PAGE = 20;
 
@@ -253,6 +254,16 @@ function SubtaskRoleSection({ item }: { item: MyWorkItem }): React.ReactNode {
   return (
     <>
       <Divider className="!my-4" />
+      {item.designPackageId ? (
+        <ApprovedCrRevisionBanner
+          projectId={item.projectId}
+          designPackageId={item.designPackageId}
+          packageStatus={item.packageStatus}
+          onViewChangeRequest={() => {
+            window.location.href = `/projects/${item.projectId}/change-requests`;
+          }}
+        />
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs text-slate-500">{disciplineHeading(item)}</p>

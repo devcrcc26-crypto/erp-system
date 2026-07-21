@@ -53,6 +53,19 @@ export class ChangeRequestsController {
     );
   }
 
+  @Get('eligible-subtasks')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({ summary: 'List subtasks eligible for CR creation' })
+  eligibleSubtasks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.changeRequestService.listEligibleSubtasks(
+      this.ctx(user),
+      projectId,
+    );
+  }
+
   @Get(':changeRequestId')
   @RequirePermission('projects', 'view')
   @ApiOperation({ summary: 'Get change request by id' })
@@ -97,6 +110,36 @@ export class ChangeRequestsController {
       projectId,
       changeRequestId,
       dto,
+    );
+  }
+
+  @Patch(':changeRequestId/submit')
+  @RequirePermission('projects', 'edit')
+  @ApiOperation({ summary: 'Submit change request for D.Lead review' })
+  submit(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('changeRequestId') changeRequestId: string,
+  ): Promise<unknown> {
+    return this.changeRequestService.submitChangeRequest(
+      this.ctx(user),
+      projectId,
+      changeRequestId,
+    );
+  }
+
+  @Patch(':changeRequestId/recall')
+  @RequirePermission('projects', 'edit')
+  @ApiOperation({ summary: 'Recall submitted change request to draft' })
+  recall(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('changeRequestId') changeRequestId: string,
+  ): Promise<unknown> {
+    return this.changeRequestService.recallChangeRequest(
+      this.ctx(user),
+      projectId,
+      changeRequestId,
     );
   }
 

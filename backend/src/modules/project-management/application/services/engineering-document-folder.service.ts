@@ -206,6 +206,25 @@ export class EngineeringDocumentFolderService {
   }
 
   /**
+   * Returns or creates the attachment folder for a change request under the project folder.
+   */
+  async ensureChangeRequestFolder(
+    ctx: PmContext,
+    projectId: string,
+    changeRequestId: string,
+    changeNumber: string,
+  ): Promise<DocumentFolderRef> {
+    return this.ensureEntityFolder(
+      ctx,
+      projectId,
+      FolderContextType.CHANGE_REQUEST,
+      changeRequestId,
+      `change-requests/${this.toFolderSegment(changeNumber)}`,
+      this.toFolderSegment(changeNumber),
+    );
+  }
+
+  /**
    * Returns or creates the attachment folder for a daily log under the project folder.
    */
   async ensureDailyLogFolder(

@@ -7,6 +7,7 @@ import { RequirePermission } from '../../../../shared/permissions/require-permis
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { EpcWorkspaceService } from '../../application/services/epc-workspace.service';
 import { MyWorkService } from '../../application/services/my-work.service';
+import { ProjectChangeRequestService } from '../../application/services/project-change-request.service';
 import { ReviewSessionListQueryDto } from '../../application/dtos/pm.dtos';
 
 @ApiTags('EPC Workspace')
@@ -17,6 +18,7 @@ export class EpcWorkspaceController {
   constructor(
     private readonly epcWorkspaceService: EpcWorkspaceService,
     private readonly myWorkService: MyWorkService,
+    private readonly changeRequestService: ProjectChangeRequestService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
@@ -121,6 +123,29 @@ export class EpcWorkspaceController {
       this.ctx(user),
       designPackageId,
       reviewSessionId,
+    );
+  }
+
+  @Get('design-packages/:packageId/current-edvs')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Current isCurrent EDVs for a design package' })
+  currentEdvs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('packageId') packageId: string,
+  ): Promise<unknown> {
+    return this.changeRequestService.listCurrentEdvs(this.ctx(user), packageId);
+  }
+
+  @Get('design-packages/:packageId/next-cr-number')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Preview next change request number for a package' })
+  nextCrNumber(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('packageId') packageId: string,
+  ): Promise<unknown> {
+    return this.changeRequestService.previewNextCrNumber(
+      this.ctx(user),
+      packageId,
     );
   }
 

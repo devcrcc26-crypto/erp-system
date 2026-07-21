@@ -18,9 +18,9 @@ import type {
   ChangeRequestStatus,
   ProjectChangeRequest,
 } from '@/lib/api/project-management.types';
-import { usePmCapabilities, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { usePmCapabilities, usePermissionsLoading, useEpcCapabilities } from '@/hooks/use-pm-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { useChangeRequests } from '@/lib/query/change-requests';
+import { useChangeRequests, useEligibleCrSubtasks } from '@/lib/query/change-requests';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   changeRequestStatusVariant,
@@ -29,6 +29,7 @@ import {
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import { useAuthStore } from '@/stores/auth.store';
 
 const STATUS_OPTIONS: Array<{ value: ChangeRequestStatus; label: string }> = [
   { value: 'DRAFT', label: 'Draft' },
@@ -44,6 +45,10 @@ export default function ChangeRequestList({
   projectId: string;
 }): React.ReactNode {
   const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const isSystemAdministrator = useAuthStore(
+    (state) => state.capabilities.isSystemAdministrator,
+  );
   const permLoading = usePermissionsLoading();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
@@ -52,6 +57,16 @@ export default function ChangeRequestList({
   >();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const eligibleQuery = useEligibleCrSubtasks(
+    projectId,
+    !permLoading && pm.projects.canView,
+  );
+  const canCreateCr =
+    pm.projects.canCreate ||
+    isSystemAdministrator ||
+    epc.navFullAccess ||
+    (eligibleQuery.data?.length ?? 0) > 0;
 
   const listQuery = useChangeRequests(
     projectId,
@@ -126,8 +141,8 @@ export default function ChangeRequestList({
       <FormLayout
         title="Change requests"
         description="Track scope changes from identification through approval."
-        extra={
-          pm.projects.canCreate ? (
+          extra={
+          canCreateCr ? (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -193,7 +208,7 @@ export default function ChangeRequestList({
                 title="No change requests yet"
                 description="Create a change request to track scope impacts"
                 action={
-                  pm.projects.canCreate
+                  canCreateCr
                     ? {
                         label: 'New change request',
                         onClick: () => setCreateOpen(true),
