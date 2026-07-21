@@ -1232,6 +1232,8 @@ export interface ProjectChangeRequest {
   id: string;
   companyId: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   changeNumber: string;
   title: string;
   description: string | null;

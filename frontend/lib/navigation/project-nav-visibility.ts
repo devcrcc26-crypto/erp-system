@@ -33,16 +33,12 @@ export function isProjectNavReady(
 }
 
 /** Project nav keys for discipline leaders (union can widen). */
-const DISCIPLINE_LEADER_PROJECT_KEYS = new Set([
-  'disciplines',
-  'submittals',
-  'change-requests',
-]);
+const DISCIPLINE_LEADER_PROJECT_KEYS = new Set(['disciplines', 'submittals']);
 
 /** Reviewer / dept·inst chief (and multi-role union with designer). */
 const REVIEWER_TIER_PROJECT_KEYS = new Set<string>();
 
-const DESIGNER_PROJECT_KEYS = new Set(['submittals', 'change-requests']);
+const DESIGNER_PROJECT_KEYS = new Set(['submittals']);
 
 const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
@@ -173,7 +169,7 @@ export function canViewProjectNavItem(
 
   if (item.key === 'submittals' || item.key === 'change-requests') {
     if (ctx.epc.navDisciplineLeader || ctx.epc.navDesigner) {
-      return true;
+      return item.key === 'submittals';
     }
   }
 

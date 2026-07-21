@@ -81,6 +81,11 @@ export interface CrSubtaskOption {
   fullCode: string;
 }
 
+export type MappedMyChangeRequest = MappedProjectChangeRequest & {
+  projectName: string;
+  projectCode: string;
+};
+
 const DESIGN_PACKAGE_FULL_CODE_SELECT = {
   packageCode: true,
   subtaskIndex: true,
@@ -142,6 +147,41 @@ export class ProjectChangeRequestService {
       query.page,
       query.limit,
     );
+  }
+
+  /**
+   * Company-scoped change requests relevant to the current user.
+   */
+  async listMyChangeRequests(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyChangeRequest>> {
+    const where = this.buildMyListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      CHANGE_REQUEST_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.projectChangeRequest.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+          linkedDesignPackage: {
+            select: { id: true, packageCode: true, name: true },
+          },
+        },
+      }),
+      this.prisma.projectChangeRequest.count({ where }),
+    ]);
+
+    const data = rows.map((row) => this.mapMyChangeRequestRow(row));
+    return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
   /**
@@ -1004,6 +1044,85 @@ export class ProjectChangeRequestService {
     }
 
     return where;
+  }
+
+  private buildMyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.ProjectChangeRequestWhereInput {
+    const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { designerUserId: ctx.userId },
+        { disciplinaryLeaderUserId: ctx.userId },
+        { reviewerUserId: ctx.userId },
+        { supportingDesignerUserId: ctx.userId },
+        { deptDeputyChiefUserId: ctx.userId },
+        { instituteChiefUserId: ctx.userId },
+      ],
+    });
+
+    const where: Prisma.ProjectChangeRequestWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { createdBy: ctx.userId },
+        { assignedTo: ctx.userId },
+        { linkedDesignPackage: assignedPackageWhere },
+      ],
+    });
+
+    if (query.status) {
+      where.status = query.status as ProjectChangeRequestStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.AND = [
+        {
+          OR: [
+            { changeNumber: { contains: term, mode: 'insensitive' } },
+            { title: { contains: term, mode: 'insensitive' } },
+            {
+              project: {
+                name: { contains: term, mode: 'insensitive' },
+              },
+            },
+            {
+              project: {
+                projectCode: { contains: term, mode: 'insensitive' },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    return where;
+  }
+
+  private mapMyChangeRequestRow(
+    row: ProjectChangeRequest & {
+      project: { id: string; name: string; projectCode: string };
+      linkedDesignPackage: {
+        id: string;
+        packageCode: string;
+        name: string;
+      } | null;
+    },
+  ): MappedMyChangeRequest {
+    const mapped = mapProjectChangeRequest(row);
+    return {
+      ...mapped,
+      projectName: row.project.name,
+      projectCode: row.project.projectCode,
+      linkedDesignPackage: row.linkedDesignPackage
+        ? {
+            id: row.linkedDesignPackage.id,
+            packageCode: row.linkedDesignPackage.packageCode,
+            name: row.linkedDesignPackage.name,
+          }
+        : null,
+    };
   }
 
   private async getChangeRequestOrThrow(

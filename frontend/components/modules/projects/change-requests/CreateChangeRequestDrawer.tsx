@@ -16,6 +16,11 @@ import type { ChangeRequestReason } from '@/lib/api/project-management.types';
 import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useMyWork } from '@/lib/query/epc-workspace';
+import {
+  useCanViewMyWork,
+  useCapabilitiesReady,
+} from '@/hooks/use-pm-capabilities';
 
 const CHANGE_REASON_OPTIONS: Array<{
   value: ChangeRequestReason;
@@ -37,17 +42,46 @@ interface FormValues {
 
 export default function CreateChangeRequestDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onCreated,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
   onCreated: () => void;
 }): React.ReactNode {
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
+
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewMyWork = useCanViewMyWork();
+  const myWorkQuery = useMyWork(
+    undefined,
+    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  );
+
+  const projectOptions = useMemo(() => {
+    const myWorkItems = myWorkQuery.data ?? [];
+    return Array.from(
+      new Map(
+        myWorkItems.map((item) => [
+          item.projectId,
+          {
+            value: item.projectId,
+            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
+          },
+        ]),
+      ).values(),
+    );
+  }, [myWorkQuery.data]);
+
   const [form] = Form.useForm<FormValues>();
-  const createMutation = useCreateChangeRequest(projectId);
+  const createMutation = useCreateChangeRequest(effectiveProjectId);
   const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
@@ -57,7 +91,10 @@ export default function CreateChangeRequestDrawer({
     | string
     | undefined;
 
-  const subtasksQuery = useEligibleCrSubtasks(projectId, open);
+  const subtasksQuery = useEligibleCrSubtasks(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
   const edvsQuery = usePackageCurrentEdvs(
     selectedPackageId ?? '',
     open && Boolean(selectedPackageId),
@@ -86,12 +123,21 @@ export default function CreateChangeRequestDrawer({
   );
 
   useEffect(() => {
+    if (open && projectIdProp) {
+      setSelectedProjectId(projectIdProp);
+    }
+  }, [open, projectIdProp]);
+
+  useEffect(() => {
     if (!open) {
       form.resetFields();
       setQueuedFiles([]);
       setUploading(false);
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
     }
-  }, [open, form]);
+  }, [open, form, showProjectSelector, projectIdProp]);
 
   async function uploadQueuedFiles(folderId: string): Promise<void> {
     setUploading(true);
@@ -103,6 +149,10 @@ export default function CreateChangeRequestDrawer({
   }
 
   async function handleSubmit(values: FormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     try {
       const result = await createMutation.mutateAsync({
         linkedDesignPackageId: values.linkedDesignPackageId,
@@ -155,6 +205,24 @@ export default function CreateChangeRequestDrawer({
         className="erp-drawer-form"
         onFinish={(values) => void handleSubmit(values)}
       >
+        {showProjectSelector && (
+          <Form.Item label="Project" required>
+            <Select
+              showSearch
+              placeholder="Select project"
+              options={projectOptions}
+              loading={myWorkQuery.isLoading}
+              optionFilterProp="label"
+              value={selectedProjectId ?? undefined}
+              onChange={(value: string) => {
+                setSelectedProjectId(value);
+                form.setFieldValue('linkedDesignPackageId', undefined);
+                form.setFieldValue('affectedEdvIds', []);
+              }}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item
           label="Subtask"
           name="linkedDesignPackageId"
@@ -165,6 +233,7 @@ export default function CreateChangeRequestDrawer({
             optionFilterProp="label"
             placeholder="Select subtask"
             loading={subtasksQuery.isLoading}
+            disabled={!effectiveProjectId}
             options={subtaskOptions}
             onChange={() => {
               form.setFieldValue('affectedEdvIds', []);

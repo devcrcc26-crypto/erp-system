@@ -113,9 +113,8 @@
     },
     "globalChangeRequests": {
       "title": "Change Requests",
-      "description": "Review and manage change requests by project.",
-      "projectPlaceholder": "Select project",
-      "noProjects": "No projects available. Open a project to work on change requests.",
+      "description": "Change requests you created, are assigned to, or linked to your subtasks across all projects.",
+      "empty": "No change requests yet. Create one to track design scope changes.",
       "noAccess": "You do not have access to change requests."
     },
     "reviewMode": {

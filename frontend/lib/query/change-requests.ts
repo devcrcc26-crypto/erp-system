@@ -52,6 +52,15 @@ export const changeRequestKeys = {
     [...changeRequestKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, changeRequestId: string) =>
     [...changeRequestKeys.details(projectId), changeRequestId] as const,
+  myList: (
+    params: PaginationParams &
+      PmListFilters & {
+        status?: ChangeRequestStatus;
+      } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...changeRequestKeys.all, 'my', params] as const,
   eligibleSubtasks: (projectId: string) =>
     [...changeRequestKeys.all, projectId, 'eligible-subtasks'] as const,
   currentEdvs: (packageId: string) =>
@@ -85,6 +94,37 @@ export function useChangeRequests(
         `${changeRequestsPath(projectId)}${toQueryString(params)}`,
       ),
     enabled: Boolean(projectId) && enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Cross-project change requests relevant to the signed-in user.
+ */
+export function useMyChangeRequests(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: ChangeRequestStatus;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<ProjectChangeRequest>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: changeRequestKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<ProjectChangeRequest>(
+        `/change-requests/my${toQueryString(params)}`,
+      ),
+    enabled,
     retry: false,
     ...options,
   });
@@ -170,6 +210,9 @@ export function useCreateChangeRequest(projectId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: changeRequestKeys.lists(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: changeRequestKeys.all,
       });
     },
   });

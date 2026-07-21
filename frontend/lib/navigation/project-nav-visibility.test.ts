@@ -41,7 +41,7 @@ describe('project-nav-visibility', () => {
     }
   });
 
-  it('discipline leader allowlist includes disciplines, submittals, and change requests', () => {
+  it('discipline leader allowlist includes disciplines and submittals but not change requests', () => {
     const disciplines = flattenProjectNavItems().find((item) => item.key === 'disciplines');
     const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
     const changeRequests = flattenProjectNavItems().find(
@@ -67,7 +67,7 @@ describe('project-nav-visibility', () => {
 
     expect(canViewProjectNavItem(disciplines!, ctx)).toBe(true);
     expect(canViewProjectNavItem(submittals!, ctx)).toBe(true);
-    expect(canViewProjectNavItem(changeRequests!, ctx)).toBe(true);
+    expect(canViewProjectNavItem(changeRequests!, ctx)).toBe(false);
   });
 
   it('FK-only discipline leader has project sidebar when allowlist is non-empty', () => {
@@ -151,21 +151,19 @@ describe('project-nav-visibility', () => {
 });
 
 describe('canViewGlobalNavKey — submittals', () => {
+  const moduleCaps = {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
   const pmCanView = {
-    submittals: {
-      canView: true,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-    },
+    submittals: { ...moduleCaps, canView: true },
+    change_requests: moduleCaps,
   };
   const pmNoView = {
-    submittals: {
-      canView: false,
-      canCreate: false,
-      canEdit: false,
-      canDelete: false,
-    },
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
   };
 
   it('allows designer and discipline leader to see /submittals', () => {
@@ -220,6 +218,50 @@ describe('canViewGlobalNavKey — submittals', () => {
         '/submittals',
         { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
         pmNoView,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('canViewGlobalNavKey — change requests', () => {
+  const moduleCaps = {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+  const pmCanView = {
+    submittals: moduleCaps,
+    change_requests: { ...moduleCaps, canView: true },
+  };
+  const pmNoView = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+  };
+
+  it('allows designer and discipline leader to see /change-requests', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/change-requests',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+    expect(
+      canViewGlobalNavKey(
+        '/change-requests',
+        { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+  });
+
+  it('allows Project Admin via pm.change_requests.canView', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/change-requests',
+        EMPTY_EPC_CAPABILITIES,
+        pmCanView,
       ),
     ).toBe(true);
   });
