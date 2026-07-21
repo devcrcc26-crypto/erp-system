@@ -1225,6 +1225,7 @@ export interface CrSubtaskOption {
   id: string;
   packageCode: string;
   name: string;
+  fullCode: string;
 }
 
 export interface ProjectChangeRequest {

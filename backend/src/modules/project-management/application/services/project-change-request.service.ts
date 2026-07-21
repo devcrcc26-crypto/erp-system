@@ -16,6 +16,7 @@ import {
   ProjectChangeRequestStatus,
   ReviewSessionStatus,
 } from '@prisma/client';
+import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -77,7 +78,23 @@ export interface CrSubtaskOption {
   id: string;
   packageCode: string;
   name: string;
+  fullCode: string;
 }
+
+const DESIGN_PACKAGE_FULL_CODE_SELECT = {
+  packageCode: true,
+  subtaskIndex: true,
+  taskDiscipline: {
+    select: {
+      disciplineIndex: true,
+      task: {
+        select: {
+          overseasTaskNumber: true,
+        },
+      },
+    },
+  },
+} as const;
 
 /**
  * Manages project change requests — CRUD, submit/recall, and approval side-effects.
@@ -157,15 +174,23 @@ export class ProjectChangeRequestService {
       }),
       select: {
         id: true,
-        packageCode: true,
         designerUserId: true,
         supportingDesignerUserId: true,
         reviewerUserId: true,
         disciplinaryLeaderUserId: true,
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
+        ...DESIGN_PACKAGE_FULL_CODE_SELECT,
         taskDiscipline: {
-          select: { task: { select: { projectId: true } } },
+          select: {
+            disciplineIndex: true,
+            task: {
+              select: {
+                projectId: true,
+                overseasTaskNumber: true,
+              },
+            },
+          },
         },
       },
     });
@@ -217,7 +242,12 @@ export class ProjectChangeRequestService {
       },
     });
     const seq = String(existingCount + 1).padStart(3, '0');
-    const changeNumber = `CR-${pkg.packageCode}-${seq}`;
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
+    );
+    const changeNumber = `CR-${fullCode}-${seq}`;
 
     const row = await this.prisma.$transaction(async (tx) => {
       const created = await tx.projectChangeRequest.create({
@@ -722,7 +752,7 @@ export class ProjectChangeRequestService {
   ): Promise<{ changeNumber: string }> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: packageId, companyId: ctx.companyId }),
-      select: { packageCode: true },
+      select: DESIGN_PACKAGE_FULL_CODE_SELECT,
     });
     if (!pkg) {
       throw new NotFoundException('Subtask not found');
@@ -735,7 +765,12 @@ export class ProjectChangeRequestService {
       },
     });
     const seq = String(existingCount + 1).padStart(3, '0');
-    return { changeNumber: `CR-${pkg.packageCode}-${seq}` };
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
+    );
+    return { changeNumber: `CR-${fullCode}-${seq}` };
   }
 
   /**
@@ -773,11 +808,24 @@ export class ProjectChangeRequestService {
               ],
             }),
       }),
-      select: { id: true, packageCode: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        ...DESIGN_PACKAGE_FULL_CODE_SELECT,
+      },
       orderBy: { packageCode: 'asc' },
     });
 
-    return packages;
+    return packages.map((pkg) => ({
+      id: pkg.id,
+      packageCode: pkg.packageCode,
+      name: pkg.name,
+      fullCode: formatDesignPackageFullCode(
+        pkg.taskDiscipline.task.overseasTaskNumber,
+        pkg.taskDiscipline.disciplineIndex,
+        pkg.subtaskIndex,
+      ),
+    }));
   }
 
   /**

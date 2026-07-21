@@ -71,7 +71,7 @@ export default function CreateChangeRequestDrawer({
     () =>
       (subtasksQuery.data ?? []).map((pkg) => ({
         value: pkg.id,
-        label: `${pkg.packageCode} — ${pkg.name}`,
+        label: `${pkg.fullCode} — ${pkg.name}`,
       })),
     [subtasksQuery.data],
   );

@@ -27,10 +27,11 @@ describe('ProjectChangeRequestService status transitions', () => {
     projectChangeRequest: {
       findFirst: jest.Mock;
       update: jest.Mock;
+      count: jest.Mock;
     };
     reviewSession: { findMany: jest.Mock };
     engineeringDocumentVersion: { updateMany: jest.Mock };
-    designPackage: { findFirst: jest.Mock; update: jest.Mock };
+    designPackage: { findFirst: jest.Mock; findMany: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
   let permissionService: { getUserRoleNames: jest.Mock };
@@ -43,6 +44,11 @@ describe('ProjectChangeRequestService status transitions', () => {
     name: 'Geotech',
     taskDisciplineId: 'discipline-1',
     designerUserId: 'designer-user',
+    subtaskIndex: 3,
+    taskDiscipline: {
+      disciplineIndex: 1,
+      task: { overseasTaskNumber: '26-ETO-035' },
+    },
   };
 
   function createService(): ProjectChangeRequestService {
@@ -98,11 +104,13 @@ describe('ProjectChangeRequestService status transitions', () => {
       projectChangeRequest: {
         findFirst: jest.fn(),
         update: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       reviewSession: { findMany: jest.fn().mockResolvedValue([]) },
       engineeringDocumentVersion: { updateMany: jest.fn() },
       designPackage: {
         findFirst: jest.fn().mockResolvedValue(defaultPackageLookup),
+        findMany: jest.fn(),
         update: jest.fn(),
       },
       $transaction: jest.fn(async (work: (tx: typeof prisma) => Promise<unknown>) =>
@@ -348,6 +356,68 @@ describe('ProjectChangeRequestService status transitions', () => {
         },
       });
       expect(result.status).toBe(ProjectChangeRequestStatus.REJECTED);
+    });
+  });
+
+  describe('previewNextCrNumber', () => {
+    it('uses fullCode for CR number preview', async () => {
+      prisma.designPackage.findFirst.mockResolvedValue({
+        packageCode: 'LJZ-GEO-001',
+        subtaskIndex: 3,
+        taskDiscipline: {
+          disciplineIndex: 1,
+          task: { overseasTaskNumber: '26-ETO-035' },
+        },
+      });
+      prisma.projectChangeRequest.count.mockResolvedValue(0);
+
+      const result = await service.previewNextCrNumber(ctx, 'pkg-1');
+
+      expect(result.changeNumber).toBe('CR-26-ETO-035-01-003-001');
+    });
+
+    it('increments sequence for second CR on same subtask', async () => {
+      prisma.designPackage.findFirst.mockResolvedValue({
+        packageCode: 'LJZ-GEO-001',
+        subtaskIndex: 3,
+        taskDiscipline: {
+          disciplineIndex: 1,
+          task: { overseasTaskNumber: '26-ETO-035' },
+        },
+      });
+      prisma.projectChangeRequest.count.mockResolvedValue(1);
+
+      const result = await service.previewNextCrNumber(ctx, 'pkg-1');
+
+      expect(result.changeNumber).toBe('CR-26-ETO-035-01-003-002');
+    });
+  });
+
+  describe('listEligibleSubtasks', () => {
+    it('returns fullCode on each subtask option', async () => {
+      prisma.designPackage.findMany.mockResolvedValue([
+        {
+          id: 'pkg-1',
+          packageCode: 'LJZ-GEO-001',
+          name: 'Geological Survey',
+          subtaskIndex: 3,
+          taskDiscipline: {
+            disciplineIndex: 1,
+            task: { overseasTaskNumber: '26-ETO-035' },
+          },
+        },
+      ]);
+
+      const result = await service.listEligibleSubtasks(ctx, projectId);
+
+      expect(result).toEqual([
+        {
+          id: 'pkg-1',
+          packageCode: 'LJZ-GEO-001',
+          name: 'Geological Survey',
+          fullCode: '26-ETO-035-01-003',
+        },
+      ]);
     });
   });
 });

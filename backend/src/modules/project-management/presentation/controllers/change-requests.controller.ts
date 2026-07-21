@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -144,7 +145,7 @@ export class ChangeRequestsController {
   }
 
   @Patch(':changeRequestId/approve')
-  @RequirePermission('projects', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Approve change request' })
   approve(
     @CurrentUser() user: AuthenticatedUser,
