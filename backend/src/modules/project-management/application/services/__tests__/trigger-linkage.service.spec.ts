@@ -3,6 +3,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import {
+  DesignPackageProjectedStatus,
   DesignPackageStatus,
   ExternalReviewTriggerMode,
   ExternalReviewTriggerStatus,
@@ -257,6 +258,7 @@ describe('Trigger linkage (trigger-linkage)', () => {
             packageCode: 'PKG',
             name: 'Package',
           }),
+          update: jest.fn(),
         },
       };
       const prisma = {
@@ -315,6 +317,13 @@ describe('Trigger linkage (trigger-linkage)', () => {
           }),
         }),
       );
+      expect(tx.designPackage.update).toHaveBeenCalledWith({
+        where: { id: packageId },
+        data: expect.objectContaining({
+          packageStatus: DesignPackageStatus.OPEN,
+          projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+        }),
+      });
     });
   });
 

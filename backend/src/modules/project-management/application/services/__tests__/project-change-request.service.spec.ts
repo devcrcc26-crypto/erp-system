@@ -7,6 +7,8 @@ import {
   ProjectChangeRequest,
   ProjectChangeRequestSource,
   ProjectChangeRequestStatus,
+  DesignPackageProjectedStatus,
+  DesignPackageStatus,
 } from '@prisma/client';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
@@ -28,11 +30,35 @@ describe('ProjectChangeRequestService status transitions', () => {
     };
     reviewSession: { findMany: jest.Mock };
     engineeringDocumentVersion: { updateMany: jest.Mock };
-    designPackage: { findFirst: jest.Mock };
+    designPackage: { findFirst: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
   let permissionService: { getUserRoleNames: jest.Mock };
+  let notificationService: { send: jest.Mock };
   let service: ProjectChangeRequestService;
+
+  const defaultPackageLookup = {
+    id: 'pkg-1',
+    packageCode: 'LJZ-GEO-001',
+    name: 'Geotech',
+    taskDisciplineId: 'discipline-1',
+    designerUserId: 'designer-user',
+  };
+
+  function createService(): ProjectChangeRequestService {
+    return new ProjectChangeRequestService(
+      prisma as unknown as PrismaService,
+      {
+        getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+      } as unknown as ProjectScopeService,
+      {} as unknown as EngineeringDocumentFolderService,
+      permissionService as unknown as PermissionService,
+      {
+        closeSessionAsSuperseded: jest.fn(),
+      } as unknown as EpcReviewRepository,
+      notificationService as never,
+    );
+  }
 
   function buildChangeRequest(status: string): ProjectChangeRequest {
     return {
@@ -55,7 +81,7 @@ describe('ProjectChangeRequestService status transitions', () => {
       affectedEdvIds: [],
       affectedEdvSnapshot: [],
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      createdBy: ctx.userId,
+      createdBy: 'creator-user',
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedBy: ctx.userId,
       deletedAt: null,
@@ -64,6 +90,10 @@ describe('ProjectChangeRequestService status transitions', () => {
   }
 
   beforeEach(() => {
+    notificationService = {
+      send: jest.fn().mockResolvedValue({ inAppId: 'notif-1', emailQueued: false }),
+    };
+
     prisma = {
       projectChangeRequest: {
         findFirst: jest.fn(),
@@ -72,11 +102,8 @@ describe('ProjectChangeRequestService status transitions', () => {
       reviewSession: { findMany: jest.fn().mockResolvedValue([]) },
       engineeringDocumentVersion: { updateMany: jest.fn() },
       designPackage: {
-        findFirst: jest.fn().mockResolvedValue({
-          id: 'pkg-1',
-          packageCode: 'LJZ-GEO-001',
-          name: 'Geotech',
-        }),
+        findFirst: jest.fn().mockResolvedValue(defaultPackageLookup),
+        update: jest.fn(),
       },
       $transaction: jest.fn(async (work: (tx: typeof prisma) => Promise<unknown>) =>
         work(prisma),
@@ -87,17 +114,7 @@ describe('ProjectChangeRequestService status transitions', () => {
       getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
     };
 
-    service = new ProjectChangeRequestService(
-      prisma as unknown as PrismaService,
-      {
-        getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
-      } as unknown as ProjectScopeService,
-      {} as unknown as EngineeringDocumentFolderService,
-      permissionService as unknown as PermissionService,
-      {
-        closeSessionAsSuperseded: jest.fn(),
-      } as unknown as EpcReviewRepository,
-    );
+    service = createService();
   });
 
   function mockChangeRequestWithStatus(status: string): void {
@@ -158,7 +175,121 @@ describe('ProjectChangeRequestService status transitions', () => {
           updatedBy: ctx.userId,
         },
       });
+      expect(prisma.designPackage.update).toHaveBeenCalledWith({
+        where: { id: 'pkg-1' },
+        data: {
+          packageStatus: DesignPackageStatus.OPEN,
+          projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+          packageClosedAt: null,
+          packageClosedBy: null,
+          updatedBy: ctx.userId,
+        },
+      });
       expect(result.status).toBe(ProjectChangeRequestStatus.APPROVED);
+    });
+
+    it('sends revision notification to designer on approve', async () => {
+      mockChangeRequestWithStatus(ProjectChangeRequestStatus.SUBMITTED);
+      prisma.projectChangeRequest.update.mockResolvedValue(
+        buildChangeRequest(ProjectChangeRequestStatus.APPROVED),
+      );
+
+      await service.approveChangeRequest(ctx, projectId, changeRequestId);
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        expect.objectContaining({
+          recipientId: 'designer-user',
+          eventType: 'change_request.approved_revision_required',
+          subject: 'Revision required — CR-LJZ-GEO-001-001 approved',
+          body: expect.stringContaining(
+            '/projects/project-1/disciplines/discipline-1/packages/pkg-1',
+          ),
+        }),
+      );
+    });
+
+    it('sends approved notification to creator when different from designer', async () => {
+      mockChangeRequestWithStatus(ProjectChangeRequestStatus.SUBMITTED);
+      prisma.projectChangeRequest.update.mockResolvedValue(
+        buildChangeRequest(ProjectChangeRequestStatus.APPROVED),
+      );
+
+      await service.approveChangeRequest(ctx, projectId, changeRequestId);
+
+      expect(notificationService.send).toHaveBeenCalledTimes(2);
+      expect(notificationService.send).toHaveBeenCalledWith(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        expect.objectContaining({
+          recipientId: 'creator-user',
+          eventType: 'change_request.approved_creator',
+          subject: 'CR CR-LJZ-GEO-001-001 approved',
+          body: expect.stringContaining('/projects/project-1/change-requests'),
+        }),
+      );
+    });
+
+    it('does not send duplicate when creator = designer', async () => {
+      prisma.projectChangeRequest.findFirst.mockResolvedValue({
+        ...buildChangeRequest(ProjectChangeRequestStatus.SUBMITTED),
+        createdBy: 'designer-user',
+      });
+      prisma.projectChangeRequest.update.mockResolvedValue(
+        buildChangeRequest(ProjectChangeRequestStatus.APPROVED),
+      );
+
+      await service.approveChangeRequest(ctx, projectId, changeRequestId);
+
+      expect(notificationService.send).toHaveBeenCalledTimes(1);
+      expect(notificationService.send).toHaveBeenCalledWith(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        expect.objectContaining({
+          recipientId: 'designer-user',
+          eventType: 'change_request.approved_revision_required',
+        }),
+      );
+    });
+
+    it('does not notify approver about their own action', async () => {
+      prisma.projectChangeRequest.findFirst.mockResolvedValue({
+        ...buildChangeRequest(ProjectChangeRequestStatus.SUBMITTED),
+        createdBy: 'creator-user',
+      });
+      prisma.designPackage.findFirst.mockResolvedValue({
+        ...defaultPackageLookup,
+        designerUserId: ctx.userId,
+      });
+      prisma.projectChangeRequest.update.mockResolvedValue(
+        buildChangeRequest(ProjectChangeRequestStatus.APPROVED),
+      );
+
+      await service.approveChangeRequest(ctx, projectId, changeRequestId);
+
+      expect(notificationService.send).toHaveBeenCalledTimes(1);
+      expect(notificationService.send).toHaveBeenCalledWith(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        expect.objectContaining({
+          recipientId: 'creator-user',
+          eventType: 'change_request.approved_creator',
+        }),
+      );
+    });
+
+    it('keeps CR approved when notification send fails', async () => {
+      mockChangeRequestWithStatus(ProjectChangeRequestStatus.SUBMITTED);
+      prisma.projectChangeRequest.update.mockResolvedValue(
+        buildChangeRequest(ProjectChangeRequestStatus.APPROVED),
+      );
+      notificationService.send.mockRejectedValueOnce(new Error('notify failed'));
+
+      const result = await service.approveChangeRequest(
+        ctx,
+        projectId,
+        changeRequestId,
+      );
+
+      expect(result.status).toBe(ProjectChangeRequestStatus.APPROVED);
+      expect(prisma.projectChangeRequest.update).toHaveBeenCalled();
     });
   });
 

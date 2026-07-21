@@ -3,9 +3,13 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
+  DesignPackageProjectedStatus,
+  DesignPackageStatus,
   Prisma,
   ProjectChangeRequest,
   ProjectChangeRequestSource,
@@ -40,8 +44,13 @@ import {
 } from '../utils/source-entity.util';
 import { PrismaTx } from '../../infrastructure/repositories/epc-workflow.repository';
 import { EpcReviewRepository } from '../../infrastructure/repositories/epc-review.repository';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+
+const CR_APPROVED_REVISION_REQUIRED_EVENT =
+  'change_request.approved_revision_required';
+const CR_APPROVED_CREATOR_EVENT = 'change_request.approved_creator';
 
 const CHANGE_REQUEST_SORT_FIELDS = new Set([
   'createdAt',
@@ -75,12 +84,16 @@ export interface CrSubtaskOption {
  */
 @Injectable()
 export class ProjectChangeRequestService {
+  private readonly logger = new Logger(ProjectChangeRequestService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly permissionService: PermissionService,
     private readonly epcReviewRepository: EpcReviewRepository,
+    @Optional()
+    private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -374,8 +387,8 @@ export class ProjectChangeRequestService {
   }
 
   /**
-   * Approves a change request: voids active review sessions and marks affected EDVs non-current.
-   * Subtask reopen is intentionally skipped pending a separate go.
+   * Approves a change request: voids active review sessions, marks affected EDVs
+   * non-current, and reopens the linked subtask for designer revision.
    */
   async approveChangeRequest(
     ctx: PmContext,
@@ -442,7 +455,18 @@ export class ProjectChangeRequestService {
         });
       }
 
-      // Step 4 (subtask reopen) skipped — awaiting DesignPackage status confirmation.
+      if (existing.linkedDesignPackageId) {
+        await tx.designPackage.update({
+          where: { id: existing.linkedDesignPackageId },
+          data: {
+            packageStatus: DesignPackageStatus.OPEN,
+            projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+            packageClosedAt: null,
+            packageClosedBy: null,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
 
       return tx.projectChangeRequest.update({
         where: { id: changeRequestId },
@@ -453,7 +477,104 @@ export class ProjectChangeRequestService {
       });
     });
 
+    await this.sendChangeRequestApprovedNotifications(
+      ctx,
+      projectId,
+      existing,
+    );
+
     return this.enrichChangeRequest(row);
+  }
+
+  /**
+   * Notifies designer and creator after a change request is approved.
+   */
+  private async sendChangeRequestApprovedNotifications(
+    ctx: PmContext,
+    projectId: string,
+    cr: ProjectChangeRequest,
+  ): Promise<void> {
+    if (!this.notificationService || !cr.linkedDesignPackageId) {
+      return;
+    }
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: {
+        id: cr.linkedDesignPackageId,
+        deletedAt: null,
+      },
+      select: {
+        designerUserId: true,
+        packageCode: true,
+        name: true,
+        taskDisciplineId: true,
+      },
+    });
+
+    if (!pkg) {
+      return;
+    }
+
+    const subtaskUrl =
+      `/projects/${projectId}` +
+      `/disciplines/${pkg.taskDisciplineId}` +
+      `/packages/${cr.linkedDesignPackageId}`;
+
+    if (pkg.designerUserId && pkg.designerUserId !== ctx.userId) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId: pkg.designerUserId,
+            eventType: CR_APPROVED_REVISION_REQUIRED_EVENT,
+            subject: `Revision required — ${cr.changeNumber} approved`,
+            body: `Change request ${cr.changeNumber} on subtask ${pkg.packageCode} has been approved. Upload revised documents to continue. ${subtaskUrl}`,
+            variables: {
+              projectId,
+              changeRequestId: cr.id,
+              changeNumber: cr.changeNumber,
+              packageCode: pkg.packageCode,
+              designPackageId: cr.linkedDesignPackageId,
+              link: subtaskUrl,
+            },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'CR approval notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+
+    const crUrl = `/projects/${projectId}/change-requests`;
+    const creatorIsDesigner = cr.createdBy === pkg.designerUserId;
+    const creatorIsApprover = cr.createdBy === ctx.userId;
+
+    if (!creatorIsDesigner && !creatorIsApprover) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId: cr.createdBy,
+            eventType: CR_APPROVED_CREATOR_EVENT,
+            subject: `CR ${cr.changeNumber} approved`,
+            body: `Your change request ${cr.changeNumber} has been approved by the Discipline Lead. The designer has been notified to upload revised documents. ${crUrl}`,
+            variables: {
+              projectId,
+              changeRequestId: cr.id,
+              changeNumber: cr.changeNumber,
+              link: crUrl,
+            },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'CR approval creator notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
   }
 
   /**
