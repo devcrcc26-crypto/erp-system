@@ -33,8 +33,8 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: project.projectNumber
-          ? `${project.projectNumber} — ${project.name}`
+        label: project.projectCode
+          ? `${project.projectCode} — ${project.name}`
           : project.name,
       })),
     [projectsQuery.data?.data],

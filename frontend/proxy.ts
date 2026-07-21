@@ -24,7 +24,7 @@ function hasExplicitLoginIntent(searchParams: URLSearchParams): boolean {
   );
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const isAuthenticated =
     request.cookies.get(AUTH_COOKIE_NAME)?.value === '1';
