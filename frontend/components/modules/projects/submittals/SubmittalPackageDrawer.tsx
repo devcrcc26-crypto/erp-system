@@ -11,6 +11,7 @@ import {
   Input,
   Select,
   Space,
+  Spin,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueries } from '@tanstack/react-query';
@@ -83,88 +84,12 @@ export default function SubmittalPackageDrawer({
   const purpose = Form.useWatch('submittalPurpose', form) as
     | SubmittalPurpose
     | undefined;
-  const preparedByRole = purpose ? purposeToRole(purpose) : undefined;
-  const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
-
-  return (
-    <Drawer
-      {...submittalDrawerProps}
-      title="Create design submittal"
-      open={open}
-      onClose={onClose}
-      footer={
-        <Space>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            type="primary"
-            loading={createSubmittal.isPending}
-            onClick={() => form.submit()}
-          >
-            Create submittal
-          </Button>
-        </Space>
-      }
-    >
-      <Alert
-        type="info"
-        showIcon
-        className="mb-4"
-        title="Select approved subtasks"
-        description={
-          isDeputy
-            ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
-            : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
-        }
-      />
-
-      <SubmittalPackageForm
-        form={form}
-        projectId={projectId}
-        disciplines={disciplinesQuery.data ?? []}
-        onSubmit={async (values) => {
-          await createSubmittal.mutateAsync({
-            projectId,
-            body: {
-              category: values.category.trim(),
-              title: values.title.trim(),
-              designPackageIds: values.designPackageIds,
-              contractor: values.contractor?.trim() || undefined,
-              supplier: values.supplier?.trim() || undefined,
-              specReference: values.specReference?.trim() || undefined,
-              submittalPurpose: values.submittalPurpose,
-              preparedByRole: purposeToRole(values.submittalPurpose),
-              taskDisciplineId: values.taskDisciplineId,
-            },
-          });
-          messageApi.success('Design submittal created');
-          form.resetFields();
-          onCreated();
-          onClose();
-        }}
-      />
-    </Drawer>
-  );
-}
-
-function SubmittalPackageForm({
-  form,
-  projectId,
-  disciplines,
-  onSubmit,
-}: {
-  form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
-  projectId: string;
-  disciplines: { id: string; disciplineIndex?: number | null }[];
-  onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
-}): React.ReactNode {
-  const purpose = Form.useWatch('submittalPurpose', form) as
-    | SubmittalPurpose
-    | undefined;
   const taskDisciplineId = Form.useWatch('taskDisciplineId', form) as
     | string
     | undefined;
   const preparedByRole = purpose ? purposeToRole(purpose) : undefined;
   const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
+  const disciplines = disciplinesQuery.data ?? [];
 
   const packageQueries = useQueries({
     queries: disciplines.map((discipline) => ({
@@ -200,6 +125,103 @@ function SubmittalPackageForm({
     return source.filter((pkg) => pkg.projectedStatus === 'APPROVED');
   }, [isDeputy, packageQueries, singleDisciplinePackagesQuery]);
 
+  const isLoadingPackages = isDeputy
+    ? packageQueries.some((query) => query.isLoading)
+    : (singleDisciplinePackagesQuery[0]?.isLoading ?? false);
+
+  const hasSelectedDiscipline = isDeputy ? true : Boolean(taskDisciplineId);
+
+  return (
+    <Drawer
+      {...submittalDrawerProps}
+      title="Create design submittal"
+      open={open}
+      onClose={onClose}
+      footer={
+        <Space>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            type="primary"
+            loading={createSubmittal.isPending}
+            disabled={
+              !hasSelectedDiscipline ||
+              isLoadingPackages ||
+              lockablePackages.length === 0
+            }
+            onClick={() => form.submit()}
+          >
+            Create submittal
+          </Button>
+        </Space>
+      }
+    >
+      <Alert
+        type="info"
+        showIcon
+        className="mb-4"
+        title="Select approved subtasks"
+        description={
+          isDeputy
+            ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
+            : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
+        }
+      />
+
+      <SubmittalPackageForm
+        form={form}
+        disciplines={disciplines}
+        isDeputy={isDeputy}
+        lockablePackages={lockablePackages}
+        isLoadingPackages={isLoadingPackages}
+        hasSelectedDiscipline={hasSelectedDiscipline}
+        onSubmit={async (values) => {
+          await createSubmittal.mutateAsync({
+            projectId,
+            body: {
+              category: values.category.trim(),
+              title: values.title.trim(),
+              designPackageIds: values.designPackageIds,
+              contractor: values.contractor?.trim() || undefined,
+              supplier: values.supplier?.trim() || undefined,
+              specReference: values.specReference?.trim() || undefined,
+              submittalPurpose: values.submittalPurpose,
+              preparedByRole: purposeToRole(values.submittalPurpose),
+              taskDisciplineId: values.taskDisciplineId,
+            },
+          });
+          messageApi.success('Design submittal created');
+          form.resetFields();
+          onCreated();
+          onClose();
+        }}
+      />
+    </Drawer>
+  );
+}
+
+function SubmittalPackageForm({
+  form,
+  disciplines,
+  isDeputy,
+  lockablePackages,
+  isLoadingPackages,
+  hasSelectedDiscipline,
+  onSubmit,
+}: {
+  form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
+  disciplines: {
+    id: string;
+    disciplineIndex?: number | null;
+    disciplineNumber?: string | null;
+    disciplineName?: string | null;
+    overseasTaskNumber?: string | null;
+  }[];
+  isDeputy: boolean;
+  lockablePackages: DesignPackage[];
+  isLoadingPackages: boolean;
+  hasSelectedDiscipline: boolean;
+  onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
+}): React.ReactNode {
   const purposeOptions = useMemo(() => {
     const options = [
       ...DISCIPLINE_LEAD_PURPOSES.map((value) => ({
@@ -262,7 +284,9 @@ function SubmittalPackageForm({
             placeholder="Select discipline"
             options={disciplines.map((d) => ({
               value: d.id,
-              label: formatDisciplineLabel(d.disciplineIndex),
+              label: d.disciplineNumber
+                ? `${d.disciplineNumber} — ${d.disciplineName ?? ''}`
+                : (d.disciplineName ?? formatDisciplineLabel(d.disciplineIndex)),
             }))}
           />
         </Form.Item>
@@ -290,32 +314,68 @@ function SubmittalPackageForm({
         <Input />
       </Form.Item>
 
-      {(isDeputy || taskDisciplineId) && (
-        <FormLayout title="Approved subtasks" className="mb-4">
-          <DataTable<DesignPackage>
-            rowKey="id"
-            size="small"
-            columns={packageColumns}
-            dataSource={lockablePackages}
-            locale={{ emptyText: 'No approved subtasks available' }}
+      {!hasSelectedDiscipline && (
+        <Form.Item>
+          <Alert
+            type="info"
+            showIcon
+            title="Select a discipline to see available subtasks"
           />
-        </FormLayout>
+        </Form.Item>
       )}
 
-      <Form.Item
-        name="designPackageIds"
-        label="Subtasks"
-        rules={[{ required: true, message: 'Select at least one subtask' }]}
-      >
-        <Select
-          mode="multiple"
-          placeholder="Select approved subtasks"
-          options={lockablePackages.map((pkg) => ({
-            value: pkg.id,
-            label: pkg.name,
-          }))}
-        />
-      </Form.Item>
+      {hasSelectedDiscipline && isLoadingPackages && (
+        <Form.Item>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spin size="small" />
+            Loading subtasks...
+          </div>
+        </Form.Item>
+      )}
+
+      {hasSelectedDiscipline &&
+        !isLoadingPackages &&
+        lockablePackages.length === 0 && (
+          <Form.Item>
+            <Alert
+              type="info"
+              showIcon
+              title="No approved subtasks"
+              description="This discipline has no subtasks with Approved status. Documents must complete the full review workflow before they can be released externally."
+            />
+          </Form.Item>
+        )}
+
+      {hasSelectedDiscipline &&
+        !isLoadingPackages &&
+        lockablePackages.length > 0 && (
+          <>
+            <FormLayout title="Approved subtasks" className="mb-4">
+              <DataTable<DesignPackage>
+                rowKey="id"
+                size="small"
+                columns={packageColumns}
+                dataSource={lockablePackages}
+                locale={{ emptyText: 'No approved subtasks available' }}
+              />
+            </FormLayout>
+
+            <Form.Item
+              name="designPackageIds"
+              label="Subtasks"
+              rules={[{ required: true, message: 'Select at least one subtask' }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="Select approved subtasks"
+                options={lockablePackages.map((pkg) => ({
+                  value: pkg.id,
+                  label: pkg.name,
+                }))}
+              />
+            </Form.Item>
+          </>
+        )}
     </Form>
   );
 }
