@@ -55,7 +55,7 @@ export class ChangeRequestsController {
   }
 
   @Get('eligible-subtasks')
-  @RequirePermission('projects', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List subtasks eligible for CR creation' })
   eligibleSubtasks(
     @CurrentUser() user: AuthenticatedUser,
@@ -83,7 +83,7 @@ export class ChangeRequestsController {
   }
 
   @Post()
-  @RequirePermission('projects', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create change request' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -98,7 +98,7 @@ export class ChangeRequestsController {
   }
 
   @Patch(':changeRequestId')
-  @RequirePermission('projects', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update change request' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -115,7 +115,7 @@ export class ChangeRequestsController {
   }
 
   @Patch(':changeRequestId/submit')
-  @RequirePermission('projects', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Submit change request for D.Lead review' })
   submit(
     @CurrentUser() user: AuthenticatedUser,
@@ -130,7 +130,7 @@ export class ChangeRequestsController {
   }
 
   @Patch(':changeRequestId/recall')
-  @RequirePermission('projects', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Recall submitted change request to draft' })
   recall(
     @CurrentUser() user: AuthenticatedUser,
@@ -160,7 +160,7 @@ export class ChangeRequestsController {
   }
 
   @Patch(':changeRequestId/reject')
-  @RequirePermission('projects', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Reject change request' })
   reject(
     @CurrentUser() user: AuthenticatedUser,
