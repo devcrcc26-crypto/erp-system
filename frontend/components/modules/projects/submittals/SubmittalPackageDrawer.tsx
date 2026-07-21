@@ -18,7 +18,10 @@ import { useQueries } from '@tanstack/react-query';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
-import type { DesignPackage } from '@/lib/api/epc.types';
+import type {
+  DesignPackage,
+  DesignPackageProjectedStatus,
+} from '@/lib/api/epc.types';
 import type {
   SubmittalPreparedByRole,
   SubmittalPurpose,
@@ -51,6 +54,14 @@ const DEPUTY_PURPOSES: SubmittalPurpose[] = [
   'DEPUTY_BID',
   'DEPUTY_INTERIM',
   'DEPUTY_FINAL',
+];
+
+/** Subtasks the designer has submitted for review — excludes IN_PROGRESS
+ * (nothing submitted) and REWORK_REQUIRED (known deficient). */
+const RELEASABLE_STATUSES: DesignPackageProjectedStatus[] = [
+  'PENDING_LEAD',
+  'APPROVED',
+  'LOCKED',
 ];
 
 function purposeToRole(purpose: SubmittalPurpose): SubmittalPreparedByRole {
@@ -122,7 +133,9 @@ export default function SubmittalPackageDrawer({
     const source = isDeputy
       ? packageQueries.flatMap((query) => query.data ?? [])
       : (singleDisciplinePackagesQuery[0]?.data ?? []);
-    return source.filter((pkg) => pkg.projectedStatus === 'APPROVED');
+    return source.filter((pkg) =>
+      RELEASABLE_STATUSES.includes(pkg.projectedStatus),
+    );
   }, [isDeputy, packageQueries, singleDisciplinePackagesQuery]);
 
   const isLoadingPackages = isDeputy
@@ -340,8 +353,8 @@ function SubmittalPackageForm({
             <Alert
               type="info"
               showIcon
-              title="No approved subtasks"
-              description="This discipline has no subtasks with Approved status. Documents must complete the full review workflow before they can be released externally."
+              title="No subtasks ready for release"
+              description="This discipline has no subtasks ready for external release. Subtasks must be submitted for review (Pending Lead, Approved, or Locked status) before they can be packaged and sent externally."
             />
           </Form.Item>
         )}
