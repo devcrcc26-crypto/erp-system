@@ -10,6 +10,7 @@ import {
   Drawer,
   Form,
   Input,
+  Modal,
   Radio,
   Select,
   Space,
@@ -25,7 +26,6 @@ import { apiGet } from '@/lib/api/client';
 import type { SubmittalStatus } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
-import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   useAddSubmittalReview,
@@ -35,7 +35,6 @@ import {
   useUpdateSubmittal,
 } from '@/lib/query/submittals';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import SubmittalExternalReviewPanel from '@/components/modules/projects/submittals/SubmittalExternalReviewPanel';
 import { useIssueSubmittal } from '@/lib/query/epc-submittals';
 import { layout, submittalDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -109,7 +108,6 @@ export default function SubmittalDetailDrawer({
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
-  const { submittals: submittalsCap } = usePmCapabilities();
   const uploadDocument = useUploadDocumentToFolder();
 
   const submittalQuery = useSubmittal(projectId, submittalId ?? '', open);
@@ -142,16 +140,6 @@ export default function SubmittalDetailDrawer({
     isConstruction &&
     isStoredDisciplineLead &&
     submittal?.status === 'UNDER_REVIEW';
-
-  const isAssignedReviewer =
-    Boolean(submittal?.assignedTo) &&
-    submittal?.assignedTo === currentUserId;
-  const canRecordExternalReview =
-    !isConstruction &&
-    submittalsCap.canCreate &&
-    isAssignedReviewer &&
-    submittal !== undefined &&
-    (submittal.status === 'SUBMITTED' || submittal.status === 'UNDER_REVIEW');
 
   const canResubmitToLead =
     isConstruction &&
@@ -307,30 +295,6 @@ export default function SubmittalDetailDrawer({
     }
   }
 
-  async function handleExternalReview(values: ReviewFormValues): Promise<void> {
-    if (!submittalId || !submittal) {
-      return;
-    }
-    try {
-      await addReview.mutateAsync({
-        projectId,
-        submittalId,
-        body: {
-          status: values.status,
-          comments: values.comments?.trim() || undefined,
-          revisionNumber: submittal.revisionNumber,
-        },
-      });
-      leadForm.resetFields();
-      messageApi.success('Review recorded');
-      onUpdated();
-      void reviewsQuery.refetch();
-      void submittalQuery.refetch();
-    } catch (error) {
-      notifyApiError(error, 'Failed to record review', messageApi);
-    }
-  }
-
   async function handleSubmitToLead(): Promise<void> {
     if (!submittalId) {
       return;
@@ -473,6 +437,13 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Due date">
               {formatProjectDate(submittal.dueDate)}
             </Descriptions.Item>
+            {isExternalRelease && (
+              <Descriptions.Item label="Issued">
+                {submittal.issuedAt
+                  ? `Issued by ${resolveUserDisplay(submittal.submittedBy, submittal.submittedByName)} on ${formatProjectDate(submittal.issuedAt)}`
+                  : 'Not yet issued'}
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           {showDirectStatusControl && (
@@ -504,8 +475,8 @@ export default function SubmittalDetailDrawer({
               <div className="erp-drawer-list">
                 {submittal.items.map((item) => (
                   <div key={item.id} className={`px-4 py-3 ${layout.drawerMutedText}`}>
-                    Subtask {item.sortOrder + 1}
-                    {item.snapshotCaptured ? ' (snapshot captured)' : ''}
+                    {item.packageCode ?? '—'} — {item.packageName ?? 'Unknown subtask'}
+                    {!item.snapshotCaptured ? ' (pending)' : ''}
                   </div>
                 ))}
               </div>
@@ -780,55 +751,6 @@ export default function SubmittalDetailDrawer({
             </div>
           )}
 
-          {canRecordExternalReview && (
-            <Form<ReviewFormValues>
-              form={leadForm}
-              layout="vertical"
-              className="erp-drawer-form mt-4"
-              initialValues={{ status: 'APPROVED' }}
-              onFinish={(values: ReviewFormValues) =>
-                void handleExternalReview(values)
-              }
-            >
-              <Form.Item
-                label="Review outcome"
-                name="status"
-                rules={[{ required: true, message: 'Select review outcome' }]}
-              >
-                <Radio.Group
-                  options={SUBMITTAL_WORKFLOW.filter((step) =>
-                    [
-                      'UNDER_REVIEW',
-                      'APPROVED',
-                      'APPROVED_WITH_COMMENTS',
-                      'REVISE_AND_RESUBMIT',
-                      'REJECTED',
-                    ].includes(step.key),
-                  ).map((step) => ({
-                    value: step.key,
-                    label: step.label,
-                  }))}
-                />
-              </Form.Item>
-              <Form.Item
-                label="Comments"
-                name="comments"
-                rules={[
-                  { required: true, message: 'Enter review comments' },
-                ]}
-              >
-                <Input.TextArea rows={4} />
-              </Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={addReview.isPending}
-              >
-                Record review
-              </Button>
-            </Form>
-          )}
-
           {!canDesignerReview &&
             !canLeadApprove &&
             isConstruction &&
@@ -911,8 +833,13 @@ export default function SubmittalDetailDrawer({
             )}
           </section>
 
-          {isExternalRelease && submittalId && (
-            <SubmittalExternalReviewPanel submittalId={submittalId} />
+          {isExternalRelease && (
+            <Alert
+              type="info"
+              showIcon
+              className="mt-4"
+              title="External feedback is handled outside the system. Create an Issue, RFI, or Change Request to action any feedback received."
+            />
           )}
 
           {isExternalRelease &&
@@ -923,22 +850,29 @@ export default function SubmittalDetailDrawer({
                 type="primary"
                 loading={issueSubmittal.isPending}
                 onClick={() => {
-                  void issueSubmittal
-                    .mutateAsync({ projectId, submittalId })
-                    .then(() => {
-                      messageApi.success(
-                        'Submittal issued to external reviewers',
-                      );
-                      onUpdated();
-                      void submittalQuery.refetch();
-                    })
-                    .catch((error: unknown) => {
-                      notifyApiError(
-                        error,
-                        'Failed to issue submittal',
-                        messageApi,
-                      );
-                    });
+                  Modal.confirm({
+                    title: 'Issue this package?',
+                    content: `The document snapshots will be frozen. This cannot be undone. Issue to ${submittal.submittalPurpose === 'DISCIPLINE_SITE' ? 'construction site' : 'consultant'}?`,
+                    okText: 'Issue',
+                    cancelText: 'Cancel',
+                    onOk: () =>
+                      issueSubmittal
+                        .mutateAsync({ projectId, submittalId })
+                        .then(() => {
+                          messageApi.success(
+                            'Submittal issued to external reviewers',
+                          );
+                          onUpdated();
+                          void submittalQuery.refetch();
+                        })
+                        .catch((error: unknown) => {
+                          notifyApiError(
+                            error,
+                            'Failed to issue submittal',
+                            messageApi,
+                          );
+                        }),
+                  });
                 }}
               >
                 Issue to site / consultant

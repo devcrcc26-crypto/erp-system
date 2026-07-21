@@ -282,6 +282,9 @@ export class PermissionResolverService {
     // Discipline leader — Layer 3 enforces matching assignment
     granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_LOCK);
     granted.add(EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UNLOCK);
+    // Any FK role on the discipline/subtask — Layer 3 enforces matching assignment
+    granted.add(EpcWorkflowAction.SUBMITTAL_CREATE);
+    granted.add(EpcWorkflowAction.SUBMITTAL_ISSUE);
   }
 
   private grantReviewApprovalActions(

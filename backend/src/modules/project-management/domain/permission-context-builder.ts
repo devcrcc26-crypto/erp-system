@@ -129,6 +129,14 @@ const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
   EpcWorkflowAction.REVISION_TRIGGER,
   EpcWorkflowAction.REVISION_TRIGGER_CREATE,
+  EpcWorkflowAction.SUBMITTAL_CREATE,
+  EpcWorkflowAction.SUBMITTAL_ISSUE,
+]);
+
+/** Any FK role on the subtask/discipline may create or issue a submittal for it. */
+const SUBMITTAL_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
+  EpcWorkflowAction.SUBMITTAL_CREATE,
+  EpcWorkflowAction.SUBMITTAL_ISSUE,
 ]);
 
 /** Stage gates — action denied when project is in a locked design stage. */
@@ -302,6 +310,22 @@ export function evaluateDisciplineAssignmentLayer(
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
       reason: match ? undefined : 'User is not the primary discipline designer',
+    };
+  }
+
+  if (SUBMITTAL_ACTIONS.has(action)) {
+    const chain = resolveEffectiveChain(input);
+    const match =
+      userMatchesDesigner(userId, chain, input) ||
+      userMatchesSupportingDesigner(userId, chain, input) ||
+      userMatchesReviewer(userId, chain, input) ||
+      userMatchesDisciplineLead(userId, chain, input) ||
+      userMatchesChief(userId, chain, input) ||
+      userMatchesInstituteChief(userId, chain, input);
+    return {
+      layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+      verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,
+      reason: match ? undefined : 'User is not assigned to this discipline or subtask',
     };
   }
 

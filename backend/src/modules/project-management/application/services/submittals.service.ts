@@ -109,7 +109,20 @@ export class SubmittalsService {
     );
 
     const [rows, total] = await Promise.all([
-      this.prisma.submittal.findMany({ where, skip, take, orderBy }),
+      this.prisma.submittal.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          items: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              designPackage: { select: { packageCode: true, name: true } },
+            },
+          },
+        },
+      }),
       this.prisma.submittal.count({ where }),
     ]);
 
@@ -177,7 +190,12 @@ export class SubmittalsService {
     const row = await this.prisma.submittal.findFirst({
       where: activeOnly({ id: submittalId, projectId }),
       include: {
-        items: { orderBy: { sortOrder: 'asc' } },
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            designPackage: { select: { packageCode: true, name: true } },
+          },
+        },
         taskDiscipline: { select: { disciplineLeadUserId: true } },
       },
     });
@@ -937,7 +955,12 @@ export class SubmittalsService {
     }
 
     if (query.submittalPurpose) {
-      where.submittalPurpose = query.submittalPurpose;
+      const purposes = query.submittalPurpose
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean) as SubmittalPurpose[];
+      where.submittalPurpose =
+        purposes.length === 1 ? purposes[0] : { in: purposes };
     }
 
     if (query.search?.trim()) {
@@ -1016,9 +1039,9 @@ export class SubmittalsService {
   }
 
   private assertSubmittalIssuable(status: SubmittalStatus): void {
-    if (status !== SubmittalStatus.SUBMITTED) {
+    if (status !== SubmittalStatus.DRAFT) {
       throw new BadRequestException(
-        'Only submittals in SUBMITTED status can be issued.',
+        'Only DRAFT submittals can be issued.',
       );
     }
   }

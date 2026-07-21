@@ -229,12 +229,15 @@ export interface MappedSubmittal {
   issuedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: MappedSubmittalItem[];
 }
 
 export interface MappedSubmittalItem {
   id: string;
   submittalId: string;
   designPackageId: string;
+  packageCode: string | null;
+  packageName: string | null;
   itemType: SubmittalItem['itemType'];
   sortOrder: number;
   snapshotCaptured: boolean;
@@ -513,6 +516,7 @@ export interface MappedCloseoutDetail extends MappedCloseout {
 export function mapSubmittal(
   row: Submittal & {
     project?: { name: string; projectCode: string } | null;
+    items?: Parameters<typeof mapSubmittalItem>[0][];
   },
 ): MappedSubmittal {
   return {
@@ -541,14 +545,21 @@ export function mapSubmittal(
     issuedAt: toIsoString(row.issuedAt),
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+    items: row.items?.map(mapSubmittalItem),
   };
 }
 
-export function mapSubmittalItem(row: SubmittalItem): MappedSubmittalItem {
+export function mapSubmittalItem(
+  row: SubmittalItem & {
+    designPackage?: { packageCode: string; name: string } | null;
+  },
+): MappedSubmittalItem {
   return {
     id: row.id,
     submittalId: row.submittalId,
     designPackageId: row.designPackageId,
+    packageCode: row.designPackage?.packageCode ?? null,
+    packageName: row.designPackage?.name ?? null,
     itemType: row.itemType,
     sortOrder: row.sortOrder,
     snapshotCaptured: row.snapshotCaptured,

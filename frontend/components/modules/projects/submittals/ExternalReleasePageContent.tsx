@@ -24,7 +24,6 @@ import { useSubmittals } from '@/lib/query/submittals';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
-  isOverdue,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
@@ -72,15 +71,12 @@ export default function ExternalReleasePageContent({
       ...params,
       search: search.trim() || undefined,
       status: statusFilter,
+      submittalPurpose: purposeFilter ?? EXTERNAL_PURPOSES.join(','),
     },
     !permLoading && lens.canViewSubmittals,
   );
 
-  const submittals = (submittalsQuery.data?.data ?? []).filter((row) =>
-    EXTERNAL_PURPOSES.includes(row.submittalPurpose as SubmittalPurpose),
-  ).filter((row) =>
-    purposeFilter ? row.submittalPurpose === purposeFilter : true,
-  );
+  const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
 
   const columns: ColumnsType<Submittal> = useMemo(
@@ -106,10 +102,32 @@ export default function ExternalReleasePageContent({
         ellipsis: true,
       },
       {
+        title: 'Subtasks',
+        key: 'subtasks',
+        render: (_value: unknown, record) => {
+          const codes = (record.items ?? [])
+            .map((item) => item.packageCode)
+            .filter((code): code is string => Boolean(code));
+          if (codes.length === 0) {
+            return '—';
+          }
+          if (codes.length <= 2) {
+            return codes.join(', ');
+          }
+          return `${codes.slice(0, 2).join(', ')} +${codes.length - 2} more`;
+        },
+      },
+      {
         title: 'Recipient',
         dataIndex: 'submittalPurpose',
         key: 'submittalPurpose',
         render: (value: SubmittalPurpose | null) => formatPurpose(value),
+      },
+      {
+        title: 'Issued by',
+        key: 'issuedBy',
+        render: (_value: unknown, record) =>
+          record.submittedByName ?? record.submittedBy ?? '—',
       },
       {
         title: 'Status',
@@ -123,28 +141,10 @@ export default function ExternalReleasePageContent({
         ),
       },
       {
-        title: 'Issued',
+        title: 'Issued date',
         dataIndex: 'issuedAt',
         key: 'issuedAt',
         render: (value: string | null) => formatProjectDate(value),
-      },
-      {
-        title: 'Due',
-        dataIndex: 'dueDate',
-        key: 'dueDate',
-        render: (value: string | null, record) => (
-          <span
-            className={
-              isOverdue(value) &&
-              record.status !== 'APPROVED' &&
-              record.status !== 'REJECTED'
-                ? 'font-medium text-red-600'
-                : undefined
-            }
-          >
-            {formatProjectDate(value)}
-          </span>
-        ),
       },
     ],
     [],

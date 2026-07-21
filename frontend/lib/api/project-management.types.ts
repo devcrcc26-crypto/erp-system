@@ -424,12 +424,15 @@ export interface Submittal {
   issuedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: SubmittalItem[];
 }
 
 export interface SubmittalItem {
   id: string;
   submittalId: string;
   designPackageId: string;
+  packageCode: string | null;
+  packageName: string | null;
   itemType: 'DESIGN_PACKAGE';
   sortOrder: number;
   snapshotCaptured: boolean;
@@ -1190,7 +1193,8 @@ export type UpdateWarrantyRequest = Partial<CreateWarrantyRequest>;
 export interface PmListFilters {
   search?: string;
   status?: string;
-  submittalPurpose?: SubmittalPurpose;
+  /** Comma-separated list of SubmittalPurpose values to match any of. */
+  submittalPurpose?: string;
   linkedDesignPackageId?: string;
 }
 
