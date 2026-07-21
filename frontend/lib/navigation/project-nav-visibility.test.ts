@@ -41,11 +41,15 @@ describe('project-nav-visibility', () => {
     }
   });
 
-  it('discipline leader allowlist includes disciplines and submittals', () => {
+  it('discipline leader allowlist includes disciplines, submittals, and change requests', () => {
     const disciplines = flattenProjectNavItems().find((item) => item.key === 'disciplines');
     const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
+    const changeRequests = flattenProjectNavItems().find(
+      (item) => item.key === 'change-requests',
+    );
     expect(disciplines).toBeDefined();
     expect(submittals).toBeDefined();
+    expect(changeRequests).toBeDefined();
 
     const ctx = {
       pm: basePm({
@@ -63,6 +67,7 @@ describe('project-nav-visibility', () => {
 
     expect(canViewProjectNavItem(disciplines!, ctx)).toBe(true);
     expect(canViewProjectNavItem(submittals!, ctx)).toBe(true);
+    expect(canViewProjectNavItem(changeRequests!, ctx)).toBe(true);
   });
 
   it('FK-only discipline leader has project sidebar when allowlist is non-empty', () => {

@@ -16,6 +16,7 @@
     "myComments": "All My Comments",
     "myWork": "All My Work",
     "submittals": "Submittals",
+    "changeRequests": "Change Requests",
     "departments": "Departments",
     "positions": "Positions",
     "disciplinesCatalog": "Disciplines",
@@ -109,6 +110,13 @@
       "projectName": "Project",
       "empty": "No submittals relevant to you.",
       "noAccess": "You do not have access to construction submittals."
+    },
+    "globalChangeRequests": {
+      "title": "Change Requests",
+      "description": "Review and manage change requests by project.",
+      "projectPlaceholder": "Select project",
+      "noProjects": "No projects available. Open a project to work on change requests.",
+      "noAccess": "You do not have access to change requests."
     },
     "reviewMode": {
       "title": "Review Mode",

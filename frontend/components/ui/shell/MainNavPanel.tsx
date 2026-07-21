@@ -20,6 +20,7 @@ import {
   useCanViewMyComments,
   useCanViewMyWork,
   useCanViewReviewInbox,
+  useCanViewChangeRequests,
   useCanViewSubmittals,
   useEpcCapabilities,
   usePermissionsLoading,
@@ -188,6 +189,7 @@ export default function MainNavPanel({
   const canViewMyComments = useCanViewMyComments();
   const canViewMyWork = useCanViewMyWork();
   const canViewSubmittals = useCanViewSubmittals();
+  const canViewChangeRequests = useCanViewChangeRequests();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
@@ -200,6 +202,7 @@ export default function MainNavPanel({
     canViewMyComments: !permLoading && canViewMyComments,
     canViewMyWork: !permLoading && canViewMyWork,
     canViewSubmittals: !permLoading && canViewSubmittals,
+    canViewChangeRequests: !permLoading && canViewChangeRequests,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,

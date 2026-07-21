@@ -33,12 +33,16 @@ export function isProjectNavReady(
 }
 
 /** Project nav keys for discipline leaders (union can widen). */
-const DISCIPLINE_LEADER_PROJECT_KEYS = new Set(['disciplines', 'submittals']);
+const DISCIPLINE_LEADER_PROJECT_KEYS = new Set([
+  'disciplines',
+  'submittals',
+  'change-requests',
+]);
 
 /** Reviewer / dept·inst chief (and multi-role union with designer). */
 const REVIEWER_TIER_PROJECT_KEYS = new Set<string>();
 
-const DESIGNER_PROJECT_KEYS = new Set(['submittals']);
+const DESIGNER_PROJECT_KEYS = new Set(['submittals', 'change-requests']);
 
 const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
@@ -167,7 +171,7 @@ export function canViewProjectNavItem(
     return Boolean(cap?.canView || cap?.canEdit);
   }
 
-  if (item.key === 'submittals') {
+  if (item.key === 'submittals' || item.key === 'change-requests') {
     if (ctx.epc.navDisciplineLeader || ctx.epc.navDesigner) {
       return true;
     }
@@ -213,6 +217,7 @@ const GLOBAL_DEPT_LEADER = new Set([
   '/review-inbox',
   '/my-comments',
   '/submittals',
+  '/change-requests',
   '/kanban-board',
   '/reports',
 ]);
@@ -223,6 +228,7 @@ const GLOBAL_DISCIPLINE_LEADER = new Set([
   '/review-inbox',
   '/my-comments',
   '/submittals',
+  '/change-requests',
 ]);
 
 const GLOBAL_REVIEWER = new Set([
@@ -232,7 +238,13 @@ const GLOBAL_REVIEWER = new Set([
   '/my-comments',
 ]);
 
-const GLOBAL_DESIGNER = new Set(['/', '/my-work', '/my-comments', '/submittals']);
+const GLOBAL_DESIGNER = new Set([
+  '/',
+  '/my-work',
+  '/my-comments',
+  '/submittals',
+  '/change-requests',
+]);
 
 const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 
@@ -243,7 +255,7 @@ const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 export function canViewGlobalNavKey(
   key: string,
   epc: EpcCapabilities,
-  pm?: Pick<PmCapabilities, 'submittals'> | null,
+  pm?: Pick<PmCapabilities, 'submittals' | 'change_requests'> | null,
 ): boolean {
   if (epc.navFullAccess) {
     return true;
@@ -255,6 +267,14 @@ export function canViewGlobalNavKey(
       epc.navDesigner ||
       epc.navDisciplineLeader ||
       (pm?.submittals.canView ?? false)
+    );
+  }
+
+  if (key === '/change-requests') {
+    return (
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.change_requests.canView ?? false)
     );
   }
 

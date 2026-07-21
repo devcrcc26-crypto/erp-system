@@ -84,6 +84,19 @@ export function useCanViewSubmittals(): boolean {
 }
 
 /**
+ * Global change requests — designer / discipline-lead personas or PM module view.
+ */
+export function useCanViewChangeRequests(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  return (
+    epc.navDesigner ||
+    epc.navDisciplineLeader ||
+    pm.change_requests.canView
+  );
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {
