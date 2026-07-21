@@ -66,7 +66,7 @@ export class SubmittalsController {
   }
 
   @Post('design-package')
-  @RequirePermission('submittals', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create design-package submittal (DRAFT)' })
   createDesign(
     @CurrentUser() user: AuthenticatedUser,
@@ -117,7 +117,7 @@ export class SubmittalsController {
   }
 
   @Post(':id/issue')
-  @RequirePermission('submittals', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Issue submittal - freeze package snapshots' })
   issue(
     @CurrentUser() user: AuthenticatedUser,
