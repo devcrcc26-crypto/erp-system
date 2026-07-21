@@ -5,11 +5,12 @@ import { Button } from 'antd';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
 import type { MyWorkItem } from '@/lib/api/epc.types';
+import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 import { subtaskStatusDisplay, workItemHref } from './my-work-helpers';
 
 /**
- * One subtask (design package) row — used both nested under a DisciplineGroup
- * and standalone in the "Other subtasks" section.
+ * One subtask (design package) table row — used both nested under a
+ * MyWorkDisciplineGroup and standalone in the "Other subtasks" section.
  */
 export default function MyWorkSubtaskRow({
   item,
@@ -20,48 +21,56 @@ export default function MyWorkSubtaskRow({
 }): React.ReactNode {
   const status = subtaskStatusDisplay(item);
   const subCode = [item.packageCode, item.subtaskId].filter(Boolean).join(' · ');
+  const indentClass = indented ? 'pl-10' : 'pl-4';
 
   return (
-    <div className="bg-white">
-      <div
-        className={`flex flex-wrap items-center gap-3 px-4 py-3 ${indented ? 'pl-10' : ''}`}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-slate-900">
+    <>
+      <tr className="border-t border-[var(--color-border-tertiary)] hover:bg-slate-50">
+        <td className={`px-4 py-3 ${indentClass}`}>
+          <div className="text-sm font-medium text-slate-900">
             {item.subtaskName ?? '—'}
           </div>
           <div className="text-xs text-slate-500">{subCode || '—'}</div>
-        </div>
-
-        <div className="w-44 shrink-0 text-xs text-slate-600">
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-700">{item.projectName}</td>
+        <td className="px-4 py-3 text-sm text-slate-500">
+          {item.overseasTaskNumber ?? item.taskIdCode ?? '—'}
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-500">
+          {item.disciplineName}
+          {item.disciplineIndex != null
+            ? ` (${formatDisciplineNumber(item.disciplineIndex)})`
+            : ''}
+        </td>
+        <td className="px-4 py-3 text-sm text-slate-700">
           {item.roleLabel ?? '—'}
-        </div>
-
-        <div className="w-28 shrink-0">
+        </td>
+        <td className="px-4 py-3">
           {status ? (
             <StatusBadge label={status.label} variant={status.variant} />
           ) : (
             <span className="text-xs text-slate-400">—</span>
           )}
-        </div>
-
-        <Link href={workItemHref(item)} className="shrink-0">
-          <Button type="link" className="!px-0" size="small">
-            Open
-          </Button>
-        </Link>
-      </div>
+        </td>
+        <td className="px-4 py-3 text-right">
+          <Link href={workItemHref(item)}>
+            <Button size="small">Open</Button>
+          </Link>
+        </td>
+      </tr>
 
       {item.designPackageId ? (
-        <div className={`px-4 pb-3 ${indented ? 'pl-10' : ''}`}>
-          <ApprovedCrRevisionBanner
-            projectId={item.projectId}
-            designPackageId={item.designPackageId}
-            packageStatus={item.packageStatus}
-            embedDrawer
-          />
-        </div>
+        <tr>
+          <td colSpan={7} className={`px-4 pb-2 ${indentClass}`}>
+            <ApprovedCrRevisionBanner
+              projectId={item.projectId}
+              designPackageId={item.designPackageId}
+              packageStatus={item.packageStatus}
+              embedDrawer
+            />
+          </td>
+        </tr>
       ) : null}
-    </div>
+    </>
   );
 }

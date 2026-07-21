@@ -6,7 +6,6 @@ import { Alert, Button, Select, Switch } from 'antd';
 import { CheckSquare } from 'lucide-react';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import type {
@@ -24,13 +23,20 @@ import MyWorkDisciplineGroup from './MyWorkDisciplineGroup';
 import MyWorkSubtaskRow from './MyWorkSubtaskRow';
 import {
   KIND_LABELS,
-  KIND_VARIANTS,
   STATUS_FILTER_OPTIONS,
   compareWorkItems,
   matchesSearch,
-  projectLabel,
   workItemHref,
 } from './my-work-helpers';
+
+const TABLE_HEADERS = [
+  'Subtask',
+  'Project',
+  'Task',
+  'Discipline',
+  'Your role',
+  'Status',
+];
 
 export default function MyWorkPageContent({
   projectId,
@@ -204,68 +210,94 @@ export default function MyWorkPageContent({
           title="No work assigned to you yet."
         />
       ) : (
-        <div className="flex flex-col gap-6">
-          {groupedData.responsiblePersonItems.length > 0 ? (
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-slate-600">
-                Responsible tasks
-              </h3>
-              <div className="divide-y divide-[var(--color-border-tertiary)] overflow-hidden rounded-[12px] border border-[var(--color-border-tertiary)] bg-white">
-                {groupedData.responsiblePersonItems.map((item) => (
-                  <div
-                    key={item.taskId}
-                    className="flex flex-wrap items-center gap-3 px-4 py-3"
+        <div className="overflow-hidden rounded-[12px] border border-[var(--color-border-tertiary)]">
+          <table className="w-full border-collapse text-left">
+            <thead className="border-b border-[var(--color-border-tertiary)] bg-slate-50">
+              <tr>
+                {TABLE_HEADERS.map((header) => (
+                  <th
+                    key={header}
+                    className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate-500"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-slate-900">
-                        {item.taskName}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {(item.overseasTaskNumber ?? item.taskIdCode) || '—'}
-                        {' · '}
-                        {projectLabel(item)}
-                      </div>
-                    </div>
-                    <StatusBadge
-                      label={KIND_LABELS.RESPONSIBLE_PERSON}
-                      variant={KIND_VARIANTS.RESPONSIBLE_PERSON}
+                    {header}
+                  </th>
+                ))}
+                <th className="px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {groupedData.responsiblePersonItems.length > 0 ? (
+                <>
+                  <tr className="border-t-2 border-[var(--color-border-tertiary)] bg-slate-50">
+                    <td colSpan={7} className="px-4 py-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Responsible tasks
+                      </span>
+                    </td>
+                  </tr>
+                  {groupedData.responsiblePersonItems.map((item) => (
+                    <tr
+                      key={item.taskId}
+                      className="border-t border-[var(--color-border-tertiary)] hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3 pl-4">
+                        <div className="text-sm font-medium text-slate-900">
+                          {item.taskName}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {(item.overseasTaskNumber ?? item.taskIdCode) || '—'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-700">
+                        {item.projectName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
+                        {item.overseasTaskNumber ?? item.taskIdCode ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-500">—</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">
+                        {KIND_LABELS.RESPONSIBLE_PERSON}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-400">—</td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={workItemHref(item)}>
+                          <Button size="small">Open</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              ) : null}
+
+              {groupedData.disciplineGroups.map(({ lead, subtasks }) => (
+                <MyWorkDisciplineGroup
+                  key={`${lead.taskDisciplineId}:${showSubtasks}`}
+                  lead={lead}
+                  subtasks={subtasks}
+                  defaultExpanded={showSubtasks}
+                  onAddSubtask={setAddSubtaskFor}
+                />
+              ))}
+
+              {groupedData.orphanSubtasks.length > 0 ? (
+                <>
+                  <tr className="border-t-2 border-[var(--color-border-tertiary)] bg-slate-50">
+                    <td colSpan={7} className="px-4 py-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Other subtasks
+                      </span>
+                    </td>
+                  </tr>
+                  {groupedData.orphanSubtasks.map((item) => (
+                    <MyWorkSubtaskRow
+                      key={item.designPackageId ?? `${item.taskDisciplineId}-${item.subtaskId}`}
+                      item={item}
                     />
-                    <Link href={workItemHref(item)}>
-                      <Button type="link" className="!px-0" size="small">
-                        Open
-                      </Button>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {groupedData.disciplineGroups.map(({ lead, subtasks }) => (
-            <MyWorkDisciplineGroup
-              key={`${lead.taskDisciplineId}:${showSubtasks}`}
-              lead={lead}
-              subtasks={subtasks}
-              defaultExpanded={showSubtasks}
-              onAddSubtask={setAddSubtaskFor}
-            />
-          ))}
-
-          {groupedData.orphanSubtasks.length > 0 ? (
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-slate-600">
-                Other subtasks
-              </h3>
-              <div className="divide-y divide-[var(--color-border-tertiary)] overflow-hidden rounded-[12px] border border-[var(--color-border-tertiary)] bg-white">
-                {groupedData.orphanSubtasks.map((item) => (
-                  <MyWorkSubtaskRow
-                    key={item.designPackageId ?? `${item.taskDisciplineId}-${item.subtaskId}`}
-                    item={item}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
+                  ))}
+                </>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       )}
 

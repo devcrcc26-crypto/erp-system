@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { Button } from 'antd';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { MyWorkItem } from '@/lib/api/epc.types';
-import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
+import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 import MyWorkSubtaskRow from './MyWorkSubtaskRow';
-import { projectLabel, workItemHref } from './my-work-helpers';
+import { workItemHref } from './my-work-helpers';
+
+const TOTAL_COLUMNS = 7;
 
 /**
- * A discipline the user leads, collapsed/expanded, with its subtasks nested inside.
+ * A discipline the user leads, rendered as a header <tr> (spanning the
+ * table) followed by its subtasks' <tr>s, collapsible independently.
  */
 export default function MyWorkDisciplineGroup({
   lead,
@@ -27,71 +30,75 @@ export default function MyWorkDisciplineGroup({
   const taskCode = lead.overseasTaskNumber ?? lead.taskIdCode;
 
   return (
-    <div className="overflow-hidden rounded-[12px] border border-[var(--color-border-tertiary)] bg-white">
-      <div
-        role="button"
-        tabIndex={0}
-        className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-4 py-3 cursor-pointer"
+    <>
+      <tr
+        className="cursor-pointer border-t-2 border-[var(--color-border-tertiary)] bg-slate-50 hover:bg-slate-100"
         onClick={() => setExpanded((prev) => !prev)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            setExpanded((prev) => !prev);
-          }
-        }}
       >
-        <div className="flex min-w-0 items-center gap-3">
-          {expanded ? (
-            <ChevronDown size={16} className="shrink-0 text-slate-400" />
-          ) : (
-            <ChevronRight size={16} className="shrink-0 text-slate-400" />
-          )}
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-slate-900">
-              {formatDisciplineLabel(lead.disciplineIndex)} — {lead.disciplineName}
-            </div>
-            <div className="truncate text-xs text-slate-500">
-              {lead.taskName}
-              {taskCode ? ` (${taskCode})` : ''}
+        <td colSpan={5} className="px-4 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              aria-label={expanded ? 'Collapse discipline' : 'Expand discipline'}
+              className="flex shrink-0 items-center justify-center text-slate-400"
+              onClick={(event) => {
+                event.stopPropagation();
+                setExpanded((prev) => !prev);
+              }}
+            >
+              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            <span className="text-sm font-semibold text-slate-900">
+              {lead.disciplineName}
+            </span>
+            <span className="text-xs text-slate-500">
+              {taskCode}
+              {lead.disciplineIndex != null
+                ? ` · Disc ${formatDisciplineNumber(lead.disciplineIndex)}`
+                : ''}
               {' · '}
-              {projectLabel(lead)}
-            </div>
+              {lead.projectName}
+            </span>
+            <span className="ml-2 text-xs text-slate-500">
+              ({subtasks.length} subtask{subtasks.length === 1 ? '' : 's'})
+            </span>
           </div>
-        </div>
-
-        <div
-          className="flex shrink-0 items-center gap-3"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span className="text-xs text-slate-500">
-            {subtasks.length} subtask{subtasks.length === 1 ? '' : 's'}
-          </span>
-          <Link href={workItemHref(lead)}>
-            <Button size="small">Open</Button>
-          </Link>
-          <Button size="small" onClick={() => onAddSubtask(lead.taskDisciplineId)}>
-            Add subtask
-          </Button>
-        </div>
-      </div>
+        </td>
+        <td className="px-4 py-2 text-right" colSpan={2}>
+          <div
+            className="flex items-center justify-end gap-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Link href={workItemHref(lead)}>
+              <Button size="small">Open</Button>
+            </Link>
+            <Button size="small" onClick={() => onAddSubtask(lead.taskDisciplineId)}>
+              Add subtask
+            </Button>
+          </div>
+        </td>
+      </tr>
 
       {expanded ? (
-        <div className="divide-y divide-[var(--color-border-tertiary)]">
-          {subtasks.length === 0 ? (
-            <div className="px-6 py-4 text-sm italic text-slate-500">
+        subtasks.length === 0 ? (
+          <tr>
+            <td
+              colSpan={TOTAL_COLUMNS}
+              className="border-t border-[var(--color-border-tertiary)] px-4 py-3 pl-10 text-sm italic text-slate-500"
+            >
               No subtasks yet.
-            </div>
-          ) : (
-            subtasks.map((item) => (
-              <MyWorkSubtaskRow
-                key={item.designPackageId ?? `${item.taskDisciplineId}-${item.subtaskId}`}
-                item={item}
-                indented
-              />
-            ))
-          )}
-        </div>
+            </td>
+          </tr>
+        ) : (
+          subtasks.map((item) => (
+            <MyWorkSubtaskRow
+              key={item.designPackageId ?? `${item.taskDisciplineId}-${item.subtaskId}`}
+              item={item}
+              indented
+            />
+          ))
+        )
       ) : null}
-    </div>
+    </>
   );
 }
