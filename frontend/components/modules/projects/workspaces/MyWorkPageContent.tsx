@@ -2,16 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Button, Card, Divider, Empty, Pagination, Select, Space, Switch } from 'antd';
+import { Alert, Button, Select, Space, Switch } from 'antd';
+import { CheckSquare } from 'lucide-react';
+import type { ColumnsType } from 'antd/es/table';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
+import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
 import type {
   DesignPackageProjectedStatus,
   DesignPackageStatus,
   MyWorkItem,
+  MyWorkItemKind,
 } from '@/lib/api/epc.types';
 import { useMyWork } from '@/lib/query/epc-workspace';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -19,6 +25,7 @@ import {
   useCanViewMyWork,
   usePermissionsLoading,
 } from '@/hooks/use-pm-capabilities';
+import { layout } from '@/lib/theme/layout';
 import {
   reviewModeHref,
   scheduleDisciplineWorkspaceHref,
@@ -31,9 +38,6 @@ import {
   PROJECTED_STATUS_VARIANTS,
 } from '@/lib/utils/epc-display';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
-import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
-
-const TASKS_PER_PAGE = 20;
 
 const PROJECTED_STATUS_OPTIONS: DesignPackageProjectedStatus[] = [
   'IN_PROGRESS',
@@ -55,18 +59,23 @@ const REVIEWER_TIER_ROLES = new Set([
   'INSTITUTE_CHIEF',
 ]);
 
-interface TaskWorkGroup {
-  taskId: string;
-  taskName: string;
-  taskIdCode: string;
-  overseasTaskNumber: string | null;
-  projectId: string;
-  projectName: string;
-  projectNumber: string;
-  responsiblePersonItem: MyWorkItem | null;
-  disciplineLeadItems: MyWorkItem[];
-  subtaskItems: MyWorkItem[];
-}
+const KIND_LABELS: Record<MyWorkItemKind, string> = {
+  RESPONSIBLE_PERSON: 'Task lead',
+  DISCIPLINE_LEAD: 'Discipline lead',
+  SUBTASK_ROLE: 'Subtask',
+};
+
+const KIND_VARIANTS: Record<MyWorkItemKind, StatusBadgeVariant> = {
+  RESPONSIBLE_PERSON: 'info',
+  DISCIPLINE_LEAD: 'orange',
+  SUBTASK_ROLE: 'default',
+};
+
+const KIND_SORT_ORDER: Record<MyWorkItemKind, number> = {
+  RESPONSIBLE_PERSON: 0,
+  DISCIPLINE_LEAD: 1,
+  SUBTASK_ROLE: 2,
+};
 
 function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'DISCIPLINE_LEAD') {
@@ -83,7 +92,11 @@ function workItemHref(item: MyWorkItem): string {
   if (item.kind === 'SUBTASK_ROLE' && item.designPackageId) {
     if (item.primaryRole && REVIEWER_TIER_ROLES.has(item.primaryRole)) {
       if (item.packageStatus === 'SUBMITTED') {
-        return reviewModeHref(item.projectId, item.taskDisciplineId, item.designPackageId);
+        return reviewModeHref(
+          item.projectId,
+          item.taskDisciplineId,
+          item.designPackageId,
+        );
       }
       return scheduleSubtaskWorkspaceHref(
         item.projectId,
@@ -101,70 +114,61 @@ function workItemHref(item: MyWorkItem): string {
   return '/my-work';
 }
 
-function compareDisciplineIndex(left: MyWorkItem, right: MyWorkItem): number {
-  const leftIndex = left.disciplineIndex ?? Number.MAX_SAFE_INTEGER;
-  const rightIndex = right.disciplineIndex ?? Number.MAX_SAFE_INTEGER;
-  return leftIndex - rightIndex;
+function rowKey(item: MyWorkItem): string {
+  return [
+    item.kind,
+    item.projectId,
+    item.taskId,
+    item.taskDisciplineId,
+    item.designPackageId ?? '',
+    item.primaryRole ?? '',
+  ].join(':');
 }
 
-function compareSubtaskId(left: MyWorkItem, right: MyWorkItem): number {
-  const leftCode = left.subtaskId ?? left.packageCode ?? '';
-  const rightCode = right.subtaskId ?? right.packageCode ?? '';
-  return leftCode.localeCompare(rightCode);
-}
-
-function groupItemsByTask(items: MyWorkItem[]): TaskWorkGroup[] {
-  const groups = new Map<string, TaskWorkGroup>();
-
-  for (const item of items) {
-    let group = groups.get(item.taskId);
-    if (!group) {
-      group = {
-        taskId: item.taskId,
-        taskName: item.taskName,
-        taskIdCode: item.taskIdCode,
-        overseasTaskNumber: item.overseasTaskNumber,
-        projectId: item.projectId,
-        projectName: item.projectName,
-        projectNumber: item.projectNumber,
-        responsiblePersonItem: null,
-        disciplineLeadItems: [],
-        subtaskItems: [],
-      };
-      groups.set(item.taskId, group);
-    }
-
-    if (item.kind === 'RESPONSIBLE_PERSON') {
-      group.responsiblePersonItem = item;
-    } else if (item.kind === 'DISCIPLINE_LEAD') {
-      group.disciplineLeadItems.push(item);
-    } else if (item.kind === 'SUBTASK_ROLE') {
-      group.subtaskItems.push(item);
-    }
+function compareWorkItems(left: MyWorkItem, right: MyWorkItem): number {
+  const projectCompare = left.projectName.localeCompare(right.projectName);
+  if (projectCompare !== 0) {
+    return projectCompare;
   }
-
-  return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      disciplineLeadItems: [...group.disciplineLeadItems].sort(compareDisciplineIndex),
-      subtaskItems: [...group.subtaskItems].sort(compareSubtaskId),
-    }))
-    .sort((left, right) => {
-      const projectCompare = left.projectName.localeCompare(right.projectName);
-      if (projectCompare !== 0) {
-        return projectCompare;
-      }
-      return left.taskName.localeCompare(right.taskName);
-    });
+  const taskCompare = left.taskName.localeCompare(right.taskName);
+  if (taskCompare !== 0) {
+    return taskCompare;
+  }
+  const kindCompare = KIND_SORT_ORDER[left.kind] - KIND_SORT_ORDER[right.kind];
+  if (kindCompare !== 0) {
+    return kindCompare;
+  }
+  const leftDiscipline = left.disciplineIndex ?? Number.MAX_SAFE_INTEGER;
+  const rightDiscipline = right.disciplineIndex ?? Number.MAX_SAFE_INTEGER;
+  if (leftDiscipline !== rightDiscipline) {
+    return leftDiscipline - rightDiscipline;
+  }
+  const leftSubtask = left.subtaskId ?? left.packageCode ?? '';
+  const rightSubtask = right.subtaskId ?? right.packageCode ?? '';
+  return leftSubtask.localeCompare(rightSubtask);
 }
 
-function matchesCardSearch(group: TaskWorkGroup, term: string): boolean {
+function matchesSearch(item: MyWorkItem, term: string): boolean {
   if (!term) {
     return true;
   }
-  const taskName = group.taskName.toLowerCase();
-  const projectName = group.projectName.toLowerCase();
-  return taskName.includes(term) || projectName.includes(term);
+  const haystack = [
+    item.projectName,
+    item.projectNumber,
+    item.taskName,
+    item.taskIdCode,
+    item.overseasTaskNumber,
+    item.disciplineName,
+    item.subtaskName,
+    item.subtaskId,
+    item.packageCode,
+    item.roleLabel,
+    KIND_LABELS[item.kind],
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(term);
 }
 
 function subtaskStatusDisplay(
@@ -173,7 +177,9 @@ function subtaskStatusDisplay(
   if (item.projectedStatus) {
     const status = item.projectedStatus as DesignPackageProjectedStatus;
     return {
-      label: PROJECTED_STATUS_LABELS[status] ?? item.projectedStatus.replace(/_/g, ' '),
+      label:
+        PROJECTED_STATUS_LABELS[status] ??
+        item.projectedStatus.replace(/_/g, ' '),
       variant: PROJECTED_STATUS_VARIANTS[status] ?? 'info',
     };
   }
@@ -189,151 +195,11 @@ function subtaskStatusDisplay(
   return null;
 }
 
-function disciplineHeading(item: MyWorkItem): string {
+function disciplineLabel(item: MyWorkItem): string {
+  if (item.kind === 'RESPONSIBLE_PERSON') {
+    return '—';
+  }
   return `Discipline ${formatDisciplineNumber(item.disciplineIndex)} — ${item.disciplineName}`;
-}
-
-function ResponsiblePersonSection({ item }: { item: MyWorkItem }): React.ReactNode {
-  return (
-    <>
-      <Divider className="!my-4" />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <StatusBadge label="Responsible person" variant="info" />
-          <p className="mt-2 text-xs text-slate-500">
-            Read-only access to all subtasks and documents
-          </p>
-        </div>
-        <Link href={workItemHref(item)}>
-          <Button type="link" className="!px-0">
-            Open task →
-          </Button>
-        </Link>
-      </div>
-    </>
-  );
-}
-
-function DisciplineLeadSection({
-  item,
-  onAddSubtask,
-}: {
-  item: MyWorkItem;
-  onAddSubtask: (taskDisciplineId: string) => void;
-}): React.ReactNode {
-  const subtaskCount = item.subtaskCount ?? 0;
-
-  return (
-    <>
-      <Divider className="!my-4" />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-medium text-slate-900">{disciplineHeading(item)}</p>
-          <p className="text-xs text-slate-500">You lead this discipline</p>
-          <p className="text-xs text-slate-500">
-            {subtaskCount} subtask{subtaskCount === 1 ? '' : 's'}
-          </p>
-        </div>
-        <Space wrap>
-          <Link href={scheduleDisciplineWorkspaceHref(item.projectId, item.taskDisciplineId)}>
-            <Button>View discipline</Button>
-          </Link>
-          <Button type="primary" onClick={() => onAddSubtask(item.taskDisciplineId)}>
-            Add subtask
-          </Button>
-        </Space>
-      </div>
-    </>
-  );
-}
-
-function SubtaskRoleSection({ item }: { item: MyWorkItem }): React.ReactNode {
-  const subtaskCode = item.subtaskId ?? item.packageCode;
-  const status = subtaskStatusDisplay(item);
-
-  return (
-    <>
-      <Divider className="!my-4" />
-      {item.designPackageId ? (
-        <ApprovedCrRevisionBanner
-          projectId={item.projectId}
-          designPackageId={item.designPackageId}
-          packageStatus={item.packageStatus}
-          embedDrawer
-        />
-      ) : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs text-slate-500">{disciplineHeading(item)}</p>
-          <p className="font-medium text-slate-900">{item.subtaskName}</p>
-          {subtaskCode ? <p className="text-xs text-slate-500">{subtaskCode}</p> : null}
-          {item.roleLabel ? (
-            <p className="text-xs text-slate-500">Your role: {item.roleLabel}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          {status ? <StatusBadge label={status.label} variant={status.variant} /> : null}
-          <Link href={workItemHref(item)}>
-            <Button type="link" className="!px-0">
-              Open →
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function TaskWorkCard({
-  group,
-  showSubtasks,
-  onAddSubtask,
-}: {
-  group: TaskWorkGroup;
-  showSubtasks: boolean;
-  onAddSubtask: (taskDisciplineId: string) => void;
-}): React.ReactNode {
-  const taskCode = group.overseasTaskNumber ?? group.taskIdCode;
-
-  return (
-    <Card
-      size="small"
-      className="border border-slate-200 shadow-sm"
-      styles={{ body: { padding: '16px 20px' } }}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-base font-semibold text-slate-900">{group.taskName}</p>
-          {taskCode ? <p className="text-xs text-slate-500">{taskCode}</p> : null}
-        </div>
-        <div className="sm:text-right">
-          <p className="font-medium text-slate-900">{group.projectName}</p>
-          <p className="text-xs text-slate-500">{group.projectNumber}</p>
-        </div>
-      </div>
-
-      {group.responsiblePersonItem ? (
-        <ResponsiblePersonSection item={group.responsiblePersonItem} />
-      ) : null}
-
-      {group.disciplineLeadItems.map((item) => (
-        <DisciplineLeadSection
-          key={item.taskDisciplineId}
-          item={item}
-          onAddSubtask={onAddSubtask}
-        />
-      ))}
-
-      {showSubtasks
-        ? group.subtaskItems.map((item) => (
-            <SubtaskRoleSection
-              key={item.designPackageId ?? item.taskDisciplineId}
-              item={item}
-            />
-          ))
-        : null}
-    </Card>
-  );
 }
 
 export default function MyWorkPageContent({
@@ -352,7 +218,6 @@ export default function MyWorkPageContent({
     DesignPackageProjectedStatus | undefined
   >();
   const [showSubtasks, setShowSubtasks] = useState(true);
-  const [page, setPage] = useState(1);
 
   const allItems = workQuery.data ?? [];
 
@@ -366,42 +231,156 @@ export default function MyWorkPageContent({
       .sort((left, right) => left.label.localeCompare(right.label));
   }, [allItems]);
 
-  const filteredItems = useMemo(() => {
-    return allItems.filter((item) => {
-      if (!showSubtasks && item.kind === 'SUBTASK_ROLE') {
-        return false;
-      }
-      if (projectFilter && item.projectId !== projectFilter) {
-        return false;
-      }
-      if (statusFilter && item.projectedStatus !== statusFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [allItems, projectFilter, showSubtasks, statusFilter]);
-
-  const taskGroups = useMemo(() => {
+  const tableRows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const groups = groupItemsByTask(filteredItems);
-    return groups.filter((group) => matchesCardSearch(group, term));
-  }, [filteredItems, search]);
+    return allItems
+      .filter((item) => {
+        if (!showSubtasks && item.kind === 'SUBTASK_ROLE') {
+          return false;
+        }
+        if (projectFilter && item.projectId !== projectFilter) {
+          return false;
+        }
+        if (statusFilter && item.projectedStatus !== statusFilter) {
+          return false;
+        }
+        return matchesSearch(item, term);
+      })
+      .sort(compareWorkItems);
+  }, [allItems, projectFilter, search, showSubtasks, statusFilter]);
 
-  const paginatedGroups = useMemo(() => {
-    const start = (page - 1) * TASKS_PER_PAGE;
-    return taskGroups.slice(start, start + TASKS_PER_PAGE);
-  }, [page, taskGroups]);
+  const columns: ColumnsType<MyWorkItem> = useMemo(() => {
+    const cols: ColumnsType<MyWorkItem> = [];
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, projectFilter, statusFilter, showSubtasks, projectId]);
-
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(taskGroups.length / TASKS_PER_PAGE));
-    if (page > maxPage) {
-      setPage(maxPage);
+    if (!projectId) {
+      cols.push({
+        title: 'Project',
+        key: 'project',
+        render: (_: unknown, record) => {
+          const code = record.projectNumber?.trim();
+          const name = record.projectName?.trim();
+          if (code && name) {
+            return `${code} — ${name}`;
+          }
+          return name || code || '—';
+        },
+      });
     }
-  }, [page, taskGroups.length]);
+
+    cols.push(
+      {
+        title: 'Task',
+        key: 'task',
+        render: (_: unknown, record) => {
+          const code = record.overseasTaskNumber ?? record.taskIdCode;
+          return (
+            <div>
+              <div className="font-medium text-slate-900">{record.taskName}</div>
+              {code ? (
+                <div className="text-xs text-slate-500">{code}</div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Type',
+        dataIndex: 'kind',
+        key: 'kind',
+        width: 140,
+        render: (kind: MyWorkItemKind) => (
+          <StatusBadge
+            label={KIND_LABELS[kind]}
+            variant={KIND_VARIANTS[kind]}
+          />
+        ),
+      },
+      {
+        title: 'Discipline',
+        key: 'discipline',
+        ellipsis: true,
+        render: (_: unknown, record) => disciplineLabel(record),
+      },
+      {
+        title: 'Subtask',
+        key: 'subtask',
+        render: (_: unknown, record) => {
+          if (record.kind !== 'SUBTASK_ROLE') {
+            if (record.kind === 'DISCIPLINE_LEAD') {
+              const count = record.subtaskCount ?? 0;
+              return (
+                <span className="text-xs text-slate-500">
+                  {count} subtask{count === 1 ? '' : 's'}
+                </span>
+              );
+            }
+            return '—';
+          }
+          const code = record.subtaskId ?? record.packageCode;
+          return (
+            <div>
+              <div className="font-medium text-slate-900">
+                {record.subtaskName ?? '—'}
+              </div>
+              {code ? (
+                <div className="text-xs text-slate-500">{code}</div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Your role',
+        dataIndex: 'roleLabel',
+        key: 'role',
+        render: (value: string | null) => value ?? '—',
+      },
+      {
+        title: 'Status',
+        key: 'status',
+        width: 140,
+        render: (_: unknown, record) => {
+          const status = subtaskStatusDisplay(record);
+          return status ? (
+            <StatusBadge label={status.label} variant={status.variant} />
+          ) : (
+            '—'
+          );
+        },
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        fixed: 'right',
+        width: 200,
+        render: (_: unknown, record) => (
+          <Space wrap size="small">
+            <Link href={workItemHref(record)}>
+              <Button type="link" className="!px-0" size="small">
+                Open
+              </Button>
+            </Link>
+            {record.kind === 'DISCIPLINE_LEAD' ? (
+              <Button
+                type="link"
+                className="!px-0"
+                size="small"
+                onClick={() => setAddSubtaskFor(record.taskDisciplineId)}
+              >
+                Add subtask
+              </Button>
+            ) : null}
+          </Space>
+        ),
+      },
+    );
+
+    return cols;
+  }, [projectId]);
+
+  useEffect(() => {
+    setProjectFilter(undefined);
+  }, [projectId]);
 
   if (permLoading || workQuery.isLoading) {
     return <PageLoadingSkeleton />;
@@ -430,8 +409,8 @@ export default function MyWorkPageContent({
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <ListSearchInput
             live
-            placeholder="Search task or project…"
-            className="w-full max-w-xs"
+            placeholder="Search task, project, discipline, subtask…"
+            className={layout.filterControl}
             committedValue={search}
             onCommit={setSearch}
           />
@@ -440,7 +419,7 @@ export default function MyWorkPageContent({
               allowClear
               showSearch
               placeholder="Project"
-              className="w-full min-w-[160px] sm:w-48"
+              className={layout.filterControlSm}
               options={projectOptions}
               value={projectFilter}
               onChange={(value: string | undefined) => setProjectFilter(value)}
@@ -450,7 +429,7 @@ export default function MyWorkPageContent({
           <Select
             allowClear
             placeholder="Status"
-            className="w-full min-w-[140px] sm:w-40"
+            className={layout.filterControlSm}
             options={STATUS_FILTER_OPTIONS}
             value={statusFilter}
             onChange={(value: DesignPackageProjectedStatus | undefined) =>
@@ -468,32 +447,40 @@ export default function MyWorkPageContent({
         </label>
       </div>
 
-      {taskGroups.length === 0 ? (
-        <Empty description="No work assigned to you yet." />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {paginatedGroups.map((group) => (
-            <TaskWorkCard
-              key={group.taskId}
-              group={group}
-              showSubtasks={showSubtasks}
-              onAddSubtask={setAddSubtaskFor}
-            />
-          ))}
-
-          {taskGroups.length > TASKS_PER_PAGE ? (
-            <div className="flex justify-end pt-2">
-              <Pagination
-                current={page}
-                pageSize={TASKS_PER_PAGE}
-                total={taskGroups.length}
-                showSizeChanger={false}
-                onChange={setPage}
+      <DataTable<MyWorkItem>
+        rowKey={rowKey}
+        columns={columns}
+        dataSource={tableRows}
+        expandable={{
+          expandedRowRender: (record) => {
+            if (
+              record.kind !== 'SUBTASK_ROLE' ||
+              !record.designPackageId
+            ) {
+              return null;
+            }
+            return (
+              <ApprovedCrRevisionBanner
+                projectId={record.projectId}
+                designPackageId={record.designPackageId}
+                packageStatus={record.packageStatus}
+                embedDrawer
               />
-            </div>
-          ) : null}
-        </div>
-      )}
+            );
+          },
+          rowExpandable: (record) =>
+            record.kind === 'SUBTASK_ROLE' && Boolean(record.designPackageId),
+          expandRowByClick: false,
+        }}
+        locale={{
+          emptyText: (
+            <TableEmptyState
+              icon={<CheckSquare />}
+              title="No work assigned to you yet."
+            />
+          ),
+        }}
+      />
 
       {addSubtaskFor && activeItem ? (
         <DesignPackageBuilder
