@@ -17,7 +17,8 @@
       "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/find_stuck_sessions.js\")",
       "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_edvs.js\")",
       "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/reopen_stuck_session.js\")",
-      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_dl_sessions.js\")"
+      "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_dl_sessions.js\")",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "\\tmp"
