@@ -32,7 +32,6 @@ import {
 } from '@/lib/utils/epc-display';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
 import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
-import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 
 const TASKS_PER_PAGE = 20;
 
@@ -248,13 +247,7 @@ function DisciplineLeadSection({
   );
 }
 
-function SubtaskRoleSection({
-  item,
-  onViewChangeRequest,
-}: {
-  item: MyWorkItem;
-  onViewChangeRequest: (changeRequestId: string) => void;
-}): React.ReactNode {
+function SubtaskRoleSection({ item }: { item: MyWorkItem }): React.ReactNode {
   const subtaskCode = item.subtaskId ?? item.packageCode;
   const status = subtaskStatusDisplay(item);
 
@@ -266,7 +259,7 @@ function SubtaskRoleSection({
           projectId={item.projectId}
           designPackageId={item.designPackageId}
           packageStatus={item.packageStatus}
-          onViewChangeRequest={(id) => onViewChangeRequest(id)}
+          embedDrawer
         />
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -295,15 +288,10 @@ function TaskWorkCard({
   group,
   showSubtasks,
   onAddSubtask,
-  onViewChangeRequest,
 }: {
   group: TaskWorkGroup;
   showSubtasks: boolean;
   onAddSubtask: (taskDisciplineId: string) => void;
-  onViewChangeRequest: (
-    projectId: string,
-    changeRequestId: string,
-  ) => void;
 }): React.ReactNode {
   const taskCode = group.overseasTaskNumber ?? group.taskIdCode;
 
@@ -341,9 +329,6 @@ function TaskWorkCard({
             <SubtaskRoleSection
               key={item.designPackageId ?? item.taskDisciplineId}
               item={item}
-              onViewChangeRequest={(changeRequestId) =>
-                onViewChangeRequest(item.projectId, changeRequestId)
-              }
             />
           ))
         : null}
@@ -368,10 +353,6 @@ export default function MyWorkPageContent({
   >();
   const [showSubtasks, setShowSubtasks] = useState(true);
   const [page, setPage] = useState(1);
-  const [selectedCr, setSelectedCr] = useState<{
-    projectId: string;
-    changeRequestId: string;
-  } | null>(null);
 
   const allItems = workQuery.data ?? [];
 
@@ -497,9 +478,6 @@ export default function MyWorkPageContent({
               group={group}
               showSubtasks={showSubtasks}
               onAddSubtask={setAddSubtaskFor}
-              onViewChangeRequest={(crProjectId, changeRequestId) =>
-                setSelectedCr({ projectId: crProjectId, changeRequestId })
-              }
             />
           ))}
 
@@ -530,13 +508,6 @@ export default function MyWorkPageContent({
           }}
         />
       ) : null}
-
-      <ChangeRequestDrawer
-        projectId={selectedCr?.projectId ?? ''}
-        changeRequestId={selectedCr?.changeRequestId ?? null}
-        onClose={() => setSelectedCr(null)}
-        onUpdated={() => undefined}
-      />
     </FormLayout>
   );
 }

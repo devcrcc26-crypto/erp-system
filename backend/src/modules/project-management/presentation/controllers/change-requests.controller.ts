@@ -68,7 +68,7 @@ export class ChangeRequestsController {
   }
 
   @Get(':changeRequestId')
-  @RequirePermission('projects', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get change request by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
