@@ -6,7 +6,6 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
