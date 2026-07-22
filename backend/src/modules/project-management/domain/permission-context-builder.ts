@@ -460,17 +460,31 @@ export function buildPermissionLayerResults(
 export function canPerformFromContext(input: PermissionContextInput): boolean {
   const results = buildPermissionLayerResults(input);
   const layerAllowed = evaluatePermissionLayers(results);
-  // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
-  console.log('Permission check result:', {
-    action: input.action,
-    userId: input.userId,
-    layers: results.map((r) => ({
-      layer: r.layer,
-      verdict: r.verdict,
-      reason: r.reason,
-    })),
-  });
   if (!layerAllowed) {
+    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
+    console.warn(
+      '[SUBMITTAL PERMISSION DENY]',
+      JSON.stringify(
+        {
+          action: input.action,
+          userId: input.userId,
+          taskDisciplineId: input.taskDisciplineId ?? null,
+          designPackageId: input.designPackageId ?? null,
+          disciplineLeadUserId: input.disciplineLeadUserId ?? null,
+          disciplineDesignerUserId: input.disciplineDesignerUserId ?? null,
+          subtaskDesignerUserId: input.subtaskDesignerUserId ?? null,
+          subtaskDisciplinaryLeaderUserId:
+            input.subtaskDisciplinaryLeaderUserId ?? null,
+          layers: results.map((r) => ({
+            layer: r.layer,
+            verdict: r.verdict,
+            reason: r.reason ?? null,
+          })),
+        },
+        null,
+        2,
+      ),
+    );
     return false;
   }
   return evaluateAssigneeOverride(

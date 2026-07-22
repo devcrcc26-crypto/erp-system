@@ -117,6 +117,21 @@ export class PermissionResolverService {
    * Asserts user may perform a workflow action - deny wins.
    */
   async assertActionAllowed(input: WorkflowActionPermissionInput): Promise<void> {
+    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
+    console.warn(
+      '[SUBMITTAL PERMISSION INPUT]',
+      JSON.stringify(
+        {
+          action: input.action,
+          userId: input.userId,
+          taskDisciplineId: input.taskDisciplineId ?? null,
+          designPackageId: input.designPackageId ?? null,
+        },
+        null,
+        2,
+      ),
+    );
+
     const [grantedActions, roleNames] = await Promise.all([
       this.resolveGrantedActions(input.userId, input.companyId),
       this.permissionService.getUserRoleNames(input.userId, input.companyId),
@@ -146,6 +161,22 @@ export class PermissionResolverService {
           input.designPackageId,
         )
       : undefined;
+
+    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
+    console.warn(
+      '[SUBMITTAL DISCIPLINE CONTEXT]',
+      JSON.stringify(
+        {
+          disciplineLeadUserId: discipline.disciplineLeadUserId ?? null,
+          disciplineDesignerUserId: discipline.designerUserId ?? null,
+          subtaskDesignerUserId: packageOverrides?.designerUserId ?? null,
+          subtaskDisciplinaryLeaderUserId:
+            packageOverrides?.disciplinaryLeaderUserId ?? null,
+        },
+        null,
+        2,
+      ),
+    );
 
     const allowed = canPerformFromContext({
       companyId: input.companyId,
