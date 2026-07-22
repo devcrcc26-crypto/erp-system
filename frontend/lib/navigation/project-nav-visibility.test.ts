@@ -125,7 +125,7 @@ describe('project-nav-visibility', () => {
     ).toBe(false);
   });
 
-  it('FK-only discipline leader has project sidebar when allowlist is non-empty', () => {
+  it('FK-only discipline leader has no project sidebar without projects.canView', () => {
     const epc = {
       ...EMPTY_EPC_CAPABILITIES,
       navDisciplineLeader: true,
@@ -133,13 +133,27 @@ describe('project-nav-visibility', () => {
     };
     const pm = basePm();
 
-    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
     expect(
       canShowProjectContextSidebar('/projects/p1/submittals', epc, pm),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('designer sees submittals in project sidebar', () => {
+  it('FK-only designer has no project sidebar without projects.canView', () => {
+    const epc = {
+      ...EMPTY_EPC_CAPABILITIES,
+      navDesigner: true,
+      canViewMyWork: true,
+    };
+    const pm = basePm();
+
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
+    expect(
+      canShowProjectContextSidebar('/projects/p1/submittals', epc, pm),
+    ).toBe(false);
+  });
+
+  it('designer allowlist still permits submittals item when sidebar is shown', () => {
     const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
     expect(submittals).toBeDefined();
 
@@ -148,7 +162,9 @@ describe('project-nav-visibility', () => {
       navDesigner: true,
       canViewMyWork: true,
     };
-    const pm = basePm();
+    const pm = basePm({
+      projects: { canView: true, canCreate: false, canEdit: false, canDelete: false },
+    });
 
     expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
     expect(
@@ -161,7 +177,8 @@ describe('project-nav-visibility', () => {
     ).toBe(true);
   });
 
-  it('reviewer-only design-cycle assignee still has no project sidebar', () => {
+  it('reviewer-only assignee without full access uses projects.canView for sidebar', () => {
+    const pmNoProjects = basePm();
     const pmWithProjects = basePm({
       projects: {
         canView: true,
@@ -175,10 +192,11 @@ describe('project-nav-visibility', () => {
       { ...EMPTY_EPC_CAPABILITIES, navReviewerTier: true },
       { ...EMPTY_EPC_CAPABILITIES, navSupportingDesigner: true },
     ]) {
-      expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(false);
+      expect(hasProjectSidebarAccess(epc, pmNoProjects)).toBe(false);
+      expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(true);
       expect(
         canShowProjectContextSidebar('/projects/p1/schedule', epc, pmWithProjects),
-      ).toBe(false);
+      ).toBe(true);
     }
   });
 

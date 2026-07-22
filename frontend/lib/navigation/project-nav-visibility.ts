@@ -44,22 +44,18 @@ const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
 /**
  * True when the user may see the project context (second) sidebar.
- * Narrow design-cycle assignees (discipline lead, reviewer, designer,
- * dept/institute chief, supporting designer) use global workspaces only
- * unless their persona allowlist includes project nav keys.
+ * Full-access / department leaders / portfolio project viewers only —
+ * FK-only design-cycle assignees use the global icon rail.
  */
 export function hasProjectSidebarAccess(
   epc: EpcCapabilities,
   pm: PmCapabilities,
 ): boolean {
-  if (epc.navFullAccess || epc.navDepartmentLeader) {
-    return true;
-  }
-  if (hasDesignCycleNavPersona(epc)) {
-    const allowlist = resolveProjectNavKeyAllowlist(epc);
-    return allowlist !== null && allowlist.size > 0;
-  }
-  return pm.projects.canView;
+  return (
+    epc.navFullAccess ||
+    epc.navDepartmentLeader ||
+    pm.projects.canView
+  );
 }
 
 /**
