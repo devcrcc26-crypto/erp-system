@@ -62,11 +62,14 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
 
   const capabilitiesReady = !usePermissionsLoading();
   const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
   const portfolioMode =
-    useGlobalPortfolioListMode() && pm.change_requests.canView;
+    useGlobalPortfolioListMode() &&
+    pm.change_requests.canView &&
+    !epc.navDesigner &&
+    !epc.navDisciplineLeader;
   const canViewPersonal = useCanViewChangeRequests();
   const canAccessPage = portfolioMode || canViewPersonal;
-  const epc = useEpcCapabilities();
   const canCreate =
     epc.navDisciplineLeader ||
     epc.navDesigner ||
