@@ -64,6 +64,8 @@ export class SubmittalWorkflowService {
           command.companyId,
           command.designPackageIds[0]!,
         ),
+        // First package loads subtask-level FK overrides for Layer 3.
+        designPackageId: command.designPackageIds[0],
       });
 
       await this.epcSubmittalRepository.assertPackagesBelongToProject(
@@ -189,6 +191,8 @@ export class SubmittalWorkflowService {
           command.companyId,
           submittal.items[0]!.designPackageId,
         ),
+        // First package loads subtask-level FK overrides for Layer 3.
+        designPackageId: submittal.items[0]!.designPackageId,
       });
 
       const validationInputs = await this.loadPackageValidationInputs(
@@ -283,6 +287,8 @@ export class SubmittalWorkflowService {
           command.companyId,
           command.designPackageIds[0]!,
         ),
+        // First package loads subtask-level FK overrides for Layer 3.
+        designPackageId: command.designPackageIds[0],
       });
 
       await this.epcSubmittalRepository.assertPackagesBelongToProject(

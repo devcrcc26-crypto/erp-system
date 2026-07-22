@@ -1,5 +1,3 @@
-// UI polish pass - styles only, no logic changes
-
 import type { Metadata } from "next";
 import AntDesignProvider from "@/components/providers/AntDesignProvider";
 import { QueryProvider } from "@/lib/query/provider";
