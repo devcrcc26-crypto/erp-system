@@ -450,6 +450,8 @@ export interface SubmittalItem {
   submittalId: string;
   designPackageId: string;
   packageCode: string | null;
+  /** Full subtask number e.g. 26-ETO-035-01-003 when available. */
+  fullSubtaskCode?: string | null;
   packageName: string | null;
   itemType: 'DESIGN_PACKAGE';
   sortOrder: number;

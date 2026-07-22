@@ -174,7 +174,8 @@ function ReleasedSnapshotList({
       {items.map((item) => (
         <div key={item.id}>
           <p className={`mb-2 font-medium ${layout.drawerHeading}`}>
-            {item.packageCode ?? '—'} — {item.packageName ?? 'Unknown subtask'}
+            {item.fullSubtaskCode ?? item.packageCode ?? '—'} —{' '}
+            {item.packageName ?? 'Unknown subtask'}
           </p>
           <ul className="erp-drawer-file-list">
             {(item.snapshotPayload ?? []).map((row) => (
@@ -279,7 +280,8 @@ export default function ExternalReleaseDocumentsSection({
             className="mb-4 rounded border border-[var(--color-border)] p-3"
           >
             <p className={`mb-2 font-medium ${layout.drawerHeading}`}>
-              {item.packageCode ?? '—'} — {item.packageName ?? 'Unknown subtask'}
+              {item.fullSubtaskCode ?? item.packageCode ?? '—'} —{' '}
+            {item.packageName ?? 'Unknown subtask'}
             </p>
             <DraftItemEdvList
               projectId={projectId}

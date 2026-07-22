@@ -24,6 +24,7 @@ import {
   isOverdue,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -102,6 +103,12 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
         dataIndex: 'title',
         key: 'title',
         ellipsis: true,
+      },
+      {
+        title: 'Subtasks',
+        key: 'subtasks',
+        render: (_value: unknown, record) =>
+          formatSubmittalItemCodesSummary(record.items),
       },
       {
         title: 'Category',

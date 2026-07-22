@@ -36,6 +36,8 @@ export interface MyWorkItem {
   designPackageId: string | null;
   subtaskName: string | null;
   subtaskId: string | null;
+  /** Package subtask index (padded in full code as 3 digits). */
+  subtaskIndex: number | null;
   packageCode: string | null;
   roleLabel: string | null;
   /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
@@ -182,6 +184,7 @@ export class MyWorkService {
         designPackageId: null,
         subtaskName: null,
         subtaskId: null,
+        subtaskIndex: null,
         packageCode: null,
         roleLabel: 'Discipline leader (专册)',
         primaryRole: null,
@@ -217,6 +220,7 @@ export class MyWorkService {
         designPackageId: pkg.id,
         subtaskName: pkg.name,
         subtaskId: pkg.subtaskId,
+        subtaskIndex: pkg.subtaskIndex,
         packageCode: pkg.packageCode,
         roleLabel: this.resolveSubtaskRoleLabel(pkg, ctx.userId),
         primaryRole,
@@ -242,6 +246,7 @@ export class MyWorkService {
         designPackageId: null,
         subtaskName: null,
         subtaskId: null,
+        subtaskIndex: null,
         packageCode: null,
         roleLabel: 'Responsible person',
         primaryRole: null,

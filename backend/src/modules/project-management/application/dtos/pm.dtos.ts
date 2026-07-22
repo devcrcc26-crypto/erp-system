@@ -812,9 +812,10 @@ export class CreateSubmittalReviewDto {
 }
 
 export class CreateDesignSubmittalDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  category!: string;
+  category?: string;
 
   @ApiProperty()
   @IsString()
@@ -824,6 +825,21 @@ export class CreateDesignSubmittalDto {
   @IsArray()
   @IsEntityUuid({ each: true })
   designPackageIds!: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Site or consultant recipient for external releases; stored on contractor',
+  })
+  @IsOptional()
+  @IsString()
+  recipientName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional release notes; stored on specReference',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -439,17 +439,27 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Revision">
               {submittal.revisionNumber}
             </Descriptions.Item>
-            <Descriptions.Item label="Spec reference">
-              {submittal.specReference ?? '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Contractor">
+            {isExternalRelease ? (
+              <Descriptions.Item label="Description">
+                {submittal.specReference ?? '-'}
+              </Descriptions.Item>
+            ) : (
+              <Descriptions.Item label="Spec reference">
+                {submittal.specReference ?? '-'}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item
+              label={isExternalRelease ? 'Recipient' : 'Contractor'}
+            >
               {submittal.contractor ?? '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Supplier">
-              {submittal.supplier ?? '-'}
-            </Descriptions.Item>
+            {!isExternalRelease && (
+              <Descriptions.Item label="Supplier">
+                {submittal.supplier ?? '-'}
+              </Descriptions.Item>
+            )}
             {isExternalRelease && (
-              <Descriptions.Item label="Recipient">
+              <Descriptions.Item label="Release purpose">
                 {formatExternalReleasePurpose(submittal.submittalPurpose)}
               </Descriptions.Item>
             )}
@@ -528,7 +538,8 @@ export default function SubmittalDetailDrawer({
               <div className="erp-drawer-list">
                 {submittal.items.map((item) => (
                   <div key={item.id} className={`px-4 py-3 ${layout.drawerMutedText}`}>
-                    {item.packageCode ?? '—'} — {item.packageName ?? 'Unknown subtask'}
+                    {item.fullSubtaskCode ?? item.packageCode ?? '—'} —{' '}
+                    {item.packageName ?? 'Unknown subtask'}
                     {!item.snapshotCaptured ? ' (pending)' : ''}
                   </div>
                 ))}

@@ -6,6 +6,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ApprovedCrRevisionBanner from '@/components/modules/projects/change-requests/ApprovedCrRevisionBanner';
 import type { MyWorkItem } from '@/lib/api/epc.types';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
+import { formatFullSubtaskCode } from '@/lib/utils/submittal-display';
 import { subtaskStatusDisplay, workItemHref } from './my-work-helpers';
 
 /**
@@ -20,7 +21,13 @@ export default function MyWorkSubtaskRow({
   indented?: boolean;
 }): React.ReactNode {
   const status = subtaskStatusDisplay(item);
-  const subCode = [item.packageCode, item.subtaskId].filter(Boolean).join(' · ');
+  const fullCode = formatFullSubtaskCode({
+    overseasTaskNumber: item.overseasTaskNumber,
+    disciplineIndex: item.disciplineIndex,
+    subtaskIndex: item.subtaskIndex,
+    packageCode: item.packageCode,
+  });
+  const subCode = [fullCode, item.subtaskId].filter(Boolean).join(' · ');
   const indentClass = indented ? 'pl-10' : 'pl-4';
 
   return (

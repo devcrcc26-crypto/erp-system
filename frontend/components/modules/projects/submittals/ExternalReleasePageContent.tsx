@@ -28,6 +28,7 @@ import {
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
+import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -95,18 +96,8 @@ export default function ExternalReleasePageContent({
       {
         title: 'Subtasks',
         key: 'subtasks',
-        render: (_value: unknown, record) => {
-          const codes = (record.items ?? [])
-            .map((item) => item.packageCode)
-            .filter((code): code is string => Boolean(code));
-          if (codes.length === 0) {
-            return '—';
-          }
-          if (codes.length <= 2) {
-            return codes.join(', ');
-          }
-          return `${codes.slice(0, 2).join(', ')} +${codes.length - 2} more`;
-        },
+        render: (_value: unknown, record) =>
+          formatSubmittalItemCodesSummary(record.items),
       },
       {
         title: 'Recipient',

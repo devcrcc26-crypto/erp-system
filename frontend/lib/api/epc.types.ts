@@ -274,6 +274,8 @@ export interface MyWorkItem {
   designPackageId: string | null;
   subtaskName: string | null;
   subtaskId: string | null;
+  /** Package subtask index (padded in full code as 3 digits). */
+  subtaskIndex: number | null;
   packageCode: string | null;
   roleLabel: string | null;
   /** DESIGNER/SUPPORTING_DESIGNER take priority; otherwise highest reviewer-tier role, else DISCIPLINE_OWNER. Null for DISCIPLINE_LEAD-kind items. */
@@ -683,9 +685,11 @@ export interface TriggerRevisionRequest {
 }
 
 export interface CreateDesignSubmittalRequest {
-  category: string;
+  category?: string;
   title: string;
   designPackageIds: string[];
+  recipientName?: string;
+  description?: string;
   contractor?: string;
   supplier?: string;
   specReference?: string;

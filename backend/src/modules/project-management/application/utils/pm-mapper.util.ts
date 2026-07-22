@@ -237,6 +237,8 @@ export interface MappedSubmittalItem {
   submittalId: string;
   designPackageId: string;
   packageCode: string | null;
+  /** Full subtask number e.g. 26-ETO-035-01-003 when overseas task number is present. */
+  fullSubtaskCode?: string | null;
   packageName: string | null;
   itemType: SubmittalItem['itemType'];
   sortOrder: number;
@@ -248,6 +250,17 @@ export interface MappedSubmittalItem {
   capturedAt: string | null;
   createdAt: string;
 }
+
+/** Nested package shape used when mapping submittal items with full subtask codes. */
+export type SubmittalItemDesignPackageSelect = {
+  packageCode: string;
+  name: string;
+  subtaskIndex?: number | null;
+  taskDiscipline?: {
+    disciplineIndex: number | null;
+    task: { overseasTaskNumber: string | null };
+  } | null;
+};
 
 /** Frozen EDV row stored on submittal item at issue time. */
 export interface SubmittalEdvSnapshotRow {
@@ -563,7 +576,7 @@ export function mapSubmittal(
 
 export function mapSubmittalItem(
   row: SubmittalItem & {
-    designPackage?: { packageCode: string; name: string } | null;
+    designPackage?: SubmittalItemDesignPackageSelect | null;
   },
 ): MappedSubmittalItem {
   const payload = row.snapshotPayload;
@@ -571,12 +584,24 @@ export function mapSubmittalItem(
     ? (payload as unknown as SubmittalEdvSnapshotRow[])
     : [];
 
+  const pkg = row.designPackage;
+  const overseas = pkg?.taskDiscipline?.task?.overseasTaskNumber?.trim() ?? '';
+  const discIdx = String(pkg?.taskDiscipline?.disciplineIndex ?? 0).padStart(
+    2,
+    '0',
+  );
+  const subIdx = String(pkg?.subtaskIndex ?? 0).padStart(3, '0');
+  const fullSubtaskCode = overseas
+    ? `${overseas}-${discIdx}-${subIdx}`
+    : (pkg?.packageCode ?? null);
+
   return {
     id: row.id,
     submittalId: row.submittalId,
     designPackageId: row.designPackageId,
-    packageCode: row.designPackage?.packageCode ?? null,
-    packageName: row.designPackage?.name ?? null,
+    packageCode: pkg?.packageCode ?? null,
+    fullSubtaskCode,
+    packageName: pkg?.name ?? null,
     itemType: row.itemType,
     sortOrder: row.sortOrder,
     snapshotCaptured: row.snapshotCaptured,

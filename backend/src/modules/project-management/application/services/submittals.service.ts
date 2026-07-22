@@ -42,6 +42,23 @@ import { TaskAccessScopeService } from './task-access-scope.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
 
+/** Package fields needed to compute fullSubtaskCode on mapped items. */
+const SUBMITTAL_ITEM_PACKAGE_SELECT = {
+  packageCode: true,
+  name: true,
+  subtaskIndex: true,
+  taskDiscipline: {
+    select: {
+      disciplineIndex: true,
+      task: {
+        select: {
+          overseasTaskNumber: true,
+        },
+      },
+    },
+  },
+} as const;
+
 const SUBMITTAL_SORT_FIELDS = new Set([
   'createdAt',
   'updatedAt',
@@ -128,7 +145,7 @@ export class SubmittalsService {
           items: {
             orderBy: { sortOrder: 'asc' },
             include: {
-              designPackage: { select: { packageCode: true, name: true } },
+              designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
             },
           },
         },
@@ -173,7 +190,7 @@ export class SubmittalsService {
           items: {
             orderBy: { sortOrder: 'asc' },
             include: {
-              designPackage: { select: { packageCode: true, name: true } },
+              designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
             },
           },
         },
@@ -210,7 +227,7 @@ export class SubmittalsService {
         items: {
           orderBy: { sortOrder: 'asc' },
           include: {
-            designPackage: { select: { packageCode: true, name: true } },
+            designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
           },
         },
         taskDiscipline: { select: { disciplineLeadUserId: true } },
@@ -347,9 +364,9 @@ export class SubmittalsService {
       );
     }
 
-    const submittalNumber = await this.documentNumberService.getNextNumber(
-      ctx,
-      'SUBMITTAL',
+    const submittalNumber = await this.generateConstructionSubmittalNumber(
+      ctx.companyId,
+      dto.designPackageId,
     );
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -578,6 +595,13 @@ export class SubmittalsService {
       dto.submittalPurpose === SubmittalPurpose.DISCIPLINE_SITE ||
       dto.submittalPurpose === SubmittalPurpose.DISCIPLINE_CONSULTANT;
 
+    const category =
+      dto.category?.trim() ||
+      (isExternalRelease ? 'External Release' : undefined);
+    if (!category) {
+      throw new BadRequestException('Category is required');
+    }
+
     const submittalNumber = isExternalRelease
       ? await this.generateExternalReleaseNumber(
           ctx.companyId,
@@ -593,10 +617,10 @@ export class SubmittalsService {
       designPackageIds: dto.designPackageIds,
       submittalNumber,
       title: dto.title,
-      category: dto.category,
-      contractor: dto.contractor,
+      category,
+      contractor: dto.recipientName ?? dto.contractor,
       supplier: dto.supplier,
-      specReference: dto.specReference,
+      specReference: dto.description ?? dto.specReference,
       submittalPurpose: dto.submittalPurpose,
       preparedByRole: dto.preparedByRole,
       taskDisciplineId: dto.taskDisciplineId,
@@ -678,7 +702,7 @@ export class SubmittalsService {
       where: { id: itemId },
       data: { excludedEdvIds: [...excluded] },
       include: {
-        designPackage: { select: { packageCode: true, name: true } },
+        designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
       },
     });
 
@@ -712,7 +736,7 @@ export class SubmittalsService {
         excludedEdvIds: item.excludedEdvIds.filter((id) => id !== edvId),
       },
       include: {
-        designPackage: { select: { packageCode: true, name: true } },
+        designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
       },
     });
 
@@ -1214,6 +1238,50 @@ export class SubmittalsService {
     return `ER-${fullCode}-${seq}`;
   }
 
+  /**
+   * CS-{overseas}-{discipline:02}-{subtask:03}-{seq:03} for construction submittals.
+   */
+  private async generateConstructionSubmittalNumber(
+    companyId: string,
+    designPackageId: string,
+  ): Promise<string> {
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: designPackageId, companyId }),
+      select: {
+        subtaskIndex: true,
+        taskDiscipline: {
+          select: {
+            disciplineIndex: true,
+            task: { select: { overseasTaskNumber: true } },
+          },
+        },
+      },
+    });
+    if (!pkg) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
+    );
+
+    const existingCount = await this.prisma.submittal.count({
+      where: {
+        deletedAt: null,
+        submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+        project: { companyId, deletedAt: null },
+        items: {
+          some: { designPackageId },
+        },
+      },
+    });
+
+    const seq = String(existingCount + 1).padStart(3, '0');
+    return `CS-${fullCode}-${seq}`;
+  }
+
   private async getSubmittalItemOrThrow(
     companyId: string,
     projectId: string,
@@ -1224,7 +1292,7 @@ export class SubmittalsService {
       where: { id: itemId, companyId, submittalId },
       include: {
         submittal: { select: { projectId: true, issuedAt: true } },
-        designPackage: { select: { packageCode: true, name: true } },
+        designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
       },
     });
     if (!item || item.submittal.projectId !== projectId) {

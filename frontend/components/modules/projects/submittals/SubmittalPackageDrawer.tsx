@@ -38,11 +38,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface SubmittalPackageFormValues {
   projectId?: string;
-  category: string;
   title: string;
-  contractor?: string;
-  supplier?: string;
-  specReference?: string;
+  description?: string;
+  recipientName?: string;
   submittalPurpose: SubmittalPurpose;
   taskDisciplineId: string;
   designPackageIds: string[];
@@ -220,8 +218,7 @@ export default function SubmittalPackageDrawer({
           type="info"
           showIcon
           className="mb-4"
-          title="Select approved subtasks for external release"
-          description="External releases must use subtasks from a single discipline."
+          title="Select the discipline and approved subtasks to include in this release package."
         />
       )}
 
@@ -248,12 +245,10 @@ export default function SubmittalPackageDrawer({
             const result = await createSubmittal.mutateAsync({
               projectId,
               body: {
-                category: values.category.trim(),
                 title: values.title.trim(),
                 designPackageIds: values.designPackageIds,
-                contractor: values.contractor?.trim() || undefined,
-                supplier: values.supplier?.trim() || undefined,
-                specReference: values.specReference?.trim() || undefined,
+                recipientName: values.recipientName?.trim() || undefined,
+                description: values.description?.trim() || undefined,
                 submittalPurpose: values.submittalPurpose,
                 preparedByRole: 'DISCIPLINE_LEAD',
                 taskDisciplineId: values.taskDisciplineId,
@@ -309,6 +304,10 @@ function SubmittalPackageForm({
   hasSelectedDiscipline: boolean;
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
+  const purpose = Form.useWatch('submittalPurpose', form) as
+    | SubmittalPurpose
+    | undefined;
+
   const packageColumns: ColumnsType<DesignPackage> = [
     { title: 'Subtask', dataIndex: 'name', key: 'name' },
     {
@@ -356,6 +355,18 @@ function SubmittalPackageForm({
         <Select options={EXTERNAL_RELEASE_PURPOSES} />
       </Form.Item>
 
+      {purpose === 'DISCIPLINE_SITE' && (
+        <Form.Item name="recipientName" label="Site recipient">
+          <Input placeholder="e.g. Site Manager, Foreman, Site office" />
+        </Form.Item>
+      )}
+
+      {purpose === 'DISCIPLINE_CONSULTANT' && (
+        <Form.Item name="recipientName" label="Consultant recipient">
+          <Input placeholder="e.g. Consultant name, company, contact person" />
+        </Form.Item>
+      )}
+
       <Form.Item
         name="taskDisciplineId"
         label="Discipline"
@@ -374,26 +385,15 @@ function SubmittalPackageForm({
         />
       </Form.Item>
 
-      <Form.Item
-        name="category"
-        label="Category"
-        rules={[{ required: true }]}
-      >
-        <Input placeholder="e.g. Shop drawings" />
-      </Form.Item>
       <Form.Item name="title" label="Title" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Form.Item name="contractor" label="Contractor">
-          <Input />
-        </Form.Item>
-        <Form.Item name="supplier" label="Supplier">
-          <Input />
-        </Form.Item>
-      </div>
-      <Form.Item name="specReference" label="Spec reference">
-        <Input />
+
+      <Form.Item name="description" label="Description">
+        <Input.TextArea
+          rows={3}
+          placeholder="Add notes about this release package (optional)"
+        />
       </Form.Item>
 
       {!hasSelectedDiscipline && (
