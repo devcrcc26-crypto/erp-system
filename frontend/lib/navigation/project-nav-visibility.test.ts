@@ -125,13 +125,15 @@ describe('project-nav-visibility', () => {
     ).toBe(false);
   });
 
-  it('FK-only discipline leader has no project sidebar without projects.canView', () => {
+  it('FK-only discipline leader has no project sidebar even with Employee projects.canView', () => {
     const epc = {
       ...EMPTY_EPC_CAPABILITIES,
       navDisciplineLeader: true,
       canViewMyWork: true,
     };
-    const pm = basePm();
+    const pm = basePm({
+      projects: { canView: true, canCreate: false, canEdit: false, canDelete: false },
+    });
 
     expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
     expect(
@@ -139,13 +141,15 @@ describe('project-nav-visibility', () => {
     ).toBe(false);
   });
 
-  it('FK-only designer has no project sidebar without projects.canView', () => {
+  it('FK-only designer has no project sidebar even with Employee projects.canView', () => {
     const epc = {
       ...EMPTY_EPC_CAPABILITIES,
       navDesigner: true,
       canViewMyWork: true,
     };
-    const pm = basePm();
+    const pm = basePm({
+      projects: { canView: true, canCreate: false, canEdit: false, canDelete: false },
+    });
 
     expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
     expect(
@@ -153,7 +157,7 @@ describe('project-nav-visibility', () => {
     ).toBe(false);
   });
 
-  it('designer allowlist still permits submittals item when sidebar is shown', () => {
+  it('designer allowlist still permits submittals item for item-level checks', () => {
     const submittals = flattenProjectNavItems().find((item) => item.key === 'submittals');
     expect(submittals).toBeDefined();
 
@@ -166,7 +170,7 @@ describe('project-nav-visibility', () => {
       projects: { canView: true, canCreate: false, canEdit: false, canDelete: false },
     });
 
-    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(false);
     expect(
       canViewProjectNavItem(submittals!, {
         pm,
@@ -177,8 +181,23 @@ describe('project-nav-visibility', () => {
     ).toBe(true);
   });
 
-  it('reviewer-only assignee without full access uses projects.canView for sidebar', () => {
-    const pmNoProjects = basePm();
+  it('Project Manager with designer FK still has sidebar via navFullAccess', () => {
+    const epc = {
+      ...EMPTY_EPC_CAPABILITIES,
+      navFullAccess: true,
+      navDesigner: true,
+    };
+    const pm = basePm({
+      projects: { canView: true, canCreate: true, canEdit: true, canDelete: true },
+    });
+
+    expect(hasProjectSidebarAccess(epc, pm)).toBe(true);
+    expect(
+      canShowProjectContextSidebar('/projects/p1/schedule', epc, pm),
+    ).toBe(true);
+  });
+
+  it('reviewer / supporting designer FK never get project sidebar from projects.canView', () => {
     const pmWithProjects = basePm({
       projects: {
         canView: true,
@@ -192,11 +211,10 @@ describe('project-nav-visibility', () => {
       { ...EMPTY_EPC_CAPABILITIES, navReviewerTier: true },
       { ...EMPTY_EPC_CAPABILITIES, navSupportingDesigner: true },
     ]) {
-      expect(hasProjectSidebarAccess(epc, pmNoProjects)).toBe(false);
-      expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(true);
+      expect(hasProjectSidebarAccess(epc, pmWithProjects)).toBe(false);
       expect(
         canShowProjectContextSidebar('/projects/p1/schedule', epc, pmWithProjects),
-      ).toBe(true);
+      ).toBe(false);
     }
   });
 

@@ -43,19 +43,35 @@ const DESIGNER_PROJECT_KEYS = new Set(['submittals']);
 const SUPPORTING_DESIGNER_PROJECT_KEYS = new Set<string>();
 
 /**
+ * Narrow design-cycle assignees (FK probes) — global workspaces only.
+ * Excludes navFullAccess / navDepartmentLeader (those keep the project sidebar).
+ */
+function isFkDesignCycleAssignee(epc: EpcCapabilities): boolean {
+  return (
+    epc.navDisciplineLeader ||
+    epc.navReviewerTier ||
+    epc.navDesigner ||
+    epc.navSupportingDesigner
+  );
+}
+
+/**
  * True when the user may see the project context (second) sidebar.
- * Full-access / department leaders / portfolio project viewers only —
- * FK-only design-cycle assignees use the global icon rail.
+ * Full-access / department leaders always. Other roles need projects.canView.
+ * FK design-cycle assignees never — Employee portfolio projects.canView
+ * must not open this sidebar (Wei Chen / Khalid demo case).
  */
 export function hasProjectSidebarAccess(
   epc: EpcCapabilities,
   pm: PmCapabilities,
 ): boolean {
-  return (
-    epc.navFullAccess ||
-    epc.navDepartmentLeader ||
-    pm.projects.canView
-  );
+  if (epc.navFullAccess || epc.navDepartmentLeader) {
+    return true;
+  }
+  if (isFkDesignCycleAssignee(epc)) {
+    return false;
+  }
+  return pm.projects.canView;
 }
 
 /**
