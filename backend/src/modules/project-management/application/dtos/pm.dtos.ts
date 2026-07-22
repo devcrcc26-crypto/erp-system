@@ -1569,6 +1569,11 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEntityUuid()
   linkedDesignPackageId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter to a single project (company-wide lists)' })
+  @IsOptional()
+  @IsEntityUuid()
+  projectId?: string;
 }
 
 export class DailyLogListQueryDto extends PmListQueryDto {

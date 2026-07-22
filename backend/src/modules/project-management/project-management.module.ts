@@ -73,6 +73,7 @@ import { EpcWorkflowRepository } from './infrastructure/repositories/epc-workflo
 import { PmModuleAccessGuard } from './presentation/guards/pm-module-access.guard';
 import { CloseoutController } from './presentation/controllers/closeout.controller';
 import { ChangeRequestsController } from './presentation/controllers/change-requests.controller';
+import { ExternalReleasesController } from './presentation/controllers/external-releases.controller';
 import { MyChangeRequestsController } from './presentation/controllers/my-change-requests.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
@@ -127,6 +128,7 @@ const workflowBullProcessors = redisEnabled
     IssuesController,
     SubmittalsController,
     MySubmittalsController,
+    ExternalReleasesController,
     DrawingsController,
     EngineeringDocumentsController,
     DesignPackagesController,

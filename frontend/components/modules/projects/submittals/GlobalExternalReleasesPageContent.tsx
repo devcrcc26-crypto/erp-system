@@ -17,7 +17,8 @@ import type {
   SubmittalPurpose,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
-import { useMySubmittals } from '@/lib/query/submittals';
+import { useMySubmittals, useAllExternalReleases } from '@/lib/query/submittals';
+import { useAllProjects } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
@@ -28,7 +29,9 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCanViewExternalReleases,
   useEpcCapabilities,
+  useGlobalPortfolioListMode,
   usePermissionsLoading,
+  usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -45,6 +48,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
+  const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
     submittalId: string;
@@ -52,18 +56,42 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const capabilitiesReady = !usePermissionsLoading();
-  const canViewExternalReleases = useCanViewExternalReleases();
+  const pm = usePmCapabilities();
+  const portfolioMode = useGlobalPortfolioListMode() && pm.submittals.canView;
+  const canViewPersonal = useCanViewExternalReleases();
+  const canAccessPage = portfolioMode || canViewPersonal;
   const epc = useEpcCapabilities();
   const canCreate = epc.navDisciplineLeader || epc.navDesigner;
 
-  const submittalsQuery = useMySubmittals(
-    {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      submittalPurpose: EXTERNAL_PURPOSES.join(','),
-    },
-    capabilitiesReady && canViewExternalReleases,
+  const listParams = {
+    ...params,
+    search: search.trim() || undefined,
+    status: statusFilter,
+    projectId: portfolioMode ? projectFilter : undefined,
+    submittalPurpose: portfolioMode ? undefined : EXTERNAL_PURPOSES.join(','),
+  };
+
+  const mySubmittalsQuery = useMySubmittals(
+    listParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const allReleasesQuery = useAllExternalReleases(
+    listParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+  const submittalsQuery = portfolioMode ? allReleasesQuery : mySubmittalsQuery;
+
+  const projectsQuery = useAllProjects(
+    {},
+    capabilitiesReady && portfolioMode,
+  );
+  const projectFilterOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
   );
 
   const columns: ColumnsType<Submittal> = useMemo(
@@ -143,7 +171,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
-  if (!canViewExternalReleases) {
+  if (!canAccessPage) {
     return (
       <Alert
         type="warning"
@@ -165,7 +193,11 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
     <>
       <FormLayout
         title={t('pages.globalExternalReleases.title')}
-        description={t('pages.globalExternalReleases.description')}
+        description={
+          portfolioMode
+            ? 'All external releases across projects.'
+            : t('pages.globalExternalReleases.description')
+        }
         extra={
           canCreate ? (
             <Button
@@ -213,6 +245,22 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               { value: 'SUBMITTED', label: 'Issued' },
             ]}
           />
+          {portfolioMode ? (
+            <Select
+              allowClear
+              showSearch
+              placeholder="Project"
+              className={layout.filterControl}
+              value={projectFilter}
+              optionFilterProp="label"
+              loading={projectsQuery.isLoading}
+              onChange={(value: string | undefined) => {
+                resetPage();
+                setProjectFilter(value);
+              }}
+              options={projectFilterOptions}
+            />
+          ) : null}
         </Space>
 
         <DataTable<Submittal>
@@ -225,7 +273,11 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               <TableEmptyState
                 icon={<Send />}
                 title={t('pages.globalExternalReleases.empty')}
-                description="External releases you created, or that belong to disciplines you lead, appear here."
+                description={
+                  portfolioMode
+                    ? 'External releases from all projects appear here.'
+                    : 'External releases you created, or that belong to disciplines you lead, appear here.'
+                }
                 action={
                   canCreate && !apiUnavailable
                     ? {

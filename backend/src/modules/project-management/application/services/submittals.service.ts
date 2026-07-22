@@ -209,6 +209,28 @@ export class SubmittalsService {
   }
 
   /**
+   * Company-wide construction submittals (portfolio / admin users).
+   */
+  async listAllSubmittals(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedSubmittal>> {
+    return this.listCompanySubmittals(ctx, query, SubmittalPurpose.IN_CONSTRUCTION);
+  }
+
+  /**
+   * Company-wide external releases (site / consultant purposes).
+   */
+  async listAllExternalReleases(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedSubmittal>> {
+    return this.listCompanySubmittals(ctx, query, {
+      in: [SubmittalPurpose.DISCIPLINE_SITE, SubmittalPurpose.DISCIPLINE_CONSULTANT],
+    });
+  }
+
+  /**
    * Returns a single submittal by id scoped to a project.
    */
   async getSubmittal(
@@ -1083,6 +1105,100 @@ export class SubmittalsService {
       mapSubmittalReview(review),
       PM_REVIEWED_BY_NAME,
     );
+  }
+
+  private async listCompanySubmittals(
+    ctx: PmContext,
+    query: PmListQueryDto,
+    defaultPurpose: SubmittalPurpose | { in: SubmittalPurpose[] },
+  ): Promise<PaginatedResult<MappedSubmittal>> {
+    const where = this.buildCompanyListWhere(ctx, query, defaultPurpose);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      SUBMITTAL_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.submittal.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { name: true, projectCode: true } },
+          items: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
+            },
+          },
+        },
+      }),
+      this.prisma.submittal.count({ where }),
+    ]);
+
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map(mapSubmittal),
+      PM_SUBMITTAL_USER_NAMES,
+    );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  private buildCompanyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+    defaultPurpose: SubmittalPurpose | { in: SubmittalPurpose[] },
+  ): Prisma.SubmittalWhereInput {
+    const projectWhere: Prisma.ProjectWhereInput = {
+      ...activeOnly({ companyId: ctx.companyId }),
+      ...(query.projectId ? { id: query.projectId } : {}),
+    };
+
+    const where: Prisma.SubmittalWhereInput = activeOnly({
+      project: projectWhere,
+    });
+
+    if (query.submittalPurpose) {
+      const purposes = query.submittalPurpose
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean) as SubmittalPurpose[];
+      where.submittalPurpose =
+        purposes.length === 1 ? purposes[0] : { in: purposes };
+    } else {
+      where.submittalPurpose = defaultPurpose;
+    }
+
+    if (query.status) {
+      where.status = query.status as SubmittalStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.OR = [
+        { submittalNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { category: { contains: term, mode: 'insensitive' } },
+        { contractor: { contains: term, mode: 'insensitive' } },
+        {
+          project: {
+            name: { contains: term, mode: 'insensitive' },
+          },
+        },
+        {
+          project: {
+            projectCode: { contains: term, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    return where;
   }
 
   private buildListWhere(

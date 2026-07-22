@@ -16,7 +16,8 @@ import type {
   ChangeRequestStatus,
   ProjectChangeRequest,
 } from '@/lib/api/project-management.types';
-import { useMyChangeRequests } from '@/lib/query/change-requests';
+import { useMyChangeRequests, useAllChangeRequests } from '@/lib/query/change-requests';
+import { useAllProjects } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   changeRequestStatusVariant,
@@ -28,6 +29,7 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCanViewChangeRequests,
   useEpcCapabilities,
+  useGlobalPortfolioListMode,
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
@@ -51,6 +53,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const [statusFilter, setStatusFilter] = useState<
     ChangeRequestStatus | undefined
   >();
+  const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
     changeRequestId: string;
@@ -58,21 +61,47 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const [createOpen, setCreateOpen] = useState(false);
 
   const capabilitiesReady = !usePermissionsLoading();
-  const canViewChangeRequests = useCanViewChangeRequests();
-  const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
+  const portfolioMode =
+    useGlobalPortfolioListMode() && pm.change_requests.canView;
+  const canViewPersonal = useCanViewChangeRequests();
+  const canAccessPage = portfolioMode || canViewPersonal;
+  const epc = useEpcCapabilities();
   const canCreate =
     epc.navDisciplineLeader ||
     epc.navDesigner ||
     pm.change_requests.canCreate;
 
-  const changeRequestsQuery = useMyChangeRequests(
-    {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-    },
-    capabilitiesReady && canViewChangeRequests,
+  const listParams = {
+    ...params,
+    search: search.trim() || undefined,
+    status: statusFilter,
+    projectId: portfolioMode ? projectFilter : undefined,
+  };
+
+  const myChangeRequestsQuery = useMyChangeRequests(
+    listParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const allChangeRequestsQuery = useAllChangeRequests(
+    listParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+  const changeRequestsQuery = portfolioMode
+    ? allChangeRequestsQuery
+    : myChangeRequestsQuery;
+
+  const projectsQuery = useAllProjects(
+    {},
+    capabilitiesReady && portfolioMode,
+  );
+  const projectFilterOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
   );
 
   const columns: ColumnsType<ProjectChangeRequest> = useMemo(
@@ -145,7 +174,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
-  if (!canViewChangeRequests) {
+  if (!canAccessPage) {
     return (
       <Alert
         type="warning"
@@ -168,7 +197,11 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     <>
       <FormLayout
         title={t('pages.globalChangeRequests.title')}
-        description={t('pages.globalChangeRequests.description')}
+        description={
+          portfolioMode
+            ? 'All change requests across projects.'
+            : t('pages.globalChangeRequests.description')
+        }
         extra={
           canCreate ? (
             <Button
@@ -213,6 +246,22 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
             }}
             options={STATUS_OPTIONS}
           />
+          {portfolioMode ? (
+            <Select
+              allowClear
+              showSearch
+              placeholder="Project"
+              className={layout.filterControl}
+              value={projectFilter}
+              optionFilterProp="label"
+              loading={projectsQuery.isLoading}
+              onChange={(value: string | undefined) => {
+                resetPage();
+                setProjectFilter(value);
+              }}
+              options={projectFilterOptions}
+            />
+          ) : null}
         </Space>
 
         <DataTable<ProjectChangeRequest>

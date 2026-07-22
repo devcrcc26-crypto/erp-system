@@ -192,6 +192,41 @@ export class ProjectChangeRequestService {
   }
 
   /**
+   * Company-wide change requests (portfolio / admin users).
+   */
+  async listAllChangeRequests(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyChangeRequest>> {
+    const where = this.buildCompanyListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      CHANGE_REQUEST_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.projectChangeRequest.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+          linkedDesignPackage: {
+            select: { id: true, packageCode: true, name: true },
+          },
+        },
+      }),
+      this.prisma.projectChangeRequest.count({ where }),
+    ]);
+
+    const data = rows.map((row) => this.mapMyChangeRequestRow(row));
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
    * Company-scoped projects where the current user has at least one CR-eligible
    * subtask with reviewable documents.
    */
@@ -1155,6 +1190,44 @@ export class ProjectChangeRequestService {
       return undefined;
     }
     return dto.originEntityId;
+  }
+
+  private buildCompanyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.ProjectChangeRequestWhereInput {
+    const where: Prisma.ProjectChangeRequestWhereInput = activeOnly({
+      companyId: ctx.companyId,
+    });
+
+    if (query.projectId) {
+      where.projectId = query.projectId;
+    }
+
+    if (query.status) {
+      where.status = query.status as ProjectChangeRequestStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.OR = [
+        { changeNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        {
+          project: {
+            name: { contains: term, mode: 'insensitive' },
+          },
+        },
+        {
+          project: {
+            projectCode: { contains: term, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    return where;
   }
 
   private buildListWhere(

@@ -1218,6 +1218,7 @@ export interface PmListFilters {
   /** Comma-separated list of SubmittalPurpose values to match any of. */
   submittalPurpose?: string;
   linkedDesignPackageId?: string;
+  projectId?: string;
 }
 
 export type ChangeRequestStatus =

@@ -308,4 +308,16 @@ export class MySubmittalsController {
   ): Promise<unknown> {
     return this.submittalsService.listMySubmittals(this.ctx(user), query);
   }
+
+  @Get('all')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({
+    summary: 'List all construction submittals across projects (portfolio access)',
+  })
+  listAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PmListQueryDto,
+  ): Promise<unknown> {
+    return this.submittalsService.listAllSubmittals(this.ctx(user), query);
+  }
 }

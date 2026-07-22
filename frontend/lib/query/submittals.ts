@@ -43,6 +43,20 @@ export const submittalKeys = {
       limit: 20,
     },
   ) => [...submittalKeys.myLists(), params] as const,
+  allLists: () => [...submittalKeys.all, 'all', 'list'] as const,
+  allList: (
+    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...submittalKeys.allLists(), params] as const,
+  externalAllLists: () => [...submittalKeys.all, 'external-all', 'list'] as const,
+  externalAllList: (
+    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...submittalKeys.externalAllLists(), params] as const,
   lists: (projectId: string) =>
     [...submittalKeys.all, projectId, 'list'] as const,
   list: (
@@ -85,6 +99,56 @@ export function useMySubmittals(
     queryKey: submittalKeys.myList(params),
     queryFn: () =>
       apiGetPaginated<Submittal>(`/submittals/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide construction submittals (portfolio / admin users).
+ */
+export function useAllSubmittals(
+  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Submittal>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: submittalKeys.allList(params),
+    queryFn: () =>
+      apiGetPaginated<Submittal>(`/submittals/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide external releases (portfolio / admin users).
+ */
+export function useAllExternalReleases(
+  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Submittal>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: submittalKeys.externalAllList(params),
+    queryFn: () =>
+      apiGetPaginated<Submittal>(
+        `/external-releases/all${toQueryString(params)}`,
+      ),
     enabled,
     retry: false,
     ...options,

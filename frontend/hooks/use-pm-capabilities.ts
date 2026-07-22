@@ -71,6 +71,14 @@ export function useCanViewMyWork(): boolean {
 }
 
 /**
+ * True when the user should see company-wide portfolio lists (not FK-scoped /my).
+ */
+export function useGlobalPortfolioListMode(): boolean {
+  const pm = usePmCapabilities();
+  return pm.projects.canView;
+}
+
+/**
  * Global construction submittals — designer / discipline-lead personas or PM module view.
  */
 export function useCanViewSubmittals(): boolean {

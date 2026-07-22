@@ -141,16 +141,6 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
       },
       {
-        key: 'change-requests',
-        label: 'Change Requests',
-        labelKey: 'workspace.items.changeRequests',
-        iconKey: 'change-requests',
-        pathSuffix: 'change-requests',
-        capability: 'change_requests',
-        breadcrumbGroup: 'Review & Release',
-        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
-      },
-      {
         key: 'external-release',
         label: 'External Release',
         labelKey: 'workspace.items.externalRelease',
@@ -160,6 +150,16 @@ export const PROJECT_WORKSPACE_NAV: readonly ProjectWorkspaceNavGroup[] = [
         breadcrumbGroupKey: 'workspace.groups.reviewRelease',
         epcSurface: 'engineering',
         requiresDisciplineAssignment: true,
+      },
+      {
+        key: 'change-requests',
+        label: 'Change Requests',
+        labelKey: 'workspace.items.changeRequests',
+        iconKey: 'change-requests',
+        pathSuffix: 'change-requests',
+        capability: 'change_requests',
+        breadcrumbGroup: 'Review & Release',
+        breadcrumbGroupKey: 'workspace.groups.reviewRelease',
       },
       {
         key: 'review-inbox',

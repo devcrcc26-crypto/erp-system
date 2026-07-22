@@ -62,6 +62,15 @@ export const changeRequestKeys = {
       limit: 20,
     },
   ) => [...changeRequestKeys.all, 'my', params] as const,
+  allList: (
+    params: PaginationParams &
+      PmListFilters & {
+        status?: ChangeRequestStatus;
+      } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...changeRequestKeys.all, 'all', params] as const,
   myProjects: () => [...changeRequestKeys.all, 'my', 'projects'] as const,
   eligibleSubtasks: (projectId: string) =>
     [...changeRequestKeys.all, projectId, 'eligible-subtasks'] as const,
@@ -125,6 +134,37 @@ export function useMyChangeRequests(
     queryFn: () =>
       apiGetPaginated<ProjectChangeRequest>(
         `/change-requests/my${toQueryString(params)}`,
+      ),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide change requests (portfolio / admin users).
+ */
+export function useAllChangeRequests(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: ChangeRequestStatus;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<ProjectChangeRequest>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: changeRequestKeys.allList(params),
+    queryFn: () =>
+      apiGetPaginated<ProjectChangeRequest>(
+        `/change-requests/all${toQueryString(params)}`,
       ),
     enabled,
     retry: false,

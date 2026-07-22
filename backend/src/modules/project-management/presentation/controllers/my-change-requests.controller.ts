@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { PmListQueryDto } from '../../application/dtos/pm.dtos';
 import { ProjectChangeRequestService } from '../../application/services/project-change-request.service';
@@ -34,6 +35,18 @@ export class MyChangeRequestsController {
     @Query() query: PmListQueryDto,
   ): Promise<unknown> {
     return this.changeRequestService.listMyChangeRequests(this.ctx(user), query);
+  }
+
+  @Get('all')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({
+    summary: 'List all change requests across projects (portfolio access)',
+  })
+  listAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PmListQueryDto,
+  ): Promise<unknown> {
+    return this.changeRequestService.listAllChangeRequests(this.ctx(user), query);
   }
 
   @Get('my/projects')

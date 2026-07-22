@@ -17,7 +17,8 @@ import type {
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
-import { useMySubmittals } from '@/lib/query/submittals';
+import { useMySubmittals, useAllSubmittals } from '@/lib/query/submittals';
+import { useAllProjects } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -31,7 +32,9 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCanViewSubmittals,
   useEpcCapabilities,
+  useGlobalPortfolioListMode,
   usePermissionsLoading,
+  usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -44,6 +47,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
+  const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
     submittalId: string;
@@ -51,18 +55,42 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const capabilitiesReady = !usePermissionsLoading();
-  const canViewSubmittals = useCanViewSubmittals();
+  const pm = usePmCapabilities();
+  const portfolioMode = useGlobalPortfolioListMode() && pm.submittals.canView;
+  const canViewPersonal = useCanViewSubmittals();
+  const canAccessPage = portfolioMode || canViewPersonal;
   const epc = useEpcCapabilities();
   const canCreate = epc.navDisciplineLeader || epc.navDesigner;
   const resolveUserDisplay = useUserDisplayResolver();
 
-  const submittalsQuery = useMySubmittals(
-    {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-    },
-    capabilitiesReady && canViewSubmittals,
+  const listParams = {
+    ...params,
+    search: search.trim() || undefined,
+    status: statusFilter,
+    projectId: portfolioMode ? projectFilter : undefined,
+  };
+
+  const mySubmittalsQuery = useMySubmittals(
+    listParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const allSubmittalsQuery = useAllSubmittals(
+    listParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+  const submittalsQuery = portfolioMode ? allSubmittalsQuery : mySubmittalsQuery;
+
+  const projectsQuery = useAllProjects(
+    {},
+    capabilitiesReady && portfolioMode,
+  );
+  const projectFilterOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
   );
 
   const columns: ColumnsType<Submittal> = useMemo(
@@ -166,7 +194,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
-  if (!canViewSubmittals) {
+  if (!canAccessPage) {
     return (
       <Alert
         type="warning"
@@ -188,7 +216,11 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     <>
       <FormLayout
         title={t('pages.globalSubmittals.title')}
-        description={t('pages.globalSubmittals.description')}
+        description={
+          portfolioMode
+            ? 'All construction submittals across projects.'
+            : t('pages.globalSubmittals.description')
+        }
         extra={
           canCreate ? (
             <Button
@@ -236,6 +268,22 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
               label: step.label,
             }))}
           />
+          {portfolioMode ? (
+            <Select
+              allowClear
+              showSearch
+              placeholder="Project"
+              className={layout.filterControl}
+              value={projectFilter}
+              optionFilterProp="label"
+              loading={projectsQuery.isLoading}
+              onChange={(value: string | undefined) => {
+                resetPage();
+                setProjectFilter(value);
+              }}
+              options={projectFilterOptions}
+            />
+          ) : null}
         </Space>
 
         <DataTable<Submittal>
@@ -248,7 +296,11 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
               <TableEmptyState
                 icon={<Send />}
                 title={t('pages.globalSubmittals.empty')}
-                description="Submittals assigned to you, raised by you, or in your disciplines appear here."
+                description={
+                  portfolioMode
+                    ? 'Construction submittals from all projects appear here.'
+                    : 'Submittals assigned to you, raised by you, or in your disciplines appear here.'
+                }
                 action={
                   canCreate && !apiUnavailable
                     ? {
