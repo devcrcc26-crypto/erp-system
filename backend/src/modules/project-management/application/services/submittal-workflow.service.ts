@@ -217,7 +217,13 @@ export class SubmittalWorkflowService {
           tx,
           command.companyId,
           item.designPackageId,
+          item.excludedEdvIds,
         );
+        if (snapshot.snapshotPayload.length === 0) {
+          throw new BadRequestException(
+            `Submittal item ${item.id} has no documents selected for release`,
+          );
+        }
         await this.epcSubmittalRepository.captureItemSnapshot(tx, item.id, {
           snapshotEdvIds: snapshot.snapshotEdvIds,
           snapshotPayload: snapshot.snapshotPayload as unknown as Prisma.InputJsonValue,

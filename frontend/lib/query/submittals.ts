@@ -20,6 +20,7 @@ import type {
   PmListFilters,
   Submittal,
   SubmittalDetail,
+  SubmittalItemReleasableEdv,
   SubmittalReview,
   SubmittalStatus,
   UpdateSubmittalRequest,
@@ -29,8 +30,9 @@ import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
-const submittalsPath = (projectId: string): string =>
-  projectPath(projectId, 'submittals');
+export function submittalsPath(projectId: string): string {
+  return projectPath(projectId, 'submittals');
+}
 
 export const submittalKeys = {
   all: ['pm', 'submittals'] as const,
@@ -56,6 +58,13 @@ export const submittalKeys = {
     [...submittalKeys.details(projectId), submittalId] as const,
   reviews: (projectId: string, submittalId: string) =>
     [...submittalKeys.detail(projectId, submittalId), 'reviews'] as const,
+  itemEdvs: (projectId: string, submittalId: string, itemId: string) =>
+    [
+      ...submittalKeys.detail(projectId, submittalId),
+      'items',
+      itemId,
+      'edvs',
+    ] as const,
 };
 
 /**
@@ -283,4 +292,83 @@ export function useAddSubmittalReview() {
       });
     },
   });
+}
+
+export function useSubmittalItemEdvs(
+  projectId: string,
+  submittalId: string,
+  itemId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: submittalKeys.itemEdvs(projectId, submittalId, itemId),
+    queryFn: () =>
+      apiGet<SubmittalItemReleasableEdv[]>(
+        `${submittalsPath(projectId)}/${submittalId}/items/${itemId}/edvs`,
+      ),
+    enabled: Boolean(projectId && submittalId && itemId) && enabled,
+    retry: false,
+  });
+}
+
+export function useExcludeSubmittalItemEdv() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      itemId,
+      edvId,
+    }: {
+      projectId: string;
+      submittalId: string;
+      itemId: string;
+      edvId: string;
+    }) =>
+      apiDelete(
+        `${submittalsPath(projectId)}/${submittalId}/items/${itemId}/edvs/${edvId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.detail(variables.projectId, variables.submittalId),
+      });
+    },
+  });
+}
+
+export function useIncludeSubmittalItemEdv() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      itemId,
+      edvId,
+    }: {
+      projectId: string;
+      submittalId: string;
+      itemId: string;
+      edvId: string;
+    }) =>
+      apiPost(
+        `${submittalsPath(projectId)}/${submittalId}/items/${itemId}/edvs/${edvId}/include`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: submittalKeys.detail(variables.projectId, variables.submittalId),
+      });
+    },
+  });
+}
+
+export async function fetchEdvDownloadUrl(
+  projectId: string,
+  edvId: string,
+): Promise<{ url: string; fileName: string; fileSizeBytes: number }> {
+  return apiGet<{ url: string; fileName: string; fileSizeBytes: number }>(
+    `${projectPath(projectId)}/engineering-documents/versions/${edvId}/download-url`,
+  );
 }

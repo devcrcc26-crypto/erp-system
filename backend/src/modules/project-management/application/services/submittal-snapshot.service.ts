@@ -30,7 +30,9 @@ export class SubmittalSnapshotService {
     tx: PrismaTx,
     companyId: string,
     designPackageId: string,
+    excludedEdvIds: readonly string[] = [],
   ): Promise<SubmittalPackageSnapshot> {
+    const excluded = new Set(excludedEdvIds);
     const items = await tx.designPackageItem.findMany({
       where: { companyId, designPackageId },
       orderBy: { sortOrder: 'asc' },
@@ -41,18 +43,20 @@ export class SubmittalSnapshotService {
       },
     });
 
-    const snapshotPayload: SubmittalEdvSnapshotRow[] = items.map((item) => {
-      const edv = item.engineeringDocumentVersion;
-      const doc = edv.engineeringDocument;
-      return {
-        engineeringDocumentVersionId: edv.id,
-        engineeringDocumentId: doc.id,
-        revisionLabel: edv.revisionLabel,
-        documentNumber: doc.documentNumber,
-        title: doc.title,
-        edvStatus: edv.status,
-      };
-    });
+    const snapshotPayload: SubmittalEdvSnapshotRow[] = items
+      .map((item) => {
+        const edv = item.engineeringDocumentVersion;
+        const doc = edv.engineeringDocument;
+        return {
+          engineeringDocumentVersionId: edv.id,
+          engineeringDocumentId: doc.id,
+          revisionLabel: edv.revisionLabel,
+          documentNumber: doc.documentNumber,
+          title: doc.title,
+          edvStatus: edv.status,
+        };
+      })
+      .filter((row) => !excluded.has(row.engineeringDocumentVersionId));
 
     const snapshotEdvIds = snapshotPayload
       .map((r) => r.engineeringDocumentVersionId)

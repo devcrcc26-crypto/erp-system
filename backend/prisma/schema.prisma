@@ -2121,6 +2121,7 @@ model SubmittalItem {
   sortOrder         Int               @default(0) @map("sort_order")
   snapshotCaptured  Boolean           @default(false) @map("snapshot_captured")
   snapshotEdvIds    String[]          @map("snapshot_edv_ids")
+  excludedEdvIds    String[]          @default([]) @map("excluded_edv_ids")
   snapshotPayload   Json              @default("[]") @map("snapshot_payload")
   contentHash       String?           @map("content_hash")
   capturedAt        DateTime?         @map("captured_at")

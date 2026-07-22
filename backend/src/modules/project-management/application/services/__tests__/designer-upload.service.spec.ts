@@ -262,6 +262,8 @@ describe('designer-upload rights', () => {
         } as unknown as ConflictGuardService,
         { logCrud: jest.fn() } as unknown as WorkflowEventLogService,
         workflowKernel as unknown as WorkflowKernelService,
+        { getVersionDownloadUrl: jest.fn() } as never,
+        { engineeringDocumentVersion: { findFirst: jest.fn() } } as never,
       );
     });
 

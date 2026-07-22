@@ -242,9 +242,21 @@ export interface MappedSubmittalItem {
   sortOrder: number;
   snapshotCaptured: boolean;
   snapshotEdvIds: string[];
+  excludedEdvIds: string[];
+  snapshotPayload: SubmittalEdvSnapshotRow[];
   contentHash: string | null;
   capturedAt: string | null;
   createdAt: string;
+}
+
+/** Frozen EDV row stored on submittal item at issue time. */
+export interface SubmittalEdvSnapshotRow {
+  engineeringDocumentVersionId: string;
+  engineeringDocumentId: string;
+  revisionLabel: string;
+  documentNumber: string | null;
+  title: string;
+  edvStatus: string;
 }
 
 export interface MappedSubmittalReview {
@@ -554,6 +566,11 @@ export function mapSubmittalItem(
     designPackage?: { packageCode: string; name: string } | null;
   },
 ): MappedSubmittalItem {
+  const payload = row.snapshotPayload;
+  const snapshotPayload: SubmittalEdvSnapshotRow[] = Array.isArray(payload)
+    ? (payload as unknown as SubmittalEdvSnapshotRow[])
+    : [];
+
   return {
     id: row.id,
     submittalId: row.submittalId,
@@ -564,6 +581,8 @@ export function mapSubmittalItem(
     sortOrder: row.sortOrder,
     snapshotCaptured: row.snapshotCaptured,
     snapshotEdvIds: row.snapshotEdvIds,
+    excludedEdvIds: row.excludedEdvIds ?? [],
+    snapshotPayload,
     contentHash: row.contentHash,
     capturedAt: toIsoString(row.capturedAt),
     createdAt: toIsoString(row.createdAt)!,

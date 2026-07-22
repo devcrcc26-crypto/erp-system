@@ -427,6 +427,24 @@ export interface Submittal {
   items?: SubmittalItem[];
 }
 
+export interface SubmittalEdvSnapshotRow {
+  engineeringDocumentVersionId: string;
+  engineeringDocumentId: string;
+  revisionLabel: string;
+  documentNumber: string | null;
+  title: string;
+  edvStatus: string;
+}
+
+export interface SubmittalItemReleasableEdv {
+  id: string;
+  title: string;
+  revisionLabel: string;
+  documentNumber: string | null;
+  edvStatus: string;
+  documentVersionId: string;
+}
+
 export interface SubmittalItem {
   id: string;
   submittalId: string;
@@ -437,6 +455,8 @@ export interface SubmittalItem {
   sortOrder: number;
   snapshotCaptured: boolean;
   snapshotEdvIds: string[];
+  excludedEdvIds: string[];
+  snapshotPayload: SubmittalEdvSnapshotRow[];
   contentHash: string | null;
   capturedAt: string | null;
   createdAt: string;

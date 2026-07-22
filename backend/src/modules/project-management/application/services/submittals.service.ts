@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
+import { EdvStatus, FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -76,6 +76,15 @@ const SUBMITTAL_REVIEW_OUTCOME_STATUSES = new Set<SubmittalStatus>([
   SubmittalStatus.REVISE_AND_RESUBMIT,
   SubmittalStatus.REJECTED,
 ]);
+
+export interface SubmittalItemReleasableEdv {
+  readonly id: string;
+  readonly title: string;
+  readonly revisionLabel: string;
+  readonly documentNumber: string | null;
+  readonly edvStatus: string;
+  readonly documentVersionId: string;
+}
 
 @Injectable()
 export class SubmittalsService {
@@ -610,6 +619,100 @@ export class SubmittalsService {
   }
 
   /**
+   * Lists LOCKED EDVs on the design package linked to a DRAFT submittal item.
+   */
+  async listSubmittalItemReleasableEdvs(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    itemId: string,
+  ): Promise<SubmittalItemReleasableEdv[]> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const item = await this.getSubmittalItemOrThrow(
+      ctx.companyId,
+      projectId,
+      submittalId,
+      itemId,
+    );
+    if (item.submittal.issuedAt) {
+      throw new BadRequestException('Submittal is already issued');
+    }
+
+    return this.loadLockedEdvsForPackage(ctx.companyId, item.designPackageId);
+  }
+
+  /**
+   * Excludes an EDV from the external release snapshot (before issue).
+   */
+  async excludeSubmittalItemEdv(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    itemId: string,
+    edvId: string,
+  ): Promise<MappedSubmittalItem> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const item = await this.getSubmittalItemOrThrow(
+      ctx.companyId,
+      projectId,
+      submittalId,
+      itemId,
+    );
+    if (item.submittal.issuedAt) {
+      throw new BadRequestException('Cannot change document selection after issue');
+    }
+
+    await this.assertEdvOnPackage(ctx.companyId, item.designPackageId, edvId);
+
+    const excluded = new Set(item.excludedEdvIds);
+    excluded.add(edvId);
+
+    const updated = await this.prisma.submittalItem.update({
+      where: { id: itemId },
+      data: { excludedEdvIds: [...excluded] },
+      include: {
+        designPackage: { select: { packageCode: true, name: true } },
+      },
+    });
+
+    return mapSubmittalItem(updated);
+  }
+
+  /**
+   * Re-includes a previously excluded EDV in the release selection.
+   */
+  async includeSubmittalItemEdv(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    itemId: string,
+    edvId: string,
+  ): Promise<MappedSubmittalItem> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const item = await this.getSubmittalItemOrThrow(
+      ctx.companyId,
+      projectId,
+      submittalId,
+      itemId,
+    );
+    if (item.submittal.issuedAt) {
+      throw new BadRequestException('Cannot change document selection after issue');
+    }
+
+    const updated = await this.prisma.submittalItem.update({
+      where: { id: itemId },
+      data: {
+        excludedEdvIds: item.excludedEdvIds.filter((id) => id !== edvId),
+      },
+      include: {
+        designPackage: { select: { packageCode: true, name: true } },
+      },
+    });
+
+    return mapSubmittalItem(updated);
+  }
+
+  /**
    * Adds locked design packages to an existing DRAFT submittal.
    */
   async addItems(
@@ -1053,6 +1156,75 @@ export class SubmittalsService {
       throw new NotFoundException('Submittal not found');
     }
     return row;
+  }
+
+  private async getSubmittalItemOrThrow(
+    companyId: string,
+    projectId: string,
+    submittalId: string,
+    itemId: string,
+  ) {
+    const item = await this.prisma.submittalItem.findFirst({
+      where: { id: itemId, companyId, submittalId },
+      include: {
+        submittal: { select: { projectId: true, issuedAt: true } },
+        designPackage: { select: { packageCode: true, name: true } },
+      },
+    });
+    if (!item || item.submittal.projectId !== projectId) {
+      throw new NotFoundException('Submittal item not found');
+    }
+    return item;
+  }
+
+  private async loadLockedEdvsForPackage(
+    companyId: string,
+    designPackageId: string,
+  ): Promise<SubmittalItemReleasableEdv[]> {
+    const rows = await this.prisma.designPackageItem.findMany({
+      where: { companyId, designPackageId },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        engineeringDocumentVersion: {
+          include: { engineeringDocument: true },
+        },
+      },
+    });
+
+    return rows
+      .filter((row) => row.engineeringDocumentVersion.status === EdvStatus.LOCKED)
+      .map((row) => {
+        const edv = row.engineeringDocumentVersion;
+        const doc = edv.engineeringDocument;
+        return {
+          id: edv.id,
+          title: doc.title,
+          revisionLabel: edv.revisionLabel,
+          documentNumber: doc.documentNumber,
+          edvStatus: edv.status,
+          documentVersionId: edv.documentVersionId,
+        };
+      });
+  }
+
+  private async assertEdvOnPackage(
+    companyId: string,
+    designPackageId: string,
+    edvId: string,
+  ): Promise<void> {
+    const link = await this.prisma.designPackageItem.findFirst({
+      where: {
+        companyId,
+        designPackageId,
+        engineeringDocumentVersionId: edvId,
+        engineeringDocumentVersion: { status: EdvStatus.LOCKED },
+      },
+    });
+    if (!link) {
+      throw new NotFoundException(
+        'Locked engineering document version not found on this subtask',
+      );
+    }
   }
 
   private assertSubmittalIssuable(status: SubmittalStatus): void {

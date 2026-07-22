@@ -60,6 +60,23 @@ export class EngineeringBatchController {
     );
   }
 
+  @Get('engineering-documents/versions/:edvId/download-url')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Presigned download URL for an engineering document version (EDV)',
+  })
+  getEdvDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('edvId') edvId: string,
+  ): Promise<unknown> {
+    return this.engineeringDocumentsService.getEdvDownloadUrl(
+      this.ctx(user),
+      projectId,
+      edvId,
+    );
+  }
+
   @Get('engineering-documents/:id/decision-trace')
   @RequirePermission('schedule', 'view')
   @ApiOperation({ summary: 'Decision trace lineage for engineering document' })

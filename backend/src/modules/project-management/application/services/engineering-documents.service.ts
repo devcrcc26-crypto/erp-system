@@ -5,6 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EdvStatus, Prisma, WorkflowEntityType } from '@prisma/client';
+import { DocumentService } from '../../../documents/application/services/document.service';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -50,7 +53,57 @@ export class EngineeringDocumentsService {
     private readonly conflictGuard: ConflictGuardService,
     private readonly workflowEventLogService: WorkflowEventLogService,
     private readonly workflowKernel: WorkflowKernelService,
+    private readonly documentService: DocumentService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Presigned download URL for an EDV file in a project context.
+   */
+  async getEdvDownloadUrl(
+    ctx: PmContext,
+    projectId: string,
+    edvId: string,
+  ): Promise<{
+    url: string;
+    fileName: string;
+    fileSizeBytes: number;
+    expiresIn: number;
+  }> {
+    const edv = await this.prisma.engineeringDocumentVersion.findFirst({
+      where: activeOnly({ id: edvId, companyId: ctx.companyId }),
+      include: {
+        engineeringDocument: {
+          include: {
+            taskDiscipline: {
+              include: { task: { select: { projectId: true } } },
+            },
+          },
+        },
+        documentVersion: {
+          select: { id: true, fileSizeBytes: true },
+        },
+      },
+    });
+    if (
+      !edv ||
+      edv.engineeringDocument.taskDiscipline.task.projectId !== projectId
+    ) {
+      throw new NotFoundException('Engineering document version not found');
+    }
+
+    const presigned = await this.documentService.getVersionDownloadUrl(
+      ctx,
+      edv.documentVersionId,
+    );
+
+    return {
+      url: presigned.url,
+      expiresIn: presigned.expiresIn,
+      fileName: edv.engineeringDocument.title,
+      fileSizeBytes: edv.documentVersion.fileSizeBytes,
+    };
+  }
 
   /**
    * Lists engineering documents for a task discipline.

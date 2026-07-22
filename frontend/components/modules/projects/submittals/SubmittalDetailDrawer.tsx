@@ -35,7 +35,6 @@ import {
   useUpdateSubmittal,
 } from '@/lib/query/submittals';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import { useIssueSubmittal } from '@/lib/query/epc-submittals';
 import { layout, submittalDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -49,6 +48,7 @@ import {
 } from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import ExternalReleaseDocumentsSection from '@/components/modules/projects/submittals/ExternalReleaseDocumentsSection';
 
 interface ReviewFormValues {
   status: SubmittalStatus;
@@ -113,7 +113,6 @@ export default function SubmittalDetailDrawer({
   const submittalQuery = useSubmittal(projectId, submittalId ?? '', open);
   const reviewsQuery = useSubmittalReviews(projectId, submittalId ?? '', open);
   const addReview = useAddSubmittalReview();
-  const issueSubmittal = useIssueSubmittal();
   const submitToLead = useSubmitSubmittalToLead();
   const updateSubmittal = useUpdateSubmittal();
 
@@ -467,7 +466,19 @@ export default function SubmittalDetailDrawer({
             </section>
           )}
 
-          {submittal.items.length > 0 && (
+          {isExternalRelease && submittalId && (
+            <ExternalReleaseDocumentsSection
+              projectId={projectId}
+              submittal={submittal}
+              submittalId={submittalId}
+              onUpdated={() => {
+                onUpdated();
+                void submittalQuery.refetch();
+              }}
+            />
+          )}
+
+          {!isExternalRelease && submittal.items.length > 0 && (
             <div>
               <h3 className={`${layout.drawerHeading} mb-2`}>
                 Linked subtasks
@@ -483,7 +494,7 @@ export default function SubmittalDetailDrawer({
             </div>
           )}
 
-          {submittal.attachmentFolderId && (
+          {!isExternalRelease && submittal.attachmentFolderId && (
             <div className="mt-4">
               <h4 className={`${layout.drawerHeading} mb-2`}>Attached files</h4>
               <DocumentAttachmentPanel
@@ -841,43 +852,6 @@ export default function SubmittalDetailDrawer({
               title="External feedback is handled outside the system. Create an Issue, RFI, or Change Request to action any feedback received."
             />
           )}
-
-          {isExternalRelease &&
-            submittal.status === 'DRAFT' &&
-            submittal.items.length > 0 &&
-            submittalId && (
-              <Button
-                type="primary"
-                loading={issueSubmittal.isPending}
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'Issue this package?',
-                    content: `The document snapshots will be frozen. This cannot be undone. Issue to ${submittal.submittalPurpose === 'DISCIPLINE_SITE' ? 'construction site' : 'consultant'}?`,
-                    okText: 'Issue',
-                    cancelText: 'Cancel',
-                    onOk: () =>
-                      issueSubmittal
-                        .mutateAsync({ projectId, submittalId })
-                        .then(() => {
-                          messageApi.success(
-                            'Submittal issued to external reviewers',
-                          );
-                          onUpdated();
-                          void submittalQuery.refetch();
-                        })
-                        .catch((error: unknown) => {
-                          notifyApiError(
-                            error,
-                            'Failed to issue submittal',
-                            messageApi,
-                          );
-                        }),
-                  });
-                }}
-              >
-                Issue to site / consultant
-              </Button>
-            )}
         </div>
       )}
     </Drawer>

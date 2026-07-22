@@ -185,6 +185,61 @@ export class SubmittalsController {
     return this.submittalsService.addReview(this.ctx(user), projectId, id, dto);
   }
 
+  @Get(':id/items/:itemId/edvs')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List LOCKED EDVs for a submittal item (pre-issue)' })
+  listItemEdvs(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ): Promise<unknown> {
+    return this.submittalsService.listSubmittalItemReleasableEdvs(
+      this.ctx(user),
+      projectId,
+      id,
+      itemId,
+    );
+  }
+
+  @Delete(':id/items/:itemId/edvs/:edvId')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Exclude an EDV from external release snapshot' })
+  excludeItemEdv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Param('edvId') edvId: string,
+  ): Promise<unknown> {
+    return this.submittalsService.excludeSubmittalItemEdv(
+      this.ctx(user),
+      projectId,
+      id,
+      itemId,
+      edvId,
+    );
+  }
+
+  @Post(':id/items/:itemId/edvs/:edvId/include')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Re-include an excluded EDV in external release' })
+  includeItemEdv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Param('edvId') edvId: string,
+  ): Promise<unknown> {
+    return this.submittalsService.includeSubmittalItemEdv(
+      this.ctx(user),
+      projectId,
+      id,
+      itemId,
+      edvId,
+    );
+  }
+
   @Get(':id')
   @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get submittal by id' })

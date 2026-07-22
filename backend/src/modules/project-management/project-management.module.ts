@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PermissionsModule } from '../../shared/permissions/permissions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { DocumentsModule } from '../documents/documents.module';
 import {
   WORKFLOW_COMMITTED_QUEUE,
   WORKFLOW_SLA_QUEUE,
@@ -115,6 +116,7 @@ const workflowBullProcessors = redisEnabled
   imports: [
     PermissionsModule,
     NotificationsModule,
+    DocumentsModule,
     ScheduleModule.forRoot(),
     ...workflowBullImports,
   ],

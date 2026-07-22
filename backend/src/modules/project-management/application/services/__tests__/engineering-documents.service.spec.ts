@@ -55,6 +55,8 @@ describe('EngineeringDocumentsService registerFromUpload', () => {
       {} as unknown as ConflictGuardService,
       { logCrud: jest.fn() } as unknown as WorkflowEventLogService,
       {} as unknown as WorkflowKernelService,
+      { getVersionDownloadUrl: jest.fn() } as never,
+      { engineeringDocumentVersion: { findFirst: jest.fn() } } as never,
     );
   });
 
