@@ -127,7 +127,7 @@ export default function ContextSidebar({
     <aside
       className={`shell-context-sidebar relative flex h-full shrink-0 flex-col bg-white ${className}`}
       style={{
-        width: CONTEXT_SIDEBAR_WIDTH,
+        width: className.includes('w-full') ? '100%' : CONTEXT_SIDEBAR_WIDTH,
         borderRight: `0.5px solid ${tokens.colorBorder}`,
       }}
       aria-label={t('shell.projectNavigation')}

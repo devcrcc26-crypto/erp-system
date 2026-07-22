@@ -70,9 +70,11 @@ function ConfirmEmailChangeContent(): React.ReactNode {
 
   if (errorMessage) {
     return (
-      <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Email confirmation failed</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+            Email confirmation failed
+          </h1>
           <p className="mt-2 text-sm text-slate-500">
             We could not confirm your new email address.
           </p>
@@ -97,8 +99,10 @@ function ConfirmEmailChangeContent(): React.ReactNode {
   }
 
   return (
-    <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
-      <h1 className="text-2xl font-bold text-slate-900">Confirming email change</h1>
+    <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-8">
+      <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+        Confirming email change
+      </h1>
       <p className="mt-2 text-sm text-slate-500">
         Please wait while we verify your new email address…
       </p>
@@ -110,7 +114,7 @@ export default function ConfirmEmailChangePage(): React.ReactNode {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+        <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
           Loading…
         </div>
       }

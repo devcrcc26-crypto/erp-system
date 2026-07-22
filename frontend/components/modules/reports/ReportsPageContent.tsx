@@ -955,18 +955,21 @@ export default function ReportsPageContent(): React.ReactNode {
         >
           {t('pages.systemReports.sections.projectRegister')}
         </p>
-        <Table<Project>
-          rowKey="id"
-          size="small"
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          dataSource={projects}
-          columns={projectColumns}
-          locale={{
-            emptyText: (
-              <ChartEmpty description="Create projects to populate the portfolio register" />
-            ),
-          }}
-        />
+        <div className="erp-table-scroll min-w-0 w-full overflow-x-auto">
+          <Table<Project>
+            rowKey="id"
+            size="small"
+            scroll={{ x: 'max-content' }}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            dataSource={projects}
+            columns={projectColumns}
+            locale={{
+              emptyText: (
+                <ChartEmpty description="Create projects to populate the portfolio register" />
+              ),
+            }}
+          />
+        </div>
       </FormLayout>
     </div>
   );

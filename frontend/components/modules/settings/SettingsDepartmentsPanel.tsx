@@ -163,6 +163,7 @@ export default function SettingsDepartmentsPanel(): React.ReactNode {
         confirmLoading={createDepartment.isPending || updateDepartment.isPending}
         destroyOnHidden
         width={560}
+        className="erp-responsive-modal"
       >
         <Form<DepartmentFormValues>
           form={form}

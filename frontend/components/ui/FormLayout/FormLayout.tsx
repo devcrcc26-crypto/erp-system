@@ -79,14 +79,14 @@ export default function FormLayout({
 export function PageLoadingSkeleton(): React.ReactNode {
   return (
     <div
-      className="rounded-[12px] bg-white p-6"
+      className="rounded-[12px] bg-white p-4 sm:p-6"
       style={{ border: `0.5px solid ${tokens.colorBorder}` }}
     >
-      <div className="erp-page-skeleton mb-4 h-5 w-40" />
-      <div className="erp-page-skeleton mb-6 h-4 w-72" />
-      <div className="mb-4 flex gap-3">
-        <div className="erp-page-skeleton h-9 w-64 rounded-lg" />
-        <div className="erp-page-skeleton h-9 w-48 rounded-lg" />
+      <div className="erp-page-skeleton mb-4 h-5 w-32 max-w-full sm:w-40" />
+      <div className="erp-page-skeleton mb-6 h-4 w-full max-w-xs" />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="erp-page-skeleton h-9 w-full max-w-xs rounded-lg sm:w-64" />
+        <div className="erp-page-skeleton h-9 w-full max-w-[12rem] rounded-lg sm:w-48" />
       </div>
       <div className="space-y-3">
         {Array.from({ length: 6 }).map((_, index) => (

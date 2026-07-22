@@ -84,7 +84,7 @@ export const standardDetailDrawerProps: Pick<
   'size' | 'className' | 'styles'
 > = {
   size: DRAWER_WIDTH_STANDARD,
-  className: detailDrawerClassName,
+  className: responsiveDetailDrawerClassName,
   styles: detailDrawerStyles,
 };
 

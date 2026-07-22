@@ -210,8 +210,8 @@ export default function MyWorkPageContent({
           title="No work assigned to you yet."
         />
       ) : (
-        <div className="overflow-hidden rounded-[12px] border border-[var(--color-border-tertiary)]">
-          <table className="w-full border-collapse text-left">
+        <div className="overflow-x-auto min-w-0 rounded-[12px] border border-[var(--color-border-tertiary)]">
+          <table className="w-full min-w-[720px] border-collapse text-left">
             <thead className="border-b border-[var(--color-border-tertiary)] bg-slate-50">
               <tr>
                 {TABLE_HEADERS.map((header) => (

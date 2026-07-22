@@ -238,6 +238,7 @@ export default function RevisionWorkspace({
       onCancel={handleClose}
       footer={null}
       width={560}
+      className="erp-responsive-modal"
       destroyOnHidden
     >
       {comment && (

@@ -123,7 +123,7 @@ export default function AppShell({
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 
-        <div className="flex flex-col p-6">
+        <div className="flex flex-col p-3 sm:p-4 lg:p-6">
           <div className="min-w-0 flex-1">{children}</div>
         </div>
       </main>

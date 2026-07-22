@@ -6,6 +6,9 @@ import { useForgotPassword } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 
+const AUTH_INPUT_CLASS =
+  'w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100';
+
 export default function ForgotPasswordPage(): React.ReactNode {
   const forgotPassword = useForgotPassword();
 
@@ -35,9 +38,11 @@ export default function ForgotPasswordPage(): React.ReactNode {
   }
 
   return (
-    <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 shadow-sm">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Forgot password</h1>
+    <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <div className="mb-6 text-center sm:mb-8">
+        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+          Forgot password
+        </h1>
         <p className="mt-2 text-sm text-slate-500">
           Enter the exact email address on your account. We will send a reset
           link if it matches an active user.
@@ -59,7 +64,7 @@ export default function ForgotPasswordPage(): React.ReactNode {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+            className={AUTH_INPUT_CLASS}
           />
           <DemoEmailWarning email={email} />
         </div>

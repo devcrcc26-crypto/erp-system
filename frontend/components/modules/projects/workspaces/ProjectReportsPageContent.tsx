@@ -951,38 +951,41 @@ export default function ProjectReportsPageContent({
         >
           {t('pages.projectReports.sections.moduleSummary')}
         </p>
-        <Table<ModuleSummaryRow>
-          rowKey="key"
-          size="small"
-          pagination={false}
-          dataSource={moduleSummary}
-          columns={[
-            {
-              title: t('pages.projectReports.table.module'),
-              dataIndex: 'module',
-              key: 'module',
-            },
-            {
-              title: t('pages.projectReports.table.snapshot'),
-              dataIndex: 'metric',
-              key: 'metric',
-            },
-            {
-              title: '',
-              key: 'action',
-              width: 100,
-              render: (_value, record) => (
-                <Link
-                  href={record.href}
-                  className="text-[12px] no-underline hover:underline"
-                  style={{ color: tokens.colorTeal600 }}
-                >
-                  {t('pages.projectReports.table.view')}
-                </Link>
-              ),
-            },
-          ]}
-        />
+        <div className="erp-table-scroll min-w-0 w-full overflow-x-auto">
+          <Table<ModuleSummaryRow>
+            rowKey="key"
+            size="small"
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            dataSource={moduleSummary}
+            columns={[
+              {
+                title: t('pages.projectReports.table.module'),
+                dataIndex: 'module',
+                key: 'module',
+              },
+              {
+                title: t('pages.projectReports.table.snapshot'),
+                dataIndex: 'metric',
+                key: 'metric',
+              },
+              {
+                title: '',
+                key: 'action',
+                width: 100,
+                render: (_value, record) => (
+                  <Link
+                    href={record.href}
+                    className="text-[12px] no-underline hover:underline"
+                    style={{ color: tokens.colorTeal600 }}
+                  >
+                    {t('pages.projectReports.table.view')}
+                  </Link>
+                ),
+              },
+            ]}
+          />
+        </div>
       </FormLayout>
     </div>
   );

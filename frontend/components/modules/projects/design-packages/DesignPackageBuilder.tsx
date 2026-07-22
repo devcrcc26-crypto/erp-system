@@ -280,6 +280,7 @@ export default function DesignPackageBuilder({
       onClose={onClose}
       width={560}
       placement="right"
+      className="erp-responsive-drawer"
       footer={renderFooter()}
       styles={{
         body: {

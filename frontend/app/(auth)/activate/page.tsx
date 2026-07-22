@@ -50,9 +50,11 @@ function ActivateForm(): React.ReactNode {
   }
 
   return (
-    <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 shadow-sm">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Activate account</h1>
+    <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <div className="mb-6 text-center sm:mb-8">
+        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+          Activate account
+        </h1>
         <p className="mt-2 text-sm text-slate-500">
           Set your password to verify your email and access the system.
         </p>
@@ -79,7 +81,7 @@ function ActivateForm(): React.ReactNode {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+            className="w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
           />
         </div>
 
@@ -98,7 +100,7 @@ function ActivateForm(): React.ReactNode {
             minLength={8}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+            className="w-full min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
           />
         </div>
 
@@ -131,7 +133,7 @@ export default function ActivatePage(): React.ReactNode {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md rounded-md border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+        <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
           Loading...
         </div>
       }

@@ -67,7 +67,7 @@ export default function DisciplineRolesModal({
       confirmLoading={updateDiscipline.isPending}
       destroyOnHidden
       width={720}
-      className="erp-responsive-drawer"
+      className="erp-responsive-modal"
       afterOpenChange={(visible: boolean) => {
         if (visible && discipline) {
           form.setFieldsValue(toDisciplineRolesFormValues(discipline));
