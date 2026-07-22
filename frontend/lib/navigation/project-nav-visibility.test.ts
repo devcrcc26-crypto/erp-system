@@ -70,6 +70,61 @@ describe('project-nav-visibility', () => {
     expect(canViewProjectNavItem(changeRequests!, ctx)).toBe(false);
   });
 
+  it('full-access user with FK designer probe still sees change requests in project sidebar', () => {
+    const changeRequests = flattenProjectNavItems().find(
+      (item) => item.key === 'change-requests',
+    );
+    expect(changeRequests).toBeDefined();
+
+    expect(
+      canViewProjectNavItem(changeRequests!, {
+        pm: basePm({
+          change_requests: {
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+          },
+        }),
+        epc: {
+          ...EMPTY_EPC_CAPABILITIES,
+          navFullAccess: true,
+          navDesigner: true,
+          disciplineScopeBypass: true,
+        },
+        hasAssignedDisciplines: true,
+        disciplineScopeBypass: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('FK-only designer still hides change requests in project sidebar', () => {
+    const changeRequests = flattenProjectNavItems().find(
+      (item) => item.key === 'change-requests',
+    );
+    expect(changeRequests).toBeDefined();
+
+    expect(
+      canViewProjectNavItem(changeRequests!, {
+        pm: basePm({
+          change_requests: {
+            canView: true,
+            canCreate: false,
+            canEdit: false,
+            canDelete: false,
+          },
+        }),
+        epc: {
+          ...EMPTY_EPC_CAPABILITIES,
+          navDesigner: true,
+          canViewMyWork: true,
+        },
+        hasAssignedDisciplines: true,
+        disciplineScopeBypass: false,
+      }),
+    ).toBe(false);
+  });
+
   it('FK-only discipline leader has project sidebar when allowlist is non-empty', () => {
     const epc = {
       ...EMPTY_EPC_CAPABILITIES,

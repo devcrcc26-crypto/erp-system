@@ -168,7 +168,10 @@ export function canViewProjectNavItem(
   }
 
   if (item.key === 'submittals' || item.key === 'change-requests') {
-    if (ctx.epc.navDisciplineLeader || ctx.epc.navDesigner) {
+    if (
+      !ctx.epc.navFullAccess &&
+      (ctx.epc.navDisciplineLeader || ctx.epc.navDesigner)
+    ) {
       return item.key === 'submittals';
     }
   }
