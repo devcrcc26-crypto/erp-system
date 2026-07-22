@@ -19,12 +19,10 @@ import type {
   SubmittalPurpose,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
-import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useSubmittals } from '@/lib/query/submittals';
 import { useProject } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
-  formatSubmittalStatus,
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
@@ -84,7 +82,7 @@ export default function ExternalReleasePageContent({
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
       {
-        title: 'Submittal #',
+        title: 'Release #',
         dataIndex: 'submittalNumber',
         key: 'submittalNumber',
         render: (value: string, record) => (
@@ -137,7 +135,7 @@ export default function ExternalReleasePageContent({
         key: 'status',
         render: (status: SubmittalStatus) => (
           <StatusBadge
-            label={formatSubmittalStatus(status)}
+            label={status === 'DRAFT' ? 'Draft' : 'Issued'}
             variant={submittalStatusVariant(status)}
           />
         ),
@@ -172,7 +170,7 @@ export default function ExternalReleasePageContent({
     <>
       <FormLayout
         title="External release"
-        description="Submit discipline-leader-approved subtasks to site engineers or consultants for formal review."
+        description="External releases you created or that belong to disciplines you lead."
         extra={
           canCreateRelease ? (
             <Button
@@ -191,7 +189,7 @@ export default function ExternalReleasePageContent({
             type="warning"
             showIcon
             className="!mb-4"
-            title="This project is in Tender stage. Submittals cannot be created until the project moves to an active design phase."
+            title="This project is in Tender stage. External releases cannot be created until the project moves to an active design phase."
           />
         )}
 
@@ -208,7 +206,7 @@ export default function ExternalReleasePageContent({
             type="info"
             showIcon
             className="!mb-4"
-            title="Submittal APIs are not connected yet."
+            title="External release APIs are not connected yet."
           />
         )}
 
@@ -245,10 +243,10 @@ export default function ExternalReleasePageContent({
               resetPage();
               setStatusFilter(value);
             }}
-            options={SUBMITTAL_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
+            options={[
+              { value: 'DRAFT', label: 'Draft' },
+              { value: 'SUBMITTED', label: 'Issued' },
+            ]}
           />
         </Space>
 

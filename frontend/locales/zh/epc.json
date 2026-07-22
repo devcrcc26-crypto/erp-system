@@ -114,8 +114,8 @@
     },
     "globalExternalReleases": {
       "title": "对外发布",
-      "description": "跨项目显示由您创建或属于您所领导专业的对外发布文件。",
-      "empty": "没有与您相关的对外发布文件。",
+      "description": "跨项目查看所有对外发布。",
+      "empty": "暂无对外发布。",
       "noAccess": "您无权访问对外发布文件。"
     },
     "globalChangeRequests": {

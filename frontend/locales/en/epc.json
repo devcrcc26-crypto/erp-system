@@ -114,8 +114,8 @@
     },
     "globalExternalReleases": {
       "title": "External Release",
-      "description": "External releases you created or that belong to disciplines you lead, across all projects.",
-      "empty": "No external releases relevant to you.",
+      "description": "External releases across all your projects.",
+      "empty": "No external releases yet.",
       "noAccess": "You do not have access to external releases."
     },
     "globalChangeRequests": {

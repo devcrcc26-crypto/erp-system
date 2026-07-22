@@ -17,13 +17,9 @@ import type {
   SubmittalPurpose,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
-import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useMySubmittals } from '@/lib/query/submittals';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import {
-  formatSubmittalStatus,
-  submittalStatusVariant,
-} from '@/lib/utils/pm-status-display';
+import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -81,7 +77,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
       {
-        title: 'Submittal #',
+        title: 'Release #',
         dataIndex: 'submittalNumber',
         key: 'submittalNumber',
         render: (value: string, record) => (
@@ -133,7 +129,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         key: 'status',
         render: (status: SubmittalStatus) => (
           <StatusBadge
-            label={formatSubmittalStatus(status)}
+            label={status === 'DRAFT' ? 'Draft' : 'Issued'}
             variant={submittalStatusVariant(status)}
           />
         ),
@@ -205,7 +201,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
             type="info"
             showIcon
             className="!mb-4"
-            title="Submittal APIs are not connected yet."
+            title="External release APIs are not connected yet."
             description="This page is ready - data will appear when the backend is available."
           />
         )}
@@ -229,10 +225,10 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               resetPage();
               setStatusFilter(value);
             }}
-            options={SUBMITTAL_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
+            options={[
+              { value: 'DRAFT', label: 'Draft' },
+              { value: 'SUBMITTED', label: 'Issued' },
+            ]}
           />
         </Space>
 

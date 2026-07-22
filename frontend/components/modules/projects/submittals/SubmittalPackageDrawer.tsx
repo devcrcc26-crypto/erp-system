@@ -216,7 +216,7 @@ export default function SubmittalPackageDrawer({
   return (
     <Drawer
       {...submittalDrawerProps}
-      title="Create design submittal"
+      title="New external release"
       open={open}
       onClose={handleClose}
       destroyOnHidden
@@ -235,7 +235,7 @@ export default function SubmittalPackageDrawer({
             }
             onClick={() => form.submit()}
           >
-            Create submittal
+            Create release
           </Button>
         </Space>
       }
@@ -246,18 +246,18 @@ export default function SubmittalPackageDrawer({
           showIcon
           className="mb-4"
           title="Project is in Tender stage"
-          description="Submittals and external releases cannot be created while the project is in Tender stage. The project must be moved to an active design stage (Concept Design or later) before submittals can be raised."
+          description="External releases cannot be created while the project is in Tender stage. The project must be moved to an active design stage (Concept Design or later) before releases can be raised."
         />
       ) : (
         <Alert
           type="info"
           showIcon
           className="mb-4"
-          title="Select approved subtasks"
+          title="Select approved subtasks for external release"
           description={
             isDeputy
-              ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
-              : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
+              ? 'Deputy chief releases may bundle locked-ready subtasks across disciplines.'
+              : 'External releases must use subtasks from a single discipline.'
           }
         />
       )}
@@ -297,7 +297,7 @@ export default function SubmittalPackageDrawer({
                 taskDisciplineId: values.taskDisciplineId,
               },
             });
-            messageApi.success('Design submittal created');
+            messageApi.success('External release created');
             form.resetFields();
             onCreated(result.id);
             onClose();
@@ -306,7 +306,7 @@ export default function SubmittalPackageDrawer({
               setStageBlocked(true);
               return;
             }
-            notifyApiError(error, 'Failed to create design submittal', messageApi);
+            notifyApiError(error, 'Failed to create external release', messageApi);
           }
         }}
       />
@@ -412,7 +412,7 @@ function SubmittalPackageForm({
 
       <Form.Item
         name="submittalPurpose"
-        label="Submittal purpose"
+        label="Release purpose"
         rules={[{ required: true }]}
       >
         <Select options={purposeOptions} />

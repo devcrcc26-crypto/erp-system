@@ -14,6 +14,7 @@ import {
   Radio,
   Select,
   Space,
+  Steps,
   Timeline,
   Upload,
 } from 'antd';
@@ -154,6 +155,7 @@ export default function SubmittalDetailDrawer({
   const showDirectStatusControl =
     submittal !== undefined &&
     !isConstruction &&
+    !isExternalRelease &&
     !SUBMITTAL_VERDICT_STATUSES.includes(submittal.status) &&
     nextStatusOptions(submittal.status, SUBMITTAL_DIRECT_TRANSITIONS).length >
       0;
@@ -355,11 +357,29 @@ export default function SubmittalDetailDrawer({
 
       {submittal && (
         <div className={layout.drawerStack}>
-          <WorkflowStepper
-            className="erp-drawer-workflow"
-            steps={SUBMITTAL_WORKFLOW}
-            currentStatus={submittal.status}
-          />
+          {isExternalRelease ? (
+            <Steps
+              size="small"
+              className="erp-drawer-workflow"
+              current={submittal.status === 'DRAFT' ? 0 : 1}
+              items={[
+                {
+                  title: 'Draft',
+                  description: 'Being prepared',
+                },
+                {
+                  title: 'Issued',
+                  description: 'Sent externally',
+                },
+              ]}
+            />
+          ) : (
+            <WorkflowStepper
+              className="erp-drawer-workflow"
+              steps={SUBMITTAL_WORKFLOW}
+              currentStatus={submittal.status}
+            />
+          )}
 
           {isConstruction && submittal.status === 'APPROVED' && (
             <Alert
@@ -402,7 +422,13 @@ export default function SubmittalDetailDrawer({
           >
             <Descriptions.Item label="Status">
               <StatusBadge
-                label={formatSubmittalStatus(submittal.status)}
+                label={
+                  isExternalRelease
+                    ? submittal.status === 'DRAFT'
+                      ? 'Draft'
+                      : 'Issued'
+                    : formatSubmittalStatus(submittal.status)
+                }
                 variant={submittalStatusVariant(submittal.status)}
               />
             </Descriptions.Item>
@@ -421,21 +447,40 @@ export default function SubmittalDetailDrawer({
             <Descriptions.Item label="Supplier">
               {submittal.supplier ?? '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Submitted by">
+            {isExternalRelease && (
+              <Descriptions.Item label="Recipient">
+                {submittal.submittalPurpose === 'DISCIPLINE_SITE'
+                  ? 'Site engineers'
+                  : submittal.submittalPurpose === 'DISCIPLINE_CONSULTANT'
+                    ? 'Consultants'
+                    : '-'}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item
+              label={isExternalRelease ? 'Prepared by' : 'Submitted by'}
+            >
               {resolveUserDisplay(submittal.submittedBy, submittal.submittedByName)}
             </Descriptions.Item>
-            <Descriptions.Item label="Assigned to">
-              {resolveUserDisplay(submittal.assignedTo, submittal.assignedToName, '-')}
-            </Descriptions.Item>
-            <Descriptions.Item label="Discipline leader">
-              {resolveUserDisplay(submittal.reviewedBy, submittal.reviewedByName, '-')}
-            </Descriptions.Item>
-            <Descriptions.Item label="Submission date">
+            {!isExternalRelease && (
+              <Descriptions.Item label="Assigned to">
+                {resolveUserDisplay(submittal.assignedTo, submittal.assignedToName, '-')}
+              </Descriptions.Item>
+            )}
+            {!isExternalRelease && (
+              <Descriptions.Item label="Discipline leader">
+                {resolveUserDisplay(submittal.reviewedBy, submittal.reviewedByName, '-')}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item
+              label={isExternalRelease ? 'Prepared on' : 'Submission date'}
+            >
               {formatProjectDate(submittal.submissionDate)}
             </Descriptions.Item>
-            <Descriptions.Item label="Due date">
-              {formatProjectDate(submittal.dueDate)}
-            </Descriptions.Item>
+            {!isExternalRelease && (
+              <Descriptions.Item label="Due date">
+                {formatProjectDate(submittal.dueDate)}
+              </Descriptions.Item>
+            )}
             {isExternalRelease && (
               <Descriptions.Item label="Issued">
                 {submittal.issuedAt
@@ -788,6 +833,7 @@ export default function SubmittalDetailDrawer({
               />
             )}
 
+          {!isExternalRelease && (
           <section className={layout.drawerSection}>
             <h3 className={`${layout.drawerHeading} mb-3`}>
               Review history
@@ -843,6 +889,7 @@ export default function SubmittalDetailDrawer({
               />
             )}
           </section>
+          )}
 
           {isExternalRelease && (
             <Alert

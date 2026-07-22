@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { EdvStatus, FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
+import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -573,10 +574,16 @@ export class SubmittalsService {
   ): Promise<WorkflowResultSnapshot> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    const submittalNumber = await this.documentNumberService.getNextNumber(
-      ctx,
-      'SUBMITTAL',
-    );
+    const isExternalRelease =
+      dto.submittalPurpose === SubmittalPurpose.DISCIPLINE_SITE ||
+      dto.submittalPurpose === SubmittalPurpose.DISCIPLINE_CONSULTANT;
+
+    const submittalNumber = isExternalRelease
+      ? await this.generateExternalReleaseNumber(
+          ctx.companyId,
+          dto.designPackageIds[0]!,
+        )
+      : await this.documentNumberService.getNextNumber(ctx, 'SUBMITTAL');
 
     return this.workflowKernel.execute({
       type: 'CreateDesignSubmittal',
@@ -1156,6 +1163,55 @@ export class SubmittalsService {
       throw new NotFoundException('Submittal not found');
     }
     return row;
+  }
+
+  /**
+   * ER-{overseas}-{discipline:02}-{subtask:03}-{seq:03} for site/consultant releases.
+   */
+  private async generateExternalReleaseNumber(
+    companyId: string,
+    designPackageId: string,
+  ): Promise<string> {
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: designPackageId, companyId }),
+      select: {
+        subtaskIndex: true,
+        taskDiscipline: {
+          select: {
+            disciplineIndex: true,
+            task: { select: { overseasTaskNumber: true } },
+          },
+        },
+      },
+    });
+    if (!pkg) {
+      throw new NotFoundException('Design package not found');
+    }
+
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
+    );
+
+    const existingCount = await this.prisma.submittal.count({
+      where: {
+        deletedAt: null,
+        submittalPurpose: {
+          in: [
+            SubmittalPurpose.DISCIPLINE_SITE,
+            SubmittalPurpose.DISCIPLINE_CONSULTANT,
+          ],
+        },
+        project: { companyId, deletedAt: null },
+        items: {
+          some: { designPackageId },
+        },
+      },
+    });
+
+    const seq = String(existingCount + 1).padStart(3, '0');
+    return `ER-${fullCode}-${seq}`;
   }
 
   private async getSubmittalItemOrThrow(

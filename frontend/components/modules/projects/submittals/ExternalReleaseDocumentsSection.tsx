@@ -260,11 +260,11 @@ export default function ExternalReleaseDocumentsSection({
         issueSubmittal
           .mutateAsync({ projectId, submittalId })
           .then(() => {
-            messageApi.success('Submittal issued to external reviewers');
+            messageApi.success('Release issued to external reviewers');
             onUpdated();
           })
           .catch((error: unknown) => {
-            notifyApiError(error, 'Failed to issue submittal', messageApi);
+            notifyApiError(error, 'Failed to issue release', messageApi);
           }),
     });
   }
