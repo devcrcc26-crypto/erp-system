@@ -20,7 +20,8 @@
       "Bash(node \"/c/Users/PAVILION/AppData/Local/Temp/claude/c--Users-PAVILION-Documents-ERP-System/fa1f5b36-a082-427d-91e7-6c69b9105b68/scratchpad/check_dl_sessions.js\")",
       "Bash(git stash *)",
       "Bash(node -e ' *)",
-      "Bash(grep -i \"^ts-node$\")"
+      "Bash(grep -i \"^ts-node$\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).scripts\\)\")"
     ],
     "additionalDirectories": [
       "\\tmp"

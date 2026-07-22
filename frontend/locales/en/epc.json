@@ -16,6 +16,7 @@
     "myComments": "All My Comments",
     "myWork": "All My Work",
     "submittals": "Submittals",
+    "externalReleases": "External Release",
     "changeRequests": "Change Requests",
     "departments": "Departments",
     "positions": "Positions",
@@ -110,6 +111,12 @@
       "projectName": "Project",
       "empty": "No submittals relevant to you.",
       "noAccess": "You do not have access to construction submittals."
+    },
+    "globalExternalReleases": {
+      "title": "External Release",
+      "description": "External releases you created or that belong to disciplines you lead, across all projects.",
+      "empty": "No external releases relevant to you.",
+      "noAccess": "You do not have access to external releases."
     },
     "globalChangeRequests": {
       "title": "Change Requests",

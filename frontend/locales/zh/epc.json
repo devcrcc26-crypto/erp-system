@@ -16,6 +16,7 @@
     "myComments": "全部我的意见",
     "myWork": "全部我的工作",
     "submittals": "送审文件",
+    "externalReleases": "对外发布",
     "changeRequests": "变更请求",
     "departments": "部门",
     "positions": "职位",
@@ -110,6 +111,12 @@
       "projectName": "项目",
       "empty": "没有与您相关的送审文件。",
       "noAccess": "您无权访问施工送审文件。"
+    },
+    "globalExternalReleases": {
+      "title": "对外发布",
+      "description": "跨项目显示由您创建或属于您所领导专业的对外发布文件。",
+      "empty": "没有与您相关的对外发布文件。",
+      "noAccess": "您无权访问对外发布文件。"
     },
     "globalChangeRequests": {
       "title": "变更请求",

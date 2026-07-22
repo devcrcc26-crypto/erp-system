@@ -266,6 +266,14 @@ export function canViewGlobalNavKey(
     );
   }
 
+  if (key === '/external-releases') {
+    return (
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.submittals.canView ?? false)
+    );
+  }
+
   if (key === '/change-requests') {
     return (
       epc.navDesigner ||

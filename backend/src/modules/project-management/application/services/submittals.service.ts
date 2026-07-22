@@ -137,7 +137,8 @@ export class SubmittalsService {
   }
 
   /**
-   * Company-scoped construction submittals relevant to the current user.
+   * Company-scoped submittals relevant to the current user across projects.
+   * Defaults to construction submittals; pass query.submittalPurpose to widen.
    */
   async listMySubmittals(
     ctx: PmContext,
@@ -159,6 +160,12 @@ export class SubmittalsService {
         orderBy,
         include: {
           project: { select: { name: true, projectCode: true } },
+          items: {
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              designPackage: { select: { packageCode: true, name: true } },
+            },
+          },
         },
       }),
       this.prisma.submittal.count({ where }),
@@ -991,8 +998,18 @@ export class SubmittalsService {
       },
     ];
 
+    let submittalPurpose: Prisma.SubmittalWhereInput['submittalPurpose'] =
+      SubmittalPurpose.IN_CONSTRUCTION;
+    if (query.submittalPurpose) {
+      const purposes = query.submittalPurpose
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean) as SubmittalPurpose[];
+      submittalPurpose = purposes.length === 1 ? purposes[0] : { in: purposes };
+    }
+
     const where: Prisma.SubmittalWhereInput = activeOnly({
-      submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+      submittalPurpose,
       project: activeOnly({ companyId: ctx.companyId }),
       OR: relevanceOr,
     });

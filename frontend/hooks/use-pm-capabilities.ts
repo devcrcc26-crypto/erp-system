@@ -84,6 +84,20 @@ export function useCanViewSubmittals(): boolean {
 }
 
 /**
+ * Global external releases — designer / discipline-lead personas or PM module view.
+ * Same visibility formula as construction submittals (shares the `submittals` module).
+ */
+export function useCanViewExternalReleases(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  return (
+    epc.navDesigner ||
+    epc.navDisciplineLeader ||
+    pm.submittals.canView
+  );
+}
+
+/**
  * Global change requests — designer / discipline-lead personas or PM module view.
  */
 export function useCanViewChangeRequests(): boolean {

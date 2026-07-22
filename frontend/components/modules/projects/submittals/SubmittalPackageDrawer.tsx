@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -30,11 +30,14 @@ import { apiGet } from '@/lib/api/client';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { designPackageKeys } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
+import { useMyWork } from '@/lib/query/epc-workspace';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewMyWork, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 
 interface SubmittalPackageFormValues {
+  projectId?: string;
   category: string;
   title: string;
   contractor?: string;
@@ -79,17 +82,34 @@ function designPackagesPath(
 
 export default function SubmittalPackageDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onCreated,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (submittalId: string) => void;
 }): React.ReactNode {
   const [form] = Form.useForm<SubmittalPackageFormValues>();
-  const disciplinesQuery = useProjectDisciplines(projectId, open);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? '';
+
+  const capabilitiesReady = useCapabilitiesReady();
+  const canViewMyWork = useCanViewMyWork();
+  const myWorkQuery = useMyWork(
+    undefined,
+    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  );
+
+  const disciplinesQuery = useProjectDisciplines(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
   const createSubmittal = useCreateDesignSubmittal();
   const messageApi = useAppMessage();
   const purpose = Form.useWatch('submittalPurpose', form) as
@@ -102,12 +122,29 @@ export default function SubmittalPackageDrawer({
   const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
   const disciplines = disciplinesQuery.data ?? [];
 
+  const projectOptions = useMemo(() => {
+    const myWorkItems = myWorkQuery.data ?? [];
+    return Array.from(
+      new Map(
+        myWorkItems.map((item) => [
+          item.projectId,
+          {
+            value: item.projectId,
+            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
+          },
+        ]),
+      ).values(),
+    );
+  }, [myWorkQuery.data]);
+
   const packageQueries = useQueries({
     queries: disciplines.map((discipline) => ({
-      queryKey: designPackageKeys.lists(projectId, discipline.id),
+      queryKey: designPackageKeys.lists(effectiveProjectId, discipline.id),
       queryFn: () =>
-        apiGet<DesignPackage[]>(designPackagesPath(projectId, discipline.id)),
-      enabled: Boolean(projectId) && isDeputy,
+        apiGet<DesignPackage[]>(
+          designPackagesPath(effectiveProjectId, discipline.id),
+        ),
+      enabled: Boolean(effectiveProjectId) && isDeputy,
       staleTime: 30_000,
     })),
   });
@@ -116,14 +153,15 @@ export default function SubmittalPackageDrawer({
     queries: [
       {
         queryKey: designPackageKeys.lists(
-          projectId,
+          effectiveProjectId,
           taskDisciplineId ?? '__none__',
         ),
         queryFn: () =>
           apiGet<DesignPackage[]>(
-            designPackagesPath(projectId, taskDisciplineId!),
+            designPackagesPath(effectiveProjectId, taskDisciplineId!),
           ),
-        enabled: Boolean(projectId) && Boolean(taskDisciplineId) && !isDeputy,
+        enabled:
+          Boolean(effectiveProjectId) && Boolean(taskDisciplineId) && !isDeputy,
         staleTime: 30_000,
       },
     ],
@@ -142,21 +180,51 @@ export default function SubmittalPackageDrawer({
     ? packageQueries.some((query) => query.isLoading)
     : (singleDisciplinePackagesQuery[0]?.isLoading ?? false);
 
-  const hasSelectedDiscipline = isDeputy ? true : Boolean(taskDisciplineId);
+  const hasSelectedProject = Boolean(effectiveProjectId);
+  const hasSelectedDiscipline = isDeputy
+    ? hasSelectedProject
+    : Boolean(taskDisciplineId);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setSelectedProjectId(projectIdProp ?? null);
+    if (projectIdProp) {
+      form.setFieldsValue({ projectId: projectIdProp });
+    }
+  }, [open, projectIdProp, form]);
+
+  function handleProjectChange(nextProjectId: string): void {
+    setSelectedProjectId(nextProjectId);
+    form.setFieldsValue({
+      projectId: nextProjectId,
+      taskDisciplineId: undefined,
+      designPackageIds: undefined,
+    });
+  }
+
+  function handleClose(): void {
+    setSelectedProjectId(projectIdProp ?? null);
+    form.resetFields();
+    onClose();
+  }
 
   return (
     <Drawer
       {...submittalDrawerProps}
       title="Create design submittal"
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
+      destroyOnHidden
       footer={
         <Space>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleClose}>Cancel</Button>
           <Button
             type="primary"
             loading={createSubmittal.isPending}
             disabled={
+              !hasSelectedProject ||
               !hasSelectedDiscipline ||
               isLoadingPackages ||
               lockablePackages.length === 0
@@ -182,13 +250,24 @@ export default function SubmittalPackageDrawer({
 
       <SubmittalPackageForm
         form={form}
+        showProjectSelector={showProjectSelector}
+        projectOptions={projectOptions}
+        projectOptionsLoading={myWorkQuery.isLoading}
+        onProjectChange={handleProjectChange}
+        hasSelectedProject={hasSelectedProject}
         disciplines={disciplines}
+        disciplinesLoading={disciplinesQuery.isLoading}
         isDeputy={isDeputy}
         lockablePackages={lockablePackages}
         isLoadingPackages={isLoadingPackages}
         hasSelectedDiscipline={hasSelectedDiscipline}
         onSubmit={async (values) => {
-          await createSubmittal.mutateAsync({
+          const projectId = selectedProjectId ?? values.projectId ?? projectIdProp;
+          if (!projectId) {
+            messageApi.error('Select a project');
+            return;
+          }
+          const result = await createSubmittal.mutateAsync({
             projectId,
             body: {
               category: values.category.trim(),
@@ -204,7 +283,7 @@ export default function SubmittalPackageDrawer({
           });
           messageApi.success('Design submittal created');
           form.resetFields();
-          onCreated();
+          onCreated(result.id);
           onClose();
         }}
       />
@@ -214,7 +293,13 @@ export default function SubmittalPackageDrawer({
 
 function SubmittalPackageForm({
   form,
+  showProjectSelector,
+  projectOptions,
+  projectOptionsLoading,
+  onProjectChange,
+  hasSelectedProject,
   disciplines,
+  disciplinesLoading,
   isDeputy,
   lockablePackages,
   isLoadingPackages,
@@ -222,6 +307,11 @@ function SubmittalPackageForm({
   onSubmit,
 }: {
   form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
+  showProjectSelector: boolean;
+  projectOptions: { value: string; label: string }[];
+  projectOptionsLoading: boolean;
+  onProjectChange: (projectId: string) => void;
+  hasSelectedProject: boolean;
   disciplines: {
     id: string;
     disciplineIndex?: number | null;
@@ -229,6 +319,7 @@ function SubmittalPackageForm({
     disciplineName?: string | null;
     overseasTaskNumber?: string | null;
   }[];
+  disciplinesLoading: boolean;
   isDeputy: boolean;
   lockablePackages: DesignPackage[];
   isLoadingPackages: boolean;
@@ -279,6 +370,23 @@ function SubmittalPackageForm({
       initialValues={{ submittalPurpose: 'DISCIPLINE_SITE' as SubmittalPurpose }}
       onFinish={(values: SubmittalPackageFormValues) => void onSubmit(values)}
     >
+      {showProjectSelector && (
+        <Form.Item
+          name="projectId"
+          label="Project"
+          rules={[{ required: true, message: 'Select a project' }]}
+        >
+          <Select
+            showSearch
+            placeholder="Select project"
+            options={projectOptions}
+            loading={projectOptionsLoading}
+            optionFilterProp="label"
+            onChange={onProjectChange}
+          />
+        </Form.Item>
+      )}
+
       <Form.Item
         name="submittalPurpose"
         label="Submittal purpose"
@@ -295,6 +403,8 @@ function SubmittalPackageForm({
         >
           <Select
             placeholder="Select discipline"
+            loading={disciplinesLoading}
+            disabled={showProjectSelector && !hasSelectedProject}
             options={disciplines.map((d) => ({
               value: d.id,
               label: d.disciplineNumber
@@ -332,7 +442,11 @@ function SubmittalPackageForm({
           <Alert
             type="info"
             showIcon
-            title="Select a discipline to see available subtasks"
+            title={
+              showProjectSelector && !hasSelectedProject
+                ? 'Select a project and discipline to see available subtasks'
+                : 'Select a discipline to see available subtasks'
+            }
           />
         </Form.Item>
       )}
