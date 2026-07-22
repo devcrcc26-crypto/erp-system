@@ -27,6 +27,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
+import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -35,16 +36,6 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
   'DISCIPLINE_SITE',
   'DISCIPLINE_CONSULTANT',
 ];
-
-function formatPurpose(purpose: SubmittalPurpose | null): string {
-  if (purpose === 'DISCIPLINE_SITE') {
-    return 'Site engineers';
-  }
-  if (purpose === 'DISCIPLINE_CONSULTANT') {
-    return 'Consultants';
-  }
-  return '-';
-}
 
 export default function ExternalReleasePageContent({
   projectId,
@@ -121,7 +112,8 @@ export default function ExternalReleasePageContent({
         title: 'Recipient',
         dataIndex: 'submittalPurpose',
         key: 'submittalPurpose',
-        render: (value: SubmittalPurpose | null) => formatPurpose(value),
+        render: (value: SubmittalPurpose | null) =>
+          formatExternalReleasePurpose(value),
       },
       {
         title: 'Issued by',
@@ -230,8 +222,14 @@ export default function ExternalReleasePageContent({
               setPurposeFilter(value);
             }}
             options={[
-              { value: 'DISCIPLINE_SITE', label: 'Site engineers' },
-              { value: 'DISCIPLINE_CONSULTANT', label: 'Consultants' },
+              {
+                value: 'DISCIPLINE_SITE',
+                label: formatExternalReleasePurpose('DISCIPLINE_SITE'),
+              },
+              {
+                value: 'DISCIPLINE_CONSULTANT',
+                label: formatExternalReleasePurpose('DISCIPLINE_CONSULTANT'),
+              },
             ]}
           />
           <Select

@@ -20,6 +20,7 @@ import type {
 import { useMySubmittals } from '@/lib/query/submittals';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
+import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -34,16 +35,6 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
   'DISCIPLINE_SITE',
   'DISCIPLINE_CONSULTANT',
 ];
-
-function formatPurpose(purpose: SubmittalPurpose | null): string {
-  if (purpose === 'DISCIPLINE_SITE') {
-    return 'Site engineers';
-  }
-  if (purpose === 'DISCIPLINE_CONSULTANT') {
-    return 'Consultants';
-  }
-  return '-';
-}
 
 /**
  * Global external releases list — cross-project, current-user relevant only.
@@ -121,7 +112,8 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         title: 'Recipient',
         dataIndex: 'submittalPurpose',
         key: 'submittalPurpose',
-        render: (value: SubmittalPurpose | null) => formatPurpose(value),
+        render: (value: SubmittalPurpose | null) =>
+          formatExternalReleasePurpose(value),
       },
       {
         title: 'Status',

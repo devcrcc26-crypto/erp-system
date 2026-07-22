@@ -14,7 +14,7 @@ import {
   Spin,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
@@ -22,10 +22,7 @@ import type {
   DesignPackage,
   DesignPackageProjectedStatus,
 } from '@/lib/api/epc.types';
-import type {
-  SubmittalPreparedByRole,
-  SubmittalPurpose,
-} from '@/lib/api/project-management.types';
+import type { SubmittalPurpose } from '@/lib/api/project-management.types';
 import { apiGet } from '@/lib/api/client';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { designPackageKeys } from '@/lib/query/design-packages';
@@ -35,6 +32,7 @@ import { submittalDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewMyWork, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
+import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { isProjectStageBlockedError } from '@/lib/api/errors';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -46,19 +44,22 @@ interface SubmittalPackageFormValues {
   supplier?: string;
   specReference?: string;
   submittalPurpose: SubmittalPurpose;
-  taskDisciplineId?: string;
+  taskDisciplineId: string;
   designPackageIds: string[];
 }
 
-const DISCIPLINE_LEAD_PURPOSES: SubmittalPurpose[] = [
-  'DISCIPLINE_SITE',
-  'DISCIPLINE_CONSULTANT',
-];
-
-const DEPUTY_PURPOSES: SubmittalPurpose[] = [
-  'DEPUTY_BID',
-  'DEPUTY_INTERIM',
-  'DEPUTY_FINAL',
+const EXTERNAL_RELEASE_PURPOSES: {
+  value: SubmittalPurpose;
+  label: string;
+}[] = [
+  {
+    value: 'DISCIPLINE_SITE',
+    label: formatExternalReleasePurpose('DISCIPLINE_SITE'),
+  },
+  {
+    value: 'DISCIPLINE_CONSULTANT',
+    label: formatExternalReleasePurpose('DISCIPLINE_CONSULTANT'),
+  },
 ];
 
 /** Subtasks eligible for external release — Approved or Locked only. */
@@ -66,12 +67,6 @@ const RELEASABLE_STATUSES: DesignPackageProjectedStatus[] = [
   'APPROVED',
   'LOCKED',
 ];
-
-function purposeToRole(purpose: SubmittalPurpose): SubmittalPreparedByRole {
-  return DISCIPLINE_LEAD_PURPOSES.includes(purpose)
-    ? 'DISCIPLINE_LEAD'
-    : 'DEPUTY_CHIEF';
-}
 
 function designPackagesPath(
   projectId: string,
@@ -113,14 +108,9 @@ export default function SubmittalPackageDrawer({
   const createSubmittal = useCreateDesignSubmittal();
   const messageApi = useAppMessage();
   const [stageBlocked, setStageBlocked] = useState(false);
-  const purpose = Form.useWatch('submittalPurpose', form) as
-    | SubmittalPurpose
-    | undefined;
   const taskDisciplineId = Form.useWatch('taskDisciplineId', form) as
     | string
     | undefined;
-  const preparedByRole = purpose ? purposeToRole(purpose) : undefined;
-  const isDeputy = preparedByRole === 'DEPUTY_CHIEF';
   const disciplines = disciplinesQuery.data ?? [];
 
   const projectOptions = useMemo(() => {
@@ -138,53 +128,30 @@ export default function SubmittalPackageDrawer({
     );
   }, [myWorkQuery.data]);
 
-  const packageQueries = useQueries({
-    queries: disciplines.map((discipline) => ({
-      queryKey: designPackageKeys.lists(effectiveProjectId, discipline.id),
-      queryFn: () =>
-        apiGet<DesignPackage[]>(
-          designPackagesPath(effectiveProjectId, discipline.id),
-        ),
-      enabled: Boolean(effectiveProjectId) && isDeputy,
-      staleTime: 30_000,
-    })),
+  const packagesQuery = useQuery({
+    queryKey: designPackageKeys.lists(
+      effectiveProjectId,
+      taskDisciplineId ?? '__none__',
+    ),
+    queryFn: () =>
+      apiGet<DesignPackage[]>(
+        designPackagesPath(effectiveProjectId, taskDisciplineId!),
+      ),
+    enabled: Boolean(effectiveProjectId) && Boolean(taskDisciplineId),
+    staleTime: 30_000,
   });
 
-  const singleDisciplinePackagesQuery = useQueries({
-    queries: [
-      {
-        queryKey: designPackageKeys.lists(
-          effectiveProjectId,
-          taskDisciplineId ?? '__none__',
-        ),
-        queryFn: () =>
-          apiGet<DesignPackage[]>(
-            designPackagesPath(effectiveProjectId, taskDisciplineId!),
-          ),
-        enabled:
-          Boolean(effectiveProjectId) && Boolean(taskDisciplineId) && !isDeputy,
-        staleTime: 30_000,
-      },
-    ],
-  });
+  const lockablePackages = useMemo(
+    () =>
+      (packagesQuery.data ?? []).filter((pkg) =>
+        RELEASABLE_STATUSES.includes(pkg.projectedStatus),
+      ),
+    [packagesQuery.data],
+  );
 
-  const lockablePackages = useMemo(() => {
-    const source = isDeputy
-      ? packageQueries.flatMap((query) => query.data ?? [])
-      : (singleDisciplinePackagesQuery[0]?.data ?? []);
-    return source.filter((pkg) =>
-      RELEASABLE_STATUSES.includes(pkg.projectedStatus),
-    );
-  }, [isDeputy, packageQueries, singleDisciplinePackagesQuery]);
-
-  const isLoadingPackages = isDeputy
-    ? packageQueries.some((query) => query.isLoading)
-    : (singleDisciplinePackagesQuery[0]?.isLoading ?? false);
-
+  const isLoadingPackages = packagesQuery.isLoading;
   const hasSelectedProject = Boolean(effectiveProjectId);
-  const hasSelectedDiscipline = isDeputy
-    ? hasSelectedProject
-    : Boolean(taskDisciplineId);
+  const hasSelectedDiscipline = Boolean(taskDisciplineId);
 
   useEffect(() => {
     if (!open) {
@@ -254,11 +221,7 @@ export default function SubmittalPackageDrawer({
           showIcon
           className="mb-4"
           title="Select approved subtasks for external release"
-          description={
-            isDeputy
-              ? 'Deputy chief releases may bundle locked-ready subtasks across disciplines.'
-              : 'External releases must use subtasks from a single discipline.'
-          }
+          description="External releases must use subtasks from a single discipline."
         />
       )}
 
@@ -271,7 +234,6 @@ export default function SubmittalPackageDrawer({
         hasSelectedProject={hasSelectedProject}
         disciplines={disciplines}
         disciplinesLoading={disciplinesQuery.isLoading}
-        isDeputy={isDeputy}
         lockablePackages={lockablePackages}
         isLoadingPackages={isLoadingPackages}
         hasSelectedDiscipline={hasSelectedDiscipline}
@@ -293,7 +255,7 @@ export default function SubmittalPackageDrawer({
                 supplier: values.supplier?.trim() || undefined,
                 specReference: values.specReference?.trim() || undefined,
                 submittalPurpose: values.submittalPurpose,
-                preparedByRole: purposeToRole(values.submittalPurpose),
+                preparedByRole: 'DISCIPLINE_LEAD',
                 taskDisciplineId: values.taskDisciplineId,
               },
             });
@@ -323,7 +285,6 @@ function SubmittalPackageForm({
   hasSelectedProject,
   disciplines,
   disciplinesLoading,
-  isDeputy,
   lockablePackages,
   isLoadingPackages,
   hasSelectedDiscipline,
@@ -343,34 +304,11 @@ function SubmittalPackageForm({
     overseasTaskNumber?: string | null;
   }[];
   disciplinesLoading: boolean;
-  isDeputy: boolean;
   lockablePackages: DesignPackage[];
   isLoadingPackages: boolean;
   hasSelectedDiscipline: boolean;
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
-  const purposeOptions = useMemo(() => {
-    const options = [
-      ...DISCIPLINE_LEAD_PURPOSES.map((value) => ({
-        value,
-        label:
-          value === 'DISCIPLINE_SITE'
-            ? 'Discipline - site issue'
-            : 'Discipline - consultant issue',
-      })),
-      ...DEPUTY_PURPOSES.map((value) => ({
-        value,
-        label:
-          value === 'DEPUTY_BID'
-            ? 'Deputy - bid package'
-            : value === 'DEPUTY_INTERIM'
-              ? 'Deputy - interim package'
-              : 'Deputy - final package',
-      })),
-    ];
-    return options;
-  }, []);
-
   const packageColumns: ColumnsType<DesignPackage> = [
     { title: 'Subtask', dataIndex: 'name', key: 'name' },
     {
@@ -415,28 +353,26 @@ function SubmittalPackageForm({
         label="Release purpose"
         rules={[{ required: true }]}
       >
-        <Select options={purposeOptions} />
+        <Select options={EXTERNAL_RELEASE_PURPOSES} />
       </Form.Item>
 
-      {!isDeputy && (
-        <Form.Item
-          name="taskDisciplineId"
-          label="Discipline"
-          rules={[{ required: true, message: 'Select a discipline' }]}
-        >
-          <Select
-            placeholder="Select discipline"
-            loading={disciplinesLoading}
-            disabled={showProjectSelector && !hasSelectedProject}
-            options={disciplines.map((d) => ({
-              value: d.id,
-              label: d.disciplineNumber
-                ? `${d.disciplineNumber} — ${d.disciplineName ?? ''}`
-                : (d.disciplineName ?? formatDisciplineLabel(d.disciplineIndex)),
-            }))}
-          />
-        </Form.Item>
-      )}
+      <Form.Item
+        name="taskDisciplineId"
+        label="Discipline"
+        rules={[{ required: true, message: 'Select a discipline' }]}
+      >
+        <Select
+          placeholder="Select discipline"
+          loading={disciplinesLoading}
+          disabled={showProjectSelector && !hasSelectedProject}
+          options={disciplines.map((d) => ({
+            value: d.id,
+            label: d.disciplineNumber
+              ? `${d.disciplineNumber} — ${d.disciplineName ?? ''}`
+              : (d.disciplineName ?? formatDisciplineLabel(d.disciplineIndex)),
+          }))}
+        />
+      </Form.Item>
 
       <Form.Item
         name="category"
@@ -491,7 +427,7 @@ function SubmittalPackageForm({
               type="info"
               showIcon
               title="No subtasks ready for release"
-              description="This discipline has no subtasks ready for external release. Subtasks must be submitted for review (Pending Lead, Approved, or Locked status) before they can be packaged and sent externally."
+              description="This discipline has no subtasks ready for external release. Subtasks must be Approved or Locked before they can be packaged and sent externally."
             />
           </Form.Item>
         )}

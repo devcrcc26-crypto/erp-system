@@ -49,6 +49,7 @@ import {
 } from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import ExternalReleaseDocumentsSection from '@/components/modules/projects/submittals/ExternalReleaseDocumentsSection';
 
 interface ReviewFormValues {
@@ -449,11 +450,7 @@ export default function SubmittalDetailDrawer({
             </Descriptions.Item>
             {isExternalRelease && (
               <Descriptions.Item label="Recipient">
-                {submittal.submittalPurpose === 'DISCIPLINE_SITE'
-                  ? 'Site engineers'
-                  : submittal.submittalPurpose === 'DISCIPLINE_CONSULTANT'
-                    ? 'Consultants'
-                    : '-'}
+                {formatExternalReleasePurpose(submittal.submittalPurpose)}
               </Descriptions.Item>
             )}
             <Descriptions.Item
