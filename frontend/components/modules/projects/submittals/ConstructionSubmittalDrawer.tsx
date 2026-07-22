@@ -38,6 +38,7 @@ import { useQuery } from '@tanstack/react-query';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatDisciplineNumber } from '@/lib/utils/discipline-display';
+import { isProjectStageBlockedError } from '@/lib/api/errors';
 
 interface ConstructionSubmittalFormValues {
   projectId?: string;
@@ -93,6 +94,7 @@ export default function ConstructionSubmittalDrawer({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     projectIdProp ?? null,
   );
+  const [stageBlocked, setStageBlocked] = useState(false);
 
   const capabilitiesReady = useCapabilitiesReady();
   const canViewMyWork = useCanViewMyWork();
@@ -197,6 +199,7 @@ export default function ConstructionSubmittalDrawer({
     setQueuedFiles([]);
     setUploading(false);
     setPendingUpload(null);
+    setStageBlocked(false);
     setSelectedProjectId(projectIdProp ?? null);
     form.resetFields();
     onClose();
@@ -226,6 +229,7 @@ export default function ConstructionSubmittalDrawer({
     }
 
     try {
+      setStageBlocked(false);
       if (pendingUpload) {
         if (queuedFiles.length === 0) {
           messageApi.success('Submittal created');
@@ -294,6 +298,10 @@ export default function ConstructionSubmittalDrawer({
       onCreated(result.id);
       onClose();
     } catch (error) {
+      if (isProjectStageBlockedError(error)) {
+        setStageBlocked(true);
+        return;
+      }
       notifyApiError(error, 'Failed to create submittal', messageApi);
     } finally {
       setUploading(false);
@@ -313,7 +321,7 @@ export default function ConstructionSubmittalDrawer({
           <Button
             type="primary"
             loading={createSubmittal.isPending || uploading}
-            disabled={queuedFiles.length === 0 && !pendingUpload}
+            disabled={stageBlocked || (queuedFiles.length === 0 && !pendingUpload)}
             onClick={() => form.submit()}
           >
             {pendingUpload ? 'Retry upload' : 'Create submittal'}
@@ -321,13 +329,23 @@ export default function ConstructionSubmittalDrawer({
         </Space>
       }
     >
-      <Alert
-        type="info"
-        showIcon
-        className="mb-4"
-        title="Submit for review"
-        description="Attach files and select a subtask. The submittal will be sent to the subtask designer for review, then to the discipline leader for final approval."
-      />
+      {stageBlocked ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-4"
+          title="Project is in Tender stage"
+          description="Submittals and external releases cannot be created while the project is in Tender stage. The project must be moved to an active design stage (Concept Design or later) before submittals can be raised."
+        />
+      ) : (
+        <Alert
+          type="info"
+          showIcon
+          className="mb-4"
+          title="Submit for review"
+          description="Attach files and select a subtask. The submittal will be sent to the subtask designer for review, then to the discipline leader for final approval."
+        />
+      )}
 
       <Form<ConstructionSubmittalFormValues>
         form={form}

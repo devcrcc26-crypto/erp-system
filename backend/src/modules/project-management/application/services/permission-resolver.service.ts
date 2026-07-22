@@ -5,7 +5,18 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
 import { ProjectDesignStage } from '../../domain/contracts/enums/project-design-stage.enum';
-import { canPerformFromContext } from '../../domain/permission-context-builder';
+import {
+  buildPermissionLayerResults,
+  canPerformFromContext,
+} from '../../domain/permission-context-builder';
+import {
+  evaluateAssigneeOverride,
+  evaluatePermissionLayers,
+} from '../../domain/contracts/permission-evaluator';
+import {
+  PermissionLayerId,
+  PermissionLayerVerdict,
+} from '../../domain/contracts/permission.model';
 import {
   EdvWithDiscipline,
   EpcWorkflowRepository,
@@ -117,21 +128,6 @@ export class PermissionResolverService {
    * Asserts user may perform a workflow action - deny wins.
    */
   async assertActionAllowed(input: WorkflowActionPermissionInput): Promise<void> {
-    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
-    console.warn(
-      '[SUBMITTAL PERMISSION INPUT]',
-      JSON.stringify(
-        {
-          action: input.action,
-          userId: input.userId,
-          taskDisciplineId: input.taskDisciplineId ?? null,
-          designPackageId: input.designPackageId ?? null,
-        },
-        null,
-        2,
-      ),
-    );
-
     const [grantedActions, roleNames] = await Promise.all([
       this.resolveGrantedActions(input.userId, input.companyId),
       this.permissionService.getUserRoleNames(input.userId, input.companyId),
@@ -162,23 +158,7 @@ export class PermissionResolverService {
         )
       : undefined;
 
-    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
-    console.warn(
-      '[SUBMITTAL DISCIPLINE CONTEXT]',
-      JSON.stringify(
-        {
-          disciplineLeadUserId: discipline.disciplineLeadUserId ?? null,
-          disciplineDesignerUserId: discipline.designerUserId ?? null,
-          subtaskDesignerUserId: packageOverrides?.designerUserId ?? null,
-          subtaskDisciplinaryLeaderUserId:
-            packageOverrides?.disciplinaryLeaderUserId ?? null,
-        },
-        null,
-        2,
-      ),
-    );
-
-    const allowed = canPerformFromContext({
+    const context = {
       companyId: input.companyId,
       userId: input.userId,
       projectId: input.projectId,
@@ -206,10 +186,37 @@ export class PermissionResolverService {
       subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
       isDocumentController: roleNames.includes('Document Controller'),
       currentAssigneeUserId: input.currentAssigneeUserId,
-    });
+    };
 
-    if (!allowed) {
-      throw new ForbiddenException(`Permission denied for action ${input.action}`);
+    const layerResults = buildPermissionLayerResults(context);
+    if (!evaluatePermissionLayers(layerResults)) {
+      const stageLayer = layerResults.find(
+        (r) => r.layer === PermissionLayerId.PROJECT_DESIGN_STAGE,
+      );
+      if (stageLayer?.verdict === PermissionLayerVerdict.DENY) {
+        throw new ForbiddenException({
+          message:
+            stageLayer.reason ??
+            `Action blocked in stage ${projectDesignStage}`,
+          error: 'PROJECT_STAGE_BLOCKED',
+          details: { stage: projectDesignStage },
+        });
+      }
+      throw new ForbiddenException(
+        `Permission denied for action ${input.action}`,
+      );
+    }
+
+    if (
+      !evaluateAssigneeOverride(
+        input.action,
+        input.userId,
+        input.currentAssigneeUserId,
+      )
+    ) {
+      throw new ForbiddenException(
+        `Permission denied for action ${input.action}`,
+      );
     }
   }
 

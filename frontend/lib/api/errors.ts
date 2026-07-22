@@ -49,3 +49,12 @@ export function toApiRequestError(error: unknown): ApiRequestError {
 
   return new ApiRequestError(message, 'REQUEST_FAILED', status);
 }
+
+/** True when API denied the action because of project design stage (e.g. TENDER). */
+export function isProjectStageBlockedError(error: unknown): boolean {
+  const apiError = toApiRequestError(error);
+  if (apiError.code === 'PROJECT_STAGE_BLOCKED') {
+    return true;
+  }
+  return /stage\s+TENDER/i.test(apiError.message);
+}

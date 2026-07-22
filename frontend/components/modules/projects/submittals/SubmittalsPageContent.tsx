@@ -20,6 +20,7 @@ import type {
 } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useSubmittals } from '@/lib/query/submittals';
+import { useProject } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -49,8 +50,8 @@ export default function SubmittalsPageContent({
   );
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
+  const projectQuery = useProject(projectId, !permLoading);
   const resolveUserDisplay = useUserDisplayResolver();
-  const canCreateSubmittal = lens.canCreateSubmittals;
   const canAccessPage = lens.canViewSubmittals;
 
   const submittalsQuery = useSubmittals(
@@ -144,7 +145,7 @@ export default function SubmittalsPageContent({
     [resolveUserDisplay],
   );
 
-  if (permLoading || submittalsQuery.isLoading) {
+  if (permLoading || submittalsQuery.isLoading || projectQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -159,6 +160,8 @@ export default function SubmittalsPageContent({
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const isTenderStage = projectQuery.data?.designStage === 'TENDER';
+  const canCreateSubmittal = lens.canCreateSubmittals && !isTenderStage;
 
   return (
     <ProjectModuleGate projectId={projectId} module="submittals">
@@ -184,6 +187,15 @@ export default function SubmittalsPageContent({
           </Space>
         }
       >
+        {isTenderStage && (
+          <Alert
+            type="warning"
+            showIcon
+            className="!mb-4"
+            title="This project is in Tender stage. Submittals cannot be created until the project moves to an active design phase."
+          />
+        )}
+
         {apiUnavailable && (
           <Alert
             type="info"

@@ -62,6 +62,17 @@ describe('permission-context-builder', () => {
       expect(result.verdict).toBe(PermissionLayerVerdict.DENY);
     });
 
+    it('ALLOW submittal create in DETAILED_DESIGN_DD', () => {
+      const result = evaluateProjectDesignStageLayer(
+        baseContext({
+          action: EpcWorkflowAction.SUBMITTAL_CREATE,
+          projectDesignStage: ProjectDesignStage.DETAILED_DESIGN_DD,
+          grantedActions: new Set([EpcWorkflowAction.SUBMITTAL_CREATE]),
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    });
+
     it('DENY upload in AS_BUILT_DRAWINGS', () => {
       const result = evaluateProjectDesignStageLayer(
         baseContext({

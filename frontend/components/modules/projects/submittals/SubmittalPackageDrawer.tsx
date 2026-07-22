@@ -35,6 +35,8 @@ import { submittalDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewMyWork, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
+import { isProjectStageBlockedError } from '@/lib/api/errors';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface SubmittalPackageFormValues {
   projectId?: string;
@@ -112,6 +114,7 @@ export default function SubmittalPackageDrawer({
   );
   const createSubmittal = useCreateDesignSubmittal();
   const messageApi = useAppMessage();
+  const [stageBlocked, setStageBlocked] = useState(false);
   const purpose = Form.useWatch('submittalPurpose', form) as
     | SubmittalPurpose
     | undefined;
@@ -197,6 +200,7 @@ export default function SubmittalPackageDrawer({
 
   function handleProjectChange(nextProjectId: string): void {
     setSelectedProjectId(nextProjectId);
+    setStageBlocked(false);
     form.setFieldsValue({
       projectId: nextProjectId,
       taskDisciplineId: undefined,
@@ -206,6 +210,7 @@ export default function SubmittalPackageDrawer({
 
   function handleClose(): void {
     setSelectedProjectId(projectIdProp ?? null);
+    setStageBlocked(false);
     form.resetFields();
     onClose();
   }
@@ -224,6 +229,7 @@ export default function SubmittalPackageDrawer({
             type="primary"
             loading={createSubmittal.isPending}
             disabled={
+              stageBlocked ||
               !hasSelectedProject ||
               !hasSelectedDiscipline ||
               isLoadingPackages ||
@@ -236,17 +242,27 @@ export default function SubmittalPackageDrawer({
         </Space>
       }
     >
-      <Alert
-        type="info"
-        showIcon
-        className="mb-4"
-        title="Select approved subtasks"
-        description={
-          isDeputy
-            ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
-            : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
-        }
-      />
+      {stageBlocked ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-4"
+          title="Project is in Tender stage"
+          description="Submittals and external releases cannot be created while the project is in Tender stage. The project must be moved to an active design stage (Concept Design or later) before submittals can be raised."
+        />
+      ) : (
+        <Alert
+          type="info"
+          showIcon
+          className="mb-4"
+          title="Select approved subtasks"
+          description={
+            isDeputy
+              ? 'Deputy chief submittals may bundle locked-ready subtasks across disciplines.'
+              : 'Discipline lead submittals must use subtasks from a single assigned discipline.'
+          }
+        />
+      )}
 
       <SubmittalPackageForm
         form={form}
@@ -267,24 +283,33 @@ export default function SubmittalPackageDrawer({
             messageApi.error('Select a project');
             return;
           }
-          const result = await createSubmittal.mutateAsync({
-            projectId,
-            body: {
-              category: values.category.trim(),
-              title: values.title.trim(),
-              designPackageIds: values.designPackageIds,
-              contractor: values.contractor?.trim() || undefined,
-              supplier: values.supplier?.trim() || undefined,
-              specReference: values.specReference?.trim() || undefined,
-              submittalPurpose: values.submittalPurpose,
-              preparedByRole: purposeToRole(values.submittalPurpose),
-              taskDisciplineId: values.taskDisciplineId,
-            },
-          });
-          messageApi.success('Design submittal created');
-          form.resetFields();
-          onCreated(result.id);
-          onClose();
+          try {
+            setStageBlocked(false);
+            const result = await createSubmittal.mutateAsync({
+              projectId,
+              body: {
+                category: values.category.trim(),
+                title: values.title.trim(),
+                designPackageIds: values.designPackageIds,
+                contractor: values.contractor?.trim() || undefined,
+                supplier: values.supplier?.trim() || undefined,
+                specReference: values.specReference?.trim() || undefined,
+                submittalPurpose: values.submittalPurpose,
+                preparedByRole: purposeToRole(values.submittalPurpose),
+                taskDisciplineId: values.taskDisciplineId,
+              },
+            });
+            messageApi.success('Design submittal created');
+            form.resetFields();
+            onCreated(result.id);
+            onClose();
+          } catch (error) {
+            if (isProjectStageBlockedError(error)) {
+              setStageBlocked(true);
+              return;
+            }
+            notifyApiError(error, 'Failed to create design submittal', messageApi);
+          }
         }}
       />
     </Drawer>

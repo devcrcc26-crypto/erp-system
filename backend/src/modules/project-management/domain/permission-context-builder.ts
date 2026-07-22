@@ -143,20 +143,9 @@ const SUBMITTAL_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
 const STAGE_LOCKED_ACTIONS: Readonly<
   Partial<Record<EpcWorkflowAction, readonly ProjectDesignStage[]>>
 > = {
-  [EpcWorkflowAction.SUBMITTAL_ISSUE]: [
-    ProjectDesignStage.TENDER,
-    ProjectDesignStage.CONCEPT_DESIGN_CD,
-    ProjectDesignStage.PRELIMINARY_DESIGN_PD,
-    ProjectDesignStage.SCHEMATIC_DESIGN_SD,
-    ProjectDesignStage.DETAILED_DESIGN_DD,
-  ],
-  [EpcWorkflowAction.SUBMITTAL_CREATE]: [
-    ProjectDesignStage.TENDER,
-    ProjectDesignStage.CONCEPT_DESIGN_CD,
-    ProjectDesignStage.PRELIMINARY_DESIGN_PD,
-    ProjectDesignStage.SCHEMATIC_DESIGN_SD,
-    ProjectDesignStage.DETAILED_DESIGN_DD,
-  ],
+  // External releases / submittals: blocked in TENDER only.
+  [EpcWorkflowAction.SUBMITTAL_ISSUE]: [ProjectDesignStage.TENDER],
+  [EpcWorkflowAction.SUBMITTAL_CREATE]: [ProjectDesignStage.TENDER],
   [EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD]: [
     ProjectDesignStage.AS_BUILT_DRAWINGS,
   ],
@@ -461,30 +450,6 @@ export function canPerformFromContext(input: PermissionContextInput): boolean {
   const results = buildPermissionLayerResults(input);
   const layerAllowed = evaluatePermissionLayers(results);
   if (!layerAllowed) {
-    // TEMPORARY DEBUG — remove after tracing SUBMITTAL_CREATE denial.
-    console.warn(
-      '[SUBMITTAL PERMISSION DENY]',
-      JSON.stringify(
-        {
-          action: input.action,
-          userId: input.userId,
-          taskDisciplineId: input.taskDisciplineId ?? null,
-          designPackageId: input.designPackageId ?? null,
-          disciplineLeadUserId: input.disciplineLeadUserId ?? null,
-          disciplineDesignerUserId: input.disciplineDesignerUserId ?? null,
-          subtaskDesignerUserId: input.subtaskDesignerUserId ?? null,
-          subtaskDisciplinaryLeaderUserId:
-            input.subtaskDisciplinaryLeaderUserId ?? null,
-          layers: results.map((r) => ({
-            layer: r.layer,
-            verdict: r.verdict,
-            reason: r.reason ?? null,
-          })),
-        },
-        null,
-        2,
-      ),
-    );
     return false;
   }
   return evaluateAssigneeOverride(

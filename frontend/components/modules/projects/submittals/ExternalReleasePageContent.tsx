@@ -21,6 +21,7 @@ import type {
 } from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useSubmittals } from '@/lib/query/submittals';
+import { useProject } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatSubmittalStatus,
@@ -64,6 +65,7 @@ export default function ExternalReleasePageContent({
   );
   const lens = useRoleLens();
   const permLoading = usePermissionsLoading();
+  const projectQuery = useProject(projectId, !permLoading);
 
   const submittalsQuery = useSubmittals(
     projectId,
@@ -150,13 +152,16 @@ export default function ExternalReleasePageContent({
     [],
   );
 
-  if (permLoading || submittalsQuery.isLoading) {
+  if (permLoading || submittalsQuery.isLoading || projectQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
   if (!lens.canViewSubmittals) {
     return null;
   }
+
+  const isTenderStage = projectQuery.data?.designStage === 'TENDER';
+  const canCreateRelease = lens.canCreateSubmittals && !isTenderStage;
 
   const apiUnavailable =
     submittalsQuery.isError &&
@@ -169,7 +174,7 @@ export default function ExternalReleasePageContent({
         title="External release"
         description="Submit discipline-leader-approved subtasks to site engineers or consultants for formal review."
         extra={
-          lens.canCreateSubmittals ? (
+          canCreateRelease ? (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -181,6 +186,15 @@ export default function ExternalReleasePageContent({
           ) : undefined
         }
       >
+        {isTenderStage && (
+          <Alert
+            type="warning"
+            showIcon
+            className="!mb-4"
+            title="This project is in Tender stage. Submittals cannot be created until the project moves to an active design phase."
+          />
+        )}
+
         <Alert
           type="info"
           showIcon
@@ -250,7 +264,7 @@ export default function ExternalReleasePageContent({
                 title="No external releases"
                 description="Issue approved subtasks to site engineers or consultants"
                 action={
-                  lens.canCreateSubmittals && !apiUnavailable
+                  canCreateRelease && !apiUnavailable
                     ? {
                         label: 'New external release',
                         onClick: () => setCreateOpen(true),
