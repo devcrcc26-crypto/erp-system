@@ -16,7 +16,7 @@ export interface SubmittalPackageValidationResult {
 
 /**
  * Validates a design package is eligible for submittal inclusion.
- * Requires projectedStatus APPROVED and every EDV LOCKED.
+ * Requires projectedStatus APPROVED or LOCKED and every EDV LOCKED.
  */
 export function validateSubmittalPackage(
   input: SubmittalPackageValidationInput,
@@ -32,12 +32,16 @@ export function validateSubmittalPackage(
     };
   }
 
-  if (projectedStatus !== DesignPackageProjectedStatus.APPROVED) {
+  const releasableStatuses: readonly DesignPackageProjectedStatus[] = [
+    DesignPackageProjectedStatus.APPROVED,
+    DesignPackageProjectedStatus.LOCKED,
+  ];
+  if (!releasableStatuses.includes(projectedStatus)) {
     return {
       eligible: false,
       designPackageId,
       code: 'NOT_APPROVED',
-      message: `Design package ${designPackageId} projectedStatus must be APPROVED`,
+      message: `Design package ${designPackageId} must be Approved or Locked to be included in an external release`,
     };
   }
 

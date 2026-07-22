@@ -61,10 +61,8 @@ const DEPUTY_PURPOSES: SubmittalPurpose[] = [
   'DEPUTY_FINAL',
 ];
 
-/** Subtasks the designer has submitted for review — excludes IN_PROGRESS
- * (nothing submitted) and REWORK_REQUIRED (known deficient). */
+/** Subtasks eligible for external release — Approved or Locked only. */
 const RELEASABLE_STATUSES: DesignPackageProjectedStatus[] = [
-  'PENDING_LEAD',
   'APPROVED',
   'LOCKED',
 ];

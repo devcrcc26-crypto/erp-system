@@ -19,6 +19,18 @@ describe('submittal-package-validator', () => {
     });
   });
 
+  it('accepts LOCKED package with all LOCKED EDVs', () => {
+    expect(
+      validateSubmittalPackage({
+        ...baseInput,
+        projectedStatus: DesignPackageProjectedStatus.LOCKED,
+      }),
+    ).toEqual({
+      eligible: true,
+      designPackageId: 'pkg-1',
+    });
+  });
+
   it('rejects empty package', () => {
     const result = validateSubmittalPackage({
       ...baseInput,
@@ -28,10 +40,19 @@ describe('submittal-package-validator', () => {
     expect(result.code).toBe('NO_ITEMS');
   });
 
-  it('rejects non-APPROVED projected status', () => {
+  it('rejects non-releasable projected status', () => {
     const result = validateSubmittalPackage({
       ...baseInput,
       projectedStatus: DesignPackageProjectedStatus.IN_PROGRESS,
+    });
+    expect(result.eligible).toBe(false);
+    expect(result.code).toBe('NOT_APPROVED');
+  });
+
+  it('rejects PENDING_LEAD projected status', () => {
+    const result = validateSubmittalPackage({
+      ...baseInput,
+      projectedStatus: DesignPackageProjectedStatus.PENDING_LEAD,
     });
     expect(result.eligible).toBe(false);
     expect(result.code).toBe('NOT_APPROVED');
