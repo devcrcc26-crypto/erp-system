@@ -196,7 +196,7 @@ describe('IssuesService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('blocks non-raiser without full access', async () => {
+    it('blocks anyone who is not the raiser (including full-access)', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
           status: IssueStatus.IN_PROGRESS,
@@ -204,11 +204,6 @@ describe('IssuesService', () => {
           assignedTo: ctx.userId,
         }),
       );
-      (
-        service as unknown as {
-          permissionService: { getUserRoleNames: jest.Mock };
-        }
-      ).permissionService.getUserRoleNames.mockResolvedValue(['Employee']);
 
       await expect(
         service.closeIssue(ctx, projectId, issueId, {
@@ -219,12 +214,19 @@ describe('IssuesService', () => {
   });
 
   describe('reopenIssue', () => {
-    it('adds a system response with the reopen reason', async () => {
+    it('adds a system response and sets reopener as the new raiser', async () => {
       prisma.issue.findFirst.mockResolvedValue(
-        buildIssue({ status: IssueStatus.CLOSED }),
+        buildIssue({
+          status: IssueStatus.CLOSED,
+          raisedBy: 'original-raiser',
+          assignedTo: ctx.userId,
+        }),
       );
       prisma.issue.update.mockResolvedValue(
-        buildIssue({ status: IssueStatus.IN_PROGRESS }),
+        buildIssue({
+          status: IssueStatus.IN_PROGRESS,
+          raisedBy: ctx.userId,
+        }),
       );
       prisma.issueResponse.create.mockResolvedValue({});
 
@@ -232,6 +234,17 @@ describe('IssuesService', () => {
         reason: 'Still broken',
       });
 
+      expect(prisma.issue.update).toHaveBeenCalledWith({
+        where: { id: issueId },
+        data: expect.objectContaining({
+          status: IssueStatus.IN_PROGRESS,
+          raisedBy: ctx.userId,
+          reopenedBy: ctx.userId,
+          resolutionNote: null,
+          resolvedAt: null,
+          resolvedBy: null,
+        }),
+      });
       expect(prisma.issueResponse.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           responseText: 'Reopened: Still broken',

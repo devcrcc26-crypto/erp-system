@@ -98,9 +98,12 @@ export default function IssueDetailDrawer({
   const isAssignedToMe = issue?.assignedTo === currentUserId;
 
   const canClose =
-    issue?.status === 'IN_PROGRESS' && (isRaisedByMe || hasFullAccess);
+    issue?.status === 'IN_PROGRESS' && currentUserId === issue?.raisedBy;
   const canReopen =
-    issue?.status === 'CLOSED' && (isRaisedByMe || hasFullAccess);
+    issue?.status === 'CLOSED' &&
+    (currentUserId === issue?.raisedBy ||
+      currentUserId === issue?.assignedTo ||
+      pm.projects.canView);
   const canRespond =
     issue != null &&
     issue.status !== 'CLOSED' &&

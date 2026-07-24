@@ -510,13 +510,9 @@ export class IssuesService {
     }
     this.assertAllowedTransition(existing.status, IssueStatus.CLOSED);
 
-    const roleNames = await this.getRoleNames(ctx);
-    if (
-      ctx.userId !== existing.raisedBy &&
-      !hasFullProjectDataAccess(roleNames)
-    ) {
+    if (ctx.userId !== existing.raisedBy) {
       throw new ForbiddenException(
-        'Only the person who raised this issue or a project admin can close it.',
+        'Only the person who raised this issue can close it.',
       );
     }
 
@@ -580,12 +576,13 @@ export class IssuesService {
     this.assertAllowedTransition(existing.status, IssueStatus.IN_PROGRESS);
 
     const roleNames = await this.getRoleNames(ctx);
-    if (
-      ctx.userId !== existing.raisedBy &&
-      !hasFullProjectDataAccess(roleNames)
-    ) {
+    const mayReopen =
+      ctx.userId === existing.raisedBy ||
+      ctx.userId === existing.assignedTo ||
+      hasFullProjectDataAccess(roleNames);
+    if (!mayReopen) {
       throw new ForbiddenException(
-        'Only the person who raised this issue or a project admin can reopen it.',
+        'Only the raiser, assignee, or a project administrator can reopen this issue.',
       );
     }
 
@@ -594,11 +591,14 @@ export class IssuesService {
       throw new BadRequestException('Reopen reason cannot be empty.');
     }
 
+    const previousRaisedBy = existing.raisedBy;
+
     const issue = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.issue.update({
         where: { id: issueId },
         data: {
           status: IssueStatus.IN_PROGRESS,
+          raisedBy: ctx.userId,
           resolvedAt: null,
           resolvedBy: null,
           resolutionNote: null,
@@ -619,14 +619,13 @@ export class IssuesService {
       return updated;
     });
 
-    if (existing.assignedTo) {
-      await this.sendIssueReopenedNotification(
-        ctx,
-        issue,
-        existing.assignedTo,
-        reason,
-      );
-    }
+    await this.sendIssueReopenedNotifications(
+      ctx,
+      issue,
+      previousRaisedBy,
+      existing.assignedTo,
+      reason,
+    );
 
     return this.enrichIssue(ctx, issue);
   }
@@ -1215,10 +1214,11 @@ export class IssuesService {
     }
   }
 
-  private async sendIssueReopenedNotification(
+  private async sendIssueReopenedNotifications(
     ctx: PmContext,
     issue: Issue,
-    assignedTo: string,
+    previousRaisedBy: string,
+    assignedTo: string | null,
     reason: string,
   ): Promise<void> {
     if (!this.notificationService) {
@@ -1227,28 +1227,51 @@ export class IssuesService {
 
     const reopenerName = await this.resolveUserName(ctx, ctx.userId);
     const link = `/projects/${issue.projectId}/issues`;
+    const baseVariables = {
+      projectId: issue.projectId,
+      issueId: issue.id,
+      issueNumber: issue.issueNumber,
+      link,
+    };
 
-    try {
-      await this.notificationService.send(
-        { companyId: ctx.companyId, userId: ctx.userId },
-        {
-          recipientId: assignedTo,
-          eventType: ISSUE_REOPENED_EVENT,
-          subject: `Issue reopened — ${issue.issueNumber}: ${reason}`,
-          body: `${reopenerName} reopened issue ${issue.issueNumber}: ${reason}`,
-          variables: {
-            projectId: issue.projectId,
-            issueId: issue.id,
-            issueNumber: issue.issueNumber,
-            link,
+    if (previousRaisedBy && previousRaisedBy !== ctx.userId) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId: previousRaisedBy,
+            eventType: ISSUE_REOPENED_EVENT,
+            subject: `Issue ${issue.issueNumber} has been reopened by ${reopenerName}`,
+            body: `Issue ${issue.issueNumber} has been reopened by ${reopenerName}`,
+            variables: baseVariables,
           },
-        },
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        'Issue reopened notification failed',
-        error instanceof Error ? error.message : String(error),
-      );
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Issue reopened (previous raiser) notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+
+    if (assignedTo && assignedTo !== ctx.userId) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId: assignedTo,
+            eventType: ISSUE_REOPENED_EVENT,
+            subject: `Issue ${issue.issueNumber} has been reopened and requires attention`,
+            body: `Issue ${issue.issueNumber} has been reopened and requires attention`,
+            variables: { ...baseVariables, reason },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Issue reopened (assignee) notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
   }
 
