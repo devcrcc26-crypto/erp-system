@@ -72,6 +72,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.RFI &&
+      folder.contextId &&
+      (await this.canUploadRfiFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -433,6 +441,80 @@ export class DocumentPermissionService {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({
         id: cr.linkedDesignPackageId,
+        companyId,
+      }),
+      select: {
+        designerUserId: true,
+        supportingDesignerUserId: true,
+        reviewerUserId: true,
+        disciplinaryLeaderUserId: true,
+        deptDeputyChiefUserId: true,
+        instituteChiefUserId: true,
+      },
+    });
+    if (!pkg) {
+      return false;
+    }
+
+    return [
+      pkg.designerUserId,
+      pkg.supportingDesignerUserId,
+      pkg.reviewerUserId,
+      pkg.disciplinaryLeaderUserId,
+      pkg.deptDeputyChiefUserId,
+      pkg.instituteChiefUserId,
+    ]
+      .filter((id): id is string => Boolean(id))
+      .includes(userId);
+  }
+
+  /**
+   * RFI attachment folders: raiser, assignee, linked design-package FKs, or full access.
+   * Mirrors the access rule in RfisService#assertCanAccessRfi.
+   */
+  private async canUploadRfiFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const rfi = await this.prisma.rfi.findFirst({
+      where: activeOnly({
+        id: folder.contextId,
+        companyId,
+      }),
+      select: {
+        raisedBy: true,
+        assignedTo: true,
+        linkedDesignPackageId: true,
+      },
+    });
+    if (!rfi) {
+      return false;
+    }
+
+    if (rfi.raisedBy === userId || rfi.assignedTo === userId) {
+      return true;
+    }
+
+    if (!rfi.linkedDesignPackageId) {
+      return false;
+    }
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        id: rfi.linkedDesignPackageId,
         companyId,
       }),
       select: {
