@@ -351,6 +351,45 @@ describe('IssuesService', () => {
       expect(prisma.issueResponse.create).not.toHaveBeenCalled();
     });
 
+    it('auto-transitions OPEN to IN_PROGRESS on the assignee\'s first response', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.OPEN,
+          raisedBy: 'raiser-1',
+          assignedTo: ctx.userId,
+        }),
+      );
+      mockRoleNames(['Employee']);
+
+      await service.addIssueResponse(ctx, projectId, issueId, {
+        responseText: 'Working on it',
+      });
+
+      expect(prisma.issue.update).toHaveBeenCalledWith({
+        where: { id: issueId },
+        data: expect.objectContaining({
+          status: IssueStatus.IN_PROGRESS,
+        }),
+      });
+    });
+
+    it('leaves status unchanged when responding to an IN_PROGRESS issue', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.IN_PROGRESS,
+          raisedBy: 'raiser-1',
+          assignedTo: ctx.userId,
+        }),
+      );
+      mockRoleNames(['Employee']);
+
+      await service.addIssueResponse(ctx, projectId, issueId, {
+        responseText: 'Still working on it',
+      });
+
+      expect(prisma.issue.update).not.toHaveBeenCalled();
+    });
+
     it('notifies the raiser when the assignee responds', async () => {
       const notify = jest.fn().mockResolvedValue({ emailQueued: false });
       (service as unknown as { notificationService: unknown }).notificationService = {

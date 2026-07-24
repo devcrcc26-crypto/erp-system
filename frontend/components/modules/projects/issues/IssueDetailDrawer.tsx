@@ -115,6 +115,7 @@ export default function IssueDetailDrawer({
   const canRespond =
     issue != null &&
     issue.status !== 'CLOSED' &&
+    issue.status !== 'RESOLVED' &&
     (isAssignedToMe || hasFullAccess);
 
   function resetResponseAttachment(): void {
@@ -524,7 +525,9 @@ export default function IssueDetailDrawer({
                 description={
                   issue.status === 'CLOSED'
                     ? 'This issue is closed — no further responses can be posted.'
-                    : 'Only the raiser or assignee can post responses.'
+                    : issue.status === 'RESOLVED'
+                      ? 'This issue is resolved — no further responses can be posted.'
+                      : 'Only the assignee or project administrators can post responses.'
                 }
               />
             )}

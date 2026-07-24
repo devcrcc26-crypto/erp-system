@@ -746,16 +746,30 @@ export class IssuesService {
       );
     }
 
-    const row = await this.prisma.issueResponse.create({
-      data: {
-        issueId,
-        respondedBy: ctx.userId,
-        responseText,
-        responseDocumentId: dto.responseDocumentId,
-      },
-      include: {
-        responseDocument: { select: { name: true } },
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.issueResponse.create({
+        data: {
+          issueId,
+          respondedBy: ctx.userId,
+          responseText,
+          responseDocumentId: dto.responseDocumentId,
+        },
+        include: {
+          responseDocument: { select: { name: true } },
+        },
+      });
+
+      if (issue.status === IssueStatus.OPEN) {
+        await tx.issue.update({
+          where: { id: issueId },
+          data: {
+            status: IssueStatus.IN_PROGRESS,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+
+      return created;
     });
 
     await this.sendIssueResponseNotification(ctx, issue, ctx.userId);
