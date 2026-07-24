@@ -13,6 +13,7 @@ import {
   DrawingLink,
   DrawingVersion,
   Issue,
+  IssueResponse,
   Meeting,
   MeetingAgendaItem,
   MeetingAttendee,
@@ -1147,9 +1148,10 @@ export interface MappedIssue {
   resolvedAt: string | null;
   resolvedBy: string | null;
   resolvedByName?: string | null;
-  verifiedAt: string | null;
-  verifiedBy: string | null;
-  verifiedByName?: string | null;
+  resolutionNote: string | null;
+  reopenedAt: string | null;
+  reopenedBy: string | null;
+  reopenedByName?: string | null;
   linkedDesignPackageId: string | null;
   linkedDesignPackage?: {
     id: string;
@@ -1165,6 +1167,18 @@ export interface MappedIssue {
   createdAt: string;
   updatedAt: string;
   attachmentFolderId?: string | null;
+}
+
+export interface MappedIssueResponse {
+  id: string;
+  issueId: string;
+  respondedBy: string;
+  respondedByName?: string | null;
+  responseText: string;
+  responseDocumentId: string | null;
+  responseDocumentName?: string | null;
+  respondedAt: string;
+  createdAt: string;
 }
 
 /**
@@ -1384,13 +1398,34 @@ export function mapIssue(issue: Issue): MappedIssue {
     dueDate: toDateString(issue.dueDate),
     resolvedAt: toIsoString(issue.resolvedAt),
     resolvedBy: issue.resolvedBy,
-    verifiedAt: toIsoString(issue.verifiedAt),
-    verifiedBy: issue.verifiedBy,
+    resolutionNote: issue.resolutionNote,
+    reopenedAt: toIsoString(issue.reopenedAt),
+    reopenedBy: issue.reopenedBy,
     linkedDesignPackageId: issue.linkedDesignPackageId,
     sourceEntityType: issue.sourceEntityType,
     sourceEntityId: issue.sourceEntityId,
     createdAt: toIsoString(issue.createdAt)!,
     updatedAt: toIsoString(issue.updatedAt)!,
+  };
+}
+
+/**
+ * Maps a Prisma IssueResponse row to the API response shape.
+ */
+export function mapIssueResponse(
+  response: IssueResponse & {
+    responseDocument?: { name: string } | null;
+  },
+): MappedIssueResponse {
+  return {
+    id: response.id,
+    issueId: response.issueId,
+    respondedBy: response.respondedBy,
+    responseText: response.responseText,
+    responseDocumentId: response.responseDocumentId ?? null,
+    responseDocumentName: response.responseDocument?.name ?? null,
+    respondedAt: toIsoString(response.respondedAt)!,
+    createdAt: toIsoString(response.createdAt)!,
   };
 }
 

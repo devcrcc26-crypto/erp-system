@@ -115,10 +115,8 @@ export type IssueSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type IssueStatus =
   | 'OPEN'
-  | 'ASSIGNED'
   | 'IN_PROGRESS'
   | 'RESOLVED'
-  | 'VERIFIED'
   | 'CLOSED';
 
 export type PunchItemSeverity = 'MINOR' | 'MAJOR' | 'CRITICAL';
@@ -736,9 +734,10 @@ export interface Issue {
   resolvedAt: string | null;
   resolvedBy: string | null;
   resolvedByName?: string | null;
-  verifiedAt: string | null;
-  verifiedBy: string | null;
-  verifiedByName?: string | null;
+  resolutionNote: string | null;
+  reopenedAt: string | null;
+  reopenedBy: string | null;
+  reopenedByName?: string | null;
   linkedDesignPackageId: string | null;
   linkedDesignPackage?: {
     id: string;
@@ -1227,9 +1226,36 @@ export interface CreateIssueRequest {
   sourceEntityId?: string;
 }
 
-export type UpdateIssueRequest = Partial<CreateIssueRequest> & {
-  status?: IssueStatus;
-};
+export type UpdateIssueRequest = Partial<CreateIssueRequest>;
+
+export interface StartIssueRequest {
+  assignedTo?: string;
+}
+
+export interface ResolveIssueRequest {
+  resolutionNote: string;
+}
+
+export interface ReopenIssueRequest {
+  reason: string;
+}
+
+export interface IssueResponse {
+  id: string;
+  issueId: string;
+  respondedBy: string;
+  respondedByName?: string | null;
+  responseText: string;
+  responseDocumentId: string | null;
+  responseDocumentName?: string | null;
+  respondedAt: string;
+  createdAt: string;
+}
+
+export interface CreateIssueResponseRequest {
+  responseText: string;
+  responseDocumentId?: string;
+}
 
 export interface CreatePunchItemRequest {
   description: string;

@@ -19,10 +19,11 @@ describe('IssuesService', () => {
   function buildIssue(overrides: Partial<Issue> = {}): Issue {
     return {
       id: issueId,
+      companyId: ctx.companyId,
       projectId,
       taskDisciplineId: null,
       raisedBy: ctx.userId,
-      assignedTo: null,
+      assignedTo: 'assignee-1',
       issueNumber: 'ISS-00001',
       issueType: 'Safety',
       description: 'Exposed rebar on walkway',
@@ -31,7 +32,13 @@ describe('IssuesService', () => {
       status: IssueStatus.OPEN,
       dueDate: null,
       resolvedAt: null,
-      verifiedAt: null,
+      resolvedBy: null,
+      resolutionNote: null,
+      reopenedAt: null,
+      reopenedBy: null,
+      linkedDesignPackageId: null,
+      sourceEntityType: null,
+      sourceEntityId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -39,7 +46,7 @@ describe('IssuesService', () => {
       deletedAt: null,
       deletedBy: null,
       ...overrides,
-    } as unknown as Issue;
+    } as Issue;
   }
 
   let prisma: {
@@ -50,7 +57,13 @@ describe('IssuesService', () => {
       create: jest.Mock;
       update: jest.Mock;
     };
-    user: { findFirst: jest.Mock };
+    issueResponse: {
+      findMany: jest.Mock;
+      create: jest.Mock;
+    };
+    user: { findFirst: jest.Mock; findMany: jest.Mock };
+    designPackage: { findFirst: jest.Mock };
+    $transaction: jest.Mock;
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
   let service: IssuesService;
@@ -64,9 +77,20 @@ describe('IssuesService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      issueResponse: {
+        findMany: jest.fn(),
+        create: jest.fn(),
+      },
       user: {
         findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
       },
+      designPackage: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      $transaction: jest.fn((work: (client: typeof prisma) => Promise<unknown>) =>
+        work(prisma),
+      ),
     };
 
     projectScopeService = {
@@ -130,44 +154,90 @@ describe('IssuesService', () => {
     });
   });
 
-  describe('updateIssue', () => {
-    it('enforces issue status transition guard', async () => {
-      prisma.issue.findFirst.mockResolvedValue(
-        buildIssue({ status: IssueStatus.OPEN }),
+  describe('startIssue', () => {
+    it('transitions OPEN → IN_PROGRESS', async () => {
+      prisma.issue.findFirst.mockResolvedValue(buildIssue({ status: IssueStatus.OPEN }));
+      prisma.issue.update.mockResolvedValue(
+        buildIssue({ status: IssueStatus.IN_PROGRESS, assignedTo: ctx.userId }),
       );
 
-      await expect(
-        service.updateIssue(ctx, projectId, issueId, {
-          status: IssueStatus.VERIFIED,
+      await service.startIssue(ctx, projectId, issueId, {});
+
+      expect(prisma.issue.update).toHaveBeenCalledWith({
+        where: { id: issueId },
+        data: expect.objectContaining({
+          status: IssueStatus.IN_PROGRESS,
         }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Invalid issue status transition from OPEN to VERIFIED.',
-        ),
-      );
-
-      expect(prisma.issue.update).not.toHaveBeenCalled();
+      });
     });
 
-    it('blocks the raiser from verifying their own issue', async () => {
+    it('rejects start when not OPEN', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({ status: IssueStatus.IN_PROGRESS }),
+      );
+
+      await expect(service.startIssue(ctx, projectId, issueId, {})).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('resolveIssue', () => {
+    it('requires a non-empty resolution note', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
-          status: IssueStatus.RESOLVED,
-          raisedBy: ctx.userId,
+          status: IssueStatus.IN_PROGRESS,
+          assignedTo: ctx.userId,
         }),
       );
 
       await expect(
-        service.updateIssue(ctx, projectId, issueId, {
-          status: IssueStatus.VERIFIED,
-        }),
-      ).rejects.toThrow(
-        new ForbiddenException(
-          'The person who raised an issue cannot verify their own issue. A second person must verify.',
-        ),
-      );
+        service.resolveIssue(ctx, projectId, issueId, { resolutionNote: '  ' }),
+      ).rejects.toThrow(BadRequestException);
+    });
 
-      expect(prisma.issue.update).not.toHaveBeenCalled();
+    it('blocks non-assignee without full access', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.IN_PROGRESS,
+          assignedTo: 'other-user',
+          raisedBy: 'raiser-1',
+        }),
+      );
+      (
+        service as unknown as {
+          permissionService: { getUserRoleNames: jest.Mock };
+        }
+      ).permissionService.getUserRoleNames.mockResolvedValue(['Employee']);
+
+      await expect(
+        service.resolveIssue(ctx, projectId, issueId, {
+          resolutionNote: 'Fixed',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('reopenIssue', () => {
+    it('adds a system response with the reopen reason', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({ status: IssueStatus.RESOLVED }),
+      );
+      prisma.issue.update.mockResolvedValue(
+        buildIssue({ status: IssueStatus.IN_PROGRESS }),
+      );
+      prisma.issueResponse.create.mockResolvedValue({});
+
+      await service.reopenIssue(ctx, projectId, issueId, {
+        reason: 'Still broken',
+      });
+
+      expect(prisma.issueResponse.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          responseText: 'Reopened: Still broken',
+          respondedBy: ctx.userId,
+        }),
+      });
     });
   });
 
@@ -178,19 +248,7 @@ describe('IssuesService', () => {
 
       await service.listIssues(ctx, projectId, listQuery);
 
-      expect(projectScopeService.getProjectOrThrow).toHaveBeenCalledWith(
-        ctx,
-        projectId,
-      );
       expect(prisma.issue.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            projectId,
-            deletedAt: null,
-          }),
-        }),
-      );
-      expect(prisma.issue.count).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             projectId,

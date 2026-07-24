@@ -15,11 +15,16 @@ import {
 } from '@/lib/api/client';
 import type {
   CreateIssueRequest,
+  CreateIssueResponseRequest,
   Issue,
   IssueProjectOption,
+  IssueResponse,
   IssueSeverity,
   IssueStatus,
   PmListFilters,
+  ReopenIssueRequest,
+  ResolveIssueRequest,
+  StartIssueRequest,
   UpdateIssueRequest,
 } from '@/lib/api/project-management.types';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
@@ -45,6 +50,8 @@ export const issueKeys = {
     [...issueKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, issueId: string) =>
     [...issueKeys.details(projectId), issueId] as const,
+  responses: (projectId: string, issueId: string) =>
+    [...issueKeys.detail(projectId, issueId), 'responses'] as const,
   myList: (
     params: PaginationParams &
       PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
@@ -96,6 +103,22 @@ export function useIssue(projectId: string, issueId: string, enabled = true) {
   });
 }
 
+export function useIssueResponses(
+  projectId: string,
+  issueId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: issueKeys.responses(projectId, issueId),
+    queryFn: () =>
+      apiGet<IssueResponse[]>(
+        `${issuesPath(projectId)}/${issueId}/responses`,
+      ),
+    enabled: Boolean(projectId) && Boolean(issueId) && enabled,
+    retry: false,
+  });
+}
+
 export function useCreateIssue() {
   const queryClient = useQueryClient();
 
@@ -135,6 +158,145 @@ export function useUpdateIssue() {
       void queryClient.invalidateQueries({
         queryKey: issueKeys.detail(variables.projectId, variables.issueId),
       });
+    },
+  });
+}
+
+function invalidateIssueQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  issueId: string,
+): void {
+  void queryClient.invalidateQueries({ queryKey: issueKeys.lists(projectId) });
+  void queryClient.invalidateQueries({
+    queryKey: issueKeys.detail(projectId, issueId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: issueKeys.responses(projectId, issueId),
+  });
+  void queryClient.invalidateQueries({ queryKey: issueKeys.all });
+}
+
+export function useStartIssue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      body,
+    }: {
+      projectId: string;
+      issueId: string;
+      body?: StartIssueRequest;
+    }) =>
+      apiPatch<Issue>(
+        `${issuesPath(projectId)}/${issueId}/start`,
+        body ?? {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
+    },
+  });
+}
+
+export function useResolveIssue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      body,
+    }: {
+      projectId: string;
+      issueId: string;
+      body: ResolveIssueRequest;
+    }) =>
+      apiPatch<Issue>(
+        `${issuesPath(projectId)}/${issueId}/resolve`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
+    },
+  });
+}
+
+export function useCloseIssue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+    }: {
+      projectId: string;
+      issueId: string;
+    }) => apiPatch<Issue>(`${issuesPath(projectId)}/${issueId}/close`),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
+    },
+  });
+}
+
+export function useReopenIssue() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      body,
+    }: {
+      projectId: string;
+      issueId: string;
+      body: ReopenIssueRequest;
+    }) =>
+      apiPatch<Issue>(
+        `${issuesPath(projectId)}/${issueId}/reopen`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
+    },
+  });
+}
+
+export function useAddIssueResponse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      body,
+    }: {
+      projectId: string;
+      issueId: string;
+      body: CreateIssueResponseRequest;
+    }) =>
+      apiPost<IssueResponse>(
+        `${issuesPath(projectId)}/${issueId}/responses`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
     },
   });
 }

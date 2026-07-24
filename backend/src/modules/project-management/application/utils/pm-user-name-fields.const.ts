@@ -12,7 +12,7 @@ export const PM_ISSUE_USER_NAMES: readonly [string, string][] = [
   ['raisedBy', 'raisedByName'],
   ['assignedTo', 'assignedToName'],
   ['resolvedBy', 'resolvedByName'],
-  ['verifiedBy', 'verifiedByName'],
+  ['reopenedBy', 'reopenedByName'],
 ];
 
 export const PM_OWNER_NAME: readonly [string, string][] = [['ownerId', 'ownerName']];

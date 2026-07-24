@@ -55,10 +55,8 @@ export const CORRESPONDENCE_WORKFLOW: WorkflowStep[] = [
 
 export const ISSUE_WORKFLOW: WorkflowStep[] = [
   { key: 'OPEN', label: 'Open' },
-  { key: 'ASSIGNED', label: 'Assigned' },
   { key: 'IN_PROGRESS', label: 'In Progress' },
   { key: 'RESOLVED', label: 'Resolved' },
-  { key: 'VERIFIED', label: 'Verified' },
   { key: 'CLOSED', label: 'Closed' },
 ];
 

@@ -26,12 +26,10 @@ export const RFI_VALID_TRANSITIONS: Record<RfiStatus, RfiStatus[]> = {
 
 /** Valid issue status transitions aligned with backend issues.service.ts */
 export const ISSUE_VALID_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
-  OPEN: ['ASSIGNED', 'IN_PROGRESS', 'CLOSED'],
-  ASSIGNED: ['IN_PROGRESS', 'OPEN', 'CLOSED'],
-  IN_PROGRESS: ['RESOLVED', 'ASSIGNED', 'CLOSED'],
-  RESOLVED: ['VERIFIED', 'IN_PROGRESS', 'CLOSED'],
-  VERIFIED: ['CLOSED', 'RESOLVED'],
-  CLOSED: [],
+  OPEN: ['IN_PROGRESS'],
+  IN_PROGRESS: ['RESOLVED'],
+  RESOLVED: ['CLOSED', 'IN_PROGRESS'],
+  CLOSED: ['IN_PROGRESS'],
 };
 
 export const SUBMITTAL_VERDICT_STATUSES: SubmittalStatus[] = [

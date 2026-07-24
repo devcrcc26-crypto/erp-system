@@ -17,7 +17,11 @@ import { RequirePermission } from '../../../../shared/permissions/require-permis
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateIssueDto,
+  CreateIssueResponseDto,
   PmListQueryDto,
+  ReopenIssueDto,
+  ResolveIssueDto,
+  StartIssueDto,
   UpdateIssueDto,
 } from '../../application/dtos/pm.dtos';
 import { IssuesService } from '../../application/services/issues.service';
@@ -71,7 +75,7 @@ export class IssuesController {
 
   @Patch(':issueId')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Update issue' })
+  @ApiOperation({ summary: 'Update issue fields (status via action routes)' })
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -79,6 +83,102 @@ export class IssuesController {
     @Body() dto: UpdateIssueDto,
   ): Promise<unknown> {
     return this.issuesService.updateIssue(
+      this.ctx(user),
+      projectId,
+      issueId,
+      dto,
+    );
+  }
+
+  @Patch(':issueId/start')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Start working on an issue (OPEN → IN_PROGRESS)' })
+  start(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: StartIssueDto,
+  ): Promise<unknown> {
+    return this.issuesService.startIssue(
+      this.ctx(user),
+      projectId,
+      issueId,
+      dto,
+    );
+  }
+
+  @Patch(':issueId/resolve')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Mark issue resolved (IN_PROGRESS → RESOLVED)' })
+  resolve(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: ResolveIssueDto,
+  ): Promise<unknown> {
+    return this.issuesService.resolveIssue(
+      this.ctx(user),
+      projectId,
+      issueId,
+      dto,
+    );
+  }
+
+  @Patch(':issueId/close')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Close a resolved issue (RESOLVED → CLOSED)' })
+  close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+  ): Promise<unknown> {
+    return this.issuesService.closeIssue(this.ctx(user), projectId, issueId);
+  }
+
+  @Patch(':issueId/reopen')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Reopen a resolved or closed issue → IN_PROGRESS',
+  })
+  reopen(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: ReopenIssueDto,
+  ): Promise<unknown> {
+    return this.issuesService.reopenIssue(
+      this.ctx(user),
+      projectId,
+      issueId,
+      dto,
+    );
+  }
+
+  @Get(':issueId/responses')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List issue responses' })
+  listResponses(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+  ): Promise<unknown> {
+    return this.issuesService.listIssueResponses(
+      this.ctx(user),
+      projectId,
+      issueId,
+    );
+  }
+
+  @Post(':issueId/responses')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Add an issue response' })
+  addResponse(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: CreateIssueResponseDto,
+  ): Promise<unknown> {
+    return this.issuesService.addIssueResponse(
       this.ctx(user),
       projectId,
       issueId,

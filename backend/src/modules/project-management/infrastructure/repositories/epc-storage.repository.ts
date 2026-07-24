@@ -361,11 +361,7 @@ export class DesignPackageRepository {
         where: activeOnly({ id: sourceEntityId, companyId }),
         select: { status: true },
       });
-      if (
-        issue &&
-        issue.status !== IssueStatus.VERIFIED &&
-        issue.status !== IssueStatus.CLOSED
-      ) {
+      if (issue && issue.status !== IssueStatus.CLOSED) {
         counts.openIssues = 1;
       }
       return counts;

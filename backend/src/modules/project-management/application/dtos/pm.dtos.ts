@@ -7,7 +7,6 @@ import {
   CorrespondenceStatus,
   CorrespondenceType,
   IssueSeverity,
-  IssueStatus,
   MeetingStatus,
   MeetingType,
   ProjectContractType,
@@ -1439,11 +1438,39 @@ export class CreateIssueDto {
   sourceEntityId?: string;
 }
 
-export class UpdateIssueDto extends PartialType(CreateIssueDto) {
-  @ApiPropertyOptional({ enum: IssueStatus })
+export class UpdateIssueDto extends PartialType(CreateIssueDto) {}
+
+export class StartIssueDto {
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(IssueStatus)
-  status?: IssueStatus;
+  @IsEntityUuid()
+  assignedTo?: string;
+}
+
+export class ResolveIssueDto {
+  @ApiProperty({ description: 'What was done to resolve this issue' })
+  @IsString()
+  resolutionNote!: string;
+}
+
+export class ReopenIssueDto {
+  @ApiProperty({ description: 'Reason for reopening' })
+  @IsString()
+  reason!: string;
+}
+
+export class CreateIssueResponseDto {
+  @ApiProperty()
+  @IsString()
+  responseText!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional document id (already uploaded to the issue folder) attached to this response',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  responseDocumentId?: string;
 }
 
 export class CreatePunchItemDto {

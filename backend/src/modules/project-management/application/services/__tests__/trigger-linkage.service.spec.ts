@@ -170,12 +170,12 @@ describe('Trigger linkage (trigger-linkage)', () => {
       expect(epcSubmittalRepository.createLinkedEntityTrigger).not.toHaveBeenCalled();
     });
 
-    it('3. Issue VERIFIED + link → trigger created', async () => {
+    it('3. Issue CLOSED + link → trigger created', async () => {
       const tx = {
         issue: {
           update: jest.fn().mockResolvedValue({
             id: issueId,
-            status: IssueStatus.VERIFIED,
+            status: IssueStatus.CLOSED,
           }),
         },
       };
@@ -185,7 +185,8 @@ describe('Trigger linkage (trigger-linkage)', () => {
             id: issueId,
             projectId,
             status: IssueStatus.RESOLVED,
-            raisedBy: 'other-user',
+            raisedBy: leaderCtx.userId,
+            assignedTo: 'assignee-1',
             linkedDesignPackageId: packageId,
           }),
           update: tx.issue.update,
@@ -210,9 +211,7 @@ describe('Trigger linkage (trigger-linkage)', () => {
         } as never,
       );
 
-      await service.updateIssue(leaderCtx, projectId, issueId, {
-        status: IssueStatus.VERIFIED,
-      });
+      await service.closeIssue(leaderCtx, projectId, issueId);
 
       expect(epcSubmittalRepository.createLinkedEntityTrigger).toHaveBeenCalledWith(
         tx,

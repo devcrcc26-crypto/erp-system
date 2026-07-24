@@ -114,10 +114,8 @@ export function rfiPriorityVariant(priority: RfiPriority): StatusBadgeVariant {
 export function issueStatusVariant(status: IssueStatus): StatusBadgeVariant {
   const variants: Record<IssueStatus, StatusBadgeVariant> = {
     OPEN: 'error',
-    ASSIGNED: 'warning',
     IN_PROGRESS: 'orange',
     RESOLVED: 'info',
-    VERIFIED: 'success',
     CLOSED: 'default',
   };
   return variants[status];

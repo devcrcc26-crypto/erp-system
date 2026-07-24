@@ -1340,6 +1340,9 @@ async function cleanupDemoPmData(ctx: PmSeedContext): Promise<void> {
     where: { projectId: { in: projectIds } },
   });
   await prisma.risk.deleteMany({ where: { projectId: { in: projectIds } } });
+  await prisma.issueResponse.deleteMany({
+    where: { issue: { projectId: { in: projectIds } } },
+  });
   await prisma.issue.deleteMany({ where: { projectId: { in: projectIds } } });
   await prisma.punchItem.deleteMany({ where: { projectId: { in: projectIds } } });
   await prisma.closeout.deleteMany({ where: { projectId: { in: projectIds } } });

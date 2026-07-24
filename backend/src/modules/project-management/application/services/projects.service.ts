@@ -272,7 +272,7 @@ export class ProjectsService {
             where: activeOnly({
               projectId: id,
               status: {
-                notIn: [IssueStatus.VERIFIED, IssueStatus.CLOSED],
+                not: IssueStatus.CLOSED,
               },
             }),
           }),
