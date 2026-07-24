@@ -720,12 +720,12 @@ export class IssuesService {
     await this.assertCanAccessIssue(ctx, issue, 'edit');
 
     const roleNames = await this.getRoleNames(ctx);
-    if (
-      ctx.userId !== issue.assignedTo &&
-      !hasFullProjectDataAccess(roleNames)
-    ) {
+    const isAssignee = ctx.userId === issue.assignedTo;
+    const isRaiser = ctx.userId === issue.raisedBy;
+    const fullAccess = hasFullProjectDataAccess(roleNames);
+    if (!isAssignee && !(fullAccess && !isRaiser)) {
       throw new ForbiddenException(
-        'Only the assignee or project administrators can respond to this issue',
+        'Only the assignee or a project administrator (who did not raise the issue) can respond',
       );
     }
 

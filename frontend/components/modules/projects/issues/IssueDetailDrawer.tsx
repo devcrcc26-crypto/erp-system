@@ -116,7 +116,7 @@ export default function IssueDetailDrawer({
     issue != null &&
     issue.status !== 'CLOSED' &&
     issue.status !== 'RESOLVED' &&
-    (isAssignedToMe || hasFullAccess);
+    (isAssignedToMe || (hasFullAccess && !isRaisedByMe));
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -526,8 +526,10 @@ export default function IssueDetailDrawer({
                   issue.status === 'CLOSED'
                     ? 'This issue is closed — no further responses can be posted.'
                     : issue.status === 'RESOLVED'
-                      ? 'This issue is resolved — no further responses can be posted.'
-                      : 'Only the assignee or project administrators can post responses.'
+                      ? 'This issue is resolved — review the resolution and close the issue if you are satisfied, or reopen it if more work is needed.'
+                      : isRaisedByMe && !isAssignedToMe
+                        ? 'Waiting for the assignee to respond. Once the issue is marked resolved, you can close it from the actions above.'
+                        : 'Only the assignee can post responses on this issue.'
                 }
               />
             )}
