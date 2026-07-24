@@ -1334,41 +1334,50 @@ export class IssuesService {
       return;
     }
 
-    let recipientId: string | null = null;
+    let recipientIds: (string | null)[];
     if (respondedBy === issue.assignedTo) {
-      recipientId = issue.raisedBy;
+      recipientIds = [issue.raisedBy];
     } else if (respondedBy === issue.raisedBy) {
-      recipientId = issue.assignedTo;
+      recipientIds = [issue.assignedTo];
+    } else {
+      recipientIds = [issue.raisedBy, issue.assignedTo];
     }
 
-    if (!recipientId || recipientId === respondedBy) {
+    const uniqueRecipientIds = [...new Set(recipientIds)].filter(
+      (recipientId): recipientId is string =>
+        recipientId != null && recipientId !== respondedBy,
+    );
+
+    if (uniqueRecipientIds.length === 0) {
       return;
     }
 
     const responderName = await this.resolveUserName(ctx, respondedBy);
     const link = `/projects/${issue.projectId}/issues`;
 
-    try {
-      await this.notificationService.send(
-        { companyId: ctx.companyId, userId: ctx.userId },
-        {
-          recipientId,
-          eventType: ISSUE_RESPONSE_EVENT,
-          subject: `New response — ${issue.issueNumber}`,
-          body: `${responderName} added a response to issue ${issue.issueNumber}.`,
-          variables: {
-            projectId: issue.projectId,
-            issueId: issue.id,
-            issueNumber: issue.issueNumber,
-            link,
+    for (const recipientId of uniqueRecipientIds) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: ISSUE_RESPONSE_EVENT,
+            subject: `New response — ${issue.issueNumber}`,
+            body: `${responderName} added a response to issue ${issue.issueNumber}.`,
+            variables: {
+              projectId: issue.projectId,
+              issueId: issue.id,
+              issueNumber: issue.issueNumber,
+              link,
+            },
           },
-        },
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        'Issue response notification failed',
-        error instanceof Error ? error.message : String(error),
-      );
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Issue response notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
   }
 }
