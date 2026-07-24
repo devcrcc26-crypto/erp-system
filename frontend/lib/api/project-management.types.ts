@@ -425,6 +425,8 @@ export interface RfiResponse {
   respondedBy: string;
   respondedByName?: string | null;
   responseText: string;
+  responseDocumentId?: string | null;
+  responseDocumentName?: string | null;
   respondedAt: string;
   createdAt: string;
 }
@@ -1023,6 +1025,7 @@ export type UpdateRfiRequest = Partial<CreateRfiRequest> & {
 
 export interface CreateRfiResponseRequest {
   responseText: string;
+  responseDocumentId?: string;
 }
 
 export interface CreateSubmittalRequest {

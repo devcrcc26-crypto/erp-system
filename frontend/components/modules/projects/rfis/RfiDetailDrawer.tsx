@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
@@ -9,14 +9,22 @@ import {
   Form,
   Input,
   Select,
+  Space,
   Typography,
+  Upload,
 } from 'antd';
+import {
+  CheckCircleOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { MessageSquare } from 'lucide-react';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
+import { apiGet } from '@/lib/api/client';
 import type { RfiSource, RfiStatus } from '@/lib/api/project-management.types';
 import type { ProjectChangeRequest } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
@@ -28,6 +36,7 @@ import {
   useRfiResponses,
   useUpdateRfi,
 } from '@/lib/query/rfis';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatRfiStatus,
@@ -59,6 +68,13 @@ interface ResponseFormValues {
   responseText: string;
 }
 
+async function downloadResponseDocument(documentId: string): Promise<void> {
+  const { url } = await apiGet<{ url: string; expiresIn: number }>(
+    `/documents/${documentId}/download-url`,
+  );
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export default function RfiDetailDrawer({
   projectId,
   rfiId,
@@ -79,11 +95,16 @@ export default function RfiDetailDrawer({
     projectId: string;
     changeRequestId: string;
   } | null>(null);
+  const [responseFile, setResponseFile] = useState<File | null>(null);
+  const [responseDocId, setResponseDocId] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const rfiQuery = useRfi(projectId, rfiId ?? '', open);
   const responsesQuery = useRfiResponses(projectId, rfiId ?? '', open);
   const updateRfi = useUpdateRfi();
   const addResponse = useAddRfiResponse();
+  const uploadDocument = useUploadDocumentToFolder();
   const linkRfiCr = useLinkRfiCr();
   const messageApi = useAppMessage();
   const epc = useEpcCapabilities();
@@ -95,6 +116,48 @@ export default function RfiDetailDrawer({
     Boolean(rfi?.assignedTo) &&
     rfi?.assignedTo === currentUserId &&
     rfi?.status !== 'CLOSED';
+
+  function resetResponseAttachment(): void {
+    setResponseFile(null);
+    setResponseDocId(null);
+    setUploadedFileName(null);
+    setUploading(false);
+  }
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      resetResponseAttachment();
+    }
+  }, [open, form]);
+
+  async function uploadResponseFile(file: File): Promise<string | null> {
+    if (!rfi?.attachmentFolderId) {
+      messageApi.error(
+        'RFI has no attachment folder. Save the RFI before attaching files.',
+      );
+      return null;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await uploadDocument.mutateAsync({
+        folderId: rfi.attachmentFolderId,
+        file,
+      });
+      setResponseDocId(uploaded.id);
+      setUploadedFileName(uploaded.name);
+      return uploaded.id;
+    } catch (uploadError) {
+      notifyApiError(
+        uploadError,
+        'Failed to upload response attachment',
+        messageApi,
+      );
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleStatusChange(status: RfiStatus): Promise<void> {
     if (!rfiId || !rfi) {
@@ -119,13 +182,26 @@ export default function RfiDetailDrawer({
       return;
     }
     try {
+      let documentId = responseDocId;
+
+      if (responseFile && !documentId) {
+        documentId = await uploadResponseFile(responseFile);
+        if (!documentId) {
+          return;
+        }
+      }
+
       await addResponse.mutateAsync({
         projectId,
         rfiId,
-        body: { responseText: values.responseText.trim() },
+        body: {
+          responseText: values.responseText.trim(),
+          ...(documentId ? { responseDocumentId: documentId } : {}),
+        },
       });
       messageApi.success('Response posted successfully');
       form.resetFields();
+      resetResponseAttachment();
       onUpdated();
       void responsesQuery.refetch();
       void rfiQuery.refetch();
@@ -364,6 +440,23 @@ export default function RfiDetailDrawer({
                     <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
                       {item.responseText}
                     </p>
+                    {item.responseDocumentId && (
+                      <div className="mt-2">
+                        <Button
+                          type="link"
+                          size="small"
+                          className="!px-0"
+                          icon={<DownloadOutlined />}
+                          onClick={() =>
+                            void downloadResponseDocument(
+                              item.responseDocumentId as string,
+                            )
+                          }
+                        >
+                          📎 {item.responseDocumentName ?? 'Attachment'}
+                        </Button>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -385,10 +478,44 @@ export default function RfiDetailDrawer({
                 >
                   <Input.TextArea rows={3} placeholder="Official response text" />
                 </Form.Item>
+                <Form.Item label="Attach file (optional)">
+                  {!responseDocId ? (
+                    <Upload
+                      maxCount={1}
+                      beforeUpload={(file) => {
+                        setResponseFile(file);
+                        void uploadResponseFile(file);
+                        return false;
+                      }}
+                      showUploadList={false}
+                    >
+                      <Button icon={<UploadOutlined />} loading={uploading}>
+                        {responseFile ? responseFile.name : 'Choose file'}
+                      </Button>
+                    </Upload>
+                  ) : (
+                    <Space>
+                      <CheckCircleOutlined style={{ color: 'green' }} />
+                      <span>{uploadedFileName}</span>
+                      <Button
+                        size="small"
+                        type="link"
+                        danger
+                        onClick={() => {
+                          setResponseFile(null);
+                          setResponseDocId(null);
+                          setUploadedFileName(null);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </Space>
+                  )}
+                </Form.Item>
                 <Button
                   type="primary"
                   htmlType="submit"
-                  loading={addResponse.isPending}
+                  loading={addResponse.isPending || uploading}
                 >
                   Post response
                 </Button>

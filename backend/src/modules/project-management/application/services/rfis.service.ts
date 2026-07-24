@@ -667,6 +667,9 @@ export class RfisService {
 
     const responses = await this.prisma.rfiResponse.findMany({
       where: { rfiId },
+      include: {
+        responseDocument: { select: { name: true } },
+      },
       orderBy: { respondedAt: 'asc' },
     });
 
@@ -691,12 +694,24 @@ export class RfisService {
     await this.assertCanAccessRfi(ctx, rfi, 'respond');
     this.assertCanRespondToRfi(ctx, rfi);
 
+    if (dto.responseDocumentId) {
+      await this.assertResponseDocumentBelongsToRfi(
+        ctx,
+        rfiId,
+        dto.responseDocumentId,
+      );
+    }
+
     const response = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rfiResponse.create({
         data: {
           rfiId,
           respondedBy: ctx.userId,
           responseText: dto.responseText,
+          responseDocumentId: dto.responseDocumentId ?? null,
+        },
+        include: {
+          responseDocument: { select: { name: true } },
         },
       });
 
@@ -1338,6 +1353,41 @@ export class RfisService {
     if (rfi.assignedTo !== ctx.userId) {
       throw new ForbiddenException(
         'Only the assigned designer can respond to this RFI',
+      );
+    }
+  }
+
+  /**
+   * Ensures the response attachment document lives in this RFI's folder.
+   */
+  private async assertResponseDocumentBelongsToRfi(
+    ctx: PmContext,
+    rfiId: string,
+    documentId: string,
+  ): Promise<void> {
+    const folder =
+      await this.engineeringDocumentFolderService.findEntityFolder(
+        ctx,
+        FolderContextType.RFI,
+        rfiId,
+      );
+    if (!folder) {
+      throw new BadRequestException(
+        'RFI has no attachment folder for response files',
+      );
+    }
+
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({
+        id: documentId,
+        companyId: ctx.companyId,
+        folderId: folder.id,
+      }),
+      select: { id: true },
+    });
+    if (!document) {
+      throw new BadRequestException(
+        'Response attachment must be a document in this RFI folder',
       );
     }
   }

@@ -1122,6 +1122,8 @@ export interface MappedRfiResponse {
   respondedBy: string;
   respondedByName?: string | null;
   responseText: string;
+  responseDocumentId: string | null;
+  responseDocumentName?: string | null;
   respondedAt: string;
   createdAt: string;
 }
@@ -1331,12 +1333,18 @@ export function mapRfi(rfi: Rfi): MappedRfi {
 /**
  * Maps a Prisma RfiResponse row to the API response shape.
  */
-export function mapRfiResponse(response: RfiResponse): MappedRfiResponse {
+export function mapRfiResponse(
+  response: RfiResponse & {
+    responseDocument?: { name: string } | null;
+  },
+): MappedRfiResponse {
   return {
     id: response.id,
     rfiId: response.rfiId,
     respondedBy: response.respondedBy,
     responseText: response.responseText,
+    responseDocumentId: response.responseDocumentId ?? null,
+    responseDocumentName: response.responseDocument?.name ?? null,
     respondedAt: toIsoString(response.respondedAt)!,
     createdAt: toIsoString(response.createdAt)!,
   };

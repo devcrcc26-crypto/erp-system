@@ -867,6 +867,7 @@ model Document {
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
   submittalReviewAttachments SubmittalReview[]
+  rfiResponses             RfiResponse[]             @relation("RfiResponseDocument")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -2050,17 +2051,20 @@ model Rfi {
 }
 
 model RfiResponse {
-  id           String   @id @default(uuid())
-  rfiId        String   @map("rfi_id")
-  respondedBy  String   @map("responded_by")
-  responseText String   @map("response_text")
-  respondedAt  DateTime @default(now()) @map("responded_at")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(uuid())
+  rfiId              String   @map("rfi_id")
+  respondedBy        String   @map("responded_by")
+  responseText       String   @map("response_text")
+  responseDocumentId String?  @map("response_document_id")
+  respondedAt        DateTime @default(now()) @map("responded_at")
+  createdAt          DateTime @default(now()) @map("created_at")
 
-  rfi        Rfi  @relation(fields: [rfiId], references: [id])
-  responder  User @relation(fields: [respondedBy], references: [id])
+  rfi              Rfi       @relation(fields: [rfiId], references: [id])
+  responder        User      @relation(fields: [respondedBy], references: [id])
+  responseDocument Document? @relation("RfiResponseDocument", fields: [responseDocumentId], references: [id])
 
   @@index([rfiId], map: "idx_rfi_response_rfi_id")
+  @@index([responseDocumentId], map: "idx_rfi_response_response_document_id")
   @@map("rfi_response")
 }
 

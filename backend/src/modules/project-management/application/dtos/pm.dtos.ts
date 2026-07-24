@@ -717,6 +717,14 @@ export class CreateRfiResponseDto {
   @ApiProperty()
   @IsString()
   responseText!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional document id (already uploaded to the RFI folder) attached to this response',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  responseDocumentId?: string;
 }
 
 export class LinkRfiCrDto {

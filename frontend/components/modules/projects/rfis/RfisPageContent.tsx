@@ -11,8 +11,9 @@ import {
   Select,
   Space,
   Typography,
+  Upload,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { type Dayjs } from 'dayjs';
@@ -34,6 +35,7 @@ import type {
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import {
   useCreateRfi,
   useEligibleRfiSubtasks,
@@ -109,7 +111,10 @@ export function RfiFormDrawer({
   const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
 
   const createRfi = useCreateRfi();
+  const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const myProjectsQuery = useMyRfiProjects(open && showProjectSelector);
   const projectOptions = useMemo(
@@ -172,6 +177,8 @@ export function RfiFormDrawer({
   useEffect(() => {
     if (!open) {
       form.resetFields();
+      setQueuedFiles([]);
+      setUploading(false);
       if (showProjectSelector && !projectIdProp) {
         setSelectedProjectId(null);
       }
@@ -184,6 +191,15 @@ export function RfiFormDrawer({
     !selectedPackageId ||
     !rfiSource ||
     !title?.trim();
+
+  async function uploadQueuedFiles(folderId: string): Promise<void> {
+    setUploading(true);
+    await Promise.all(
+      queuedFiles.map((file) =>
+        uploadDocument.mutateAsync({ folderId, file }),
+      ),
+    );
+  }
 
   async function handleSubmit(values: RfiFormValues): Promise<void> {
     if (!effectiveProjectId) {
@@ -201,13 +217,35 @@ export function RfiFormDrawer({
       sourceEntityId: values.sourceEntityId || undefined,
     };
     try {
-      await createRfi.mutateAsync({ projectId: effectiveProjectId, body });
+      const result = await createRfi.mutateAsync({
+        projectId: effectiveProjectId,
+        body,
+      });
+
+      if (queuedFiles.length > 0 && result.attachmentFolderId) {
+        try {
+          await uploadQueuedFiles(result.attachmentFolderId);
+        } catch {
+          messageApi.warning(
+            'RFI created but file upload failed. You can add files from the RFI detail page.',
+          );
+          form.resetFields();
+          setQueuedFiles([]);
+          onSaved();
+          onClose();
+          return;
+        }
+      }
+
       messageApi.success('RFI created successfully');
       form.resetFields();
+      setQueuedFiles([]);
       onSaved();
       onClose();
     } catch (error) {
       notifyApiError(error, 'Failed to create RFI', messageApi);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -352,12 +390,34 @@ export function RfiFormDrawer({
           </Form.Item>
         )}
 
+        <Form.Item label="Attachments">
+          <Upload
+            multiple
+            beforeUpload={(file) => {
+              setQueuedFiles((prev) => [...prev, file]);
+              return false;
+            }}
+            onRemove={(file) => {
+              setQueuedFiles((prev) =>
+                prev.filter((f) => f.name !== file.name),
+              );
+            }}
+            fileList={queuedFiles.map((f) => ({
+              uid: f.name,
+              name: f.name,
+              status: 'done' as const,
+            }))}
+          >
+            <Button icon={<UploadOutlined />}>Add files</Button>
+          </Upload>
+        </Form.Item>
+
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button
             type="primary"
             htmlType="submit"
-            loading={createRfi.isPending}
+            loading={createRfi.isPending || uploading}
             disabled={submitDisabled}
           >
             Create RFI
