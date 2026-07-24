@@ -65,7 +65,7 @@ describe('RfisService', () => {
     rfiResponse: { create: jest.Mock };
     designPackage: { findFirst: jest.Mock };
     projectChangeRequest: { findFirst: jest.Mock };
-    user: { findFirst: jest.Mock };
+    user: { findFirst: jest.Mock; findMany: jest.Mock };
     documentFolder: { findMany: jest.Mock; createMany: jest.Mock };
     project: { findFirst: jest.Mock };
     $transaction: jest.Mock;
@@ -109,6 +109,7 @@ describe('RfisService', () => {
           chineseName: null,
           email: 'wei@example.com',
         }),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       documentFolder: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -143,9 +144,19 @@ describe('RfisService', () => {
           .fn()
           .mockResolvedValue({ id: 'project-folder-1', path: '/projects/DEMO-001' }),
       } as unknown as EngineeringDocumentFolderService,
-      {} as never,
+      {
+        createLinkedEntityTrigger: jest.fn().mockResolvedValue(undefined),
+      } as never,
       {
         getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
+        }),
       } as unknown as PermissionService,
     );
   });
@@ -227,21 +238,52 @@ describe('RfisService', () => {
       });
     });
 
-    it('enforces only assignee can respond', async () => {
+    it('allows raiser to respond without marking ANSWERED', async () => {
+      const rfi = buildRfi({
+        status: RfiStatus.UNDER_REVIEW,
+        assignedTo: assigneeUserId,
+        raisedBy: ctx.userId,
+      });
+      prisma.rfi.findFirst.mockResolvedValue(rfi);
+      prisma.$transaction.mockImplementation(
+        async (work: (tx: typeof prisma) => Promise<unknown>) => work(prisma),
+      );
+      prisma.rfiResponse.create.mockResolvedValue({
+        id: 'response-1',
+        rfiId,
+        respondedBy: ctx.userId,
+        responseText: 'Clarifying the question',
+        respondedAt: new Date('2026-02-01T00:00:00.000Z'),
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      });
+
+      await service.addRfiResponse(ctx, projectId, rfiId, {
+        responseText: 'Clarifying the question',
+      });
+
+      expect(prisma.rfiResponse.create).toHaveBeenCalled();
+      expect(prisma.rfi.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects responses from users who are not raiser, assignee, or full-access', async () => {
       prisma.rfi.findFirst.mockResolvedValue(
         buildRfi({
           status: RfiStatus.UNDER_REVIEW,
           assignedTo: assigneeUserId,
+          raisedBy: 'other-raiser',
         }),
       );
+      (
+        service as unknown as {
+          permissionService: { getUserRoleNames: jest.Mock };
+        }
+      ).permissionService.getUserRoleNames.mockResolvedValue(['Employee']);
 
       await expect(
         service.addRfiResponse(ctx, projectId, rfiId, {
           responseText: 'Not my RFI',
         }),
-      ).rejects.toThrow(
-        new ForbiddenException('Only the assigned designer can respond to this RFI'),
-      );
+      ).rejects.toThrow(ForbiddenException);
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });

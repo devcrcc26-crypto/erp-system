@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Button,
-  Descriptions,
   Drawer,
   Form,
   Input,
@@ -17,14 +17,11 @@ import {
   DownloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { MessageSquare } from 'lucide-react';
-import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import TableEmptyState from '@/components/ui/TableEmptyState';
-import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { apiGet } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
-import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
@@ -37,6 +34,7 @@ import {
 } from '@/lib/query/issues';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatIssueStatus,
@@ -46,8 +44,21 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAuthStore } from '@/stores/auth.store';
 
+dayjs.extend(relativeTime);
+
 interface ResponseFormValues {
   responseText: string;
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return '?';
+  }
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
 }
 
 async function downloadResponseDocument(documentId: string): Promise<void> {
@@ -55,6 +66,21 @@ async function downloadResponseDocument(documentId: string): Promise<void> {
     `/documents/${documentId}/download-url`,
   );
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function DetailCell({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p className={`mb-0.5 ${layout.drawerMetaLabel}`}>{label}</p>
+      <div className={layout.drawerMutedText}>{children}</div>
+    </div>
+  );
 }
 
 export default function IssueDetailDrawer({
@@ -82,6 +108,7 @@ export default function IssueDetailDrawer({
   const uploadDocument = useUploadDocumentToFolder();
 
   const [form] = Form.useForm<ResponseFormValues>();
+  const [responseModalOpen, setResponseModalOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState('');
   const [reopenOpen, setReopenOpen] = useState(false);
@@ -93,9 +120,6 @@ export default function IssueDetailDrawer({
 
   const issue = issueQuery.data;
   const responses = responsesQuery.data ?? [];
-  const hasFullAccess = pm.projects.canView;
-  const isRaisedByMe = issue?.raisedBy === currentUserId;
-  const isAssignedToMe = issue?.assignedTo === currentUserId;
 
   const canClose =
     issue?.status === 'IN_PROGRESS' && currentUserId === issue?.raisedBy;
@@ -107,7 +131,11 @@ export default function IssueDetailDrawer({
   const canRespond =
     issue != null &&
     issue.status !== 'CLOSED' &&
-    (isAssignedToMe || (hasFullAccess && !isRaisedByMe));
+    (currentUserId === issue.raisedBy ||
+      currentUserId === issue.assignedTo ||
+      pm.projects.canView);
+  const showWaitingAlert =
+    responses.length === 0 && issue?.status === 'OPEN';
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -116,10 +144,17 @@ export default function IssueDetailDrawer({
     setUploading(false);
   }
 
+  function closeResponseModal(): void {
+    setResponseModalOpen(false);
+    form.resetFields();
+    resetResponseAttachment();
+  }
+
   useEffect(() => {
     if (!open) {
       form.resetFields();
       resetResponseAttachment();
+      setResponseModalOpen(false);
       setCloseOpen(false);
       setResolutionNote('');
       setReopenOpen(false);
@@ -222,8 +257,7 @@ export default function IssueDetailDrawer({
         },
       });
       messageApi.success('Response posted');
-      form.resetFields();
-      resetResponseAttachment();
+      closeResponseModal();
       await refresh();
     } catch (error) {
       notifyApiError(error, 'Failed to post response', messageApi);
@@ -235,7 +269,7 @@ export default function IssueDetailDrawer({
       {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={issue ? `${issue.issueNumber} - ${issue.issueType}` : 'Issue detail'}
+      title={issue ? issue.issueType : 'Issue detail'}
       destroyOnHidden
     >
       {issueQuery.isLoading && (
@@ -256,75 +290,182 @@ export default function IssueDetailDrawer({
 
       {issue && (
         <div className={layout.drawerStack}>
-          <WorkflowStepper
-            className="erp-drawer-workflow"
-            steps={ISSUE_WORKFLOW}
-            currentStatus={issue.status}
-          />
-
-          <Descriptions
-            className={layout.drawerDescriptionsClass}
-            column={1}
-            size="small"
-            bordered
-          >
-            <Descriptions.Item label="Status">
+          {/* SECTION 1 — HEADER */}
+          <section>
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <span
+                className="text-[15px] font-semibold leading-tight"
+                style={{ color: tokens.colorTeal600 }}
+              >
+                {issue.issueNumber}
+              </span>
               <StatusBadge
                 label={formatIssueStatus(issue.status)}
                 variant={issueStatusVariant(issue.status)}
               />
-            </Descriptions.Item>
-            <Descriptions.Item label="Severity">
+            </div>
+            <Space size={8} wrap>
+              <StatusBadge label={issue.issueType} variant="default" />
               <StatusBadge
                 label={issue.severity}
                 variant={issueSeverityVariant(issue.severity)}
               />
-            </Descriptions.Item>
-            <Descriptions.Item label="Location">
-              {issue.location ?? '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Raised by">
-              {resolveUserDisplay(issue.raisedBy, issue.raisedByName)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Assigned to">
-              {resolveUserDisplay(issue.assignedTo, issue.assignedToName, '-')}
-            </Descriptions.Item>
-            <Descriptions.Item label="Due date">
-              {formatProjectDate(issue.dueDate)}
-            </Descriptions.Item>
-            {issue.status === 'CLOSED' && (
-              <>
-                <Descriptions.Item label="Resolution">
-                  {issue.resolutionNote ?? '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Closed by">
+            </Space>
+          </section>
+
+          {/* SECTION 2 — DETAILS */}
+          <section className={layout.drawerSection}>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <DetailCell label="Raised by">
+                {resolveUserDisplay(issue.raisedBy, issue.raisedByName)}
+              </DetailCell>
+              <DetailCell label="Assigned to">
+                {resolveUserDisplay(issue.assignedTo, issue.assignedToName, '—')}
+              </DetailCell>
+              <DetailCell label="Date raised">
+                {formatProjectDate(issue.createdAt)}
+              </DetailCell>
+              <DetailCell label="Due date">
+                {formatProjectDate(issue.dueDate)}
+              </DetailCell>
+              <DetailCell label="Subtask">
+                {issue.linkedDesignPackage
+                  ? `${issue.linkedDesignPackage.fullCode} ${issue.linkedDesignPackage.name}`
+                  : '—'}
+              </DetailCell>
+              <DetailCell label="Location">
+                {issue.location ?? '—'}
+              </DetailCell>
+              {issue.sourceEntitySummary && (
+                <>
+                  <DetailCell label="Source type">
+                    {issue.sourceEntitySummary.type.replace(/_/g, ' ')}
+                  </DetailCell>
+                  <DetailCell label="Source entity">
+                    {issue.sourceEntitySummary.label}
+                  </DetailCell>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* SECTION 3 — DESCRIPTION */}
+          <section className={layout.drawerSection}>
+            <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
+            <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+              {issue.description}
+            </p>
+          </section>
+
+          {/* SECTION 4 — DISCUSSION */}
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-3`}>Discussion</h3>
+
+            {showWaitingAlert && (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-3"
+                description="No responses yet. Waiting for the assignee to respond."
+              />
+            )}
+
+            {responses.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {responses.map((item) => {
+                  const displayName = resolveUserDisplay(
+                    item.respondedBy,
+                    item.respondedByName,
+                  );
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-3"
+                    >
+                      <div className="mb-2 flex items-start gap-2">
+                        <Avatar size={28} style={{ backgroundColor: tokens.colorTeal400 }}>
+                          {initialsFromName(displayName)}
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className={layout.drawerHeading}>{displayName}</span>
+                            <span className={layout.drawerMetaLabel}>
+                              {dayjs(item.respondedAt).fromNow()} ·{' '}
+                              {formatProjectDate(item.respondedAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+                        {item.responseText}
+                      </p>
+                      {item.responseDocumentId && (
+                        <div className="mt-2">
+                          <Button
+                            type="link"
+                            size="small"
+                            className="!px-0"
+                            icon={<DownloadOutlined />}
+                            onClick={() =>
+                              void downloadResponseDocument(
+                                item.responseDocumentId as string,
+                              )
+                            }
+                          >
+                            {item.responseDocumentName ?? 'Attachment'}
+                          </Button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {canRespond && (
+              <Button
+                type="primary"
+                className="mt-3"
+                onClick={() => setResponseModalOpen(true)}
+              >
+                Add Response
+              </Button>
+            )}
+          </section>
+
+          {/* SECTION 5 — RESOLUTION */}
+          {issue.status === 'CLOSED' && (
+            <section
+              className="rounded-lg border p-4"
+              style={{
+                borderColor: tokens.colorTeal400,
+                backgroundColor: tokens.colorTeal50,
+              }}
+            >
+              <p className={`mb-2 ${layout.drawerHeading}`}>Resolution</p>
+              <p className={`mb-3 whitespace-pre-wrap ${layout.drawerMutedText}`}>
+                {issue.resolutionNote ?? '—'}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <DetailCell label="Closed by">
                   {resolveUserDisplay(
                     issue.resolvedBy,
                     issue.resolvedByName,
                     '—',
                   )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Closed on">
+                </DetailCell>
+                <DetailCell label="Closed on">
                   {issue.resolvedAt
                     ? formatProjectDate(issue.resolvedAt)
                     : '—'}
-                </Descriptions.Item>
-              </>
-            )}
-            <Descriptions.Item label="Description">
-              {issue.description}
-            </Descriptions.Item>
-            {issue.sourceEntitySummary && (
-              <Descriptions.Item label="Source">
-                {issue.sourceEntitySummary.type.replace(/_/g, ' ')} —{' '}
-                {issue.sourceEntitySummary.label}
-              </Descriptions.Item>
-            )}
-          </Descriptions>
+                </DetailCell>
+              </div>
+            </section>
+          )}
 
+          {/* SECTION 6 — ACTIONS */}
           {(canClose || canReopen) && (
             <section className={layout.drawerSection}>
-              <p className={`mb-2 ${layout.drawerHeading}`}>Actions</p>
               <Space wrap>
                 {canClose && (
                   <Button type="primary" onClick={() => setCloseOpen(true)}>
@@ -332,140 +473,71 @@ export default function IssueDetailDrawer({
                   </Button>
                 )}
                 {canReopen && (
-                  <Button onClick={() => setReopenOpen(true)}>
-                    Reopen Issue
-                  </Button>
+                  <Button onClick={() => setReopenOpen(true)}>Reopen</Button>
                 )}
               </Space>
             </section>
           )}
-
-          <section className={layout.drawerSection}>
-            <h3 className={`${layout.drawerHeading} mb-3`}>Responses</h3>
-            {responses.length === 0 ? (
-              <TableEmptyState
-                icon={<MessageSquare />}
-                title="No responses yet"
-                description="Conversation between raiser and assignee will appear here"
-              />
-            ) : (
-              <ul className="erp-drawer-list">
-                {responses.map((item) => (
-                  <li key={item.id} className="px-4 py-3">
-                    <div className="mb-1 flex items-baseline justify-between gap-2">
-                      <span className={layout.drawerHeading}>
-                        {resolveUserDisplay(item.respondedBy, item.respondedByName)}
-                      </span>
-                      <span className={layout.drawerMetaLabel}>
-                        {formatProjectDate(item.respondedAt)}
-                      </span>
-                    </div>
-                    <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
-                      {item.responseText}
-                    </p>
-                    {item.responseDocumentId && (
-                      <div className="mt-2">
-                        <Button
-                          type="link"
-                          size="small"
-                          className="!px-0"
-                          icon={<DownloadOutlined />}
-                          onClick={() =>
-                            void downloadResponseDocument(
-                              item.responseDocumentId as string,
-                            )
-                          }
-                        >
-                          📎 {item.responseDocumentName ?? 'Attachment'}
-                        </Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {canRespond ? (
-              <Form<ResponseFormValues>
-                form={form}
-                layout="vertical"
-                className="erp-drawer-form mt-4"
-                onFinish={(values: ResponseFormValues) =>
-                  void handleAddResponse(values)
-                }
-              >
-                <Form.Item
-                  label="Add response"
-                  name="responseText"
-                  rules={[{ required: true, message: 'Enter a response' }]}
-                >
-                  <Input.TextArea rows={3} placeholder="Response text" />
-                </Form.Item>
-                <Form.Item label="Attach file (optional)">
-                  {!responseDocId ? (
-                    <Upload
-                      maxCount={1}
-                      beforeUpload={(file) => {
-                        setResponseFile(file);
-                        void uploadResponseFile(file);
-                        return false;
-                      }}
-                      showUploadList={false}
-                    >
-                      <Button icon={<UploadOutlined />} loading={uploading}>
-                        {responseFile ? responseFile.name : 'Choose file'}
-                      </Button>
-                    </Upload>
-                  ) : (
-                    <Space>
-                      <CheckCircleOutlined style={{ color: 'green' }} />
-                      <span>{uploadedFileName}</span>
-                      <Button
-                        size="small"
-                        type="link"
-                        danger
-                        onClick={() => resetResponseAttachment()}
-                      >
-                        Remove
-                      </Button>
-                    </Space>
-                  )}
-                </Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={addResponse.isPending || uploading}
-                >
-                  Post response
-                </Button>
-              </Form>
-            ) : (
-              <Alert
-                type="info"
-                showIcon
-                className="mt-4"
-                description={
-                  issue.status === 'CLOSED'
-                    ? 'This issue is closed — review the resolution above, or reopen if more work is needed.'
-                    : issue.status === 'OPEN'
-                      ? isRaisedByMe
-                        ? 'Waiting for the assignee to post the first response. Status moves to In Progress automatically when they reply.'
-                        : 'Only the assignee can post the first response on this issue.'
-                      : isRaisedByMe && !isAssignedToMe
-                        ? 'Waiting for the assignee to respond. Once work is done, close the issue with a resolution note.'
-                        : 'Only the assignee can post responses on this issue.'
-                }
-              />
-            )}
-          </section>
-
-          <DocumentAttachmentPanel
-            folderId={issue.attachmentFolderId ?? undefined}
-            title="Photos & drawings"
-            description="Upload site photos, sketches, or drawing references for this issue."
-          />
         </div>
       )}
+
+      <Modal
+        title="Add Response"
+        open={responseModalOpen}
+        onCancel={closeResponseModal}
+        onOk={() => void form.submit()}
+        okText="Post Response"
+        confirmLoading={addResponse.isPending || uploading}
+        destroyOnHidden
+      >
+        <Form<ResponseFormValues>
+          form={form}
+          layout="vertical"
+          className="erp-drawer-form mt-2"
+          onFinish={(values: ResponseFormValues) => void handleAddResponse(values)}
+        >
+          <Form.Item
+            label="Response"
+            name="responseText"
+            rules={[{ required: true, message: 'Enter a response' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Type your response here..."
+            />
+          </Form.Item>
+          <Form.Item label="Attach file (optional)">
+            {!responseDocId ? (
+              <Upload
+                maxCount={1}
+                beforeUpload={(file) => {
+                  setResponseFile(file);
+                  void uploadResponseFile(file);
+                  return false;
+                }}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />} loading={uploading}>
+                  {responseFile ? responseFile.name : 'Choose file'}
+                </Button>
+              </Upload>
+            ) : (
+              <Space>
+                <CheckCircleOutlined style={{ color: 'green' }} />
+                <span>{uploadedFileName}</span>
+                <Button
+                  size="small"
+                  type="link"
+                  danger
+                  onClick={() => resetResponseAttachment()}
+                >
+                  Remove
+                </Button>
+              </Space>
+            )}
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title="Close Issue"
@@ -479,15 +551,16 @@ export default function IssueDetailDrawer({
         confirmLoading={closeIssue.isPending}
         destroyOnHidden
       >
-        <p className={`mb-2 ${layout.drawerMutedText}`}>
-          Describe what was done to resolve this issue
-        </p>
-        <Input.TextArea
-          rows={4}
-          value={resolutionNote}
-          onChange={(event) => setResolutionNote(event.target.value)}
-          placeholder="Describe what was done to resolve this issue"
-        />
+        <Form layout="vertical" className="mt-2">
+          <Form.Item label="Resolution note" required>
+            <Input.TextArea
+              rows={4}
+              value={resolutionNote}
+              onChange={(event) => setResolutionNote(event.target.value)}
+              placeholder="Describe what was done to resolve this issue"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
 
       <Modal
@@ -502,15 +575,15 @@ export default function IssueDetailDrawer({
         confirmLoading={reopenIssue.isPending}
         destroyOnHidden
       >
-        <p className={`mb-2 ${layout.drawerMutedText}`}>
-          Why is this issue being reopened?
-        </p>
-        <Input.TextArea
-          rows={3}
-          value={reopenReason}
-          onChange={(event) => setReopenReason(event.target.value)}
-          placeholder="Why is this issue being reopened?"
-        />
+        <Form layout="vertical" className="mt-2">
+          <Form.Item label="Reason" required>
+            <Input.TextArea
+              rows={3}
+              value={reopenReason}
+              onChange={(event) => setReopenReason(event.target.value)}
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </Drawer>
   );

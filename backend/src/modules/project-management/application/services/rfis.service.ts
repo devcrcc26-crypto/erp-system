@@ -767,7 +767,25 @@ export class RfisService {
   ): Promise<MappedRfiResponse> {
     const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertCanAccessRfi(ctx, rfi, 'respond');
-    this.assertCanRespondToRfi(ctx, rfi);
+
+    if (rfi.status === RfiStatus.CLOSED) {
+      throw new BadRequestException('Cannot respond to a closed RFI');
+    }
+
+    const roleNames = await this.getRoleNames(ctx);
+    const isAssignee = ctx.userId === rfi.assignedTo;
+    const isRaiser = ctx.userId === rfi.raisedBy;
+    const fullAccess = hasFullProjectDataAccess(roleNames);
+    if (!isAssignee && !isRaiser && !fullAccess) {
+      throw new ForbiddenException(
+        'Only the raiser, assignee, or a project administrator can respond to this RFI',
+      );
+    }
+
+    const responseText = dto.responseText.trim();
+    if (!responseText) {
+      throw new BadRequestException('Response text cannot be empty.');
+    }
 
     if (dto.responseDocumentId) {
       await this.assertResponseDocumentBelongsToRfi(
@@ -777,12 +795,15 @@ export class RfisService {
       );
     }
 
+    const shouldMarkAnswered =
+      isAssignee && rfi.status !== RfiStatus.ANSWERED;
+
     const response = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rfiResponse.create({
         data: {
           rfiId,
           respondedBy: ctx.userId,
-          responseText: dto.responseText,
+          responseText,
           responseDocumentId: dto.responseDocumentId ?? null,
         },
         include: {
@@ -790,7 +811,7 @@ export class RfisService {
         },
       });
 
-      if (rfi.status !== RfiStatus.CLOSED) {
+      if (shouldMarkAnswered) {
         await tx.rfi.update({
           where: { id: rfiId },
           data: {
@@ -816,7 +837,13 @@ export class RfisService {
       return created;
     });
 
-    await this.sendRfiRespondedNotification(ctx, rfi);
+    await this.sendRfiRespondedNotification(
+      ctx,
+      rfi,
+      isAssignee,
+      isRaiser,
+      fullAccess,
+    );
 
     return enrichWithUserDisplayNames(
       this.prisma,
@@ -1192,38 +1219,60 @@ export class RfisService {
   private async sendRfiRespondedNotification(
     ctx: PmContext,
     rfi: Rfi,
+    isAssignee: boolean,
+    isRaiser: boolean,
+    fullAccess: boolean,
   ): Promise<void> {
-    if (
-      !this.notificationService ||
-      rfi.raisedBy === ctx.userId
-    ) {
+    if (!this.notificationService) {
+      return;
+    }
+
+    const recipientIds = new Set<string>();
+    if (isAssignee && rfi.raisedBy) {
+      recipientIds.add(rfi.raisedBy);
+    } else if (isRaiser && rfi.assignedTo) {
+      recipientIds.add(rfi.assignedTo);
+    } else if (fullAccess) {
+      if (rfi.raisedBy) {
+        recipientIds.add(rfi.raisedBy);
+      }
+      if (rfi.assignedTo) {
+        recipientIds.add(rfi.assignedTo);
+      }
+    }
+
+    recipientIds.delete(ctx.userId);
+    if (recipientIds.size === 0) {
       return;
     }
 
     const responderName = await this.resolveUserName(ctx, ctx.userId);
     const link = `/projects/${rfi.projectId}/rfis`;
+    const variables = {
+      projectId: rfi.projectId,
+      rfiId: rfi.id,
+      rfiNumber: rfi.rfiNumber,
+      link,
+    };
 
-    try {
-      await this.notificationService.send(
-        { companyId: ctx.companyId, userId: ctx.userId },
-        {
-          recipientId: rfi.raisedBy,
-          eventType: RFI_RESPONDED_EVENT,
-          subject: `Response received — ${rfi.rfiNumber}`,
-          body: `${responderName} responded to RFI ${rfi.rfiNumber}. Please review and close when satisfied.`,
-          variables: {
-            projectId: rfi.projectId,
-            rfiId: rfi.id,
-            rfiNumber: rfi.rfiNumber,
-            link,
+    for (const recipientId of recipientIds) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: RFI_RESPONDED_EVENT,
+            subject: `Response received — ${rfi.rfiNumber}`,
+            body: `${responderName} responded to RFI ${rfi.rfiNumber}.`,
+            variables,
           },
-        },
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        'RFI responded notification failed',
-        error instanceof Error ? error.message : String(error),
-      );
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'RFI responded notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
   }
 
@@ -1406,30 +1455,6 @@ export class RfisService {
     }
 
     throw new ForbiddenException('You do not have access to this RFI');
-  }
-
-  /**
-   * Only the RFI assignee may post an official response.
-   */
-  private assertCanRespondToRfi(
-    ctx: PmContext,
-    rfi: { assignedTo: string | null; status: RfiStatus },
-  ): void {
-    if (rfi.status === RfiStatus.CLOSED) {
-      throw new BadRequestException('Cannot respond to a closed RFI');
-    }
-
-    if (!rfi.assignedTo) {
-      throw new ForbiddenException(
-        'This RFI has no assigned designer — assign a designer before posting a response',
-      );
-    }
-
-    if (rfi.assignedTo !== ctx.userId) {
-      throw new ForbiddenException(
-        'Only the assigned designer can respond to this RFI',
-      );
-    }
   }
 
   /**

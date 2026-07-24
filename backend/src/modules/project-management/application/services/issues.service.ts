@@ -674,9 +674,9 @@ export class IssuesService {
     const isAssignee = ctx.userId === issue.assignedTo;
     const isRaiser = ctx.userId === issue.raisedBy;
     const fullAccess = hasFullProjectDataAccess(roleNames);
-    if (!isAssignee && !(fullAccess && !isRaiser)) {
+    if (!isAssignee && !isRaiser && !fullAccess) {
       throw new ForbiddenException(
-        'Only the assignee or a project administrator (who did not raise the issue) can respond',
+        'Only the raiser, assignee, or a project administrator can respond to this issue',
       );
     }
 
@@ -710,7 +710,7 @@ export class IssuesService {
         },
       });
 
-      if (issue.status === IssueStatus.OPEN) {
+      if (isAssignee && issue.status === IssueStatus.OPEN) {
         await tx.issue.update({
           where: { id: issueId },
           data: {
@@ -723,7 +723,14 @@ export class IssuesService {
       return created;
     });
 
-    await this.sendIssueResponseNotification(ctx, issue, ctx.userId);
+    await this.sendIssueResponseNotification(
+      ctx,
+      issue,
+      ctx.userId,
+      isAssignee,
+      isRaiser,
+      fullAccess,
+    );
 
     const mapped = mapIssueResponse(row);
     return enrichRowsWithUserDisplayNames(
@@ -1279,39 +1286,60 @@ export class IssuesService {
     ctx: PmContext,
     issue: Issue,
     respondedBy: string,
+    isAssignee: boolean,
+    isRaiser: boolean,
+    fullAccess: boolean,
   ): Promise<void> {
-    if (!this.notificationService || !issue.raisedBy) {
+    if (!this.notificationService) {
       return;
     }
 
-    if (issue.assignedTo === issue.raisedBy) {
+    const recipientIds = new Set<string>();
+    if (isAssignee && issue.raisedBy) {
+      recipientIds.add(issue.raisedBy);
+    } else if (isRaiser && issue.assignedTo) {
+      recipientIds.add(issue.assignedTo);
+    } else if (fullAccess) {
+      if (issue.raisedBy) {
+        recipientIds.add(issue.raisedBy);
+      }
+      if (issue.assignedTo) {
+        recipientIds.add(issue.assignedTo);
+      }
+    }
+
+    recipientIds.delete(respondedBy);
+    if (recipientIds.size === 0) {
       return;
     }
 
     const responderName = await this.resolveUserName(ctx, respondedBy);
     const link = `/projects/${issue.projectId}/issues`;
+    const variables = {
+      projectId: issue.projectId,
+      issueId: issue.id,
+      issueNumber: issue.issueNumber,
+      link,
+    };
 
-    try {
-      await this.notificationService.send(
-        { companyId: ctx.companyId, userId: ctx.userId },
-        {
-          recipientId: issue.raisedBy,
-          eventType: ISSUE_RESPONSE_EVENT,
-          subject: `New response — ${issue.issueNumber}`,
-          body: `${responderName} added a response to issue ${issue.issueNumber}.`,
-          variables: {
-            projectId: issue.projectId,
-            issueId: issue.id,
-            issueNumber: issue.issueNumber,
-            link,
+    for (const recipientId of recipientIds) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: ISSUE_RESPONSE_EVENT,
+            subject: `New response — ${issue.issueNumber}`,
+            body: `${responderName} added a response to issue ${issue.issueNumber}.`,
+            variables,
           },
-        },
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        'Issue response notification failed',
-        error instanceof Error ? error.message : String(error),
-      );
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Issue response notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
   }
 }

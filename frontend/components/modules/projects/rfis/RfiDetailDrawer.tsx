@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Button,
-  Descriptions,
   Drawer,
   Form,
   Input,
   Modal,
   Space,
-  Typography,
   Upload,
 } from 'antd';
 import {
@@ -18,16 +17,13 @@ import {
   DownloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { MessageSquare } from 'lucide-react';
-import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
-import TableEmptyState from '@/components/ui/TableEmptyState';
-import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
 import type { RfiSource } from '@/lib/api/project-management.types';
 import type { ProjectChangeRequest } from '@/lib/api/project-management.types';
-import { RFI_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import {
   useAddRfiResponse,
@@ -46,13 +42,15 @@ import {
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useEpcCapabilities, usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAuthStore } from '@/stores/auth.store';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import { tokens } from '@/lib/theme/tokens';
+
+dayjs.extend(relativeTime);
 
 const RFI_SOURCE_LABELS: Record<RfiSource, string> = {
   SITE_TEAM: 'Site Team',
@@ -65,11 +63,37 @@ interface ResponseFormValues {
   responseText: string;
 }
 
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return '?';
+  }
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
+  }
+  return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+}
+
 async function downloadResponseDocument(documentId: string): Promise<void> {
   const { url } = await apiGet<{ url: string; expiresIn: number }>(
     `/documents/${documentId}/download-url`,
   );
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function DetailCell({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p className={`mb-0.5 ${layout.drawerMetaLabel}`}>{label}</p>
+      <div className={layout.drawerMutedText}>{children}</div>
+    </div>
+  );
 }
 
 export default function RfiDetailDrawer({
@@ -92,6 +116,7 @@ export default function RfiDetailDrawer({
     projectId: string;
     changeRequestId: string;
   } | null>(null);
+  const [responseModalOpen, setResponseModalOpen] = useState(false);
   const [responseFile, setResponseFile] = useState<File | null>(null);
   const [responseDocId, setResponseDocId] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -105,23 +130,28 @@ export default function RfiDetailDrawer({
   const closeRfi = useCloseRfi();
   const reopenRfi = useReopenRfi();
   const messageApi = useAppMessage();
-  const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const rfi = rfiQuery.data;
   const responses = responsesQuery.data ?? [];
+
   const canRespond =
-    Boolean(rfi?.assignedTo) &&
-    rfi?.assignedTo === currentUserId &&
-    rfi?.status !== 'CLOSED' &&
-    rfi?.status !== 'ANSWERED';
-  const isRaisedByMe = rfi?.raisedBy === currentUserId;
-  const hasFullAccess = pm.projects.canView;
+    rfi != null &&
+    rfi.status !== 'CLOSED' &&
+    (currentUserId === rfi.raisedBy ||
+      currentUserId === rfi.assignedTo ||
+      pm.projects.canView);
   const canClose =
-    rfi?.status === 'ANSWERED' && (isRaisedByMe || hasFullAccess);
+    rfi?.status === 'ANSWERED' && currentUserId === rfi?.raisedBy;
   const canReopen =
-    rfi?.status === 'CLOSED' && (isRaisedByMe || hasFullAccess);
+    rfi?.status === 'CLOSED' &&
+    (currentUserId === rfi?.raisedBy || pm.projects.canView);
+  const showWaitingAlert =
+    responses.length === 0 &&
+    (rfi?.status === 'SUBMITTED' || rfi?.status === 'UNDER_REVIEW');
+  const showRaiseCrButton =
+    rfi?.status === 'ANSWERED' && !rfi?.linkedCrId;
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -130,10 +160,17 @@ export default function RfiDetailDrawer({
     setUploading(false);
   }
 
+  function closeResponseModal(): void {
+    setResponseModalOpen(false);
+    form.resetFields();
+    resetResponseAttachment();
+  }
+
   useEffect(() => {
     if (!open) {
       form.resetFields();
       resetResponseAttachment();
+      setResponseModalOpen(false);
     }
   }, [open, form]);
 
@@ -217,8 +254,7 @@ export default function RfiDetailDrawer({
         },
       });
       messageApi.success('Response posted successfully');
-      form.resetFields();
-      resetResponseAttachment();
+      closeResponseModal();
       onUpdated();
       void responsesQuery.refetch();
       void rfiQuery.refetch();
@@ -247,15 +283,12 @@ export default function RfiDetailDrawer({
     }
   }
 
-  const showRaiseCrButton =
-    rfi?.status === 'ANSWERED' && !rfi?.linkedCrId;
-
   return (
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={rfi ? `${rfi.rfiNumber} — ${rfi.title}` : 'RFI detail'}
+      title={rfi ? rfi.title : 'RFI detail'}
       destroyOnHidden
     >
       {rfiQuery.isLoading && (
@@ -276,106 +309,187 @@ export default function RfiDetailDrawer({
 
       {rfi && (
         <div className={layout.drawerStack}>
-          <WorkflowStepper
-            className="erp-drawer-workflow"
-            steps={RFI_WORKFLOW}
-            currentStatus={rfi.status}
-          />
-
-          <Descriptions
-            className={layout.drawerDescriptionsClass}
-            column={1}
-            size="small"
-            bordered
-          >
-            <Descriptions.Item label="RFI Number">
-              <Typography.Text strong>{rfi.rfiNumber}</Typography.Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
+          {/* SECTION 1 — HEADER */}
+          <section>
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <span
+                className="text-[15px] font-semibold leading-tight"
+                style={{ color: tokens.colorTeal600 }}
+              >
+                {rfi.rfiNumber}
+              </span>
               <StatusBadge
                 label={formatRfiStatus(rfi.status)}
                 variant={rfiStatusVariant(rfi.status)}
               />
-            </Descriptions.Item>
-            {rfi.rfiSource && (
-              <Descriptions.Item label="Source">
-                {RFI_SOURCE_LABELS[rfi.rfiSource] ?? rfi.rfiSource}
-              </Descriptions.Item>
-            )}
-            {rfi.linkedDesignPackage && (
-              <Descriptions.Item label="Subtask">
-                <Typography.Text code>
-                  {rfi.linkedDesignPackage.fullCode}
-                </Typography.Text>{' '}
-                {rfi.linkedDesignPackage.name}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Assigned to">
-              {resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—')}
-            </Descriptions.Item>
-            <Descriptions.Item label="Raised by">
-              {resolveUserDisplay(rfi.raisedBy, rfi.raisedByName)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Priority">
-              <StatusBadge
-                label={rfi.priority}
-                variant={rfiPriorityVariant(rfi.priority)}
-              />
-            </Descriptions.Item>
-            <Descriptions.Item label="Date raised">
-              {formatProjectDate(rfi.dateRaised)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Due date">
-              <span
-                style={
-                  isOverdue(rfi.dueDate) && rfi.status !== 'CLOSED'
-                    ? { color: tokens.colorRed600, fontWeight: 500 }
-                    : undefined
-                }
-              >
-                {formatProjectDate(rfi.dueDate)}
-              </span>
-            </Descriptions.Item>
-            {rfi.dateAnswered && (
-              <Descriptions.Item label="Date answered">
-                {formatProjectDate(rfi.dateAnswered)}
-              </Descriptions.Item>
-            )}
-            {rfi.description && (
-              <Descriptions.Item label="Description">
-                <span className="whitespace-pre-wrap">{rfi.description}</span>
-              </Descriptions.Item>
-            )}
-            {rfi.sourceEntitySummary && (
-              <Descriptions.Item label="Source entity">
-                {rfi.sourceEntitySummary.type.replace(/_/g, ' ')} —{' '}
-                {rfi.sourceEntitySummary.label}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Linked CR">
-              {rfi.linkedCrId ? (
-                <Button
-                  type="link"
-                  className="!px-0"
-                  style={{ color: tokens.colorTeal600 }}
-                  onClick={() =>
-                    setSelectedCr({
-                      projectId,
-                      changeRequestId: rfi.linkedCrId as string,
-                    })
+            </div>
+            <StatusBadge
+              label={rfi.priority}
+              variant={rfiPriorityVariant(rfi.priority)}
+            />
+          </section>
+
+          {/* SECTION 2 — DETAILS */}
+          <section className={layout.drawerSection}>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <DetailCell label="Raised by">
+                {resolveUserDisplay(rfi.raisedBy, rfi.raisedByName)}
+              </DetailCell>
+              <DetailCell label="Assigned to">
+                {resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—')}
+              </DetailCell>
+              <DetailCell label="Date raised">
+                {formatProjectDate(rfi.dateRaised)}
+              </DetailCell>
+              <DetailCell label="Due date">
+                <span
+                  style={
+                    isOverdue(rfi.dueDate) && rfi.status !== 'CLOSED'
+                      ? { color: tokens.colorRed600, fontWeight: 500 }
+                      : undefined
                   }
                 >
-                  {rfi.linkedCrNumber ?? rfi.linkedCrId}
-                </Button>
-              ) : (
-                '—'
+                  {formatProjectDate(rfi.dueDate)}
+                </span>
+              </DetailCell>
+              <DetailCell label="Source">
+                {rfi.rfiSource
+                  ? (RFI_SOURCE_LABELS[rfi.rfiSource] ?? rfi.rfiSource)
+                  : '—'}
+              </DetailCell>
+              <DetailCell label="Subtask">
+                {rfi.linkedDesignPackage
+                  ? `${rfi.linkedDesignPackage.fullCode} ${rfi.linkedDesignPackage.name}`
+                  : '—'}
+              </DetailCell>
+              {rfi.sourceEntitySummary && (
+                <>
+                  <DetailCell label="RFI Source type">
+                    {rfi.sourceEntitySummary.type.replace(/_/g, ' ')}
+                  </DetailCell>
+                  <DetailCell label="Source entity">
+                    {rfi.sourceEntitySummary.label}
+                  </DetailCell>
+                </>
               )}
-            </Descriptions.Item>
-          </Descriptions>
+            </div>
+          </section>
 
-          {(canClose || canReopen) && (
+          {/* SECTION 3 — DESCRIPTION */}
+          <section className={layout.drawerSection}>
+            <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
+            <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+              {rfi.description?.trim() ? rfi.description : '—'}
+            </p>
+          </section>
+
+          {/* SECTION 4 — DISCUSSION */}
+          <section className={layout.drawerSection}>
+            <h3 className={`${layout.drawerHeading} mb-3`}>Discussion</h3>
+
+            {showWaitingAlert && (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-3"
+                description="No responses yet. Waiting for the assignee to respond."
+              />
+            )}
+
+            {responses.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {responses.map((item) => {
+                  const displayName = resolveUserDisplay(
+                    item.respondedBy,
+                    item.respondedByName,
+                  );
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-3"
+                    >
+                      <div className="mb-2 flex items-start gap-2">
+                        <Avatar
+                          size={28}
+                          style={{ backgroundColor: tokens.colorTeal400 }}
+                        >
+                          {initialsFromName(displayName)}
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className={layout.drawerHeading}>
+                              {displayName}
+                            </span>
+                            <span className={layout.drawerMetaLabel}>
+                              {dayjs(item.respondedAt).fromNow()} ·{' '}
+                              {formatProjectDate(item.respondedAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <p
+                        className={`whitespace-pre-wrap ${layout.drawerMutedText}`}
+                      >
+                        {item.responseText}
+                      </p>
+                      {item.responseDocumentId && (
+                        <div className="mt-2">
+                          <Button
+                            type="link"
+                            size="small"
+                            className="!px-0"
+                            icon={<DownloadOutlined />}
+                            onClick={() =>
+                              void downloadResponseDocument(
+                                item.responseDocumentId as string,
+                              )
+                            }
+                          >
+                            {item.responseDocumentName ?? 'Attachment'}
+                          </Button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {canRespond && (
+              <Button
+                type="primary"
+                className="mt-3"
+                onClick={() => setResponseModalOpen(true)}
+              >
+                Add Response
+              </Button>
+            )}
+          </section>
+
+          {/* SECTION 5 — LINKED CR */}
+          {rfi.linkedCrId && (
             <section className={layout.drawerSection}>
-              <Space>
+              <Button
+                type="link"
+                className="!px-0"
+                style={{ color: tokens.colorTeal600 }}
+                onClick={() =>
+                  setSelectedCr({
+                    projectId,
+                    changeRequestId: rfi.linkedCrId as string,
+                  })
+                }
+              >
+                Linked Change Request:{' '}
+                {rfi.linkedCrNumber ?? rfi.linkedCrId} →
+              </Button>
+            </section>
+          )}
+
+          {/* SECTION 6 — ACTIONS */}
+          {(canClose || canReopen || showRaiseCrButton) && (
+            <section className={layout.drawerSection}>
+              <Space wrap>
                 {canClose && (
                   <Button
                     type="primary"
@@ -390,188 +504,88 @@ export default function RfiDetailDrawer({
                     onClick={() =>
                       Modal.confirm({
                         title: 'Reopen this RFI?',
-                        content:
-                          'The status will return to Submitted and the assignee can add a new response.',
                         okText: 'Reopen',
                         onOk: () => handleReopen(),
                       })
                     }
                     loading={reopenRfi.isPending}
                   >
-                    Reopen RFI
+                    Reopen
+                  </Button>
+                )}
+                {showRaiseCrButton && (
+                  <Button
+                    onClick={() => setCreateCrOpen(true)}
+                    loading={linkRfiCr.isPending}
+                  >
+                    Raise CR
                   </Button>
                 )}
               </Space>
             </section>
           )}
-
-          {showRaiseCrButton && (
-            <section className={layout.drawerSection}>
-              <p className={`mb-2 ${layout.drawerHeading}`}>Change Request</p>
-              <Alert
-                type="info"
-                showIcon
-                className="!mb-3"
-                description="If this RFI requires a design change, raise a CR to formally trigger the revision workflow."
-              />
-              <Button
-                type="primary"
-                onClick={() => setCreateCrOpen(true)}
-                loading={linkRfiCr.isPending}
-              >
-                Raise Change Request
-              </Button>
-            </section>
-          )}
-
-          {rfi.linkedCrId && (
-            <section className={layout.drawerSection}>
-              <p className={`mb-2 ${layout.drawerHeading}`}>Linked Change Request</p>
-              <Button
-                type="link"
-                className="!px-0"
-                style={{ color: tokens.colorTeal600 }}
-                onClick={() =>
-                  setSelectedCr({
-                    projectId,
-                    changeRequestId: rfi.linkedCrId as string,
-                  })
-                }
-              >
-                {rfi.linkedCrNumber ?? rfi.linkedCrId}
-              </Button>
-            </section>
-          )}
-
-          <section className={layout.drawerSection}>
-            <h3 className={`${layout.drawerHeading} mb-3`}>Responses</h3>
-            {responses.length === 0 ? (
-              <TableEmptyState
-                icon={<MessageSquare />}
-                title="No responses yet"
-                description="Official responses will appear here once posted"
-              />
-            ) : (
-              <ul className="erp-drawer-list">
-                {responses.map((item) => (
-                  <li key={item.id} className="px-4 py-3">
-                    <div className="mb-1 flex items-baseline justify-between gap-2">
-                      <span className={layout.drawerHeading}>
-                        {resolveUserDisplay(item.respondedBy, item.respondedByName)}
-                      </span>
-                      <span className={layout.drawerMetaLabel}>
-                        {formatProjectDate(item.respondedAt)}
-                      </span>
-                    </div>
-                    <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
-                      {item.responseText}
-                    </p>
-                    {item.responseDocumentId && (
-                      <div className="mt-2">
-                        <Button
-                          type="link"
-                          size="small"
-                          className="!px-0"
-                          icon={<DownloadOutlined />}
-                          onClick={() =>
-                            void downloadResponseDocument(
-                              item.responseDocumentId as string,
-                            )
-                          }
-                        >
-                          📎 {item.responseDocumentName ?? 'Attachment'}
-                        </Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {canRespond ? (
-              <Form<ResponseFormValues>
-                form={form}
-                layout="vertical"
-                className="erp-drawer-form mt-4"
-                onFinish={(values: ResponseFormValues) =>
-                  void handleAddResponse(values)
-                }
-              >
-                <Form.Item
-                  label="Add response"
-                  name="responseText"
-                  rules={[{ required: true, message: 'Enter a response' }]}
-                >
-                  <Input.TextArea rows={3} placeholder="Official response text" />
-                </Form.Item>
-                <Form.Item label="Attach file (optional)">
-                  {!responseDocId ? (
-                    <Upload
-                      maxCount={1}
-                      beforeUpload={(file) => {
-                        setResponseFile(file);
-                        void uploadResponseFile(file);
-                        return false;
-                      }}
-                      showUploadList={false}
-                    >
-                      <Button icon={<UploadOutlined />} loading={uploading}>
-                        {responseFile ? responseFile.name : 'Choose file'}
-                      </Button>
-                    </Upload>
-                  ) : (
-                    <Space>
-                      <CheckCircleOutlined style={{ color: 'green' }} />
-                      <span>{uploadedFileName}</span>
-                      <Button
-                        size="small"
-                        type="link"
-                        danger
-                        onClick={() => {
-                          setResponseFile(null);
-                          setResponseDocId(null);
-                          setUploadedFileName(null);
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </Space>
-                  )}
-                </Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={addResponse.isPending || uploading}
-                >
-                  Post response
-                </Button>
-              </Form>
-            ) : (
-              <Alert
-                type="info"
-                showIcon
-                className="mt-4"
-                description={
-                  !rfi.assignedTo
-                    ? 'Assign a designer on this RFI before an official response can be posted.'
-                    : rfi.status === 'CLOSED'
-                      ? 'This RFI is closed — no further responses can be posted.'
-                      : rfi.status === 'ANSWERED'
-                        ? 'This RFI has been answered. Reopen it to add another response.'
-                        : 'Only the assigned designer can post an official response.'
-                }
-              />
-            )}
-          </section>
-
-          <DocumentAttachmentPanel
-            folderId={rfi.attachmentFolderId ?? undefined}
-            title="Attachments"
-            description="Files attached to this RFI."
-            readOnly={true}
-          />
         </div>
       )}
+
+      <Modal
+        title="Add Response"
+        open={responseModalOpen}
+        onCancel={closeResponseModal}
+        onOk={() => void form.submit()}
+        okText="Post Response"
+        confirmLoading={addResponse.isPending || uploading}
+        destroyOnHidden
+      >
+        <Form<ResponseFormValues>
+          form={form}
+          layout="vertical"
+          className="erp-drawer-form mt-2"
+          onFinish={(values: ResponseFormValues) =>
+            void handleAddResponse(values)
+          }
+        >
+          <Form.Item
+            label="Response"
+            name="responseText"
+            rules={[{ required: true, message: 'Enter a response' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Type your response here..."
+            />
+          </Form.Item>
+          <Form.Item label="Attach file (optional)">
+            {!responseDocId ? (
+              <Upload
+                maxCount={1}
+                beforeUpload={(file) => {
+                  setResponseFile(file);
+                  void uploadResponseFile(file);
+                  return false;
+                }}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />} loading={uploading}>
+                  {responseFile ? responseFile.name : 'Choose file'}
+                </Button>
+              </Upload>
+            ) : (
+              <Space>
+                <CheckCircleOutlined style={{ color: 'green' }} />
+                <span>{uploadedFileName}</span>
+                <Button
+                  size="small"
+                  type="link"
+                  danger
+                  onClick={() => resetResponseAttachment()}
+                >
+                  Remove
+                </Button>
+              </Space>
+            )}
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <CreateChangeRequestDrawer
         open={createCrOpen}
