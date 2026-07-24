@@ -44,7 +44,6 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
 const STATUS_OPTIONS: Array<{ value: IssueStatus; label: string }> = [
   { value: 'OPEN', label: 'Open' },
   { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
   { value: 'CLOSED', label: 'Closed' },
 ];
 

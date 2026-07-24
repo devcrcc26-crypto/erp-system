@@ -27,8 +27,7 @@ export const RFI_VALID_TRANSITIONS: Record<RfiStatus, RfiStatus[]> = {
 /** Valid issue status transitions aligned with backend issues.service.ts */
 export const ISSUE_VALID_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
   OPEN: ['IN_PROGRESS'],
-  IN_PROGRESS: ['RESOLVED'],
-  RESOLVED: ['CLOSED', 'IN_PROGRESS'],
+  IN_PROGRESS: ['CLOSED'],
   CLOSED: ['IN_PROGRESS'],
 };
 

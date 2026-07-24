@@ -116,7 +116,6 @@ export type IssueSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IssueStatus =
   | 'OPEN'
   | 'IN_PROGRESS'
-  | 'RESOLVED'
   | 'CLOSED';
 
 export type PunchItemSeverity = 'MINOR' | 'MAJOR' | 'CRITICAL';
@@ -1228,11 +1227,7 @@ export interface CreateIssueRequest {
 
 export type UpdateIssueRequest = Partial<CreateIssueRequest>;
 
-export interface StartIssueRequest {
-  assignedTo?: string;
-}
-
-export interface ResolveIssueRequest {
+export interface CloseIssueRequest {
   resolutionNote: string;
 }
 

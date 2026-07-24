@@ -27,11 +27,11 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
+  CloseIssueDto,
   CreateIssueDto,
   CreateIssueResponseDto,
   PmListQueryDto,
   ReopenIssueDto,
-  ResolveIssueDto,
   StartIssueDto,
   UpdateIssueDto,
 } from '../dtos/pm.dtos';
@@ -72,8 +72,7 @@ const ISSUE_SORT_FIELDS = new Set([
 
 const ISSUE_STATUS_TRANSITIONS: Record<string, string[]> = {
   OPEN: ['IN_PROGRESS'],
-  IN_PROGRESS: ['RESOLVED'],
-  RESOLVED: ['CLOSED', 'IN_PROGRESS'],
+  IN_PROGRESS: ['CLOSED'],
   CLOSED: ['IN_PROGRESS'],
 };
 
@@ -89,7 +88,6 @@ const DESIGN_PACKAGE_FULL_CODE_SELECT = {
 } as const;
 
 const ISSUE_ASSIGNED_EVENT = 'issue.assigned';
-const ISSUE_RESOLVED_EVENT = 'issue.resolved';
 const ISSUE_CLOSED_EVENT = 'issue.closed';
 const ISSUE_REOPENED_EVENT = 'issue.reopened';
 const ISSUE_RESPONSE_EVENT = 'issue.response';
@@ -493,72 +491,21 @@ export class IssuesService {
   }
 
   /**
-   * Transitions an issue from IN_PROGRESS to RESOLVED with a resolution note.
+   * Transitions an issue from IN_PROGRESS to CLOSED with a resolution note,
+   * and optionally triggers the EPC external-review pipeline when linked.
    */
-  async resolveIssue(
+  async closeIssue(
     ctx: PmContext,
     projectId: string,
     issueId: string,
-    dto: ResolveIssueDto,
+    dto: CloseIssueDto,
   ): Promise<MappedIssue> {
     const existing = await this.getIssueOrThrow(projectId, issueId);
     await this.assertCanAccessIssue(ctx, existing, 'edit');
 
     if (existing.status !== IssueStatus.IN_PROGRESS) {
       throw new BadRequestException(
-        `Issue must be IN_PROGRESS to resolve. Current status: ${existing.status}.`,
-      );
-    }
-    this.assertAllowedTransition(existing.status, IssueStatus.RESOLVED);
-
-    const roleNames = await this.getRoleNames(ctx);
-    if (
-      ctx.userId !== existing.assignedTo &&
-      !hasFullProjectDataAccess(roleNames)
-    ) {
-      throw new ForbiddenException(
-        'Only the assigned user or a project admin can resolve this issue.',
-      );
-    }
-
-    const resolutionNote = dto.resolutionNote.trim();
-    if (!resolutionNote) {
-      throw new BadRequestException('Resolution note cannot be empty.');
-    }
-
-    const issue = await this.prisma.issue.update({
-      where: { id: issueId },
-      data: {
-        status: IssueStatus.RESOLVED,
-        resolvedAt: new Date(),
-        resolvedBy: ctx.userId,
-        resolutionNote,
-        updatedBy: ctx.userId,
-      },
-    });
-
-    if (existing.raisedBy) {
-      await this.sendIssueResolvedNotification(ctx, issue, existing.raisedBy);
-    }
-
-    return this.enrichIssue(ctx, issue);
-  }
-
-  /**
-   * Transitions an issue from RESOLVED to CLOSED and optionally triggers
-   * the EPC external-review pipeline if linked to a design package.
-   */
-  async closeIssue(
-    ctx: PmContext,
-    projectId: string,
-    issueId: string,
-  ): Promise<MappedIssue> {
-    const existing = await this.getIssueOrThrow(projectId, issueId);
-    await this.assertCanAccessIssue(ctx, existing, 'edit');
-
-    if (existing.status !== IssueStatus.RESOLVED) {
-      throw new BadRequestException(
-        `Issue must be RESOLVED to close. Current status: ${existing.status}.`,
+        `Issue must be IN_PROGRESS to close. Current status: ${existing.status}.`,
       );
     }
     this.assertAllowedTransition(existing.status, IssueStatus.CLOSED);
@@ -573,11 +520,19 @@ export class IssuesService {
       );
     }
 
+    const resolutionNote = dto.resolutionNote.trim();
+    if (!resolutionNote) {
+      throw new BadRequestException('Resolution note cannot be empty.');
+    }
+
     const issue = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.issue.update({
         where: { id: issueId },
         data: {
           status: IssueStatus.CLOSED,
+          resolvedAt: new Date(),
+          resolvedBy: ctx.userId,
+          resolutionNote,
           updatedBy: ctx.userId,
         },
       });
@@ -605,7 +560,7 @@ export class IssuesService {
   }
 
   /**
-   * Transitions an issue from RESOLVED or CLOSED back to IN_PROGRESS,
+   * Transitions an issue from CLOSED back to IN_PROGRESS,
    * recording a reopen reason as an issue response.
    */
   async reopenIssue(
@@ -617,12 +572,9 @@ export class IssuesService {
     const existing = await this.getIssueOrThrow(projectId, issueId);
     await this.assertCanAccessIssue(ctx, existing, 'edit');
 
-    if (
-      existing.status !== IssueStatus.RESOLVED &&
-      existing.status !== IssueStatus.CLOSED
-    ) {
+    if (existing.status !== IssueStatus.CLOSED) {
       throw new BadRequestException(
-        `Issue must be RESOLVED or CLOSED to reopen. Current status: ${existing.status}.`,
+        `Issue must be CLOSED to reopen. Current status: ${existing.status}.`,
       );
     }
     this.assertAllowedTransition(existing.status, IssueStatus.IN_PROGRESS);
@@ -1222,42 +1174,6 @@ export class IssuesService {
     } catch (error: unknown) {
       this.logger.warn(
         'Issue assigned notification failed',
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-
-  private async sendIssueResolvedNotification(
-    ctx: PmContext,
-    issue: Issue,
-    raisedBy: string,
-  ): Promise<void> {
-    if (!this.notificationService) {
-      return;
-    }
-
-    const resolverName = await this.resolveUserName(ctx, ctx.userId);
-    const link = `/projects/${issue.projectId}/issues`;
-
-    try {
-      await this.notificationService.send(
-        { companyId: ctx.companyId, userId: ctx.userId },
-        {
-          recipientId: raisedBy,
-          eventType: ISSUE_RESOLVED_EVENT,
-          subject: `Issue resolved — ${issue.issueNumber}: ${issue.resolutionNote ?? ''}`,
-          body: `${resolverName} resolved issue ${issue.issueNumber}: ${issue.resolutionNote ?? ''}`,
-          variables: {
-            projectId: issue.projectId,
-            issueId: issue.id,
-            issueNumber: issue.issueNumber,
-            link,
-          },
-        },
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        'Issue resolved notification failed',
         error instanceof Error ? error.message : String(error),
       );
     }

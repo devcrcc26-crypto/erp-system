@@ -21,7 +21,6 @@ import { MessageSquare } from 'lucide-react';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { apiGet } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -35,8 +34,6 @@ import {
   useIssue,
   useIssueResponses,
   useReopenIssue,
-  useResolveIssue,
-  useStartIssue,
 } from '@/lib/query/issues';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
@@ -79,17 +76,14 @@ export default function IssueDetailDrawer({
 
   const issueQuery = useIssue(projectId, issueId ?? '', open);
   const responsesQuery = useIssueResponses(projectId, issueId ?? '', open);
-  const startIssue = useStartIssue();
-  const resolveIssue = useResolveIssue();
   const closeIssue = useCloseIssue();
   const reopenIssue = useReopenIssue();
   const addResponse = useAddIssueResponse();
   const uploadDocument = useUploadDocumentToFolder();
 
   const [form] = Form.useForm<ResponseFormValues>();
-  const [startAssignee, setStartAssignee] = useState<string | undefined>();
-  const [resolveOpen, setResolveOpen] = useState(false);
-  const [resolveNote, setResolveNote] = useState('');
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [resolutionNote, setResolutionNote] = useState('');
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [responseFile, setResponseFile] = useState<File | null>(null);
@@ -103,19 +97,13 @@ export default function IssueDetailDrawer({
   const isRaisedByMe = issue?.raisedBy === currentUserId;
   const isAssignedToMe = issue?.assignedTo === currentUserId;
 
-  const canStart = issue?.status === 'OPEN';
-  const canResolve =
-    issue?.status === 'IN_PROGRESS' && (isAssignedToMe || hasFullAccess);
   const canClose =
-    issue?.status === 'RESOLVED' && (isRaisedByMe || hasFullAccess);
-  const canReopenFromResolved =
-    issue?.status === 'RESOLVED' && (isRaisedByMe || hasFullAccess);
-  const canReopenFromClosed =
+    issue?.status === 'IN_PROGRESS' && (isRaisedByMe || hasFullAccess);
+  const canReopen =
     issue?.status === 'CLOSED' && (isRaisedByMe || hasFullAccess);
   const canRespond =
     issue != null &&
     issue.status !== 'CLOSED' &&
-    issue.status !== 'RESOLVED' &&
     (isAssignedToMe || (hasFullAccess && !isRaisedByMe));
 
   function resetResponseAttachment(): void {
@@ -129,73 +117,36 @@ export default function IssueDetailDrawer({
     if (!open) {
       form.resetFields();
       resetResponseAttachment();
-      setStartAssignee(undefined);
-      setResolveOpen(false);
-      setResolveNote('');
+      setCloseOpen(false);
+      setResolutionNote('');
       setReopenOpen(false);
       setReopenReason('');
     }
   }, [open, form]);
-
-  useEffect(() => {
-    if (issue?.assignedTo) {
-      setStartAssignee(issue.assignedTo);
-    }
-  }, [issue?.assignedTo]);
 
   async function refresh(): Promise<void> {
     onUpdated();
     await Promise.all([issueQuery.refetch(), responsesQuery.refetch()]);
   }
 
-  async function handleStart(): Promise<void> {
+  async function handleClose(): Promise<void> {
     if (!issueId) {
       return;
     }
-    try {
-      await startIssue.mutateAsync({
-        projectId,
-        issueId,
-        body: { assignedTo: startAssignee },
-      });
-      messageApi.success('Issue started');
-      await refresh();
-    } catch (error) {
-      notifyApiError(error, 'Failed to start issue', messageApi);
-    }
-  }
-
-  async function handleResolve(): Promise<void> {
-    if (!issueId) {
-      return;
-    }
-    const note = resolveNote.trim();
+    const note = resolutionNote.trim();
     if (!note) {
       messageApi.error('Enter a resolution note');
       return;
     }
     try {
-      await resolveIssue.mutateAsync({
+      await closeIssue.mutateAsync({
         projectId,
         issueId,
         body: { resolutionNote: note },
       });
-      messageApi.success('Issue marked resolved');
-      setResolveOpen(false);
-      setResolveNote('');
-      await refresh();
-    } catch (error) {
-      notifyApiError(error, 'Failed to resolve issue', messageApi);
-    }
-  }
-
-  async function handleClose(): Promise<void> {
-    if (!issueId) {
-      return;
-    }
-    try {
-      await closeIssue.mutateAsync({ projectId, issueId });
       messageApi.success('Issue closed');
+      setCloseOpen(false);
+      setResolutionNote('');
       await refresh();
     } catch (error) {
       notifyApiError(error, 'Failed to close issue', messageApi);
@@ -338,19 +289,19 @@ export default function IssueDetailDrawer({
             <Descriptions.Item label="Due date">
               {formatProjectDate(issue.dueDate)}
             </Descriptions.Item>
-            {(issue.status === 'RESOLVED' || issue.status === 'CLOSED') && (
+            {issue.status === 'CLOSED' && (
               <>
                 <Descriptions.Item label="Resolution">
                   {issue.resolutionNote ?? '—'}
                 </Descriptions.Item>
-                <Descriptions.Item label="Resolved by">
+                <Descriptions.Item label="Closed by">
                   {resolveUserDisplay(
                     issue.resolvedBy,
                     issue.resolvedByName,
                     '—',
                   )}
                 </Descriptions.Item>
-                <Descriptions.Item label="Resolved on">
+                <Descriptions.Item label="Closed on">
                   {issue.resolvedAt
                     ? formatProjectDate(issue.resolvedAt)
                     : '—'}
@@ -368,55 +319,23 @@ export default function IssueDetailDrawer({
             )}
           </Descriptions>
 
-          <section className={layout.drawerSection}>
-            <p className={`mb-2 ${layout.drawerHeading}`}>Actions</p>
-            <Space wrap>
-              {canStart && (
-                <>
-                  {!issue.assignedTo && (
-                    <UserSelect
-                      className="min-w-[220px]"
-                      placeholder="Assign before starting"
-                      value={startAssignee}
-                      onChange={(value: string | undefined) =>
-                        setStartAssignee(value)
-                      }
-                    />
-                  )}
-                  <Button
-                    type="primary"
-                    loading={startIssue.isPending}
-                    onClick={() => void handleStart()}
-                  >
-                    Start / Assign
+          {(canClose || canReopen) && (
+            <section className={layout.drawerSection}>
+              <p className={`mb-2 ${layout.drawerHeading}`}>Actions</p>
+              <Space wrap>
+                {canClose && (
+                  <Button type="primary" onClick={() => setCloseOpen(true)}>
+                    Close Issue
                   </Button>
-                </>
-              )}
-              {canResolve && (
-                <Button
-                  type="primary"
-                  loading={resolveIssue.isPending}
-                  onClick={() => setResolveOpen(true)}
-                >
-                  Mark Resolved
-                </Button>
-              )}
-              {canClose && (
-                <Button
-                  type="primary"
-                  loading={closeIssue.isPending}
-                  onClick={() => void handleClose()}
-                >
-                  Close Issue
-                </Button>
-              )}
-              {(canReopenFromResolved || canReopenFromClosed) && (
-                <Button onClick={() => setReopenOpen(true)}>
-                  {issue.status === 'CLOSED' ? 'Reopen Issue' : 'Reopen'}
-                </Button>
-              )}
-            </Space>
-          </section>
+                )}
+                {canReopen && (
+                  <Button onClick={() => setReopenOpen(true)}>
+                    Reopen Issue
+                  </Button>
+                )}
+              </Space>
+            </section>
+          )}
 
           <section className={layout.drawerSection}>
             <h3 className={`${layout.drawerHeading} mb-3`}>Responses</h3>
@@ -524,11 +443,13 @@ export default function IssueDetailDrawer({
                 className="mt-4"
                 description={
                   issue.status === 'CLOSED'
-                    ? 'This issue is closed — no further responses can be posted.'
-                    : issue.status === 'RESOLVED'
-                      ? 'This issue is resolved — review the resolution and close the issue if you are satisfied, or reopen it if more work is needed.'
+                    ? 'This issue is closed — review the resolution above, or reopen if more work is needed.'
+                    : issue.status === 'OPEN'
+                      ? isRaisedByMe
+                        ? 'Waiting for the assignee to post the first response. Status moves to In Progress automatically when they reply.'
+                        : 'Only the assignee can post the first response on this issue.'
                       : isRaisedByMe && !isAssignedToMe
-                        ? 'Waiting for the assignee to respond. Once the issue is marked resolved, you can close it from the actions above.'
+                        ? 'Waiting for the assignee to respond. Once work is done, close the issue with a resolution note.'
                         : 'Only the assignee can post responses on this issue.'
                 }
               />
@@ -540,27 +461,19 @@ export default function IssueDetailDrawer({
             title="Photos & drawings"
             description="Upload site photos, sketches, or drawing references for this issue."
           />
-
-          <Alert
-            type="info"
-            showIcon
-            className="mt-4"
-            title="EPC revision"
-            description="For defects tied to engineering documents, use Trigger Revision from the engineering document detail page after linking the issue in correspondence."
-          />
         </div>
       )}
 
       <Modal
-        title="Mark issue resolved"
-        open={resolveOpen}
+        title="Close Issue"
+        open={closeOpen}
         onCancel={() => {
-          setResolveOpen(false);
-          setResolveNote('');
+          setCloseOpen(false);
+          setResolutionNote('');
         }}
-        onOk={() => void handleResolve()}
-        okText="Mark Resolved"
-        confirmLoading={resolveIssue.isPending}
+        onOk={() => void handleClose()}
+        okText="Close Issue"
+        confirmLoading={closeIssue.isPending}
         destroyOnHidden
       >
         <p className={`mb-2 ${layout.drawerMutedText}`}>
@@ -568,14 +481,14 @@ export default function IssueDetailDrawer({
         </p>
         <Input.TextArea
           rows={4}
-          value={resolveNote}
-          onChange={(event) => setResolveNote(event.target.value)}
-          placeholder="Resolution details"
+          value={resolutionNote}
+          onChange={(event) => setResolutionNote(event.target.value)}
+          placeholder="Describe what was done to resolve this issue"
         />
       </Modal>
 
       <Modal
-        title="Reopen issue"
+        title="Reopen Issue"
         open={reopenOpen}
         onCancel={() => {
           setReopenOpen(false);
@@ -587,13 +500,13 @@ export default function IssueDetailDrawer({
         destroyOnHidden
       >
         <p className={`mb-2 ${layout.drawerMutedText}`}>
-          Explain why this issue is being reopened
+          Why is this issue being reopened?
         </p>
         <Input.TextArea
-          rows={4}
+          rows={3}
           value={reopenReason}
           onChange={(event) => setReopenReason(event.target.value)}
-          placeholder="Reopen reason"
+          placeholder="Why is this issue being reopened?"
         />
       </Modal>
     </Drawer>

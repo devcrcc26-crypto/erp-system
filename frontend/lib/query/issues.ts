@@ -14,6 +14,7 @@ import {
   apiPost,
 } from '@/lib/api/client';
 import type {
+  CloseIssueRequest,
   CreateIssueRequest,
   CreateIssueResponseRequest,
   Issue,
@@ -23,8 +24,6 @@ import type {
   IssueStatus,
   PmListFilters,
   ReopenIssueRequest,
-  ResolveIssueRequest,
-  StartIssueRequest,
   UpdateIssueRequest,
 } from '@/lib/api/project-management.types';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
@@ -177,68 +176,19 @@ function invalidateIssueQueries(
   void queryClient.invalidateQueries({ queryKey: issueKeys.all });
 }
 
-export function useStartIssue() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      issueId,
-      body,
-    }: {
-      projectId: string;
-      issueId: string;
-      body?: StartIssueRequest;
-    }) =>
-      apiPatch<Issue>(
-        `${issuesPath(projectId)}/${issueId}/start`,
-        body ?? {},
-      ),
-    onSuccess: (_data, variables) => {
-      invalidateIssueQueries(
-        queryClient,
-        variables.projectId,
-        variables.issueId,
-      );
-    },
-  });
-}
-
-export function useResolveIssue() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      issueId,
-      body,
-    }: {
-      projectId: string;
-      issueId: string;
-      body: ResolveIssueRequest;
-    }) =>
-      apiPatch<Issue>(
-        `${issuesPath(projectId)}/${issueId}/resolve`,
-        body,
-      ),
-    onSuccess: (_data, variables) => {
-      invalidateIssueQueries(
-        queryClient,
-        variables.projectId,
-        variables.issueId,
-      );
-    },
-  });
-}
-
 export function useCloseIssue() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       projectId,
       issueId,
+      body,
     }: {
       projectId: string;
       issueId: string;
-    }) => apiPatch<Issue>(`${issuesPath(projectId)}/${issueId}/close`),
+      body: CloseIssueRequest;
+    }) =>
+      apiPatch<Issue>(`${issuesPath(projectId)}/${issueId}/close`, body),
     onSuccess: (_data, variables) => {
       invalidateIssueQueries(
         queryClient,

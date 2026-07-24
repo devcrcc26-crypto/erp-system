@@ -115,7 +115,6 @@ export function issueStatusVariant(status: IssueStatus): StatusBadgeVariant {
   const variants: Record<IssueStatus, StatusBadgeVariant> = {
     OPEN: 'error',
     IN_PROGRESS: 'orange',
-    RESOLVED: 'info',
     CLOSED: 'default',
   };
   return variants[status];

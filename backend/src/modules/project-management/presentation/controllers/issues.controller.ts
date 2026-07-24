@@ -16,11 +16,11 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  CloseIssueDto,
   CreateIssueDto,
   CreateIssueResponseDto,
   PmListQueryDto,
   ReopenIssueDto,
-  ResolveIssueDto,
   StartIssueDto,
   UpdateIssueDto,
 } from '../../application/dtos/pm.dtos';
@@ -107,16 +107,18 @@ export class IssuesController {
     );
   }
 
-  @Patch(':issueId/resolve')
+  @Patch(':issueId/close')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Mark issue resolved (IN_PROGRESS → RESOLVED)' })
-  resolve(
+  @ApiOperation({
+    summary: 'Close an in-progress issue (IN_PROGRESS → CLOSED)',
+  })
+  close(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
     @Param('issueId') issueId: string,
-    @Body() dto: ResolveIssueDto,
+    @Body() dto: CloseIssueDto,
   ): Promise<unknown> {
-    return this.issuesService.resolveIssue(
+    return this.issuesService.closeIssue(
       this.ctx(user),
       projectId,
       issueId,
@@ -124,22 +126,9 @@ export class IssuesController {
     );
   }
 
-  @Patch(':issueId/close')
-  @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Close a resolved issue (RESOLVED → CLOSED)' })
-  close(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('projectId') projectId: string,
-    @Param('issueId') issueId: string,
-  ): Promise<unknown> {
-    return this.issuesService.closeIssue(this.ctx(user), projectId, issueId);
-  }
-
   @Patch(':issueId/reopen')
   @DelegatePermissionCheck()
-  @ApiOperation({
-    summary: 'Reopen a resolved or closed issue → IN_PROGRESS',
-  })
+  @ApiOperation({ summary: 'Reopen a closed issue → IN_PROGRESS' })
   reopen(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,

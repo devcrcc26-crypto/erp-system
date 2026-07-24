@@ -1447,7 +1447,7 @@ export class StartIssueDto {
   assignedTo?: string;
 }
 
-export class ResolveIssueDto {
+export class CloseIssueDto {
   @ApiProperty({ description: 'What was done to resolve this issue' })
   @IsString()
   resolutionNote!: string;

@@ -184,7 +184,7 @@ describe('Trigger linkage (trigger-linkage)', () => {
           findFirst: jest.fn().mockResolvedValue({
             id: issueId,
             projectId,
-            status: IssueStatus.RESOLVED,
+            status: IssueStatus.IN_PROGRESS,
             raisedBy: leaderCtx.userId,
             assignedTo: 'assignee-1',
             linkedDesignPackageId: packageId,
@@ -211,7 +211,9 @@ describe('Trigger linkage (trigger-linkage)', () => {
         } as never,
       );
 
-      await service.closeIssue(leaderCtx, projectId, issueId);
+      await service.closeIssue(leaderCtx, projectId, issueId, {
+        resolutionNote: 'Verified on site',
+      });
 
       expect(epcSubmittalRepository.createLinkedEntityTrigger).toHaveBeenCalledWith(
         tx,

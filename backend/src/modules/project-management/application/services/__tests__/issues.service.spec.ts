@@ -182,26 +182,26 @@ describe('IssuesService', () => {
     });
   });
 
-  describe('resolveIssue', () => {
+  describe('closeIssue', () => {
     it('requires a non-empty resolution note', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
           status: IssueStatus.IN_PROGRESS,
-          assignedTo: ctx.userId,
+          raisedBy: ctx.userId,
         }),
       );
 
       await expect(
-        service.resolveIssue(ctx, projectId, issueId, { resolutionNote: '  ' }),
+        service.closeIssue(ctx, projectId, issueId, { resolutionNote: '  ' }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('blocks non-assignee without full access', async () => {
+    it('blocks non-raiser without full access', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
           status: IssueStatus.IN_PROGRESS,
-          assignedTo: 'other-user',
           raisedBy: 'raiser-1',
+          assignedTo: ctx.userId,
         }),
       );
       (
@@ -211,7 +211,7 @@ describe('IssuesService', () => {
       ).permissionService.getUserRoleNames.mockResolvedValue(['Employee']);
 
       await expect(
-        service.resolveIssue(ctx, projectId, issueId, {
+        service.closeIssue(ctx, projectId, issueId, {
           resolutionNote: 'Fixed',
         }),
       ).rejects.toThrow(ForbiddenException);
@@ -221,7 +221,7 @@ describe('IssuesService', () => {
   describe('reopenIssue', () => {
     it('adds a system response with the reopen reason', async () => {
       prisma.issue.findFirst.mockResolvedValue(
-        buildIssue({ status: IssueStatus.RESOLVED }),
+        buildIssue({ status: IssueStatus.CLOSED }),
       );
       prisma.issue.update.mockResolvedValue(
         buildIssue({ status: IssueStatus.IN_PROGRESS }),
