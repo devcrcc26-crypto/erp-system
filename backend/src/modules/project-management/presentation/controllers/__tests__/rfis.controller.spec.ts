@@ -12,6 +12,7 @@ import { RfisService } from '../../../application/services/rfis.service';
 import { PermissionsGuard } from '../../../../../shared/permissions/permissions.guard';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { ResponseEnvelopeInterceptor } from '../../../../../shared/interceptors/response-envelope.interceptor';
+import { PmModuleAccessGuard } from '../../guards/pm-module-access.guard';
 
 const testUser = { userId: 'user-1', companyId: 'company-1' };
 const projectId = 'project-1';
@@ -33,16 +34,24 @@ class TestUserGuard implements CanActivate {
   }
 }
 
+class AllowAllPmModuleGuard implements CanActivate {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
 describe('RfisController', () => {
   let app: INestApplication;
   let rfisService: {
     addRfiResponse: jest.Mock;
+    deleteRfi: jest.Mock;
   };
   let hasPermission: jest.Mock;
 
   beforeEach(async () => {
     rfisService = {
       addRfiResponse: jest.fn().mockResolvedValue(rfiResponse),
+      deleteRfi: jest.fn().mockResolvedValue(undefined),
     };
     hasPermission = jest.fn().mockResolvedValue(true);
 
@@ -54,7 +63,10 @@ describe('RfisController', () => {
         { provide: PermissionService, useValue: { hasPermission } },
         Reflector,
       ],
-    }).compile();
+    })
+      .overrideGuard(PmModuleAccessGuard)
+      .useClass(AllowAllPmModuleGuard)
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalGuards(new TestUserGuard());
@@ -73,21 +85,24 @@ describe('RfisController', () => {
     await app.close();
   });
 
-  it('returns 403 when user has rfis.view but not rfis.edit on POST response', async () => {
-    hasPermission.mockImplementation(
-      async (
-        _userId: string,
-        _companyId: string,
-        module: string,
-        action: string,
-      ) => module === 'rfis' && action === 'view',
-    );
+  it('delegates POST response permission to the service (no RBAC edit required)', async () => {
+    hasPermission.mockResolvedValue(false);
 
     await request(app.getHttpServer())
       .post(`/projects/${projectId}/rfis/${rfiId}/responses`)
       .send({ responseText: 'Use footing depth per drawing A-101.' })
+      .expect(201);
+
+    expect(rfisService.addRfiResponse).toHaveBeenCalled();
+  });
+
+  it('returns 403 when user lacks rfis.delete on DELETE', async () => {
+    hasPermission.mockResolvedValue(false);
+
+    await request(app.getHttpServer())
+      .delete(`/projects/${projectId}/rfis/${rfiId}`)
       .expect(403);
 
-    expect(rfisService.addRfiResponse).not.toHaveBeenCalled();
+    expect(rfisService.deleteRfi).not.toHaveBeenCalled();
   });
 });

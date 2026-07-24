@@ -308,7 +308,7 @@ export class RfisService {
     rfiId: string,
   ): Promise<MappedRfi> {
     const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
-    await this.assertRfiVisible(ctx, projectId, rfi);
+    await this.assertCanAccessRfi(ctx, rfi, 'view');
     return this.enrichRfi(ctx, rfi);
   }
 
@@ -321,6 +321,16 @@ export class RfisService {
     dto: CreateRfiDto,
   ): Promise<MappedRfi> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    await this.assertCanAccessRfi(
+      ctx,
+      {
+        linkedDesignPackageId: dto.linkedDesignPackageId,
+        raisedBy: ctx.userId,
+        assignedTo: null,
+      },
+      'create',
+    );
 
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({
@@ -509,7 +519,7 @@ export class RfisService {
     dto: UpdateRfiDto,
   ): Promise<MappedRfi> {
     const existing = await this.getRfiOrThrow(ctx, projectId, rfiId);
-    await this.assertRfiVisible(ctx, projectId, existing);
+    await this.assertCanAccessRfi(ctx, existing, 'edit');
 
     if (dto.linkedDesignPackageId) {
       const pkg = await this.prisma.designPackage.findFirst({
@@ -607,7 +617,7 @@ export class RfisService {
     dto: LinkRfiCrDto,
   ): Promise<MappedRfi> {
     const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
-    await this.assertRfiVisible(ctx, projectId, rfi);
+    await this.assertCanAccessRfi(ctx, rfi, 'edit');
 
     const cr = await this.prisma.projectChangeRequest.findFirst({
       where: activeOnly({
@@ -653,7 +663,7 @@ export class RfisService {
     rfiId: string,
   ): Promise<MappedRfiResponse[]> {
     const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
-    await this.assertRfiVisible(ctx, projectId, rfi);
+    await this.assertCanAccessRfi(ctx, rfi, 'view');
 
     const responses = await this.prisma.rfiResponse.findMany({
       where: { rfiId },
@@ -678,7 +688,7 @@ export class RfisService {
     dto: CreateRfiResponseDto,
   ): Promise<MappedRfiResponse> {
     const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
-    await this.assertRfiVisible(ctx, projectId, rfi);
+    await this.assertCanAccessRfi(ctx, rfi, 'respond');
     this.assertCanRespondToRfi(ctx, rfi);
 
     const response = await this.prisma.$transaction(async (tx) => {
@@ -823,21 +833,23 @@ export class RfisService {
       projectId,
     });
 
-    const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
-      ctx,
-      projectId,
-    );
-    if (!bypass) {
-      const assignedIds =
-        await this.disciplineScopeService.getAssignedDisciplineIds(
-          ctx,
-          projectId,
-        );
+    const roleNames = await this.getRoleNames(ctx);
+    if (!hasFullProjectDataAccess(roleNames)) {
+      const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
+        companyId: ctx.companyId,
+        OR: [
+          { designerUserId: ctx.userId },
+          { disciplinaryLeaderUserId: ctx.userId },
+          { reviewerUserId: ctx.userId },
+          { supportingDesignerUserId: ctx.userId },
+          { deptDeputyChiefUserId: ctx.userId },
+          { instituteChiefUserId: ctx.userId },
+        ],
+      });
       where.OR = [
-        { taskDisciplineId: null },
-        { taskDisciplineId: { in: assignedIds } },
         { raisedBy: ctx.userId },
         { assignedTo: ctx.userId },
+        { linkedDesignPackage: assignedPackageWhere },
       ];
     }
 
@@ -861,6 +873,87 @@ export class RfisService {
     }
 
     return where;
+  }
+
+  /**
+   * Allows full-access / RBAC module perms / package FK / raiser / assignee.
+   */
+  private async assertCanAccessRfi(
+    ctx: PmContext,
+    rfi: {
+      linkedDesignPackageId?: string | null;
+      raisedBy?: string | null;
+      assignedTo?: string | null;
+    },
+    action: 'view' | 'create' | 'edit' | 'respond',
+  ): Promise<void> {
+    const roleNames = await this.getRoleNames(ctx);
+    if (hasFullProjectDataAccess(roleNames)) {
+      return;
+    }
+
+    const pmPerms = await this.getModulePermissions(ctx, 'rfis');
+    if (action === 'view' && pmPerms.canView) {
+      return;
+    }
+    if (action === 'create' && pmPerms.canCreate) {
+      return;
+    }
+    if (action === 'edit' && pmPerms.canEdit) {
+      return;
+    }
+    if (action === 'respond' && pmPerms.canEdit) {
+      return;
+    }
+
+    if (rfi.linkedDesignPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: rfi.linkedDesignPackageId,
+          companyId: ctx.companyId,
+          OR: [
+            { designerUserId: ctx.userId },
+            { disciplinaryLeaderUserId: ctx.userId },
+            { reviewerUserId: ctx.userId },
+            { supportingDesignerUserId: ctx.userId },
+            { deptDeputyChiefUserId: ctx.userId },
+            { instituteChiefUserId: ctx.userId },
+          ],
+        }),
+        select: { id: true },
+      });
+      if (pkg) {
+        return;
+      }
+    }
+
+    if (rfi.raisedBy === ctx.userId || rfi.assignedTo === ctx.userId) {
+      return;
+    }
+
+    throw new ForbiddenException('You do not have access to this RFI');
+  }
+
+  private async getRoleNames(ctx: PmContext): Promise<string[]> {
+    return this.permissionService.getUserRoleNames(ctx.userId, ctx.companyId);
+  }
+
+  private async getModulePermissions(
+    ctx: PmContext,
+    module: string,
+  ): Promise<{
+    canView: boolean;
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canApprove: boolean;
+    canExport: boolean;
+  }> {
+    return this.permissionService.getUserModulePermissions(
+      ctx.userId,
+      ctx.companyId,
+      module,
+    );
   }
 
   private async mapMyRfiRow(

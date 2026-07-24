@@ -39,7 +39,7 @@ export class RfisController {
   }
 
   @Get()
-  @RequirePermission('rfis', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project RFIs' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -70,7 +70,7 @@ export class RfisController {
   }
 
   @Get(':rfiId')
-  @RequirePermission('rfis', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get RFI by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -81,7 +81,7 @@ export class RfisController {
   }
 
   @Post()
-  @RequirePermission('rfis', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create RFI' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -92,7 +92,7 @@ export class RfisController {
   }
 
   @Patch(':rfiId')
-  @RequirePermission('rfis', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update RFI' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -133,7 +133,7 @@ export class RfisController {
   }
 
   @Get(':rfiId/responses')
-  @RequirePermission('rfis', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List RFI responses' })
   listResponses(
     @CurrentUser() user: AuthenticatedUser,
@@ -148,7 +148,7 @@ export class RfisController {
   }
 
   @Post(':rfiId/responses')
-  @RequirePermission('rfis', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add RFI response (assigned designer only)' })
   addResponse(
     @CurrentUser() user: AuthenticatedUser,

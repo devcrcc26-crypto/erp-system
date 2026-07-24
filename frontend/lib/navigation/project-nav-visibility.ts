@@ -271,8 +271,19 @@ export function canViewGlobalNavKey(
   epc: EpcCapabilities,
   pm?: Pick<PmCapabilities, 'submittals' | 'change_requests' | 'rfis' | 'projects'> | null,
 ): boolean {
+  if (key === '/rfis') {
+    if (epc.navFullAccess) {
+      return !(pm?.projects?.canView ?? false);
+    }
+    return (
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.rfis?.canView ?? false)
+    );
+  }
+
   if (epc.navFullAccess) {
-    return !(key === '/rfis' && (pm?.projects?.canView ?? false));
+    return true;
   }
 
   // Submittals never use the "no design persona → allow all" shortcut.
@@ -297,14 +308,6 @@ export function canViewGlobalNavKey(
       epc.navDesigner ||
       epc.navDisciplineLeader ||
       (pm?.change_requests.canView ?? false)
-    );
-  }
-
-  if (key === '/rfis') {
-    return (
-      epc.navDesigner ||
-      epc.navDisciplineLeader ||
-      (pm?.rfis?.canView ?? false)
     );
   }
 
