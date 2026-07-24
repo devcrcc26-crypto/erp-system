@@ -8,7 +8,7 @@ import {
   Drawer,
   Form,
   Input,
-  Select,
+  Modal,
   Space,
   Typography,
   Upload,
@@ -25,16 +25,17 @@ import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
-import type { RfiSource, RfiStatus } from '@/lib/api/project-management.types';
+import type { RfiSource } from '@/lib/api/project-management.types';
 import type { ProjectChangeRequest } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import {
   useAddRfiResponse,
+  useCloseRfi,
   useLinkRfiCr,
+  useReopenRfi,
   useRfi,
   useRfiResponses,
-  useUpdateRfi,
 } from '@/lib/query/rfis';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -44,12 +45,8 @@ import {
   rfiPriorityVariant,
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
-import {
-  nextStatusOptions,
-  RFI_VALID_TRANSITIONS,
-} from '@/lib/utils/pm-status-transitions';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
+import { useEpcCapabilities, usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAuthStore } from '@/stores/auth.store';
@@ -102,12 +99,14 @@ export default function RfiDetailDrawer({
 
   const rfiQuery = useRfi(projectId, rfiId ?? '', open);
   const responsesQuery = useRfiResponses(projectId, rfiId ?? '', open);
-  const updateRfi = useUpdateRfi();
   const addResponse = useAddRfiResponse();
   const uploadDocument = useUploadDocumentToFolder();
   const linkRfiCr = useLinkRfiCr();
+  const closeRfi = useCloseRfi();
+  const reopenRfi = useReopenRfi();
   const messageApi = useAppMessage();
   const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const rfi = rfiQuery.data;
@@ -115,7 +114,14 @@ export default function RfiDetailDrawer({
   const canRespond =
     Boolean(rfi?.assignedTo) &&
     rfi?.assignedTo === currentUserId &&
-    rfi?.status !== 'CLOSED';
+    rfi?.status !== 'CLOSED' &&
+    rfi?.status !== 'ANSWERED';
+  const isRaisedByMe = rfi?.raisedBy === currentUserId;
+  const hasFullAccess = pm.projects.canView;
+  const canClose =
+    rfi?.status === 'ANSWERED' && (isRaisedByMe || hasFullAccess);
+  const canReopen =
+    rfi?.status === 'CLOSED' && (isRaisedByMe || hasFullAccess);
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -159,21 +165,32 @@ export default function RfiDetailDrawer({
     }
   }
 
-  async function handleStatusChange(status: RfiStatus): Promise<void> {
-    if (!rfiId || !rfi) {
+  async function handleClose(): Promise<void> {
+    if (!rfiId) {
       return;
     }
     try {
-      await updateRfi.mutateAsync({
-        projectId,
-        rfiId,
-        body: { status },
-      });
-      messageApi.success('RFI status updated');
+      await closeRfi.mutateAsync({ projectId, rfiId });
+      messageApi.success('RFI closed');
       onUpdated();
       void rfiQuery.refetch();
     } catch (error) {
-      notifyApiError(error, 'Failed to update RFI status', messageApi);
+      notifyApiError(error, 'Failed to close RFI', messageApi);
+    }
+  }
+
+  async function handleReopen(): Promise<void> {
+    if (!rfiId) {
+      return;
+    }
+    try {
+      await reopenRfi.mutateAsync({ projectId, rfiId });
+      messageApi.success('RFI reopened');
+      onUpdated();
+      void rfiQuery.refetch();
+      void responsesQuery.refetch();
+    } catch (error) {
+      notifyApiError(error, 'Failed to reopen RFI', messageApi);
     }
   }
 
@@ -356,28 +373,37 @@ export default function RfiDetailDrawer({
             </Descriptions.Item>
           </Descriptions>
 
-          <section className={layout.drawerSection}>
-            <p className={`mb-2 ${layout.drawerHeading}`}>Update status</p>
-            {nextStatusOptions(rfi.status, RFI_VALID_TRANSITIONS).length === 0 ? (
-              <StatusBadge
-                label={formatRfiStatus(rfi.status)}
-                variant={rfiStatusVariant(rfi.status)}
-              />
-            ) : (
-              <Select
-                className="w-full max-w-xs"
-                value={rfi.status}
-                onChange={(value: RfiStatus) => void handleStatusChange(value)}
-                loading={updateRfi.isPending}
-                options={nextStatusOptions(rfi.status, RFI_VALID_TRANSITIONS).map(
-                  (status) => ({
-                    value: status,
-                    label: formatRfiStatus(status),
-                  }),
+          {(canClose || canReopen) && (
+            <section className={layout.drawerSection}>
+              <Space>
+                {canClose && (
+                  <Button
+                    type="primary"
+                    onClick={() => void handleClose()}
+                    loading={closeRfi.isPending}
+                  >
+                    Close RFI
+                  </Button>
                 )}
-              />
-            )}
-          </section>
+                {canReopen && (
+                  <Button
+                    onClick={() =>
+                      Modal.confirm({
+                        title: 'Reopen this RFI?',
+                        content:
+                          'The status will return to Submitted and the assignee can add a new response.',
+                        okText: 'Reopen',
+                        onOk: () => handleReopen(),
+                      })
+                    }
+                    loading={reopenRfi.isPending}
+                  >
+                    Reopen RFI
+                  </Button>
+                )}
+              </Space>
+            </section>
+          )}
 
           {showRaiseCrButton && (
             <section className={layout.drawerSection}>
@@ -530,7 +556,9 @@ export default function RfiDetailDrawer({
                     ? 'Assign a designer on this RFI before an official response can be posted.'
                     : rfi.status === 'CLOSED'
                       ? 'This RFI is closed — no further responses can be posted.'
-                      : 'Only the assigned designer can post an official response.'
+                      : rfi.status === 'ANSWERED'
+                        ? 'This RFI has been answered. Reopen it to add another response.'
+                        : 'Only the assigned designer can post an official response.'
                 }
               />
             )}
@@ -539,7 +567,8 @@ export default function RfiDetailDrawer({
           <DocumentAttachmentPanel
             folderId={rfi.attachmentFolderId ?? undefined}
             title="Attachments"
-            description="Upload drawings, photos, or markup files related to this RFI."
+            description="Files attached to this RFI."
+            readOnly={true}
           />
         </div>
       )}

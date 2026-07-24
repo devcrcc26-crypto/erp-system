@@ -152,6 +152,53 @@ export function useUpdateRfi() {
   });
 }
 
+export function useCloseRfi() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      rfiId,
+    }: {
+      projectId: string;
+      rfiId: string;
+    }) => apiPatch<Rfi>(`${rfisPath(projectId)}/${rfiId}/close`),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.detail(variables.projectId, variables.rfiId),
+      });
+    },
+  });
+}
+
+export function useReopenRfi() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      rfiId,
+    }: {
+      projectId: string;
+      rfiId: string;
+    }) => apiPatch<Rfi>(`${rfisPath(projectId)}/${rfiId}/reopen`),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.detail(variables.projectId, variables.rfiId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.responses(variables.projectId, variables.rfiId),
+      });
+    },
+  });
+}
+
 export function useDeleteRfi() {
   const queryClient = useQueryClient();
 

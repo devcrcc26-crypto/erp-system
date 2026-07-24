@@ -592,6 +592,81 @@ export class RfisService {
   }
 
   /**
+   * Closes an answered RFI. Raiser or full-access users only.
+   */
+  async closeRfi(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<MappedRfi> {
+    const existing = await this.getRfiOrThrow(ctx, projectId, rfiId);
+
+    if (existing.status !== RfiStatus.ANSWERED) {
+      throw new BadRequestException(
+        'RFI must be answered before it can be closed',
+      );
+    }
+
+    const roleNames = await this.getRoleNames(ctx);
+    if (
+      existing.raisedBy !== ctx.userId &&
+      !hasFullProjectDataAccess(roleNames)
+    ) {
+      throw new ForbiddenException(
+        'Only the RFI raiser or a full-access user can close this RFI',
+      );
+    }
+
+    const rfi = await this.prisma.rfi.update({
+      where: { id: rfiId },
+      data: {
+        status: RfiStatus.CLOSED,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.sendRfiClosedNotification(ctx, rfi);
+
+    return this.enrichRfi(ctx, rfi);
+  }
+
+  /**
+   * Reopens a closed RFI back to SUBMITTED. Raiser or full-access users only.
+   */
+  async reopenRfi(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<MappedRfi> {
+    const existing = await this.getRfiOrThrow(ctx, projectId, rfiId);
+
+    if (existing.status !== RfiStatus.CLOSED) {
+      throw new BadRequestException('Only a closed RFI can be reopened');
+    }
+
+    const roleNames = await this.getRoleNames(ctx);
+    if (
+      existing.raisedBy !== ctx.userId &&
+      !hasFullProjectDataAccess(roleNames)
+    ) {
+      throw new ForbiddenException(
+        'Only the RFI raiser or a full-access user can reopen this RFI',
+      );
+    }
+
+    const rfi = await this.prisma.rfi.update({
+      where: { id: rfiId },
+      data: {
+        status: RfiStatus.SUBMITTED,
+        dateAnswered: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return this.enrichRfi(ctx, rfi);
+  }
+
+  /**
    * Soft-deletes an RFI scoped to a project.
    */
   async deleteRfi(

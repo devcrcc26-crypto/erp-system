@@ -103,6 +103,28 @@ export class RfisController {
     return this.rfisService.updateRfi(this.ctx(user), projectId, rfiId, dto);
   }
 
+  @Patch(':rfiId/close')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Close an answered RFI (raiser or full access)' })
+  close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('rfiId') rfiId: string,
+  ): Promise<unknown> {
+    return this.rfisService.closeRfi(this.ctx(user), projectId, rfiId);
+  }
+
+  @Patch(':rfiId/reopen')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Reopen a closed RFI (raiser or full access)' })
+  reopen(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('rfiId') rfiId: string,
+  ): Promise<unknown> {
+    return this.rfisService.reopenRfi(this.ctx(user), projectId, rfiId);
+  }
+
   @Patch(':rfiId/link-cr')
   @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Link a change request to an RFI' })
