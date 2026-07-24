@@ -274,14 +274,14 @@ export function canViewGlobalNavKey(
     'submittals' | 'change_requests' | 'rfis' | 'issues' | 'projects'
   > | null,
 ): boolean {
+  if (epc.navFullAccess) {
+    return true;
+  }
+
   if (key === '/issues') {
     const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
     if (isFkUser) {
       return true;
-    }
-    // PA/SA use project sidebar under Site Operations
-    if (epc.navFullAccess) {
-      return false;
     }
     return pm?.issues?.canView ?? false;
   }
@@ -291,15 +291,7 @@ export function canViewGlobalNavKey(
     if (isFkUser) {
       return true;
     }
-    // PA/SA use project sidebar under Site Operations
-    if (epc.navFullAccess) {
-      return false;
-    }
     return pm?.rfis?.canView ?? false;
-  }
-
-  if (epc.navFullAccess) {
-    return true;
   }
 
   // Submittals never use the "no design persona → allow all" shortcut.

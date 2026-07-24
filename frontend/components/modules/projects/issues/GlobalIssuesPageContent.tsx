@@ -68,9 +68,10 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
   const epc = useEpcCapabilities();
   const portfolioMode =
     useGlobalPortfolioListMode() &&
-    pm.issues.canView &&
-    !epc.navDesigner &&
-    !epc.navDisciplineLeader;
+    (epc.navFullAccess ||
+      (pm.issues.canView &&
+        !epc.navDesigner &&
+        !epc.navDisciplineLeader));
   const canViewPersonal = useCanViewIssues();
   const canAccessPage = portfolioMode || canViewPersonal;
   const canCreate =

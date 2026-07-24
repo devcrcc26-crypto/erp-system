@@ -85,9 +85,10 @@ export default function GlobalRfisPageContent(): React.ReactNode {
   const epc = useEpcCapabilities();
   const portfolioMode =
     useGlobalPortfolioListMode() &&
-    pm.rfis.canView &&
-    !epc.navDesigner &&
-    !epc.navDisciplineLeader;
+    (epc.navFullAccess ||
+      (pm.rfis.canView &&
+        !epc.navDesigner &&
+        !epc.navDisciplineLeader));
   const canViewPersonal = useCanViewRfis();
   const canAccessPage = portfolioMode || canViewPersonal;
   const canCreate =

@@ -59,9 +59,10 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const epc = useEpcCapabilities();
   const portfolioMode =
     useGlobalPortfolioListMode() &&
-    (pm.submittals.canView || epc.navFullAccess) &&
-    !epc.navDesigner &&
-    !epc.navDisciplineLeader;
+    (epc.navFullAccess ||
+      (pm.submittals.canView &&
+        !epc.navDesigner &&
+        !epc.navDisciplineLeader));
   const canViewPersonal = useCanViewSubmittals();
   const canAccessPage = portfolioMode || canViewPersonal;
   const canCreate = epc.navDisciplineLeader || epc.navDesigner;

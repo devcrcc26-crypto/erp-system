@@ -122,12 +122,15 @@ export function useCanViewChangeRequests(): boolean {
 }
 
 /**
- * Global RFIs — FK designer / discipline-lead always; otherwise only when
+ * Global RFIs — full-access / FK designer-lead always; otherwise only when
  * rfis.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewRfis(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
+  if (epc.navFullAccess) {
+    return true;
+  }
   const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
   if (isFkUser) {
     return true;
@@ -136,12 +139,15 @@ export function useCanViewRfis(): boolean {
 }
 
 /**
- * Global Issues — FK designer / discipline-lead always; otherwise only when
+ * Global Issues — full-access / FK designer-lead always; otherwise only when
  * issues.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewIssues(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
+  if (epc.navFullAccess) {
+    return true;
+  }
   const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
   if (isFkUser) {
     return true;
