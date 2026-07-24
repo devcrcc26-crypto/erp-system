@@ -719,21 +719,18 @@ export class IssuesService {
     const issue = await this.getIssueOrThrow(projectId, issueId);
     await this.assertCanAccessIssue(ctx, issue, 'edit');
 
-    if (issue.status === IssueStatus.CLOSED) {
-      throw new BadRequestException(
-        'Cannot add a response to a closed issue.',
-      );
-    }
-
     const roleNames = await this.getRoleNames(ctx);
     if (
-      ctx.userId !== issue.raisedBy &&
       ctx.userId !== issue.assignedTo &&
       !hasFullProjectDataAccess(roleNames)
     ) {
       throw new ForbiddenException(
-        'Only the raiser, the assignee, or a project admin can respond to this issue.',
+        'Only the assignee or project administrators can respond to this issue',
       );
+    }
+
+    if (issue.status === IssueStatus.CLOSED) {
+      throw new BadRequestException('Cannot respond to a closed issue');
     }
 
     const responseText = dto.responseText.trim();
@@ -1330,54 +1327,38 @@ export class IssuesService {
     issue: Issue,
     respondedBy: string,
   ): Promise<void> {
-    if (!this.notificationService) {
+    if (!this.notificationService || !issue.raisedBy) {
       return;
     }
 
-    let recipientIds: (string | null)[];
-    if (respondedBy === issue.assignedTo) {
-      recipientIds = [issue.raisedBy];
-    } else if (respondedBy === issue.raisedBy) {
-      recipientIds = [issue.assignedTo];
-    } else {
-      recipientIds = [issue.raisedBy, issue.assignedTo];
-    }
-
-    const uniqueRecipientIds = [...new Set(recipientIds)].filter(
-      (recipientId): recipientId is string =>
-        recipientId != null && recipientId !== respondedBy,
-    );
-
-    if (uniqueRecipientIds.length === 0) {
+    if (issue.assignedTo === issue.raisedBy) {
       return;
     }
 
     const responderName = await this.resolveUserName(ctx, respondedBy);
     const link = `/projects/${issue.projectId}/issues`;
 
-    for (const recipientId of uniqueRecipientIds) {
-      try {
-        await this.notificationService.send(
-          { companyId: ctx.companyId, userId: ctx.userId },
-          {
-            recipientId,
-            eventType: ISSUE_RESPONSE_EVENT,
-            subject: `New response — ${issue.issueNumber}`,
-            body: `${responderName} added a response to issue ${issue.issueNumber}.`,
-            variables: {
-              projectId: issue.projectId,
-              issueId: issue.id,
-              issueNumber: issue.issueNumber,
-              link,
-            },
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: issue.raisedBy,
+          eventType: ISSUE_RESPONSE_EVENT,
+          subject: `New response — ${issue.issueNumber}`,
+          body: `${responderName} added a response to issue ${issue.issueNumber}.`,
+          variables: {
+            projectId: issue.projectId,
+            issueId: issue.id,
+            issueNumber: issue.issueNumber,
+            link,
           },
-        );
-      } catch (error: unknown) {
-        this.logger.warn(
-          'Issue response notification failed',
-          error instanceof Error ? error.message : String(error),
-        );
-      }
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Issue response notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 }

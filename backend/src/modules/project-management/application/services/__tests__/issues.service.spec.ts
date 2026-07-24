@@ -263,23 +263,6 @@ describe('IssuesService', () => {
       });
     });
 
-    it('allows the raiser to respond', async () => {
-      prisma.issue.findFirst.mockResolvedValue(
-        buildIssue({
-          status: IssueStatus.OPEN,
-          raisedBy: ctx.userId,
-          assignedTo: 'assignee-1',
-        }),
-      );
-      mockRoleNames(['Employee']);
-
-      await expect(
-        service.addIssueResponse(ctx, projectId, issueId, {
-          responseText: 'Looking into it',
-        }),
-      ).resolves.toBeDefined();
-    });
-
     it('allows the assignee to respond', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
@@ -314,7 +297,25 @@ describe('IssuesService', () => {
       ).resolves.toBeDefined();
     });
 
-    it('blocks a user who is neither raiser, assignee, nor full-access', async () => {
+    it('blocks the raiser when they are not also the assignee', async () => {
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.OPEN,
+          raisedBy: ctx.userId,
+          assignedTo: 'assignee-1',
+        }),
+      );
+      mockRoleNames(['Employee']);
+
+      await expect(
+        service.addIssueResponse(ctx, projectId, issueId, {
+          responseText: 'Looking into it',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.issueResponse.create).not.toHaveBeenCalled();
+    });
+
+    it('blocks a user who is neither assignee nor full-access (e.g. another FK user)', async () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
           status: IssueStatus.OPEN,
@@ -336,8 +337,8 @@ describe('IssuesService', () => {
       prisma.issue.findFirst.mockResolvedValue(
         buildIssue({
           status: IssueStatus.CLOSED,
-          raisedBy: ctx.userId,
-          assignedTo: 'assignee-1',
+          raisedBy: 'raiser-1',
+          assignedTo: ctx.userId,
         }),
       );
       mockRoleNames(['Employee']);
@@ -350,7 +351,32 @@ describe('IssuesService', () => {
       expect(prisma.issueResponse.create).not.toHaveBeenCalled();
     });
 
-    it('notifies both raiser and assignee when a full-access user responds', async () => {
+    it('notifies the raiser when the assignee responds', async () => {
+      const notify = jest.fn().mockResolvedValue({ emailQueued: false });
+      (service as unknown as { notificationService: unknown }).notificationService = {
+        send: notify,
+      };
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.OPEN,
+          raisedBy: 'raiser-1',
+          assignedTo: ctx.userId,
+        }),
+      );
+      prisma.user.findFirst.mockResolvedValue({ id: ctx.userId, name: 'Assignee' });
+      mockRoleNames(['Employee']);
+
+      await service.addIssueResponse(ctx, projectId, issueId, {
+        responseText: 'Working on it',
+      });
+
+      expect(notify).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ recipientId: 'raiser-1' }),
+      );
+    });
+
+    it('notifies the raiser when a full-access user responds', async () => {
       const notify = jest.fn().mockResolvedValue({ emailQueued: false });
       (service as unknown as { notificationService: unknown }).notificationService = {
         send: notify,
@@ -369,10 +395,31 @@ describe('IssuesService', () => {
         responseText: 'Admin note',
       });
 
-      const recipientIds = notify.mock.calls.map(
-        ([, dto]: [unknown, { recipientId: string }]) => dto.recipientId,
+      expect(notify).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ recipientId: 'raiser-1' }),
       );
-      expect(recipientIds.sort()).toEqual(['assignee-1', 'raiser-1']);
+    });
+
+    it('skips notification when the assignee and raiser are the same person', async () => {
+      const notify = jest.fn().mockResolvedValue({ emailQueued: false });
+      (service as unknown as { notificationService: unknown }).notificationService = {
+        send: notify,
+      };
+      prisma.issue.findFirst.mockResolvedValue(
+        buildIssue({
+          status: IssueStatus.OPEN,
+          raisedBy: 'same-user',
+          assignedTo: 'same-user',
+        }),
+      );
+      mockRoleNames(['System Administrator']);
+
+      await service.addIssueResponse(ctx, projectId, issueId, {
+        responseText: 'Self note',
+      });
+
+      expect(notify).not.toHaveBeenCalled();
     });
   });
 

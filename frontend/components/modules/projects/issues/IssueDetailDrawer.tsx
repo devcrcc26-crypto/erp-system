@@ -115,7 +115,7 @@ export default function IssueDetailDrawer({
   const canRespond =
     issue != null &&
     issue.status !== 'CLOSED' &&
-    (isRaisedByMe || isAssignedToMe || hasFullAccess);
+    (isAssignedToMe || hasFullAccess);
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
