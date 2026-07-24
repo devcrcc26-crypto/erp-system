@@ -80,6 +80,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.ISSUE &&
+      folder.contextId &&
+      (await this.canUploadIssueFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -515,6 +523,79 @@ export class DocumentPermissionService {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({
         id: rfi.linkedDesignPackageId,
+        companyId,
+      }),
+      select: {
+        designerUserId: true,
+        supportingDesignerUserId: true,
+        reviewerUserId: true,
+        disciplinaryLeaderUserId: true,
+        deptDeputyChiefUserId: true,
+        instituteChiefUserId: true,
+      },
+    });
+    if (!pkg) {
+      return false;
+    }
+
+    return [
+      pkg.designerUserId,
+      pkg.supportingDesignerUserId,
+      pkg.reviewerUserId,
+      pkg.disciplinaryLeaderUserId,
+      pkg.deptDeputyChiefUserId,
+      pkg.instituteChiefUserId,
+    ]
+      .filter((id): id is string => Boolean(id))
+      .includes(userId);
+  }
+
+  /**
+   * Issue attachment folders: raiser, assignee, linked design-package FKs, or full access.
+   */
+  private async canUploadIssueFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const issue = await this.prisma.issue.findFirst({
+      where: activeOnly({
+        id: folder.contextId,
+        companyId,
+      }),
+      select: {
+        raisedBy: true,
+        assignedTo: true,
+        linkedDesignPackageId: true,
+      },
+    });
+    if (!issue) {
+      return false;
+    }
+
+    if (issue.raisedBy === userId || issue.assignedTo === userId) {
+      return true;
+    }
+
+    if (!issue.linkedDesignPackageId) {
+      return false;
+    }
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        id: issue.linkedDesignPackageId,
         companyId,
       }),
       select: {

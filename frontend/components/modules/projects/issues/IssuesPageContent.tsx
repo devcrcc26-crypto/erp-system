@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -12,6 +12,7 @@ import {
   Input,
   Select,
   Space,
+  Typography,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { AlertCircle } from 'lucide-react';
@@ -38,10 +39,12 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateIssue,
   useIssues,
+  useMyIssueProjects,
   useUpdateIssue,
 } from '@/lib/query/issues';
 import { useMeetings } from '@/lib/query/meetings';
 import { useCorrespondence } from '@/lib/query/correspondence';
+import { useDesignPackages } from '@/lib/query/design-packages';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import {
@@ -72,10 +75,12 @@ const SOURCE_TYPE_OPTIONS = [
 ];
 
 interface IssueFormValues {
+  projectId?: string;
   issueType: string;
   description: string;
   location?: string;
   taskDisciplineId?: string;
+  linkedDesignPackageId?: string;
   severity: IssueSeverity;
   assignedTo?: string;
   dueDate?: Dayjs;
@@ -83,24 +88,45 @@ interface IssueFormValues {
   sourceEntityId?: string;
 }
 
-function IssueFormDrawer({
+export function IssueFormDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<IssueFormValues>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
+
   const createIssue = useCreateIssue();
   const messageApi = useAppMessage();
-  const disciplinesQuery = useProjectDisciplines(projectId, open);
+
+  const myProjectsQuery = useMyIssueProjects(open && showProjectSelector);
+  const projectOptions = useMemo(
+    () =>
+      (myProjectsQuery.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.projectCode} — ${p.name}`,
+      })),
+    [myProjectsQuery.data],
+  );
+
+  const disciplinesQuery = useProjectDisciplines(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
   const sourceEntityType = Form.useWatch('sourceEntityType', form);
-  const meetingsQuery = useMeetings(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'MEETING');
-  const correspondenceQuery = useCorrespondence(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'CORRESPONDENCE');
+  const meetingsQuery = useMeetings(effectiveProjectId, { page: 1, limit: 50 }, open && Boolean(effectiveProjectId) && sourceEntityType === 'MEETING');
+  const correspondenceQuery = useCorrespondence(effectiveProjectId, { page: 1, limit: 50 }, open && Boolean(effectiveProjectId) && sourceEntityType === 'CORRESPONDENCE');
 
   const disciplineOptions = useMemo(
     () =>
@@ -111,12 +137,58 @@ function IssueFormDrawer({
     [disciplinesQuery.data],
   );
 
+  const taskDisciplineId = Form.useWatch('taskDisciplineId', form);
+  const subtasksQuery = useDesignPackages(
+    effectiveProjectId,
+    taskDisciplineId ?? '',
+    open && Boolean(effectiveProjectId) && Boolean(taskDisciplineId),
+  );
+  const subtaskOptions = useMemo(
+    () =>
+      (subtasksQuery.data ?? []).map((pkg) => ({
+        value: pkg.id,
+        label: `${pkg.packageCode} — ${pkg.name}`,
+      })),
+    [subtasksQuery.data],
+  );
+
+  useEffect(() => {
+    if (open && projectIdProp) {
+      setSelectedProjectId(projectIdProp);
+    }
+  }, [open, projectIdProp]);
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
+    }
+  }, [open, form, showProjectSelector, projectIdProp]);
+
+  function handleSubtaskChange(packageId: string | undefined): void {
+    form.setFieldValue('sourceEntityId', undefined);
+    if (!packageId) {
+      return;
+    }
+    const pkg = (subtasksQuery.data ?? []).find((p) => p.id === packageId);
+    if (pkg?.disciplinaryLeaderUserId) {
+      form.setFieldValue('assignedTo', pkg.disciplinaryLeaderUserId);
+    }
+  }
+
   async function handleSubmit(values: IssueFormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     const body: CreateIssueRequest = {
       issueType: values.issueType.trim(),
       description: values.description.trim(),
       location: values.location?.trim() || undefined,
       taskDisciplineId: values.taskDisciplineId,
+      linkedDesignPackageId: values.linkedDesignPackageId,
       severity: values.severity,
       assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
@@ -124,7 +196,7 @@ function IssueFormDrawer({
       sourceEntityId: values.sourceEntityId || undefined,
     };
     try {
-      await createIssue.mutateAsync({ projectId, body });
+      await createIssue.mutateAsync({ projectId: effectiveProjectId, body });
       messageApi.success('Issue created successfully');
       form.resetFields();
       onSaved();
@@ -149,6 +221,25 @@ function IssueFormDrawer({
         initialValues={{ severity: 'MEDIUM' }}
         onFinish={(values: IssueFormValues) => void handleSubmit(values)}
       >
+        {showProjectSelector && (
+          <Form.Item label="Project" required>
+            <Select
+              showSearch
+              placeholder="Select project"
+              options={projectOptions}
+              loading={myProjectsQuery.isLoading}
+              optionFilterProp="label"
+              value={selectedProjectId ?? undefined}
+              onChange={(value: string) => {
+                setSelectedProjectId(value);
+                form.setFieldValue('taskDisciplineId', undefined);
+                form.setFieldValue('linkedDesignPackageId', undefined);
+                form.setFieldValue('sourceEntityId', undefined);
+              }}
+            />
+          </Form.Item>
+        )}
+
         <Form.Item
           label="Issue type"
           name="issueType"
@@ -171,9 +262,26 @@ function IssueFormDrawer({
             allowClear
             placeholder="Select engineering discipline"
             loading={disciplinesQuery.isLoading}
+            disabled={!effectiveProjectId}
             options={disciplineOptions}
+            onChange={() => {
+              form.setFieldValue('linkedDesignPackageId', undefined);
+            }}
           />
         </Form.Item>
+        {taskDisciplineId && (
+          <Form.Item label="Linked subtask" name="linkedDesignPackageId">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Select subtask (optional)"
+              loading={subtasksQuery.isLoading}
+              options={subtaskOptions}
+              onChange={handleSubtaskChange}
+            />
+          </Form.Item>
+        )}
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
           <Form.Item
             label="Severity"
@@ -189,6 +297,12 @@ function IssueFormDrawer({
         <Form.Item label="Assigned to" name="assignedTo">
           <UserSelect placeholder="Assign responsible person" />
         </Form.Item>
+        {taskDisciplineId && (
+          <Typography.Text type="secondary" className="!-mt-3 !mb-4 !block">
+            Auto-filled from the subtask&apos;s discipline lead when a subtask is
+            selected — you can still change it above.
+          </Typography.Text>
+        )}
         <Form.Item label="Source type" name="sourceEntityType">
           <Select
             allowClear

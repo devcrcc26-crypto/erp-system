@@ -23,6 +23,10 @@ import {
   issueSeverityVariant,
   issueStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import {
+  ISSUE_VALID_TRANSITIONS,
+  nextStatusOptions,
+} from '@/lib/utils/pm-status-transitions';
 
 export default function IssueDetailDrawer({
   projectId,
@@ -117,10 +121,14 @@ export default function IssueDetailDrawer({
               {formatProjectDate(issue.dueDate)}
             </Descriptions.Item>
             <Descriptions.Item label="Resolved">
-              {formatProjectDate(issue.resolvedAt)}
+              {issue.resolvedAt
+                ? `${formatProjectDate(issue.resolvedAt)} — ${resolveUserDisplay(issue.resolvedBy, issue.resolvedByName, '—')}`
+                : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="Verified">
-              {formatProjectDate(issue.verifiedAt)}
+              {issue.verifiedAt
+                ? `${formatProjectDate(issue.verifiedAt)} — ${resolveUserDisplay(issue.verifiedBy, issue.verifiedByName, '—')}`
+                : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="Description">
               {issue.description}
@@ -136,16 +144,25 @@ export default function IssueDetailDrawer({
             <p className={`mb-2 ${layout.drawerHeading}`}>
               Update status
             </p>
-            <Select
-              className="w-full max-w-xs"
-              value={issue.status}
-              onChange={(value: IssueStatus) => void handleStatusChange(value)}
-              loading={updateIssue.isPending}
-              options={ISSUE_WORKFLOW.map((step) => ({
-                value: step.key,
-                label: step.label,
-              }))}
-            />
+            {nextStatusOptions(issue.status, ISSUE_VALID_TRANSITIONS).length === 0 ? (
+              <StatusBadge
+                label={formatIssueStatus(issue.status)}
+                variant={issueStatusVariant(issue.status)}
+              />
+            ) : (
+              <Select
+                className="w-full max-w-xs"
+                value={issue.status}
+                onChange={(value: IssueStatus) => void handleStatusChange(value)}
+                loading={updateIssue.isPending}
+                options={nextStatusOptions(issue.status, ISSUE_VALID_TRANSITIONS).map(
+                  (status) => ({
+                    value: status,
+                    label: formatIssueStatus(status),
+                  }),
+                )}
+              />
+            )}
           </section>
 
           <DocumentAttachmentPanel

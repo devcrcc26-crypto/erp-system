@@ -252,12 +252,14 @@ describe('canViewGlobalNavKey — submittals', () => {
     submittals: { ...moduleCaps, canView: true },
     change_requests: moduleCaps,
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: moduleCaps,
   };
 
@@ -329,12 +331,14 @@ describe('canViewGlobalNavKey — change requests', () => {
     submittals: moduleCaps,
     change_requests: { ...moduleCaps, canView: true },
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: moduleCaps,
   };
 
@@ -377,18 +381,21 @@ describe('canViewGlobalNavKey — rfis', () => {
     submittals: moduleCaps,
     change_requests: moduleCaps,
     rfis: { ...moduleCaps, canView: true },
+    issues: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: moduleCaps,
   };
   const pmWithProjects = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
     rfis: moduleCaps,
+    issues: moduleCaps,
     projects: { ...moduleCaps, canView: true },
   };
 

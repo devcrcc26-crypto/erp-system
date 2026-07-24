@@ -8,6 +8,13 @@ export const PM_RAISED_ASSIGNED_NAMES: readonly [string, string][] = [
   ['assignedTo', 'assignedToName'],
 ];
 
+export const PM_ISSUE_USER_NAMES: readonly [string, string][] = [
+  ['raisedBy', 'raisedByName'],
+  ['assignedTo', 'assignedToName'],
+  ['resolvedBy', 'resolvedByName'],
+  ['verifiedBy', 'verifiedByName'],
+];
+
 export const PM_OWNER_NAME: readonly [string, string][] = [['ownerId', 'ownerName']];
 
 export const PM_SITE_ENGINEER_NAME: readonly [string, string][] = [

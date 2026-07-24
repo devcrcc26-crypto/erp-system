@@ -39,6 +39,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/external-releases': 'nav.externalReleases',
   '/change-requests': 'nav.changeRequests',
   '/rfis': 'nav.rfis',
+  '/issues': 'nav.issues',
   '/users': 'nav.users',
   '/teams': 'nav.teams',
   '/reports': 'nav.reports',
@@ -59,6 +60,7 @@ export interface IconRailVisibility {
   canViewExternalReleases: boolean;
   canViewChangeRequests: boolean;
   canViewRfis: boolean;
+  canViewIssues: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -80,6 +82,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewExternalReleases,
     canViewChangeRequests,
     canViewRfis,
+    canViewIssues,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -152,6 +155,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/rfis',
       iconKey: 'rfis',
       visible: canViewRfis,
+    },
+    {
+      key: '/issues',
+      labelKey: 'nav.issues',
+      href: '/issues',
+      iconKey: 'issues',
+      visible: canViewIssues,
     },
     {
       key: '/departments',

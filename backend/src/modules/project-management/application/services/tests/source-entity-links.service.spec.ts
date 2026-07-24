@@ -33,7 +33,7 @@ describe('Source entity links (source-entity-links)', () => {
       findMany: jest.Mock;
       count: jest.Mock;
     };
-    issue: { create: jest.Mock; findMany: jest.Mock };
+    issue: { create: jest.Mock; findMany: jest.Mock; count: jest.Mock };
     projectChangeRequest: {
       create: jest.Mock;
       findMany: jest.Mock;
@@ -70,7 +70,11 @@ describe('Source entity links (source-entity-links)', () => {
         findMany: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
       },
-      issue: { create: jest.fn(), findMany: jest.fn() },
+      issue: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+      },
       projectChangeRequest: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -165,13 +169,23 @@ describe('Source entity links (source-entity-links)', () => {
     issuesService = new IssuesService(
       prisma as unknown as PrismaService,
       projectScopeService,
-      {
-        ...documentNumberService,
-        getNextNumber: jest.fn().mockResolvedValue('ISS-001'),
-      } as unknown as DocumentNumberService,
       disciplineScopeService,
       engineeringDocumentFolderService,
       epcSubmittalRepository,
+      {
+        getVisibleProjectIds: jest.fn().mockResolvedValue(null),
+      } as never,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
+        }),
+      } as never,
     );
 
     changeRequestService = new ProjectChangeRequestService(

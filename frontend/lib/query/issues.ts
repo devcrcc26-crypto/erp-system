@@ -16,6 +16,7 @@ import {
 import type {
   CreateIssueRequest,
   Issue,
+  IssueProjectOption,
   IssueSeverity,
   IssueStatus,
   PmListFilters,
@@ -44,6 +45,21 @@ export const issueKeys = {
     [...issueKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, issueId: string) =>
     [...issueKeys.details(projectId), issueId] as const,
+  myList: (
+    params: PaginationParams &
+      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...issueKeys.all, 'my', params] as const,
+  allList: (
+    params: PaginationParams &
+      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...issueKeys.all, 'all', params] as const,
+  myProjects: () => [...issueKeys.all, 'my', 'projects'] as const,
 };
 
 export function useIssues(
@@ -139,5 +155,77 @@ export function useDeleteIssue() {
         queryKey: issueKeys.lists(variables.projectId),
       });
     },
+  });
+}
+
+/**
+ * Cross-project issues relevant to the signed-in user.
+ */
+export function useMyIssues(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: IssueStatus;
+      severity?: IssueSeverity;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Issue>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: issueKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<Issue>(`/issues/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide issues (portfolio / admin users).
+ */
+export function useAllIssues(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: IssueStatus;
+      severity?: IssueSeverity;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Issue>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: issueKeys.allList(params),
+    queryFn: () =>
+      apiGetPaginated<Issue>(`/issues/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Projects that have issues relevant to the current user.
+ */
+export function useMyIssueProjects(enabled = true) {
+  return useQuery({
+    queryKey: issueKeys.myProjects(),
+    queryFn: () => apiGet<IssueProjectOption[]>('/issues/my/projects'),
+    enabled,
+    retry: false,
   });
 }

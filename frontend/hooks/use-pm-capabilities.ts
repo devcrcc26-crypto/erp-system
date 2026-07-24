@@ -133,6 +133,21 @@ export function useCanViewRfis(): boolean {
 }
 
 /**
+ * Global Issues — everyone with any project access sees issues (FK design
+ * personas, full-access roles, or plain issues.canView).
+ */
+export function useCanViewIssues(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  return (
+    epc.navDesigner ||
+    epc.navDisciplineLeader ||
+    epc.navFullAccess ||
+    pm.issues.canView
+  );
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {

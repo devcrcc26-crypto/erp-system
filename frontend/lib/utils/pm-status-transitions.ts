@@ -1,6 +1,11 @@
 // Gap completion — new
 
-import type { RfiStatus, SubmittalStatus, TaskStatus } from '@/lib/api/project-management.types';
+import type {
+  IssueStatus,
+  RfiStatus,
+  SubmittalStatus,
+  TaskStatus,
+} from '@/lib/api/project-management.types';
 
 /** Valid task status transitions aligned with backend schedule.service.ts */
 export const TASK_VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
@@ -16,6 +21,16 @@ export const RFI_VALID_TRANSITIONS: Record<RfiStatus, RfiStatus[]> = {
   SUBMITTED: ['UNDER_REVIEW', 'DRAFT'],
   UNDER_REVIEW: ['ANSWERED', 'SUBMITTED'],
   ANSWERED: ['CLOSED', 'UNDER_REVIEW'],
+  CLOSED: [],
+};
+
+/** Valid issue status transitions aligned with backend issues.service.ts */
+export const ISSUE_VALID_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
+  OPEN: ['ASSIGNED', 'IN_PROGRESS', 'CLOSED'],
+  ASSIGNED: ['IN_PROGRESS', 'OPEN', 'CLOSED'],
+  IN_PROGRESS: ['RESOLVED', 'ASSIGNED', 'CLOSED'],
+  RESOLVED: ['VERIFIED', 'IN_PROGRESS', 'CLOSED'],
+  VERIFIED: ['CLOSED', 'RESOLVED'],
   CLOSED: [],
 };
 

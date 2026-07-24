@@ -269,8 +269,20 @@ const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 export function canViewGlobalNavKey(
   key: string,
   epc: EpcCapabilities,
-  pm?: Pick<PmCapabilities, 'submittals' | 'change_requests' | 'rfis' | 'projects'> | null,
+  pm?: Pick<
+    PmCapabilities,
+    'submittals' | 'change_requests' | 'rfis' | 'issues' | 'projects'
+  > | null,
 ): boolean {
+  if (key === '/issues') {
+    return (
+      epc.navFullAccess ||
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.issues?.canView ?? false)
+    );
+  }
+
   if (key === '/rfis') {
     const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
     if (isFkUser) {

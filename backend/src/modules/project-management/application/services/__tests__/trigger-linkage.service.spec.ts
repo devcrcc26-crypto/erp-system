@@ -17,7 +17,6 @@ import { DesignPackageRepository } from '../../../infrastructure/repositories/ep
 import { EpcSubmittalRepository } from '../../../infrastructure/repositories/epc-submittal.repository';
 import { PmContext } from '../../types/pm-context.type';
 import { ConfigureRevisionTriggerDto } from '../../dtos/pm.dtos';
-import { DocumentNumberService } from '../document-number.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { ExternalReviewTriggerService } from '../external-review-trigger.service';
@@ -199,7 +198,6 @@ describe('Trigger linkage (trigger-linkage)', () => {
       const service = new IssuesService(
         prisma as unknown as PrismaService,
         { getProjectOrThrow: jest.fn() } as unknown as ProjectScopeService,
-        {} as unknown as DocumentNumberService,
         {
           hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         } as unknown as DisciplineScopeService,
@@ -207,6 +205,12 @@ describe('Trigger linkage (trigger-linkage)', () => {
           findEntityFolder: jest.fn().mockResolvedValue(null),
         } as unknown as EngineeringDocumentFolderService,
         epcSubmittalRepository as unknown as EpcSubmittalRepository,
+        {
+          getVisibleProjectIds: jest.fn().mockResolvedValue(null),
+        } as never,
+        {
+          getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        } as never,
       );
 
       await service.updateIssue(leaderCtx, projectId, issueId, {

@@ -1130,6 +1130,7 @@ export interface MappedRfiResponse {
 
 export interface MappedIssue {
   id: string;
+  companyId: string;
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
@@ -1144,7 +1145,20 @@ export interface MappedIssue {
   status: Issue['status'];
   dueDate: string | null;
   resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolvedByName?: string | null;
   verifiedAt: string | null;
+  verifiedBy: string | null;
+  verifiedByName?: string | null;
+  linkedDesignPackageId: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+    fullCode: string;
+  } | null;
+  projectName?: string | null;
+  projectCode?: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
   sourceEntitySummary?: SourceEntitySummary | null;
@@ -1356,6 +1370,7 @@ export function mapRfiResponse(
 export function mapIssue(issue: Issue): MappedIssue {
   return {
     id: issue.id,
+    companyId: issue.companyId,
     projectId: issue.projectId,
     taskDisciplineId: issue.taskDisciplineId,
     raisedBy: issue.raisedBy,
@@ -1368,7 +1383,10 @@ export function mapIssue(issue: Issue): MappedIssue {
     status: issue.status,
     dueDate: toDateString(issue.dueDate),
     resolvedAt: toIsoString(issue.resolvedAt),
+    resolvedBy: issue.resolvedBy,
     verifiedAt: toIsoString(issue.verifiedAt),
+    verifiedBy: issue.verifiedBy,
+    linkedDesignPackageId: issue.linkedDesignPackageId,
     sourceEntityType: issue.sourceEntityType,
     sourceEntityId: issue.sourceEntityId,
     createdAt: toIsoString(issue.createdAt)!,

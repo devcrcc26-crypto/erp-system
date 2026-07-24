@@ -1,5 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { FolderContextType, IssueStatus, Prisma, ExternalReviewTriggerType } from '@prisma/client';
+import { FolderContextType, Issue, IssueStatus, Prisma, ExternalReviewTriggerType } from '@prisma/client';
+import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
+import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -26,11 +29,11 @@ import {
 import {
   enrichWithUserDisplayNames,
 } from '../utils/pm-user-names.util';
-import { PM_RAISED_ASSIGNED_NAMES } from '../utils/pm-user-name-fields.const';
+import { PM_ISSUE_USER_NAMES } from '../utils/pm-user-name-fields.const';
 import { DisciplineScopeService } from './discipline-scope.service';
-import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+import { TaskAccessScopeService } from './task-access-scope.service';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 
 const ISSUE_SORT_FIELDS = new Set([
@@ -51,15 +54,38 @@ const ISSUE_STATUS_TRANSITIONS: Record<string, string[]> = {
   CLOSED: [],
 };
 
+const DESIGN_PACKAGE_FULL_CODE_SELECT = {
+  packageCode: true,
+  subtaskIndex: true,
+  taskDiscipline: {
+    select: {
+      disciplineIndex: true,
+      task: { select: { overseasTaskNumber: true } },
+    },
+  },
+} as const;
+
+export interface IssueProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
+export type MappedMyIssue = MappedIssue & {
+  projectName: string;
+  projectCode: string;
+};
+
 @Injectable()
 export class IssuesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
-    private readonly documentNumberService: DocumentNumberService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly epcSubmittalRepository: EpcSubmittalRepository,
+    private readonly taskAccessScopeService: TaskAccessScopeService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /**
@@ -93,6 +119,103 @@ export class IssuesService {
   }
 
   /**
+   * Issues relevant to the current user across projects: raiser, assignee,
+   * or FK role on the linked design package.
+   */
+  async listMyIssues(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyIssue>> {
+    const where = this.buildMyIssueListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      ISSUE_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.issue.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+        },
+      }),
+      this.prisma.issue.count({ where }),
+    ]);
+
+    const data = await Promise.all(
+      rows.map((row) => this.mapMyIssueRow(ctx, row)),
+    );
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Company-wide issues (portfolio / admin users).
+   */
+  async listAllIssues(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyIssue>> {
+    const where = this.buildCompanyIssueListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      ISSUE_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.issue.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+        },
+      }),
+      this.prisma.issue.count({ where }),
+    ]);
+
+    const data = await Promise.all(
+      rows.map((row) => this.mapMyIssueRow(ctx, row)),
+    );
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Distinct projects with issues relevant to the current user.
+   */
+  async listMyIssueProjects(ctx: PmContext): Promise<IssueProjectOption[]> {
+    const where = this.buildMyIssueListWhere(ctx, {});
+    const rows = await this.prisma.issue.findMany({
+      where,
+      select: {
+        project: { select: { id: true, projectCode: true, name: true } },
+      },
+    });
+
+    const byId = new Map<string, IssueProjectOption>();
+    for (const row of rows) {
+      if (!byId.has(row.project.id)) {
+        byId.set(row.project.id, {
+          id: row.project.id,
+          projectCode: row.project.projectCode,
+          name: row.project.name,
+        });
+      }
+    }
+
+    return [...byId.values()].sort((a, b) =>
+      a.projectCode.localeCompare(b.projectCode),
+    );
+  }
+
+  /**
    * Returns a single issue by id scoped to a project.
    */
   async getIssue(
@@ -101,19 +224,35 @@ export class IssuesService {
     issueId: string,
   ): Promise<MappedIssue> {
     const issue = await this.getIssueOrThrow(projectId, issueId);
-    await this.assertIssueVisible(ctx, projectId, issue);
+    await this.assertCanAccessIssue(ctx, issue, 'view');
     return this.enrichIssue(ctx, issue);
   }
 
   /**
-   * Creates an issue with an auto-generated document number.
+   * Creates an issue with an auto-generated issue number: subtask-chain
+   * numbering when linked to a design package, otherwise a project-level
+   * sequence.
    */
   async createIssue(
     ctx: PmContext,
     projectId: string,
     dto: CreateIssueDto,
   ): Promise<MappedIssue> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const project = await this.projectScopeService.getProjectOrThrow(
+      ctx,
+      projectId,
+    );
+
+    await this.assertCanAccessIssue(
+      ctx,
+      {
+        projectId,
+        raisedBy: ctx.userId,
+        assignedTo: dto.assignedTo ?? null,
+        linkedDesignPackageId: dto.linkedDesignPackageId ?? null,
+      },
+      'create',
+    );
 
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
@@ -136,17 +275,20 @@ export class IssuesService {
       );
     }
 
-    const issueNumber = await this.documentNumberService.getNextNumber(
+    const issueNumber = await this.nextIssueNumber(
       ctx,
-      'ISSUE',
+      project,
+      dto.linkedDesignPackageId,
     );
 
     const issue = await this.prisma.issue.create({
       data: {
+        companyId: ctx.companyId,
         projectId,
         raisedBy: ctx.userId,
         assignedTo: dto.assignedTo,
         taskDisciplineId: dto.taskDisciplineId,
+        linkedDesignPackageId: dto.linkedDesignPackageId,
         issueNumber,
         issueType: dto.issueType,
         description: dto.description,
@@ -171,6 +313,55 @@ export class IssuesService {
   }
 
   /**
+   * ISS-{overseas}-{discipline:02}-{subtask:03}-{seq:03} when linked to a
+   * subtask, else ISS-{projectCode}-{seq:03}.
+   */
+  private async nextIssueNumber(
+    ctx: PmContext,
+    project: { id: string; projectCode: string | null },
+    linkedDesignPackageId: string | undefined,
+  ): Promise<string> {
+    if (linkedDesignPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: linkedDesignPackageId,
+          companyId: ctx.companyId,
+        }),
+        select: {
+          subtaskIndex: true,
+          taskDiscipline: {
+            select: {
+              disciplineIndex: true,
+              task: { select: { overseasTaskNumber: true, projectId: true } },
+            },
+          },
+        },
+      });
+      if (!pkg || pkg.taskDiscipline.task.projectId !== project.id) {
+        throw new NotFoundException('Subtask not found');
+      }
+
+      const count = await this.prisma.issue.count({
+        where: { linkedDesignPackageId, deletedAt: null },
+      });
+      const seq = String(count + 1).padStart(3, '0');
+      const fullCode = formatDesignPackageFullCode(
+        pkg.taskDiscipline.task.overseasTaskNumber,
+        pkg.taskDiscipline.disciplineIndex,
+        pkg.subtaskIndex,
+      );
+      return `ISS-${fullCode}-${seq}`;
+    }
+
+    const count = await this.prisma.issue.count({
+      where: { projectId: project.id, linkedDesignPackageId: null, deletedAt: null },
+    });
+    const seq = String(count + 1).padStart(3, '0');
+    const projectCode = project.projectCode ?? 'PRJ';
+    return `ISS-${projectCode}-${seq}`;
+  }
+
+  /**
    * Updates an existing issue scoped to a project.
    */
   async updateIssue(
@@ -180,7 +371,7 @@ export class IssuesService {
     dto: UpdateIssueDto,
   ): Promise<MappedIssue> {
     const existing = await this.getIssueOrThrow(projectId, issueId);
-    await this.assertIssueVisible(ctx, projectId, existing);
+    await this.assertCanAccessIssue(ctx, existing, 'edit');
 
     if (dto.assignedTo) {
       await this.assertUserInCompany(ctx, dto.assignedTo);
@@ -216,6 +407,36 @@ export class IssuesService {
       this.assertVerifierIsNotRaiser(existing, ctx.userId);
     }
 
+    let resolvedAt: Date | null | undefined;
+    let resolvedBy: string | null | undefined;
+    let verifiedAt: Date | null | undefined;
+    let verifiedBy: string | null | undefined;
+
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      if (dto.status === IssueStatus.RESOLVED) {
+        resolvedAt = new Date();
+        resolvedBy = ctx.userId;
+      }
+      if (dto.status === IssueStatus.VERIFIED) {
+        verifiedAt = new Date();
+        verifiedBy = ctx.userId;
+      }
+      if (
+        existing.status === IssueStatus.RESOLVED &&
+        dto.status === IssueStatus.IN_PROGRESS
+      ) {
+        resolvedAt = null;
+        resolvedBy = null;
+      }
+      if (
+        existing.status === IssueStatus.VERIFIED &&
+        dto.status === IssueStatus.RESOLVED
+      ) {
+        verifiedAt = null;
+        verifiedBy = null;
+      }
+    }
+
     const issue = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.issue.update({
         where: { id: issueId },
@@ -226,8 +447,13 @@ export class IssuesService {
           severity: dto.severity,
           assignedTo: dto.assignedTo,
           taskDisciplineId: dto.taskDisciplineId,
+          linkedDesignPackageId: dto.linkedDesignPackageId,
           dueDate: parseOptionalDate(dto.dueDate),
           status: dto.status,
+          resolvedAt,
+          resolvedBy,
+          verifiedAt,
+          verifiedBy,
           sourceEntityType: dto.sourceEntityType,
           sourceEntityId: dto.sourceEntityId,
           updatedBy: ctx.userId,
@@ -270,6 +496,97 @@ export class IssuesService {
       where: { id: issueId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
+  }
+
+  private buildMyIssueListWhere(
+    ctx: PmContext,
+    query: Partial<PmListQueryDto>,
+  ): Prisma.IssueWhereInput {
+    const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { designerUserId: ctx.userId },
+        { disciplinaryLeaderUserId: ctx.userId },
+        { reviewerUserId: ctx.userId },
+        { supportingDesignerUserId: ctx.userId },
+        { deptDeputyChiefUserId: ctx.userId },
+        { instituteChiefUserId: ctx.userId },
+      ],
+    });
+
+    const where: Prisma.IssueWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { raisedBy: ctx.userId },
+        { assignedTo: ctx.userId },
+        { linkedDesignPackage: assignedPackageWhere },
+      ],
+    });
+
+    if (query.projectId) {
+      where.projectId = query.projectId;
+    }
+    if (query.status) {
+      where.status = query.status as IssueStatus;
+    }
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.AND = [
+        {
+          OR: [
+            { issueNumber: { contains: term, mode: 'insensitive' } },
+            { issueType: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+            { location: { contains: term, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    return where;
+  }
+
+  private buildCompanyIssueListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.IssueWhereInput {
+    const where: Prisma.IssueWhereInput = activeOnly({
+      companyId: ctx.companyId,
+    });
+
+    if (query.projectId) {
+      where.projectId = query.projectId;
+    }
+    if (query.status) {
+      where.status = query.status as IssueStatus;
+    }
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.OR = [
+        { issueNumber: { contains: term, mode: 'insensitive' } },
+        { issueType: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        { location: { contains: term, mode: 'insensitive' } },
+        { project: { name: { contains: term, mode: 'insensitive' } } },
+        { project: { projectCode: { contains: term, mode: 'insensitive' } } },
+      ];
+    }
+
+    return where;
+  }
+
+  private async mapMyIssueRow(
+    ctx: PmContext,
+    row: Issue & {
+      project: { id: string; name: string; projectCode: string };
+    },
+  ): Promise<MappedMyIssue> {
+    const enriched = await this.enrichIssue(ctx, row);
+    return {
+      ...enriched,
+      projectName: row.project.name,
+      projectCode: row.project.projectCode,
+    };
   }
 
   private async buildIssueListWhere(
@@ -322,17 +639,21 @@ export class IssuesService {
     ctx: PmContext,
     issue: Parameters<typeof mapIssue>[0],
   ): Promise<MappedIssue> {
-    const folder = await this.engineeringDocumentFolderService.findEntityFolder(
-      ctx,
-      FolderContextType.ISSUE,
-      issue.id,
-    );
+    const [folder, linkedDesignPackage] = await Promise.all([
+      this.engineeringDocumentFolderService.findEntityFolder(
+        ctx,
+        FolderContextType.ISSUE,
+        issue.id,
+      ),
+      this.resolveLinkedDesignPackage(ctx, issue.linkedDesignPackageId),
+    ]);
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
       {
         ...mapIssue(issue),
         attachmentFolderId: folder?.id ?? null,
+        linkedDesignPackage,
         sourceEntitySummary: await buildSourceEntitySummary(
           this.prisma,
           issue.projectId,
@@ -340,8 +661,111 @@ export class IssuesService {
           issue.sourceEntityId,
         ),
       },
-      PM_RAISED_ASSIGNED_NAMES,
+      PM_ISSUE_USER_NAMES,
     );
+  }
+
+  private async resolveLinkedDesignPackage(
+    ctx: PmContext,
+    linkedDesignPackageId: string | null,
+  ): Promise<MappedIssue['linkedDesignPackage']> {
+    if (!linkedDesignPackageId) {
+      return null;
+    }
+
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: linkedDesignPackageId, companyId: ctx.companyId }),
+      select: { id: true, name: true, ...DESIGN_PACKAGE_FULL_CODE_SELECT },
+    });
+    if (!pkg) {
+      return null;
+    }
+
+    return {
+      id: pkg.id,
+      packageCode: pkg.packageCode,
+      name: pkg.name,
+      fullCode: formatDesignPackageFullCode(
+        pkg.taskDiscipline.task.overseasTaskNumber,
+        pkg.taskDiscipline.disciplineIndex,
+        pkg.subtaskIndex,
+      ),
+    };
+  }
+
+  /**
+   * Full access bypass, RBAC module perms, raiser/assignee, linked-package
+   * FK roles, or any project the caller can otherwise see.
+   */
+  private async assertCanAccessIssue(
+    ctx: PmContext,
+    issue: {
+      projectId: string;
+      raisedBy: string;
+      assignedTo: string | null;
+      linkedDesignPackageId?: string | null;
+    },
+    action: 'view' | 'create' | 'edit',
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    if (hasFullProjectDataAccess(roleNames)) {
+      return;
+    }
+
+    const pmPerms = await this.permissionService.getUserModulePermissions(
+      ctx.userId,
+      ctx.companyId,
+      'issues',
+    );
+    if (action === 'view' && pmPerms.canView) {
+      return;
+    }
+    if (action === 'create' && pmPerms.canCreate) {
+      return;
+    }
+    if (action === 'edit' && pmPerms.canEdit) {
+      return;
+    }
+
+    if (issue.raisedBy === ctx.userId || issue.assignedTo === ctx.userId) {
+      return;
+    }
+
+    if (issue.linkedDesignPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: issue.linkedDesignPackageId,
+          companyId: ctx.companyId,
+          OR: [
+            { designerUserId: ctx.userId },
+            { disciplinaryLeaderUserId: ctx.userId },
+            { reviewerUserId: ctx.userId },
+            { supportingDesignerUserId: ctx.userId },
+            { deptDeputyChiefUserId: ctx.userId },
+            { instituteChiefUserId: ctx.userId },
+          ],
+        }),
+        select: { id: true },
+      });
+      if (pkg) {
+        return;
+      }
+    }
+
+    // Issues are visible company-wide to anyone who can otherwise see the project.
+    const visibleProjectIds =
+      await this.taskAccessScopeService.getVisibleProjectIds(ctx);
+    if (
+      visibleProjectIds === null ||
+      visibleProjectIds.includes(issue.projectId)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Access denied');
   }
 
   private async assertIssueVisible(

@@ -1,13 +1,14 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Issue, IssueSeverity, IssueStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
-import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { IssuesService } from '../issues.service';
 import { PmListQueryDto } from '../../dtos/pm.dtos';
 import { PmContext } from '../../types/pm-context.type';
 import { ProjectScopeService } from '../project-scope.service';
+import { TaskAccessScopeService } from '../task-access-scope.service';
 
 describe('IssuesService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
@@ -73,15 +74,15 @@ describe('IssuesService', () => {
       getProjectOrThrow: jest.fn().mockResolvedValue({
         id: projectId,
         companyId: ctx.companyId,
+        projectCode: 'PRJ',
       }),
     };
+
+    prisma.issue.count.mockResolvedValue(0);
 
     service = new IssuesService(
       prisma as unknown as PrismaService,
       projectScopeService as unknown as ProjectScopeService,
-      {
-        getNextNumber: jest.fn().mockResolvedValue('ISS-00001'),
-      } as unknown as DocumentNumberService,
       {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         assertDisciplineAccess: jest.fn().mockResolvedValue(undefined),
@@ -93,6 +94,22 @@ describe('IssuesService', () => {
         findEntityFolder: jest.fn().mockResolvedValue(null),
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
+      {
+        getVisibleProjectIds: jest.fn().mockResolvedValue(null),
+      } as unknown as TaskAccessScopeService,
+      {
+        getUserRoleNames: jest
+          .fn()
+          .mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
+        }),
+      } as unknown as PermissionService,
     );
   });
 

@@ -168,6 +168,7 @@ model Company {
   deliverables            Deliverable[]
   changeRequests          ProjectChangeRequest[]
   rfis                    Rfi[]
+  issues                  Issue[]
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
@@ -504,6 +505,8 @@ model User {
   ownedRisks             Risk[]
   raisedIssues           Issue[]                @relation("IssueRaisedBy")
   assignedIssues         Issue[]                @relation("IssueAssignedTo")
+  resolvedIssues         Issue[]                @relation("IssueResolvedBy")
+  verifiedIssues         Issue[]                @relation("IssueVerifiedBy")
   raisedPunchItems       PunchItem[]            @relation("PunchRaisedBy")
   assignedPunchItems     PunchItem[]            @relation("PunchAssignedTo")
   verifiedChecklistItems CloseoutChecklistItem[]
@@ -2587,6 +2590,7 @@ model Risk {
 
 model Issue {
   id               String        @id @default(uuid())
+  companyId        String        @map("company_id")
   projectId        String        @map("project_id")
   taskDisciplineId String?       @map("task_discipline_id")
   raisedBy         String        @map("raised_by")
@@ -2599,7 +2603,9 @@ model Issue {
   status       IssueStatus   @default(OPEN)
   dueDate      DateTime?     @map("due_date") @db.Date
   resolvedAt   DateTime?     @map("resolved_at")
+  resolvedBy   String?       @map("resolved_by")
   verifiedAt   DateTime?     @map("verified_at")
+  verifiedBy   String?       @map("verified_by")
   linkedDesignPackageId String? @map("linked_design_package_id")
   sourceEntityType      String? @map("source_entity_type")
   sourceEntityId        String? @map("source_entity_id")
@@ -2610,16 +2616,21 @@ model Issue {
   deletedAt    DateTime?     @map("deleted_at")
   deletedBy    String?       @map("deleted_by")
 
+  company        Company        @relation(fields: [companyId], references: [id])
   project        Project        @relation(fields: [projectId], references: [id])
   taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
   linkedDesignPackage DesignPackage? @relation("IssueLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
   raiser         User           @relation("IssueRaisedBy", fields: [raisedBy], references: [id])
   assignee User?   @relation("IssueAssignedTo", fields: [assignedTo], references: [id])
+  resolvedByUser User? @relation("IssueResolvedBy", fields: [resolvedBy], references: [id])
+  verifiedByUser User? @relation("IssueVerifiedBy", fields: [verifiedBy], references: [id])
 
   @@index([projectId], map: "idx_issue_project_id")
   @@index([taskDisciplineId], map: "idx_issue_task_discipline_id")
   @@index([linkedDesignPackageId], map: "idx_issue_linked_design_package_id")
   @@index([projectId, deletedAt], map: "idx_issue_project_deleted")
+  @@index([companyId], map: "idx_issue_company_id")
+  @@index([companyId, deletedAt], map: "idx_issue_company_deleted")
   @@map("issue")
 }
 

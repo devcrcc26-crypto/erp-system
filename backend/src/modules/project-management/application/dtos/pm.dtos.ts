@@ -1419,6 +1419,11 @@ export class CreateIssueDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsEntityUuid()
+  linkedDesignPackageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   dueDate?: string;
 

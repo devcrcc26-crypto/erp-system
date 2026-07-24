@@ -996,6 +996,7 @@ export async function seedProjectBundle(
     update: {},
     create: {
       id: sid(p, 110),
+      companyId,
       projectId,
       raisedBy: users.engineerUserId,
       assignedTo: users.pmUserId,
@@ -1015,6 +1016,7 @@ export async function seedProjectBundle(
     update: {},
     create: {
       id: sid(p, 111),
+      companyId,
       projectId,
       raisedBy: users.safetyUserId,
       assignedTo: users.engineerUserId,

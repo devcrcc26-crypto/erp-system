@@ -711,8 +711,15 @@ export interface Risk {
   updatedAt: string;
 }
 
+export interface IssueProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
 export interface Issue {
   id: string;
+  companyId: string;
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
@@ -727,7 +734,20 @@ export interface Issue {
   status: IssueStatus;
   dueDate: string | null;
   resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolvedByName?: string | null;
   verifiedAt: string | null;
+  verifiedBy: string | null;
+  verifiedByName?: string | null;
+  linkedDesignPackageId: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+    fullCode: string;
+  } | null;
+  projectName?: string | null;
+  projectCode?: string | null;
   sourceEntityType?:
     | 'MEETING'
     | 'CORRESPONDENCE'
@@ -1201,6 +1221,7 @@ export interface CreateIssueRequest {
   severity: IssueSeverity;
   assignedTo?: string;
   taskDisciplineId?: string;
+  linkedDesignPackageId?: string;
   dueDate?: string;
   sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
   sourceEntityId?: string;
