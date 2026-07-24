@@ -79,12 +79,13 @@ export function useGlobalPortfolioListMode(): boolean {
 }
 
 /**
- * Global construction submittals — designer / discipline-lead personas or PM module view.
+ * Global construction submittals — full-access, designer / discipline-lead, or module view.
  */
 export function useCanViewSubmittals(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
   return (
+    epc.navFullAccess ||
     epc.navDesigner ||
     epc.navDisciplineLeader ||
     pm.submittals.canView
@@ -92,13 +93,14 @@ export function useCanViewSubmittals(): boolean {
 }
 
 /**
- * Global external releases — designer / discipline-lead personas or PM module view.
+ * Global external releases — full-access, designer / discipline-lead, or module view.
  * Same visibility formula as construction submittals (shares the `submittals` module).
  */
 export function useCanViewExternalReleases(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
   return (
+    epc.navFullAccess ||
     epc.navDesigner ||
     epc.navDisciplineLeader ||
     pm.submittals.canView
@@ -106,12 +108,13 @@ export function useCanViewExternalReleases(): boolean {
 }
 
 /**
- * Global change requests — designer / discipline-lead personas or PM module view.
+ * Global change requests — full-access, designer / discipline-lead, or module view.
  */
 export function useCanViewChangeRequests(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
   return (
+    epc.navFullAccess ||
     epc.navDesigner ||
     epc.navDisciplineLeader ||
     pm.change_requests.canView
