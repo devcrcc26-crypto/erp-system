@@ -119,18 +119,17 @@ export function useCanViewChangeRequests(): boolean {
 }
 
 /**
- * Global RFIs — designer / discipline-lead personas or PM module view.
- * Not shown to users who can view the full project list (they have project-scoped RFI access).
+ * Global RFIs — FK designer / discipline-lead always; otherwise only when
+ * rfis.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewRfis(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
-  return (
-    (epc.navDesigner ||
-      epc.navDisciplineLeader ||
-      (pm.rfis?.canView ?? false)) &&
-    !pm.projects.canView
-  );
+  const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+  if (isFkUser) {
+    return true;
+  }
+  return (pm.rfis?.canView ?? false) && !pm.projects.canView;
 }
 
 /**

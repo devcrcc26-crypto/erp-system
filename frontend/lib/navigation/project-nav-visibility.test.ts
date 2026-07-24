@@ -415,7 +415,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     ).toBe(true);
   });
 
-  it('hides /rfis from full-access users who have projects.canView (they use project-scoped RFIs)', () => {
+  it('hides /rfis from full-access users (they use project-scoped RFIs)', () => {
     expect(
       canViewGlobalNavKey(
         '/rfis',
@@ -423,14 +423,21 @@ describe('canViewGlobalNavKey — rfis', () => {
         pmWithProjects,
       ),
     ).toBe(false);
-  });
-
-  it('shows /rfis for full-access users without projects.canView', () => {
     expect(
       canViewGlobalNavKey(
         '/rfis',
         { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
         pmNoView,
+      ),
+    ).toBe(false);
+  });
+
+  it('allows designer even when projects.canView is true (Employee + FK)', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/rfis',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmWithProjects,
       ),
     ).toBe(true);
   });

@@ -272,14 +272,15 @@ export function canViewGlobalNavKey(
   pm?: Pick<PmCapabilities, 'submittals' | 'change_requests' | 'rfis' | 'projects'> | null,
 ): boolean {
   if (key === '/rfis') {
-    if (epc.navFullAccess) {
-      return !(pm?.projects?.canView ?? false);
+    const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+    if (isFkUser) {
+      return true;
     }
-    return (
-      epc.navDesigner ||
-      epc.navDisciplineLeader ||
-      (pm?.rfis?.canView ?? false)
-    );
+    // PA/SA use project sidebar under Site Operations
+    if (epc.navFullAccess) {
+      return false;
+    }
+    return pm?.rfis?.canView ?? false;
   }
 
   if (epc.navFullAccess) {
