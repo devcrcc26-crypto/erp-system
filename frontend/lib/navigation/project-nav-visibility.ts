@@ -275,12 +275,15 @@ export function canViewGlobalNavKey(
   > | null,
 ): boolean {
   if (key === '/issues') {
-    return (
-      epc.navFullAccess ||
-      epc.navDesigner ||
-      epc.navDisciplineLeader ||
-      (pm?.issues?.canView ?? false)
-    );
+    const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+    if (isFkUser) {
+      return true;
+    }
+    // PA/SA use project sidebar under Site Operations
+    if (epc.navFullAccess) {
+      return false;
+    }
+    return pm?.issues?.canView ?? false;
   }
 
   if (key === '/rfis') {

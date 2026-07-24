@@ -133,18 +133,17 @@ export function useCanViewRfis(): boolean {
 }
 
 /**
- * Global Issues — everyone with any project access sees issues (FK design
- * personas, full-access roles, or plain issues.canView).
+ * Global Issues — FK designer / discipline-lead always; otherwise only when
+ * issues.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewIssues(): boolean {
   const epc = useEpcCapabilities();
   const pm = usePmCapabilities();
-  return (
-    epc.navDesigner ||
-    epc.navDisciplineLeader ||
-    epc.navFullAccess ||
-    pm.issues.canView
-  );
+  const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+  if (isFkUser) {
+    return true;
+  }
+  return pm.issues.canView && !pm.projects.canView;
 }
 
 /**

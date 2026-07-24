@@ -8,7 +8,6 @@ import { IssuesService } from '../issues.service';
 import { PmListQueryDto } from '../../dtos/pm.dtos';
 import { PmContext } from '../../types/pm-context.type';
 import { ProjectScopeService } from '../project-scope.service';
-import { TaskAccessScopeService } from '../task-access-scope.service';
 
 describe('IssuesService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
@@ -94,9 +93,6 @@ describe('IssuesService', () => {
         findEntityFolder: jest.fn().mockResolvedValue(null),
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
-      {
-        getVisibleProjectIds: jest.fn().mockResolvedValue(null),
-      } as unknown as TaskAccessScopeService,
       {
         getUserRoleNames: jest
           .fn()

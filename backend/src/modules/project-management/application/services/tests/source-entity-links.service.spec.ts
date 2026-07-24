@@ -173,9 +173,6 @@ describe('Source entity links (source-entity-links)', () => {
       engineeringDocumentFolderService,
       epcSubmittalRepository,
       {
-        getVisibleProjectIds: jest.fn().mockResolvedValue(null),
-      } as never,
-      {
         getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
         getUserModulePermissions: jest.fn().mockResolvedValue({
           canView: false,

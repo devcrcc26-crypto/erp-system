@@ -206,9 +206,6 @@ describe('Trigger linkage (trigger-linkage)', () => {
         } as unknown as EngineeringDocumentFolderService,
         epcSubmittalRepository as unknown as EpcSubmittalRepository,
         {
-          getVisibleProjectIds: jest.fn().mockResolvedValue(null),
-        } as never,
-        {
           getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
         } as never,
       );

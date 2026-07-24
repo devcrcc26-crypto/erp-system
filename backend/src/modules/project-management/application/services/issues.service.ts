@@ -33,7 +33,6 @@ import { PM_ISSUE_USER_NAMES } from '../utils/pm-user-name-fields.const';
 import { DisciplineScopeService } from './discipline-scope.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
-import { TaskAccessScopeService } from './task-access-scope.service';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
 
 const ISSUE_SORT_FIELDS = new Set([
@@ -84,7 +83,6 @@ export class IssuesService {
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly epcSubmittalRepository: EpcSubmittalRepository,
-    private readonly taskAccessScopeService: TaskAccessScopeService,
     private readonly permissionService: PermissionService,
   ) {}
 
@@ -246,10 +244,10 @@ export class IssuesService {
     await this.assertCanAccessIssue(
       ctx,
       {
-        projectId,
         raisedBy: ctx.userId,
         assignedTo: dto.assignedTo ?? null,
         linkedDesignPackageId: dto.linkedDesignPackageId ?? null,
+        taskDisciplineId: dto.taskDisciplineId ?? null,
       },
       'create',
     );
@@ -694,16 +692,17 @@ export class IssuesService {
   }
 
   /**
-   * Full access bypass, RBAC module perms, raiser/assignee, linked-package
-   * FK roles, or any project the caller can otherwise see.
+   * Full access bypass, RBAC module perms, raiser/assignee (existing issues
+   * only — creation can't bootstrap off its own raiser), linked-subtask FK
+   * roles, or discipline lead/designer on the linked discipline.
    */
   private async assertCanAccessIssue(
     ctx: PmContext,
     issue: {
-      projectId: string;
-      raisedBy: string;
+      raisedBy: string | null;
       assignedTo: string | null;
       linkedDesignPackageId?: string | null;
+      taskDisciplineId?: string | null;
     },
     action: 'view' | 'create' | 'edit',
   ): Promise<void> {
@@ -730,7 +729,10 @@ export class IssuesService {
       return;
     }
 
-    if (issue.raisedBy === ctx.userId || issue.assignedTo === ctx.userId) {
+    if (
+      action !== 'create' &&
+      (issue.raisedBy === ctx.userId || issue.assignedTo === ctx.userId)
+    ) {
       return;
     }
 
@@ -755,14 +757,21 @@ export class IssuesService {
       }
     }
 
-    // Issues are visible company-wide to anyone who can otherwise see the project.
-    const visibleProjectIds =
-      await this.taskAccessScopeService.getVisibleProjectIds(ctx);
-    if (
-      visibleProjectIds === null ||
-      visibleProjectIds.includes(issue.projectId)
-    ) {
-      return;
+    if (issue.taskDisciplineId) {
+      const disc = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({
+          id: issue.taskDisciplineId,
+          companyId: ctx.companyId,
+          OR: [
+            { disciplineLeadUserId: ctx.userId },
+            { designerUserId: ctx.userId },
+          ],
+        }),
+        select: { id: true },
+      });
+      if (disc) {
+        return;
+      }
     }
 
     throw new ForbiddenException('Access denied');

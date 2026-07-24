@@ -26,6 +26,9 @@ import { IssueFormDrawer } from '@/components/modules/projects/issues/IssuesPage
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
+  useCanViewIssues,
+  useEpcCapabilities,
+  useGlobalPortfolioListMode,
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
@@ -64,8 +67,16 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
 
   const capabilitiesReady = !usePermissionsLoading();
   const pm = usePmCapabilities();
-  const portfolioMode = pm.projects.canView;
-  const canCreate = true;
+  const epc = useEpcCapabilities();
+  const portfolioMode =
+    useGlobalPortfolioListMode() &&
+    pm.issues.canView &&
+    !epc.navDesigner &&
+    !epc.navDisciplineLeader;
+  const canViewPersonal = useCanViewIssues();
+  const canAccessPage = portfolioMode || canViewPersonal;
+  const canCreate =
+    epc.navDisciplineLeader || epc.navDesigner || pm.issues.canCreate;
 
   const listParams = {
     ...params,
@@ -77,15 +88,17 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
 
   const myIssuesQuery = useMyIssues(
     listParams,
-    capabilitiesReady && !portfolioMode,
+    capabilitiesReady && canAccessPage && !portfolioMode,
   );
   const allIssuesQuery = useAllIssues(
     listParams,
-    capabilitiesReady && portfolioMode,
+    capabilitiesReady && canAccessPage && portfolioMode,
   );
   const issuesQuery = portfolioMode ? allIssuesQuery : myIssuesQuery;
 
-  const myProjectsQuery = useMyIssueProjects(capabilitiesReady && !portfolioMode);
+  const myProjectsQuery = useMyIssueProjects(
+    capabilitiesReady && !portfolioMode && canCreate,
+  );
   const allProjectsQuery = useAllProjects({}, capabilitiesReady && portfolioMode);
 
   const projectFilterOptions = useMemo(
@@ -195,6 +208,16 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
 
   if (!capabilitiesReady || issuesQuery.isLoading) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (!canAccessPage) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        title="You do not have access to view issues."
+      />
+    );
   }
 
   const apiUnavailable =
