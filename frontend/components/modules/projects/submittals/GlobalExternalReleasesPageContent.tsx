@@ -60,7 +60,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const epc = useEpcCapabilities();
   const portfolioMode =
     useGlobalPortfolioListMode() &&
-    pm.submittals.canView &&
+    (pm.submittals.canView || epc.navFullAccess) &&
     !epc.navDesigner &&
     !epc.navDisciplineLeader;
   const canViewPersonal = useCanViewExternalReleases();
