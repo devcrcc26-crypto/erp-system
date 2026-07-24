@@ -229,6 +229,7 @@ const GLOBAL_DEPT_LEADER = new Set([
   '/my-comments',
   '/submittals',
   '/change-requests',
+  '/rfis',
   '/kanban-board',
   '/reports',
 ]);
@@ -240,6 +241,7 @@ const GLOBAL_DISCIPLINE_LEADER = new Set([
   '/my-comments',
   '/submittals',
   '/change-requests',
+  '/rfis',
 ]);
 
 const GLOBAL_REVIEWER = new Set([
@@ -255,6 +257,7 @@ const GLOBAL_DESIGNER = new Set([
   '/my-comments',
   '/submittals',
   '/change-requests',
+  '/rfis',
 ]);
 
 const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
@@ -266,10 +269,10 @@ const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 export function canViewGlobalNavKey(
   key: string,
   epc: EpcCapabilities,
-  pm?: Pick<PmCapabilities, 'submittals' | 'change_requests'> | null,
+  pm?: Pick<PmCapabilities, 'submittals' | 'change_requests' | 'rfis' | 'projects'> | null,
 ): boolean {
   if (epc.navFullAccess) {
-    return true;
+    return !(key === '/rfis' && (pm?.projects?.canView ?? false));
   }
 
   // Submittals never use the "no design persona → allow all" shortcut.
@@ -294,6 +297,14 @@ export function canViewGlobalNavKey(
       epc.navDesigner ||
       epc.navDisciplineLeader ||
       (pm?.change_requests.canView ?? false)
+    );
+  }
+
+  if (key === '/rfis') {
+    return (
+      epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm?.rfis?.canView ?? false)
     );
   }
 

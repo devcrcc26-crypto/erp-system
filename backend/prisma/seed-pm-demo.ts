@@ -9,6 +9,7 @@ import {
   Prisma,
   PrismaClient,
   ProjectContractType,
+  ProjectDesignProperties,
   ProjectDesignStage,
   ProjectStatus,
   ProjectTeamRole,
@@ -193,7 +194,7 @@ export interface DemoProjectDef {
   railwayLengthKm?: number;
   urbanRailLengthKm?: number;
   grossFloorAreaM2?: number;
-  designProperties?: string;
+  designProperties?: ProjectDesignProperties;
   designStage?: ProjectDesignStage;
 }
 
@@ -580,6 +581,7 @@ export async function seedProjectBundle(
     update: {},
     create: {
       id: rfi1Id,
+      companyId,
       projectId,
       raisedBy: users.engineerUserId,
       assignedTo: users.pmUserId,
@@ -600,6 +602,7 @@ export async function seedProjectBundle(
     update: {},
     create: {
       id: rfi2Id,
+      companyId,
       projectId,
       raisedBy: users.docsUserId,
       assignedTo: users.engineerUserId,

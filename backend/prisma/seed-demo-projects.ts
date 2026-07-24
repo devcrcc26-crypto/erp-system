@@ -504,6 +504,7 @@ async function seedExtendedProjectData(
       update: { status: rfi.status, updatedBy: adminUserId },
       create: {
         id: sid(p, rfi.entity),
+        companyId,
         projectId,
         raisedBy: U.engineer,
         assignedTo: U.pm,

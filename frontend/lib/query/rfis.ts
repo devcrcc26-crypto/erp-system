@@ -19,8 +19,10 @@ import type {
   PmListFilters,
   Rfi,
   RfiPriority,
+  RfiProjectOption,
   RfiResponse,
   RfiStatus,
+  RfiSubtaskOption,
   UpdateRfiRequest,
 } from '@/lib/api/project-management.types';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
@@ -47,6 +49,25 @@ export const rfiKeys = {
     [...rfiKeys.details(projectId), rfiId] as const,
   responses: (projectId: string, rfiId: string) =>
     [...rfiKeys.detail(projectId, rfiId), 'responses'] as const,
+  myList: (
+    params: PaginationParams &
+      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...rfiKeys.all, 'my', params] as const,
+  allList: (
+    params: PaginationParams &
+      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...rfiKeys.all, 'all', params] as const,
+  myProjects: () => [...rfiKeys.all, 'my', 'projects'] as const,
+  eligibleSubtasks: (projectId: string) =>
+    [...rfiKeys.all, projectId, 'eligible-subtasks'] as const,
+  previewNumber: (projectId: string, packageId: string) =>
+    [...rfiKeys.all, projectId, 'preview-number', packageId] as const,
 };
 
 export function useRfis(
@@ -176,6 +197,149 @@ export function useAddRfiResponse() {
       });
       void queryClient.invalidateQueries({
         queryKey: rfiKeys.lists(variables.projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Cross-project RFIs relevant to the signed-in user.
+ */
+export function useMyRfis(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: RfiStatus;
+      priority?: RfiPriority;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Rfi>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: rfiKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<Rfi>(`/rfis/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide RFIs (portfolio / admin users).
+ */
+export function useAllRfis(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: RfiStatus;
+      priority?: RfiPriority;
+    } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<Rfi>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: rfiKeys.allList(params),
+    queryFn: () =>
+      apiGetPaginated<Rfi>(`/rfis/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Projects that have RFIs relevant to the current user.
+ */
+export function useMyRfiProjects(enabled = true) {
+  return useQuery({
+    queryKey: rfiKeys.myProjects(),
+    queryFn: () => apiGet<RfiProjectOption[]>('/rfis/my/projects'),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Design packages (subtasks) eligible for raising an RFI on the given project.
+ */
+export function useEligibleRfiSubtasks(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: rfiKeys.eligibleSubtasks(projectId),
+    queryFn: () =>
+      apiGet<RfiSubtaskOption[]>(
+        `/projects/${projectId}/rfis/eligible-subtasks`,
+      ),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Preview the RFI number that will be assigned for the given project + package.
+ */
+export function usePreviewRfiNumber(
+  projectId: string,
+  packageId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: rfiKeys.previewNumber(projectId, packageId),
+    queryFn: () =>
+      apiGet<{ rfiNumber: string }>(
+        `/projects/${projectId}/rfis/preview-number?packageId=${packageId}`,
+      ),
+    enabled: Boolean(projectId) && Boolean(packageId) && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Link a change request to an RFI after the CR is created.
+ */
+export function useLinkRfiCr() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      rfiId,
+      crId,
+    }: {
+      projectId: string;
+      rfiId: string;
+      crId: string;
+    }) =>
+      apiPatch<Rfi>(
+        `${rfisPath(projectId)}/${rfiId}/link-cr`,
+        { crId },
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.detail(variables.projectId, variables.rfiId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.myList(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: rfiKeys.allList(),
       });
     },
   });

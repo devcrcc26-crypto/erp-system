@@ -59,7 +59,6 @@ describe('RfisService status transitions', () => {
     service = new RfisService(
       prisma as unknown as PrismaService,
       {} as unknown as ProjectScopeService,
-      {} as never,
       {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
       } as unknown as DisciplineScopeService,
@@ -69,6 +68,9 @@ describe('RfisService status transitions', () => {
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/rfis/RFI-001' }),
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+      } as never,
     );
   });
 

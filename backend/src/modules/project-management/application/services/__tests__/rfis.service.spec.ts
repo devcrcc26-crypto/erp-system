@@ -3,41 +3,47 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Rfi, RfiStatus } from '@prisma/client';
+import { Rfi, RfiSource, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
-import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { RfisService } from '../rfis.service';
 import { PmListQueryDto } from '../../dtos/pm.dtos';
 import { PmContext } from '../../types/pm-context.type';
 import { ProjectScopeService } from '../project-scope.service';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 
 describe('RfisService', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
   const projectId = 'project-1';
   const rfiId = 'rfi-1';
+  const packageId = 'package-1';
   const assigneeUserId = 'user-assignee';
-  const outsiderUserId = 'user-outsider';
 
   const listQuery = { page: 1, limit: 20 } as PmListQueryDto;
 
   function buildRfi(overrides: Partial<Rfi> = {}): Rfi {
     return {
       id: rfiId,
+      companyId: ctx.companyId,
       projectId,
-      taskDisciplineId: null,
+      taskDisciplineId: 'td-1',
       raisedBy: ctx.userId,
       assignedTo: null,
-      rfiNumber: 'RFI-00001',
+      rfiNumber: 'RFI-26-AAR-001-01-001-001',
       title: 'Clarification on footing depth',
       description: null,
       discipline: null,
       priority: null,
       status: RfiStatus.DRAFT,
+      rfiSource: RfiSource.SITE_TEAM,
       dateRaised: new Date('2026-01-01'),
       dueDate: null,
       dateAnswered: null,
+      linkedDesignPackageId: packageId,
+      linkedCrId: null,
+      sourceEntityType: null,
+      sourceEntityId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -57,6 +63,8 @@ describe('RfisService', () => {
       update: jest.Mock;
     };
     rfiResponse: { create: jest.Mock };
+    designPackage: { findFirst: jest.Mock };
+    projectChangeRequest: { findFirst: jest.Mock };
     user: { findFirst: jest.Mock };
     documentFolder: { findMany: jest.Mock; createMany: jest.Mock };
     project: { findFirst: jest.Mock };
@@ -70,15 +78,37 @@ describe('RfisService', () => {
       rfi: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         update: jest.fn(),
       },
       rfiResponse: {
         create: jest.fn(),
       },
-      user: {
+      designPackage: {
+        findFirst: jest.fn().mockResolvedValue({
+          subtaskIndex: 1,
+          designerUserId: assigneeUserId,
+          taskDisciplineId: 'td-1',
+          taskDiscipline: {
+            disciplineIndex: 1,
+            task: {
+              projectId,
+              overseasTaskNumber: '26-AAR-001',
+            },
+          },
+        }),
+      },
+      projectChangeRequest: {
         findFirst: jest.fn(),
+      },
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          firstName: 'Wei',
+          lastName: 'Chen',
+          chineseName: null,
+          email: 'wei@example.com',
+        }),
       },
       documentFolder: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -102,9 +132,6 @@ describe('RfisService', () => {
       prisma as unknown as PrismaService,
       projectScopeService as unknown as ProjectScopeService,
       {
-        getNextNumber: jest.fn().mockResolvedValue('RFI-00001'),
-      } as unknown as DocumentNumberService,
-      {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         assertDisciplineAccess: jest.fn().mockResolvedValue(undefined),
       } as unknown as DisciplineScopeService,
@@ -117,36 +144,45 @@ describe('RfisService', () => {
           .mockResolvedValue({ id: 'project-folder-1', path: '/projects/DEMO-001' }),
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+      } as unknown as PermissionService,
     );
   });
 
   describe('createRfi', () => {
-    it('sets raisedBy to ctx.userId', async () => {
-      const created = buildRfi();
+    it('sets raisedBy to ctx.userId and auto-assigns designer', async () => {
+      const created = buildRfi({ assignedTo: assigneeUserId });
       prisma.rfi.create.mockResolvedValue(created);
 
       await service.createRfi(ctx, projectId, {
         title: 'Clarification on footing depth',
+        linkedDesignPackageId: packageId,
+        rfiSource: RfiSource.SITE_TEAM,
       });
 
       expect(prisma.rfi.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           raisedBy: ctx.userId,
+          assignedTo: assigneeUserId,
+          companyId: ctx.companyId,
+          linkedDesignPackageId: packageId,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
         }),
       });
     });
 
-    it('validates assignedTo is in the company', async () => {
-      prisma.user.findFirst.mockResolvedValue(null);
+    it('throws when subtask is not found', async () => {
+      prisma.designPackage.findFirst.mockResolvedValue(null);
 
       await expect(
         service.createRfi(ctx, projectId, {
-          title: 'Assignee validation',
-          assignedTo: outsiderUserId,
+          title: 'Missing package',
+          linkedDesignPackageId: packageId,
+          rfiSource: RfiSource.SITE_TEAM,
         }),
-      ).rejects.toThrow(new NotFoundException('User not found'));
+      ).rejects.toThrow(new NotFoundException('Subtask not found'));
 
       expect(prisma.rfi.create).not.toHaveBeenCalled();
     });
@@ -212,19 +248,8 @@ describe('RfisService', () => {
   });
 
   describe('updateRfi', () => {
-    function mockRfiWithStatus(status: RfiStatus): void {
-      prisma.rfi.findFirst.mockImplementation(
-        (args: { select?: { status?: boolean } }) => {
-          if (args?.select?.status) {
-            return Promise.resolve({ status });
-          }
-          return Promise.resolve(buildRfi({ status }));
-        },
-      );
-    }
-
     it('throws BadRequestException for DRAFT to CLOSED', async () => {
-      mockRfiWithStatus(RfiStatus.DRAFT);
+      prisma.rfi.findFirst.mockResolvedValue(buildRfi({ status: RfiStatus.DRAFT }));
 
       await expect(
         service.updateRfi(ctx, projectId, rfiId, {
@@ -240,7 +265,9 @@ describe('RfisService', () => {
     });
 
     it('allows ANSWERED to CLOSED', async () => {
-      mockRfiWithStatus(RfiStatus.ANSWERED);
+      prisma.rfi.findFirst.mockResolvedValue(
+        buildRfi({ status: RfiStatus.ANSWERED, assignedTo: assigneeUserId }),
+      );
       prisma.rfi.update.mockResolvedValue(buildRfi({ status: RfiStatus.CLOSED }));
 
       const result = await service.updateRfi(ctx, projectId, rfiId, {
@@ -267,6 +294,7 @@ describe('RfisService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             projectId,
+            companyId: ctx.companyId,
             deletedAt: null,
           }),
         }),

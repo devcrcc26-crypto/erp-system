@@ -61,6 +61,27 @@ export type CompletionStatus = 'NORMAL' | 'AHEAD' | 'BEHIND';
 
 export type RfiPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
+export type RfiSource =
+  | 'SITE_TEAM'
+  | 'CONTRACTOR'
+  | 'CLIENT_CONSULTANT'
+  | 'INTER_DISCIPLINE';
+
+export interface RfiSubtaskOption {
+  id: string;
+  packageCode: string;
+  name: string;
+  fullCode: string;
+  designerUserId: string | null;
+  designerName: string | null;
+}
+
+export interface RfiProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
 export type RfiStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -328,6 +349,7 @@ export interface TaskDependency {
 
 export interface Rfi {
   id: string;
+  companyId: string;
   projectId: string;
   taskDisciplineId: string | null;
   raisedBy: string;
@@ -340,6 +362,18 @@ export interface Rfi {
   discipline: string | null;
   priority: RfiPriority;
   status: RfiStatus;
+  rfiSource: RfiSource | null;
+  linkedDesignPackageId: string | null;
+  linkedCrId: string | null;
+  linkedCrNumber?: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+    fullCode: string;
+  } | null;
+  projectName?: string | null;
+  projectCode?: string | null;
   dateRaised: string | null;
   dueDate: string | null;
   dateAnswered: string | null;
@@ -973,12 +1007,11 @@ export interface CreateTaskDependencyRequest {
 export type UpdateTaskDependencyRequest = Partial<CreateTaskDependencyRequest>;
 
 export interface CreateRfiRequest {
+  linkedDesignPackageId: string;
+  rfiSource: RfiSource;
   title: string;
   description?: string;
-  discipline?: string;
   priority?: RfiPriority;
-  assignedTo?: string;
-  taskDisciplineId?: string;
   dueDate?: string;
   sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
   sourceEntityId?: string;

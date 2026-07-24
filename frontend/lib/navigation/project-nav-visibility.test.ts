@@ -251,10 +251,14 @@ describe('canViewGlobalNavKey — submittals', () => {
   const pmCanView = {
     submittals: { ...moduleCaps, canView: true },
     change_requests: moduleCaps,
+    rfis: moduleCaps,
+    projects: moduleCaps,
   };
   const pmNoView = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
+    rfis: moduleCaps,
+    projects: moduleCaps,
   };
 
   it('allows designer and discipline leader to see /submittals', () => {
@@ -324,10 +328,14 @@ describe('canViewGlobalNavKey — change requests', () => {
   const pmCanView = {
     submittals: moduleCaps,
     change_requests: { ...moduleCaps, canView: true },
+    rfis: moduleCaps,
+    projects: moduleCaps,
   };
   const pmNoView = {
     submittals: moduleCaps,
     change_requests: moduleCaps,
+    rfis: moduleCaps,
+    projects: moduleCaps,
   };
 
   it('allows designer and discipline leader to see /change-requests', () => {
@@ -353,6 +361,76 @@ describe('canViewGlobalNavKey — change requests', () => {
         '/change-requests',
         EMPTY_EPC_CAPABILITIES,
         pmCanView,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('canViewGlobalNavKey — rfis', () => {
+  const moduleCaps = {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+  const pmRfiCanView = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+    rfis: { ...moduleCaps, canView: true },
+    projects: moduleCaps,
+  };
+  const pmNoView = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+    rfis: moduleCaps,
+    projects: moduleCaps,
+  };
+  const pmWithProjects = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+    rfis: moduleCaps,
+    projects: { ...moduleCaps, canView: true },
+  };
+
+  it('allows designer and discipline leader to see /rfis', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/rfis',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+    expect(
+      canViewGlobalNavKey(
+        '/rfis',
+        { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+  });
+
+  it('allows Project Admin via pm.rfis.canView', () => {
+    expect(
+      canViewGlobalNavKey('/rfis', EMPTY_EPC_CAPABILITIES, pmRfiCanView),
+    ).toBe(true);
+  });
+
+  it('hides /rfis from full-access users who have projects.canView (they use project-scoped RFIs)', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/rfis',
+        { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
+        pmWithProjects,
+      ),
+    ).toBe(false);
+  });
+
+  it('shows /rfis for full-access users without projects.canView', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/rfis',
+        { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
+        pmNoView,
       ),
     ).toBe(true);
   });

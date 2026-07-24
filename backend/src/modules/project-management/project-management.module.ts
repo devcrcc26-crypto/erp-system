@@ -75,6 +75,7 @@ import { CloseoutController } from './presentation/controllers/closeout.controll
 import { ChangeRequestsController } from './presentation/controllers/change-requests.controller';
 import { ExternalReleasesController } from './presentation/controllers/external-releases.controller';
 import { MyChangeRequestsController } from './presentation/controllers/my-change-requests.controller';
+import { MyRfisController } from './presentation/controllers/my-rfis.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
 import { DeliverablesController } from './presentation/controllers/deliverables.controller';
@@ -125,6 +126,7 @@ const workflowBullProcessors = redisEnabled
     ProjectsController,
     ScheduleController,
     RfisController,
+    MyRfisController,
     IssuesController,
     SubmittalsController,
     MySubmittalsController,

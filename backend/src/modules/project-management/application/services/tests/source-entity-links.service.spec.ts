@@ -31,6 +31,7 @@ describe('Source entity links (source-entity-links)', () => {
       update: jest.Mock;
       findFirst: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
     };
     issue: { create: jest.Mock; findMany: jest.Mock };
     projectChangeRequest: {
@@ -67,6 +68,7 @@ describe('Source entity links (source-entity-links)', () => {
         update: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       issue: { create: jest.fn(), findMany: jest.fn() },
       projectChangeRequest: {
@@ -77,7 +79,20 @@ describe('Source entity links (source-entity-links)', () => {
         findFirst: jest.fn(),
       },
       designPackage: {
-        findFirst: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({
+          subtaskIndex: 1,
+          designerUserId: ctx.userId,
+          taskDisciplineId: 'td-1',
+          packageCode: 'PKG-001',
+          name: 'Package',
+          taskDiscipline: {
+            disciplineIndex: 1,
+            task: {
+              projectId,
+              overseasTaskNumber: '26-AAR-001',
+            },
+          },
+        }),
       },
       designPackageItem: {
         findMany: jest.fn(),
@@ -96,9 +111,15 @@ describe('Source entity links (source-entity-links)', () => {
       projectTeam: {
         findFirst: jest.fn().mockResolvedValue({ id: 'team-1' }),
       },
-      user: { findFirst: jest.fn() },
-      documentFolder: { findMany: jest.fn().mockResolvedValue([]),
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          firstName: 'Test',
+          lastName: 'User',
+          chineseName: null,
+          email: 'test@example.com',
+        }),
       },
+      documentFolder: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(),
     };
 
@@ -133,10 +154,12 @@ describe('Source entity links (source-entity-links)', () => {
     rfisService = new RfisService(
       prisma as unknown as PrismaService,
       projectScopeService,
-      documentNumberService,
       disciplineScopeService,
       engineeringDocumentFolderService,
       epcSubmittalRepository,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+      } as never,
     );
 
     issuesService = new IssuesService(
@@ -185,27 +208,37 @@ describe('Source entity links (source-entity-links)', () => {
     prisma.meeting.findFirst.mockResolvedValue({ id: meetingId, title: 'Weekly Progress Meeting' });
     prisma.rfi.create.mockResolvedValue({
       id: 'rfi-1',
+      companyId: ctx.companyId,
       projectId,
-      taskDisciplineId: null,
+      taskDisciplineId: 'td-1',
       raisedBy: ctx.userId,
-      assignedTo: null,
+      assignedTo: ctx.userId,
       rfiNumber: 'RFI-001',
       title: 'Clarification',
       description: null,
       discipline: null,
       priority: 'MEDIUM',
       status: 'DRAFT',
+      rfiSource: 'SITE_TEAM',
       dateRaised: new Date(),
       dueDate: null,
       dateAnswered: null,
+      linkedDesignPackageId: 'package-1',
+      linkedCrId: null,
       sourceEntityType: 'MEETING',
       sourceEntityId: meetingId,
       createdAt: new Date(),
       updatedAt: new Date(),
+      createdBy: ctx.userId,
+      updatedBy: ctx.userId,
+      deletedAt: null,
+      deletedBy: null,
     });
 
     await rfisService.createRfi(ctx, projectId, {
       title: 'Clarification',
+      linkedDesignPackageId: 'package-1',
+      rfiSource: 'SITE_TEAM' as never,
       sourceEntityType: 'MEETING',
       sourceEntityId: meetingId,
     });
@@ -226,6 +259,8 @@ describe('Source entity links (source-entity-links)', () => {
     await expect(
       rfisService.createRfi(ctx, projectId, {
         title: 'Clarification',
+        linkedDesignPackageId: 'package-1',
+        rfiSource: 'SITE_TEAM' as never,
         sourceEntityType: 'MEETING',
         sourceEntityId: 'missing-meeting',
       }),
@@ -238,6 +273,8 @@ describe('Source entity links (source-entity-links)', () => {
     await expect(
       rfisService.createRfi(ctx, projectId, {
         title: 'Clarification',
+        linkedDesignPackageId: 'package-1',
+        rfiSource: 'SITE_TEAM' as never,
         sourceEntityType: 'MEETING',
         sourceEntityId: 'other-project-meeting',
       }),

@@ -1080,7 +1080,10 @@ export interface MappedTaskDependency {
 
 export interface MappedRfi {
   id: string;
+  companyId: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   taskDisciplineId: string | null;
   raisedBy: string;
   raisedByName?: string | null;
@@ -1092,9 +1095,19 @@ export interface MappedRfi {
   discipline: string | null;
   priority: Rfi['priority'];
   status: Rfi['status'];
+  rfiSource: Rfi['rfiSource'];
   dateRaised: string | null;
   dueDate: string | null;
   dateAnswered: string | null;
+  linkedDesignPackageId: string | null;
+  linkedCrId: string | null;
+  linkedCrNumber?: string | null;
+  linkedDesignPackage?: {
+    id: string;
+    packageCode: string;
+    name: string;
+    fullCode: string;
+  } | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
   sourceEntitySummary?: SourceEntitySummary | null;
@@ -1291,6 +1304,7 @@ export function mapTaskDependency(
 export function mapRfi(rfi: Rfi): MappedRfi {
   return {
     id: rfi.id,
+    companyId: rfi.companyId,
     projectId: rfi.projectId,
     taskDisciplineId: rfi.taskDisciplineId,
     raisedBy: rfi.raisedBy,
@@ -1301,9 +1315,12 @@ export function mapRfi(rfi: Rfi): MappedRfi {
     discipline: rfi.discipline,
     priority: rfi.priority,
     status: rfi.status,
+    rfiSource: rfi.rfiSource,
     dateRaised: toDateString(rfi.dateRaised),
     dueDate: toDateString(rfi.dueDate),
     dateAnswered: toDateString(rfi.dateAnswered),
+    linkedDesignPackageId: rfi.linkedDesignPackageId,
+    linkedCrId: rfi.linkedCrId,
     sourceEntityType: rfi.sourceEntityType,
     sourceEntityId: rfi.sourceEntityId,
     createdAt: toIsoString(rfi.createdAt)!,

@@ -22,6 +22,7 @@ import {
   useCanViewReviewInbox,
   useCanViewChangeRequests,
   useCanViewExternalReleases,
+  useCanViewRfis,
   useCanViewSubmittals,
   useEpcCapabilities,
   usePermissionsLoading,
@@ -192,6 +193,7 @@ export default function MainNavPanel({
   const canViewSubmittals = useCanViewSubmittals();
   const canViewExternalReleases = useCanViewExternalReleases();
   const canViewChangeRequests = useCanViewChangeRequests();
+  const canViewRfis = useCanViewRfis();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
@@ -206,6 +208,7 @@ export default function MainNavPanel({
     canViewSubmittals: !permLoading && canViewSubmittals,
     canViewExternalReleases: !permLoading && canViewExternalReleases,
     canViewChangeRequests: !permLoading && canViewChangeRequests,
+    canViewRfis: !permLoading && canViewRfis,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,

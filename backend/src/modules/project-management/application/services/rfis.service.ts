@@ -4,19 +4,32 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import { FolderContextType, Prisma, RfiStatus, ExternalReviewTriggerType } from '@prisma/client';
+import {
+  FolderContextType,
+  Prisma,
+  Rfi,
+  RfiStatus,
+  ExternalReviewTriggerType,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
+import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   CreateRfiDto,
   CreateRfiResponseDto,
+  LinkRfiCrDto,
   PmListQueryDto,
   UpdateRfiDto,
 } from '../dtos/pm.dtos';
@@ -37,9 +50,11 @@ import {
   enrichRowsWithUserDisplayNames,
   enrichWithUserDisplayNames,
 } from '../utils/pm-user-names.util';
-import { PM_RAISED_ASSIGNED_NAMES, PM_RESPONDED_BY_NAME } from '../utils/pm-user-name-fields.const';
+import {
+  PM_RAISED_ASSIGNED_NAMES,
+  PM_RESPONDED_BY_NAME,
+} from '../utils/pm-user-name-fields.const';
 import { DisciplineScopeService } from './discipline-scope.service';
-import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
 import { EpcSubmittalRepository } from '../../infrastructure/repositories/epc-submittal.repository';
@@ -54,6 +69,48 @@ const RFI_SORT_FIELDS = new Set([
   'dateRaised',
 ]);
 
+const RFI_ASSIGNED_EVENT = 'rfi.assigned';
+const RFI_RESPONDED_EVENT = 'rfi.responded';
+const RFI_CLOSED_EVENT = 'rfi.closed';
+
+const DESIGN_PACKAGE_FULL_CODE_SELECT = {
+  packageCode: true,
+  subtaskIndex: true,
+  taskDiscipline: {
+    select: {
+      disciplineIndex: true,
+      task: {
+        select: {
+          overseasTaskNumber: true,
+        },
+      },
+    },
+  },
+} as const;
+
+export interface RfiSubtaskOption {
+  id: string;
+  packageCode: string;
+  name: string;
+  fullCode: string;
+  designerUserId: string | null;
+  designerName: string | null;
+}
+
+export interface RfiProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
+export type MappedMyRfi = MappedRfi & {
+  projectName: string;
+  projectCode: string;
+};
+
+/**
+ * Manages project RFIs — CRUD, responses, numbering, and notifications.
+ */
 @Injectable()
 export class RfisService {
   private readonly logger = new Logger(RfisService.name);
@@ -61,10 +118,12 @@ export class RfisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
-    private readonly documentNumberService: DocumentNumberService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly epcSubmittalRepository: EpcSubmittalRepository,
+    private readonly permissionService: PermissionService,
+    @Optional()
+    private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -98,14 +157,146 @@ export class RfisService {
     const data = await enrichRowsWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
-      rows.map((row) => ({
-        ...mapRfi(row),
-        attachmentFolderId: folderIds.get(row.id) ?? null,
-      })),
+      await Promise.all(
+        rows.map(async (row) => ({
+          ...(await this.enrichRfiFields(ctx, row)),
+          attachmentFolderId: folderIds.get(row.id) ?? null,
+        })),
+      ),
       PM_RAISED_ASSIGNED_NAMES,
     );
 
     return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Company-scoped RFIs relevant to the current user.
+   */
+  async listMyRfis(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyRfi>> {
+    const where = this.buildMyListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      RFI_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.rfi.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+        },
+      }),
+      this.prisma.rfi.count({ where }),
+    ]);
+
+    const data = await Promise.all(
+      rows.map(async (row) => this.mapMyRfiRow(ctx, row)),
+    );
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Company-wide RFIs (portfolio / admin users).
+   */
+  async listAllRfis(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedMyRfi>> {
+    const where = this.buildCompanyListWhere(ctx, query);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      RFI_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.rfi.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+        },
+      }),
+      this.prisma.rfi.count({ where }),
+    ]);
+
+    const data = await Promise.all(
+      rows.map(async (row) => this.mapMyRfiRow(ctx, row)),
+    );
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Distinct projects where the current user has relevant RFIs or FK roles.
+   */
+  async listMyRfiProjects(ctx: PmContext): Promise<RfiProjectOption[]> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isFullAccess = hasFullProjectDataAccess(roleNames);
+
+    const packages = await this.prisma.designPackage.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        ...(isFullAccess
+          ? {}
+          : {
+              OR: [
+                { designerUserId: ctx.userId },
+                { supportingDesignerUserId: ctx.userId },
+                { reviewerUserId: ctx.userId },
+                { disciplinaryLeaderUserId: ctx.userId },
+                { deptDeputyChiefUserId: ctx.userId },
+                { instituteChiefUserId: ctx.userId },
+              ],
+            }),
+        taskDiscipline: {
+          deletedAt: null,
+          task: { deletedAt: null },
+        },
+      }),
+      select: {
+        taskDiscipline: {
+          select: {
+            task: {
+              select: {
+                project: {
+                  select: { id: true, projectCode: true, name: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const byId = new Map<string, RfiProjectOption>();
+    for (const pkg of packages) {
+      const project = pkg.taskDiscipline.task.project;
+      if (!byId.has(project.id)) {
+        byId.set(project.id, {
+          id: project.id,
+          projectCode: project.projectCode,
+          name: project.name,
+        });
+      }
+    }
+
+    return [...byId.values()].sort((a, b) =>
+      a.projectCode.localeCompare(b.projectCode),
+    );
   }
 
   /**
@@ -116,13 +307,13 @@ export class RfisService {
     projectId: string,
     rfiId: string,
   ): Promise<MappedRfi> {
-    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, rfi);
     return this.enrichRfi(ctx, rfi);
   }
 
   /**
-   * Creates an RFI with an auto-generated document number.
+   * Creates an RFI with package-based numbering and designer auto-assignment.
    */
   async createRfi(
     ctx: PmContext,
@@ -131,16 +322,33 @@ export class RfisService {
   ): Promise<MappedRfi> {
     await this.projectScopeService.getProjectOrThrow(ctx, projectId);
 
-    if (dto.assignedTo) {
-      await this.assertUserInCompany(ctx, dto.assignedTo);
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        id: dto.linkedDesignPackageId,
+        companyId: ctx.companyId,
+      }),
+      select: {
+        subtaskIndex: true,
+        designerUserId: true,
+        taskDisciplineId: true,
+        taskDiscipline: {
+          select: {
+            disciplineIndex: true,
+            task: {
+              select: {
+                projectId: true,
+                overseasTaskNumber: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!pkg) {
+      throw new NotFoundException('Subtask not found');
     }
-
-    if (dto.taskDisciplineId) {
-      await this.disciplineScopeService.assertDisciplineAccess(
-        ctx,
-        projectId,
-        dto.taskDisciplineId,
-      );
+    if (pkg.taskDiscipline.task.projectId !== projectId) {
+      throw new NotFoundException('Subtask not found');
     }
 
     if (dto.sourceEntityType && dto.sourceEntityId) {
@@ -152,22 +360,33 @@ export class RfisService {
       );
     }
 
-    const rfiNumber = await this.documentNumberService.getNextNumber(
-      ctx,
-      'RFI',
+    const count = await this.prisma.rfi.count({
+      where: {
+        linkedDesignPackageId: dto.linkedDesignPackageId,
+        deletedAt: null,
+      },
+    });
+    const seq = String(count + 1).padStart(3, '0');
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
     );
+    const rfiNumber = `RFI-${fullCode}-${seq}`;
 
     const rfi = await this.prisma.rfi.create({
       data: {
+        companyId: ctx.companyId,
         projectId,
         raisedBy: ctx.userId,
-        assignedTo: dto.assignedTo,
-        taskDisciplineId: dto.taskDisciplineId,
+        assignedTo: pkg.designerUserId,
+        taskDisciplineId: pkg.taskDisciplineId,
+        linkedDesignPackageId: dto.linkedDesignPackageId,
         rfiNumber,
         title: dto.title,
         description: dto.description,
-        discipline: dto.discipline,
         priority: dto.priority,
+        rfiSource: dto.rfiSource,
         dueDate: parseOptionalDate(dto.dueDate),
         dateRaised: this.todayDate(),
         sourceEntityType: dto.sourceEntityType,
@@ -177,7 +396,107 @@ export class RfisService {
       },
     });
 
+    await this.sendRfiAssignedNotification(ctx, rfi);
+
     return this.enrichRfi(ctx, rfi);
+  }
+
+  /**
+   * Previews the next RFI number for a design package.
+   */
+  async previewNextRfiNumber(
+    ctx: PmContext,
+    packageId: string,
+  ): Promise<{ rfiNumber: string }> {
+    const pkg = await this.prisma.designPackage.findFirst({
+      where: activeOnly({ id: packageId, companyId: ctx.companyId }),
+      select: DESIGN_PACKAGE_FULL_CODE_SELECT,
+    });
+    if (!pkg) {
+      throw new NotFoundException('Subtask not found');
+    }
+
+    const existingCount = await this.prisma.rfi.count({
+      where: {
+        linkedDesignPackageId: packageId,
+        deletedAt: null,
+      },
+    });
+    const seq = String(existingCount + 1).padStart(3, '0');
+    const fullCode = formatDesignPackageFullCode(
+      pkg.taskDiscipline.task.overseasTaskNumber,
+      pkg.taskDiscipline.disciplineIndex,
+      pkg.subtaskIndex,
+    );
+    return { rfiNumber: `RFI-${fullCode}-${seq}` };
+  }
+
+  /**
+   * Lists subtasks the current user may raise an RFI against (FK roles only).
+   */
+  async listEligibleSubtasks(
+    ctx: PmContext,
+    projectId: string,
+  ): Promise<RfiSubtaskOption[]> {
+    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isFullAccess = hasFullProjectDataAccess(roleNames);
+
+    const packages = await this.prisma.designPackage.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        taskDiscipline: {
+          deletedAt: null,
+          task: { projectId, deletedAt: null },
+        },
+        ...(isFullAccess
+          ? {}
+          : {
+              OR: [
+                { designerUserId: ctx.userId },
+                { supportingDesignerUserId: ctx.userId },
+                { reviewerUserId: ctx.userId },
+                { disciplinaryLeaderUserId: ctx.userId },
+                { deptDeputyChiefUserId: ctx.userId },
+                { instituteChiefUserId: ctx.userId },
+              ],
+            }),
+      }),
+      select: {
+        id: true,
+        name: true,
+        designerUserId: true,
+        designerUser: {
+          select: {
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+        ...DESIGN_PACKAGE_FULL_CODE_SELECT,
+      },
+      orderBy: { packageCode: 'asc' },
+    });
+
+    return packages.map((pkg) => ({
+      id: pkg.id,
+      packageCode: pkg.packageCode,
+      name: pkg.name,
+      fullCode: formatDesignPackageFullCode(
+        pkg.taskDiscipline.task.overseasTaskNumber,
+        pkg.taskDiscipline.disciplineIndex,
+        pkg.subtaskIndex,
+      ),
+      designerUserId: pkg.designerUserId,
+      designerName: pkg.designerUser
+        ? formatUserDisplayName(pkg.designerUser)
+        : null,
+    }));
   }
 
   /**
@@ -189,19 +508,24 @@ export class RfisService {
     rfiId: string,
     dto: UpdateRfiDto,
   ): Promise<MappedRfi> {
-    const existing = await this.getRfiOrThrow(projectId, rfiId);
+    const existing = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, existing);
 
-    if (dto.assignedTo) {
-      await this.assertUserInCompany(ctx, dto.assignedTo);
-    }
-
-    if (dto.taskDisciplineId) {
-      await this.disciplineScopeService.assertDisciplineAccess(
-        ctx,
-        projectId,
-        dto.taskDisciplineId,
-      );
+    if (dto.linkedDesignPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: dto.linkedDesignPackageId,
+          companyId: ctx.companyId,
+        }),
+        select: {
+          taskDisciplineId: true,
+          designerUserId: true,
+          taskDiscipline: { select: { task: { select: { projectId: true } } } },
+        },
+      });
+      if (!pkg || pkg.taskDiscipline.task.projectId !== projectId) {
+        throw new NotFoundException('Subtask not found');
+      }
     }
 
     if (dto.sourceEntityType && dto.sourceEntityId) {
@@ -214,10 +538,6 @@ export class RfisService {
     }
 
     if (dto.status !== undefined) {
-      const current = await this.prisma.rfi.findFirst({
-        where: activeOnly({ id: rfiId, projectId }),
-        select: { status: true },
-      });
       const RFI_STATUS_TRANSITIONS: Record<string, string[]> = {
         DRAFT: ['SUBMITTED'],
         SUBMITTED: ['UNDER_REVIEW', 'DRAFT'],
@@ -225,11 +545,11 @@ export class RfisService {
         ANSWERED: ['CLOSED', 'UNDER_REVIEW'],
         CLOSED: [],
       };
-      if (dto.status !== current!.status) {
-        const allowed = RFI_STATUS_TRANSITIONS[current!.status];
+      if (dto.status !== existing.status) {
+        const allowed = RFI_STATUS_TRANSITIONS[existing.status];
         if (!allowed?.includes(dto.status)) {
           throw new BadRequestException(
-            `Invalid RFI status transition from ${current!.status} to ${dto.status}.`,
+            `Invalid RFI status transition from ${existing.status} to ${dto.status}.`,
           );
         }
       }
@@ -240,10 +560,9 @@ export class RfisService {
       data: {
         title: dto.title,
         description: dto.description,
-        discipline: dto.discipline,
         priority: dto.priority,
-        assignedTo: dto.assignedTo,
-        taskDisciplineId: dto.taskDisciplineId,
+        rfiSource: dto.rfiSource,
+        linkedDesignPackageId: dto.linkedDesignPackageId,
         dueDate: parseOptionalDate(dto.dueDate),
         status: dto.status,
         sourceEntityType: dto.sourceEntityType,
@@ -251,6 +570,13 @@ export class RfisService {
         updatedBy: ctx.userId,
       },
     });
+
+    if (
+      dto.status === RfiStatus.CLOSED &&
+      existing.status !== RfiStatus.CLOSED
+    ) {
+      await this.sendRfiClosedNotification(ctx, rfi);
+    }
 
     return this.enrichRfi(ctx, rfi);
   }
@@ -263,12 +589,59 @@ export class RfisService {
     projectId: string,
     rfiId: string,
   ): Promise<void> {
-    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, rfi);
     await this.prisma.rfi.update({
       where: { id: rfiId },
       data: { deletedAt: new Date(), deletedBy: ctx.userId },
     });
+  }
+
+  /**
+   * Links an approved/created change request to an RFI.
+   */
+  async linkChangeRequest(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+    dto: LinkRfiCrDto,
+  ): Promise<MappedRfi> {
+    const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
+    await this.assertRfiVisible(ctx, projectId, rfi);
+
+    const cr = await this.prisma.projectChangeRequest.findFirst({
+      where: activeOnly({
+        id: dto.crId,
+        companyId: ctx.companyId,
+        projectId,
+      }),
+      select: {
+        id: true,
+        linkedDesignPackageId: true,
+      },
+    });
+    if (!cr) {
+      throw new NotFoundException('Change request not found');
+    }
+    if (
+      rfi.linkedDesignPackageId &&
+      cr.linkedDesignPackageId &&
+      cr.linkedDesignPackageId !== rfi.linkedDesignPackageId
+    ) {
+      throw new BadRequestException(
+        'Change request must belong to the same subtask as this RFI',
+      );
+    }
+
+    const updated = await this.prisma.rfi.update({
+      where: { id: rfiId },
+      data: {
+        linkedCrId: cr.id,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return this.enrichRfi(ctx, updated);
   }
 
   /**
@@ -279,7 +652,7 @@ export class RfisService {
     projectId: string,
     rfiId: string,
   ): Promise<MappedRfiResponse[]> {
-    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, rfi);
 
     const responses = await this.prisma.rfiResponse.findMany({
@@ -304,7 +677,7 @@ export class RfisService {
     rfiId: string,
     dto: CreateRfiResponseDto,
   ): Promise<MappedRfiResponse> {
-    const rfi = await this.getRfiOrThrow(projectId, rfiId);
+    const rfi = await this.getRfiOrThrow(ctx, projectId, rfiId);
     await this.assertRfiVisible(ctx, projectId, rfi);
     this.assertCanRespondToRfi(ctx, rfi);
 
@@ -343,6 +716,8 @@ export class RfisService {
       return created;
     });
 
+    await this.sendRfiRespondedNotification(ctx, rfi);
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
@@ -351,12 +726,102 @@ export class RfisService {
     );
   }
 
+  private buildMyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.RfiWhereInput {
+    const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { designerUserId: ctx.userId },
+        { disciplinaryLeaderUserId: ctx.userId },
+        { reviewerUserId: ctx.userId },
+        { supportingDesignerUserId: ctx.userId },
+        { deptDeputyChiefUserId: ctx.userId },
+        { instituteChiefUserId: ctx.userId },
+      ],
+    });
+
+    const where: Prisma.RfiWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      OR: [
+        { raisedBy: ctx.userId },
+        { assignedTo: ctx.userId },
+        { linkedDesignPackage: assignedPackageWhere },
+      ],
+    });
+
+    if (query.projectId) {
+      where.projectId = query.projectId;
+    }
+
+    if (query.status) {
+      where.status = query.status as RfiStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.AND = [
+        {
+          OR: [
+            { rfiNumber: { contains: term, mode: 'insensitive' } },
+            { title: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    return where;
+  }
+
+  private buildCompanyListWhere(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Prisma.RfiWhereInput {
+    const where: Prisma.RfiWhereInput = activeOnly({
+      companyId: ctx.companyId,
+    });
+
+    if (query.projectId) {
+      where.projectId = query.projectId;
+    }
+
+    if (query.status) {
+      where.status = query.status as RfiStatus;
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.OR = [
+        { rfiNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        {
+          project: {
+            name: { contains: term, mode: 'insensitive' },
+          },
+        },
+        {
+          project: {
+            projectCode: { contains: term, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    return where;
+  }
+
   private async buildRfiListWhere(
     ctx: PmContext,
     projectId: string,
     query: PmListQueryDto,
   ): Promise<Prisma.RfiWhereInput> {
-    const where: Prisma.RfiWhereInput = activeOnly({ projectId });
+    const where: Prisma.RfiWhereInput = activeOnly({
+      companyId: ctx.companyId,
+      projectId,
+    });
 
     const bypass = await this.disciplineScopeService.hasDisciplineScopeBypass(
       ctx,
@@ -398,10 +863,21 @@ export class RfisService {
     return where;
   }
 
-  private async enrichRfi(
+  private async mapMyRfiRow(
     ctx: PmContext,
-    rfi: Parameters<typeof mapRfi>[0],
-  ): Promise<MappedRfi> {
+    row: Rfi & {
+      project: { id: string; name: string; projectCode: string };
+    },
+  ): Promise<MappedMyRfi> {
+    const enriched = await this.enrichRfi(ctx, row);
+    return {
+      ...enriched,
+      projectName: row.project.name,
+      projectCode: row.project.projectCode,
+    };
+  }
+
+  private async enrichRfi(ctx: PmContext, rfi: Rfi): Promise<MappedRfi> {
     let attachmentFolderId: string | null = null;
 
     try {
@@ -420,11 +896,13 @@ export class RfisService {
       );
     }
 
+    const fields = await this.enrichRfiFields(ctx, rfi);
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
       {
-        ...mapRfi(rfi),
+        ...fields,
         attachmentFolderId,
         sourceEntitySummary: await buildSourceEntitySummary(
           this.prisma,
@@ -435,6 +913,190 @@ export class RfisService {
       },
       PM_RAISED_ASSIGNED_NAMES,
     );
+  }
+
+  private async enrichRfiFields(
+    ctx: PmContext,
+    rfi: Rfi,
+  ): Promise<MappedRfi> {
+    const mapped = mapRfi(rfi);
+    let linkedDesignPackage: MappedRfi['linkedDesignPackage'] = null;
+    let linkedCrNumber: string | null = null;
+
+    if (rfi.linkedDesignPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: rfi.linkedDesignPackageId,
+          companyId: ctx.companyId,
+        }),
+        select: {
+          id: true,
+          name: true,
+          ...DESIGN_PACKAGE_FULL_CODE_SELECT,
+        },
+      });
+      if (pkg) {
+        linkedDesignPackage = {
+          id: pkg.id,
+          packageCode: pkg.packageCode,
+          name: pkg.name,
+          fullCode: formatDesignPackageFullCode(
+            pkg.taskDiscipline.task.overseasTaskNumber,
+            pkg.taskDiscipline.disciplineIndex,
+            pkg.subtaskIndex,
+          ),
+        };
+      }
+    }
+
+    if (rfi.linkedCrId) {
+      const cr = await this.prisma.projectChangeRequest.findFirst({
+        where: activeOnly({
+          id: rfi.linkedCrId,
+          companyId: ctx.companyId,
+        }),
+        select: { changeNumber: true },
+      });
+      linkedCrNumber = cr?.changeNumber ?? null;
+    }
+
+    return {
+      ...mapped,
+      linkedDesignPackage,
+      linkedCrNumber,
+    };
+  }
+
+  private async sendRfiAssignedNotification(
+    ctx: PmContext,
+    rfi: Rfi,
+  ): Promise<void> {
+    if (
+      !this.notificationService ||
+      !rfi.assignedTo ||
+      rfi.assignedTo === rfi.createdBy
+    ) {
+      return;
+    }
+
+    const raisedByName = await this.resolveUserName(ctx, rfi.raisedBy);
+    const link = `/projects/${rfi.projectId}/rfis`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: rfi.assignedTo,
+          eventType: RFI_ASSIGNED_EVENT,
+          subject: `RFI assigned to you — ${rfi.rfiNumber}`,
+          body: `${raisedByName} raised RFI ${rfi.rfiNumber} and assigned it to you for response.`,
+          variables: {
+            projectId: rfi.projectId,
+            rfiId: rfi.id,
+            rfiNumber: rfi.rfiNumber,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'RFI assigned notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async sendRfiRespondedNotification(
+    ctx: PmContext,
+    rfi: Rfi,
+  ): Promise<void> {
+    if (
+      !this.notificationService ||
+      rfi.raisedBy === ctx.userId
+    ) {
+      return;
+    }
+
+    const responderName = await this.resolveUserName(ctx, ctx.userId);
+    const link = `/projects/${rfi.projectId}/rfis`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: rfi.raisedBy,
+          eventType: RFI_RESPONDED_EVENT,
+          subject: `Response received — ${rfi.rfiNumber}`,
+          body: `${responderName} responded to RFI ${rfi.rfiNumber}. Please review and close when satisfied.`,
+          variables: {
+            projectId: rfi.projectId,
+            rfiId: rfi.id,
+            rfiNumber: rfi.rfiNumber,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'RFI responded notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async sendRfiClosedNotification(
+    ctx: PmContext,
+    rfi: Rfi,
+  ): Promise<void> {
+    if (
+      !this.notificationService ||
+      !rfi.assignedTo ||
+      rfi.assignedTo === ctx.userId
+    ) {
+      return;
+    }
+
+    const closedByName = await this.resolveUserName(ctx, ctx.userId);
+    const link = `/projects/${rfi.projectId}/rfis`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: rfi.assignedTo,
+          eventType: RFI_CLOSED_EVENT,
+          subject: `RFI closed — ${rfi.rfiNumber}`,
+          body: `RFI ${rfi.rfiNumber} has been closed by ${closedByName}.`,
+          variables: {
+            projectId: rfi.projectId,
+            rfiId: rfi.id,
+            rfiNumber: rfi.rfiNumber,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'RFI closed notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async resolveUserName(
+    ctx: PmContext,
+    userId: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: {
+        firstName: true,
+        lastName: true,
+        chineseName: true,
+        email: true,
+      },
+    });
+    return user ? formatUserDisplayName(user) : userId;
   }
 
   /**
@@ -587,27 +1249,22 @@ export class RfisService {
     }
   }
 
-  private async getRfiOrThrow(projectId: string, rfiId: string) {
+  private async getRfiOrThrow(
+    ctx: PmContext,
+    projectId: string,
+    rfiId: string,
+  ): Promise<Rfi> {
     const rfi = await this.prisma.rfi.findFirst({
-      where: activeOnly({ id: rfiId, projectId }),
+      where: activeOnly({
+        id: rfiId,
+        projectId,
+        companyId: ctx.companyId,
+      }),
     });
     if (!rfi) {
       throw new NotFoundException('RFI not found');
     }
     return rfi;
-  }
-
-  private async assertUserInCompany(
-    ctx: PmContext,
-    userId: string,
-  ): Promise<void> {
-    const user = await this.prisma.user.findFirst({
-      where: activeOnly({ id: userId, companyId: ctx.companyId }),
-      select: { id: true },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
   }
 
   private todayDate(): Date {

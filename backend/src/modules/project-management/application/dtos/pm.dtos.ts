@@ -20,6 +20,7 @@ import {
   PunchItemSeverity,
   PunchItemStatus,
   RfiPriority,
+  RfiSource,
   RfiStatus,
   RiskCategory,
   RiskStatus,
@@ -667,6 +668,14 @@ export class UpdateTaskDependencyDto extends PartialType(CreateTaskDependencyDto
 
 export class CreateRfiDto {
   @ApiProperty()
+  @IsEntityUuid()
+  linkedDesignPackageId!: string;
+
+  @ApiProperty({ enum: RfiSource })
+  @IsEnum(RfiSource)
+  rfiSource!: RfiSource;
+
+  @ApiProperty()
   @IsString()
   title!: string;
 
@@ -675,25 +684,10 @@ export class CreateRfiDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  discipline?: string;
-
   @ApiPropertyOptional({ enum: RfiPriority })
   @IsOptional()
   @IsEnum(RfiPriority)
   priority?: RfiPriority;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEntityUuid()
-  assignedTo?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEntityUuid()
-  taskDisciplineId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -723,6 +717,12 @@ export class CreateRfiResponseDto {
   @ApiProperty()
   @IsString()
   responseText!: string;
+}
+
+export class LinkRfiCrDto {
+  @ApiProperty()
+  @IsEntityUuid()
+  crId!: string;
 }
 
 export class CreateSubmittalDto {

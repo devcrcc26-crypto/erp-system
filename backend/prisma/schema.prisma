@@ -167,6 +167,7 @@ model Company {
   externalReviewTriggers  ExternalReviewTrigger[]
   deliverables            Deliverable[]
   changeRequests          ProjectChangeRequest[]
+  rfis                    Rfi[]
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
@@ -1129,6 +1130,13 @@ enum RfiStatus {
   CLOSED
 }
 
+enum RfiSource {
+  SITE_TEAM
+  CONTRACTOR
+  CLIENT_CONSULTANT
+  INTER_DISCIPLINE
+}
+
 enum SubmittalStatus {
   DRAFT
   SUBMITTED
@@ -1995,6 +2003,7 @@ model TaskDependency {
 
 model Rfi {
   id               String      @id @default(uuid())
+  companyId        String      @map("company_id")
   projectId        String      @map("project_id")
   taskDisciplineId String?     @map("task_discipline_id")
   raisedBy         String      @map("raised_by")
@@ -2005,10 +2014,12 @@ model Rfi {
   discipline   String?
   priority     RfiPriority @default(MEDIUM)
   status       RfiStatus   @default(DRAFT)
+  rfiSource    RfiSource?  @map("rfi_source")
   dateRaised   DateTime?   @map("date_raised") @db.Date
   dueDate      DateTime?   @map("due_date") @db.Date
   dateAnswered DateTime?   @map("date_answered") @db.Date
   linkedDesignPackageId String? @map("linked_design_package_id")
+  linkedCrId            String? @map("linked_cr_id")
   sourceEntityType      String? @map("source_entity_type")
   sourceEntityId        String? @map("source_entity_id")
   createdAt    DateTime    @default(now()) @map("created_at")
@@ -2018,16 +2029,21 @@ model Rfi {
   deletedAt    DateTime?   @map("deleted_at")
   deletedBy    String?     @map("deleted_by")
 
-  project        Project        @relation(fields: [projectId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  project        Project         @relation(fields: [projectId], references: [id])
   taskDiscipline TaskDiscipline? @relation(fields: [taskDisciplineId], references: [id])
   linkedDesignPackage DesignPackage? @relation("RfiLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
-  raiser         User           @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
-  assignee  User?         @relation("RfiAssignedTo", fields: [assignedTo], references: [id])
-  responses RfiResponse[]
+  linkedCr       ProjectChangeRequest? @relation("RfiLinkedCr", fields: [linkedCrId], references: [id])
+  raiser         User            @relation("RfiRaisedBy", fields: [raisedBy], references: [id])
+  assignee       User?           @relation("RfiAssignedTo", fields: [assignedTo], references: [id])
+  responses      RfiResponse[]
 
+  @@index([companyId], map: "idx_rfi_company_id")
+  @@index([companyId, deletedAt], map: "idx_rfi_company_deleted")
   @@index([projectId], map: "idx_rfi_project_id")
   @@index([taskDisciplineId], map: "idx_rfi_task_discipline_id")
   @@index([linkedDesignPackageId], map: "idx_rfi_linked_design_package_id")
+  @@index([linkedCrId], map: "idx_rfi_linked_cr_id")
   @@index([projectId, deletedAt], map: "idx_rfi_project_deleted")
   @@index([status], map: "idx_rfi_status")
   @@map("rfi")
@@ -2255,6 +2271,7 @@ model ProjectChangeRequest {
   linkedDesignPackage DesignPackage? @relation("ChangeRequestLinkedDesignPackage", fields: [linkedDesignPackageId], references: [id])
   attachmentFolder    DocumentFolder? @relation("ChangeRequestAttachmentFolder", fields: [attachmentFolderId], references: [id])
   assignee            User?           @relation("ChangeRequestAssignedTo", fields: [assignedTo], references: [id])
+  linkedFromRfi       Rfi[]           @relation("RfiLinkedCr")
 
   @@unique([companyId, changeNumber], map: "uq_project_change_request_company_number")
   @@index([companyId], map: "idx_project_change_request_company_id")

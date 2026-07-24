@@ -90,12 +90,14 @@ describe('Trigger linkage (trigger-linkage)', () => {
       const service = new RfisService(
         prisma as unknown as PrismaService,
         { getProjectOrThrow: jest.fn() } as unknown as ProjectScopeService,
-        {} as unknown as DocumentNumberService,
         {
           hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         } as unknown as DisciplineScopeService,
         {} as unknown as EngineeringDocumentFolderService,
         epcSubmittalRepository as unknown as EpcSubmittalRepository,
+        {
+          getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        } as never,
       );
 
       await service.addRfiResponse(leaderCtx, projectId, rfiId, {
@@ -152,12 +154,14 @@ describe('Trigger linkage (trigger-linkage)', () => {
       const service = new RfisService(
         prisma as unknown as PrismaService,
         { getProjectOrThrow: jest.fn() } as unknown as ProjectScopeService,
-        {} as unknown as DocumentNumberService,
         {
           hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
         } as unknown as DisciplineScopeService,
         {} as unknown as EngineeringDocumentFolderService,
         epcSubmittalRepository as unknown as EpcSubmittalRepository,
+        {
+          getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        } as never,
       );
 
       await service.addRfiResponse(leaderCtx, projectId, rfiId, {

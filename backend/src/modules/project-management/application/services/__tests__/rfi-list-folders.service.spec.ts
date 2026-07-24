@@ -2,7 +2,6 @@ import { FolderContextType, Rfi, RfiStatus } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { PmListQueryDto } from '../../dtos/pm.dtos';
 import { DisciplineScopeService } from '../discipline-scope.service';
-import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { RfisService } from '../rfis.service';
 import { PmContext } from '../../types/pm-context.type';
@@ -75,12 +74,14 @@ describe('RfisService listRfis folder batching', () => {
       {
         getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
       } as unknown as ProjectScopeService,
-      {} as unknown as DocumentNumberService,
       {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
       } as unknown as DisciplineScopeService,
       engineeringDocumentFolderService as unknown as EngineeringDocumentFolderService,
       {} as never,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+      } as never,
     );
   });
 

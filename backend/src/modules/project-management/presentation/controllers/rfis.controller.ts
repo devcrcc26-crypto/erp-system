@@ -11,12 +11,14 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateRfiDto,
   CreateRfiResponseDto,
+  LinkRfiCrDto,
   PmListQueryDto,
   UpdateRfiDto,
 } from '../../application/dtos/pm.dtos';
@@ -45,6 +47,26 @@ export class RfisController {
     @Query() query: PmListQueryDto,
   ): Promise<unknown> {
     return this.rfisService.listRfis(this.ctx(user), projectId, query);
+  }
+
+  @Get('eligible-subtasks')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List subtasks eligible for RFI creation' })
+  eligibleSubtasks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.rfisService.listEligibleSubtasks(this.ctx(user), projectId);
+  }
+
+  @Get('preview-number')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Preview next RFI number for a subtask' })
+  previewNumber(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('packageId') packageId: string,
+  ): Promise<unknown> {
+    return this.rfisService.previewNextRfiNumber(this.ctx(user), packageId);
   }
 
   @Get(':rfiId')
@@ -79,6 +101,23 @@ export class RfisController {
     @Body() dto: UpdateRfiDto,
   ): Promise<unknown> {
     return this.rfisService.updateRfi(this.ctx(user), projectId, rfiId, dto);
+  }
+
+  @Patch(':rfiId/link-cr')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Link a change request to an RFI' })
+  linkCr(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('rfiId') rfiId: string,
+    @Body() dto: LinkRfiCrDto,
+  ): Promise<unknown> {
+    return this.rfisService.linkChangeRequest(
+      this.ctx(user),
+      projectId,
+      rfiId,
+      dto,
+    );
   }
 
   @Delete(':rfiId')

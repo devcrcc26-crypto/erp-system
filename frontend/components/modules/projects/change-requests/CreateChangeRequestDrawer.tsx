@@ -13,7 +13,10 @@ import {
   usePackageCurrentEdvs,
 } from '@/lib/query/change-requests';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import type { ChangeRequestReason } from '@/lib/api/project-management.types';
+import type {
+  ChangeRequestReason,
+  ProjectChangeRequest,
+} from '@/lib/api/project-management.types';
 import { standardDetailDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -46,14 +49,16 @@ export default function CreateChangeRequestDrawer({
   open,
   projectId: projectIdProp,
   showProjectSelector = false,
+  initialLinkedDesignPackageId,
   onClose,
   onCreated,
 }: {
   open: boolean;
   projectId?: string;
   showProjectSelector?: boolean;
+  initialLinkedDesignPackageId?: string;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (created?: ProjectChangeRequest) => void;
 }): React.ReactNode {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     projectIdProp ?? null,
@@ -131,7 +136,10 @@ export default function CreateChangeRequestDrawer({
     if (open && projectIdProp) {
       setSelectedProjectId(projectIdProp);
     }
-  }, [open, projectIdProp]);
+    if (open && initialLinkedDesignPackageId) {
+      form.setFieldValue('linkedDesignPackageId', initialLinkedDesignPackageId);
+    }
+  }, [open, projectIdProp, initialLinkedDesignPackageId, form]);
 
   useEffect(() => {
     if (!open) {
@@ -178,7 +186,7 @@ export default function CreateChangeRequestDrawer({
           );
           form.resetFields();
           setQueuedFiles([]);
-          onCreated();
+          onCreated(result);
           onClose();
           return;
         }
@@ -187,7 +195,7 @@ export default function CreateChangeRequestDrawer({
       messageApi.success('Change request created');
       form.resetFields();
       setQueuedFiles([]);
-      onCreated();
+      onCreated(result);
       onClose();
     } catch (error) {
       notifyApiError(error, 'Failed to create change request', messageApi);

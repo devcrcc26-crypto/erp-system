@@ -1,8 +1,6 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -12,17 +10,17 @@ import {
   Input,
   Select,
   Space,
+  Typography,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -30,6 +28,7 @@ import type {
   CreateRfiRequest,
   Rfi,
   RfiPriority,
+  RfiSource,
   RfiStatus,
 } from '@/lib/api/project-management.types';
 import { RFI_WORKFLOW } from '@/lib/api/workflow';
@@ -37,13 +36,14 @@ import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateRfi,
+  useEligibleRfiSubtasks,
+  useMyRfiProjects,
+  usePreviewRfiNumber,
   useRfis,
-  useUpdateRfi,
 } from '@/lib/query/rfis';
 import { useMeetings } from '@/lib/query/meetings';
 import { useCorrespondence } from '@/lib/query/correspondence';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import {
   formatRfiStatus,
   isOverdue,
@@ -52,7 +52,6 @@ import {
 } from '@/lib/utils/pm-status-display';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
-import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -64,6 +63,13 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
+const RFI_SOURCE_OPTIONS: Array<{ value: RfiSource; label: string }> = [
+  { value: 'SITE_TEAM', label: 'Site Team' },
+  { value: 'CONTRACTOR', label: 'Contractor' },
+  { value: 'CLIENT_CONSULTANT', label: 'Client / Consultant' },
+  { value: 'INTER_DISCIPLINE', label: 'Inter-discipline' },
+];
+
 const SOURCE_TYPE_OPTIONS = [
   { value: 'MEETING', label: 'Meeting' },
   { value: 'CORRESPONDENCE', label: 'Correspondence' },
@@ -72,59 +78,130 @@ const SOURCE_TYPE_OPTIONS = [
 ];
 
 interface RfiFormValues {
+  projectId?: string;
+  linkedDesignPackageId: string;
+  rfiSource: RfiSource;
   title: string;
   description?: string;
-  discipline?: string;
-  taskDisciplineId?: string;
   priority: RfiPriority;
-  assignedTo?: string;
   dueDate?: Dayjs;
   sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
   sourceEntityId?: string;
 }
 
-function RfiFormDrawer({
+export function RfiFormDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<RfiFormValues>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
+
   const createRfi = useCreateRfi();
   const messageApi = useAppMessage();
-  const disciplinesQuery = useProjectDisciplines(projectId, open);
-  const sourceEntityType = Form.useWatch('sourceEntityType', form);
-  const meetingsQuery = useMeetings(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'MEETING');
-  const correspondenceQuery = useCorrespondence(projectId, { page: 1, limit: 50 }, open && sourceEntityType === 'CORRESPONDENCE');
 
-  const disciplineOptions = useMemo(
+  const myProjectsQuery = useMyRfiProjects(open && showProjectSelector);
+  const projectOptions = useMemo(
     () =>
-      (disciplinesQuery.data ?? []).map((row) => ({
-        value: row.id,
-        label: `${row.taskName} - ${formatDisciplineLabel(row.disciplineIndex)}`,
+      (myProjectsQuery.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.projectCode} — ${p.name}`,
       })),
-    [disciplinesQuery.data],
+    [myProjectsQuery.data],
   );
 
+  const subtasksQuery = useEligibleRfiSubtasks(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
+  const subtaskOptions = useMemo(
+    () =>
+      (subtasksQuery.data ?? []).map((pkg) => ({
+        value: pkg.id,
+        label: `${pkg.fullCode} — ${pkg.name}`,
+      })),
+    [subtasksQuery.data],
+  );
+
+  const selectedPackageId = Form.useWatch('linkedDesignPackageId', form) as
+    | string
+    | undefined;
+
+  const previewNumberQuery = usePreviewRfiNumber(
+    effectiveProjectId,
+    selectedPackageId ?? '',
+    open && Boolean(effectiveProjectId) && Boolean(selectedPackageId),
+  );
+
+  const selectedSubtask = useMemo(
+    () =>
+      (subtasksQuery.data ?? []).find((s) => s.id === selectedPackageId) ??
+      null,
+    [subtasksQuery.data, selectedPackageId],
+  );
+
+  const sourceEntityType = Form.useWatch('sourceEntityType', form);
+  const meetingsQuery = useMeetings(
+    effectiveProjectId,
+    { page: 1, limit: 50 },
+    open && Boolean(effectiveProjectId) && sourceEntityType === 'MEETING',
+  );
+  const correspondenceQuery = useCorrespondence(
+    effectiveProjectId,
+    { page: 1, limit: 50 },
+    open && Boolean(effectiveProjectId) && sourceEntityType === 'CORRESPONDENCE',
+  );
+
+  useEffect(() => {
+    if (open && projectIdProp) {
+      setSelectedProjectId(projectIdProp);
+    }
+  }, [open, projectIdProp]);
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
+    }
+  }, [open, form, showProjectSelector, projectIdProp]);
+
+  const rfiSource = Form.useWatch('rfiSource', form);
+  const title = Form.useWatch('title', form);
+  const submitDisabled =
+    !selectedPackageId ||
+    !rfiSource ||
+    !title?.trim();
+
   async function handleSubmit(values: RfiFormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     const body: CreateRfiRequest = {
+      linkedDesignPackageId: values.linkedDesignPackageId,
+      rfiSource: values.rfiSource,
       title: values.title.trim(),
       description: values.description?.trim() || undefined,
-      discipline: values.discipline?.trim() || undefined,
-      taskDisciplineId: values.taskDisciplineId,
       priority: values.priority,
-      assignedTo: values.assignedTo,
       dueDate: values.dueDate?.toISOString(),
       sourceEntityType: values.sourceEntityType || undefined,
       sourceEntityId: values.sourceEntityId || undefined,
     };
     try {
-      await createRfi.mutateAsync({ projectId, body });
+      await createRfi.mutateAsync({ projectId: effectiveProjectId, body });
       messageApi.success('RFI created successfully');
       form.resetFields();
       onSaved();
@@ -149,6 +226,79 @@ function RfiFormDrawer({
         initialValues={{ priority: 'MEDIUM' }}
         onFinish={(values: RfiFormValues) => void handleSubmit(values)}
       >
+        {showProjectSelector && (
+          <Form.Item label="Project" required>
+            <Select
+              showSearch
+              placeholder="Select project"
+              options={projectOptions}
+              loading={myProjectsQuery.isLoading}
+              optionFilterProp="label"
+              value={selectedProjectId ?? undefined}
+              onChange={(value: string) => {
+                setSelectedProjectId(value);
+                form.setFieldValue('linkedDesignPackageId', undefined);
+                form.setFieldValue('sourceEntityId', undefined);
+              }}
+            />
+          </Form.Item>
+        )}
+
+        <Form.Item
+          label="Subtask"
+          name="linkedDesignPackageId"
+          rules={[{ required: true, message: 'Subtask is required' }]}
+        >
+          <Select
+            showSearch
+            optionFilterProp="label"
+            placeholder="Select subtask"
+            loading={subtasksQuery.isLoading}
+            disabled={!effectiveProjectId}
+            options={subtaskOptions}
+            onChange={() => {
+              form.setFieldValue('sourceEntityId', undefined);
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item label="RFI Number">
+          <Input
+            value={
+              previewNumberQuery.data?.rfiNumber ??
+              (selectedPackageId ? 'Loading…' : 'Select a subtask first')
+            }
+            disabled
+          />
+        </Form.Item>
+
+        {selectedSubtask && (
+          <Form.Item label="Assigned to">
+            <Typography.Text type="secondary">
+              Auto-assigned to:{' '}
+              <strong>
+                {selectedSubtask.designerName ?? 'No designer assigned'}
+              </strong>
+            </Typography.Text>
+          </Form.Item>
+        )}
+
+        <Form.Item
+          label="RFI Source"
+          name="rfiSource"
+          rules={[{ required: true, message: 'RFI source is required' }]}
+        >
+          <Select placeholder="Select source" options={RFI_SOURCE_OPTIONS} />
+        </Form.Item>
+
+        <Form.Item
+          label="Priority"
+          name="priority"
+          rules={[{ required: true, message: 'Priority is required' }]}
+        >
+          <Select options={PRIORITY_OPTIONS} />
+        </Form.Item>
+
         <Form.Item
           label="Title"
           name="title"
@@ -156,37 +306,15 @@ function RfiFormDrawer({
         >
           <Input placeholder="RFI subject" />
         </Form.Item>
+
         <Form.Item label="Description" name="description">
           <Input.TextArea rows={4} placeholder="Detailed question or clarification" />
         </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Linked discipline" name="taskDisciplineId">
-            <Select
-              allowClear
-              placeholder="Select engineering discipline"
-              loading={disciplinesQuery.isLoading}
-              options={disciplineOptions}
-            />
-          </Form.Item>
-          <Form.Item label="Discipline label" name="discipline">
-            <Input placeholder="e.g. Structural (optional display)" />
-          </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label="Priority"
-            name="priority"
-            rules={[{ required: true, message: 'Priority is required' }]}
-          >
-            <Select options={PRIORITY_OPTIONS} />
-          </Form.Item>
-          <Form.Item label="Assigned to" name="assignedTo">
-            <UserSelect placeholder="Select reviewer" />
-          </Form.Item>
-        </div>
+
         <Form.Item label="Due date" name="dueDate">
           <DatePicker className="w-full" />
         </Form.Item>
+
         <Form.Item label="Source type" name="sourceEntityType">
           <Select
             allowClear
@@ -195,6 +323,7 @@ function RfiFormDrawer({
             onChange={() => form.setFieldValue('sourceEntityId', undefined)}
           />
         </Form.Item>
+
         {sourceEntityType && (
           <Form.Item label="Source entity" name="sourceEntityId">
             {sourceEntityType === 'MEETING' ? (
@@ -222,9 +351,15 @@ function RfiFormDrawer({
             )}
           </Form.Item>
         )}
+
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" htmlType="submit" loading={createRfi.isPending}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={createRfi.isPending}
+            disabled={submitDisabled}
+          >
             Create RFI
           </Button>
         </div>
@@ -278,10 +413,13 @@ export default function RfisPageContent({
         ellipsis: true,
       },
       {
-        title: 'Discipline',
-        dataIndex: 'discipline',
-        key: 'discipline',
-        render: (value: string | null) => value ?? '-',
+        title: 'Source',
+        dataIndex: 'rfiSource',
+        key: 'rfiSource',
+        render: (value: RfiSource | null) => {
+          if (!value) return '-';
+          return RFI_SOURCE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+        },
       },
       {
         title: 'Priority',
@@ -351,7 +489,7 @@ export default function RfisPageContent({
     <>
       <FormLayout
         title="RFIs"
-        description="Requests for information -track clarifications from design to closeout."
+        description="Requests for information — track clarifications from design to closeout."
         extra={
           <Button
             type="primary"
@@ -369,7 +507,7 @@ export default function RfisPageContent({
             showIcon
             className="!mb-4"
             title="RFI APIs are not connected yet."
-            description="This page is ready -data will appear when the project management backend module is available."
+            description="This page is ready — data will appear when the project management backend module is available."
           />
         )}
 

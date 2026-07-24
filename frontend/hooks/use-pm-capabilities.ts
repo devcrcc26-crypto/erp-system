@@ -119,6 +119,21 @@ export function useCanViewChangeRequests(): boolean {
 }
 
 /**
+ * Global RFIs — designer / discipline-lead personas or PM module view.
+ * Not shown to users who can view the full project list (they have project-scoped RFI access).
+ */
+export function useCanViewRfis(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  return (
+    (epc.navDesigner ||
+      epc.navDisciplineLeader ||
+      (pm.rfis?.canView ?? false)) &&
+    !pm.projects.canView
+  );
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {
