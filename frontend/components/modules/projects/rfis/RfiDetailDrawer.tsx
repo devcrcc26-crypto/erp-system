@@ -5,6 +5,7 @@ import {
   Alert,
   Avatar,
   Button,
+  Descriptions,
   Drawer,
   Form,
   Input,
@@ -74,26 +75,32 @@ function initialsFromName(name: string): string {
   return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
 }
 
+function formatRfiSource(source: RfiSource | null): string | null {
+  if (!source) {
+    return null;
+  }
+  return RFI_SOURCE_LABELS[source] ?? source;
+}
+
+function responseAvatarColor(
+  respondedBy: string,
+  assignedTo: string | null,
+  raisedBy: string,
+): string {
+  if (assignedTo && respondedBy === assignedTo) {
+    return tokens.colorTeal600;
+  }
+  if (respondedBy === raisedBy) {
+    return tokens.colorGray600;
+  }
+  return tokens.colorBlue400;
+}
+
 async function downloadResponseDocument(documentId: string): Promise<void> {
   const { url } = await apiGet<{ url: string; expiresIn: number }>(
     `/documents/${documentId}/download-url`,
   );
   window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function DetailCell({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactNode {
-  return (
-    <div className="min-w-0">
-      <p className={`mb-0.5 ${layout.drawerMetaLabel}`}>{label}</p>
-      <div className={layout.drawerMutedText}>{children}</div>
-    </div>
-  );
 }
 
 export default function RfiDetailDrawer({
@@ -147,11 +154,14 @@ export default function RfiDetailDrawer({
   const canReopen =
     rfi?.status === 'CLOSED' &&
     (currentUserId === rfi?.raisedBy || pm.projects.canView);
+  const isTerminal = rfi?.status === 'CLOSED' || rfi?.status === 'ANSWERED';
   const showWaitingAlert =
     responses.length === 0 &&
-    (rfi?.status === 'SUBMITTED' || rfi?.status === 'UNDER_REVIEW');
-  const showRaiseCrButton =
-    rfi?.status === 'ANSWERED' && !rfi?.linkedCrId;
+    (rfi?.status === 'SUBMITTED' ||
+      // RfiStatus has no OPEN today; keep string check for forward-compat.
+      (rfi?.status as string | undefined) === 'OPEN');
+  const showRaiseCrButton = rfi?.status === 'ANSWERED' && !rfi?.linkedCrId;
+  const showActions = canClose || canReopen || showRaiseCrButton;
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -288,7 +298,21 @@ export default function RfiDetailDrawer({
       {...wideDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={rfi ? rfi.title : 'RFI detail'}
+      title={
+        rfi ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[14px] font-semibold">
+              {rfi.rfiNumber}
+            </span>
+            <StatusBadge
+              label={formatRfiStatus(rfi.status)}
+              variant={rfiStatusVariant(rfi.status)}
+            />
+          </div>
+        ) : (
+          'RFI'
+        )
+      }
       destroyOnHidden
     >
       {rfiQuery.isLoading && (
@@ -309,73 +333,61 @@ export default function RfiDetailDrawer({
 
       {rfi && (
         <div className={layout.drawerStack}>
-          {/* SECTION 1 — HEADER */}
           <section>
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <span
-                className="text-[15px] font-semibold leading-tight"
-                style={{ color: tokens.colorTeal600 }}
-              >
-                {rfi.rfiNumber}
-              </span>
-              <StatusBadge
-                label={formatRfiStatus(rfi.status)}
-                variant={rfiStatusVariant(rfi.status)}
-              />
-            </div>
             <StatusBadge
               label={rfi.priority}
               variant={rfiPriorityVariant(rfi.priority)}
             />
           </section>
 
-          {/* SECTION 2 — DETAILS */}
           <section className={layout.drawerSection}>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <DetailCell label="Raised by">
+            <Descriptions
+              bordered
+              column={2}
+              size="small"
+              className={layout.drawerDescriptionsClass}
+            >
+              <Descriptions.Item label="Raised By">
                 {resolveUserDisplay(rfi.raisedBy, rfi.raisedByName)}
-              </DetailCell>
-              <DetailCell label="Assigned to">
+              </Descriptions.Item>
+              <Descriptions.Item label="Assigned To">
                 {resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—')}
-              </DetailCell>
-              <DetailCell label="Date raised">
-                {formatProjectDate(rfi.dateRaised)}
-              </DetailCell>
-              <DetailCell label="Due date">
+              </Descriptions.Item>
+              <Descriptions.Item label="Date Raised">
+                {formatProjectDate(rfi.dateRaised) || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Due Date">
                 <span
-                  style={
-                    isOverdue(rfi.dueDate) && rfi.status !== 'CLOSED'
-                      ? { color: tokens.colorRed600, fontWeight: 500 }
+                  className={
+                    isOverdue(rfi.dueDate) && !isTerminal
+                      ? 'font-medium text-red-600'
                       : undefined
                   }
                 >
-                  {formatProjectDate(rfi.dueDate)}
+                  {formatProjectDate(rfi.dueDate) || '—'}
                 </span>
-              </DetailCell>
-              <DetailCell label="Source">
-                {rfi.rfiSource
-                  ? (RFI_SOURCE_LABELS[rfi.rfiSource] ?? rfi.rfiSource)
-                  : '—'}
-              </DetailCell>
-              <DetailCell label="Subtask">
+              </Descriptions.Item>
+              <Descriptions.Item label="Source">
+                {formatRfiSource(rfi.rfiSource) ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Subtask">
                 {rfi.linkedDesignPackage
-                  ? `${rfi.linkedDesignPackage.fullCode} ${rfi.linkedDesignPackage.name}`
+                  ? `${rfi.linkedDesignPackage.fullCode} — ${rfi.linkedDesignPackage.name}`
                   : '—'}
-              </DetailCell>
-              {rfi.sourceEntitySummary && (
-                <>
-                  <DetailCell label="RFI Source type">
-                    {rfi.sourceEntitySummary.type.replace(/_/g, ' ')}
-                  </DetailCell>
-                  <DetailCell label="Source entity">
-                    {rfi.sourceEntitySummary.label}
-                  </DetailCell>
-                </>
+              </Descriptions.Item>
+              {rfi.sourceEntityType && (
+                <Descriptions.Item label="Source Type" span={2}>
+                  {rfi.sourceEntityType.replace(/_/g, ' ')}
+                </Descriptions.Item>
               )}
-            </div>
+              {rfi.dateAnswered && (
+                <Descriptions.Item label="Date Answered" span={2}>
+                  {formatProjectDate(rfi.dateAnswered)}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
           </section>
 
-          {/* SECTION 3 — DESCRIPTION */}
           <section className={layout.drawerSection}>
             <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
             <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
@@ -383,7 +395,6 @@ export default function RfiDetailDrawer({
             </p>
           </section>
 
-          {/* SECTION 4 — DISCUSSION */}
           <section className={layout.drawerSection}>
             <h3 className={`${layout.drawerHeading} mb-3`}>Discussion</h3>
 
@@ -406,12 +417,18 @@ export default function RfiDetailDrawer({
                   return (
                     <li
                       key={item.id}
-                      className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-3"
+                      className="rounded-lg border border-[var(--color-border-tertiary)] bg-white p-3 shadow-sm"
                     >
                       <div className="mb-2 flex items-start gap-2">
                         <Avatar
                           size={28}
-                          style={{ backgroundColor: tokens.colorTeal400 }}
+                          style={{
+                            backgroundColor: responseAvatarColor(
+                              item.respondedBy,
+                              rfi.assignedTo,
+                              rfi.raisedBy,
+                            ),
+                          }}
                         >
                           {initialsFromName(displayName)}
                         </Avatar>
@@ -457,7 +474,6 @@ export default function RfiDetailDrawer({
 
             {canRespond && (
               <Button
-                type="primary"
                 className="mt-3"
                 onClick={() => setResponseModalOpen(true)}
               >
@@ -466,9 +482,11 @@ export default function RfiDetailDrawer({
             )}
           </section>
 
-          {/* SECTION 5 — LINKED CR */}
           {rfi.linkedCrId && (
             <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-2`}>
+                Linked Change Request
+              </h3>
               <Button
                 type="link"
                 className="!px-0"
@@ -480,15 +498,14 @@ export default function RfiDetailDrawer({
                   })
                 }
               >
-                Linked Change Request:{' '}
                 {rfi.linkedCrNumber ?? rfi.linkedCrId} →
               </Button>
             </section>
           )}
 
-          {/* SECTION 6 — ACTIONS */}
-          {(canClose || canReopen || showRaiseCrButton) && (
+          {showActions && (
             <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>Actions</h3>
               <Space wrap>
                 {canClose && (
                   <Button
@@ -518,7 +535,7 @@ export default function RfiDetailDrawer({
                     onClick={() => setCreateCrOpen(true)}
                     loading={linkRfiCr.isPending}
                   >
-                    Raise CR
+                    Raise Change Request
                   </Button>
                 )}
               </Space>
@@ -530,6 +547,7 @@ export default function RfiDetailDrawer({
       <Modal
         title="Add Response"
         open={responseModalOpen}
+        width={520}
         onCancel={closeResponseModal}
         onOk={() => void form.submit()}
         okText="Post Response"
