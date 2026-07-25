@@ -39,9 +39,9 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCreateIssue,
   useIssues,
-  useMyIssueProjects,
   useUpdateIssue,
 } from '@/lib/query/issues';
+import { useAllProjects } from '@/lib/query/projects';
 import { useMeetings } from '@/lib/query/meetings';
 import { useCorrespondence } from '@/lib/query/correspondence';
 import { useDesignPackages } from '@/lib/query/design-packages';
@@ -129,14 +129,14 @@ export function IssueFormDrawer({
   const createIssue = useCreateIssue();
   const messageApi = useAppMessage();
 
-  const myProjectsQuery = useMyIssueProjects(open && showProjectSelector);
+  const projectsQuery = useAllProjects({}, open && showProjectSelector);
   const projectOptions = useMemo(
     () =>
-      (myProjectsQuery.data ?? []).map((p) => ({
+      (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
         label: `${p.projectCode} — ${p.name}`,
       })),
-    [myProjectsQuery.data],
+    [projectsQuery.data?.data],
   );
 
   const disciplinesQuery = useProjectDisciplines(
@@ -255,7 +255,7 @@ export function IssueFormDrawer({
               showSearch
               placeholder="Select project"
               options={projectOptions}
-              loading={myProjectsQuery.isLoading}
+              loading={projectsQuery.isLoading}
               optionFilterProp="label"
               value={selectedProjectId ?? undefined}
               onChange={(value: string) => {

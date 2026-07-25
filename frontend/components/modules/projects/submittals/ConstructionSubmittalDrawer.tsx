@@ -27,13 +27,10 @@ import { SUBMITTAL_CATEGORIES } from '@/lib/constants/submittal';
 import { designPackageKeys } from '@/lib/query/design-packages';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
-import { useMyWork } from '@/lib/query/epc-workspace';
+import { useAllProjects } from '@/lib/query/projects';
 import { useCreateConstructionSubmittal } from '@/lib/query/submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
-import {
-  useCanViewMyWork,
-  useCapabilitiesReady,
-} from '@/hooks/use-pm-capabilities';
+import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useQuery } from '@tanstack/react-query';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -97,10 +94,10 @@ export default function ConstructionSubmittalDrawer({
   const [stageBlocked, setStageBlocked] = useState(false);
 
   const capabilitiesReady = useCapabilitiesReady();
-  const canViewMyWork = useCanViewMyWork();
-  const myWorkQuery = useMyWork(
-    undefined,
-    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  // Prefer /projects (access-scoped) over My Work — My Work omits projects without assignments.
+  const projectsQuery = useAllProjects(
+    {},
+    open && showProjectSelector && capabilitiesReady,
   );
 
   const effectiveProjectId = selectedProjectId ?? '';
@@ -131,20 +128,14 @@ export default function ConstructionSubmittalDrawer({
 
   const packages = packagesQuery.data ?? [];
 
-  const projectOptions = useMemo(() => {
-    const myWorkItems = myWorkQuery.data ?? [];
-    return Array.from(
-      new Map(
-        myWorkItems.map((item) => [
-          item.projectId,
-          {
-            value: item.projectId,
-            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
-          },
-        ]),
-      ).values(),
-    );
-  }, [myWorkQuery.data]);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
 
   const disciplineOptions = useMemo(
     () =>
@@ -366,7 +357,7 @@ export default function ConstructionSubmittalDrawer({
               showSearch
               placeholder="Select project"
               options={projectOptions}
-              loading={myWorkQuery.isLoading}
+              loading={projectsQuery.isLoading}
               optionFilterProp="label"
               onChange={handleProjectChange}
             />

@@ -8,11 +8,11 @@ import { UploadOutlined } from '@ant-design/icons';
 import {
   useCreateChangeRequest,
   useEligibleCrSubtasks,
-  useMyChangeRequestProjects,
   useNextCrNumber,
   usePackageCurrentEdvs,
 } from '@/lib/query/change-requests';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
+import { useAllProjects } from '@/lib/query/projects';
 import type {
   ChangeRequestReason,
   ProjectChangeRequest,
@@ -66,16 +66,19 @@ export default function CreateChangeRequestDrawer({
   const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
 
   const capabilitiesReady = useCapabilitiesReady();
-  const myProjectsQuery = useMyChangeRequestProjects(
+  const projectsQuery = useAllProjects(
+    {},
     open && showProjectSelector && capabilitiesReady,
   );
 
-  const projectOptions = useMemo(() => {
-    return (myProjectsQuery.data ?? []).map((project) => ({
-      value: project.id,
-      label: `${project.projectCode ?? ''} ${project.name ?? ''}`.trim(),
-    }));
-  }, [myProjectsQuery.data]);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
 
   const [form] = Form.useForm<FormValues>();
   const createMutation = useCreateChangeRequest(effectiveProjectId);
@@ -120,7 +123,7 @@ export default function CreateChangeRequestDrawer({
   const createDisabled =
     noQualifyingSubtasks ||
     (showProjectSelector &&
-      !myProjectsQuery.isLoading &&
+      !projectsQuery.isLoading &&
       projectOptions.length === 0);
 
   const edvOptions = useMemo(
@@ -224,7 +227,7 @@ export default function CreateChangeRequestDrawer({
               showSearch
               placeholder="Select project"
               options={projectOptions}
-              loading={myProjectsQuery.isLoading}
+              loading={projectsQuery.isLoading}
               optionFilterProp="label"
               value={selectedProjectId ?? undefined}
               onChange={(value: string) => {

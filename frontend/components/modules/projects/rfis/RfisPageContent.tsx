@@ -39,10 +39,10 @@ import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import {
   useCreateRfi,
   useEligibleRfiSubtasks,
-  useMyRfiProjects,
   usePreviewRfiNumber,
   useRfis,
 } from '@/lib/query/rfis';
+import { useAllProjects } from '@/lib/query/projects';
 import { useMeetings } from '@/lib/query/meetings';
 import { useCorrespondence } from '@/lib/query/correspondence';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -135,14 +135,14 @@ export function RfiFormDrawer({
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  const myProjectsQuery = useMyRfiProjects(open && showProjectSelector);
+  const projectsQuery = useAllProjects({}, open && showProjectSelector);
   const projectOptions = useMemo(
     () =>
-      (myProjectsQuery.data ?? []).map((p) => ({
+      (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
         label: `${p.projectCode} — ${p.name}`,
       })),
-    [myProjectsQuery.data],
+    [projectsQuery.data?.data],
   );
 
   const subtasksQuery = useEligibleRfiSubtasks(
@@ -289,7 +289,7 @@ export function RfiFormDrawer({
               showSearch
               placeholder="Select project"
               options={projectOptions}
-              loading={myProjectsQuery.isLoading}
+              loading={projectsQuery.isLoading}
               optionFilterProp="label"
               value={selectedProjectId ?? undefined}
               onChange={(value: string) => {

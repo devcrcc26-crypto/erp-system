@@ -80,15 +80,18 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const portfolioMode =
-    useGlobalPortfolioListMode() &&
-    (epc.navFullAccess ||
-      (pm.issues.canView &&
-        !epc.navDesigner &&
-        !epc.navDisciplineLeader));
+    epc.navFullAccess ||
+    (useGlobalPortfolioListMode() &&
+      pm.issues.canView &&
+      !epc.navDesigner &&
+      !epc.navDisciplineLeader);
   const canViewPersonal = useCanViewIssues();
   const canAccessPage = portfolioMode || canViewPersonal;
   const canCreate =
-    epc.navDisciplineLeader || epc.navDesigner || pm.issues.canCreate;
+    epc.navFullAccess ||
+    epc.navDisciplineLeader ||
+    epc.navDesigner ||
+    pm.issues.canCreate;
 
   const filterParams = {
     search: search.trim() || undefined,

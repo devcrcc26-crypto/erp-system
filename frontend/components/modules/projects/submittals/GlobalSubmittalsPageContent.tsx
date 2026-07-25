@@ -86,14 +86,15 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const portfolioMode =
-    useGlobalPortfolioListMode() &&
-    (epc.navFullAccess ||
-      (pm.submittals.canView &&
-        !epc.navDesigner &&
-        !epc.navDisciplineLeader));
+    epc.navFullAccess ||
+    (useGlobalPortfolioListMode() &&
+      pm.submittals.canView &&
+      !epc.navDesigner &&
+      !epc.navDisciplineLeader);
   const canViewPersonal = useCanViewSubmittals();
   const canAccessPage = portfolioMode || canViewPersonal;
-  const canCreate = epc.navDisciplineLeader || epc.navDesigner;
+  const canCreate =
+    epc.navFullAccess || epc.navDisciplineLeader || epc.navDesigner;
   const resolveUserDisplay = useUserDisplayResolver();
 
   const filterParams = {

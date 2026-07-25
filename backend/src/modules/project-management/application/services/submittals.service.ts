@@ -1150,6 +1150,42 @@ export class SubmittalsService {
     return buildPaginatedResult(data, total, query.page, query.limit);
   }
 
+  /**
+   * Construction lists treat null purpose as legacy in-construction rows.
+   */
+  private applySubmittalPurposeFilter(
+    where: Prisma.SubmittalWhereInput,
+    purpose: SubmittalPurpose | { in: SubmittalPurpose[] },
+  ): void {
+    const purposes =
+      typeof purpose === 'object' && 'in' in purpose ? purpose.in : [purpose];
+
+    if (purposes.includes(SubmittalPurpose.IN_CONSTRUCTION)) {
+      const others = purposes.filter(
+        (p) => p !== SubmittalPurpose.IN_CONSTRUCTION,
+      );
+      const purposeClause: Prisma.SubmittalWhereInput = {
+        OR: [
+          { submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION },
+          { submittalPurpose: null },
+          ...(others.length > 0
+            ? [{ submittalPurpose: { in: others } }]
+            : []),
+        ],
+      };
+      const existingAnd = Array.isArray(where.AND)
+        ? where.AND
+        : where.AND
+          ? [where.AND]
+          : [];
+      where.AND = [...existingAnd, purposeClause];
+      return;
+    }
+
+    where.submittalPurpose =
+      purposes.length === 1 ? purposes[0] : { in: purposes };
+  }
+
   private buildCompanyListWhere(
     ctx: PmContext,
     query: PmListQueryDto,
@@ -1169,10 +1205,12 @@ export class SubmittalsService {
         .split(',')
         .map((p) => p.trim())
         .filter(Boolean) as SubmittalPurpose[];
-      where.submittalPurpose =
-        purposes.length === 1 ? purposes[0] : { in: purposes };
+      this.applySubmittalPurposeFilter(
+        where,
+        purposes.length === 1 ? purposes[0]! : { in: purposes },
+      );
     } else {
-      where.submittalPurpose = defaultPurpose;
+      this.applySubmittalPurposeFilter(where, defaultPurpose);
     }
 
     const statusFilter = parseStatusFilter<SubmittalStatus>(query.status);
@@ -1182,7 +1220,7 @@ export class SubmittalsService {
 
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
+      const searchOr: Prisma.SubmittalWhereInput[] = [
         { submittalNumber: { contains: term, mode: 'insensitive' } },
         { title: { contains: term, mode: 'insensitive' } },
         { category: { contains: term, mode: 'insensitive' } },
@@ -1198,6 +1236,8 @@ export class SubmittalsService {
           },
         },
       ];
+      // Purpose filter may already set OR (null construction). Nest search under AND.
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), { OR: searchOr }];
     }
 
     return where;
@@ -1219,18 +1259,21 @@ export class SubmittalsService {
         .split(',')
         .map((p) => p.trim())
         .filter(Boolean) as SubmittalPurpose[];
-      where.submittalPurpose =
-        purposes.length === 1 ? purposes[0] : { in: purposes };
+      this.applySubmittalPurposeFilter(
+        where,
+        purposes.length === 1 ? purposes[0]! : { in: purposes },
+      );
     }
 
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.OR = [
+      const searchOr: Prisma.SubmittalWhereInput[] = [
         { submittalNumber: { contains: term, mode: 'insensitive' } },
         { title: { contains: term, mode: 'insensitive' } },
         { category: { contains: term, mode: 'insensitive' } },
         { contractor: { contains: term, mode: 'insensitive' } },
       ];
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), { OR: searchOr }];
     }
 
     return where;
@@ -1251,21 +1294,26 @@ export class SubmittalsService {
       },
     ];
 
-    let submittalPurpose: Prisma.SubmittalWhereInput['submittalPurpose'] =
-      SubmittalPurpose.IN_CONSTRUCTION;
+    const where: Prisma.SubmittalWhereInput = activeOnly({
+      project: activeOnly({ companyId: ctx.companyId }),
+      AND: [{ OR: relevanceOr }],
+    });
+
     if (query.submittalPurpose) {
       const purposes = query.submittalPurpose
         .split(',')
         .map((p) => p.trim())
         .filter(Boolean) as SubmittalPurpose[];
-      submittalPurpose = purposes.length === 1 ? purposes[0] : { in: purposes };
+      this.applySubmittalPurposeFilter(
+        where,
+        purposes.length === 1 ? purposes[0]! : { in: purposes },
+      );
+    } else {
+      this.applySubmittalPurposeFilter(
+        where,
+        SubmittalPurpose.IN_CONSTRUCTION,
+      );
     }
-
-    const where: Prisma.SubmittalWhereInput = activeOnly({
-      submittalPurpose,
-      project: activeOnly({ companyId: ctx.companyId }),
-      OR: relevanceOr,
-    });
 
     const statusFilter = parseStatusFilter<SubmittalStatus>(query.status);
     if (statusFilter) {
@@ -1274,25 +1322,25 @@ export class SubmittalsService {
 
     if (query.search?.trim()) {
       const term = query.search.trim();
-      where.AND = [
+      const searchOr: Prisma.SubmittalWhereInput[] = [
+        { submittalNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { category: { contains: term, mode: 'insensitive' } },
+        { contractor: { contains: term, mode: 'insensitive' } },
         {
-          OR: [
-            { submittalNumber: { contains: term, mode: 'insensitive' } },
-            { title: { contains: term, mode: 'insensitive' } },
-            { category: { contains: term, mode: 'insensitive' } },
-            { contractor: { contains: term, mode: 'insensitive' } },
-            {
-              project: {
-                name: { contains: term, mode: 'insensitive' },
-              },
-            },
-            {
-              project: {
-                projectCode: { contains: term, mode: 'insensitive' },
-              },
-            },
-          ],
+          project: {
+            name: { contains: term, mode: 'insensitive' },
+          },
         },
+        {
+          project: {
+            projectCode: { contains: term, mode: 'insensitive' },
+          },
+        },
+      ];
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { OR: searchOr },
       ];
     }
 
