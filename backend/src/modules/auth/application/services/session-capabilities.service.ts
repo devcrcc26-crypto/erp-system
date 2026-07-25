@@ -72,51 +72,38 @@ export class SessionCapabilitiesService {
    * Resolves UI capability flags for the authenticated session from RBAC.
    */
   async resolve(userId: string, companyId: string): Promise<CapabilitiesDto> {
-    const roleNames = await this.permissionService.getUserRoleNames(
-      userId,
-      companyId,
-    );
-    const systemAdministrator = isSystemAdministrator(roleNames);
+    const permissionModules = [
+      'users',
+      'roles',
+      'notifications',
+      'audit',
+      'schedule',
+      'engineering_documents',
+      'review_sessions',
+      ...PM_MODULE_BINDINGS.map((binding) => binding.module),
+    ];
 
-    const [
-      users,
-      roles,
-      notifications,
-      audit,
-      pm,
-      schedule,
-      engineeringDocuments,
-      reviewSessions,
-      hasAssignedReviewInbox,
-      navProbes,
-    ] = await Promise.all([
-      this.permissionService.getUserModulePermissions(userId, companyId, 'users'),
-      this.permissionService.getUserModulePermissions(userId, companyId, 'roles'),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'notifications',
-      ),
-      this.permissionService.getUserModulePermissions(userId, companyId, 'audit'),
-      this.resolvePmCapabilities(userId, companyId),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'schedule',
-      ),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'engineering_documents',
-      ),
-      this.permissionService.getUserModulePermissions(
-        userId,
-        companyId,
-        'review_sessions',
-      ),
-      this.hasActiveReviewInboxAssignment(userId, companyId),
-      this.resolveNavAssignmentProbes(userId, companyId),
-    ]);
+    const [roleNames, permissionMap, hasAssignedReviewInbox, navProbes] =
+      await Promise.all([
+        this.permissionService.getUserRoleNames(userId, companyId),
+        this.permissionService.getUserModulePermissionsMap(
+          userId,
+          companyId,
+          permissionModules,
+        ),
+        this.hasActiveReviewInboxAssignment(userId, companyId),
+        this.resolveNavAssignmentProbes(userId, companyId),
+      ]);
+
+    const systemAdministrator = isSystemAdministrator(roleNames);
+    const users = permissionMap.users;
+    const roles = permissionMap.roles;
+    const notifications = permissionMap.notifications;
+    const audit = permissionMap.audit;
+    const schedule = permissionMap.schedule;
+    const engineeringDocuments = permissionMap.engineering_documents;
+    const reviewSessions = permissionMap.review_sessions;
+    const pm = this.toPmCapabilities(permissionMap);
 
     return {
       canManageUsers: users.canView,
@@ -138,24 +125,21 @@ export class SessionCapabilitiesService {
     };
   }
 
-  private async resolvePmCapabilities(
-    userId: string,
-    companyId: string,
-  ): Promise<PmCapabilitiesDto> {
-    const flagsByKey = await Promise.all(
-      PM_MODULE_BINDINGS.map(async ({ key, module }) => {
-        const flags = await this.permissionService.getUserModulePermissions(
-          userId,
-          companyId,
-          module,
-        );
-        return { key, flags };
-      }),
-    );
-
+  private toPmCapabilities(
+    permissionMap: Record<string, PermissionFlags>,
+  ): PmCapabilitiesDto {
     const pm = {} as PmCapabilitiesDto;
-    for (const { key, flags } of flagsByKey) {
-      pm[key] = this.toModuleCapabilities(flags);
+    for (const { key, module } of PM_MODULE_BINDINGS) {
+      pm[key] = this.toModuleCapabilities(
+        permissionMap[module] ?? {
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
+        },
+      );
     }
     return pm;
   }

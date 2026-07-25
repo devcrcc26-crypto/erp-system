@@ -47,6 +47,7 @@ import { useCorrespondence } from '@/lib/query/correspondence';
 import { useDesignPackages } from '@/lib/query/design-packages';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
+import { formatDisciplineNumber as formatTaskDisciplineNumber } from '@/lib/utils/discipline-number';
 import {
   formatIssueStatus,
   issueSeverityVariant,
@@ -130,10 +131,19 @@ export function IssueFormDrawer({
 
   const disciplineOptions = useMemo(
     () =>
-      (disciplinesQuery.data ?? []).map((row) => ({
-        value: row.id,
-        label: `${row.taskName} - ${formatDisciplineLabel(row.disciplineIndex)}`,
-      })),
+      (disciplinesQuery.data ?? []).map((row) => {
+        const disciplineNumber =
+          row.disciplineNumber?.trim() ||
+          formatTaskDisciplineNumber(
+            row.overseasTaskNumber,
+            row.disciplineIndex,
+          ) ||
+          formatDisciplineLabel(row.disciplineIndex);
+        return {
+          value: row.id,
+          label: `${disciplineNumber} — ${row.disciplineName}`,
+        };
+      }),
     [disciplinesQuery.data],
   );
 
@@ -260,6 +270,8 @@ export function IssueFormDrawer({
         <Form.Item label="Linked discipline" name="taskDisciplineId">
           <Select
             allowClear
+            showSearch
+            optionFilterProp="label"
             placeholder="Select engineering discipline"
             loading={disciplinesQuery.isLoading}
             disabled={!effectiveProjectId}

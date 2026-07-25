@@ -5,6 +5,7 @@ import {
   Alert,
   Avatar,
   Button,
+  Descriptions,
   Drawer,
   Form,
   Input,
@@ -49,7 +50,7 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
-import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAuthStore } from '@/stores/auth.store';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
@@ -67,11 +68,6 @@ const RFI_SOURCE_LABELS: Record<RfiSource, string> = {
 
 interface ResponseFormValues {
   responseText: string;
-}
-
-interface InfoRow {
-  label: string;
-  value: React.ReactNode;
 }
 
 function initialsFromName(name: string): string {
@@ -186,75 +182,12 @@ export default function RfiDetailDrawer({
   const canReopen =
     rfi?.status === 'CLOSED' &&
     (isRaisedByMe || pm.projects.canView);
-  const isTerminal = rfi?.status === 'CLOSED' || rfi?.status === 'ANSWERED';
   const canRaiseCr = rfi?.status === 'ANSWERED';
   const showWaitingAlert =
     responses.length === 0 &&
     (rfi?.status === 'SUBMITTED' ||
       (rfi?.status as string | undefined) === 'OPEN');
   const showLifecycleActions = canClose || canReopen;
-
-  const infoRows: InfoRow[] = useMemo(() => {
-    if (!rfi) {
-      return [];
-    }
-    const dueDateLabel = formatProjectDate(rfi.dueDate);
-    const rows: Array<InfoRow | null> = [
-      {
-        label: 'Raised By',
-        value: resolveUserDisplay(rfi.raisedBy, rfi.raisedByName),
-      },
-      {
-        label: 'Assigned To',
-        value: resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—'),
-      },
-      {
-        label: 'Date Raised',
-        value: formatProjectDate(rfi.dateRaised),
-      },
-      {
-        label: 'Due Date',
-        value: (
-          <span
-            className={
-              isOverdue(rfi.dueDate) && !isTerminal
-                ? 'font-medium text-red-600'
-                : undefined
-            }
-          >
-            {dueDateLabel}
-          </span>
-        ),
-      },
-      {
-        label: 'Source',
-        value: formatRfiSource(rfi.rfiSource),
-      },
-      {
-        label: 'Subtask',
-        value: rfi.linkedDesignPackage
-          ? `${rfi.linkedDesignPackage.fullCode} — ${rfi.linkedDesignPackage.name}`
-          : null,
-      },
-      {
-        label: 'Source Type',
-        value: rfi.sourceEntityType
-          ? rfi.sourceEntityType.replace(/_/g, ' ')
-          : null,
-      },
-      {
-        label: 'Date Answered',
-        value: rfi.dateAnswered ? formatProjectDate(rfi.dateAnswered) : null,
-      },
-    ];
-    return rows.filter(
-      (row): row is InfoRow =>
-        row != null &&
-        row.value != null &&
-        row.value !== '' &&
-        row.value !== '—',
-    );
-  }, [rfi, resolveUserDisplay, isTerminal]);
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -388,7 +321,7 @@ export default function RfiDetailDrawer({
 
   return (
     <Drawer
-      {...wideDetailDrawerProps}
+      {...standardDetailDrawerProps}
       open={open}
       onClose={onClose}
       title={
@@ -426,33 +359,62 @@ export default function RfiDetailDrawer({
 
       {rfi && (
         <div className={layout.drawerStack}>
-          <section>
-            <StatusBadge
-              label={rfi.priority}
-              variant={rfiPriorityVariant(rfi.priority)}
-            />
-          </section>
-
           <section className={layout.drawerSection}>
-            <table className="w-full text-sm">
-              <tbody>
-                {infoRows.map((row) => (
-                  <tr
-                    key={row.label}
-                    className="border-b border-[var(--color-border-tertiary)]"
+            <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
+            <Descriptions
+              className={layout.drawerDescriptionsClass}
+              column={1}
+              size="small"
+              bordered
+            >
+              <Descriptions.Item label="Raised By">
+                {rfi.raisedByName ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Assigned To">
+                {rfi.assignedToName ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Date Raised">
+                {formatProjectDate(rfi.dateRaised ?? rfi.createdAt)}
+              </Descriptions.Item>
+              {rfi.dueDate && (
+                <Descriptions.Item label="Due Date">
+                  <span
+                    className={
+                      isOverdue(rfi.dueDate) && rfi.status !== 'CLOSED'
+                        ? 'font-medium text-red-600'
+                        : ''
+                    }
                   >
-                    <td
-                      className={`${layout.drawerMetaLabel} w-[140px] py-2 pr-4 align-top`}
-                    >
-                      {row.label}
-                    </td>
-                    <td className="py-2 text-[13px] text-[var(--color-text-primary)]">
-                      {row.value}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    {formatProjectDate(rfi.dueDate)}
+                  </span>
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="Source">
+                {formatRfiSource(rfi.rfiSource) ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Priority">
+                <StatusBadge
+                  label={rfi.priority}
+                  variant={rfiPriorityVariant(rfi.priority)}
+                />
+              </Descriptions.Item>
+              {rfi.linkedDesignPackage && (
+                <Descriptions.Item label="Subtask">
+                  {rfi.linkedDesignPackage.fullCode} —{' '}
+                  {rfi.linkedDesignPackage.name}
+                </Descriptions.Item>
+              )}
+              {rfi.sourceEntityType && (
+                <Descriptions.Item label="Source Type">
+                  {rfi.sourceEntityType.replace(/_/g, ' ')}
+                </Descriptions.Item>
+              )}
+              {rfi.dateAnswered && (
+                <Descriptions.Item label="Date Answered">
+                  {formatProjectDate(rfi.dateAnswered)}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
           </section>
 
           <section className={layout.drawerSection}>
@@ -625,7 +587,7 @@ export default function RfiDetailDrawer({
 
           {showLifecycleActions && (
             <section className={layout.drawerSection}>
-              <Space className="w-full" direction="vertical" size="middle">
+              <div className="flex flex-col gap-2">
                 {canClose && (
                   <Button
                     type="primary"
@@ -651,7 +613,7 @@ export default function RfiDetailDrawer({
                     Reopen RFI
                   </Button>
                 )}
-              </Space>
+              </div>
             </section>
           )}
         </div>

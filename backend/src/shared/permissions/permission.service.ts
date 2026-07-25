@@ -25,10 +25,6 @@ export class PermissionService {
     module: string,
     action: PermissionAction,
   ): Promise<boolean> {
-    if (await this.userIsSystemAdministrator(userId, companyId)) {
-      return true;
-    }
-
     const flags = await this.getUserModulePermissions(userId, companyId, module);
     const flagKey = ACTION_TO_FLAG[action];
     return flags[flagKey];
@@ -42,8 +38,32 @@ export class PermissionService {
     companyId: string,
     module: string,
   ): Promise<PermissionFlags> {
-    if (await this.userIsSystemAdministrator(userId, companyId)) {
-      return { ...FULL_PERMISSION_FLAGS };
+    const map = await this.getUserModulePermissionsMap(userId, companyId, [
+      module,
+    ]);
+    return map[module] ?? { ...EMPTY_PERMISSION_FLAGS };
+  }
+
+  /**
+   * Batch-resolves permission flags for many modules in a few queries.
+   * Avoids N parallel getUserModulePermissions calls exhausting DB pools.
+   */
+  async getUserModulePermissionsMap(
+    userId: string,
+    companyId: string,
+    modules: readonly string[],
+  ): Promise<Record<string, PermissionFlags>> {
+    const uniqueModules = [...new Set(modules)];
+    const emptyMap = (): Record<string, PermissionFlags> => {
+      const result: Record<string, PermissionFlags> = {};
+      for (const module of uniqueModules) {
+        result[module] = { ...EMPTY_PERMISSION_FLAGS };
+      }
+      return result;
+    };
+
+    if (uniqueModules.length === 0) {
+      return {};
     }
 
     const userRoles = await this.prisma.userRole.findMany({
@@ -51,42 +71,59 @@ export class PermissionService {
       include: { role: true },
     });
 
-    if (userRoles.length === 0) {
-      return { ...EMPTY_PERMISSION_FLAGS };
+    const companyRoles = userRoles.filter(
+      (ur) => ur.role.companyId === companyId && ur.role.isActive,
+    );
+
+    if (companyRoles.length === 0) {
+      return emptyMap();
     }
 
-    const merged = { ...EMPTY_PERMISSION_FLAGS };
-
-    for (const userRole of userRoles) {
-      if (userRole.role.companyId !== companyId || !userRole.role.isActive) {
-        continue;
+    const roleNames = companyRoles.map((ur) => ur.role.name);
+    if (isSystemAdministrator(roleNames)) {
+      const result: Record<string, PermissionFlags> = {};
+      for (const module of uniqueModules) {
+        result[module] = { ...FULL_PERMISSION_FLAGS };
       }
+      return result;
+    }
 
-      const roleIds = await this.collectRoleChainIds(
+    const roleIdSet = new Set<string>();
+    for (const userRole of companyRoles) {
+      const chainIds = await this.collectRoleChainIds(
         userRole.roleId,
         companyId,
       );
-
-      const rolePermissions = await this.prisma.rolePermission.findMany({
-        where: {
-          deletedAt: null,
-          roleId: { in: roleIds },
-          permission: { module },
-        },
-        include: { permission: true },
-      });
-
-      for (const rp of rolePermissions) {
-        merged.canView = merged.canView || rp.canView;
-        merged.canCreate = merged.canCreate || rp.canCreate;
-        merged.canEdit = merged.canEdit || rp.canEdit;
-        merged.canDelete = merged.canDelete || rp.canDelete;
-        merged.canApprove = merged.canApprove || rp.canApprove;
-        merged.canExport = merged.canExport || rp.canExport;
+      for (const id of chainIds) {
+        roleIdSet.add(id);
       }
     }
 
-    return merged;
+    const rolePermissions = await this.prisma.rolePermission.findMany({
+      where: {
+        deletedAt: null,
+        roleId: { in: [...roleIdSet] },
+        permission: { module: { in: uniqueModules } },
+      },
+      include: { permission: true },
+    });
+
+    const result = emptyMap();
+    for (const rp of rolePermissions) {
+      const module = rp.permission.module;
+      const merged = result[module];
+      if (!merged) {
+        continue;
+      }
+      merged.canView = merged.canView || rp.canView;
+      merged.canCreate = merged.canCreate || rp.canCreate;
+      merged.canEdit = merged.canEdit || rp.canEdit;
+      merged.canDelete = merged.canDelete || rp.canDelete;
+      merged.canApprove = merged.canApprove || rp.canApprove;
+      merged.canExport = merged.canExport || rp.canExport;
+    }
+
+    return result;
   }
 
   /**
@@ -125,13 +162,5 @@ export class PermissionService {
     }
 
     return ids;
-  }
-
-  private async userIsSystemAdministrator(
-    userId: string,
-    companyId: string,
-  ): Promise<boolean> {
-    const roleNames = await this.getUserRoleNames(userId, companyId);
-    return isSystemAdministrator(roleNames);
   }
 }

@@ -5,6 +5,7 @@ import {
   Alert,
   Avatar,
   Button,
+  Descriptions,
   Drawer,
   Form,
   Input,
@@ -33,11 +34,12 @@ import {
   useReopenIssue,
 } from '@/lib/query/issues';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatIssueStatus,
+  isOverdue,
   issueSeverityVariant,
   issueStatusVariant,
 } from '@/lib/utils/pm-status-display';
@@ -66,21 +68,6 @@ async function downloadResponseDocument(documentId: string): Promise<void> {
     `/documents/${documentId}/download-url`,
   );
   window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function DetailCell({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactNode {
-  return (
-    <div className="min-w-0">
-      <p className={`mb-0.5 ${layout.drawerMetaLabel}`}>{label}</p>
-      <div className={layout.drawerMutedText}>{children}</div>
-    </div>
-  );
 }
 
 export default function IssueDetailDrawer({
@@ -266,10 +253,24 @@ export default function IssueDetailDrawer({
 
   return (
     <Drawer
-      {...wideDetailDrawerProps}
+      {...standardDetailDrawerProps}
       open={open}
       onClose={onClose}
-      title={issue ? issue.issueType : 'Issue detail'}
+      title={
+        issue ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[14px] font-semibold">
+              {issue.issueNumber}
+            </span>
+            <StatusBadge
+              label={formatIssueStatus(issue.status)}
+              variant={issueStatusVariant(issue.status)}
+            />
+          </div>
+        ) : (
+          'Issue'
+        )
+      }
       destroyOnHidden
     >
       {issueQuery.isLoading && (
@@ -290,66 +291,76 @@ export default function IssueDetailDrawer({
 
       {issue && (
         <div className={layout.drawerStack}>
-          {/* SECTION 1 — HEADER */}
-          <section>
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <span
-                className="text-[15px] font-semibold leading-tight"
-                style={{ color: tokens.colorTeal600 }}
-              >
-                {issue.issueNumber}
-              </span>
-              <StatusBadge
-                label={formatIssueStatus(issue.status)}
-                variant={issueStatusVariant(issue.status)}
-              />
-            </div>
-            <Space size={8} wrap>
-              <StatusBadge label={issue.issueType} variant="default" />
-              <StatusBadge
-                label={issue.severity}
-                variant={issueSeverityVariant(issue.severity)}
-              />
-            </Space>
-          </section>
-
-          {/* SECTION 2 — DETAILS */}
+          {/* SECTION 1 — DETAILS */}
           <section className={layout.drawerSection}>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <DetailCell label="Raised by">
-                {resolveUserDisplay(issue.raisedBy, issue.raisedByName)}
-              </DetailCell>
-              <DetailCell label="Assigned to">
-                {resolveUserDisplay(issue.assignedTo, issue.assignedToName, '—')}
-              </DetailCell>
-              <DetailCell label="Date raised">
+            <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
+            <Descriptions
+              className={layout.drawerDescriptionsClass}
+              column={1}
+              size="small"
+              bordered
+            >
+              <Descriptions.Item label="Issue Type">
+                {issue.issueType ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Raised By">
+                {issue.raisedByName ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Assigned To">
+                {issue.assignedToName ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Date Raised">
                 {formatProjectDate(issue.createdAt)}
-              </DetailCell>
-              <DetailCell label="Due date">
-                {formatProjectDate(issue.dueDate)}
-              </DetailCell>
-              <DetailCell label="Subtask">
-                {issue.linkedDesignPackage
-                  ? `${issue.linkedDesignPackage.fullCode} ${issue.linkedDesignPackage.name}`
-                  : '—'}
-              </DetailCell>
-              <DetailCell label="Location">
-                {issue.location ?? '—'}
-              </DetailCell>
-              {issue.sourceEntitySummary && (
-                <>
-                  <DetailCell label="Source type">
-                    {issue.sourceEntitySummary.type.replace(/_/g, ' ')}
-                  </DetailCell>
-                  <DetailCell label="Source entity">
-                    {issue.sourceEntitySummary.label}
-                  </DetailCell>
-                </>
+              </Descriptions.Item>
+              {issue.dueDate && (
+                <Descriptions.Item label="Due Date">
+                  <span
+                    className={
+                      isOverdue(issue.dueDate) && issue.status !== 'CLOSED'
+                        ? 'font-medium text-red-600'
+                        : ''
+                    }
+                  >
+                    {formatProjectDate(issue.dueDate)}
+                  </span>
+                </Descriptions.Item>
               )}
-            </div>
+              <Descriptions.Item label="Severity">
+                <StatusBadge
+                  label={issue.severity}
+                  variant={issueSeverityVariant(issue.severity)}
+                />
+              </Descriptions.Item>
+              {issue.location && (
+                <Descriptions.Item label="Location">
+                  {issue.location}
+                </Descriptions.Item>
+              )}
+              {issue.linkedDesignPackage && (
+                <Descriptions.Item label="Subtask">
+                  {issue.linkedDesignPackage.fullCode} —{' '}
+                  {issue.linkedDesignPackage.name}
+                </Descriptions.Item>
+              )}
+              {issue.sourceEntityType && (
+                <Descriptions.Item label="Source Type">
+                  {issue.sourceEntityType.replace(/_/g, ' ')}
+                </Descriptions.Item>
+              )}
+              {issue.status === 'CLOSED' && issue.resolvedAt && (
+                <Descriptions.Item label="Closed On">
+                  {formatProjectDate(issue.resolvedAt)}
+                </Descriptions.Item>
+              )}
+              {issue.status === 'CLOSED' && issue.resolvedByName && (
+                <Descriptions.Item label="Closed By">
+                  {issue.resolvedByName}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
           </section>
 
-          {/* SECTION 3 — DESCRIPTION */}
+          {/* SECTION 2 — DESCRIPTION */}
           <section className={layout.drawerSection}>
             <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
             <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
@@ -357,7 +368,7 @@ export default function IssueDetailDrawer({
             </p>
           </section>
 
-          {/* SECTION 4 — DISCUSSION */}
+          {/* SECTION 3 — DISCUSSION */}
           <section className={layout.drawerSection}>
             <h3 className={`${layout.drawerHeading} mb-3`}>Discussion</h3>
 
@@ -433,49 +444,37 @@ export default function IssueDetailDrawer({
             )}
           </section>
 
-          {/* SECTION 5 — RESOLUTION */}
-          {issue.status === 'CLOSED' && (
-            <section
-              className="rounded-lg border p-4"
-              style={{
-                borderColor: tokens.colorTeal400,
-                backgroundColor: tokens.colorTeal50,
-              }}
-            >
+          {/* SECTION 4 — RESOLUTION */}
+          {issue.status === 'CLOSED' && issue.resolutionNote && (
+            <section className={layout.drawerSection}>
               <p className={`mb-2 ${layout.drawerHeading}`}>Resolution</p>
-              <p className={`mb-3 whitespace-pre-wrap ${layout.drawerMutedText}`}>
-                {issue.resolutionNote ?? '—'}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <DetailCell label="Closed by">
-                  {resolveUserDisplay(
-                    issue.resolvedBy,
-                    issue.resolvedByName,
-                    '—',
-                  )}
-                </DetailCell>
-                <DetailCell label="Closed on">
-                  {issue.resolvedAt
-                    ? formatProjectDate(issue.resolvedAt)
-                    : '—'}
-                </DetailCell>
+              <div className={layout.drawerSurface}>
+                <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+                  {issue.resolutionNote}
+                </p>
               </div>
             </section>
           )}
 
-          {/* SECTION 6 — ACTIONS */}
+          {/* SECTION 5 — ACTIONS */}
           {(canClose || canReopen) && (
             <section className={layout.drawerSection}>
-              <Space wrap>
+              <div className="flex flex-col gap-2">
                 {canClose && (
-                  <Button type="primary" onClick={() => setCloseOpen(true)}>
+                  <Button
+                    type="primary"
+                    block
+                    onClick={() => setCloseOpen(true)}
+                  >
                     Close Issue
                   </Button>
                 )}
                 {canReopen && (
-                  <Button onClick={() => setReopenOpen(true)}>Reopen</Button>
+                  <Button block onClick={() => setReopenOpen(true)}>
+                    Reopen Issue
+                  </Button>
                 )}
-              </Space>
+              </div>
             </section>
           )}
         </div>

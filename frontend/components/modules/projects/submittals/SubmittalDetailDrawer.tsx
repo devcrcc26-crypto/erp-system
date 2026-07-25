@@ -366,11 +366,11 @@ export default function SubmittalDetailDrawer({
               items={[
                 {
                   title: 'Draft',
-                  description: 'Being prepared',
+                  content: 'Being prepared',
                 },
                 {
                   title: 'Issued',
-                  description: 'Sent externally',
+                  content: 'Sent externally',
                 },
               ]}
             />
