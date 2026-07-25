@@ -11,6 +11,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ChangeRequestStatus,
@@ -29,6 +30,7 @@ import ListStatusTabs, {
 import {
   CHANGE_REQUEST_ACTIVE_STATUSES,
   CHANGE_REQUEST_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
@@ -42,6 +44,23 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+const CR_ACTIVE_STATUS_OPTIONS: Array<{
+  value: ChangeRequestStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+];
+
+const CR_RESOLVED_STATUS_OPTIONS: Array<{
+  value: ChangeRequestStatus;
+  label: string;
+}> = [
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'CLOSED', label: 'Closed' },
+];
+
 /**
  * Global change requests list — cross-project, current-user relevant only.
  */
@@ -50,6 +69,9 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    ChangeRequestStatus | undefined
+  >();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -81,12 +103,18 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const activeListParams = {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: CHANGE_REQUEST_ACTIVE_STATUSES,
+    status: resolveTabStatusFilter(
+      CHANGE_REQUEST_ACTIVE_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   };
   const resolvedListParams = {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: CHANGE_REQUEST_RESOLVED_STATUSES,
+    status: resolveTabStatusFilter(
+      CHANGE_REQUEST_RESOLVED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   };
 
   const myActiveQuery = useMyChangeRequests(activeListParams, capabilitiesReady && canAccessPage && !portfolioMode);
@@ -152,14 +180,8 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
       {
         title: 'Project',
         key: 'project',
-        render: (_: unknown, record: ProjectChangeRequest) => {
-          const code = record.projectCode?.trim();
-          const name = record.projectName?.trim();
-          if (code && name) {
-            return `${code} — ${name}`;
-          }
-          return name || code || '-';
-        },
+        render: (_: unknown, record: ProjectChangeRequest) =>
+          record.projectCode?.trim() || '-',
       },
       {
         title: 'Subtask',
@@ -177,7 +199,10 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     [],
   );
 
-  if (!capabilitiesReady || changeRequestsQuery.isLoading) {
+  if (
+    !capabilitiesReady ||
+    (changeRequestsQuery.isLoading && !changeRequestsQuery.data)
+  ) {
     return <PageLoadingSkeleton />;
   }
 
@@ -243,6 +268,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Active"
@@ -261,6 +287,21 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
               setSearch(value);
             }}
           />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: ChangeRequestStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? CR_ACTIVE_STATUS_OPTIONS
+                : CR_RESOLVED_STATUS_OPTIONS
+            }
+          />
           {portfolioMode ? (
             <Select
               allowClear
@@ -278,6 +319,12 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
             />
           ) : null}
         </Space>
+
+        <TableUpdatingIndicator
+          active={
+            changeRequestsQuery.isFetching && Boolean(changeRequestsQuery.data)
+          }
+        />
 
         <DataTable<ProjectChangeRequest>
           rowKey="id"

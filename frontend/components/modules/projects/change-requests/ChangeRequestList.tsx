@@ -12,6 +12,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import type {
@@ -32,11 +33,29 @@ import ListStatusTabs, {
 import {
   CHANGE_REQUEST_ACTIVE_STATUSES,
   CHANGE_REQUEST_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAuthStore } from '@/stores/auth.store';
+
+const CR_ACTIVE_STATUS_OPTIONS: Array<{
+  value: ChangeRequestStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+];
+
+const CR_RESOLVED_STATUS_OPTIONS: Array<{
+  value: ChangeRequestStatus;
+  label: string;
+}> = [
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'CLOSED', label: 'Closed' },
+];
 
 export default function ChangeRequestList({
   projectId,
@@ -52,6 +71,9 @@ export default function ChangeRequestList({
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<
+    ChangeRequestStatus | undefined
+  >();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -76,7 +98,10 @@ export default function ChangeRequestList({
     {
       ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
       ...filterParams,
-      status: CHANGE_REQUEST_ACTIVE_STATUSES,
+      status: resolveTabStatusFilter(
+        CHANGE_REQUEST_ACTIVE_STATUSES,
+        activeTab === 'active' ? statusFilter : undefined,
+      ),
     },
     !permLoading && pm.projects.canView,
   );
@@ -86,7 +111,10 @@ export default function ChangeRequestList({
     {
       ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
       ...filterParams,
-      status: CHANGE_REQUEST_RESOLVED_STATUSES,
+      status: resolveTabStatusFilter(
+        CHANGE_REQUEST_RESOLVED_STATUSES,
+        activeTab === 'closed' ? statusFilter : undefined,
+      ),
     },
     !permLoading && pm.projects.canView,
   );
@@ -144,7 +172,7 @@ export default function ChangeRequestList({
     [],
   );
 
-  if (permLoading || listQuery.isLoading) {
+  if (permLoading || (listQuery.isLoading && !listQuery.data)) {
     return <PageLoadingSkeleton />;
   }
 
@@ -174,6 +202,7 @@ export default function ChangeRequestList({
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Active"
@@ -192,13 +221,32 @@ export default function ChangeRequestList({
               setSearch(value);
             }}
           />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: ChangeRequestStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? CR_ACTIVE_STATUS_OPTIONS
+                : CR_RESOLVED_STATUS_OPTIONS
+            }
+          />
         </Space>
+
+        <TableUpdatingIndicator
+          active={listQuery.isFetching && Boolean(listQuery.data)}
+        />
 
         <DataTable<ProjectChangeRequest>
           rowKey="id"
           columns={columns}
           dataSource={listQuery.data?.data ?? []}
-          loading={listQuery.isLoading}
+          loading={listQuery.isLoading && !listQuery.data}
           pagination={bindMeta(listQuery.data?.meta)}
           onRow={(record) => ({
             onClick: () => setSelectedId(record.id),

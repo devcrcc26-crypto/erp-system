@@ -20,3 +20,13 @@ export const CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES =
 
 export const PROJECT_ACTIVE_STATUSES = 'NOT_STARTED,IN_PROGRESS,ON_HOLD';
 export const PROJECT_CLOSED_STATUSES = 'COMPLETED,CANCELLED';
+
+/**
+ * Resolves the API status param: a single Select value overrides the tab set.
+ */
+export function resolveTabStatusFilter(
+  tabStatuses: string,
+  statusFilter: string | undefined,
+): string {
+  return statusFilter?.trim() || tabStatuses;
+}

@@ -25,6 +25,7 @@ import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -59,6 +60,7 @@ import ListStatusTabs, {
 import {
   ISSUE_OPEN_STATUSES,
   ISSUE_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -73,6 +75,16 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'HIGH', label: 'High' },
   { value: 'CRITICAL', label: 'Critical' },
 ];
+
+const ISSUE_OPEN_STATUS_OPTIONS: Array<{ value: IssueStatus; label: string }> = [
+  { value: 'OPEN', label: 'Open' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+];
+
+const ISSUE_RESOLVED_STATUS_OPTIONS: Array<{
+  value: IssueStatus;
+  label: string;
+}> = [{ value: 'CLOSED', label: 'Closed' }];
 
 const SOURCE_TYPE_OPTIONS = [
   { value: 'MEETING', label: 'Meeting' },
@@ -379,6 +391,7 @@ export default function IssuesPageContent({
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>();
   const [severityFilter, setSeverityFilter] = useState<
     IssueSeverity | undefined
   >();
@@ -396,13 +409,19 @@ export default function IssuesPageContent({
   const openIssuesQuery = useIssues(projectId, {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: ISSUE_OPEN_STATUSES,
+    status: resolveTabStatusFilter(
+      ISSUE_OPEN_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   }, !permLoading);
 
   const resolvedIssuesQuery = useIssues(projectId, {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: ISSUE_RESOLVED_STATUSES,
+    status: resolveTabStatusFilter(
+      ISSUE_RESOLVED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   }, !permLoading);
 
   const issuesQuery = activeTab === 'active' ? openIssuesQuery : resolvedIssuesQuery;
@@ -428,12 +447,6 @@ export default function IssuesPageContent({
         title: 'Type',
         dataIndex: 'issueType',
         key: 'issueType',
-      },
-      {
-        title: 'Description',
-        dataIndex: 'description',
-        key: 'description',
-        ellipsis: true,
       },
       {
         title: 'Location',
@@ -495,7 +508,7 @@ export default function IssuesPageContent({
     [resolveUserDisplay],
   );
 
-  if (issuesQuery.isLoading) {
+  if (issuesQuery.isLoading && !issuesQuery.data) {
     return <PageLoadingSkeleton />;
   }
 
@@ -545,6 +558,7 @@ export default function IssuesPageContent({
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Open"
@@ -565,6 +579,21 @@ export default function IssuesPageContent({
           />
           <Select
             allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: IssueStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? ISSUE_OPEN_STATUS_OPTIONS
+                : ISSUE_RESOLVED_STATUS_OPTIONS
+            }
+          />
+          <Select
+            allowClear
             placeholder="Severity"
             className={layout.filterControlXs}
             value={severityFilter}
@@ -575,6 +604,10 @@ export default function IssuesPageContent({
             options={SEVERITY_OPTIONS}
           />
         </Space>
+
+        <TableUpdatingIndicator
+          active={issuesQuery.isFetching && Boolean(issuesQuery.data)}
+        />
 
         <DataTable<Issue>
           rowKey="id"

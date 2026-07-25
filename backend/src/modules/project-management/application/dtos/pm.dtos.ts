@@ -1606,6 +1606,16 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsString()
   status?: string;
 
+  @ApiPropertyOptional({ enum: IssueSeverity })
+  @IsOptional()
+  @IsEnum(IssueSeverity)
+  severity?: IssueSeverity;
+
+  @ApiPropertyOptional({ enum: RfiPriority })
+  @IsOptional()
+  @IsEnum(RfiPriority)
+  priority?: RfiPriority;
+
   @ApiPropertyOptional({
     description:
       'Submittal purpose filter. Comma-separated to match multiple purposes.',

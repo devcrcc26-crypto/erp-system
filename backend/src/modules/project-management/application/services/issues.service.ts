@@ -790,6 +790,9 @@ export class IssuesService {
     if (statusFilter) {
       where.status = statusFilter;
     }
+    if (query.severity) {
+      where.severity = query.severity;
+    }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.AND = [
@@ -821,6 +824,9 @@ export class IssuesService {
     const statusFilter = parseStatusFilter<IssueStatus>(query.status);
     if (statusFilter) {
       where.status = statusFilter;
+    }
+    if (query.severity) {
+      where.severity = query.severity;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -878,6 +884,9 @@ export class IssuesService {
     const statusFilter = parseStatusFilter<IssueStatus>(query.status);
     if (statusFilter) {
       where.status = statusFilter;
+    }
+    if (query.severity) {
+      where.severity = query.severity;
     }
 
     if (query.search?.trim()) {

@@ -897,6 +897,9 @@ export class RfisService {
     if (statusFilter) {
       where.status = statusFilter;
     }
+    if (query.priority) {
+      where.priority = query.priority;
+    }
 
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -929,6 +932,9 @@ export class RfisService {
     const statusFilter = parseStatusFilter<RfiStatus>(query.status);
     if (statusFilter) {
       where.status = statusFilter;
+    }
+    if (query.priority) {
+      where.priority = query.priority;
     }
 
     if (query.search?.trim()) {
@@ -986,6 +992,9 @@ export class RfisService {
     const statusFilter = parseStatusFilter<RfiStatus>(query.status);
     if (statusFilter) {
       where.status = statusFilter;
+    }
+    if (query.priority) {
+      where.priority = query.priority;
     }
 
     if (query.search?.trim()) {

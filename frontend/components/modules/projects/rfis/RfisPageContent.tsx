@@ -22,6 +22,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -57,6 +58,7 @@ import ListStatusTabs, {
 import {
   RFI_OPEN_STATUSES,
   RFI_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -69,6 +71,17 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'MEDIUM', label: 'Medium' },
   { value: 'HIGH', label: 'High' },
   { value: 'URGENT', label: 'Urgent' },
+];
+
+const RFI_OPEN_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'UNDER_REVIEW', label: 'Under Review' },
+  { value: 'ANSWERED', label: 'Answered' },
+];
+
+const RFI_RESOLVED_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
+  { value: 'CLOSED', label: 'Closed' },
 ];
 
 const RFI_SOURCE_OPTIONS: Array<{ value: RfiSource; label: string }> = [
@@ -442,6 +455,7 @@ export default function RfisPageContent({
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<RfiStatus | undefined>();
   const [priorityFilter, setPriorityFilter] = useState<RfiPriority | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRfiId, setSelectedRfiId] = useState<string | null>(null);
@@ -457,13 +471,19 @@ export default function RfisPageContent({
   const openRfisQuery = useRfis(projectId, {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: RFI_OPEN_STATUSES,
+    status: resolveTabStatusFilter(
+      RFI_OPEN_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   }, !permLoading);
 
   const resolvedRfisQuery = useRfis(projectId, {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: RFI_RESOLVED_STATUSES,
+    status: resolveTabStatusFilter(
+      RFI_RESOLVED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   }, !permLoading);
 
   const rfisQuery = activeTab === 'active' ? openRfisQuery : resolvedRfisQuery;
@@ -551,7 +571,7 @@ export default function RfisPageContent({
     [resolveUserDisplay],
   );
 
-  if (rfisQuery.isLoading) {
+  if (rfisQuery.isLoading && !rfisQuery.data) {
     return <PageLoadingSkeleton />;
   }
 
@@ -601,6 +621,7 @@ export default function RfisPageContent({
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Open"
@@ -621,6 +642,21 @@ export default function RfisPageContent({
           />
           <Select
             allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: RfiStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? RFI_OPEN_STATUS_OPTIONS
+                : RFI_RESOLVED_STATUS_OPTIONS
+            }
+          />
+          <Select
+            allowClear
             placeholder="Priority"
             className={layout.filterControlXs}
             value={priorityFilter}
@@ -631,6 +667,10 @@ export default function RfisPageContent({
             options={PRIORITY_OPTIONS}
           />
         </Space>
+
+        <TableUpdatingIndicator
+          active={rfisQuery.isFetching && Boolean(rfisQuery.data)}
+        />
 
         <DataTable<Rfi>
           rowKey="id"

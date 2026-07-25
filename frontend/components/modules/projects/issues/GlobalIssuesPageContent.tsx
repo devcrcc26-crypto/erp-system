@@ -10,6 +10,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import ListStatusTabs, {
   type ListStatusTabKey,
 } from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -28,6 +29,7 @@ import {
 import {
   ISSUE_OPEN_STATUSES,
   ISSUE_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import { IssueFormDrawer } from '@/components/modules/projects/issues/IssuesPageContent';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
@@ -48,6 +50,16 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
+const ISSUE_OPEN_STATUS_OPTIONS: Array<{ value: IssueStatus; label: string }> = [
+  { value: 'OPEN', label: 'Open' },
+  { value: 'IN_PROGRESS', label: 'In Progress' },
+];
+
+const ISSUE_RESOLVED_STATUS_OPTIONS: Array<{
+  value: IssueStatus;
+  label: string;
+}> = [{ value: 'CLOSED', label: 'Closed' }];
+
 /**
  * Global Issues list — cross-project, user-scoped or portfolio-wide.
  */
@@ -55,6 +67,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>();
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -88,14 +101,20 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
       ? params
       : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: ISSUE_OPEN_STATUSES,
+    status: resolveTabStatusFilter(
+      ISSUE_OPEN_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   };
   const resolvedListParams = {
     ...(activeTab === 'closed'
       ? params
       : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: ISSUE_RESOLVED_STATUSES,
+    status: resolveTabStatusFilter(
+      ISSUE_RESOLVED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   };
 
   const myOpenQuery = useMyIssues(
@@ -163,12 +182,6 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
         key: 'issueType',
       },
       {
-        title: 'Description',
-        dataIndex: 'description',
-        key: 'description',
-        ellipsis: true,
-      },
-      {
         title: 'Severity',
         dataIndex: 'severity',
         key: 'severity',
@@ -196,12 +209,8 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
       {
         title: 'Project',
         key: 'project',
-        render: (_: unknown, record: Issue) => {
-          const code = record.projectCode?.trim();
-          const name = record.projectName?.trim();
-          if (code && name) return `${code} — ${name}`;
-          return name ?? code ?? '—';
-        },
+        render: (_: unknown, record: Issue) =>
+          record.projectCode?.trim() || '—',
       },
       {
         title: 'Subtask',
@@ -229,7 +238,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
     [],
   );
 
-  if (!capabilitiesReady || issuesQuery.isLoading) {
+  if (!capabilitiesReady || (issuesQuery.isLoading && !issuesQuery.data)) {
     return <PageLoadingSkeleton />;
   }
 
@@ -294,6 +303,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Open"
@@ -311,6 +321,21 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
+          />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: IssueStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? ISSUE_OPEN_STATUS_OPTIONS
+                : ISSUE_RESOLVED_STATUS_OPTIONS
+            }
           />
           <Select
             allowClear
@@ -340,6 +365,10 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
             />
           ) : null}
         </Space>
+
+        <TableUpdatingIndicator
+          active={issuesQuery.isFetching && Boolean(issuesQuery.data)}
+        />
 
         <DataTable<Issue>
           rowKey="id"

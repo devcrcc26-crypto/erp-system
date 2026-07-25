@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Space } from 'antd';
+import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -13,6 +13,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   Submittal,
@@ -33,6 +34,7 @@ import ListStatusTabs, {
 import {
   CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
   CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
@@ -43,6 +45,25 @@ import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import Link from 'next/link';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 
+const SUBMITTAL_ACTIVE_STATUS_OPTIONS: Array<{
+  value: SubmittalStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'UNDER_REVIEW', label: 'Under Review' },
+  { value: 'REVISE_AND_RESUBMIT', label: 'Revise & Resubmit' },
+];
+
+const SUBMITTAL_COMPLETED_STATUS_OPTIONS: Array<{
+  value: SubmittalStatus;
+  label: string;
+}> = [
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'APPROVED_WITH_COMMENTS', label: 'Approved with Comments' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
+
 export default function SubmittalsPageContent({
   projectId,
 }: {
@@ -51,6 +72,7 @@ export default function SubmittalsPageContent({
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedSubmittalId, setSelectedSubmittalId] = useState<string | null>(
     null,
@@ -71,7 +93,10 @@ export default function SubmittalsPageContent({
     {
       ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
       ...filterParams,
-      status: CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+      status: resolveTabStatusFilter(
+        CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+        activeTab === 'active' ? statusFilter : undefined,
+      ),
     },
     !permLoading && canAccessPage,
   );
@@ -81,7 +106,10 @@ export default function SubmittalsPageContent({
     {
       ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
       ...filterParams,
-      status: CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+      status: resolveTabStatusFilter(
+        CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+        activeTab === 'closed' ? statusFilter : undefined,
+      ),
     },
     !permLoading && canAccessPage,
   );
@@ -174,7 +202,11 @@ export default function SubmittalsPageContent({
     [resolveUserDisplay],
   );
 
-  if (permLoading || submittalsQuery.isLoading || projectQuery.isLoading) {
+  if (
+    permLoading ||
+    (submittalsQuery.isLoading && !submittalsQuery.data) ||
+    projectQuery.isLoading
+  ) {
     return <PageLoadingSkeleton />;
   }
 
@@ -246,6 +278,7 @@ export default function SubmittalsPageContent({
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Active"
@@ -264,7 +297,26 @@ export default function SubmittalsPageContent({
               setSearch(value);
             }}
           />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: SubmittalStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? SUBMITTAL_ACTIVE_STATUS_OPTIONS
+                : SUBMITTAL_COMPLETED_STATUS_OPTIONS
+            }
+          />
         </Space>
+
+        <TableUpdatingIndicator
+          active={submittalsQuery.isFetching && Boolean(submittalsQuery.data)}
+        />
 
         <DataTable<Submittal>
           rowKey="id"

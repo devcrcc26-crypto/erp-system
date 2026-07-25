@@ -11,6 +11,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   Submittal,
@@ -31,6 +32,7 @@ import ListStatusTabs, {
 import {
   CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
   CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
@@ -45,6 +47,25 @@ import {
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+const SUBMITTAL_ACTIVE_STATUS_OPTIONS: Array<{
+  value: SubmittalStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'UNDER_REVIEW', label: 'Under Review' },
+  { value: 'REVISE_AND_RESUBMIT', label: 'Revise & Resubmit' },
+];
+
+const SUBMITTAL_COMPLETED_STATUS_OPTIONS: Array<{
+  value: SubmittalStatus;
+  label: string;
+}> = [
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'APPROVED_WITH_COMMENTS', label: 'Approved with Comments' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
+
 /**
  * Global construction submittals list — cross-project, current-user relevant only.
  */
@@ -53,6 +74,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -82,12 +104,18 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const activeListParams = {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+    status: resolveTabStatusFilter(
+      CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   };
   const completedListParams = {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+    status: resolveTabStatusFilter(
+      CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   };
 
   const myActiveQuery = useMySubmittals(activeListParams, capabilitiesReady && canAccessPage && !portfolioMode);
@@ -117,14 +145,8 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
       {
         title: t('pages.globalSubmittals.projectName'),
         key: 'project',
-        render: (_: unknown, record: Submittal) => {
-          const code = record.projectCode?.trim();
-          const name = record.projectName?.trim();
-          if (code && name) {
-            return `${code} — ${name}`;
-          }
-          return name || code || '-';
-        },
+        render: (_: unknown, record: Submittal) =>
+          record.projectCode?.trim() || '-',
       },
       {
         title: 'Submittal #',
@@ -209,7 +231,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     [resolveUserDisplay, t],
   );
 
-  if (!capabilitiesReady || submittalsQuery.isLoading) {
+  if (!capabilitiesReady || (submittalsQuery.isLoading && !submittalsQuery.data)) {
     return <PageLoadingSkeleton />;
   }
 
@@ -274,6 +296,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Active"
@@ -292,6 +315,21 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
               setSearch(value);
             }}
           />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: SubmittalStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? SUBMITTAL_ACTIVE_STATUS_OPTIONS
+                : SUBMITTAL_COMPLETED_STATUS_OPTIONS
+            }
+          />
           {portfolioMode ? (
             <Select
               allowClear
@@ -309,6 +347,10 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
             />
           ) : null}
         </Space>
+
+        <TableUpdatingIndicator
+          active={submittalsQuery.isFetching && Boolean(submittalsQuery.data)}
+        />
 
         <DataTable<Submittal>
           rowKey="id"

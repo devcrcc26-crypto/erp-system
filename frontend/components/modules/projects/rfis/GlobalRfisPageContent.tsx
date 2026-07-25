@@ -11,6 +11,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   Rfi,
@@ -37,6 +38,7 @@ import ListStatusTabs, {
 import {
   RFI_OPEN_STATUSES,
   RFI_RESOLVED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import { RfiFormDrawer } from '@/components/modules/projects/rfis/RfisPageContent';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
@@ -64,6 +66,17 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
+const RFI_OPEN_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'UNDER_REVIEW', label: 'Under Review' },
+  { value: 'ANSWERED', label: 'Answered' },
+];
+
+const RFI_RESOLVED_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
+  { value: 'CLOSED', label: 'Closed' },
+];
+
 /**
  * Global RFIs list — cross-project, user-scoped or portfolio-wide.
  */
@@ -71,6 +84,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<RfiStatus | undefined>();
   const [priorityFilter, setPriorityFilter] = useState<RfiPriority | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -104,12 +118,18 @@ export default function GlobalRfisPageContent(): React.ReactNode {
   const openListParams = {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: RFI_OPEN_STATUSES,
+    status: resolveTabStatusFilter(
+      RFI_OPEN_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   };
   const resolvedListParams = {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: RFI_RESOLVED_STATUSES,
+    status: resolveTabStatusFilter(
+      RFI_RESOLVED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   };
 
   const myOpenQuery = useMyRfis(openListParams, capabilitiesReady && canAccessPage && !portfolioMode);
@@ -203,12 +223,8 @@ export default function GlobalRfisPageContent(): React.ReactNode {
       {
         title: 'Project',
         key: 'project',
-        render: (_: unknown, record: Rfi) => {
-          const code = record.projectCode?.trim();
-          const name = record.projectName?.trim();
-          if (code && name) return `${code} — ${name}`;
-          return name ?? code ?? '—';
-        },
+        render: (_: unknown, record: Rfi) =>
+          record.projectCode?.trim() || '—',
       },
       {
         title: 'Subtask',
@@ -236,7 +252,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
     [],
   );
 
-  if (!capabilitiesReady || rfisQuery.isLoading) {
+  if (!capabilitiesReady || (rfisQuery.isLoading && !rfisQuery.data)) {
     return <PageLoadingSkeleton />;
   }
 
@@ -301,6 +317,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Open"
@@ -318,6 +335,21 @@ export default function GlobalRfisPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
+          />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: RfiStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? RFI_OPEN_STATUS_OPTIONS
+                : RFI_RESOLVED_STATUS_OPTIONS
+            }
           />
           <Select
             allowClear
@@ -347,6 +379,10 @@ export default function GlobalRfisPageContent(): React.ReactNode {
             />
           ) : null}
         </Space>
+
+        <TableUpdatingIndicator
+          active={rfisQuery.isFetching && Boolean(rfisQuery.data)}
+        />
 
         <DataTable<Rfi>
           rowKey="id"
