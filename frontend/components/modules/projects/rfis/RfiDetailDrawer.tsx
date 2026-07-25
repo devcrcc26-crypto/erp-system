@@ -179,11 +179,13 @@ export default function RfiDetailDrawer({
     (currentUserId === rfi.raisedBy ||
       currentUserId === rfi.assignedTo ||
       pm.projects.canView);
+  const isRaisedByMe = rfi?.raisedBy === currentUserId;
   const canClose =
-    rfi?.status === 'ANSWERED' && currentUserId === rfi?.raisedBy;
+    rfi?.status === 'ANSWERED' &&
+    (isRaisedByMe || pm.projects.canView);
   const canReopen =
     rfi?.status === 'CLOSED' &&
-    (currentUserId === rfi?.raisedBy || pm.projects.canView);
+    (isRaisedByMe || pm.projects.canView);
   const isTerminal = rfi?.status === 'CLOSED' || rfi?.status === 'ANSWERED';
   const canRaiseCr = rfi?.status === 'ANSWERED';
   const showWaitingAlert =
