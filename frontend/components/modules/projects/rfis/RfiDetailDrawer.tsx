@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Avatar,
   Button,
-  Descriptions,
   Drawer,
   Form,
   Input,
@@ -16,6 +15,7 @@ import {
 import {
   CheckCircleOutlined,
   DownloadOutlined,
+  PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -23,8 +23,11 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
-import type { RfiSource } from '@/lib/api/project-management.types';
-import type { ProjectChangeRequest } from '@/lib/api/project-management.types';
+import type {
+  ChangeRequestStatus,
+  ProjectChangeRequest,
+  RfiSource,
+} from '@/lib/api/project-management.types';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import {
   useAddRfiResponse,
@@ -37,6 +40,8 @@ import {
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  changeRequestStatusVariant,
+  formatChangeRequestStatus,
   formatRfiStatus,
   isOverdue,
   rfiPriorityVariant,
@@ -62,6 +67,11 @@ const RFI_SOURCE_LABELS: Record<RfiSource, string> = {
 
 interface ResponseFormValues {
   responseText: string;
+}
+
+interface InfoRow {
+  label: string;
+  value: React.ReactNode;
 }
 
 function initialsFromName(name: string): string {
@@ -143,6 +153,26 @@ export default function RfiDetailDrawer({
   const rfi = rfiQuery.data;
   const responses = responsesQuery.data ?? [];
 
+  const linkedCrs = useMemo(() => {
+    if (!rfi) {
+      return [];
+    }
+    if (rfi.linkedCrs && rfi.linkedCrs.length > 0) {
+      return rfi.linkedCrs;
+    }
+    if (rfi.linkedCrId) {
+      return [
+        {
+          id: rfi.linkedCrId,
+          changeNumber: rfi.linkedCrNumber ?? rfi.linkedCrId,
+          title: '—',
+          status: 'SUBMITTED' as ChangeRequestStatus,
+        },
+      ];
+    }
+    return [];
+  }, [rfi]);
+
   const canRespond =
     rfi != null &&
     rfi.status !== 'CLOSED' &&
@@ -155,13 +185,74 @@ export default function RfiDetailDrawer({
     rfi?.status === 'CLOSED' &&
     (currentUserId === rfi?.raisedBy || pm.projects.canView);
   const isTerminal = rfi?.status === 'CLOSED' || rfi?.status === 'ANSWERED';
+  const canRaiseCr = rfi?.status === 'ANSWERED';
   const showWaitingAlert =
     responses.length === 0 &&
     (rfi?.status === 'SUBMITTED' ||
-      // RfiStatus has no OPEN today; keep string check for forward-compat.
       (rfi?.status as string | undefined) === 'OPEN');
-  const showRaiseCrButton = rfi?.status === 'ANSWERED' && !rfi?.linkedCrId;
-  const showActions = canClose || canReopen || showRaiseCrButton;
+  const showLifecycleActions = canClose || canReopen;
+
+  const infoRows: InfoRow[] = useMemo(() => {
+    if (!rfi) {
+      return [];
+    }
+    const dueDateLabel = formatProjectDate(rfi.dueDate);
+    const rows: Array<InfoRow | null> = [
+      {
+        label: 'Raised By',
+        value: resolveUserDisplay(rfi.raisedBy, rfi.raisedByName),
+      },
+      {
+        label: 'Assigned To',
+        value: resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—'),
+      },
+      {
+        label: 'Date Raised',
+        value: formatProjectDate(rfi.dateRaised),
+      },
+      {
+        label: 'Due Date',
+        value: (
+          <span
+            className={
+              isOverdue(rfi.dueDate) && !isTerminal
+                ? 'font-medium text-red-600'
+                : undefined
+            }
+          >
+            {dueDateLabel}
+          </span>
+        ),
+      },
+      {
+        label: 'Source',
+        value: formatRfiSource(rfi.rfiSource),
+      },
+      {
+        label: 'Subtask',
+        value: rfi.linkedDesignPackage
+          ? `${rfi.linkedDesignPackage.fullCode} — ${rfi.linkedDesignPackage.name}`
+          : null,
+      },
+      {
+        label: 'Source Type',
+        value: rfi.sourceEntityType
+          ? rfi.sourceEntityType.replace(/_/g, ' ')
+          : null,
+      },
+      {
+        label: 'Date Answered',
+        value: rfi.dateAnswered ? formatProjectDate(rfi.dateAnswered) : null,
+      },
+    ];
+    return rows.filter(
+      (row): row is InfoRow =>
+        row != null &&
+        row.value != null &&
+        row.value !== '' &&
+        row.value !== '—',
+    );
+  }, [rfi, resolveUserDisplay, isTerminal]);
 
   function resetResponseAttachment(): void {
     setResponseFile(null);
@@ -341,51 +432,25 @@ export default function RfiDetailDrawer({
           </section>
 
           <section className={layout.drawerSection}>
-            <Descriptions
-              bordered
-              column={2}
-              size="small"
-              className={layout.drawerDescriptionsClass}
-            >
-              <Descriptions.Item label="Raised By">
-                {resolveUserDisplay(rfi.raisedBy, rfi.raisedByName)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Assigned To">
-                {resolveUserDisplay(rfi.assignedTo, rfi.assignedToName, '—')}
-              </Descriptions.Item>
-              <Descriptions.Item label="Date Raised">
-                {formatProjectDate(rfi.dateRaised) || '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Due Date">
-                <span
-                  className={
-                    isOverdue(rfi.dueDate) && !isTerminal
-                      ? 'font-medium text-red-600'
-                      : undefined
-                  }
-                >
-                  {formatProjectDate(rfi.dueDate) || '—'}
-                </span>
-              </Descriptions.Item>
-              <Descriptions.Item label="Source">
-                {formatRfiSource(rfi.rfiSource) ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Subtask">
-                {rfi.linkedDesignPackage
-                  ? `${rfi.linkedDesignPackage.fullCode} — ${rfi.linkedDesignPackage.name}`
-                  : '—'}
-              </Descriptions.Item>
-              {rfi.sourceEntityType && (
-                <Descriptions.Item label="Source Type" span={2}>
-                  {rfi.sourceEntityType.replace(/_/g, ' ')}
-                </Descriptions.Item>
-              )}
-              {rfi.dateAnswered && (
-                <Descriptions.Item label="Date Answered" span={2}>
-                  {formatProjectDate(rfi.dateAnswered)}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
+            <table className="w-full text-sm">
+              <tbody>
+                {infoRows.map((row) => (
+                  <tr
+                    key={row.label}
+                    className="border-b border-[var(--color-border-tertiary)]"
+                  >
+                    <td
+                      className={`${layout.drawerMetaLabel} w-[140px] py-2 pr-4 align-top`}
+                    >
+                      {row.label}
+                    </td>
+                    <td className="py-2 text-[13px] text-[var(--color-text-primary)]">
+                      {row.value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
 
           <section className={layout.drawerSection}>
@@ -482,42 +547,97 @@ export default function RfiDetailDrawer({
             )}
           </section>
 
-          {rfi.linkedCrId && (
-            <section className={layout.drawerSection}>
-              <h3 className={`${layout.drawerHeading} mb-2`}>
-                Linked Change Request
-              </h3>
-              <Button
-                type="link"
-                className="!px-0"
-                style={{ color: tokens.colorTeal600 }}
-                onClick={() =>
-                  setSelectedCr({
-                    projectId,
-                    changeRequestId: rfi.linkedCrId as string,
-                  })
-                }
-              >
-                {rfi.linkedCrNumber ?? rfi.linkedCrId} →
-              </Button>
-            </section>
-          )}
+          <section className={layout.drawerSection}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className={layout.drawerHeading}>Linked Change Requests</h3>
+              {canRaiseCr && (
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  loading={linkRfiCr.isPending}
+                  onClick={() => setCreateCrOpen(true)}
+                >
+                  Raise Change Request
+                </Button>
+              )}
+            </div>
 
-          {showActions && (
+            {linkedCrs.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border-tertiary)]">
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      CR Number
+                    </th>
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      Title
+                    </th>
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linkedCrs.map((cr) => (
+                    <tr
+                      key={cr.id}
+                      className="cursor-pointer border-b border-[var(--color-border-tertiary)] hover:bg-[var(--color-surface-secondary)]"
+                      onClick={() =>
+                        setSelectedCr({
+                          projectId,
+                          changeRequestId: cr.id,
+                        })
+                      }
+                    >
+                      <td
+                        className="py-2 font-mono text-[12px]"
+                        style={{ color: tokens.colorTeal600 }}
+                      >
+                        {cr.changeNumber}
+                      </td>
+                      <td className="py-2 text-[13px] text-[var(--color-text-primary)]">
+                        {cr.title}
+                      </td>
+                      <td className="py-2">
+                        <StatusBadge
+                          label={formatChangeRequestStatus(cr.status)}
+                          variant={changeRequestStatusVariant(cr.status)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className={layout.drawerMutedText}>
+                No change requests linked yet.
+              </p>
+            )}
+          </section>
+
+          {showLifecycleActions && (
             <section className={layout.drawerSection}>
-              <h3 className={`${layout.drawerHeading} mb-3`}>Actions</h3>
-              <Space wrap>
+              <Space className="w-full" direction="vertical" size="middle">
                 {canClose && (
                   <Button
                     type="primary"
-                    onClick={() => void handleClose()}
+                    block
                     loading={closeRfi.isPending}
+                    onClick={() => void handleClose()}
                   >
                     Close RFI
                   </Button>
                 )}
                 {canReopen && (
                   <Button
+                    block
+                    loading={reopenRfi.isPending}
                     onClick={() =>
                       Modal.confirm({
                         title: 'Reopen this RFI?',
@@ -525,17 +645,8 @@ export default function RfiDetailDrawer({
                         onOk: () => handleReopen(),
                       })
                     }
-                    loading={reopenRfi.isPending}
                   >
-                    Reopen
-                  </Button>
-                )}
-                {showRaiseCrButton && (
-                  <Button
-                    onClick={() => setCreateCrOpen(true)}
-                    loading={linkRfiCr.isPending}
-                  >
-                    Raise Change Request
+                    Reopen RFI
                   </Button>
                 )}
               </Space>

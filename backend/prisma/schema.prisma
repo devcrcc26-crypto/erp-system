@@ -2023,6 +2023,7 @@ model Rfi {
   dateAnswered DateTime?   @map("date_answered") @db.Date
   linkedDesignPackageId String? @map("linked_design_package_id")
   linkedCrId            String? @map("linked_cr_id")
+  linkedCrIds           String[] @default([]) @map("linked_cr_ids")
   sourceEntityType      String? @map("source_entity_type")
   sourceEntityId        String? @map("source_entity_id")
   createdAt    DateTime    @default(now()) @map("created_at")

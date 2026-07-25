@@ -236,6 +236,7 @@ describe('Source entity links (source-entity-links)', () => {
       dateAnswered: null,
       linkedDesignPackageId: 'package-1',
       linkedCrId: null,
+      linkedCrIds: [],
       sourceEntityType: 'MEETING',
       sourceEntityId: meetingId,
       createdAt: new Date(),

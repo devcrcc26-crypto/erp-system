@@ -42,6 +42,7 @@ describe('RfisService', () => {
       dateAnswered: null,
       linkedDesignPackageId: packageId,
       linkedCrId: null,
+      linkedCrIds: [],
       sourceEntityType: null,
       sourceEntityId: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),

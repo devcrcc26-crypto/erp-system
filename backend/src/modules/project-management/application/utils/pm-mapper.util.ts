@@ -1102,7 +1102,14 @@ export interface MappedRfi {
   dateAnswered: string | null;
   linkedDesignPackageId: string | null;
   linkedCrId: string | null;
+  linkedCrIds: string[];
   linkedCrNumber?: string | null;
+  linkedCrs?: Array<{
+    id: string;
+    changeNumber: string;
+    title: string;
+    status: string;
+  }>;
   linkedDesignPackage?: {
     id: string;
     packageCode: string;
@@ -1351,6 +1358,7 @@ export function mapRfi(rfi: Rfi): MappedRfi {
     dateAnswered: toDateString(rfi.dateAnswered),
     linkedDesignPackageId: rfi.linkedDesignPackageId,
     linkedCrId: rfi.linkedCrId,
+    linkedCrIds: rfi.linkedCrIds ?? [],
     sourceEntityType: rfi.sourceEntityType,
     sourceEntityId: rfi.sourceEntityId,
     createdAt: toIsoString(rfi.createdAt)!,

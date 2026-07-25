@@ -362,7 +362,14 @@ export interface Rfi {
   rfiSource: RfiSource | null;
   linkedDesignPackageId: string | null;
   linkedCrId: string | null;
+  linkedCrIds?: string[];
   linkedCrNumber?: string | null;
+  linkedCrs?: Array<{
+    id: string;
+    changeNumber: string;
+    title: string;
+    status: ChangeRequestStatus;
+  }>;
   linkedDesignPackage?: {
     id: string;
     packageCode: string;

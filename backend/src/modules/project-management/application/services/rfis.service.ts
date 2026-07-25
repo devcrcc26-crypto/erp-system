@@ -718,10 +718,21 @@ export class RfisService {
       );
     }
 
+    const existingIds = [
+      ...new Set([
+        ...(rfi.linkedCrIds ?? []),
+        ...(rfi.linkedCrId ? [rfi.linkedCrId] : []),
+      ]),
+    ];
+    const linkedCrIds = existingIds.includes(cr.id)
+      ? existingIds
+      : [...existingIds, cr.id];
+
     const updated = await this.prisma.rfi.update({
       where: { id: rfiId },
       data: {
         linkedCrId: cr.id,
+        linkedCrIds,
         updatedBy: ctx.userId,
       },
     });
@@ -1131,7 +1142,6 @@ export class RfisService {
   ): Promise<MappedRfi> {
     const mapped = mapRfi(rfi);
     let linkedDesignPackage: MappedRfi['linkedDesignPackage'] = null;
-    let linkedCrNumber: string | null = null;
 
     if (rfi.linkedDesignPackageId) {
       const pkg = await this.prisma.designPackage.findFirst({
@@ -1159,21 +1169,46 @@ export class RfisService {
       }
     }
 
-    if (rfi.linkedCrId) {
-      const cr = await this.prisma.projectChangeRequest.findFirst({
+    const linkedCrIdList = [
+      ...new Set([
+        ...(rfi.linkedCrIds ?? []),
+        ...(rfi.linkedCrId ? [rfi.linkedCrId] : []),
+      ]),
+    ];
+
+    let linkedCrs: NonNullable<MappedRfi['linkedCrs']> = [];
+    if (linkedCrIdList.length > 0) {
+      const crRows = await this.prisma.projectChangeRequest.findMany({
         where: activeOnly({
-          id: rfi.linkedCrId,
+          id: { in: linkedCrIdList },
           companyId: ctx.companyId,
         }),
-        select: { changeNumber: true },
+        select: {
+          id: true,
+          changeNumber: true,
+          title: true,
+          status: true,
+        },
       });
-      linkedCrNumber = cr?.changeNumber ?? null;
+      const byId = new Map(crRows.map((row) => [row.id, row]));
+      linkedCrs = linkedCrIdList
+        .map((id) => byId.get(id))
+        .filter((row): row is NonNullable<typeof row> => row != null)
+        .map((row) => ({
+          id: row.id,
+          changeNumber: row.changeNumber,
+          title: row.title,
+          status: row.status,
+        }));
     }
 
     return {
       ...mapped,
       linkedDesignPackage,
-      linkedCrNumber,
+      linkedCrs,
+      linkedCrNumber: linkedCrs[0]?.changeNumber ?? null,
+      linkedCrId: linkedCrs[linkedCrs.length - 1]?.id ?? rfi.linkedCrId,
+      linkedCrIds: linkedCrIdList,
     };
   }
 
