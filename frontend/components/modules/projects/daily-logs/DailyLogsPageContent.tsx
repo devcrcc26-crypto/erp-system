@@ -37,6 +37,7 @@ import {
   dailyLogStatusVariant,
   formatDailyLogStatus,
 } from '@/lib/utils/pm-status-display';
+import { DAILY_LOG_WORKFLOW } from '@/lib/api/workflow';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -47,11 +48,10 @@ const SHIFT_OPTIONS = [
   { value: 'NIGHT', label: 'Night' },
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'APPROVED', label: 'Approved' },
-];
+const STATUS_OPTIONS = DAILY_LOG_WORKFLOW.map((step) => ({
+  value: step.key,
+  label: step.label,
+}));
 
 interface DailyLogFormValues {
   logDate: Dayjs;

@@ -32,6 +32,7 @@ import ListStatusTabs, {
 import {
   CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
   CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+  buildTabStatusFilterOptions,
   resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
@@ -46,25 +47,6 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-const SUBMITTAL_ACTIVE_STATUS_OPTIONS: Array<{
-  value: SubmittalStatus;
-  label: string;
-}> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'UNDER_REVIEW', label: 'Under Review' },
-  { value: 'REVISE_AND_RESUBMIT', label: 'Revise & Resubmit' },
-];
-
-const SUBMITTAL_COMPLETED_STATUS_OPTIONS: Array<{
-  value: SubmittalStatus;
-  label: string;
-}> = [
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'APPROVED_WITH_COMMENTS', label: 'Approved with Comments' },
-  { value: 'REJECTED', label: 'Rejected' },
-];
 
 /**
  * Global construction submittals list — cross-project, current-user relevant only.
@@ -327,8 +309,14 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
             }}
             options={
               activeTab === 'active'
-                ? SUBMITTAL_ACTIVE_STATUS_OPTIONS
-                : SUBMITTAL_COMPLETED_STATUS_OPTIONS
+                ? buildTabStatusFilterOptions(
+                    CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+                    formatSubmittalStatus,
+                  )
+                : buildTabStatusFilterOptions(
+                    CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+                    formatSubmittalStatus,
+                  )
             }
           />
           {portfolioMode ? (

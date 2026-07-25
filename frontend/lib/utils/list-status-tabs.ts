@@ -10,9 +10,9 @@ export const RFI_RESOLVED_STATUSES = 'CLOSED';
 export const CHANGE_REQUEST_ACTIVE_STATUSES = 'DRAFT,SUBMITTED';
 export const CHANGE_REQUEST_RESOLVED_STATUSES = 'APPROVED,REJECTED,CLOSED';
 
+/** External release table statuses: Draft → Issued (SUBMITTED). */
 export const EXTERNAL_RELEASE_DRAFT_STATUSES = 'DRAFT';
-export const EXTERNAL_RELEASE_ISSUED_STATUSES =
-  'SUBMITTED,UNDER_REVIEW,APPROVED,APPROVED_WITH_COMMENTS,REVISE_AND_RESUBMIT,REJECTED';
+export const EXTERNAL_RELEASE_ISSUED_STATUSES = 'SUBMITTED';
 
 export const CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES =
   'DRAFT,SUBMITTED,UNDER_REVIEW,REVISE_AND_RESUBMIT';
@@ -30,4 +30,22 @@ export function resolveTabStatusFilter(
   statusFilter: string | undefined,
 ): string {
   return statusFilter?.trim() || tabStatuses;
+}
+
+/**
+ * Builds Status Select options from the same status set the active tab uses.
+ * Labels come from the table's formatter / workflow — not a parallel list.
+ */
+export function buildTabStatusFilterOptions<T extends string>(
+  tabStatuses: string,
+  formatLabel: (status: T) => string,
+): Array<{ value: T; label: string }> {
+  return tabStatuses
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value): value is T => value.length > 0)
+    .map((value) => ({
+      value,
+      label: formatLabel(value),
+    }));
 }

@@ -33,29 +33,13 @@ import ListStatusTabs, {
 import {
   CHANGE_REQUEST_ACTIVE_STATUSES,
   CHANGE_REQUEST_RESOLVED_STATUSES,
+  buildTabStatusFilterOptions,
   resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAuthStore } from '@/stores/auth.store';
-
-const CR_ACTIVE_STATUS_OPTIONS: Array<{
-  value: ChangeRequestStatus;
-  label: string;
-}> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-];
-
-const CR_RESOLVED_STATUS_OPTIONS: Array<{
-  value: ChangeRequestStatus;
-  label: string;
-}> = [
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'CLOSED', label: 'Closed' },
-];
 
 export default function ChangeRequestList({
   projectId,
@@ -232,8 +216,14 @@ export default function ChangeRequestList({
             }}
             options={
               activeTab === 'active'
-                ? CR_ACTIVE_STATUS_OPTIONS
-                : CR_RESOLVED_STATUS_OPTIONS
+                ? buildTabStatusFilterOptions(
+                    CHANGE_REQUEST_ACTIVE_STATUSES,
+                    formatChangeRequestStatus,
+                  )
+                : buildTabStatusFilterOptions(
+                    CHANGE_REQUEST_RESOLVED_STATUSES,
+                    formatChangeRequestStatus,
+                  )
             }
           />
         </Space>

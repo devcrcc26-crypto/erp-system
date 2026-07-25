@@ -30,6 +30,7 @@ import ListStatusTabs, {
 import {
   CHANGE_REQUEST_ACTIVE_STATUSES,
   CHANGE_REQUEST_RESOLVED_STATUSES,
+  buildTabStatusFilterOptions,
   resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
@@ -43,23 +44,6 @@ import {
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-const CR_ACTIVE_STATUS_OPTIONS: Array<{
-  value: ChangeRequestStatus;
-  label: string;
-}> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-];
-
-const CR_RESOLVED_STATUS_OPTIONS: Array<{
-  value: ChangeRequestStatus;
-  label: string;
-}> = [
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'CLOSED', label: 'Closed' },
-];
 
 /**
  * Global change requests list — cross-project, current-user relevant only.
@@ -299,8 +283,14 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
             }}
             options={
               activeTab === 'active'
-                ? CR_ACTIVE_STATUS_OPTIONS
-                : CR_RESOLVED_STATUS_OPTIONS
+                ? buildTabStatusFilterOptions(
+                    CHANGE_REQUEST_ACTIVE_STATUSES,
+                    formatChangeRequestStatus,
+                  )
+                : buildTabStatusFilterOptions(
+                    CHANGE_REQUEST_RESOLVED_STATUSES,
+                    formatChangeRequestStatus,
+                  )
             }
           />
           {portfolioMode ? (

@@ -35,6 +35,7 @@ import {
   formatMeetingStatus,
   meetingStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { MEETING_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import MeetingDetailDrawer from '@/components/modules/projects/meetings/MeetingDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -46,12 +47,10 @@ const MEETING_TYPE_OPTIONS: { value: MeetingType; label: string }[] = [
   { value: 'CLIENT', label: 'Client' },
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'SCHEDULED', label: 'Scheduled' },
-  { value: 'CONDUCTED', label: 'Conducted' },
-  { value: 'MINUTES_ISSUED', label: 'Minutes issued' },
-  { value: 'CLOSED', label: 'Closed' },
-];
+const STATUS_OPTIONS = MEETING_WORKFLOW.map((step) => ({
+  value: step.key as MeetingStatus,
+  label: step.label,
+}));
 
 interface MeetingFormValues {
   meetingType: MeetingType;

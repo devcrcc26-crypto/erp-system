@@ -43,7 +43,7 @@ export default function HeaderActions({
     >
       <FontSizeControl compact={compact} />
       <NotificationPanel />
-      {sessionProfile?.roles.length ? (
+      {/* {sessionProfile?.roles.length ? (
         <span
           className="max-w-[140px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium"
           style={{
@@ -54,7 +54,7 @@ export default function HeaderActions({
         >
           {roleName}
         </span>
-      ) : null}
+      ) : null} */}
       <Link
         href="/profile"
         className={[

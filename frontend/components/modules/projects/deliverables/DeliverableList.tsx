@@ -30,13 +30,18 @@ import {
 import DeliverableDrawer from '@/components/modules/projects/deliverables/DeliverableDrawer';
 import CreateDeliverableDrawer from '@/components/modules/projects/deliverables/CreateDeliverableDrawer';
 
-const STATUS_OPTIONS: Array<{ value: DeliverableStatus; label: string }> = [
-  { value: 'PLANNED', label: 'Planned' },
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'WAIVED', label: 'Waived' },
+const DELIVERABLE_STATUSES: DeliverableStatus[] = [
+  'PLANNED',
+  'IN_PROGRESS',
+  'SUBMITTED',
+  'APPROVED',
+  'WAIVED',
 ];
+
+const STATUS_OPTIONS = DELIVERABLE_STATUSES.map((value) => ({
+  value,
+  label: formatDeliverableStatus(value),
+}));
 
 export default function DeliverableList({
   projectId,

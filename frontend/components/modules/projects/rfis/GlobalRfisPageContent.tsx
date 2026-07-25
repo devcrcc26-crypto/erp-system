@@ -38,6 +38,7 @@ import ListStatusTabs, {
 import {
   RFI_OPEN_STATUSES,
   RFI_RESOLVED_STATUSES,
+  buildTabStatusFilterOptions,
   resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import { RfiFormDrawer } from '@/components/modules/projects/rfis/RfisPageContent';
@@ -64,17 +65,6 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'MEDIUM', label: 'Medium' },
   { value: 'HIGH', label: 'High' },
   { value: 'URGENT', label: 'Urgent' },
-];
-
-const RFI_OPEN_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'UNDER_REVIEW', label: 'Under Review' },
-  { value: 'ANSWERED', label: 'Answered' },
-];
-
-const RFI_RESOLVED_STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
-  { value: 'CLOSED', label: 'Closed' },
 ];
 
 /**
@@ -348,8 +338,8 @@ export default function GlobalRfisPageContent(): React.ReactNode {
             }}
             options={
               activeTab === 'active'
-                ? RFI_OPEN_STATUS_OPTIONS
-                : RFI_RESOLVED_STATUS_OPTIONS
+                ? buildTabStatusFilterOptions(RFI_OPEN_STATUSES, formatRfiStatus)
+                : buildTabStatusFilterOptions(RFI_RESOLVED_STATUSES, formatRfiStatus)
             }
           />
           <Select

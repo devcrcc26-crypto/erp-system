@@ -29,6 +29,7 @@ import {
 import {
   ISSUE_OPEN_STATUSES,
   ISSUE_RESOLVED_STATUSES,
+  buildTabStatusFilterOptions,
   resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import { IssueFormDrawer } from '@/components/modules/projects/issues/IssuesPageContent';
@@ -49,16 +50,6 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'HIGH', label: 'High' },
   { value: 'CRITICAL', label: 'Critical' },
 ];
-
-const ISSUE_OPEN_STATUS_OPTIONS: Array<{ value: IssueStatus; label: string }> = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-];
-
-const ISSUE_RESOLVED_STATUS_OPTIONS: Array<{
-  value: IssueStatus;
-  label: string;
-}> = [{ value: 'CLOSED', label: 'Closed' }];
 
 /**
  * Global Issues list — cross-project, user-scoped or portfolio-wide.
@@ -336,8 +327,11 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
             }}
             options={
               activeTab === 'active'
-                ? ISSUE_OPEN_STATUS_OPTIONS
-                : ISSUE_RESOLVED_STATUS_OPTIONS
+                ? buildTabStatusFilterOptions(ISSUE_OPEN_STATUSES, formatIssueStatus)
+                : buildTabStatusFilterOptions(
+                    ISSUE_RESOLVED_STATUSES,
+                    formatIssueStatus,
+                  )
             }
           />
           <Select

@@ -41,6 +41,7 @@ import {
   correspondenceStatusVariant,
   formatCorrespondenceStatus,
 } from '@/lib/utils/pm-status-display';
+import { CORRESPONDENCE_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import CorrespondenceDetailDrawer from '@/components/modules/projects/correspondence/CorrespondenceDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -54,12 +55,10 @@ const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'MEMO', label: 'Memo' },
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SENT', label: 'Sent' },
-  { value: 'ACKNOWLEDGED', label: 'Acknowledged' },
-  { value: 'CLOSED', label: 'Closed' },
-];
+const STATUS_OPTIONS = CORRESPONDENCE_WORKFLOW.map((step) => ({
+  value: step.key as CorrespondenceStatus,
+  label: step.label,
+}));
 
 interface CorrespondenceFormValues {
   correspondenceType: CorrespondenceType;

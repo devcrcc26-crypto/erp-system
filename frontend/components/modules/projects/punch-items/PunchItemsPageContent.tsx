@@ -44,6 +44,7 @@ import {
   punchItemSeverityVariant,
   punchItemStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { PUNCH_ITEM_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import PunchItemDetailDrawer from '@/components/modules/projects/punch-items/PunchItemDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -54,13 +55,10 @@ const SEVERITY_OPTIONS: { value: PunchItemSeverity; label: string }[] = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
-const STATUS_OPTIONS: { value: PunchItemStatus; label: string }[] = [
-  { value: 'RAISED', label: 'Raised' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'CORRECTED', label: 'Corrected' },
-  { value: 'VERIFIED', label: 'Verified' },
-  { value: 'CLOSED', label: 'Closed' },
-];
+const STATUS_OPTIONS = PUNCH_ITEM_WORKFLOW.map((step) => ({
+  value: step.key as PunchItemStatus,
+  label: step.label,
+}));
 
 interface PunchItemFormValues {
   description: string;

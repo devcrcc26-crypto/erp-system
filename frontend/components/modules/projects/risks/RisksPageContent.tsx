@@ -42,6 +42,7 @@ import {
   riskScoreVariant,
   riskStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { RISK_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import RiskDetailDrawer from '@/components/modules/projects/risks/RiskDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -55,12 +56,10 @@ const CATEGORY_OPTIONS: { value: RiskCategory; label: string }[] = [
   { value: 'CONTRACTUAL', label: 'Contractual' },
 ];
 
-const STATUS_OPTIONS: { value: RiskStatus; label: string }[] = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'MONITORING', label: 'Monitoring' },
-  { value: 'MITIGATED', label: 'Mitigated' },
-  { value: 'CLOSED', label: 'Closed' },
-];
+const STATUS_OPTIONS = RISK_WORKFLOW.map((step) => ({
+  value: step.key as RiskStatus,
+  label: step.label,
+}));
 
 interface RiskFormValues {
   riskIdCode: string;

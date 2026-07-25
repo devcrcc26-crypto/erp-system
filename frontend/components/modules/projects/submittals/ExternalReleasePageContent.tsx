@@ -28,16 +28,11 @@ import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
-import {
-  EXTERNAL_RELEASE_DRAFT_STATUS_OPTIONS,
-  EXTERNAL_RELEASE_ISSUED_STATUS_OPTIONS,
-  formatExternalReleaseStatus,
-} from '@/lib/utils/external-release-status';
+import { formatExternalReleaseStatus } from '@/lib/utils/external-release-status';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import {
   EXTERNAL_RELEASE_DRAFT_STATUSES,
   EXTERNAL_RELEASE_ISSUED_STATUSES,
-  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
@@ -56,7 +51,6 @@ export default function ExternalReleasePageContent({
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [purposeFilter, setPurposeFilter] = useState<
     SubmittalPurpose | undefined
   >();
@@ -76,18 +70,12 @@ export default function ExternalReleasePageContent({
   const draftListParams = {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: resolveTabStatusFilter(
-      EXTERNAL_RELEASE_DRAFT_STATUSES,
-      activeTab === 'active' ? statusFilter : undefined,
-    ),
+    status: EXTERNAL_RELEASE_DRAFT_STATUSES,
   };
   const issuedListParams = {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: resolveTabStatusFilter(
-      EXTERNAL_RELEASE_ISSUED_STATUSES,
-      activeTab === 'closed' ? statusFilter : undefined,
-    ),
+    status: EXTERNAL_RELEASE_ISSUED_STATUSES,
   };
 
   const draftQuery = useSubmittals(
@@ -237,7 +225,6 @@ export default function ExternalReleasePageContent({
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
-            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Draft"
@@ -255,21 +242,6 @@ export default function ExternalReleasePageContent({
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={
-              activeTab === 'active'
-                ? EXTERNAL_RELEASE_DRAFT_STATUS_OPTIONS
-                : EXTERNAL_RELEASE_ISSUED_STATUS_OPTIONS
-            }
           />
           <Select
             allowClear
