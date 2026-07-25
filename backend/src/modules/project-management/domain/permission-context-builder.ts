@@ -243,6 +243,15 @@ export function evaluateDisciplineAssignmentLayer(
     };
   }
 
+  // Full-access company roles may act without discipline/subtask FK assignment.
+  // Stage and workflow-state layers still apply.
+  if (input.hasFullProjectAccess) {
+    return {
+      layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
+      verdict: PermissionLayerVerdict.ALLOW,
+    };
+  }
+
   if (input.taskDisciplineId === undefined) {
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,

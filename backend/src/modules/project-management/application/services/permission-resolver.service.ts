@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { EdvStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
@@ -65,10 +66,10 @@ export class PermissionResolverService {
       input.actionOverride ??
       this.mapTransitionToAction(input.edv.status, input.targetStatus);
 
-    const grantedActions = await this.resolveGrantedActions(
-      input.userId,
-      input.companyId,
-    );
+    const [grantedActions, roleNames] = await Promise.all([
+      this.resolveGrantedActions(input.userId, input.companyId),
+      this.permissionService.getUserRoleNames(input.userId, input.companyId),
+    ]);
 
     const discipline = input.edv.engineeringDocument.taskDiscipline;
     const projectTeamRole = await this.epcWorkflowRepository.findProjectTeamRole(
@@ -116,6 +117,8 @@ export class PermissionResolverService {
       subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
+      isDocumentController: roleNames.includes('Document Controller'),
+      hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
       currentAssigneeUserId: input.currentAssigneeUserId,
     });
 
@@ -185,6 +188,7 @@ export class PermissionResolverService {
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
       isDocumentController: roleNames.includes('Document Controller'),
+      hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
       currentAssigneeUserId: input.currentAssigneeUserId,
     };
 

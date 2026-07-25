@@ -150,6 +150,34 @@ describe('permission-context-builder', () => {
       );
       expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
     });
+
+    it('ALLOW submittal.create for full-access role without discipline FK', () => {
+      const result = evaluateDisciplineAssignmentLayer(
+        baseContext({
+          action: EpcWorkflowAction.SUBMITTAL_CREATE,
+          userId: 'sys-admin-1',
+          disciplineDesignerUserId: 'designer-1',
+          disciplineLeadUserId: 'lead-1',
+          hasFullProjectAccess: true,
+          grantedActions: new Set([EpcWorkflowAction.SUBMITTAL_CREATE]),
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.ALLOW);
+    });
+
+    it('DENY submittal.create without FK when not full-access', () => {
+      const result = evaluateDisciplineAssignmentLayer(
+        baseContext({
+          action: EpcWorkflowAction.SUBMITTAL_CREATE,
+          userId: 'sys-admin-1',
+          disciplineDesignerUserId: 'designer-1',
+          disciplineLeadUserId: 'lead-1',
+          hasFullProjectAccess: false,
+          grantedActions: new Set([EpcWorkflowAction.SUBMITTAL_CREATE]),
+        }),
+      );
+      expect(result.verdict).toBe(PermissionLayerVerdict.DENY);
+    });
   });
 
   describe('evaluateWorkflowStateLayer', () => {

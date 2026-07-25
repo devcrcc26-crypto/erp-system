@@ -47,6 +47,7 @@ describe('PermissionResolverService project design phase', () => {
         getUserModulePermissions: jest
           .fn()
           .mockResolvedValue(schedulePermissions),
+        getUserRoleNames: jest.fn().mockResolvedValue(['Designer']),
       } as unknown as PermissionService,
       {
         findProjectTeamRole: jest.fn().mockResolvedValue('OTHER'),

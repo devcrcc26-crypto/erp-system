@@ -56,6 +56,11 @@ export interface PermissionContext {
   readonly subtaskInstituteChiefName?: string;
   /** System role Document Controller — logistics upload on assigned disciplines. */
   readonly isDocumentController?: boolean;
+  /**
+   * SysAdmin / Managing Director / Project Manager / Project Administrator —
+   * bypasses discipline/subtask FK matching on Layer 3.
+   */
+  readonly hasFullProjectAccess?: boolean;
 }
 
 /**

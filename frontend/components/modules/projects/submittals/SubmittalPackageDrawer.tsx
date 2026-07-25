@@ -27,10 +27,10 @@ import { apiGet } from '@/lib/api/client';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { designPackageKeys } from '@/lib/query/design-packages';
 import { useCreateDesignSubmittal } from '@/lib/query/epc-submittals';
-import { useMyWork } from '@/lib/query/epc-workspace';
+import { useAllProjects } from '@/lib/query/projects';
 import { submittalDrawerProps } from '@/lib/theme/layout';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewMyWork, useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
+import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { formatDisciplineLabel } from '@/lib/utils/discipline-display';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { isProjectStageBlockedError } from '@/lib/api/errors';
@@ -93,10 +93,10 @@ export default function SubmittalPackageDrawer({
   const effectiveProjectId = selectedProjectId ?? '';
 
   const capabilitiesReady = useCapabilitiesReady();
-  const canViewMyWork = useCanViewMyWork();
-  const myWorkQuery = useMyWork(
-    undefined,
-    open && showProjectSelector && capabilitiesReady && canViewMyWork,
+  // Prefer /projects (access-scoped) over My Work — My Work omits projects without assignments.
+  const projectsQuery = useAllProjects(
+    {},
+    open && showProjectSelector && capabilitiesReady,
   );
 
   const disciplinesQuery = useProjectDisciplines(
@@ -111,20 +111,14 @@ export default function SubmittalPackageDrawer({
     | undefined;
   const disciplines = disciplinesQuery.data ?? [];
 
-  const projectOptions = useMemo(() => {
-    const myWorkItems = myWorkQuery.data ?? [];
-    return Array.from(
-      new Map(
-        myWorkItems.map((item) => [
-          item.projectId,
-          {
-            value: item.projectId,
-            label: `${item.projectNumber ?? ''} ${item.projectName ?? ''}`.trim(),
-          },
-        ]),
-      ).values(),
-    );
-  }, [myWorkQuery.data]);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((project) => ({
+        value: project.id,
+        label: `${project.projectCode} — ${project.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
 
   const packagesQuery = useQuery({
     queryKey: designPackageKeys.lists(
@@ -226,7 +220,7 @@ export default function SubmittalPackageDrawer({
         form={form}
         showProjectSelector={showProjectSelector}
         projectOptions={projectOptions}
-        projectOptionsLoading={myWorkQuery.isLoading}
+        projectOptionsLoading={projectsQuery.isLoading}
         onProjectChange={handleProjectChange}
         hasSelectedProject={hasSelectedProject}
         disciplines={disciplines}
