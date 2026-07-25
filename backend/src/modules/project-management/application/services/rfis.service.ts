@@ -806,9 +806,7 @@ export class RfisService {
       );
     }
 
-    const shouldMarkAnswered =
-      rfi.status !== RfiStatus.ANSWERED &&
-      rfi.status !== RfiStatus.CLOSED;
+    const shouldMarkAnswered = rfi.status !== RfiStatus.ANSWERED;
 
     const response = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rfiResponse.create({
