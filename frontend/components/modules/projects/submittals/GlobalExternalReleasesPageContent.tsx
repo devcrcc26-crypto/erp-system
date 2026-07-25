@@ -7,6 +7,9 @@ import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -24,6 +27,10 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import {
+  EXTERNAL_RELEASE_DRAFT_STATUSES,
+  EXTERNAL_RELEASE_ISSUED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -41,19 +48,14 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
   'DISCIPLINE_CONSULTANT',
 ];
 
-const STATUS_OPTIONS: Array<{ value: SubmittalStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Issued' },
-];
-
 /**
  * Global external releases list — cross-project, current-user relevant only.
  */
 export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -75,23 +77,43 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const canCreate =
     epc.navFullAccess || epc.navDisciplineLeader || epc.navDesigner;
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     projectId: portfolioMode ? projectFilter : undefined,
     submittalPurpose: portfolioMode ? undefined : EXTERNAL_PURPOSES.join(','),
   };
 
-  const myQuery = useMySubmittals(
-    listParams,
+  const draftListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_DRAFT_STATUSES,
+  };
+  const issuedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_ISSUED_STATUSES,
+  };
+
+  const myDraftQuery = useMySubmittals(
+    draftListParams,
     capabilitiesReady && canAccessPage && !portfolioMode,
   );
-  const allQuery = useAllExternalReleases(
-    listParams,
+  const myIssuedQuery = useMySubmittals(
+    issuedListParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const allDraftQuery = useAllExternalReleases(
+    draftListParams,
     capabilitiesReady && canAccessPage && portfolioMode,
   );
-  const submittalsQuery = portfolioMode ? allQuery : myQuery;
+  const allIssuedQuery = useAllExternalReleases(
+    issuedListParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+
+  const draftQuery = portfolioMode ? allDraftQuery : myDraftQuery;
+  const issuedQuery = portfolioMode ? allIssuedQuery : myIssuedQuery;
+  const submittalsQuery = activeTab === 'active' ? draftQuery : issuedQuery;
 
   const projectsQuery = useAllProjects(
     {},
@@ -194,6 +216,8 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const draftCount = draftQuery.data?.meta.total;
+  const issuedCount = issuedQuery.data?.meta.total;
 
   return (
     <>
@@ -227,6 +251,18 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Draft"
+          closedLabel="Issued"
+          activeCount={draftCount}
+          closedCount={issuedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search external releases"
@@ -236,17 +272,6 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
           />
           {portfolioMode ? (
             <Select
@@ -281,12 +306,14 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
                 icon={<Send />}
                 title={t('pages.globalExternalReleases.empty')}
                 description={
-                  portfolioMode
-                    ? 'External releases from all projects appear here.'
-                    : 'External releases you created, or that belong to disciplines you lead, appear here.'
+                  activeTab === 'active'
+                    ? 'Draft external releases appear here.'
+                    : portfolioMode
+                      ? 'Issued external releases from all projects appear here.'
+                      : 'Issued external releases you created, or that belong to disciplines you lead, appear here.'
                 }
                 action={
-                  canCreate && !apiUnavailable
+                  canCreate && !apiUnavailable && activeTab === 'active'
                     ? {
                         label: 'New external release',
                         onClick: () => setDrawerOpen(true),
@@ -304,7 +331,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setDrawerOpen(false)}
         onCreated={(submittalId) => {
-          void submittalsQuery.refetch().then((result) => {
+          void draftQuery.refetch().then((result) => {
             const created = result.data?.data.find((s) => s.id === submittalId);
             if (created) {
               setSelected({
@@ -322,7 +349,10 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           projectId={selected.projectId}
           submittalId={selected.submittalId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void submittalsQuery.refetch()}
+          onUpdated={() => {
+            void draftQuery.refetch();
+            void issuedQuery.refetch();
+          }}
         />
       )}
     </>

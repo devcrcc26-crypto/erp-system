@@ -7,6 +7,9 @@ import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -26,6 +29,10 @@ import SubmittalDetailDrawer from '@/components/modules/projects/submittals/Subm
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import {
+  EXTERNAL_RELEASE_DRAFT_STATUSES,
+  EXTERNAL_RELEASE_ISSUED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -35,19 +42,14 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
   'DISCIPLINE_CONSULTANT',
 ];
 
-const STATUS_OPTIONS: Array<{ value: SubmittalStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Issued' },
-];
-
 export default function ExternalReleasePageContent({
   projectId,
 }: {
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [purposeFilter, setPurposeFilter] = useState<
     SubmittalPurpose | undefined
   >();
@@ -59,19 +61,38 @@ export default function ExternalReleasePageContent({
   const permLoading = usePermissionsLoading();
   const projectQuery = useProject(projectId, !permLoading);
 
-  const submittalsQuery = useSubmittals(
+  const filterParams = {
+    search: search.trim() || undefined,
+    submittalPurpose: purposeFilter ?? EXTERNAL_PURPOSES.join(','),
+  };
+
+  const draftListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_DRAFT_STATUSES,
+  };
+  const issuedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_ISSUED_STATUSES,
+  };
+
+  const draftQuery = useSubmittals(
     projectId,
-    {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      submittalPurpose: purposeFilter ?? EXTERNAL_PURPOSES.join(','),
-    },
+    draftListParams,
     !permLoading && lens.canViewSubmittals,
   );
+  const issuedQuery = useSubmittals(
+    projectId,
+    issuedListParams,
+    !permLoading && lens.canViewSubmittals,
+  );
+  const submittalsQuery = activeTab === 'active' ? draftQuery : issuedQuery;
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const draftCount = draftQuery.data?.meta.total;
+  const issuedCount = issuedQuery.data?.meta.total;
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -199,6 +220,18 @@ export default function ExternalReleasePageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Draft"
+          closedLabel="Issued"
+          activeCount={draftCount}
+          closedCount={issuedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search releases"
@@ -208,17 +241,6 @@ export default function ExternalReleasePageContent({
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
           />
           <Select
             allowClear
@@ -256,9 +278,13 @@ export default function ExternalReleasePageContent({
               <TableEmptyState
                 icon={<Send />}
                 title="No external releases"
-                description="Issue approved subtasks to site engineers or consultants"
+                description={
+                  activeTab === 'active'
+                    ? 'Draft releases appear here before they are issued.'
+                    : 'Issue approved subtasks to site engineers or consultants'
+                }
                 action={
-                  canCreateRelease && !apiUnavailable
+                  canCreateRelease && !apiUnavailable && activeTab === 'active'
                     ? {
                         label: 'New external release',
                         onClick: () => setCreateOpen(true),
@@ -275,14 +301,20 @@ export default function ExternalReleasePageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => void submittalsQuery.refetch()}
+        onCreated={() => {
+          void draftQuery.refetch();
+          void issuedQuery.refetch();
+        }}
       />
 
       <SubmittalDetailDrawer
         projectId={projectId}
         submittalId={selectedSubmittalId}
         onClose={() => setSelectedSubmittalId(null)}
-        onUpdated={() => void submittalsQuery.refetch()}
+        onUpdated={() => {
+          void draftQuery.refetch();
+          void issuedQuery.refetch();
+        }}
       />
     </>
   );
