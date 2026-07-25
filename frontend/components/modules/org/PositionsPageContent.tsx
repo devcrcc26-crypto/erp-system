@@ -7,6 +7,9 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import {
   useCanManageDepartments,
@@ -29,15 +32,27 @@ export default function PositionsPageContent(): React.ReactNode {
   const canView = useCanViewDepartmentsNav();
   const canManage = useCanManageDepartments();
   const messageApi = useAppMessage();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Position | null>(null);
   const [readOnlyDrawer, setReadOnlyDrawer] = useState(false);
   const [deleting, setDeleting] = useState<Position | null>(null);
 
-  const positionsQuery = usePositions({ page: 1, limit: 100 }, canView);
+  const activePositionsQuery = usePositions({ page: 1, limit: 100, isActive: true }, canView);
+  const inactivePositionsQuery = usePositions({ page: 1, limit: 100, isActive: false }, canView);
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, canView);
   const deletePosition = useDeletePosition();
-  const positions = positionsQuery.data?.data ?? [];
+
+  const positions = activeTab === 'active'
+    ? (activePositionsQuery.data?.data ?? [])
+    : (inactivePositionsQuery.data?.data ?? []);
+  const activeCount = activePositionsQuery.data?.meta?.total ?? 0;
+  const inactiveCount = inactivePositionsQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activePositionsQuery.refetch();
+    void inactivePositionsQuery.refetch();
+  };
 
   const departmentNameById = useMemo(
     () =>
@@ -106,7 +121,7 @@ export default function PositionsPageContent(): React.ReactNode {
     },
   ];
 
-  if (permLoading || positionsQuery.isLoading) {
+  if (permLoading || activePositionsQuery.isLoading || inactivePositionsQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -116,7 +131,7 @@ export default function PositionsPageContent(): React.ReactNode {
     );
   }
 
-  if (positionsQuery.isError) {
+  if (activePositionsQuery.isError || inactivePositionsQuery.isError) {
     return (
       <Alert
         type="error"
@@ -146,11 +161,20 @@ export default function PositionsPageContent(): React.ReactNode {
         ) : undefined
       }
     >
+      <ListStatusTabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key)}
+        activeLabel="Active"
+        closedLabel="Inactive"
+        activeCount={activeCount}
+        closedCount={inactiveCount}
+      />
+
       <DataTable<Position>
         rowKey="id"
         columns={columns}
         dataSource={positions}
-        loading={positionsQuery.isLoading}
+        loading={activePositionsQuery.isLoading || inactivePositionsQuery.isLoading}
         locale={{ emptyText: 'No positions defined' }}
       />
 
@@ -163,7 +187,7 @@ export default function PositionsPageContent(): React.ReactNode {
           setEditing(null);
           setReadOnlyDrawer(false);
         }}
-        onSaved={() => void positionsQuery.refetch()}
+        onSaved={() => refetchLists()}
       />
 
       <ConfirmDialog
@@ -186,7 +210,7 @@ export default function PositionsPageContent(): React.ReactNode {
             .then(() => {
               messageApi.success('Position deleted');
               setDeleting(null);
-              void positionsQuery.refetch();
+              refetchLists();
             })
             .catch((error: unknown) => {
               notifyApiError(error, 'Failed to delete position', messageApi);

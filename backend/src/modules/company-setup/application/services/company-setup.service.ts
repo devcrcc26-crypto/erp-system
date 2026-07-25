@@ -25,6 +25,7 @@ import {
   CreateNumberSeriesDto,
   CreatePositionDto,
   ListEngineeringDisciplinesQueryDto,
+  OrgEntityListQueryDto,
   UpdateBranchDto,
   UpdateCompanyDto,
   UpdateCompanySettingDto,
@@ -204,7 +205,7 @@ export class CompanySetupService {
 
   async listDepartments(
     ctx: AuditContext,
-    query: PaginationQueryDto,
+    query: OrgEntityListQueryDto,
   ): Promise<PaginatedResult<unknown>> {
     return this.paginate('department', ctx.companyId, query);
   }
@@ -538,7 +539,7 @@ export class CompanySetupService {
 
   async listPositions(
     ctx: AuditContext,
-    query: PaginationQueryDto,
+    query: OrgEntityListQueryDto,
   ): Promise<PaginatedResult<unknown>> {
     return this.paginate('position', ctx.companyId, query);
   }
@@ -820,9 +821,16 @@ export class CompanySetupService {
   private async paginate(
     model: 'branch' | 'division' | 'department' | 'costCentre' | 'position' | 'numberSeries',
     companyId: string,
-    query: PaginationQueryDto,
+    query: PaginationQueryDto | OrgEntityListQueryDto,
   ): Promise<PaginatedResult<unknown>> {
-    const where = activeOnly({ companyId });
+    const where: Record<string, unknown> = activeOnly({ companyId });
+    if (
+      (model === 'department' || model === 'position') &&
+      'isActive' in query &&
+      (query.isActive === 'true' || query.isActive === 'false')
+    ) {
+      where.isActive = query.isActive === 'true';
+    }
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const delegate = this.prisma[model] as {
       findMany: (args: object) => Promise<unknown[]>;

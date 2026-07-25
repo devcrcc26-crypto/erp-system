@@ -23,6 +23,13 @@ import {
   changeRequestStatusVariant,
   formatChangeRequestStatus,
 } from '@/lib/utils/pm-status-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  CHANGE_REQUEST_ACTIVE_STATUSES,
+  CHANGE_REQUEST_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -35,24 +42,14 @@ import {
 } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
-const STATUS_OPTIONS: Array<{ value: ChangeRequestStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'CLOSED', label: 'Closed' },
-];
-
 /**
  * Global change requests list — cross-project, current-user relevant only.
  */
 export default function GlobalChangeRequestsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    ChangeRequestStatus | undefined
-  >();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -76,24 +73,30 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
     epc.navDesigner ||
     pm.change_requests.canCreate;
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     projectId: portfolioMode ? projectFilter : undefined,
   };
 
-  const myChangeRequestsQuery = useMyChangeRequests(
-    listParams,
-    capabilitiesReady && canAccessPage && !portfolioMode,
-  );
-  const allChangeRequestsQuery = useAllChangeRequests(
-    listParams,
-    capabilitiesReady && canAccessPage && portfolioMode,
-  );
-  const changeRequestsQuery = portfolioMode
-    ? allChangeRequestsQuery
-    : myChangeRequestsQuery;
+  const activeListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: CHANGE_REQUEST_ACTIVE_STATUSES,
+  };
+  const resolvedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: CHANGE_REQUEST_RESOLVED_STATUSES,
+  };
+
+  const myActiveQuery = useMyChangeRequests(activeListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const myResolvedQuery = useMyChangeRequests(resolvedListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const allActiveQuery = useAllChangeRequests(activeListParams, capabilitiesReady && canAccessPage && portfolioMode);
+  const allResolvedQuery = useAllChangeRequests(resolvedListParams, capabilitiesReady && canAccessPage && portfolioMode);
+
+  const activeQuery = portfolioMode ? allActiveQuery : myActiveQuery;
+  const resolvedQuery = portfolioMode ? allResolvedQuery : myResolvedQuery;
+  const changeRequestsQuery = activeTab === 'active' ? activeQuery : resolvedQuery;
 
   const projectsQuery = useAllProjects(
     {},
@@ -196,6 +199,13 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
 
   const rows = changeRequestsQuery.data?.data ?? [];
   const meta = changeRequestsQuery.data?.meta;
+  const activeCount = activeQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeQuery.refetch();
+    void resolvedQuery.refetch();
+  };
 
   return (
     <>
@@ -229,6 +239,18 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Resolved"
+          activeCount={activeCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search by title or CR number"
@@ -238,17 +260,6 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: ChangeRequestStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
           />
           {portfolioMode ? (
             <Select
@@ -305,7 +316,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setCreateOpen(false)}
         onCreated={() => {
-          void changeRequestsQuery.refetch();
+          refetchLists();
           setCreateOpen(false);
         }}
       />
@@ -315,7 +326,7 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
           projectId={selected.projectId}
           changeRequestId={selected.changeRequestId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void changeRequestsQuery.refetch()}
+          onUpdated={() => refetchLists()}
         />
       ) : null}
     </>

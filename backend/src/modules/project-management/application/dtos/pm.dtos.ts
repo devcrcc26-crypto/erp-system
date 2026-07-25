@@ -61,10 +61,13 @@ import {
 } from '@/shared/project-client-presets';
 
 export class ProjectListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ enum: ProjectStatus })
+  @ApiPropertyOptional({
+    description:
+      'Project status filter. Comma-separated to match multiple statuses.',
+  })
   @IsOptional()
-  @IsEnum(ProjectStatus)
-  status?: ProjectStatus;
+  @IsString()
+  status?: string;
 
   @ApiPropertyOptional({ enum: ProjectType })
   @IsOptional()
@@ -103,10 +106,13 @@ export class ProjectExportListQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ enum: ProjectStatus })
+  @ApiPropertyOptional({
+    description:
+      'Project status filter. Comma-separated to match multiple statuses.',
+  })
   @IsOptional()
-  @IsEnum(ProjectStatus)
-  status?: ProjectStatus;
+  @IsString()
+  status?: string;
 
   @ApiPropertyOptional({ enum: ProjectType })
   @IsOptional()
@@ -1592,7 +1598,10 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'Status filter. Comma-separated to match multiple statuses.',
+  })
   @IsOptional()
   @IsString()
   status?: string;

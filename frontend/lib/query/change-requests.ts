@@ -42,7 +42,7 @@ export const changeRequestKeys = {
     projectId: string,
     params: PaginationParams &
       PmListFilters & {
-        status?: ChangeRequestStatus;
+        status?: string;
         linkedDesignPackageId?: string;
       } = {
       page: 1,
@@ -56,7 +56,7 @@ export const changeRequestKeys = {
   myList: (
     params: PaginationParams &
       PmListFilters & {
-        status?: ChangeRequestStatus;
+        status?: string;
       } = {
       page: 1,
       limit: 20,
@@ -65,7 +65,7 @@ export const changeRequestKeys = {
   allList: (
     params: PaginationParams &
       PmListFilters & {
-        status?: ChangeRequestStatus;
+        status?: string;
       } = {
       page: 1,
       limit: 20,
@@ -84,7 +84,7 @@ export function useChangeRequests(
   projectId: string,
   params: PaginationParams &
     PmListFilters & {
-      status?: ChangeRequestStatus;
+      status?: string;
       linkedDesignPackageId?: string;
     } = {
     page: 1,
@@ -116,7 +116,7 @@ export function useChangeRequests(
 export function useMyChangeRequests(
   params: PaginationParams &
     PmListFilters & {
-      status?: ChangeRequestStatus;
+      status?: string;
     } = {
     page: 1,
     limit: 20,
@@ -147,7 +147,7 @@ export function useMyChangeRequests(
 export function useAllChangeRequests(
   params: PaginationParams &
     PmListFilters & {
-      status?: ChangeRequestStatus;
+      status?: string;
     } = {
     page: 1,
     limit: 20,

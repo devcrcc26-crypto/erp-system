@@ -23,6 +23,13 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  EXTERNAL_RELEASE_ACTIVE_STATUSES,
+  EXTERNAL_RELEASE_ISSUED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -46,8 +53,8 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
 export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -68,23 +75,31 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const canAccessPage = portfolioMode || canViewPersonal;
   const canCreate = epc.navDisciplineLeader || epc.navDesigner;
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     projectId: portfolioMode ? projectFilter : undefined,
     submittalPurpose: portfolioMode ? undefined : EXTERNAL_PURPOSES.join(','),
   };
 
-  const mySubmittalsQuery = useMySubmittals(
-    listParams,
-    capabilitiesReady && canAccessPage && !portfolioMode,
-  );
-  const allReleasesQuery = useAllExternalReleases(
-    listParams,
-    capabilitiesReady && canAccessPage && portfolioMode,
-  );
-  const submittalsQuery = portfolioMode ? allReleasesQuery : mySubmittalsQuery;
+  const activeListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_ACTIVE_STATUSES,
+  };
+  const issuedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_ISSUED_STATUSES,
+  };
+
+  const myActiveQuery = useMySubmittals(activeListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const myIssuedQuery = useMySubmittals(issuedListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const allActiveQuery = useAllExternalReleases(activeListParams, capabilitiesReady && canAccessPage && portfolioMode);
+  const allIssuedQuery = useAllExternalReleases(issuedListParams, capabilitiesReady && canAccessPage && portfolioMode);
+
+  const activeQuery = portfolioMode ? allActiveQuery : myActiveQuery;
+  const issuedQuery = portfolioMode ? allIssuedQuery : myIssuedQuery;
+  const submittalsQuery = activeTab === 'active' ? activeQuery : issuedQuery;
 
   const projectsQuery = useAllProjects(
     {},
@@ -193,6 +208,13 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const activeCount = activeQuery.data?.meta?.total ?? 0;
+  const issuedCount = issuedQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeQuery.refetch();
+    void issuedQuery.refetch();
+  };
 
   return (
     <>
@@ -226,6 +248,18 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Issued"
+          activeCount={activeCount}
+          closedCount={issuedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search external releases"
@@ -235,20 +269,6 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControl}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={[
-              { value: 'DRAFT', label: 'Draft' },
-              { value: 'SUBMITTED', label: 'Issued' },
-            ]}
           />
           {portfolioMode ? (
             <Select
@@ -302,7 +322,8 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setDrawerOpen(false)}
         onCreated={(submittalId) => {
-          void submittalsQuery.refetch().then((result) => {
+          refetchLists();
+          void activeQuery.refetch().then((result) => {
             const created = result.data?.data.find((s) => s.id === submittalId);
             if (created) {
               setSelected({
@@ -320,7 +341,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           projectId={selected.projectId}
           submittalId={selected.submittalId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void submittalsQuery.refetch()}
+          onUpdated={() => refetchLists()}
         />
       )}
     </>

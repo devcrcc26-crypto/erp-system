@@ -40,6 +40,7 @@ import {
   MappedProjectChangeRequest,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   buildSourceEntitySummary,
   validateSourceEntity,
@@ -1204,8 +1205,11 @@ export class ProjectChangeRequestService {
       where.projectId = query.projectId;
     }
 
-    if (query.status) {
-      where.status = query.status as ProjectChangeRequestStatus;
+    const statusFilter = parseStatusFilter<ProjectChangeRequestStatus>(
+      query.status,
+    );
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {
@@ -1240,8 +1244,11 @@ export class ProjectChangeRequestService {
       projectId,
     });
 
-    if (query.status) {
-      where.status = query.status as ProjectChangeRequestStatus;
+    const statusFilter = parseStatusFilter<ProjectChangeRequestStatus>(
+      query.status,
+    );
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.linkedDesignPackageId) {
@@ -1285,8 +1292,11 @@ export class ProjectChangeRequestService {
       ],
     });
 
-    if (query.status) {
-      where.status = query.status as ProjectChangeRequestStatus;
+    const statusFilter = parseStatusFilter<ProjectChangeRequestStatus>(
+      query.status,
+    );
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {

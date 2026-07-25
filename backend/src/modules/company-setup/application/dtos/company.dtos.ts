@@ -311,6 +311,16 @@ export class CreateDisciplineDto {
 
 export class UpdateDisciplineDto extends PartialType(CreateDisciplineDto) {}
 
+/** Query params for department / position lists. */
+export class OrgEntityListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'Filter by isActive. Pass "true" or "false".',
+  })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  isActive?: string;
+}
+
 /** Query params for engineering discipline catalog (allows full catalog in one page). */
 export class ListEngineeringDisciplinesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'When "true", return only active disciplines' })

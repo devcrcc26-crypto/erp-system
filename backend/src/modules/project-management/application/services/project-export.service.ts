@@ -19,6 +19,7 @@ import {
   TASK_LIST_SUMMARY_EXPORT_COLUMNS,
 } from '../constants/project-export.constants';
 import { ProjectExportListQueryDto } from '../dtos/pm.dtos';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   applyBilingualHeaders,
   workbookToBuffer,
@@ -83,8 +84,9 @@ export class ProjectExportService {
     if (query.projectIds?.length) {
       base.id = { in: query.projectIds };
     }
-    if (query.status) {
-      base.status = query.status;
+    const statusFilter = parseStatusFilter(query.status);
+    if (statusFilter) {
+      base.status = statusFilter;
     }
     if (query.projectType) {
       base.projectType = query.projectType;

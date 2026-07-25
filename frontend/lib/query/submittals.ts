@@ -38,21 +38,21 @@ export const submittalKeys = {
   all: ['pm', 'submittals'] as const,
   myLists: () => [...submittalKeys.all, 'my', 'list'] as const,
   myList: (
-    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    params: PaginationParams & PmListFilters & { status?: string } = {
       page: 1,
       limit: 20,
     },
   ) => [...submittalKeys.myLists(), params] as const,
   allLists: () => [...submittalKeys.all, 'all', 'list'] as const,
   allList: (
-    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    params: PaginationParams & PmListFilters & { status?: string } = {
       page: 1,
       limit: 20,
     },
   ) => [...submittalKeys.allLists(), params] as const,
   externalAllLists: () => [...submittalKeys.all, 'external-all', 'list'] as const,
   externalAllList: (
-    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    params: PaginationParams & PmListFilters & { status?: string } = {
       page: 1,
       limit: 20,
     },
@@ -61,7 +61,7 @@ export const submittalKeys = {
     [...submittalKeys.all, projectId, 'list'] as const,
   list: (
     projectId: string,
-    params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+    params: PaginationParams & PmListFilters & { status?: string } = {
       page: 1,
       limit: 20,
     },
@@ -85,7 +85,7 @@ export const submittalKeys = {
  * Cross-project construction submittals relevant to the signed-in user.
  */
 export function useMySubmittals(
-  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+  params: PaginationParams & PmListFilters & { status?: string } = {
     page: 1,
     limit: 20,
   },
@@ -109,7 +109,7 @@ export function useMySubmittals(
  * Company-wide construction submittals (portfolio / admin users).
  */
 export function useAllSubmittals(
-  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+  params: PaginationParams & PmListFilters & { status?: string } = {
     page: 1,
     limit: 20,
   },
@@ -133,7 +133,7 @@ export function useAllSubmittals(
  * Company-wide external releases (portfolio / admin users).
  */
 export function useAllExternalReleases(
-  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+  params: PaginationParams & PmListFilters & { status?: string } = {
     page: 1,
     limit: 20,
   },
@@ -157,7 +157,7 @@ export function useAllExternalReleases(
 
 export function useSubmittals(
   projectId: string,
-  params: PaginationParams & PmListFilters & { status?: SubmittalStatus } = {
+  params: PaginationParams & PmListFilters & { status?: string } = {
     page: 1,
     limit: 20,
   },

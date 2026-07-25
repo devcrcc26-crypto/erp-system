@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Input, Select, Space, Table } from 'antd';
+import { Button, Select, Space, Table } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -26,18 +26,17 @@ import {
   changeRequestStatusVariant,
   formatChangeRequestStatus,
 } from '@/lib/utils/pm-status-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  CHANGE_REQUEST_ACTIVE_STATUSES,
+  CHANGE_REQUEST_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAuthStore } from '@/stores/auth.store';
-
-const STATUS_OPTIONS: Array<{ value: ChangeRequestStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'REJECTED', label: 'Rejected' },
-  { value: 'CLOSED', label: 'Closed' },
-];
 
 export default function ChangeRequestList({
   projectId,
@@ -51,10 +50,8 @@ export default function ChangeRequestList({
   );
   const permLoading = usePermissionsLoading();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    ChangeRequestStatus | undefined
-  >();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -68,17 +65,40 @@ export default function ChangeRequestList({
     epc.navFullAccess ||
     (eligibleQuery.data?.length ?? 0) > 0;
 
-  const listQuery = useChangeRequests(
+  const filterParams = {
+    search: search.trim() || undefined,
+    sortBy: 'createdAt' as const,
+    sortOrder: 'desc' as const,
+  };
+
+  const activeListQuery = useChangeRequests(
     projectId,
     {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: CHANGE_REQUEST_ACTIVE_STATUSES,
     },
     !permLoading && pm.projects.canView,
   );
+
+  const resolvedListQuery = useChangeRequests(
+    projectId,
+    {
+      ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: CHANGE_REQUEST_RESOLVED_STATUSES,
+    },
+    !permLoading && pm.projects.canView,
+  );
+
+  const listQuery = activeTab === 'active' ? activeListQuery : resolvedListQuery;
+  const activeCount = activeListQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedListQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeListQuery.refetch();
+    void resolvedListQuery.refetch();
+  };
 
   const columns: ColumnsType<ProjectChangeRequest> = useMemo(
     () => [
@@ -124,9 +144,6 @@ export default function ChangeRequestList({
     [],
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-
   if (permLoading || listQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
@@ -153,6 +170,18 @@ export default function ChangeRequestList({
           ) : undefined
         }
       >
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Resolved"
+          activeCount={activeCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search change requests"
@@ -163,25 +192,14 @@ export default function ChangeRequestList({
               setSearch(value);
             }}
           />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: ChangeRequestStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
-          />
         </Space>
 
         <DataTable<ProjectChangeRequest>
           rowKey="id"
           columns={columns}
-          dataSource={rows}
+          dataSource={listQuery.data?.data ?? []}
           loading={listQuery.isLoading}
-          pagination={bindMeta(meta)}
+          pagination={bindMeta(listQuery.data?.meta)}
           onRow={(record) => ({
             onClick: () => setSelectedId(record.id),
             style: { cursor: 'pointer' },
@@ -225,14 +243,14 @@ export default function ChangeRequestList({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => void listQuery.refetch()}
+        onCreated={() => refetchLists()}
       />
 
       <ChangeRequestDrawer
         projectId={projectId}
         changeRequestId={selectedId}
         onClose={() => setSelectedId(null)}
-        onUpdated={() => void listQuery.refetch()}
+        onUpdated={() => refetchLists()}
       />
     </>
     </ProjectModuleGate>

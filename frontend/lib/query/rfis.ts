@@ -38,7 +38,7 @@ export const rfiKeys = {
   list: (
     projectId: string,
     params: PaginationParams &
-      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+      PmListFilters & { status?: string; priority?: RfiPriority } = {
       page: 1,
       limit: 20,
     },
@@ -51,14 +51,14 @@ export const rfiKeys = {
     [...rfiKeys.detail(projectId, rfiId), 'responses'] as const,
   myList: (
     params: PaginationParams &
-      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+      PmListFilters & { status?: string; priority?: RfiPriority } = {
       page: 1,
       limit: 20,
     },
   ) => [...rfiKeys.all, 'my', params] as const,
   allList: (
     params: PaginationParams &
-      PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+      PmListFilters & { status?: string; priority?: RfiPriority } = {
       page: 1,
       limit: 20,
     },
@@ -73,7 +73,7 @@ export const rfiKeys = {
 export function useRfis(
   projectId: string,
   params: PaginationParams &
-    PmListFilters & { status?: RfiStatus; priority?: RfiPriority } = {
+    PmListFilters & { status?: string; priority?: RfiPriority } = {
     page: 1,
     limit: 20,
   },
@@ -255,7 +255,7 @@ export function useAddRfiResponse() {
 export function useMyRfis(
   params: PaginationParams &
     PmListFilters & {
-      status?: RfiStatus;
+      status?: string;
       priority?: RfiPriority;
     } = {
     page: 1,
@@ -285,7 +285,7 @@ export function useMyRfis(
 export function useAllRfis(
   params: PaginationParams &
     PmListFilters & {
-      status?: RfiStatus;
+      status?: string;
       priority?: RfiPriority;
     } = {
     page: 1,

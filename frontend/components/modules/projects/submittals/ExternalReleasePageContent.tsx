@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Select, Space } from 'antd';
+import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -29,6 +29,13 @@ import SubmittalDetailDrawer from '@/components/modules/projects/submittals/Subm
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  EXTERNAL_RELEASE_ACTIVE_STATUSES,
+  EXTERNAL_RELEASE_ISSUED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -44,8 +51,8 @@ export default function ExternalReleasePageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [purposeFilter, setPurposeFilter] = useState<
     SubmittalPurpose | undefined
   >();
@@ -57,19 +64,41 @@ export default function ExternalReleasePageContent({
   const permLoading = usePermissionsLoading();
   const projectQuery = useProject(projectId, !permLoading);
 
-  const submittalsQuery = useSubmittals(
+  const filterParams = {
+    search: search.trim() || undefined,
+    submittalPurpose: purposeFilter ?? EXTERNAL_PURPOSES.join(','),
+  };
+
+  const activeReleasesQuery = useSubmittals(
     projectId,
     {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      submittalPurpose: purposeFilter ?? EXTERNAL_PURPOSES.join(','),
+      ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: EXTERNAL_RELEASE_ACTIVE_STATUSES,
     },
     !permLoading && lens.canViewSubmittals,
   );
 
+  const issuedReleasesQuery = useSubmittals(
+    projectId,
+    {
+      ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: EXTERNAL_RELEASE_ISSUED_STATUSES,
+    },
+    !permLoading && lens.canViewSubmittals,
+  );
+
+  const submittalsQuery = activeTab === 'active' ? activeReleasesQuery : issuedReleasesQuery;
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const activeCount = activeReleasesQuery.data?.meta?.total ?? 0;
+  const issuedCount = issuedReleasesQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeReleasesQuery.refetch();
+    void issuedReleasesQuery.refetch();
+  };
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -193,6 +222,18 @@ export default function ExternalReleasePageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Issued"
+          activeCount={activeCount}
+          closedCount={issuedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search releases"
@@ -221,20 +262,6 @@ export default function ExternalReleasePageContent({
                 value: 'DISCIPLINE_CONSULTANT',
                 label: formatExternalReleasePurpose('DISCIPLINE_CONSULTANT'),
               },
-            ]}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControl}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={[
-              { value: 'DRAFT', label: 'Draft' },
-              { value: 'SUBMITTED', label: 'Issued' },
             ]}
           />
         </Space>
@@ -268,14 +295,14 @@ export default function ExternalReleasePageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => void submittalsQuery.refetch()}
+        onCreated={() => refetchLists()}
       />
 
       <SubmittalDetailDrawer
         projectId={projectId}
         submittalId={selectedSubmittalId}
         onClose={() => setSelectedSubmittalId(null)}
-        onUpdated={() => void submittalsQuery.refetch()}
+        onUpdated={() => refetchLists()}
       />
     </>
   );

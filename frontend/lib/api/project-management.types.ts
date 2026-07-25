@@ -862,7 +862,7 @@ export type UpdateProjectRequest = Partial<
 };
 
 export interface ProjectListFilters {
-  status?: ProjectStatus;
+  status?: string;
   projectType?: ProjectType;
   search?: string;
   responsiblePersonId?: string;

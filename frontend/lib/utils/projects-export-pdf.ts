@@ -24,7 +24,7 @@ interface ProjectsExportPdfInput {
   projects: Project[];
   filters?: {
     search?: string;
-    status?: ProjectStatus;
+    status?: string;
   };
 }
 
@@ -104,7 +104,12 @@ export function exportProjectsPdf(input: ProjectsExportPdfInput): void {
 
   const activeFilters = [
     filters?.search ? `Search: ${filters.search}` : null,
-    filters?.status ? `Status: ${formatProjectStatus(filters.status)}` : null,
+    filters?.status
+      ? `Status: ${filters.status
+          .split(',')
+          .map((s) => formatProjectStatus(s.trim() as ProjectStatus))
+          .join(', ')}`
+      : null,
   ].filter(Boolean);
 
   y = drawSectionTitle(doc, 'Summary', y);

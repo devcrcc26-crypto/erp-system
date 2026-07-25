@@ -40,7 +40,7 @@ export const issueKeys = {
   list: (
     projectId: string,
     params: PaginationParams &
-      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      PmListFilters & { status?: string; severity?: IssueSeverity } = {
       page: 1,
       limit: 20,
     },
@@ -53,14 +53,14 @@ export const issueKeys = {
     [...issueKeys.detail(projectId, issueId), 'responses'] as const,
   myList: (
     params: PaginationParams &
-      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      PmListFilters & { status?: string; severity?: IssueSeverity } = {
       page: 1,
       limit: 20,
     },
   ) => [...issueKeys.all, 'my', params] as const,
   allList: (
     params: PaginationParams &
-      PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+      PmListFilters & { status?: string; severity?: IssueSeverity } = {
       page: 1,
       limit: 20,
     },
@@ -71,7 +71,7 @@ export const issueKeys = {
 export function useIssues(
   projectId: string,
   params: PaginationParams &
-    PmListFilters & { status?: IssueStatus; severity?: IssueSeverity } = {
+    PmListFilters & { status?: string; severity?: IssueSeverity } = {
     page: 1,
     limit: 20,
   },
@@ -276,7 +276,7 @@ export function useDeleteIssue() {
 export function useMyIssues(
   params: PaginationParams &
     PmListFilters & {
-      status?: IssueStatus;
+      status?: string;
       severity?: IssueSeverity;
     } = {
     page: 1,
@@ -306,7 +306,7 @@ export function useMyIssues(
 export function useAllIssues(
   params: PaginationParams &
     PmListFilters & {
-      status?: IssueStatus;
+      status?: string;
       severity?: IssueSeverity;
     } = {
     page: 1,

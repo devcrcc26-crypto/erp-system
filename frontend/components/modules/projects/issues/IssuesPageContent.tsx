@@ -33,7 +33,6 @@ import type {
   IssueSeverity,
   IssueStatus,
 } from '@/lib/api/project-management.types';
-import { ISSUE_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
@@ -54,6 +53,13 @@ import {
   issueStatusVariant,
   isOverdue,
 } from '@/lib/utils/pm-status-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  ISSUE_OPEN_STATUSES,
+  ISSUE_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
@@ -371,8 +377,8 @@ export default function IssuesPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>();
   const [severityFilter, setSeverityFilter] = useState<
     IssueSeverity | undefined
   >();
@@ -381,12 +387,25 @@ export default function IssuesPageContent({
 
   const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();
-  const issuesQuery = useIssues(projectId, {
-    ...params,
+
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     severity: severityFilter,
+  };
+
+  const openIssuesQuery = useIssues(projectId, {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: ISSUE_OPEN_STATUSES,
   }, !permLoading);
+
+  const resolvedIssuesQuery = useIssues(projectId, {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: ISSUE_RESOLVED_STATUSES,
+  }, !permLoading);
+
+  const issuesQuery = activeTab === 'active' ? openIssuesQuery : resolvedIssuesQuery;
 
   const columns: ColumnsType<Issue> = useMemo(
     () => [
@@ -487,6 +506,13 @@ export default function IssuesPageContent({
 
   const issues = issuesQuery.data?.data ?? [];
   const meta = issuesQuery.data?.meta;
+  const openCount = openIssuesQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedIssuesQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void openIssuesQuery.refetch();
+    void resolvedIssuesQuery.refetch();
+  };
 
   return (
     <ProjectModuleGate projectId={projectId} module="issues">
@@ -515,6 +541,18 @@ export default function IssuesPageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Open"
+          closedLabel="Resolved"
+          activeCount={openCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search issues"
@@ -524,20 +562,6 @@ export default function IssuesPageContent({
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: IssueStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={ISSUE_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
           />
           <Select
             allowClear
@@ -578,14 +602,14 @@ export default function IssuesPageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void issuesQuery.refetch()}
+        onSaved={() => refetchLists()}
       />
 
       <IssueDetailDrawer
         projectId={projectId}
         issueId={selectedIssueId}
         onClose={() => setSelectedIssueId(null)}
-        onUpdated={() => void issuesQuery.refetch()}
+        onUpdated={() => refetchLists()}
       />
     </>
     </ProjectModuleGate>

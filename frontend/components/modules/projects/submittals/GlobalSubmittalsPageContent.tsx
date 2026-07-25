@@ -16,7 +16,6 @@ import type {
   Submittal,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
-import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useMySubmittals, useAllSubmittals } from '@/lib/query/submittals';
 import { useAllProjects } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -26,6 +25,13 @@ import {
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+  CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -45,8 +51,8 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -68,22 +74,30 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const canCreate = epc.navDisciplineLeader || epc.navDesigner;
   const resolveUserDisplay = useUserDisplayResolver();
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     projectId: portfolioMode ? projectFilter : undefined,
   };
 
-  const mySubmittalsQuery = useMySubmittals(
-    listParams,
-    capabilitiesReady && canAccessPage && !portfolioMode,
-  );
-  const allSubmittalsQuery = useAllSubmittals(
-    listParams,
-    capabilitiesReady && canAccessPage && portfolioMode,
-  );
-  const submittalsQuery = portfolioMode ? allSubmittalsQuery : mySubmittalsQuery;
+  const activeListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+  };
+  const completedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+  };
+
+  const myActiveQuery = useMySubmittals(activeListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const myCompletedQuery = useMySubmittals(completedListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const allActiveQuery = useAllSubmittals(activeListParams, capabilitiesReady && canAccessPage && portfolioMode);
+  const allCompletedQuery = useAllSubmittals(completedListParams, capabilitiesReady && canAccessPage && portfolioMode);
+
+  const activeQuery = portfolioMode ? allActiveQuery : myActiveQuery;
+  const completedQuery = portfolioMode ? allCompletedQuery : myCompletedQuery;
+  const submittalsQuery = activeTab === 'active' ? activeQuery : completedQuery;
 
   const projectsQuery = useAllProjects(
     {},
@@ -216,6 +230,13 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
+  const activeCount = activeQuery.data?.meta?.total ?? 0;
+  const completedCount = completedQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeQuery.refetch();
+    void completedQuery.refetch();
+  };
 
   return (
     <>
@@ -249,6 +270,18 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Completed"
+          activeCount={activeCount}
+          closedCount={completedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search submittals"
@@ -258,20 +291,6 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControl}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={SUBMITTAL_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
           />
           {portfolioMode ? (
             <Select
@@ -325,7 +344,8 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setDrawerOpen(false)}
         onCreated={(submittalId) => {
-          void submittalsQuery.refetch().then((result) => {
+          refetchLists();
+          void activeQuery.refetch().then((result) => {
             const created = result.data?.data.find((s) => s.id === submittalId);
             if (created) {
               setSelected({
@@ -343,7 +363,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
           projectId={selected.projectId}
           submittalId={selected.submittalId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void submittalsQuery.refetch()}
+          onUpdated={() => refetchLists()}
         />
       )}
     </>

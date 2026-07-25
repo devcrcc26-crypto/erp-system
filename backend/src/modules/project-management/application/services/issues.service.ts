@@ -44,6 +44,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   buildSourceEntitySummary,
   validateSourceEntity,
@@ -785,8 +786,9 @@ export class IssuesService {
     if (query.projectId) {
       where.projectId = query.projectId;
     }
-    if (query.status) {
-      where.status = query.status as IssueStatus;
+    const statusFilter = parseStatusFilter<IssueStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -816,8 +818,9 @@ export class IssuesService {
     if (query.projectId) {
       where.projectId = query.projectId;
     }
-    if (query.status) {
-      where.status = query.status as IssueStatus;
+    const statusFilter = parseStatusFilter<IssueStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -872,8 +875,9 @@ export class IssuesService {
       ];
     }
 
-    if (query.status) {
-      where.status = query.status as IssueStatus;
+    const statusFilter = parseStatusFilter<IssueStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {

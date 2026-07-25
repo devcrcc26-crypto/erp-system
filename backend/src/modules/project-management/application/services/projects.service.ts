@@ -39,6 +39,7 @@ import {
   parseOptionalDecimal,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   resolveProjectProgressPct,
 } from '../utils/project-progress.util';
@@ -645,8 +646,9 @@ export class ProjectsService {
   ): Promise<Prisma.ProjectWhereInput> {
     const filters: Prisma.ProjectWhereInput = {};
 
-    if (query.status) {
-      filters.status = query.status;
+    const statusFilter = parseStatusFilter(query.status);
+    if (statusFilter) {
+      filters.status = statusFilter;
     }
     if (query.projectType) {
       filters.projectType = query.projectType;

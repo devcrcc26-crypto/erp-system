@@ -47,38 +47,50 @@ export interface Position {
 
 export const orgKeys = {
   all: ['org'] as const,
-  departments: (params: PaginationParams) =>
+  departments: (params: PaginationParams & { isActive?: boolean }) =>
     [...orgKeys.all, 'departments', params] as const,
   disciplines: (params: PaginationParams & { activeOnly?: boolean }) =>
     [...orgKeys.all, 'engineering-disciplines', params] as const,
-  positions: (params: PaginationParams) =>
+  positions: (params: PaginationParams & { isActive?: boolean }) =>
     [...orgKeys.all, 'positions', params] as const,
 };
 
 export function useDepartments(
-  params: PaginationParams = { page: 1, limit: 100 },
+  params: PaginationParams & { isActive?: boolean } = { page: 1, limit: 100 },
   enabled = true,
 ) {
+  const search = new URLSearchParams({
+    page: String(params.page ?? 1),
+    limit: String(params.limit ?? 100),
+  });
+  if (params.isActive !== undefined) {
+    search.set('isActive', String(params.isActive));
+  }
+
   return useQuery({
     queryKey: orgKeys.departments(params),
     queryFn: () =>
-      apiGetPaginated<DepartmentRow>(
-        `/departments?page=${params.page}&limit=${params.limit}`,
-      ),
+      apiGetPaginated<DepartmentRow>(`/departments?${search.toString()}`),
     enabled,
   });
 }
 
 export function usePositions(
-  params: PaginationParams = { page: 1, limit: 100 },
+  params: PaginationParams & { isActive?: boolean } = { page: 1, limit: 100 },
   enabled = true,
 ) {
+  const search = new URLSearchParams({
+    page: String(params.page ?? 1),
+    limit: String(params.limit ?? 100),
+  });
+  if (params.isActive !== undefined) {
+    search.set('isActive', String(params.isActive));
+  }
+
   return useQuery({
     queryKey: orgKeys.positions(params),
     queryFn: () =>
-      apiGetPaginated<Position>(
-        `/positions?page=${params.page}&limit=${params.limit}`,
-      ),
+      apiGetPaginated<Position>(`/positions?${search.toString()}`),
     enabled,
   });
 }

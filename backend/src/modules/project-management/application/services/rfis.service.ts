@@ -42,6 +42,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   buildSourceEntitySummary,
   validateSourceEntity,
@@ -892,8 +893,9 @@ export class RfisService {
       where.projectId = query.projectId;
     }
 
-    if (query.status) {
-      where.status = query.status as RfiStatus;
+    const statusFilter = parseStatusFilter<RfiStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {
@@ -924,8 +926,9 @@ export class RfisService {
       where.projectId = query.projectId;
     }
 
-    if (query.status) {
-      where.status = query.status as RfiStatus;
+    const statusFilter = parseStatusFilter<RfiStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {
@@ -980,8 +983,9 @@ export class RfisService {
       ];
     }
 
-    if (query.status) {
-      where.status = query.status as RfiStatus;
+    const statusFilter = parseStatusFilter<RfiStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {

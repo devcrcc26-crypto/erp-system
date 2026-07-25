@@ -31,6 +31,13 @@ import {
   rfiPriorityVariant,
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  RFI_OPEN_STATUSES,
+  RFI_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import { RfiFormDrawer } from '@/components/modules/projects/rfis/RfisPageContent';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -57,21 +64,13 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
   { value: 'URGENT', label: 'Urgent' },
 ];
 
-const STATUS_OPTIONS: Array<{ value: RfiStatus; label: string }> = [
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'UNDER_REVIEW', label: 'Under Review' },
-  { value: 'ANSWERED', label: 'Answered' },
-  { value: 'CLOSED', label: 'Closed' },
-];
-
 /**
  * Global RFIs list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalRfisPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<RfiStatus | undefined>();
   const [priorityFilter, setPriorityFilter] = useState<RfiPriority | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -96,23 +95,31 @@ export default function GlobalRfisPageContent(): React.ReactNode {
     epc.navDesigner ||
     pm.rfis.canCreate;
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     priority: priorityFilter,
     projectId: portfolioMode ? projectFilter : undefined,
   };
 
-  const myRfisQuery = useMyRfis(
-    listParams,
-    capabilitiesReady && canAccessPage && !portfolioMode,
-  );
-  const allRfisQuery = useAllRfis(
-    listParams,
-    capabilitiesReady && canAccessPage && portfolioMode,
-  );
-  const rfisQuery = portfolioMode ? allRfisQuery : myRfisQuery;
+  const openListParams = {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: RFI_OPEN_STATUSES,
+  };
+  const resolvedListParams = {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: RFI_RESOLVED_STATUSES,
+  };
+
+  const myOpenQuery = useMyRfis(openListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const myResolvedQuery = useMyRfis(resolvedListParams, capabilitiesReady && canAccessPage && !portfolioMode);
+  const allOpenQuery = useAllRfis(openListParams, capabilitiesReady && canAccessPage && portfolioMode);
+  const allResolvedQuery = useAllRfis(resolvedListParams, capabilitiesReady && canAccessPage && portfolioMode);
+
+  const openQuery = portfolioMode ? allOpenQuery : myOpenQuery;
+  const resolvedQuery = portfolioMode ? allResolvedQuery : myResolvedQuery;
+  const rfisQuery = activeTab === 'active' ? openQuery : resolvedQuery;
 
   const myProjectsQuery = useMyRfiProjects(
     capabilitiesReady && !portfolioMode && canCreate,
@@ -250,6 +257,13 @@ export default function GlobalRfisPageContent(): React.ReactNode {
 
   const rows = rfisQuery.data?.data ?? [];
   const meta = rfisQuery.data?.meta;
+  const openCount = openQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void openQuery.refetch();
+    void resolvedQuery.refetch();
+  };
 
   return (
     <>
@@ -283,6 +297,18 @@ export default function GlobalRfisPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Open"
+          closedLabel="Resolved"
+          activeCount={openCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search by title or RFI number"
@@ -292,17 +318,6 @@ export default function GlobalRfisPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: RfiStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
           />
           <Select
             allowClear
@@ -367,7 +382,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setCreateOpen(false)}
         onSaved={() => {
-          void rfisQuery.refetch();
+          refetchLists();
           setCreateOpen(false);
         }}
       />
@@ -377,7 +392,7 @@ export default function GlobalRfisPageContent(): React.ReactNode {
           projectId={selected.projectId}
           rfiId={selected.rfiId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void rfisQuery.refetch()}
+          onUpdated={() => refetchLists()}
         />
       ) : null}
     </>

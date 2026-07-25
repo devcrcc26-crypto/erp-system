@@ -31,6 +31,7 @@ import {
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
 import { PM_SUBMITTAL_USER_NAMES, PM_REVIEWED_BY_NAME } from '../utils/pm-user-name-fields.const';
 import { DocumentNumberService } from './document-number.service';
@@ -1174,8 +1175,9 @@ export class SubmittalsService {
       where.submittalPurpose = defaultPurpose;
     }
 
-    if (query.status) {
-      where.status = query.status as SubmittalStatus;
+    const statusFilter = parseStatusFilter<SubmittalStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {
@@ -1207,8 +1209,9 @@ export class SubmittalsService {
   ): Prisma.SubmittalWhereInput {
     const where: Prisma.SubmittalWhereInput = activeOnly({ projectId });
 
-    if (query.status) {
-      where.status = query.status as SubmittalStatus;
+    const statusFilter = parseStatusFilter<SubmittalStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.submittalPurpose) {
@@ -1264,8 +1267,9 @@ export class SubmittalsService {
       OR: relevanceOr,
     });
 
-    if (query.status) {
-      where.status = query.status as SubmittalStatus;
+    const statusFilter = parseStatusFilter<SubmittalStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.search?.trim()) {

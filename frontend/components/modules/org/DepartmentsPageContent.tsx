@@ -8,6 +8,9 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import KPICard from '@/components/ui/KPICard/KPICard';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import DepartmentFormDrawer from '@/components/modules/org/DepartmentFormDrawer';
 import {
   useCanManageDepartments,
@@ -113,6 +116,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
   const canManage = useCanManageDepartments();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const messageApi = useAppMessage();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DepartmentRow | null>(null);
   const [deleting, setDeleting] = useState<DepartmentRow | null>(null);
@@ -122,7 +126,9 @@ export default function DepartmentsPageContent(): React.ReactNode {
       window.sessionStorage.getItem(LEADER_WARNING_DISMISS_KEY) === '1',
   );
 
-  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, canView);
+  const activeDepsQuery = useDepartments({ page: 1, limit: 100, isActive: true }, canView);
+  const inactiveDepsQuery = useDepartments({ page: 1, limit: 100, isActive: false }, canView);
+  const metricsDepsQuery = useDepartments({ page: 1, limit: 100 }, canView);
   const projectsQuery = useAllProjects({}, canView);
   const usersDirectory = useUsersDirectory(
     { page: 1, limit: 100 },
@@ -130,15 +136,21 @@ export default function DepartmentsPageContent(): React.ReactNode {
   );
   const deleteDepartment = useDeleteDepartment();
 
-  const allDepartments = departmentsQuery.data?.data ?? [];
+  const activeDepartments = activeDepsQuery.data?.data ?? [];
+  const inactiveDepartments = inactiveDepsQuery.data?.data ?? [];
+  const allDepartmentsForMetrics = metricsDepsQuery.data?.data ?? [];
   const projects = projectsQuery.data?.data ?? [];
+
+  const tabDepartments = activeTab === 'active' ? activeDepartments : inactiveDepartments;
+  const activeCount = activeDepsQuery.data?.meta?.total ?? 0;
+  const inactiveCount = inactiveDepsQuery.data?.meta?.total ?? 0;
 
   const visibleDepartments = useMemo(() => {
     if (canManage) {
-      return allDepartments;
+      return tabDepartments;
     }
-    return allDepartments.filter((row) => row.leaderUserId === currentUserId);
-  }, [allDepartments, canManage, currentUserId]);
+    return tabDepartments.filter((row) => row.leaderUserId === currentUserId);
+  }, [tabDepartments, canManage, currentUserId]);
 
   const leaderNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -150,8 +162,8 @@ export default function DepartmentsPageContent(): React.ReactNode {
   }, [usersDirectory.data?.data]);
 
   const departmentsWithoutLeader = useMemo(
-    () => allDepartments.filter((row) => !row.leaderUserId),
-    [allDepartments],
+    () => allDepartmentsForMetrics.filter((row) => !row.leaderUserId),
+    [allDepartmentsForMetrics],
   );
 
   const columns: ColumnsType<DepartmentRow> = [
@@ -228,7 +240,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
     },
   ];
 
-  if (permLoading || departmentsQuery.isLoading) {
+  if (permLoading || activeDepsQuery.isLoading || inactiveDepsQuery.isLoading) {
     return <PageLoadingSkeleton />;
   }
 
@@ -284,14 +296,23 @@ export default function DepartmentsPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <DepartmentStatsRow departments={visibleDepartments} />
+      <DepartmentStatsRow departments={allDepartmentsForMetrics} />
+
+      <ListStatusTabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key)}
+        activeLabel="Active"
+        closedLabel="Inactive"
+        activeCount={activeCount}
+        closedCount={inactiveCount}
+      />
 
       {canManage ? (
         <DataTable<DepartmentRow>
           rowKey="id"
           columns={columns}
-          dataSource={allDepartments}
-          loading={departmentsQuery.isLoading || projectsQuery.isLoading}
+          dataSource={visibleDepartments}
+          loading={activeDepsQuery.isLoading || inactiveDepsQuery.isLoading || projectsQuery.isLoading}
           locale={{ emptyText: 'No departments defined' }}
         />
       ) : leaderDepartment ? (
@@ -318,7 +339,11 @@ export default function DepartmentsPageContent(): React.ReactNode {
             setDrawerOpen(false);
             setEditing(null);
           }}
-          onSaved={() => void departmentsQuery.refetch()}
+          onSaved={() => {
+            void activeDepsQuery.refetch();
+            void inactiveDepsQuery.refetch();
+            void metricsDepsQuery.refetch();
+          }}
         />
       ) : null}
 
@@ -342,7 +367,9 @@ export default function DepartmentsPageContent(): React.ReactNode {
             .then(() => {
               messageApi.success('Department deleted');
               setDeleting(null);
-              void departmentsQuery.refetch();
+              void activeDepsQuery.refetch();
+              void inactiveDepsQuery.refetch();
+              void metricsDepsQuery.refetch();
             })
             .catch((error: unknown) => {
               notifyApiError(error, 'Failed to delete department', messageApi);

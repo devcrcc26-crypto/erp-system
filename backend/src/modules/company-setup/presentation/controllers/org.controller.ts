@@ -23,6 +23,7 @@ import {
   CreateDivisionDto,
   CreatePositionDto,
   ListEngineeringDisciplinesQueryDto,
+  OrgEntityListQueryDto,
   UpdateBranchDto,
   UpdateCostCentreDto,
   UpdateDepartmentDto,
@@ -133,7 +134,7 @@ export class OrgController {
   @RequirePermission('departments', 'view')
   listDepartments(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
+    @Query() query: OrgEntityListQueryDto,
   ): Promise<unknown> {
     return this.companySetupService.listDepartments(this.ctx(user), query);
   }
@@ -257,7 +258,7 @@ export class OrgController {
   @RequirePermission('departments', 'view')
   listPositions(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
+    @Query() query: OrgEntityListQueryDto,
   ): Promise<unknown> {
     return this.companySetupService.listPositions(this.ctx(user), query);
   }

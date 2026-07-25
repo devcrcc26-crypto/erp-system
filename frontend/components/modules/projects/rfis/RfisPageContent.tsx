@@ -32,7 +32,6 @@ import type {
   RfiSource,
   RfiStatus,
 } from '@/lib/api/project-management.types';
-import { RFI_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
@@ -52,6 +51,13 @@ import {
   rfiPriorityVariant,
   rfiStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  RFI_OPEN_STATUSES,
+  RFI_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import RfiDetailDrawer from '@/components/modules/projects/rfis/RfiDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
@@ -434,20 +440,33 @@ export default function RfisPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<RfiStatus | undefined>();
   const [priorityFilter, setPriorityFilter] = useState<RfiPriority | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRfiId, setSelectedRfiId] = useState<string | null>(null);
 
   const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();
-  const rfisQuery = useRfis(projectId, {
-    ...params,
+
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     priority: priorityFilter,
+  };
+
+  const openRfisQuery = useRfis(projectId, {
+    ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: RFI_OPEN_STATUSES,
   }, !permLoading);
+
+  const resolvedRfisQuery = useRfis(projectId, {
+    ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: RFI_RESOLVED_STATUSES,
+  }, !permLoading);
+
+  const rfisQuery = activeTab === 'active' ? openRfisQuery : resolvedRfisQuery;
 
   const columns: ColumnsType<Rfi> = useMemo(
     () => [
@@ -543,6 +562,13 @@ export default function RfisPageContent({
 
   const rfis = rfisQuery.data?.data ?? [];
   const meta = rfisQuery.data?.meta;
+  const openCount = openRfisQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedRfisQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void openRfisQuery.refetch();
+    void resolvedRfisQuery.refetch();
+  };
 
   return (
     <ProjectModuleGate projectId={projectId} module="rfis">
@@ -571,6 +597,18 @@ export default function RfisPageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Open"
+          closedLabel="Resolved"
+          activeCount={openCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search RFIs"
@@ -580,20 +618,6 @@ export default function RfisPageContent({
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlNav}
-            value={statusFilter}
-            onChange={(value: RfiStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={RFI_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
           />
           <Select
             allowClear
@@ -634,14 +658,14 @@ export default function RfisPageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void rfisQuery.refetch()}
+        onSaved={() => refetchLists()}
       />
 
       <RfiDetailDrawer
         projectId={projectId}
         rfiId={selectedRfiId}
         onClose={() => setSelectedRfiId(null)}
-        onUpdated={() => void rfisQuery.refetch()}
+        onUpdated={() => refetchLists()}
       />
     </>
     </ProjectModuleGate>

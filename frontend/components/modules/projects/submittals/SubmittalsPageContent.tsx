@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Select, Space } from 'antd';
+import { Alert, Button, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -18,7 +18,6 @@ import type {
   Submittal,
   SubmittalStatus,
 } from '@/lib/api/project-management.types';
-import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useSubmittals } from '@/lib/query/submittals';
 import { useProject } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -28,6 +27,13 @@ import {
   submittalStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
+  CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import ConstructionSubmittalDrawer from '@/components/modules/projects/submittals/ConstructionSubmittalDrawer';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -43,8 +49,8 @@ export default function SubmittalsPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedSubmittalId, setSelectedSubmittalId] = useState<string | null>(
     null,
@@ -55,16 +61,32 @@ export default function SubmittalsPageContent({
   const resolveUserDisplay = useUserDisplayResolver();
   const canAccessPage = lens.canViewSubmittals;
 
-  const submittalsQuery = useSubmittals(
+  const filterParams = {
+    search: search.trim() || undefined,
+    submittalPurpose: 'IN_CONSTRUCTION',
+  };
+
+  const activeSubmittalsQuery = useSubmittals(
     projectId,
     {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      submittalPurpose: 'IN_CONSTRUCTION',
+      ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES,
     },
     !permLoading && canAccessPage,
   );
+
+  const completedSubmittalsQuery = useSubmittals(
+    projectId,
+    {
+      ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES,
+    },
+    !permLoading && canAccessPage,
+  );
+
+  const submittalsQuery = activeTab === 'active' ? activeSubmittalsQuery : completedSubmittalsQuery;
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -169,6 +191,13 @@ export default function SubmittalsPageContent({
   const meta = submittalsQuery.data?.meta;
   const isTenderStage = projectQuery.data?.designStage === 'TENDER';
   const canCreateSubmittal = lens.canCreateSubmittals && !isTenderStage;
+  const activeCount = activeSubmittalsQuery.data?.meta?.total ?? 0;
+  const completedCount = completedSubmittalsQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeSubmittalsQuery.refetch();
+    void completedSubmittalsQuery.refetch();
+  };
 
   return (
     <ProjectModuleGate projectId={projectId} module="submittals">
@@ -213,6 +242,18 @@ export default function SubmittalsPageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Completed"
+          activeCount={activeCount}
+          closedCount={completedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search submittals"
@@ -222,20 +263,6 @@ export default function SubmittalsPageContent({
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControl}
-            value={statusFilter}
-            onChange={(value: SubmittalStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={SUBMITTAL_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
           />
         </Space>
 
@@ -269,7 +296,7 @@ export default function SubmittalsPageContent({
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
         onCreated={(submittalId) => {
-          void submittalsQuery.refetch();
+          refetchLists();
           setSelectedSubmittalId(submittalId);
         }}
       />
@@ -278,7 +305,7 @@ export default function SubmittalsPageContent({
         projectId={projectId}
         submittalId={selectedSubmittalId}
         onClose={() => setSelectedSubmittalId(null)}
-        onUpdated={() => void submittalsQuery.refetch()}
+        onUpdated={() => refetchLists()}
       />
     </>
     </ProjectModuleGate>

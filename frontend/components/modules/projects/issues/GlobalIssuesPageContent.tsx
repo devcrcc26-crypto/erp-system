@@ -7,6 +7,9 @@ import { AlertCircle } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -22,6 +25,10 @@ import {
   issueSeverityVariant,
   issueStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import {
+  ISSUE_OPEN_STATUSES,
+  ISSUE_RESOLVED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import { IssueFormDrawer } from '@/components/modules/projects/issues/IssuesPageContent';
 import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -41,19 +48,13 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
-const STATUS_OPTIONS: Array<{ value: IssueStatus; label: string }> = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'CLOSED', label: 'Closed' },
-];
-
 /**
  * Global Issues list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalIssuesPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<IssueStatus | undefined>();
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
@@ -76,23 +77,47 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
   const canCreate =
     epc.navDisciplineLeader || epc.navDesigner || pm.issues.canCreate;
 
-  const listParams = {
-    ...params,
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
     severity: severityFilter,
     projectId: portfolioMode ? projectFilter : undefined,
   };
 
-  const myIssuesQuery = useMyIssues(
-    listParams,
+  const openListParams = {
+    ...(activeTab === 'active'
+      ? params
+      : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: ISSUE_OPEN_STATUSES,
+  };
+  const resolvedListParams = {
+    ...(activeTab === 'closed'
+      ? params
+      : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: ISSUE_RESOLVED_STATUSES,
+  };
+
+  const myOpenQuery = useMyIssues(
+    openListParams,
     capabilitiesReady && canAccessPage && !portfolioMode,
   );
-  const allIssuesQuery = useAllIssues(
-    listParams,
+  const myResolvedQuery = useMyIssues(
+    resolvedListParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const allOpenQuery = useAllIssues(
+    openListParams,
     capabilitiesReady && canAccessPage && portfolioMode,
   );
-  const issuesQuery = portfolioMode ? allIssuesQuery : myIssuesQuery;
+  const allResolvedQuery = useAllIssues(
+    resolvedListParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+
+  const openQuery = portfolioMode ? allOpenQuery : myOpenQuery;
+  const resolvedQuery = portfolioMode ? allResolvedQuery : myResolvedQuery;
+  const issuesQuery = activeTab === 'active' ? openQuery : resolvedQuery;
 
   const myProjectsQuery = useMyIssueProjects(
     capabilitiesReady && !portfolioMode && canCreate,
@@ -225,6 +250,13 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
 
   const rows = issuesQuery.data?.data ?? [];
   const meta = issuesQuery.data?.meta;
+  const openCount = openQuery.data?.meta?.total ?? 0;
+  const resolvedCount = resolvedQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void openQuery.refetch();
+    void resolvedQuery.refetch();
+  };
 
   return (
     <>
@@ -258,6 +290,18 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Open"
+          closedLabel="Resolved"
+          activeCount={openCount}
+          closedCount={resolvedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search by type or issue number"
@@ -267,17 +311,6 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: IssueStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
           />
           <Select
             allowClear
@@ -342,7 +375,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
         showProjectSelector
         onClose={() => setCreateOpen(false)}
         onSaved={() => {
-          void issuesQuery.refetch();
+          refetchLists();
           setCreateOpen(false);
         }}
       />
@@ -352,7 +385,7 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
           projectId={selected.projectId}
           issueId={selected.issueId}
           onClose={() => setSelected(null)}
-          onUpdated={() => void issuesQuery.refetch()}
+          onUpdated={() => refetchLists()}
         />
       ) : null}
     </>

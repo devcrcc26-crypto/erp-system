@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   Alert,
   Button,
-  Input,
   Select,
   Space,
 } from 'antd';
@@ -21,8 +20,7 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { Project, ProjectStatus, ProjectResponsibleDepartment, ProjectDesignProperties, ProjectDesignStage } from '@/lib/api/project-management.types';
-import { PROJECT_STATUS_WORKFLOW } from '@/lib/api/workflow';
+import type { Project, ProjectResponsibleDepartment, ProjectDesignProperties, ProjectDesignStage, ProjectStatus } from '@/lib/api/project-management.types';
 import { fetchAllProjects, useProjects } from '@/lib/query/projects';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -51,6 +49,13 @@ import {
   projectResponsibleDepartmentVariant,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import {
+  PROJECT_ACTIVE_STATUSES,
+  PROJECT_CLOSED_STATUSES,
+} from '@/lib/utils/list-status-tabs';
 import StackedName from '@/components/ui/StackedName/StackedName';
 import { formatUserName } from '@/lib/utils/user-display';
 import { exportProjectsPdf } from '@/lib/utils/projects-export-pdf';
@@ -60,8 +65,8 @@ import ProjectFormDrawer from '@/components/modules/projects/ProjectFormDrawer';
 export default function ProjectsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const messageApi = useAppMessage();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | undefined>();
   const [departmentFilter, setDepartmentFilter] = useState<
     ProjectResponsibleDepartment | undefined
   >();
@@ -81,19 +86,32 @@ export default function ProjectsPageContent(): React.ReactNode {
   const authUser = useAuthStore((state) => state.user);
   const canFetchProjects = authHydrated && isAuthenticated;
 
-  const projectsQuery = useProjects(
+  const filterParams = {
+    search: search.trim() || undefined,
+    responsibleDepartment: departmentFilter,
+    designProperties: designPropertiesFilter,
+    designStage: designStageFilter,
+    sortBy: 'createdAt' as const,
+    sortOrder: 'desc' as const,
+  };
+
+  const activeProjectsQuery = useProjects(
     {
-      ...params,
-      search: search.trim() || undefined,
-      status: statusFilter,
-      responsibleDepartment: departmentFilter,
-      designProperties: designPropertiesFilter,
-      designStage: designStageFilter,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
+      ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: PROJECT_ACTIVE_STATUSES,
     },
     canFetchProjects,
   );
+  const closedProjectsQuery = useProjects(
+    {
+      ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: PROJECT_CLOSED_STATUSES,
+    },
+    canFetchProjects,
+  );
+  const projectsQuery = activeTab === 'active' ? activeProjectsQuery : closedProjectsQuery;
 
   const handleExportPdf = useCallback(async (): Promise<void> => {
     const trimmedSearch = search.trim();
@@ -102,7 +120,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     try {
       const allProjects = await fetchAllProjects({
         search: trimmedSearch || undefined,
-        status: statusFilter,
+        status: activeTab === 'active' ? PROJECT_ACTIVE_STATUSES : PROJECT_CLOSED_STATUSES,
         responsibleDepartment: departmentFilter,
         designProperties: designPropertiesFilter,
         designStage: designStageFilter,
@@ -119,7 +137,7 @@ export default function ProjectsPageContent(): React.ReactNode {
         projects: allProjects,
         filters: {
           search: trimmedSearch || undefined,
-          status: statusFilter,
+          status: activeTab === 'active' ? PROJECT_ACTIVE_STATUSES : PROJECT_CLOSED_STATUSES,
         },
       });
       messageApi.success('Project export generated.');
@@ -128,14 +146,14 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingPdf(false);
     }
-  }, [authUser, departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search, statusFilter]);
+  }, [activeTab, authUser, departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search]);
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingExcel(true);
     try {
       await downloadProjectListExcel({
         search: search.trim() || undefined,
-        status: statusFilter,
+        status: activeTab === 'active' ? PROJECT_ACTIVE_STATUSES : PROJECT_CLOSED_STATUSES,
         responsibleDepartment: departmentFilter,
         designProperties: designPropertiesFilter,
         designStage: designStageFilter,
@@ -146,7 +164,7 @@ export default function ProjectsPageContent(): React.ReactNode {
     } finally {
       setExportingExcel(false);
     }
-  }, [departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search, statusFilter]);
+  }, [activeTab, departmentFilter, designPropertiesFilter, designStageFilter, messageApi, search]);
 
   const columns: ColumnsType<Project> = useMemo(
     () => [
@@ -321,6 +339,13 @@ export default function ProjectsPageContent(): React.ReactNode {
 
   const projects = projectsQuery.data?.data ?? [];
   const meta = projectsQuery.data?.meta;
+  const activeCount = activeProjectsQuery.data?.meta?.total ?? 0;
+  const closedCount = closedProjectsQuery.data?.meta?.total ?? 0;
+
+  const refetchLists = (): void => {
+    void activeProjectsQuery.refetch();
+    void closedProjectsQuery.refetch();
+  };
 
   return (
     <>
@@ -356,6 +381,18 @@ export default function ProjectsPageContent(): React.ReactNode {
           </Space>
         }
       >
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Closed"
+          activeCount={activeCount}
+          closedCount={closedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search by code or name"
@@ -365,20 +402,6 @@ export default function ProjectsPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Filter by status"
-            className={layout.filterControlMd}
-            value={statusFilter}
-            onChange={(value: ProjectStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={PROJECT_STATUS_WORKFLOW.map((step) => ({
-              value: step.key,
-              label: step.label,
-            }))}
           />
           <Select
             allowClear
@@ -440,7 +463,7 @@ export default function ProjectsPageContent(): React.ReactNode {
           setEditingProject(null);
         }}
         onSaved={() => {
-          void projectsQuery.refetch();
+          refetchLists();
         }}
       />
     </>
