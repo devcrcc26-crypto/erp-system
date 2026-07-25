@@ -26,10 +26,16 @@ import { useAllProjects } from '@/lib/query/projects';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { submittalStatusVariant } from '@/lib/utils/pm-status-display';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
+import {
+  EXTERNAL_RELEASE_DRAFT_STATUS_OPTIONS,
+  EXTERNAL_RELEASE_ISSUED_STATUS_OPTIONS,
+  formatExternalReleaseStatus,
+} from '@/lib/utils/external-release-status';
 import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import {
   EXTERNAL_RELEASE_DRAFT_STATUSES,
   EXTERNAL_RELEASE_ISSUED_STATUSES,
+  resolveTabStatusFilter,
 } from '@/lib/utils/list-status-tabs';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
@@ -56,6 +62,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<SubmittalStatus | undefined>();
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [selected, setSelected] = useState<{
     projectId: string;
@@ -86,12 +93,18 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const draftListParams = {
     ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: EXTERNAL_RELEASE_DRAFT_STATUSES,
+    status: resolveTabStatusFilter(
+      EXTERNAL_RELEASE_DRAFT_STATUSES,
+      activeTab === 'active' ? statusFilter : undefined,
+    ),
   };
   const issuedListParams = {
     ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
     ...filterParams,
-    status: EXTERNAL_RELEASE_ISSUED_STATUSES,
+    status: resolveTabStatusFilter(
+      EXTERNAL_RELEASE_ISSUED_STATUSES,
+      activeTab === 'closed' ? statusFilter : undefined,
+    ),
   };
 
   const myDraftQuery = useMySubmittals(
@@ -174,7 +187,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         key: 'status',
         render: (status: SubmittalStatus) => (
           <StatusBadge
-            label={status === 'DRAFT' ? 'Draft' : 'Issued'}
+            label={formatExternalReleaseStatus(status)}
             variant={submittalStatusVariant(status)}
           />
         ),
@@ -255,6 +268,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
+            setStatusFilter(undefined);
             resetPage();
           }}
           activeLabel="Draft"
@@ -272,6 +286,21 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
+          />
+          <Select
+            allowClear
+            placeholder="Status"
+            className={layout.filterControlSm}
+            value={statusFilter}
+            onChange={(value: SubmittalStatus | undefined) => {
+              resetPage();
+              setStatusFilter(value);
+            }}
+            options={
+              activeTab === 'active'
+                ? EXTERNAL_RELEASE_DRAFT_STATUS_OPTIONS
+                : EXTERNAL_RELEASE_ISSUED_STATUS_OPTIONS
+            }
           />
           {portfolioMode ? (
             <Select
