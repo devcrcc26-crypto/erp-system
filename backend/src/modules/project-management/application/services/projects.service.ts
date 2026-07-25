@@ -646,7 +646,7 @@ export class ProjectsService {
   ): Promise<Prisma.ProjectWhereInput> {
     const filters: Prisma.ProjectWhereInput = {};
 
-    const statusFilter = parseStatusFilter(query.status);
+    const statusFilter = parseStatusFilter<ProjectStatus>(query.status);
     if (statusFilter) {
       filters.status = statusFilter;
     }

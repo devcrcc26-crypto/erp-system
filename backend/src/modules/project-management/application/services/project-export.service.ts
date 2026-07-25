@@ -4,6 +4,7 @@ import {
   Prisma,
   Project,
   ProjectChangeRequest,
+  ProjectStatus,
   Task,
   TaskDiscipline,
   User,
@@ -84,7 +85,7 @@ export class ProjectExportService {
     if (query.projectIds?.length) {
       base.id = { in: query.projectIds };
     }
-    const statusFilter = parseStatusFilter(query.status);
+    const statusFilter = parseStatusFilter<ProjectStatus>(query.status);
     if (statusFilter) {
       base.status = statusFilter;
     }
