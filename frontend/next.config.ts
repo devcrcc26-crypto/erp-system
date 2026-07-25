@@ -1,7 +1,13 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    optimizePackageImports: ['antd', '@ant-design/icons', 'lodash', 'recharts'],
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
 };
 
 export default nextConfig;

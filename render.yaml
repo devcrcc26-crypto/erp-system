@@ -4,10 +4,10 @@
 # Stack: Render (this service) + Supabase/Neon (Postgres) + Vercel (frontend) + Resend (email)
 #
 # Render dashboard (if not using Blueprint):
-#   Root Directory     — leave EMPTY (repo root, not backend/)
-#   Build Command      — npm ci --include=dev && npm run build --workspace=backend
+#   Root Directory     — backend
+#   Build Command      — npm ci --include=dev && npm run build
 #   Pre-Deploy Command — leave EMPTY if migrations already applied (run locally or via CI)
-#   Start Command      — npm run start:prod --workspace=backend
+#   Start Command      — npm run start:prod
 #   Health Check Path  — /api/health
 #
 # Supabase DATABASE_URL: use session pooler on port 5432 (not transaction pooler :6543).
@@ -21,8 +21,8 @@
 #   5. Set NEXT_PUBLIC_API_URL on Vercel to https://<this-service>.onrender.com/api
 #
 # First deploy only (Render Shell, after migrations succeed):
-#   npm run db:seed --workspace=backend
-#   # Or baseline-only: SEED_PM_DEMO=false npm run db:seed --workspace=backend
+#   npm run prisma:seed
+#   # Or baseline-only: SEED_PM_DEMO=false npm run prisma:seed
 
 services:
   - type: web
@@ -31,18 +31,17 @@ services:
     region: oregon
     plan: starter
     branch: main
+    rootDir: backend
 
     # NODE_ENV=production omits devDependencies; --include=dev is required for nest build + prisma.
-    buildCommand: npm ci --include=dev && npm run build --workspace=backend
-    startCommand: npm run start:prod --workspace=backend
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:prod
 
     healthCheckPath: /api/health
 
     buildFilter:
       paths:
         - backend/**
-        - package.json
-        - package-lock.json
         - render.yaml
 
     envVars:

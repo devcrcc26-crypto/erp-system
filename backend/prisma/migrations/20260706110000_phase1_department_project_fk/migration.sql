@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS "idx_department_leader_user_id"
   ON "department"("leader_user_id");
 
 -- Seed Municipal Transportation + Architectural Design departments
+-- Only when seed company/division/branch already exist (skip on empty local DBs).
 INSERT INTO "department" (
   "id",
   "company_id",
@@ -43,37 +44,76 @@ INSERT INTO "department" (
   "updated_at",
   "updated_by"
 )
-VALUES
-  (
-    'e0000000-0000-4000-8000-000000000001',
-    '00000000-0000-4000-8000-000000000001',
-    '359e3881-0f8b-488b-87cd-4a854a0b1d11',
-    '00000000-0000-4000-8000-000000000010',
-    'Municipal Transportation Department',
-    '市政交通部',
-    'MTD',
-    true,
-    NULL,
-    NOW(),
-    '00000000-0000-4000-8000-000000000001',
-    NOW(),
-    '00000000-0000-4000-8000-000000000001'
-  ),
-  (
-    'e0000000-0000-4000-8000-000000000002',
-    '00000000-0000-4000-8000-000000000001',
-    '359e3881-0f8b-488b-87cd-4a854a0b1d11',
-    '00000000-0000-4000-8000-000000000010',
-    'Architectural Design Department',
-    '建筑设计部',
-    'ADD',
-    true,
-    NULL,
-    NOW(),
-    '00000000-0000-4000-8000-000000000001',
-    NOW(),
-    '00000000-0000-4000-8000-000000000001'
-  )
+SELECT
+  v."id",
+  v."company_id",
+  v."division_id",
+  v."branch_id",
+  v."name",
+  v."name_zh",
+  v."code",
+  v."is_active",
+  v."leader_user_id",
+  v."created_at",
+  v."created_by",
+  v."updated_at",
+  v."updated_by"
+FROM (
+  VALUES
+    (
+      'e0000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000001',
+      '359e3881-0f8b-488b-87cd-4a854a0b1d11',
+      '00000000-0000-4000-8000-000000000010',
+      'Municipal Transportation Department',
+      '市政交通部',
+      'MTD',
+      true,
+      NULL::text,
+      NOW(),
+      '00000000-0000-4000-8000-000000000001',
+      NOW(),
+      '00000000-0000-4000-8000-000000000001'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000002',
+      '00000000-0000-4000-8000-000000000001',
+      '359e3881-0f8b-488b-87cd-4a854a0b1d11',
+      '00000000-0000-4000-8000-000000000010',
+      'Architectural Design Department',
+      '建筑设计部',
+      'ADD',
+      true,
+      NULL::text,
+      NOW(),
+      '00000000-0000-4000-8000-000000000001',
+      NOW(),
+      '00000000-0000-4000-8000-000000000001'
+    )
+) AS v(
+  "id",
+  "company_id",
+  "division_id",
+  "branch_id",
+  "name",
+  "name_zh",
+  "code",
+  "is_active",
+  "leader_user_id",
+  "created_at",
+  "created_by",
+  "updated_at",
+  "updated_by"
+)
+WHERE EXISTS (
+  SELECT 1 FROM "company" c WHERE c."id" = '00000000-0000-4000-8000-000000000001'
+)
+AND EXISTS (
+  SELECT 1 FROM "division" d WHERE d."id" = '359e3881-0f8b-488b-87cd-4a854a0b1d11'
+)
+AND EXISTS (
+  SELECT 1 FROM "branch" b WHERE b."id" = '00000000-0000-4000-8000-000000000010'
+)
 ON CONFLICT ("company_id", "code") DO UPDATE SET
   "name" = EXCLUDED."name",
   "name_zh" = EXCLUDED."name_zh",
