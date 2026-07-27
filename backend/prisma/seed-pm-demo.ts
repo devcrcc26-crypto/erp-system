@@ -788,12 +788,15 @@ export async function seedProjectBundle(
       logNumber: `DL-${def.code}-001`,
       logDate: d('2026-03-14'),
       shift: 'DAY',
-      weatherCondition: 'Clear, light wind',
+      weatherCondition: 'SUNNY',
       temperatureC: 32,
       rainfallMm: 0,
-      workSummary:
+      rainfallLevel: 'NONE',
+      workDescription:
         'Continued pile cap reinforcement on grids A3–A6. Tower crane operational. Concrete pour scheduled tomorrow.',
       status: 'SUBMITTED',
+      submittedAt: d('2026-03-14'),
+      submittedBy: users.engineerUserId,
       createdBy: adminUserId,
       updatedBy: adminUserId,
     },

@@ -16,6 +16,7 @@ import {
 import type {
   CreateDailyLogEquipmentRequest,
   CreateDailyLogIncidentRequest,
+  CreateDailyLogMaterialRequest,
   CreateDailyLogRequest,
   CreateDailyLogVisitorRequest,
   CreateDailyLogWorkforceRequest,
@@ -23,6 +24,7 @@ import type {
   DailyLogDetail,
   DailyLogEquipment,
   DailyLogIncident,
+  DailyLogMaterial,
   DailyLogVisitor,
   DailyLogWorkforce,
   PmListFilters,
@@ -448,5 +450,121 @@ function invalidateDailyLogDetail(
   });
   void queryClient.invalidateQueries({
     queryKey: dailyLogKeys.detail(variables.projectId, variables.dailyLogId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: dailyLogKeys.myLists(),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: dailyLogKeys.allLists(),
+  });
+}
+
+function invalidateAfterWorkflow(
+  queryClient: ReturnType<typeof useQueryClient>,
+  variables: { projectId: string; dailyLogId: string },
+): void {
+  invalidateDailyLogDetail(queryClient, variables);
+}
+
+export function useSubmitDailyLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+    }) =>
+      apiPost<DailyLogDetail>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/submit`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateAfterWorkflow(queryClient, variables);
+    },
+  });
+}
+
+export function useApproveDailyLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+    }) =>
+      apiPost<DailyLogDetail>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/approve`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateAfterWorkflow(queryClient, variables);
+    },
+  });
+}
+
+export function useRecallDailyLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+    }) =>
+      apiPost<DailyLogDetail>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/recall`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateAfterWorkflow(queryClient, variables);
+    },
+  });
+}
+
+export function useAddDailyLogMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      body,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      body: CreateDailyLogMaterialRequest;
+    }) =>
+      apiPost<DailyLogMaterial>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/materials`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useRemoveDailyLogMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      dailyLogId,
+      materialId,
+    }: {
+      projectId: string;
+      dailyLogId: string;
+      materialId: string;
+    }) =>
+      apiDelete<MessageResponse>(
+        `${dailyLogsPath(projectId)}/${dailyLogId}/materials/${materialId}`,
+      ),
+    onSuccess: (_data, variables) => {
+      void invalidateDailyLogDetail(queryClient, variables);
+    },
   });
 }

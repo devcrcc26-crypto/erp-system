@@ -1037,15 +1037,25 @@ export class CreateDailyLogDto {
   @IsDateString()
   logDate!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'DAY | NIGHT | SPLIT' })
   @IsString()
-  shift?: string;
+  shift!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({
+    enum: [
+      'SUNNY',
+      'PARTLY_CLOUDY',
+      'OVERCAST',
+      'LIGHT_RAIN',
+      'HEAVY_RAIN',
+      'THUNDERSTORM',
+      'FOGGY',
+      'WINDY',
+      'HOT_AND_DRY',
+    ],
+  })
   @IsString()
-  weatherCondition?: string;
+  weatherCondition!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -1057,15 +1067,19 @@ export class CreateDailyLogDto {
   @IsNumber()
   rainfallMm?: number;
 
+  @ApiPropertyOptional({ enum: ['NONE', 'LIGHT', 'MODERATE', 'HEAVY'] })
+  @IsOptional()
+  @IsString()
+  rainfallLevel?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
   humidity?: number;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'Work description for the day' })
   @IsString()
-  workSummary?: string;
+  workDescription!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -1090,26 +1104,11 @@ export class CreateDailyLogDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  equipment?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  materials?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsEntityUuid()
   supervisorId?: string;
 }
 
-export class UpdateDailyLogDto extends PartialType(CreateDailyLogDto) {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  status?: string;
-}
+export class UpdateDailyLogDto extends PartialType(CreateDailyLogDto) {}
 
 export class CreateDailyLogWorkforceDto {
   @ApiProperty()
@@ -1159,14 +1158,33 @@ export class CreateDailyLogVisitorDto {
   @IsString()
   company?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({
+    enum: [
+      'CLIENT_VISIT',
+      'INSPECTION',
+      'DELIVERY',
+      'CONSULTANT_VISIT',
+      'REGULATORY_AUTHORITY',
+      'OTHER',
+    ],
+  })
   @IsString()
-  purpose?: string;
+  purpose!: string;
 }
 
 export class CreateDailyLogIncidentDto {
-  @ApiProperty()
+  @ApiProperty({
+    enum: [
+      'SAFETY_VIOLATION',
+      'NEAR_MISS',
+      'FIRST_AID',
+      'MEDICAL_TREATMENT',
+      'LOST_TIME_INJURY',
+      'PROPERTY_DAMAGE',
+      'ENVIRONMENTAL',
+      'OTHER',
+    ],
+  })
   @IsString()
   incidentType!: string;
 
@@ -1174,10 +1192,30 @@ export class CreateDailyLogIncidentDto {
   @IsString()
   description!: string;
 
+  @ApiProperty({
+    enum: ['MINOR', 'MODERATE', 'MAJOR', 'CRITICAL', 'NEAR_MISS'],
+  })
+  @IsString()
+  severity!: string;
+}
+
+export class CreateDailyLogMaterialDto {
+  @ApiProperty()
+  @IsString()
+  materialType!: string;
+
+  @ApiProperty()
+  @IsNumber()
+  quantity!: number;
+
+  @ApiProperty()
+  @IsString()
+  unit!: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  severity?: string;
+  supplier?: string;
 }
 
 export class CreateMeetingDto {

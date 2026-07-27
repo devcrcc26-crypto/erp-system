@@ -5,21 +5,34 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import { DailyLog, Prisma } from '@prisma/client';
+import {
+  DailyLog,
+  DailyLogStatus,
+  IncidentSeverity,
+  IncidentType,
+  Prisma,
+  RainfallLevel,
+  VisitorPurpose,
+  WeatherCondition,
+} from '@prisma/client';
 import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   CreateDailyLogDto,
   CreateDailyLogEquipmentDto,
   CreateDailyLogIncidentDto,
+  CreateDailyLogMaterialDto,
   CreateDailyLogVisitorDto,
   CreateDailyLogWorkforceDto,
   DailyLogListQueryDto,
@@ -32,27 +45,32 @@ import {
   mapDailyLogDetail,
   mapDailyLogEquipment,
   mapDailyLogIncident,
+  mapDailyLogMaterial,
   mapDailyLogVisitor,
   mapDailyLogWorkforce,
   MappedDailyLog,
   MappedDailyLogDetail,
   MappedDailyLogEquipment,
   MappedDailyLogIncident,
+  MappedDailyLogMaterial,
   MappedDailyLogVisitor,
   MappedDailyLogWorkforce,
   parseOptionalDecimal,
   toDateString,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import {
   enrichRowsWithUserDisplayNames,
   enrichWithUserDisplayNames,
 } from '../utils/pm-user-names.util';
-import {
-  PM_DAILY_LOG_USER_NAMES,
-} from '../utils/pm-user-name-fields.const';
+import { PM_DAILY_LOG_USER_NAMES } from '../utils/pm-user-name-fields.const';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { ProjectScopeService } from './project-scope.service';
+
+const DAILY_LOG_SUBMITTED_EVENT = 'daily_log.submitted';
+const DAILY_LOG_APPROVED_EVENT = 'daily_log.approved';
+const DAILY_LOG_RECALLED_EVENT = 'daily_log.recalled';
 
 const DAILY_LOG_SORT_FIELDS = new Set([
   'createdAt',
@@ -67,40 +85,20 @@ const DAILY_LOG_DETAIL_INCLUDE = {
   equipment: { orderBy: { createdAt: 'asc' as const } },
   visitors: { orderBy: { createdAt: 'asc' as const } },
   incidents: { orderBy: { createdAt: 'asc' as const } },
+  materials: { orderBy: { createdAt: 'asc' as const } },
 };
 
 const DAILY_LOG_LIST_INCLUDE = {
   workforce: { select: { workerCount: true } },
+  _count: {
+    select: {
+      equipment: true,
+      visitors: true,
+      incidents: true,
+      materials: true,
+    },
+  },
 };
-
-const IMMUTABLE_DAILY_LOG_STATUSES = new Set(['SUBMITTED', 'APPROVED']);
-
-const DAILY_LOG_STATUS_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ['SUBMITTED'],
-  SUBMITTED: ['APPROVED'],
-  APPROVED: [],
-};
-
-const DAILY_LOG_DATA_FIELDS = [
-  'logDate',
-  'shift',
-  'weatherCondition',
-  'temperatureC',
-  'rainfallMm',
-  'humidity',
-  'workSummary',
-  'workforceCount',
-  'contractorName',
-  'issues',
-  'delays',
-  'equipment',
-  'materials',
-  'supervisorId',
-] as const satisfies ReadonlyArray<keyof UpdateDailyLogDto>;
-
-function hasDailyLogDataChanges(dto: UpdateDailyLogDto): boolean {
-  return DAILY_LOG_DATA_FIELDS.some((field) => dto[field] !== undefined);
-}
 
 export type MappedMyDailyLog = MappedDailyLog & {
   projectName: string;
@@ -122,6 +120,7 @@ export class DailyLogsService {
     private readonly projectScopeService: ProjectScopeService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly permissionService: PermissionService,
+    @Optional() private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -265,7 +264,7 @@ export class DailyLogsService {
   }
 
   /**
-   * Returns a daily log with workforce, equipment, visitors, and incidents.
+   * Returns a daily log with workforce, equipment, visitors, incidents, and materials.
    */
   async getDailyLog(
     ctx: PmContext,
@@ -308,19 +307,21 @@ export class DailyLogsService {
           projectId,
           siteEngineerId: ctx.userId,
           logNumber,
+          status: 'DRAFT',
           logDate: new Date(dto.logDate),
           shift: dto.shift,
-          weatherCondition: dto.weatherCondition,
+          weatherCondition: dto.weatherCondition as WeatherCondition,
           temperatureC: parseOptionalDecimal(dto.temperatureC),
           rainfallMm: parseOptionalDecimal(dto.rainfallMm),
+          rainfallLevel: dto.rainfallLevel
+            ? (dto.rainfallLevel as RainfallLevel)
+            : undefined,
           humidity: parseOptionalDecimal(dto.humidity),
-          workSummary: dto.workSummary,
+          workDescription: dto.workDescription,
           workforceCount: dto.workforceCount,
           contractorName: dto.contractorName,
           issues: dto.issues,
           delays: dto.delays,
-          equipmentNotes: dto.equipment,
-          materials: dto.materials,
           supervisorId: dto.supervisorId,
           supervisedAt: dto.supervisorId ? new Date() : undefined,
           createdBy: ctx.userId,
@@ -352,7 +353,8 @@ export class DailyLogsService {
   }
 
   /**
-   * Updates an existing daily log scoped to a project.
+   * Updates editable fields of a daily log. Status changes must use
+   * submitDailyLog / approveDailyLog / recallDailyLog.
    */
   async updateDailyLog(
     ctx: PmContext,
@@ -361,25 +363,7 @@ export class DailyLogsService {
     dto: UpdateDailyLogDto,
   ): Promise<MappedDailyLogDetail> {
     const existing = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, existing, 'edit');
-
-    if (
-      IMMUTABLE_DAILY_LOG_STATUSES.has(existing.status) &&
-      hasDailyLogDataChanges(dto)
-    ) {
-      throw new BadRequestException(
-        'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
-      );
-    }
-
-    if (dto.status !== undefined && dto.status !== existing.status) {
-      const allowed = DAILY_LOG_STATUS_TRANSITIONS[existing.status] ?? [];
-      if (!allowed.includes(dto.status)) {
-        throw new BadRequestException(
-          `Invalid daily log status transition from ${existing.status} to ${dto.status}.`,
-        );
-      }
-    }
+    await this.assertCanEditDailyLog(ctx, existing);
 
     if (dto.supervisorId) {
       await this.assertUserInCompany(ctx, dto.supervisorId);
@@ -394,28 +378,155 @@ export class DailyLogsService {
       data: {
         logDate: dto.logDate ? new Date(dto.logDate) : undefined,
         shift: dto.shift,
-        weatherCondition: dto.weatherCondition,
+        weatherCondition: dto.weatherCondition
+          ? (dto.weatherCondition as WeatherCondition)
+          : undefined,
         temperatureC: parseOptionalDecimal(dto.temperatureC),
         rainfallMm: parseOptionalDecimal(dto.rainfallMm),
+        rainfallLevel: dto.rainfallLevel
+          ? (dto.rainfallLevel as RainfallLevel)
+          : undefined,
         humidity: parseOptionalDecimal(dto.humidity),
-        workSummary: dto.workSummary,
+        workDescription: dto.workDescription,
         workforceCount: dto.workforceCount,
         contractorName: dto.contractorName,
         issues: dto.issues,
         delays: dto.delays,
-        equipmentNotes: dto.equipment,
-        materials: dto.materials,
         supervisorId: dto.supervisorId,
         supervisedAt: supervisorChanged
           ? dto.supervisorId
             ? new Date()
             : null
           : undefined,
-        status: dto.status,
         updatedBy: ctx.userId,
       },
       include: DAILY_LOG_DETAIL_INCLUDE,
     });
+
+    return this.enrichDailyLogDetail(ctx, projectId, row);
+  }
+
+  /**
+   * Advances a DRAFT daily log to SUBMITTED status.
+   * Only the creator may submit their own log.
+   */
+  async submitDailyLog(
+    ctx: PmContext,
+    projectId: string,
+    logId: string,
+  ): Promise<MappedDailyLogDetail> {
+    const log = await this.getDailyLogDetailOrThrow(projectId, logId);
+
+    if (log.status !== 'DRAFT') {
+      throw new BadRequestException(
+        'Only DRAFT daily logs can be submitted.',
+      );
+    }
+    if (log.createdBy !== ctx.userId) {
+      throw new ForbiddenException(
+        'Only the creator may submit this daily log.',
+      );
+    }
+
+    const row = await this.prisma.dailyLog.update({
+      where: { id: logId },
+      data: {
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+        submittedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      include: DAILY_LOG_DETAIL_INCLUDE,
+    });
+
+    await this.sendDailyLogSubmittedNotification(ctx, row);
+
+    return this.enrichDailyLogDetail(ctx, projectId, row);
+  }
+
+  /**
+   * Approves a SUBMITTED daily log. The supervisor or a full-access user may approve.
+   */
+  async approveDailyLog(
+    ctx: PmContext,
+    projectId: string,
+    logId: string,
+  ): Promise<MappedDailyLogDetail> {
+    const log = await this.getDailyLogDetailOrThrow(projectId, logId);
+
+    if (log.status !== 'SUBMITTED') {
+      throw new BadRequestException(
+        'Only SUBMITTED daily logs can be approved.',
+      );
+    }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isSupervisor = log.supervisorId === ctx.userId;
+    if (!isSupervisor && !hasFullProjectDataAccess(roleNames)) {
+      throw new ForbiddenException(
+        'Only the assigned supervisor or a project administrator may approve this daily log.',
+      );
+    }
+
+    const row = await this.prisma.dailyLog.update({
+      where: { id: logId },
+      data: {
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        approvedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      include: DAILY_LOG_DETAIL_INCLUDE,
+    });
+
+    await this.sendDailyLogApprovedNotification(ctx, row);
+
+    return this.enrichDailyLogDetail(ctx, projectId, row);
+  }
+
+  /**
+   * Recalls a SUBMITTED daily log back to DRAFT status.
+   * The creator or a full-access user may recall.
+   */
+  async recallDailyLog(
+    ctx: PmContext,
+    projectId: string,
+    logId: string,
+  ): Promise<MappedDailyLogDetail> {
+    const log = await this.getDailyLogDetailOrThrow(projectId, logId);
+
+    if (log.status !== 'SUBMITTED') {
+      throw new BadRequestException(
+        'Only SUBMITTED daily logs can be recalled.',
+      );
+    }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    const isCreator = log.createdBy === ctx.userId;
+    if (!isCreator && !hasFullProjectDataAccess(roleNames)) {
+      throw new ForbiddenException(
+        'Only the creator or a project administrator may recall this daily log.',
+      );
+    }
+
+    const row = await this.prisma.dailyLog.update({
+      where: { id: logId },
+      data: {
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        updatedBy: ctx.userId,
+      },
+      include: DAILY_LOG_DETAIL_INCLUDE,
+    });
+
+    await this.sendDailyLogRecalledNotification(ctx, row);
 
     return this.enrichDailyLogDetail(ctx, projectId, row);
   }
@@ -445,7 +556,7 @@ export class DailyLogsService {
     dto: CreateDailyLogWorkforceDto,
   ): Promise<MappedDailyLogWorkforce> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
 
     const row = await this.prisma.dailyLogWorkforce.create({
       data: {
@@ -470,7 +581,7 @@ export class DailyLogsService {
     workforceId: string,
   ): Promise<void> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
     await this.deleteChildOrThrow(
       this.prisma.dailyLogWorkforce,
       workforceId,
@@ -489,7 +600,7 @@ export class DailyLogsService {
     dto: CreateDailyLogEquipmentDto,
   ): Promise<MappedDailyLogEquipment> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
 
     const row = await this.prisma.dailyLogEquipment.create({
       data: {
@@ -515,7 +626,7 @@ export class DailyLogsService {
     equipmentId: string,
   ): Promise<void> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
     await this.deleteChildOrThrow(
       this.prisma.dailyLogEquipment,
       equipmentId,
@@ -534,14 +645,14 @@ export class DailyLogsService {
     dto: CreateDailyLogVisitorDto,
   ): Promise<MappedDailyLogVisitor> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
 
     const row = await this.prisma.dailyLogVisitor.create({
       data: {
         dailyLogId,
         visitorName: dto.visitorName,
         company: dto.company,
-        purpose: dto.purpose,
+        purpose: dto.purpose as VisitorPurpose,
         createdBy: ctx.userId,
       },
     });
@@ -559,7 +670,7 @@ export class DailyLogsService {
     visitorId: string,
   ): Promise<void> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
     await this.deleteChildOrThrow(
       this.prisma.dailyLogVisitor,
       visitorId,
@@ -578,14 +689,14 @@ export class DailyLogsService {
     dto: CreateDailyLogIncidentDto,
   ): Promise<MappedDailyLogIncident> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
 
     const row = await this.prisma.dailyLogIncident.create({
       data: {
         dailyLogId,
-        incidentType: dto.incidentType,
+        incidentType: dto.incidentType as IncidentType,
         description: dto.description,
-        severity: dto.severity,
+        severity: dto.severity as IncidentSeverity,
         createdBy: ctx.userId,
       },
     });
@@ -603,12 +714,93 @@ export class DailyLogsService {
     incidentId: string,
   ): Promise<void> {
     const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
-    await this.assertCanAccessDailyLog(ctx, log, 'edit');
+    await this.assertCanEditDailyLog(ctx, log);
     await this.deleteChildOrThrow(
       this.prisma.dailyLogIncident,
       incidentId,
       dailyLogId,
       'Incident entry not found',
+    );
+  }
+
+  /**
+   * Adds a material entry to a daily log.
+   */
+  async addMaterial(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    dto: CreateDailyLogMaterialDto,
+  ): Promise<MappedDailyLogMaterial> {
+    const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.assertCanEditDailyLog(ctx, log);
+
+    const row = await this.prisma.dailyLogMaterial.create({
+      data: {
+        dailyLogId,
+        materialType: dto.materialType,
+        quantity: dto.quantity,
+        unit: dto.unit,
+        supplier: dto.supplier,
+        createdBy: ctx.userId,
+      },
+    });
+
+    return mapDailyLogMaterial(row);
+  }
+
+  /**
+   * Removes a material entry from a daily log.
+   */
+  async removeMaterial(
+    ctx: PmContext,
+    projectId: string,
+    dailyLogId: string,
+    materialId: string,
+  ): Promise<void> {
+    const log = await this.getDailyLogDetailOrThrow(projectId, dailyLogId);
+    await this.assertCanEditDailyLog(ctx, log);
+    await this.deleteChildOrThrow(
+      this.prisma.dailyLogMaterial,
+      materialId,
+      dailyLogId,
+      'Material entry not found',
+    );
+  }
+
+  /**
+   * Asserts the user may edit this daily log:
+   * - status must not be APPROVED, AND
+   * - user must be the creator, the supervisor, or have full project data access.
+   */
+  async assertCanEditDailyLog(
+    ctx: PmContext,
+    log: {
+      status: string;
+      createdBy: string;
+      supervisorId?: string | null;
+    },
+  ): Promise<void> {
+    if (log.status === 'APPROVED') {
+      throw new ForbiddenException(
+        'Approved daily logs cannot be modified.',
+      );
+    }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    if (
+      log.createdBy === ctx.userId ||
+      log.supervisorId === ctx.userId ||
+      hasFullProjectDataAccess(roleNames)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'You do not have permission to edit this daily log.',
     );
   }
 
@@ -698,8 +890,9 @@ export class DailyLogsService {
   ): Prisma.DailyLogWhereInput {
     const where: Prisma.DailyLogWhereInput = activeOnly({ projectId });
 
-    if (query.status) {
-      where.status = query.status;
+    const statusFilter = parseStatusFilter<DailyLogStatus>(query.status);
+    if (statusFilter) {
+      where.status = statusFilter;
     }
 
     if (query.logDateFrom || query.logDateTo) {
@@ -715,11 +908,10 @@ export class DailyLogsService {
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [
-        { workSummary: { contains: term, mode: 'insensitive' } },
-        { shift: { contains: term, mode: 'insensitive' } },
-        { weatherCondition: { contains: term, mode: 'insensitive' } },
         { logNumber: { contains: term, mode: 'insensitive' } },
+        { workDescription: { contains: term, mode: 'insensitive' } },
         { contractorName: { contains: term, mode: 'insensitive' } },
+        { shift: { contains: term, mode: 'insensitive' } },
       ];
     }
 
@@ -769,8 +961,9 @@ export class DailyLogsService {
     if (query.projectId) {
       where.projectId = query.projectId;
     }
-    if (query.status) {
-      where.status = query.status;
+    const myStatusFilter = parseStatusFilter<DailyLogStatus>(query.status);
+    if (myStatusFilter) {
+      where.status = myStatusFilter;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -778,9 +971,9 @@ export class DailyLogsService {
         {
           OR: [
             { logNumber: { contains: term, mode: 'insensitive' } },
-            { workSummary: { contains: term, mode: 'insensitive' } },
+            { workDescription: { contains: term, mode: 'insensitive' } },
             { contractorName: { contains: term, mode: 'insensitive' } },
-            { weatherCondition: { contains: term, mode: 'insensitive' } },
+            { shift: { contains: term, mode: 'insensitive' } },
             { project: { name: { contains: term, mode: 'insensitive' } } },
             {
               project: { projectCode: { contains: term, mode: 'insensitive' } },
@@ -804,16 +997,17 @@ export class DailyLogsService {
     if (query.projectId) {
       where.projectId = query.projectId;
     }
-    if (query.status) {
-      where.status = query.status;
+    const companyStatusFilter = parseStatusFilter<DailyLogStatus>(query.status);
+    if (companyStatusFilter) {
+      where.status = companyStatusFilter;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
       where.OR = [
         { logNumber: { contains: term, mode: 'insensitive' } },
-        { workSummary: { contains: term, mode: 'insensitive' } },
+        { workDescription: { contains: term, mode: 'insensitive' } },
         { contractorName: { contains: term, mode: 'insensitive' } },
-        { weatherCondition: { contains: term, mode: 'insensitive' } },
+        { shift: { contains: term, mode: 'insensitive' } },
         { project: { name: { contains: term, mode: 'insensitive' } } },
         { project: { projectCode: { contains: term, mode: 'insensitive' } } },
       ];
@@ -903,6 +1097,22 @@ export class DailyLogsService {
     }
   }
 
+  private async resolveUserName(
+    ctx: PmContext,
+    userId: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: {
+        firstName: true,
+        lastName: true,
+        chineseName: true,
+        email: true,
+      },
+    });
+    return user ? formatUserDisplayName(user) : userId;
+  }
+
   private async deleteChildOrThrow(
     delegate: {
       findFirst: (args: {
@@ -921,5 +1131,109 @@ export class DailyLogsService {
       throw new NotFoundException(notFoundMessage);
     }
     await delegate.delete({ where: { id: childId } });
+  }
+
+  private async sendDailyLogSubmittedNotification(
+    ctx: PmContext,
+    log: DailyLog,
+  ): Promise<void> {
+    if (!this.notificationService || !log.supervisorId) {
+      return;
+    }
+
+    const link = `/projects/${log.projectId}/daily-logs/${log.id}`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: log.supervisorId,
+          eventType: DAILY_LOG_SUBMITTED_EVENT,
+          subject: `Daily log ${log.logNumber ?? log.id} submitted for approval`,
+          body: `Daily log ${log.logNumber ?? log.id} has been submitted for your approval.`,
+          variables: {
+            projectId: log.projectId,
+            dailyLogId: log.id,
+            logNumber: log.logNumber ?? log.id,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Daily log submitted notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async sendDailyLogApprovedNotification(
+    ctx: PmContext,
+    log: DailyLog,
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+
+    const approverName = await this.resolveUserName(ctx, ctx.userId);
+    const link = `/projects/${log.projectId}/daily-logs/${log.id}`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: log.createdBy,
+          eventType: DAILY_LOG_APPROVED_EVENT,
+          subject: `Daily log ${log.logNumber ?? log.id} has been approved`,
+          body: `Daily log ${log.logNumber ?? log.id} has been approved by ${approverName}.`,
+          variables: {
+            projectId: log.projectId,
+            dailyLogId: log.id,
+            logNumber: log.logNumber ?? log.id,
+            approverName,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Daily log approved notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async sendDailyLogRecalledNotification(
+    ctx: PmContext,
+    log: DailyLog,
+  ): Promise<void> {
+    if (!this.notificationService || !log.supervisorId) {
+      return;
+    }
+
+    const link = `/projects/${log.projectId}/daily-logs/${log.id}`;
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: log.supervisorId,
+          eventType: DAILY_LOG_RECALLED_EVENT,
+          subject: `Daily log ${log.logNumber ?? log.id} has been recalled`,
+          body: `Daily log ${log.logNumber ?? log.id} has been recalled and returned to draft.`,
+          variables: {
+            projectId: log.projectId,
+            dailyLogId: log.id,
+            logNumber: log.logNumber ?? log.id,
+            link,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Daily log recalled notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 }

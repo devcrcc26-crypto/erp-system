@@ -558,6 +558,46 @@ export interface DrawingLink {
   createdAt: string;
 }
 
+export type DailyLogStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED';
+
+export type WeatherCondition =
+  | 'SUNNY'
+  | 'PARTLY_CLOUDY'
+  | 'OVERCAST'
+  | 'LIGHT_RAIN'
+  | 'HEAVY_RAIN'
+  | 'THUNDERSTORM'
+  | 'FOGGY'
+  | 'WINDY'
+  | 'HOT_AND_DRY';
+
+export type RainfallLevel = 'NONE' | 'LIGHT' | 'MODERATE' | 'HEAVY';
+
+export type VisitorPurpose =
+  | 'CLIENT_VISIT'
+  | 'INSPECTION'
+  | 'DELIVERY'
+  | 'CONSULTANT_VISIT'
+  | 'REGULATORY_AUTHORITY'
+  | 'OTHER';
+
+export type IncidentType =
+  | 'SAFETY_VIOLATION'
+  | 'NEAR_MISS'
+  | 'FIRST_AID'
+  | 'MEDICAL_TREATMENT'
+  | 'LOST_TIME_INJURY'
+  | 'PROPERTY_DAMAGE'
+  | 'ENVIRONMENTAL'
+  | 'OTHER';
+
+export type IncidentSeverity =
+  | 'MINOR'
+  | 'MODERATE'
+  | 'MAJOR'
+  | 'CRITICAL'
+  | 'NEAR_MISS';
+
 export interface DailyLog {
   id: string;
   companyId: string;
@@ -569,23 +609,31 @@ export interface DailyLog {
   logNumber: string | null;
   logDate: string;
   shift: string | null;
-  weatherCondition: string | null;
+  weatherCondition: WeatherCondition | string | null;
   temperatureC: string | null;
   rainfallMm: string | null;
+  rainfallLevel: RainfallLevel | string | null;
   humidity: string | null;
-  workSummary: string | null;
+  workDescription: string | null;
   workforceCount: number | null;
   contractorName: string | null;
   issues: string | null;
   delays: string | null;
-  /** Free-text equipment notes from create/update; detail also has `equipment` entry rows. */
-  equipmentNotes: string | null;
-  materials: string | null;
   supervisorId: string | null;
   supervisorName?: string | null;
   supervisedAt: string | null;
-  status: string;
+  submittedAt: string | null;
+  submittedBy: string | null;
+  submittedByName?: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  approvedByName?: string | null;
+  status: DailyLogStatus | string;
   totalWorkers: number;
+  incidentCount: number;
+  equipmentCount: number;
+  materialCount: number;
+  visitorCount: number;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -613,15 +661,24 @@ export interface DailyLogVisitor {
   dailyLogId: string;
   visitorName: string;
   company: string | null;
-  purpose: string | null;
+  purpose: VisitorPurpose | string | null;
 }
 
 export interface DailyLogIncident {
   id: string;
   dailyLogId: string;
-  incidentType: string;
+  incidentType: IncidentType | string;
   description: string;
-  severity: string | null;
+  severity: IncidentSeverity | string | null;
+}
+
+export interface DailyLogMaterial {
+  id: string;
+  dailyLogId: string;
+  materialType: string;
+  quantity: string;
+  unit: string;
+  supplier: string | null;
 }
 
 export interface DailyLogDetail extends DailyLog {
@@ -630,6 +687,7 @@ export interface DailyLogDetail extends DailyLog {
   equipment: DailyLogEquipment[];
   visitors: DailyLogVisitor[];
   incidents: DailyLogIncident[];
+  materials: DailyLogMaterial[];
 }
 
 export interface Meeting {
@@ -1123,24 +1181,21 @@ export interface CreateSubmittalReviewRequest {
 
 export interface CreateDailyLogRequest {
   logDate: string;
-  shift?: string;
-  weatherCondition?: string;
+  shift: string;
+  weatherCondition: WeatherCondition | string;
   temperatureC?: number;
   rainfallMm?: number;
+  rainfallLevel?: RainfallLevel | string;
   humidity?: number;
-  workSummary?: string;
+  workDescription: string;
   workforceCount?: number;
   contractorName?: string;
   issues?: string;
   delays?: string;
-  equipment?: string;
-  materials?: string;
   supervisorId?: string;
 }
 
-export type UpdateDailyLogRequest = Partial<CreateDailyLogRequest> & {
-  status?: string;
-};
+export type UpdateDailyLogRequest = Partial<CreateDailyLogRequest>;
 
 export interface CreateDailyLogWorkforceRequest {
   trade: string;
@@ -1158,13 +1213,20 @@ export interface CreateDailyLogEquipmentRequest {
 export interface CreateDailyLogVisitorRequest {
   visitorName: string;
   company?: string;
-  purpose?: string;
+  purpose: VisitorPurpose | string;
 }
 
 export interface CreateDailyLogIncidentRequest {
-  incidentType: string;
+  incidentType: IncidentType | string;
   description: string;
-  severity?: string;
+  severity: IncidentSeverity | string;
+}
+
+export interface CreateDailyLogMaterialRequest {
+  materialType: string;
+  quantity: number;
+  unit: string;
+  supplier?: string;
 }
 
 export interface CreateMeetingRequest {

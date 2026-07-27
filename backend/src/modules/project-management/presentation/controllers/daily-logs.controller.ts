@@ -19,6 +19,7 @@ import {
   CreateDailyLogDto,
   CreateDailyLogEquipmentDto,
   CreateDailyLogIncidentDto,
+  CreateDailyLogMaterialDto,
   CreateDailyLogVisitorDto,
   CreateDailyLogWorkforceDto,
   DailyLogListQueryDto,
@@ -63,8 +64,41 @@ export class DailyLogsController {
   }
 
   // Child routes must be registered before the generic :id routes.
+  @Post(':id/submit')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Submit daily log for approval (DRAFT → SUBMITTED)' })
+  submit(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.dailyLogsService.submitDailyLog(this.ctx(user), projectId, id);
+  }
+
+  @Post(':id/approve')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Approve submitted daily log (SUBMITTED → APPROVED)' })
+  approve(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.dailyLogsService.approveDailyLog(this.ctx(user), projectId, id);
+  }
+
+  @Post(':id/recall')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Recall submitted daily log to draft (SUBMITTED → DRAFT)' })
+  recall(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.dailyLogsService.recallDailyLog(this.ctx(user), projectId, id);
+  }
+
   @Post(':id/workforce')
-  @RequirePermission('daily_logs', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add workforce entry to daily log' })
   addWorkforce(
     @CurrentUser() user: AuthenticatedUser,
@@ -81,7 +115,7 @@ export class DailyLogsController {
   }
 
   @Delete(':id/workforce/:workforceId')
-  @RequirePermission('daily_logs', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove workforce entry from daily log' })
   async removeWorkforce(
     @CurrentUser() user: AuthenticatedUser,
@@ -99,7 +133,7 @@ export class DailyLogsController {
   }
 
   @Post(':id/equipment')
-  @RequirePermission('daily_logs', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add equipment entry to daily log' })
   addEquipment(
     @CurrentUser() user: AuthenticatedUser,
@@ -116,7 +150,7 @@ export class DailyLogsController {
   }
 
   @Delete(':id/equipment/:equipmentId')
-  @RequirePermission('daily_logs', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove equipment entry from daily log' })
   async removeEquipment(
     @CurrentUser() user: AuthenticatedUser,
@@ -134,7 +168,7 @@ export class DailyLogsController {
   }
 
   @Post(':id/visitors')
-  @RequirePermission('daily_logs', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add visitor entry to daily log' })
   addVisitor(
     @CurrentUser() user: AuthenticatedUser,
@@ -151,7 +185,7 @@ export class DailyLogsController {
   }
 
   @Delete(':id/visitors/:visitorId')
-  @RequirePermission('daily_logs', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove visitor entry from daily log' })
   async removeVisitor(
     @CurrentUser() user: AuthenticatedUser,
@@ -169,7 +203,7 @@ export class DailyLogsController {
   }
 
   @Post(':id/incidents')
-  @RequirePermission('daily_logs', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add incident entry to daily log' })
   addIncident(
     @CurrentUser() user: AuthenticatedUser,
@@ -186,7 +220,7 @@ export class DailyLogsController {
   }
 
   @Delete(':id/incidents/:incidentId')
-  @RequirePermission('daily_logs', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove incident entry from daily log' })
   async removeIncident(
     @CurrentUser() user: AuthenticatedUser,
@@ -201,6 +235,41 @@ export class DailyLogsController {
       incidentId,
     );
     return { message: 'Incident entry removed' };
+  }
+
+  @Post(':id/materials')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Add material entry to daily log' })
+  addMaterial(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateDailyLogMaterialDto,
+  ): Promise<unknown> {
+    return this.dailyLogsService.addMaterial(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id/materials/:materialId')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Remove material entry from daily log' })
+  async removeMaterial(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('materialId') materialId: string,
+  ): Promise<{ message: string }> {
+    await this.dailyLogsService.removeMaterial(
+      this.ctx(user),
+      projectId,
+      id,
+      materialId,
+    );
+    return { message: 'Material entry removed' };
   }
 
   @Get(':id')

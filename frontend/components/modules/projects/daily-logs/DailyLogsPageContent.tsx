@@ -14,7 +14,7 @@ import {
   Upload,
 } from 'antd';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
-import { Calendar } from 'lucide-react';
+import { ArrowRight, Calendar } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -23,11 +23,15 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CreateDailyLogRequest,
   DailyLog,
+  DailyLogDetail,
 } from '@/lib/api/project-management.types';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -42,37 +46,31 @@ import {
   dailyLogStatusVariant,
   formatDailyLogStatus,
 } from '@/lib/utils/pm-status-display';
-import { DAILY_LOG_WORKFLOW } from '@/lib/api/workflow';
 import DailyLogDetailDrawer from '@/components/modules/projects/daily-logs/DailyLogDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  SHIFT_OPTIONS,
+  WEATHER_OPTIONS,
+  RAINFALL_OPTIONS,
+} from './daily-log-options';
 
-const SHIFT_OPTIONS = [
-  { value: 'DAY', label: 'Day' },
-  { value: 'NIGHT', label: 'Night' },
-];
-
-const STATUS_OPTIONS = DAILY_LOG_WORKFLOW.map((step) => ({
-  value: step.key,
-  label: step.label,
-}));
+const DAILY_LOG_ACTIVE_STATUSES = 'DRAFT,SUBMITTED';
+const DAILY_LOG_APPROVED_STATUSES = 'APPROVED';
 
 interface DailyLogFormValues {
   logDate: Dayjs;
-  shift?: string;
-  weatherCondition?: string;
-  temperatureC?: number;
-  rainfallMm?: number;
-  humidity?: number;
+  shift: string;
   contractorName?: string;
-  workforceCount?: number;
-  workSummary?: string;
+  supervisorId?: string;
+  weatherCondition: string;
+  temperatureC?: number;
+  rainfallLevel?: string;
+  humidity?: number;
+  workDescription: string;
   issues?: string;
   delays?: string;
-  equipment?: string;
-  materials?: string;
-  supervisorId?: string;
 }
 
 /**
@@ -89,7 +87,7 @@ export function DailyLogFormDrawer({
   projectId?: string;
   showProjectSelector?: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (createdLog?: DailyLogDetail) => void;
 }): React.ReactNode {
   const [form] = Form.useForm<DailyLogFormValues>();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
@@ -121,17 +119,15 @@ export function DailyLogFormDrawer({
 
   useEffect(() => {
     if (!open) {
-      form.resetFields();
       setQueuedFiles([]);
       setUploading(false);
       if (showProjectSelector && !projectIdProp) {
         setSelectedProjectId(null);
       }
     }
-  }, [open, form, showProjectSelector, projectIdProp]);
+  }, [open, showProjectSelector, projectIdProp]);
 
   async function uploadQueuedFiles(folderId: string): Promise<void> {
-    setUploading(true);
     await Promise.all(
       queuedFiles.map((file) =>
         uploadDocument.mutateAsync({ folderId, file }),
@@ -148,21 +144,19 @@ export function DailyLogFormDrawer({
     const body: CreateDailyLogRequest = {
       logDate: values.logDate.format('YYYY-MM-DD'),
       shift: values.shift,
-      weatherCondition: values.weatherCondition?.trim() || undefined,
+      weatherCondition: values.weatherCondition,
       temperatureC: values.temperatureC,
-      rainfallMm: values.rainfallMm,
+      rainfallLevel: values.rainfallLevel || undefined,
       humidity: values.humidity,
       contractorName: values.contractorName?.trim() || undefined,
-      workforceCount: values.workforceCount,
-      workSummary: values.workSummary?.trim() || undefined,
+      workDescription: values.workDescription.trim(),
       issues: values.issues?.trim() || undefined,
       delays: values.delays?.trim() || undefined,
-      equipment: values.equipment?.trim() || undefined,
-      materials: values.materials?.trim() || undefined,
       supervisorId: values.supervisorId || undefined,
     };
 
     try {
+      setUploading(true);
       const result = await createDailyLog.mutateAsync({
         projectId: effectiveProjectId,
         body,
@@ -177,16 +171,16 @@ export function DailyLogFormDrawer({
           );
           form.resetFields();
           setQueuedFiles([]);
-          onSaved();
+          onSaved(result);
           onClose();
           return;
         }
       }
 
-      messageApi.success('Daily log created successfully');
+      messageApi.success('Daily log created');
       form.resetFields();
       setQueuedFiles([]);
-      onSaved();
+      onSaved(result);
       onClose();
     } catch (error) {
       notifyApiError(error, 'Failed to create daily log', messageApi);
@@ -202,6 +196,13 @@ export function DailyLogFormDrawer({
       title="New daily log"
       onClose={onClose}
       destroyOnHidden
+      afterOpenChange={(visible) => {
+        if (visible) {
+          form.resetFields();
+          setQueuedFiles([]);
+          setUploading(false);
+        }
+      }}
     >
       <Form<DailyLogFormValues>
         form={form}
@@ -233,41 +234,65 @@ export function DailyLogFormDrawer({
             <DatePicker className="w-full" />
           </Form.Item>
           <Form.Item label="Log number">
-            <Input disabled placeholder="Auto-generated on save (DL-…)" />
+            <Input disabled placeholder="Will be assigned on save" />
           </Form.Item>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Shift" name="shift">
-            <Select allowClear options={SHIFT_OPTIONS} placeholder="Select shift" />
+          <Form.Item
+            label="Shift"
+            name="shift"
+            rules={[{ required: true, message: 'Shift is required' }]}
+          >
+            <Select options={SHIFT_OPTIONS} placeholder="Select shift" />
           </Form.Item>
-          <Form.Item label="Weather" name="weatherCondition">
-            <Input placeholder="e.g. Clear, overcast" />
+          <Form.Item label="Contractor name" name="contractorName">
+            <Input placeholder="Primary contractor on site" />
           </Form.Item>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
+        <Form.Item label="Supervisor" name="supervisorId">
+          {effectiveProjectId ? (
+            <ProjectTeamUserSelect
+              projectId={effectiveProjectId}
+              placeholder="Optional supervisor"
+            />
+          ) : (
+            <Input disabled placeholder="Select a project first" />
+          )}
+        </Form.Item>
+
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          <Form.Item
+            label="Weather"
+            name="weatherCondition"
+            rules={[{ required: true, message: 'Weather is required' }]}
+          >
+            <Select options={WEATHER_OPTIONS} placeholder="Select weather" />
+          </Form.Item>
           <Form.Item label="Temperature (°C)" name="temperatureC">
             <InputNumber className="!w-full" />
           </Form.Item>
-          <Form.Item label="Rainfall (mm)" name="rainfallMm">
-            <InputNumber className="!w-full" min={0} />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label="Rainfall" name="rainfallLevel">
+            <Select
+              allowClear
+              options={RAINFALL_OPTIONS}
+              placeholder="Select rainfall"
+            />
           </Form.Item>
           <Form.Item label="Humidity (%)" name="humidity">
             <InputNumber className="!w-full" min={0} max={100} />
           </Form.Item>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Contractor name" name="contractorName">
-            <Input placeholder="Primary contractor on site" />
-          </Form.Item>
-          <Form.Item label="Workforce count" name="workforceCount">
-            <InputNumber className="!w-full" min={0} precision={0} />
-          </Form.Item>
-        </div>
-
-        <Form.Item label="Work description" name="workSummary">
+        <Form.Item
+          label="Work description"
+          name="workDescription"
+          rules={[{ required: true, message: 'Work description is required' }]}
+        >
           <Input.TextArea rows={4} placeholder="Work completed today" />
         </Form.Item>
 
@@ -277,18 +302,6 @@ export function DailyLogFormDrawer({
 
         <Form.Item label="Delays" name="delays">
           <Input.TextArea rows={3} placeholder="Delays and causes" />
-        </Form.Item>
-
-        <Form.Item label="Equipment on site" name="equipment">
-          <Input.TextArea rows={3} placeholder="Equipment present on site" />
-        </Form.Item>
-
-        <Form.Item label="Materials delivered / used" name="materials">
-          <Input.TextArea rows={3} placeholder="Materials delivered or consumed" />
-        </Form.Item>
-
-        <Form.Item label="Supervisor" name="supervisorId">
-          <UserSelect placeholder="Optional supervisor" />
         </Form.Item>
 
         <Form.Item label="Attachments">
@@ -336,13 +349,19 @@ export default function DailyLogsPageContent({
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [dateFrom, setDateFrom] = useState<Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<Dayjs | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
   const resolveUserDisplay = useUserDisplayResolver();
+
+  const statusFilter =
+    activeTab === 'active'
+      ? DAILY_LOG_ACTIVE_STATUSES
+      : DAILY_LOG_APPROVED_STATUSES;
+
   const logsQuery = useDailyLogs(projectId, {
     ...params,
     search: search.trim() || undefined,
@@ -350,6 +369,19 @@ export default function DailyLogsPageContent({
     logDateFrom: dateFrom?.format('YYYY-MM-DD'),
     logDateTo: dateTo?.format('YYYY-MM-DD'),
   });
+
+  const activeCountQuery = useDailyLogs(
+    projectId,
+    { page: 1, limit: 1, status: DAILY_LOG_ACTIVE_STATUSES },
+    true,
+    { select: (d) => d },
+  );
+  const approvedCountQuery = useDailyLogs(
+    projectId,
+    { page: 1, limit: 1, status: DAILY_LOG_APPROVED_STATUSES },
+    true,
+    { select: (d) => d },
+  );
 
   const columns: ColumnsType<DailyLog> = useMemo(
     () => [
@@ -361,7 +393,10 @@ export default function DailyLogsPageContent({
           <Button
             type="link"
             className="!px-0"
-            onClick={() => setSelectedLogId(record.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLogId(record.id);
+            }}
           >
             {value?.trim() || formatProjectDate(record.logDate)}
           </Button>
@@ -377,40 +412,30 @@ export default function DailyLogsPageContent({
         title: 'Shift',
         dataIndex: 'shift',
         key: 'shift',
-        render: (value: string | null) => value ?? '-',
+        render: (value: string | null) => value ?? '—',
       },
       {
         title: 'Weather',
         dataIndex: 'weatherCondition',
         key: 'weatherCondition',
-        render: (value: string | null) => value ?? '-',
+        render: (value: string | null) => value ?? '—',
       },
       {
         title: 'Workforce',
         key: 'workforce',
         render: (_: unknown, record: DailyLog) =>
-          (record.workforceCount ?? record.totalWorkers) || '-',
+          record.totalWorkers || record.workforceCount || '—',
       },
       {
-        title: 'Contractor',
-        dataIndex: 'contractorName',
-        key: 'contractorName',
-        render: (value: string | null) => value ?? '—',
-      },
-      {
-        title: 'Site engineer',
-        dataIndex: 'siteEngineerId',
-        key: 'siteEngineerId',
-        render: (_: unknown, record: DailyLog) =>
-          resolveUserDisplay(record.siteEngineerId, record.siteEngineerName),
-      },
-      {
-        title: 'Supervisor',
-        key: 'supervisor',
-        render: (_: unknown, record: DailyLog) =>
-          record.supervisorId
-            ? resolveUserDisplay(record.supervisorId, record.supervisorName)
-            : '-',
+        title: 'Incidents',
+        dataIndex: 'incidentCount',
+        key: 'incidentCount',
+        render: (value: number) =>
+          value > 0 ? (
+            <span className="font-medium text-red-500">{value}</span>
+          ) : (
+            '0'
+          ),
       },
       {
         title: 'Status',
@@ -423,11 +448,37 @@ export default function DailyLogsPageContent({
           />
         ),
       },
+      {
+        title: 'Supervisor',
+        key: 'supervisor',
+        render: (_: unknown, record: DailyLog) =>
+          record.supervisorId
+            ? resolveUserDisplay(record.supervisorId, record.supervisorName)
+            : '—',
+      },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: DailyLog) => (
+          <Button
+            type="text"
+            size="small"
+            icon={<ArrowRight size={14} />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLogId(record.id);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
     [resolveUserDisplay],
   );
 
-  if (logsQuery.isLoading) {
+  if (logsQuery.isLoading && !logsQuery.data) {
     return <PageLoadingSkeleton />;
   }
 
@@ -464,6 +515,18 @@ export default function DailyLogsPageContent({
             />
           )}
 
+          <ListStatusTabs
+            activeKey={activeTab}
+            onChange={(key) => {
+              setActiveTab(key);
+              resetPage();
+            }}
+            activeLabel="Active"
+            closedLabel="Approved"
+            activeCount={activeCountQuery.data?.meta.total}
+            closedCount={approvedCountQuery.data?.meta.total}
+          />
+
           <Space wrap className="!mb-4">
             <ListSearchInput
               placeholder="Search logs"
@@ -472,17 +535,6 @@ export default function DailyLogsPageContent({
               onCommit={(value) => {
                 resetPage();
                 setSearch(value);
-              }}
-            />
-            <Select
-              allowClear
-              placeholder="Status"
-              className={layout.filterControl}
-              options={STATUS_OPTIONS}
-              value={statusFilter}
-              onChange={(value: string | undefined) => {
-                resetPage();
-                setStatusFilter(value);
               }}
             />
             <DatePicker
@@ -508,6 +560,10 @@ export default function DailyLogsPageContent({
             columns={columns}
             dataSource={logs}
             pagination={bindMeta(meta)}
+            onRow={(record) => ({
+              onClick: () => setSelectedLogId(record.id),
+              style: { cursor: 'pointer' },
+            })}
             locale={{
               emptyText: (
                 <TableEmptyState
@@ -525,14 +581,24 @@ export default function DailyLogsPageContent({
           open={createOpen}
           projectId={projectId}
           onClose={() => setCreateOpen(false)}
-          onSaved={() => void logsQuery.refetch()}
+          onSaved={(createdLog) => {
+            void logsQuery.refetch();
+            void activeCountQuery.refetch();
+            if (createdLog) {
+              setSelectedLogId(createdLog.id);
+            }
+          }}
         />
 
         <DailyLogDetailDrawer
           projectId={projectId}
           dailyLogId={selectedLogId}
           onClose={() => setSelectedLogId(null)}
-          onUpdated={() => void logsQuery.refetch()}
+          onUpdated={() => {
+            void logsQuery.refetch();
+            void activeCountQuery.refetch();
+            void approvedCountQuery.refetch();
+          }}
         />
       </>
     </ProjectModuleGate>

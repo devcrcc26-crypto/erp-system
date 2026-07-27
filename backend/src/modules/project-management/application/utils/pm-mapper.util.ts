@@ -7,6 +7,7 @@ import {
   Deliverable,
   DailyLogEquipment,
   DailyLogIncident,
+  DailyLogMaterial,
   DailyLogVisitor,
   DailyLogWorkforce,
   Drawing,
@@ -334,20 +335,28 @@ export interface MappedDailyLog {
   weatherCondition: string | null;
   temperatureC: string | null;
   rainfallMm: string | null;
+  rainfallLevel: string | null;
   humidity: string | null;
-  workSummary: string | null;
+  workDescription: string | null;
   workforceCount: number | null;
   contractorName: string | null;
   issues: string | null;
   delays: string | null;
-  /** Free-text equipment notes (DB column `equipment`). Distinct from detail `equipment` entries. */
-  equipmentNotes: string | null;
-  materials: string | null;
   supervisorId: string | null;
   supervisorName?: string | null;
   supervisedAt: string | null;
+  submittedAt: string | null;
+  submittedBy: string | null;
+  submittedByName?: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  approvedByName?: string | null;
   status: string;
   totalWorkers: number;
+  incidentCount: number;
+  equipmentCount: number;
+  materialCount: number;
+  visitorCount: number;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -386,12 +395,22 @@ export interface MappedDailyLogIncident {
   severity: string | null;
 }
 
+export interface MappedDailyLogMaterial {
+  id: string;
+  dailyLogId: string;
+  materialType: string;
+  quantity: string;
+  unit: string;
+  supplier: string | null;
+}
+
 export interface MappedDailyLogDetail extends MappedDailyLog {
   attachmentFolderId: string | null;
   workforce: MappedDailyLogWorkforce[];
   equipment: MappedDailyLogEquipment[];
   visitors: MappedDailyLogVisitor[];
   incidents: MappedDailyLogIncident[];
+  materials: MappedDailyLogMaterial[];
 }
 
 export interface MappedMeeting {
@@ -689,7 +708,19 @@ export function mapDrawingLink(row: DrawingLink): MappedDrawingLink {
 }
 
 export function mapDailyLog(
-  row: DailyLog & { workforce?: { workerCount: number }[] },
+  row: DailyLog & {
+    workforce?: { workerCount: number }[];
+    equipment?: unknown[];
+    visitors?: unknown[];
+    incidents?: unknown[];
+    materials?: unknown[];
+    _count?: {
+      equipment?: number;
+      visitors?: number;
+      incidents?: number;
+      materials?: number;
+    };
+  },
 ): MappedDailyLog {
   const totalWorkers = (row.workforce ?? []).reduce(
     (sum, entry) => sum + entry.workerCount,
@@ -707,18 +738,25 @@ export function mapDailyLog(
     weatherCondition: row.weatherCondition,
     temperatureC: decimalToString(row.temperatureC),
     rainfallMm: decimalToString(row.rainfallMm),
+    rainfallLevel: row.rainfallLevel,
     humidity: decimalToString(row.humidity),
-    workSummary: row.workSummary,
+    workDescription: row.workDescription,
     workforceCount: row.workforceCount,
     contractorName: row.contractorName,
     issues: row.issues,
     delays: row.delays,
-    equipmentNotes: row.equipmentNotes,
-    materials: row.materials,
     supervisorId: row.supervisorId,
     supervisedAt: toIsoString(row.supervisedAt),
+    submittedAt: toIsoString(row.submittedAt),
+    submittedBy: row.submittedBy,
+    approvedAt: toIsoString(row.approvedAt),
+    approvedBy: row.approvedBy,
     status: row.status,
-    totalWorkers,
+    totalWorkers: row.workforceCount ?? totalWorkers,
+    incidentCount: row._count?.incidents ?? row.incidents?.length ?? 0,
+    equipmentCount: row._count?.equipment ?? row.equipment?.length ?? 0,
+    materialCount: row._count?.materials ?? row.materials?.length ?? 0,
+    visitorCount: row._count?.visitors ?? row.visitors?.length ?? 0,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
     createdBy: row.createdBy,
@@ -772,12 +810,26 @@ export function mapDailyLogIncident(
   };
 }
 
+export function mapDailyLogMaterial(
+  row: DailyLogMaterial,
+): MappedDailyLogMaterial {
+  return {
+    id: row.id,
+    dailyLogId: row.dailyLogId,
+    materialType: row.materialType,
+    quantity: decimalToString(row.quantity) ?? '0',
+    unit: row.unit,
+    supplier: row.supplier,
+  };
+}
+
 export function mapDailyLogDetail(
   row: DailyLog & {
     workforce: DailyLogWorkforce[];
     equipment: DailyLogEquipment[];
     visitors: DailyLogVisitor[];
     incidents: DailyLogIncident[];
+    materials: DailyLogMaterial[];
   },
   attachmentFolderId: string | null = null,
 ): MappedDailyLogDetail {
@@ -788,6 +840,7 @@ export function mapDailyLogDetail(
     equipment: row.equipment.map(mapDailyLogEquipment),
     visitors: row.visitors.map(mapDailyLogVisitor),
     incidents: row.incidents.map(mapDailyLogIncident),
+    materials: row.materials.map(mapDailyLogMaterial),
   };
 }
 

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
@@ -17,6 +17,7 @@ describe('DailyLogsService', () => {
     equipment: [],
     visitors: [],
     incidents: [],
+    materials: [],
   };
 
   function buildDailyLog(status: string) {
@@ -27,20 +28,23 @@ describe('DailyLogsService', () => {
       siteEngineerId: ctx.userId,
       logNumber: 'DL-PRJ-001',
       logDate: new Date('2026-01-01'),
-      shift: 'Day',
-      weatherCondition: 'Clear',
+      shift: 'DAY',
+      weatherCondition: 'SUNNY',
       temperatureC: null,
       rainfallMm: null,
+      rainfallLevel: null,
       humidity: null,
-      workSummary: 'Initial summary',
+      workDescription: 'Initial summary',
       workforceCount: null,
       contractorName: null,
       issues: null,
       delays: null,
-      equipmentNotes: null,
-      materials: null,
       supervisorId: null,
       supervisedAt: null,
+      submittedAt: null,
+      submittedBy: null,
+      approvedAt: null,
+      approvedBy: null,
       status,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
@@ -71,7 +75,7 @@ describe('DailyLogsService', () => {
       dailyLog: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -97,7 +101,10 @@ describe('DailyLogsService', () => {
       {
         ensureDailyLogFolder: jest
           .fn()
-          .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/daily-logs/2026-01-01' }),
+          .mockResolvedValue({
+            id: 'folder-1',
+            path: '/projects/demo/daily-logs/2026-01-01',
+          }),
       } as unknown as EngineeringDocumentFolderService,
       {
         getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
@@ -125,7 +132,9 @@ describe('DailyLogsService', () => {
       await expect(
         service.createDailyLog(ctx, projectId, {
           logDate: '2026-01-01',
-          shift: 'Day',
+          shift: 'DAY',
+          weatherCondition: 'SUNNY',
+          workDescription: 'Work done',
         }),
       ).rejects.toThrow(
         new ConflictException(
@@ -136,122 +145,36 @@ describe('DailyLogsService', () => {
   });
 
   describe('updateDailyLog', () => {
-    it('blocks data field changes on SUBMITTED logs', async () => {
-      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('SUBMITTED'));
+    it('forbids data field changes on APPROVED logs', async () => {
+      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('APPROVED'));
 
       await expect(
         service.updateDailyLog(ctx, projectId, dailyLogId, {
-          workSummary: 'Revised summary',
+          workDescription: 'Revised summary',
         }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Daily log data fields cannot be modified after submission. Only status advancement is permitted.',
-        ),
-      );
+      ).rejects.toThrow(ForbiddenException);
 
       expect(prisma.dailyLog.update).not.toHaveBeenCalled();
     });
+  });
 
-    it('allows status SUBMITTED to APPROVED', async () => {
-      const existing = buildDailyLog('SUBMITTED');
-      const updated = { ...existing, status: 'APPROVED' };
+  describe('approveDailyLog', () => {
+    it('approves a SUBMITTED log when caller is supervisor', async () => {
+      const existing = {
+        ...buildDailyLog('SUBMITTED'),
+        supervisorId: ctx.userId,
+      };
+      const updated = {
+        ...existing,
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        approvedBy: ctx.userId,
+      };
       prisma.dailyLog.findFirst.mockResolvedValue(existing);
       prisma.dailyLog.update.mockResolvedValue(updated);
 
-      const result = await service.updateDailyLog(ctx, projectId, dailyLogId, {
-        status: 'APPROVED',
-      });
-
-      expect(prisma.dailyLog.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'APPROVED',
-            updatedBy: ctx.userId,
-          }),
-        }),
-      );
+      const result = await service.approveDailyLog(ctx, projectId, dailyLogId);
       expect(result.status).toBe('APPROVED');
-    });
-
-    it('blocks DRAFT to APPROVED direct status transition', async () => {
-      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('DRAFT'));
-
-      await expect(
-        service.updateDailyLog(ctx, projectId, dailyLogId, {
-          status: 'APPROVED',
-        }),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Invalid daily log status transition from DRAFT to APPROVED.',
-        ),
-      );
-
-      expect(prisma.dailyLog.update).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('addWorkforce', () => {
-    it('creates child record linked to the log', async () => {
-      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('DRAFT'));
-      prisma.dailyLogWorkforce.create.mockResolvedValue({
-        id: 'workforce-1',
-        dailyLogId,
-        trade: 'Carpentry',
-        contractor: 'ABC Contractors',
-        workerCount: 12,
-        createdAt: new Date('2026-01-02T00:00:00.000Z'),
-        createdBy: ctx.userId,
-      });
-
-      const result = await service.addWorkforce(ctx, projectId, dailyLogId, {
-        trade: 'Carpentry',
-        contractor: 'ABC Contractors',
-        workerCount: 12,
-      });
-
-      expect(prisma.dailyLogWorkforce.create).toHaveBeenCalledWith({
-        data: {
-          dailyLogId,
-          trade: 'Carpentry',
-          contractor: 'ABC Contractors',
-          workerCount: 12,
-          createdBy: ctx.userId,
-        },
-      });
-      expect(result.dailyLogId).toBe(dailyLogId);
-      expect(result.workerCount).toBe(12);
-    });
-  });
-
-  describe('addIncident', () => {
-    it('creates incident record with correct severity', async () => {
-      prisma.dailyLog.findFirst.mockResolvedValue(buildDailyLog('DRAFT'));
-      prisma.dailyLogIncident.create.mockResolvedValue({
-        id: 'incident-1',
-        dailyLogId,
-        incidentType: 'Near miss',
-        description: 'Unsecured ladder on level 3',
-        severity: 'HIGH',
-        createdAt: new Date('2026-01-02T00:00:00.000Z'),
-        createdBy: ctx.userId,
-      });
-
-      const result = await service.addIncident(ctx, projectId, dailyLogId, {
-        incidentType: 'Near miss',
-        description: 'Unsecured ladder on level 3',
-        severity: 'HIGH',
-      });
-
-      expect(prisma.dailyLogIncident.create).toHaveBeenCalledWith({
-        data: {
-          dailyLogId,
-          incidentType: 'Near miss',
-          description: 'Unsecured ladder on level 3',
-          severity: 'HIGH',
-          createdBy: ctx.userId,
-        },
-      });
-      expect(result.severity).toBe('HIGH');
     });
   });
 });

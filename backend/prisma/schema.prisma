@@ -500,6 +500,8 @@ model User {
   drawingVersions        DrawingVersion[]
   dailyLogsAsEngineer    DailyLog[]
   supervisedLogs         DailyLog[]              @relation("DailyLogSupervisor")
+  submittedDailyLogs     DailyLog[]              @relation("DailyLogSubmittedBy")
+  approvedDailyLogs      DailyLog[]              @relation("DailyLogApprovedBy")
   organizedMeetings      Meeting[]
   meetingAgendaItems     MeetingAgendaItem[]
   meetingAttendees       MeetingAttendee[]
@@ -1144,6 +1146,59 @@ enum RfiSource {
   CONTRACTOR
   CLIENT_CONSULTANT
   INTER_DISCIPLINE
+}
+
+enum DailyLogStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+}
+
+enum RainfallLevel {
+  NONE
+  LIGHT
+  MODERATE
+  HEAVY
+}
+
+enum WeatherCondition {
+  SUNNY
+  PARTLY_CLOUDY
+  OVERCAST
+  LIGHT_RAIN
+  HEAVY_RAIN
+  THUNDERSTORM
+  FOGGY
+  WINDY
+  HOT_AND_DRY
+}
+
+enum VisitorPurpose {
+  CLIENT_VISIT
+  INSPECTION
+  DELIVERY
+  CONSULTANT_VISIT
+  REGULATORY_AUTHORITY
+  OTHER
+}
+
+enum IncidentType {
+  SAFETY_VIOLATION
+  NEAR_MISS
+  FIRST_AID
+  MEDICAL_TREATMENT
+  LOST_TIME_INJURY
+  PROPERTY_DAMAGE
+  ENVIRONMENTAL
+  OTHER
+}
+
+enum IncidentSeverity {
+  MINOR
+  MODERATE
+  MAJOR
+  CRITICAL
+  NEAR_MISS
 }
 
 enum SubmittalStatus {
@@ -2355,60 +2410,68 @@ model DrawingLink {
 }
 
 model DailyLog {
-  id                String    @id @default(uuid())
-  companyId         String    @map("company_id")
-  projectId         String    @map("project_id")
-  siteEngineerId    String    @map("site_engineer_id")
-  logNumber         String?   @map("log_number")
-  logDate           DateTime  @map("log_date") @db.Date
+  id                String            @id @default(uuid())
+  companyId         String            @map("company_id")
+  projectId         String            @map("project_id")
+  siteEngineerId    String            @map("site_engineer_id")
+  logNumber         String?           @map("log_number")
+  logDate           DateTime          @map("log_date") @db.Date
   shift             String?
-  weatherCondition  String?   @map("weather_condition")
-  temperatureC      Decimal?  @map("temperature_c") @db.Decimal(6, 2)
-  rainfallMm        Decimal?  @map("rainfall_mm") @db.Decimal(8, 2)
-  humidity          Decimal?  @db.Decimal(6, 2)
-  workSummary       String?   @map("work_summary")
-  workforceCount    Int?      @map("workforce_count")
-  contractorName    String?   @map("contractor_name")
+  weatherCondition  WeatherCondition? @map("weather_condition")
+  temperatureC      Decimal?          @map("temperature_c") @db.Decimal(6, 2)
+  rainfallMm        Decimal?          @map("rainfall_mm") @db.Decimal(8, 2)
+  rainfallLevel     RainfallLevel?    @map("rainfall_level")
+  humidity          Decimal?          @db.Decimal(6, 2)
+  workDescription   String?           @map("work_description")
+  workforceCount    Int?              @map("workforce_count")
+  contractorName    String?           @map("contractor_name")
   issues            String?
   delays            String?
-  equipmentNotes    String?   @map("equipment")
-  materials         String?
-  supervisorId      String?   @map("supervisor_id")
-  supervisedAt      DateTime? @map("supervised_at")
-  status            String    @default("DRAFT")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  createdBy         String    @map("created_by")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  updatedBy         String    @map("updated_by")
-  deletedAt         DateTime? @map("deleted_at")
-  deletedBy         String?   @map("deleted_by")
+  supervisorId      String?           @map("supervisor_id")
+  supervisedAt      DateTime?         @map("supervised_at")
+  submittedAt       DateTime?         @map("submitted_at")
+  submittedBy       String?           @map("submitted_by")
+  approvedAt        DateTime?         @map("approved_at")
+  approvedBy        String?           @map("approved_by")
+  status            DailyLogStatus    @default(DRAFT)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  createdBy         String            @map("created_by")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  updatedBy         String            @map("updated_by")
+  deletedAt         DateTime?         @map("deleted_at")
+  deletedBy         String?           @map("deleted_by")
 
-  company    Company             @relation(fields: [companyId], references: [id])
-  project    Project             @relation(fields: [projectId], references: [id])
-  engineer   User                @relation(fields: [siteEngineerId], references: [id])
-  supervisor User?               @relation("DailyLogSupervisor", fields: [supervisorId], references: [id])
-  workforce  DailyLogWorkforce[]
-  equipment  DailyLogEquipment[]
-  visitors   DailyLogVisitor[]
-  incidents  DailyLogIncident[]
+  company          Company              @relation(fields: [companyId], references: [id])
+  project          Project              @relation(fields: [projectId], references: [id])
+  engineer         User                 @relation(fields: [siteEngineerId], references: [id])
+  supervisor       User?                @relation("DailyLogSupervisor", fields: [supervisorId], references: [id])
+  submittedByUser  User?                @relation("DailyLogSubmittedBy", fields: [submittedBy], references: [id])
+  approvedByUser   User?                @relation("DailyLogApprovedBy", fields: [approvedBy], references: [id])
+  workforce        DailyLogWorkforce[]
+  equipment        DailyLogEquipment[]
+  visitors         DailyLogVisitor[]
+  incidents        DailyLogIncident[]
+  materials        DailyLogMaterial[]
 
   @@index([projectId], map: "idx_daily_log_project_id")
   @@index([projectId, deletedAt], map: "idx_daily_log_project_deleted")
   @@index([companyId], map: "idx_daily_log_company_id")
   @@index([companyId, deletedAt], map: "idx_daily_log_company_deleted")
   @@index([supervisorId], map: "idx_daily_log_supervisor_id")
+  @@index([submittedBy], map: "idx_daily_log_submitted_by")
+  @@index([approvedBy], map: "idx_daily_log_approved_by")
   @@unique([projectId, logDate, shift], map: "daily_log_project_date_shift_unique")
   @@map("daily_log")
 }
 
 model DailyLogWorkforce {
-  id         String   @id @default(uuid())
-  dailyLogId String   @map("daily_log_id")
-  trade      String
-  contractor String?
-  workerCount Int     @map("worker_count")
-  createdAt  DateTime @default(now()) @map("created_at")
-  createdBy  String   @map("created_by")
+  id          String   @id @default(uuid())
+  dailyLogId  String   @map("daily_log_id")
+  trade       String
+  contractor  String?
+  workerCount Int      @map("worker_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
 
   dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
 
@@ -2417,14 +2480,14 @@ model DailyLogWorkforce {
 }
 
 model DailyLogEquipment {
-  id             String   @id @default(uuid())
-  dailyLogId     String   @map("daily_log_id")
-  equipmentType  String   @map("equipment_type")
-  quantity       Int      @default(1)
-  hoursUsed      Decimal? @map("hours_used") @db.Decimal(8, 2)
-  hoursDowntime  Decimal? @map("hours_downtime") @db.Decimal(8, 2)
-  createdAt      DateTime @default(now()) @map("created_at")
-  createdBy      String   @map("created_by")
+  id            String   @id @default(uuid())
+  dailyLogId    String   @map("daily_log_id")
+  equipmentType String   @map("equipment_type")
+  quantity      Int      @default(1)
+  hoursUsed     Decimal? @map("hours_used") @db.Decimal(8, 2)
+  hoursDowntime Decimal? @map("hours_downtime") @db.Decimal(8, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  createdBy     String   @map("created_by")
 
   dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
 
@@ -2433,13 +2496,13 @@ model DailyLogEquipment {
 }
 
 model DailyLogVisitor {
-  id          String   @id @default(uuid())
-  dailyLogId  String   @map("daily_log_id")
-  visitorName String   @map("visitor_name")
+  id          String          @id @default(uuid())
+  dailyLogId  String          @map("daily_log_id")
+  visitorName String          @map("visitor_name")
   company     String?
-  purpose     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  createdBy   String   @map("created_by")
+  purpose     VisitorPurpose?
+  createdAt   DateTime        @default(now()) @map("created_at")
+  createdBy   String          @map("created_by")
 
   dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
 
@@ -2448,18 +2511,34 @@ model DailyLogVisitor {
 }
 
 model DailyLogIncident {
-  id           String   @id @default(uuid())
-  dailyLogId   String   @map("daily_log_id")
-  incidentType String   @map("incident_type")
+  id           String            @id @default(uuid())
+  dailyLogId   String            @map("daily_log_id")
+  incidentType IncidentType      @map("incident_type")
   description  String
-  severity     String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  createdBy    String   @map("created_by")
+  severity     IncidentSeverity?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  createdBy    String            @map("created_by")
 
   dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
 
   @@index([dailyLogId], map: "idx_daily_log_incident_log_id")
   @@map("daily_log_incident")
+}
+
+model DailyLogMaterial {
+  id           String   @id @default(uuid())
+  dailyLogId   String   @map("daily_log_id")
+  materialType String   @map("material_type")
+  quantity     Decimal  @db.Decimal(12, 3)
+  unit         String
+  supplier     String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdBy    String   @map("created_by")
+
+  dailyLog DailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+
+  @@index([dailyLogId], map: "idx_daily_log_material_log_id")
+  @@map("daily_log_material")
 }
 
 model Meeting {

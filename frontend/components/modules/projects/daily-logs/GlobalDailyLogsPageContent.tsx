@@ -5,6 +5,7 @@ import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Calendar } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
@@ -12,6 +13,9 @@ import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/Form
 import { layout } from '@/lib/theme/layout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { DailyLog } from '@/lib/api/project-management.types';
 import {
@@ -35,16 +39,19 @@ import {
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
-import { tokens } from '@/lib/theme/tokens';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
+
+const DAILY_LOG_ACTIVE_STATUSES = 'DRAFT,SUBMITTED';
+const DAILY_LOG_APPROVED_STATUSES = 'APPROVED';
 
 /**
  * Global Daily Logs list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalDailyLogsPageContent(): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<{
@@ -70,6 +77,11 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
     epc.navDesigner ||
     pm.dailyLogs.canCreate;
 
+  const statusFilter =
+    activeTab === 'active'
+      ? DAILY_LOG_ACTIVE_STATUSES
+      : DAILY_LOG_APPROVED_STATUSES;
+
   const listParams = {
     ...params,
     search: search.trim() || undefined,
@@ -86,6 +98,38 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
     capabilitiesReady && canAccessPage && portfolioMode,
   );
   const logsQuery = portfolioMode ? allQuery : myQuery;
+
+  const activeCountParams = {
+    ...params,
+    search: search.trim() || undefined,
+    status: DAILY_LOG_ACTIVE_STATUSES,
+    projectId: projectFilter,
+  };
+  const approvedCountParams = {
+    ...params,
+    search: search.trim() || undefined,
+    status: DAILY_LOG_APPROVED_STATUSES,
+    projectId: projectFilter,
+  };
+
+  const activeCountAllQuery = useAllDailyLogs(
+    { ...activeCountParams, page: 1, limit: 1 },
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+  const activeCountMyQuery = useMyDailyLogs(
+    { ...activeCountParams, page: 1, limit: 1 },
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const approvedCountAllQuery = useAllDailyLogs(
+    { ...approvedCountParams, page: 1, limit: 1 },
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
+  const approvedCountMyQuery = useMyDailyLogs(
+    { ...approvedCountParams, page: 1, limit: 1 },
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const activeCountQuery = portfolioMode ? activeCountAllQuery : activeCountMyQuery;
+  const approvedCountQuery = portfolioMode ? approvedCountAllQuery : approvedCountMyQuery;
 
   const myProjectsQuery = useMyDailyLogProjects(
     capabilitiesReady && !portfolioMode && canCreate,
@@ -119,13 +163,13 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
           <Button
             type="link"
             className="!px-0"
-            style={{ color: tokens.colorTeal600 }}
-            onClick={() =>
+            onClick={(e) => {
+              e.stopPropagation();
               setSelected({
                 projectId: record.projectId,
                 dailyLogId: record.id,
-              })
-            }
+              });
+            }}
           >
             {value?.trim() || formatProjectDate(record.logDate)}
           </Button>
@@ -144,6 +188,12 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
           record.projectCode?.trim() || '—',
       },
       {
+        title: 'Shift',
+        dataIndex: 'shift',
+        key: 'shift',
+        render: (value: string | null) => value ?? '—',
+      },
+      {
         title: 'Weather',
         dataIndex: 'weatherCondition',
         key: 'weatherCondition',
@@ -153,19 +203,18 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
         title: 'Workforce',
         key: 'workforce',
         render: (_: unknown, record: DailyLog) =>
-          (record.workforceCount ?? record.totalWorkers) || '—',
+          record.totalWorkers || record.workforceCount || '—',
       },
       {
-        title: 'Contractor',
-        dataIndex: 'contractorName',
-        key: 'contractorName',
-        render: (value: string | null) => value ?? '—',
-      },
-      {
-        title: 'Created by',
-        key: 'createdBy',
-        render: (_: unknown, record: DailyLog) =>
-          resolveUserDisplay(record.siteEngineerId, record.siteEngineerName),
+        title: 'Incidents',
+        dataIndex: 'incidentCount',
+        key: 'incidentCount',
+        render: (value: number) =>
+          value > 0 ? (
+            <span className="font-medium text-red-500">{value}</span>
+          ) : (
+            '0'
+          ),
       },
       {
         title: 'Supervisor',
@@ -186,8 +235,27 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
           />
         ),
       },
+      {
+        title: '',
+        key: 'open',
+        width: 80,
+        render: (_: unknown, record: DailyLog) => (
+          <Button
+            type="text"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(
+                `/projects/${record.projectId}/daily-logs/${record.id}`,
+              );
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay],
+    [resolveUserDisplay, router],
   );
 
   if (!capabilitiesReady || (logsQuery.isLoading && !logsQuery.data)) {
@@ -214,12 +282,14 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
 
   const refetchLists = (): void => {
     void logsQuery.refetch();
+    void activeCountQuery.refetch();
+    void approvedCountQuery.refetch();
   };
 
   return (
     <>
       <FormLayout
-        title="Daily Logs"
+        title="Daily logs"
         description={
           portfolioMode
             ? 'All daily logs across projects.'
@@ -262,6 +332,18 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Approved"
+          activeCount={activeCountQuery.data?.meta.total}
+          closedCount={approvedCountQuery.data?.meta.total}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search by log number or contractor"
@@ -271,21 +353,6 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
               resetPage();
               setSearch(value);
             }}
-          />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControlSm}
-            value={statusFilter}
-            onChange={(value: string | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-            options={[
-              { value: 'DRAFT', label: 'Draft' },
-              { value: 'SUBMITTED', label: 'Submitted' },
-              { value: 'APPROVED', label: 'Approved' },
-            ]}
           />
           <Select
             allowClear
@@ -347,9 +414,15 @@ export default function GlobalDailyLogsPageContent(): React.ReactNode {
         open={createOpen}
         showProjectSelector
         onClose={() => setCreateOpen(false)}
-        onSaved={() => {
+        onSaved={(createdLog) => {
           refetchLists();
           setCreateOpen(false);
+          if (createdLog) {
+            setSelected({
+              projectId: createdLog.projectId,
+              dailyLogId: createdLog.id,
+            });
+          }
         }}
       />
 

@@ -29,9 +29,7 @@ describe('DailyLogsService uniqueness', () => {
         }),
       } as unknown as ProjectScopeService,
       {
-        ensureDailyLogFolder: jest
-          .fn()
-          .mockResolvedValue({ id: 'folder-1' }),
+        ensureDailyLogFolder: jest.fn().mockResolvedValue({ id: 'folder-1' }),
       } as unknown as EngineeringDocumentFolderService,
       {
         getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
@@ -45,17 +43,31 @@ describe('DailyLogsService uniqueness', () => {
     );
   });
 
-  it('creates a log for a new date successfully', async () => {
+  it('creates a daily log when no duplicate exists', async () => {
     prisma.dailyLog.create.mockResolvedValue({
       id: 'log-1',
+      companyId: ctx.companyId,
       projectId,
       siteEngineerId: ctx.userId,
+      logNumber: 'DL-PRJ-001',
       logDate: new Date('2026-01-01'),
-      shift: 'Day',
-      weatherCondition: null,
+      shift: 'DAY',
+      weatherCondition: 'SUNNY',
       temperatureC: null,
       rainfallMm: null,
-      workSummary: null,
+      rainfallLevel: null,
+      humidity: null,
+      workDescription: 'Work done',
+      workforceCount: null,
+      contractorName: null,
+      issues: null,
+      delays: null,
+      supervisorId: null,
+      supervisedAt: null,
+      submittedAt: null,
+      submittedBy: null,
+      approvedAt: null,
+      approvedBy: null,
       status: 'DRAFT',
       createdAt: new Date(),
       createdBy: ctx.userId,
@@ -67,14 +79,18 @@ describe('DailyLogsService uniqueness', () => {
       equipment: [],
       visitors: [],
       incidents: [],
+      materials: [],
     });
 
     const result = await service.createDailyLog(ctx, projectId, {
       logDate: '2026-01-01',
-      shift: 'Day',
+      shift: 'DAY',
+      weatherCondition: 'SUNNY',
+      workDescription: 'Work done',
     });
 
     expect(result.id).toBe('log-1');
+    expect(result.logNumber).toBe('DL-PRJ-001');
   });
 
   it('throws ConflictException for duplicate project/date/shift', async () => {
@@ -87,7 +103,9 @@ describe('DailyLogsService uniqueness', () => {
     await expect(
       service.createDailyLog(ctx, projectId, {
         logDate: '2026-01-01',
-        shift: 'Day',
+        shift: 'DAY',
+        weatherCondition: 'SUNNY',
+        workDescription: 'Work done',
       }),
     ).rejects.toThrow(ConflictException);
   });
