@@ -738,6 +738,12 @@ export class LinkRfiCrDto {
   crId!: string;
 }
 
+export class LinkIssueCrDto {
+  @ApiProperty()
+  @IsEntityUuid()
+  crId!: string;
+}
+
 export class CreateSubmittalDto {
   @ApiProperty()
   @IsString()

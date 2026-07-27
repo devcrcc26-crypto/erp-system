@@ -39,6 +39,7 @@ describe('mapDesignPackage', () => {
       deptDeputyChiefUserId: null,
       instituteChiefUserId: null,
       instituteChiefName: null,
+      siteRepresentativeUserId: null,
       briefText: 'Brief notes',
       sourceEntityType: 'RFI',
       sourceEntityId: 'rfi-1',

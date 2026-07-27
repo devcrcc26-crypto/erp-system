@@ -19,6 +19,7 @@ import { hasFullProjectDataAccess } from '../../../../shared/permissions/project
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { subtaskRoleOr } from '../../domain/task-access-scope.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   buildPaginatedResult,
@@ -254,14 +255,7 @@ export class RfisService {
         ...(isFullAccess
           ? {}
           : {
-              OR: [
-                { designerUserId: ctx.userId },
-                { supportingDesignerUserId: ctx.userId },
-                { reviewerUserId: ctx.userId },
-                { disciplinaryLeaderUserId: ctx.userId },
-                { deptDeputyChiefUserId: ctx.userId },
-                { instituteChiefUserId: ctx.userId },
-              ],
+              OR: subtaskRoleOr(ctx.userId),
             }),
         taskDiscipline: {
           deletedAt: null,
@@ -467,14 +461,7 @@ export class RfisService {
         ...(isFullAccess
           ? {}
           : {
-              OR: [
-                { designerUserId: ctx.userId },
-                { supportingDesignerUserId: ctx.userId },
-                { reviewerUserId: ctx.userId },
-                { disciplinaryLeaderUserId: ctx.userId },
-                { deptDeputyChiefUserId: ctx.userId },
-                { instituteChiefUserId: ctx.userId },
-              ],
+              OR: subtaskRoleOr(ctx.userId),
             }),
       }),
       select: {
@@ -870,14 +857,7 @@ export class RfisService {
   ): Prisma.RfiWhereInput {
     const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
       companyId: ctx.companyId,
-      OR: [
-        { designerUserId: ctx.userId },
-        { disciplinaryLeaderUserId: ctx.userId },
-        { reviewerUserId: ctx.userId },
-        { supportingDesignerUserId: ctx.userId },
-        { deptDeputyChiefUserId: ctx.userId },
-        { instituteChiefUserId: ctx.userId },
-      ],
+      OR: subtaskRoleOr(ctx.userId),
     });
 
     const where: Prisma.RfiWhereInput = activeOnly({
@@ -973,14 +953,7 @@ export class RfisService {
     if (!hasFullProjectDataAccess(roleNames)) {
       const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
         companyId: ctx.companyId,
-        OR: [
-          { designerUserId: ctx.userId },
-          { disciplinaryLeaderUserId: ctx.userId },
-          { reviewerUserId: ctx.userId },
-          { supportingDesignerUserId: ctx.userId },
-          { deptDeputyChiefUserId: ctx.userId },
-          { instituteChiefUserId: ctx.userId },
-        ],
+        OR: subtaskRoleOr(ctx.userId),
       });
       where.OR = [
         { raisedBy: ctx.userId },
@@ -1051,14 +1024,7 @@ export class RfisService {
         where: activeOnly({
           id: rfi.linkedDesignPackageId,
           companyId: ctx.companyId,
-          OR: [
-            { designerUserId: ctx.userId },
-            { disciplinaryLeaderUserId: ctx.userId },
-            { reviewerUserId: ctx.userId },
-            { supportingDesignerUserId: ctx.userId },
-            { deptDeputyChiefUserId: ctx.userId },
-            { instituteChiefUserId: ctx.userId },
-          ],
+          OR: subtaskRoleOr(ctx.userId),
         }),
         select: { id: true },
       });

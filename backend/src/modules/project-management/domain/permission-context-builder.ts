@@ -112,6 +112,13 @@ function userMatchesInstituteChief(
   );
 }
 
+function userMatchesSiteRepresentative(
+  userId: string,
+  input: PermissionContextInput,
+): boolean {
+  return userId === input.subtaskSiteRepresentativeUserId;
+}
+
 const DISCIPLINE_SCOPED_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_UPLOAD,
   EpcWorkflowAction.ENGINEERING_DOCUMENT_VERSION_REGISTER,
@@ -319,7 +326,8 @@ export function evaluateDisciplineAssignmentLayer(
       userMatchesReviewer(userId, chain, input) ||
       userMatchesDisciplineLead(userId, chain, input) ||
       userMatchesChief(userId, chain, input) ||
-      userMatchesInstituteChief(userId, chain, input);
+      userMatchesInstituteChief(userId, chain, input) ||
+      userMatchesSiteRepresentative(userId, input);
     return {
       layer: PermissionLayerId.DISCIPLINE_ASSIGNMENT,
       verdict: match ? PermissionLayerVerdict.ALLOW : PermissionLayerVerdict.DENY,

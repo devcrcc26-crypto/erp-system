@@ -503,6 +503,12 @@ export default function DesignPackageDetailPageContent({
               {formatTaskReviewLevelLabel(pkg.reviewLevel)}
             </p>
           </div>
+          <div>
+            <p className="text-xs text-slate-500">Site Representative</p>
+            <p className="text-sm font-medium">
+              {pkg.siteRepresentativeName ?? '—'}
+            </p>
+          </div>
         </div>
 
         <ProjectionLagHelper pending={pkg.projectionPending} />

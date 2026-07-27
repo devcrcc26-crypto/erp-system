@@ -447,6 +447,11 @@ export class CreateDesignPackageDto {
   @IsEntityUuid()
   supportingDesignerUserId?: string;
 
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsEntityUuid()
+  siteRepresentativeUserId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

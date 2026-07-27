@@ -12,7 +12,8 @@ export type SubtaskRoleField =
   | 'deptDeputyChiefUserId'
   | 'instituteChiefUserId'
   | 'disciplineOwnerUserId'
-  | 'supportingDesignerUserId';
+  | 'supportingDesignerUserId'
+  | 'siteRepresentativeUserId';
 
 /**
  * Kept in exact sync with the frontend's canonical bilingual tier labels
@@ -29,4 +30,5 @@ export const SUBTASK_ROLE_LABELS: Record<SubtaskRoleField, string> = {
   instituteChiefUserId: 'Chief Engineer of The Institute (司审)',
   disciplineOwnerUserId: 'Discipline Owner',
   supportingDesignerUserId: 'Supporting designer',
+  siteRepresentativeUserId: 'Site Representative',
 };

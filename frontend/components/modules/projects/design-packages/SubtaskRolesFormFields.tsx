@@ -91,6 +91,14 @@ export default function SubtaskRolesFormFields({
           )}
         </div>
       ) : null}
+      <Form.Item label="Site Representative" name="siteRepresentativeUserId">
+        <ProjectTeamUserSelect
+          projectId={projectId}
+          memberScope="company_active"
+          placeholder="Assign site representative (optional)"
+          allowClear
+        />
+      </Form.Item>
     </>
   );
 }

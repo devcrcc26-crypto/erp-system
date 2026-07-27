@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Avatar,
@@ -16,13 +16,17 @@ import {
 import {
   CheckCircleOutlined,
   DownloadOutlined,
+  PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
+import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
 import { apiGet } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
+import type { ProjectChangeRequest } from '@/lib/api/project-management.types';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
@@ -31,6 +35,7 @@ import {
   useCloseIssue,
   useIssue,
   useIssueResponses,
+  useLinkIssueCr,
   useReopenIssue,
 } from '@/lib/query/issues';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
@@ -38,6 +43,8 @@ import { layout, standardDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  changeRequestStatusVariant,
+  formatChangeRequestStatus,
   formatIssueStatus,
   isOverdue,
   issueSeverityVariant,
@@ -93,6 +100,7 @@ export default function IssueDetailDrawer({
   const reopenIssue = useReopenIssue();
   const addResponse = useAddIssueResponse();
   const uploadDocument = useUploadDocumentToFolder();
+  const linkIssueCr = useLinkIssueCr();
 
   const [form] = Form.useForm<ResponseFormValues>();
   const [responseModalOpen, setResponseModalOpen] = useState(false);
@@ -104,9 +112,21 @@ export default function IssueDetailDrawer({
   const [responseDocId, setResponseDocId] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [createCrOpen, setCreateCrOpen] = useState(false);
+  const [selectedCr, setSelectedCr] = useState<{
+    projectId: string;
+    changeRequestId: string;
+  } | null>(null);
 
   const issue = issueQuery.data;
   const responses = responsesQuery.data ?? [];
+
+  const linkedCrs = useMemo(() => {
+    if (!issue) {
+      return [];
+    }
+    return issue.linkedCrs ?? [];
+  }, [issue]);
 
   const canClose =
     issue?.status === 'IN_PROGRESS' && currentUserId === issue?.raisedBy;
@@ -121,6 +141,10 @@ export default function IssueDetailDrawer({
     (currentUserId === issue.raisedBy ||
       currentUserId === issue.assignedTo ||
       pm.projects.canView);
+  const canRaiseCr =
+    issue != null &&
+    issue.status !== 'CLOSED' &&
+    Boolean(issue.linkedDesignPackageId);
   const showWaitingAlert =
     responses.length === 0 && issue?.status === 'OPEN';
 
@@ -146,6 +170,8 @@ export default function IssueDetailDrawer({
       setResolutionNote('');
       setReopenOpen(false);
       setReopenReason('');
+      setCreateCrOpen(false);
+      setSelectedCr(null);
     }
   }, [open, form]);
 
@@ -251,6 +277,26 @@ export default function IssueDetailDrawer({
     }
   }
 
+  async function handleCrCreated(created?: ProjectChangeRequest): Promise<void> {
+    setCreateCrOpen(false);
+    if (created && issueId) {
+      try {
+        await linkIssueCr.mutateAsync({
+          projectId,
+          issueId,
+          crId: created.id,
+        });
+        void issueQuery.refetch();
+        onUpdated();
+      } catch (error) {
+        notifyApiError(error, 'Change request created but linking failed', messageApi);
+      }
+    } else {
+      void issueQuery.refetch();
+      onUpdated();
+    }
+  }
+
   return (
     <Drawer
       {...standardDetailDrawerProps}
@@ -291,7 +337,6 @@ export default function IssueDetailDrawer({
 
       {issue && (
         <div className={layout.drawerStack}>
-          {/* SECTION 1 — DETAILS */}
           <section className={layout.drawerSection}>
             <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
             <Descriptions
@@ -360,7 +405,6 @@ export default function IssueDetailDrawer({
             </Descriptions>
           </section>
 
-          {/* SECTION 2 — DESCRIPTION */}
           <section className={layout.drawerSection}>
             <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
             <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
@@ -368,7 +412,6 @@ export default function IssueDetailDrawer({
             </p>
           </section>
 
-          {/* SECTION 3 — DISCUSSION */}
           <section className={layout.drawerSection}>
             <h3 className={`${layout.drawerHeading} mb-3`}>Discussion</h3>
 
@@ -444,7 +487,78 @@ export default function IssueDetailDrawer({
             )}
           </section>
 
-          {/* SECTION 4 — RESOLUTION */}
+          <section className={layout.drawerSection}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className={layout.drawerHeading}>Linked Change Requests</h3>
+              {canRaiseCr && (
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  loading={linkIssueCr.isPending}
+                  onClick={() => setCreateCrOpen(true)}
+                >
+                  Raise Change Request
+                </Button>
+              )}
+            </div>
+
+            {linkedCrs.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border-tertiary)]">
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      CR Number
+                    </th>
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      Title
+                    </th>
+                    <th
+                      className={`${layout.drawerMetaLabel} pb-1 text-left font-medium`}
+                    >
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linkedCrs.map((cr) => (
+                    <tr
+                      key={cr.id}
+                      className="cursor-pointer border-b border-[var(--color-border-tertiary)] hover:bg-[var(--color-surface-secondary)]"
+                      onClick={() =>
+                        setSelectedCr({
+                          projectId,
+                          changeRequestId: cr.id,
+                        })
+                      }
+                    >
+                      <td
+                        className="py-2 font-mono text-[12px]"
+                        style={{ color: tokens.colorTeal600 }}
+                      >
+                        {cr.changeNumber}
+                      </td>
+                      <td className="py-2 text-[13px] text-[var(--color-text-primary)]">
+                        {cr.title}
+                      </td>
+                      <td className="py-2">
+                        <StatusBadge
+                          label={formatChangeRequestStatus(cr.status)}
+                          variant={changeRequestStatusVariant(cr.status)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className={layout.drawerMutedText}>No linked change requests.</p>
+            )}
+          </section>
+
           {issue.status === 'CLOSED' && issue.resolutionNote && (
             <section className={layout.drawerSection}>
               <p className={`mb-2 ${layout.drawerHeading}`}>Resolution</p>
@@ -456,7 +570,6 @@ export default function IssueDetailDrawer({
             </section>
           )}
 
-          {/* SECTION 5 — ACTIONS */}
           {(canClose || canReopen) && (
             <section className={layout.drawerSection}>
               <div className="flex flex-col gap-2">
@@ -584,6 +697,23 @@ export default function IssueDetailDrawer({
           </Form.Item>
         </Form>
       </Modal>
+
+      <CreateChangeRequestDrawer
+        open={createCrOpen}
+        projectId={projectId}
+        initialLinkedDesignPackageId={issue?.linkedDesignPackageId ?? undefined}
+        onClose={() => setCreateCrOpen(false)}
+        onCreated={(created) => void handleCrCreated(created)}
+      />
+
+      {selectedCr && (
+        <ChangeRequestDrawer
+          projectId={selectedCr.projectId}
+          changeRequestId={selectedCr.changeRequestId}
+          onClose={() => setSelectedCr(null)}
+          onUpdated={() => void issueQuery.refetch()}
+        />
+      )}
     </Drawer>
   );
 }

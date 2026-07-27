@@ -19,6 +19,7 @@ import {
   CloseIssueDto,
   CreateIssueDto,
   CreateIssueResponseDto,
+  LinkIssueCrDto,
   PmListQueryDto,
   ReopenIssueDto,
   StartIssueDto,
@@ -136,6 +137,23 @@ export class IssuesController {
     @Body() dto: ReopenIssueDto,
   ): Promise<unknown> {
     return this.issuesService.reopenIssue(
+      this.ctx(user),
+      projectId,
+      issueId,
+      dto,
+    );
+  }
+
+  @Patch(':issueId/link-cr')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Link a change request to an issue' })
+  linkCr(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('issueId') issueId: string,
+    @Body() dto: LinkIssueCrDto,
+  ): Promise<unknown> {
+    return this.issuesService.linkChangeRequest(
       this.ctx(user),
       projectId,
       issueId,

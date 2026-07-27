@@ -30,6 +30,7 @@ import {
   CloseIssueDto,
   CreateIssueDto,
   CreateIssueResponseDto,
+  LinkIssueCrDto,
   PmListQueryDto,
   ReopenIssueDto,
   StartIssueDto,
@@ -49,6 +50,7 @@ import {
   buildSourceEntitySummary,
   validateSourceEntity,
 } from '../utils/source-entity.util';
+import { subtaskRoleOr } from '../../domain/task-access-scope.util';
 import {
   enrichWithUserDisplayNames,
   enrichRowsWithUserDisplayNames,
@@ -758,20 +760,65 @@ export class IssuesService {
     });
   }
 
+  /**
+   * Links a change request to an issue (same project + same linked subtask).
+   */
+  async linkChangeRequest(
+    ctx: PmContext,
+    projectId: string,
+    issueId: string,
+    dto: LinkIssueCrDto,
+  ): Promise<MappedIssue> {
+    const issue = await this.getIssueOrThrow(projectId, issueId);
+    await this.assertCanAccessIssue(ctx, issue, 'edit');
+
+    const cr = await this.prisma.projectChangeRequest.findFirst({
+      where: activeOnly({
+        id: dto.crId,
+        companyId: ctx.companyId,
+        projectId,
+      }),
+      select: {
+        id: true,
+        linkedDesignPackageId: true,
+      },
+    });
+    if (!cr) {
+      throw new NotFoundException('Change request not found');
+    }
+    if (
+      issue.linkedDesignPackageId &&
+      cr.linkedDesignPackageId &&
+      cr.linkedDesignPackageId !== issue.linkedDesignPackageId
+    ) {
+      throw new BadRequestException(
+        'Change request must belong to the same subtask as this issue',
+      );
+    }
+
+    const existingIds = [...(issue.linkedCrIds ?? [])];
+    const linkedCrIds = existingIds.includes(cr.id)
+      ? existingIds
+      : [...existingIds, cr.id];
+
+    const updated = await this.prisma.issue.update({
+      where: { id: issueId },
+      data: {
+        linkedCrIds,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    return this.enrichIssue(ctx, updated);
+  }
+
   private buildMyIssueListWhere(
     ctx: PmContext,
     query: Partial<PmListQueryDto>,
   ): Prisma.IssueWhereInput {
     const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
       companyId: ctx.companyId,
-      OR: [
-        { designerUserId: ctx.userId },
-        { disciplinaryLeaderUserId: ctx.userId },
-        { reviewerUserId: ctx.userId },
-        { supportingDesignerUserId: ctx.userId },
-        { deptDeputyChiefUserId: ctx.userId },
-        { instituteChiefUserId: ctx.userId },
-      ],
+      OR: subtaskRoleOr(ctx.userId),
     });
 
     const where: Prisma.IssueWhereInput = activeOnly({
@@ -911,13 +958,14 @@ export class IssuesService {
     ctx: PmContext,
     issue: Parameters<typeof mapIssue>[0],
   ): Promise<MappedIssue> {
-    const [folder, linkedDesignPackage] = await Promise.all([
+    const [folder, linkedDesignPackage, linkedCrs] = await Promise.all([
       this.engineeringDocumentFolderService.findEntityFolder(
         ctx,
         FolderContextType.ISSUE,
         issue.id,
       ),
       this.resolveLinkedDesignPackage(ctx, issue.linkedDesignPackageId),
+      this.resolveLinkedCrs(ctx, issue.linkedCrIds ?? []),
     ]);
     return enrichWithUserDisplayNames(
       this.prisma,
@@ -926,6 +974,7 @@ export class IssuesService {
         ...mapIssue(issue),
         attachmentFolderId: folder?.id ?? null,
         linkedDesignPackage,
+        linkedCrs,
         sourceEntitySummary: await buildSourceEntitySummary(
           this.prisma,
           issue.projectId,
@@ -935,6 +984,37 @@ export class IssuesService {
       },
       PM_ISSUE_USER_NAMES,
     );
+  }
+
+  private async resolveLinkedCrs(
+    ctx: PmContext,
+    linkedCrIds: string[],
+  ): Promise<NonNullable<MappedIssue['linkedCrs']>> {
+    if (linkedCrIds.length === 0) {
+      return [];
+    }
+    const crRows = await this.prisma.projectChangeRequest.findMany({
+      where: activeOnly({
+        id: { in: linkedCrIds },
+        companyId: ctx.companyId,
+      }),
+      select: {
+        id: true,
+        changeNumber: true,
+        title: true,
+        status: true,
+      },
+    });
+    const byId = new Map(crRows.map((row) => [row.id, row]));
+    return linkedCrIds
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .map((row) => ({
+        id: row.id,
+        changeNumber: row.changeNumber,
+        title: row.title,
+        status: row.status,
+      }));
   }
 
   private async resolveLinkedDesignPackage(
@@ -1015,14 +1095,7 @@ export class IssuesService {
         where: activeOnly({
           id: issue.linkedDesignPackageId,
           companyId: ctx.companyId,
-          OR: [
-            { designerUserId: ctx.userId },
-            { disciplinaryLeaderUserId: ctx.userId },
-            { reviewerUserId: ctx.userId },
-            { supportingDesignerUserId: ctx.userId },
-            { deptDeputyChiefUserId: ctx.userId },
-            { instituteChiefUserId: ctx.userId },
-          ],
+          OR: subtaskRoleOr(ctx.userId),
         }),
         select: { id: true },
       });

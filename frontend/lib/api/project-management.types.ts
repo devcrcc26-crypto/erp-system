@@ -819,6 +819,13 @@ export interface Issue {
   reopenedBy: string | null;
   reopenedByName?: string | null;
   linkedDesignPackageId: string | null;
+  linkedCrIds?: string[];
+  linkedCrs?: Array<{
+    id: string;
+    changeNumber: string;
+    title: string;
+    status: string;
+  }>;
   linkedDesignPackage?: {
     id: string;
     packageCode: string;

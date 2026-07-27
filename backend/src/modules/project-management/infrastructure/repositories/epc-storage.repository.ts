@@ -228,21 +228,62 @@ export class DesignPackageRepository {
     companyId: string,
     taskDisciplineId: string,
     extraWhere?: Prisma.DesignPackageWhereInput,
-  ): Promise<(DesignPackage & { items: DesignPackageItem[] })[]> {
+  ): Promise<
+    (DesignPackage & {
+      items: DesignPackageItem[];
+      siteRepresentative: {
+        firstName: string;
+        lastName: string;
+        chineseName: string | null;
+        email: string | null;
+      } | null;
+    })[]
+  > {
     return this.prisma.designPackage.findMany({
       where: activeOnly({ companyId, taskDisciplineId, ...extraWhere }),
       orderBy: { createdAt: 'desc' },
-      include: { items: packageItemInclude },
+      include: {
+        items: packageItemInclude,
+        siteRepresentative: {
+          select: {
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+      },
     });
   }
 
   async findById(
     companyId: string,
     id: string,
-  ): Promise<(DesignPackage & { items: DesignPackageItem[] }) | null> {
+  ): Promise<
+    | (DesignPackage & {
+        items: DesignPackageItem[];
+        siteRepresentative: {
+          firstName: string;
+          lastName: string;
+          chineseName: string | null;
+          email: string | null;
+        } | null;
+      })
+    | null
+  > {
     return this.prisma.designPackage.findFirst({
       where: activeOnly({ id, companyId }),
-      include: { items: packageItemInclude },
+      include: {
+        items: packageItemInclude,
+        siteRepresentative: {
+          select: {
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+      },
     });
   }
 

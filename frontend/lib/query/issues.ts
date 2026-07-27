@@ -225,6 +225,36 @@ export function useReopenIssue() {
   });
 }
 
+/**
+ * Links a change request to an issue.
+ */
+export function useLinkIssueCr() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      issueId,
+      crId,
+    }: {
+      projectId: string;
+      issueId: string;
+      crId: string;
+    }) =>
+      apiPatch<Issue>(
+        `${issuesPath(projectId)}/${issueId}/link-cr`,
+        { crId },
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateIssueQueries(
+        queryClient,
+        variables.projectId,
+        variables.issueId,
+      );
+    },
+  });
+}
+
 export function useAddIssueResponse() {
   const queryClient = useQueryClient();
   return useMutation({

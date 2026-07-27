@@ -10,6 +10,7 @@ const SUBTASK_ROLE_FIELDS: SubtaskRoleField[] = [
   'instituteChiefUserId',
   'disciplineOwnerUserId',
   'supportingDesignerUserId',
+  'siteRepresentativeUserId',
 ];
 
 /**

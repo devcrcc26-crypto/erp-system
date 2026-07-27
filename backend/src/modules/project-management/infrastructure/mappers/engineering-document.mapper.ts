@@ -9,6 +9,7 @@ import {
   UrgencyLevel,
   WorkflowEventLog,
 } from '@prisma/client';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 
 export interface MappedEngineeringDocumentVersion {
   id: string;
@@ -88,6 +89,8 @@ export interface MappedDesignPackage {
   instituteChiefName: string | null;
   disciplineOwnerUserId: string | null;
   supportingDesignerUserId: string | null;
+  siteRepresentativeUserId: string | null;
+  siteRepresentativeName: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -229,7 +232,15 @@ export function mapDesignPackageItem(
 }
 
 export function mapDesignPackage(
-  row: DesignPackage & { items?: DesignPackageItemWithEdv[] },
+  row: DesignPackage & {
+    items?: DesignPackageItemWithEdv[];
+    siteRepresentative?: {
+      firstName: string;
+      lastName: string;
+      chineseName?: string | null;
+      email?: string | null;
+    } | null;
+  },
 ): MappedDesignPackage {
   return {
     id: row.id,
@@ -263,6 +274,10 @@ export function mapDesignPackage(
     instituteChiefName: row.instituteChiefName,
     disciplineOwnerUserId: row.disciplineOwnerUserId,
     supportingDesignerUserId: row.supportingDesignerUserId,
+    siteRepresentativeUserId: row.siteRepresentativeUserId ?? null,
+    siteRepresentativeName: row.siteRepresentative
+      ? formatUserDisplayName(row.siteRepresentative)
+      : null,
     briefText: row.briefText,
     sourceEntityType: row.sourceEntityType,
     sourceEntityId: row.sourceEntityId,

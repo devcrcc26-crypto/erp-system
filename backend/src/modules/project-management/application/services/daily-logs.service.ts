@@ -21,6 +21,7 @@ import { hasFullProjectDataAccess } from '../../../../shared/permissions/project
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { subtaskRoleOr } from '../../domain/task-access-scope.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   buildPaginatedResult,
@@ -866,14 +867,7 @@ export class DailyLogsService {
             projectId: log.projectId,
           },
         },
-        OR: [
-          { designerUserId: ctx.userId },
-          { disciplinaryLeaderUserId: ctx.userId },
-          { reviewerUserId: ctx.userId },
-          { supportingDesignerUserId: ctx.userId },
-          { deptDeputyChiefUserId: ctx.userId },
-          { instituteChiefUserId: ctx.userId },
-        ],
+        OR: subtaskRoleOr(ctx.userId),
       }),
       select: { id: true },
     });
@@ -924,14 +918,7 @@ export class DailyLogsService {
   ): Prisma.DailyLogWhereInput {
     const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
       companyId: ctx.companyId,
-      OR: [
-        { designerUserId: ctx.userId },
-        { disciplinaryLeaderUserId: ctx.userId },
-        { reviewerUserId: ctx.userId },
-        { supportingDesignerUserId: ctx.userId },
-        { deptDeputyChiefUserId: ctx.userId },
-        { instituteChiefUserId: ctx.userId },
-      ],
+      OR: subtaskRoleOr(ctx.userId),
     });
 
     const where: Prisma.DailyLogWhereInput = activeOnly({

@@ -25,5 +25,6 @@ export function subtaskRoleOr(userId: string): Prisma.DesignPackageWhereInput[] 
     { instituteChiefUserId: userId },
     { disciplineOwnerUserId: userId },
     { supportingDesignerUserId: userId },
+    { siteRepresentativeUserId: userId },
   ];
 }

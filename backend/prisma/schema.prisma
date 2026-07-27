@@ -531,6 +531,7 @@ model User {
   subtaskDisciplinaryLeaderPackages     DesignPackage[] @relation("SubtaskDisciplinaryLeader")
   subtaskDeptDeputyChiefPackages        DesignPackage[] @relation("SubtaskDeptDeputyChief")
   subtaskInstituteChiefDesignPackages   DesignPackage[] @relation("SubtaskInstituteChief")
+  siteRepPackages                       DesignPackage[] @relation("PackageSiteRep")
   workflowEventLogs        WorkflowEventLog[]
   assignedReviewSessions   ReviewSession[]  @relation("ReviewSessionAssignee")
   authoredReviewComments   ReviewComment[] @relation("ReviewCommentAuthor")
@@ -1798,6 +1799,7 @@ model DesignPackage {
   instituteChiefName         String?                      @map("institute_chief_name")
   disciplineOwnerUserId      String?                      @map("discipline_owner_user_id")
   supportingDesignerUserId   String?                      @map("supporting_designer_user_id")
+  siteRepresentativeUserId   String?                      @map("site_representative_user_id")
   briefText         String?                      @map("brief_text")
   sourceEntityType  String?                      @map("source_entity_type")
   sourceEntityId    String?                      @map("source_entity_id")
@@ -1820,6 +1822,7 @@ model DesignPackage {
   instituteChiefUser     User? @relation("SubtaskInstituteChief", fields: [instituteChiefUserId], references: [id])
   disciplineOwnerUser    User? @relation("SubtaskDisciplineOwner", fields: [disciplineOwnerUserId], references: [id])
   supportingDesignerUser User? @relation("SubtaskSupportingDesigner", fields: [supportingDesignerUserId], references: [id])
+  siteRepresentative     User? @relation("PackageSiteRep", fields: [siteRepresentativeUserId], references: [id])
   items          DesignPackageItem[]
   dependencies   DesignPackageDependency[] @relation("DependentPackage")
   dependedOnBy   DesignPackageDependency[] @relation("PrerequisitePackage")
@@ -1842,6 +1845,7 @@ model DesignPackage {
   @@index([instituteChiefUserId], map: "idx_design_package_institute_chief_user_id")
   @@index([disciplineOwnerUserId], map: "idx_design_package_discipline_owner_user_id")
   @@index([supportingDesignerUserId], map: "idx_design_package_supporting_designer_user_id")
+  @@index([siteRepresentativeUserId], map: "idx_design_package_site_representative_user_id")
   @@map("design_package")
 }
 
@@ -2706,6 +2710,7 @@ model Issue {
   reopenedAt            DateTime?     @map("reopened_at")
   reopenedBy            String?       @map("reopened_by")
   linkedDesignPackageId String?       @map("linked_design_package_id")
+  linkedCrIds           String[]      @default([]) @map("linked_cr_ids")
   sourceEntityType      String?       @map("source_entity_type")
   sourceEntityId        String?       @map("source_entity_id")
   createdAt             DateTime      @default(now()) @map("created_at")

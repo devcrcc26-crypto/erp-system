@@ -204,6 +204,7 @@ export class DesignPackagesService {
         ? null
         : dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
       instituteChiefName,
+      siteRepresentativeUserId: dto.siteRepresentativeUserId ?? null,
     };
     const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
 
@@ -398,7 +399,8 @@ export class DesignPackagesService {
       dto.disciplinaryLeaderUserId !== undefined ||
       dto.deptDeputyChiefUserId !== undefined ||
       dto.instituteChiefUserId !== undefined ||
-      dto.instituteChiefName !== undefined;
+      dto.instituteChiefName !== undefined ||
+      dto.siteRepresentativeUserId !== undefined;
 
     const priorEffectiveChain = this.getEffectiveApprovalChain(
       {
@@ -469,6 +471,11 @@ export class DesignPackagesService {
       ),
       instituteChiefUserId: nextInstituteChiefUserId,
       instituteChiefName: nextInstituteChiefName,
+      siteRepresentativeUserId: this.resolveRoleOnUpdate(
+        dto.siteRepresentativeUserId,
+        existing.siteRepresentativeUserId,
+        null,
+      ),
     };
     const nextEffectiveChain = this.getEffectiveApprovalChain(
       nextPackageOverrides,
@@ -1245,6 +1252,7 @@ export class DesignPackagesService {
     disciplinaryLeaderUserId: string | null;
     deptDeputyChiefUserId: string | null;
     instituteChiefUserId: string | null;
+    siteRepresentativeUserId?: string | null;
   }) {
     return {
       ...(overrides.designerUserId
@@ -1288,6 +1296,13 @@ export class DesignPackagesService {
             },
           }
         : {}),
+      ...(overrides.siteRepresentativeUserId
+        ? {
+            siteRepresentative: {
+              connect: { id: overrides.siteRepresentativeUserId },
+            },
+          }
+        : {}),
     };
   }
 
@@ -1299,6 +1314,7 @@ export class DesignPackagesService {
     disciplinaryLeaderUserId: string | null;
     deptDeputyChiefUserId: string | null;
     instituteChiefUserId: string | null;
+    siteRepresentativeUserId?: string | null;
   }) {
     return {
       designerUser: overrides.designerUserId
@@ -1321,6 +1337,9 @@ export class DesignPackagesService {
         : { disconnect: true },
       instituteChiefUser: overrides.instituteChiefUserId
         ? { connect: { id: overrides.instituteChiefUserId } }
+        : { disconnect: true },
+      siteRepresentative: overrides.siteRepresentativeUserId
+        ? { connect: { id: overrides.siteRepresentativeUserId } }
         : { disconnect: true },
     };
   }
@@ -1484,6 +1503,7 @@ export class DesignPackagesService {
       instituteChiefUserId: string | null;
       disciplineOwnerUserId: string | null;
       supportingDesignerUserId: string | null;
+      siteRepresentativeUserId: string | null;
     } | null,
     after: {
       designerUserId: string | null;
@@ -1493,6 +1513,7 @@ export class DesignPackagesService {
       instituteChiefUserId: string | null;
       disciplineOwnerUserId: string | null;
       supportingDesignerUserId: string | null;
+      siteRepresentativeUserId: string | null;
     },
   ): Promise<void> {
     const assignments = before

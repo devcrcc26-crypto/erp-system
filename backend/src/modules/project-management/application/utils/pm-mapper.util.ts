@@ -1239,6 +1239,13 @@ export interface MappedIssue {
   reopenedBy: string | null;
   reopenedByName?: string | null;
   linkedDesignPackageId: string | null;
+  linkedCrIds: string[];
+  linkedCrs?: Array<{
+    id: string;
+    changeNumber: string;
+    title: string;
+    status: string;
+  }>;
   linkedDesignPackage?: {
     id: string;
     packageCode: string;
@@ -1489,6 +1496,7 @@ export function mapIssue(issue: Issue): MappedIssue {
     reopenedAt: toIsoString(issue.reopenedAt),
     reopenedBy: issue.reopenedBy,
     linkedDesignPackageId: issue.linkedDesignPackageId,
+    linkedCrIds: issue.linkedCrIds ?? [],
     sourceEntityType: issue.sourceEntityType,
     sourceEntityId: issue.sourceEntityId,
     createdAt: toIsoString(issue.createdAt)!,

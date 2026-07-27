@@ -13,6 +13,7 @@ export interface SubtaskRolesFormValues {
   instituteChiefMode?: InstituteChiefMode;
   instituteChiefUserId?: string;
   instituteChiefName?: string;
+  siteRepresentativeUserId?: string;
 }
 
 export function toSubtaskRolesFormValues(
@@ -28,6 +29,7 @@ export function toSubtaskRolesFormValues(
     instituteChiefMode: subtask.instituteChiefName ? 'EXTERNAL_PERSON' : 'SYSTEM_USER',
     instituteChiefUserId: subtask.instituteChiefUserId ?? undefined,
     instituteChiefName: subtask.instituteChiefName ?? undefined,
+    siteRepresentativeUserId: subtask.siteRepresentativeUserId ?? undefined,
   };
 }
 
@@ -109,5 +111,6 @@ export function toSubtaskRolesPayload(
     deptDeputyChiefUserId: values.deptDeputyChiefUserId,
     instituteChiefUserId: isExternal ? undefined : values.instituteChiefUserId,
     instituteChiefName: isExternal ? values.instituteChiefName : undefined,
+    siteRepresentativeUserId: values.siteRepresentativeUserId,
   };
 }

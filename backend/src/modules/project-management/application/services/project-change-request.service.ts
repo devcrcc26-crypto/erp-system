@@ -22,6 +22,7 @@ import { PermissionService } from '../../../../shared/permissions/permission.ser
 import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { subtaskRoleOr } from '../../domain/task-access-scope.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -255,14 +256,7 @@ export class ProjectChangeRequestService {
         ...(isFullAccess
           ? {}
           : {
-              OR: [
-                { designerUserId: ctx.userId },
-                { supportingDesignerUserId: ctx.userId },
-                { reviewerUserId: ctx.userId },
-                { disciplinaryLeaderUserId: ctx.userId },
-                { deptDeputyChiefUserId: ctx.userId },
-                { instituteChiefUserId: ctx.userId },
-              ],
+              OR: subtaskRoleOr(ctx.userId),
             }),
         items: {
           some: {
@@ -980,14 +974,7 @@ export class ProjectChangeRequestService {
         ...(isFullAccess
           ? {}
           : {
-              OR: [
-                { designerUserId: ctx.userId },
-                { supportingDesignerUserId: ctx.userId },
-                { reviewerUserId: ctx.userId },
-                { disciplinaryLeaderUserId: ctx.userId },
-                { deptDeputyChiefUserId: ctx.userId },
-                { instituteChiefUserId: ctx.userId },
-              ],
+              OR: subtaskRoleOr(ctx.userId),
             }),
         items: {
           some: {
@@ -1273,14 +1260,7 @@ export class ProjectChangeRequestService {
   ): Prisma.ProjectChangeRequestWhereInput {
     const assignedPackageWhere: Prisma.DesignPackageWhereInput = activeOnly({
       companyId: ctx.companyId,
-      OR: [
-        { designerUserId: ctx.userId },
-        { disciplinaryLeaderUserId: ctx.userId },
-        { reviewerUserId: ctx.userId },
-        { supportingDesignerUserId: ctx.userId },
-        { deptDeputyChiefUserId: ctx.userId },
-        { instituteChiefUserId: ctx.userId },
-      ],
+      OR: subtaskRoleOr(ctx.userId),
     });
 
     const where: Prisma.ProjectChangeRequestWhereInput = activeOnly({

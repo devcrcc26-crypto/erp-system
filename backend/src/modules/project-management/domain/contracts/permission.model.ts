@@ -54,6 +54,8 @@ export interface PermissionContext {
   readonly subtaskInstituteChiefUserId?: string;
   /** External Institute Chief name on the subtask — blocks discipline IC fallback. */
   readonly subtaskInstituteChiefName?: string;
+  /** Site representative FK on the subtask — communication modules only (not engineering docs). */
+  readonly subtaskSiteRepresentativeUserId?: string;
   /** System role Document Controller — logistics upload on assigned disciplines. */
   readonly isDocumentController?: boolean;
   /**

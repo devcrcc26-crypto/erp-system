@@ -117,6 +117,7 @@ export class PermissionResolverService {
       subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
+      subtaskSiteRepresentativeUserId: packageOverrides?.siteRepresentativeUserId,
       isDocumentController: roleNames.includes('Document Controller'),
       hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
       currentAssigneeUserId: input.currentAssigneeUserId,
@@ -187,6 +188,7 @@ export class PermissionResolverService {
       subtaskDeptDeputyChiefUserId: packageOverrides?.deptDeputyChiefUserId,
       subtaskInstituteChiefUserId: packageOverrides?.instituteChiefUserId,
       subtaskInstituteChiefName: packageOverrides?.instituteChiefName,
+      subtaskSiteRepresentativeUserId: packageOverrides?.siteRepresentativeUserId,
       isDocumentController: roleNames.includes('Document Controller'),
       hasFullProjectAccess: hasFullProjectDataAccess(roleNames),
       currentAssigneeUserId: input.currentAssigneeUserId,
@@ -394,6 +396,7 @@ export class PermissionResolverService {
     deptDeputyChiefUserId?: string;
     instituteChiefUserId?: string;
     instituteChiefName?: string;
+    siteRepresentativeUserId?: string;
   }> {
     const pkg = await this.prisma.designPackage.findFirst({
       where: activeOnly({ id: designPackageId, companyId }),
@@ -406,6 +409,7 @@ export class PermissionResolverService {
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
         instituteChiefName: true,
+        siteRepresentativeUserId: true,
       },
     });
     if (!pkg) {
@@ -420,6 +424,7 @@ export class PermissionResolverService {
       deptDeputyChiefUserId: pkg.deptDeputyChiefUserId ?? undefined,
       instituteChiefUserId: pkg.instituteChiefUserId ?? undefined,
       instituteChiefName: pkg.instituteChiefName ?? undefined,
+      siteRepresentativeUserId: pkg.siteRepresentativeUserId ?? undefined,
     };
   }
 }

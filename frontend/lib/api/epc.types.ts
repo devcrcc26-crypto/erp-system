@@ -156,6 +156,8 @@ export interface DesignPackage {
   instituteChiefName: string | null;
   disciplineOwnerUserId: string | null;
   supportingDesignerUserId: string | null;
+  siteRepresentativeUserId: string | null;
+  siteRepresentativeName: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -589,6 +591,7 @@ export interface CreateDesignPackageRequest {
   instituteChiefName?: string;
   disciplineOwnerUserId?: string;
   supportingDesignerUserId?: string;
+  siteRepresentativeUserId?: string;
 }
 
 export type UpdateDesignPackageRequest = Partial<CreateDesignPackageRequest>;
