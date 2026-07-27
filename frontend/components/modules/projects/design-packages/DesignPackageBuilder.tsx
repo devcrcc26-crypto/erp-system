@@ -278,7 +278,7 @@ export default function DesignPackageBuilder({
       open={open}
       title={isEditing ? 'Edit subtask' : 'New subtask'}
       onClose={onClose}
-      width={560}
+      size={560}
       placement="right"
       className="erp-responsive-drawer"
       footer={renderFooter()}
