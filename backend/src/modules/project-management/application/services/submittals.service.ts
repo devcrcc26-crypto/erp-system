@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { EdvStatus, FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalStatus } from '@prisma/client';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, Logger, Optional } from '@nestjs/common';
+import { EdvStatus, FolderContextType, Prisma, SubmittalPurpose, SubmittalPreparedByRole, SubmittalSiteReviewStatus, SubmittalStatus } from '@prisma/client';
 import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -8,6 +8,7 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   AddSubmittalItemsDto,
   CreateConstructionSubmittalDto,
@@ -18,6 +19,7 @@ import {
   BatchIssueSubmittalsDto,
   BatchAddSubmittalItemsDto,
   PmListQueryDto,
+  SubmittalSiteReviewCommentDto,
   UpdateSubmittalDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
@@ -25,13 +27,13 @@ import {
   mapSubmittal,
   mapSubmittalItem,
   mapSubmittalReview,
+  mapSubmittalSiteReview,
   MappedSubmittal,
   MappedSubmittalItem,
   MappedSubmittalReview,
+  MappedSubmittalSiteReview,
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
-import { buildPmOrderBy } from '../utils/pm-pagination.util';
-import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import { enrichRowsWithUserDisplayNames, enrichWithUserDisplayNames } from '../utils/pm-user-names.util';
 import { PM_SUBMITTAL_USER_NAMES, PM_REVIEWED_BY_NAME } from '../utils/pm-user-name-fields.const';
 import { DocumentNumberService } from './document-number.service';
@@ -42,6 +44,15 @@ import { ProjectScopeService } from './project-scope.service';
 import { TaskAccessScopeService } from './task-access-scope.service';
 import { WorkflowKernelService } from './workflow-kernel.service';
 import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.contract';
+import { buildPmOrderBy } from '../utils/pm-pagination.util';
+import { parseStatusFilter } from '../utils/parse-status-filter.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
+
+const SITE_REVIEW_REQUESTED_EVENT = 'submittal.site_review_requested';
+const SITE_REVIEW_APPROVED_EVENT = 'submittal.site_review_approved';
+const SITE_REVIEW_ALL_APPROVED_EVENT = 'submittal.site_review_all_approved';
+const SITE_REVIEW_COMMENTED_EVENT = 'submittal.site_review_commented';
+const SITE_REVIEW_REREQUESTED_EVENT = 'submittal.site_review_rerequested';
 
 /** Package fields needed to compute fullSubtaskCode on mapped items. */
 const SUBMITTAL_ITEM_PACKAGE_SELECT = {
@@ -77,8 +88,11 @@ const VERDICT_SUBMITTAL_STATUSES = new Set<SubmittalStatus>([
   SubmittalStatus.REJECTED,
 ]);
 
+/** Direct PATCH only. Site-review transitions go through dedicated endpoints / issue. */
 const SUBMITTAL_STATUS_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ['SUBMITTED'],
+  UNDER_SITE_REVIEW: [],
+  SITE_APPROVED: [],
   SUBMITTED: ['DRAFT'],
   UNDER_REVIEW: [],
 };
@@ -107,6 +121,8 @@ export interface SubmittalItemReleasableEdv {
 
 @Injectable()
 export class SubmittalsService {
+  private readonly logger = new Logger(SubmittalsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
@@ -116,6 +132,8 @@ export class SubmittalsService {
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly taskAccessScopeService: TaskAccessScopeService,
+    @Optional()
+    private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -241,6 +259,7 @@ export class SubmittalsService {
   ): Promise<
     MappedSubmittal & {
       items: MappedSubmittalItem[];
+      siteReviews: MappedSubmittalSiteReview[];
       attachmentFolderId: string | null;
     }
   > {
@@ -252,6 +271,9 @@ export class SubmittalsService {
           include: {
             designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
           },
+        },
+        siteReviews: {
+          orderBy: { createdAt: 'asc' },
         },
         taskDiscipline: { select: { disciplineLeadUserId: true } },
       },
@@ -275,6 +297,11 @@ export class SubmittalsService {
         row.submittalNumber,
       ));
 
+    const siteReviews = await this.enrichSiteReviews(
+      ctx.companyId,
+      row.siteReviews.map(mapSubmittalSiteReview),
+    );
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
@@ -282,6 +309,7 @@ export class SubmittalsService {
         ...mapSubmittal(row),
         disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
         items: row.items.map(mapSubmittalItem),
+        siteReviews,
         attachmentFolderId: attachmentFolder.id,
       },
       PM_SUBMITTAL_USER_NAMES,
@@ -653,6 +681,7 @@ export class SubmittalsService {
 
   /**
    * Issues submittal - captures immutable package snapshots.
+   * May route to UNDER_SITE_REVIEW when any item package has a site rep.
    */
   async issueSubmittal(
     ctx: PmContext,
@@ -663,13 +692,222 @@ export class SubmittalsService {
     const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
     this.assertSubmittalIssuable(submittal.status);
 
-    return this.workflowKernel.execute({
+    const result = await this.workflowKernel.execute({
       type: 'IssueSubmittal',
       companyId: ctx.companyId,
       actorId: ctx.userId,
       submittalId,
       idempotencyKey: dto.idempotencyKey,
     });
+
+    if (result.siteReviewStarted && result.siteRepUserIds?.length) {
+      await this.notifySiteRepsReviewRequested(
+        ctx,
+        projectId,
+        submittalId,
+        submittal.submittalNumber,
+        result.siteRepUserIds,
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Site rep approves their SubmittalSiteReview row.
+   * When all rows are APPROVED, transitions submittal to SITE_APPROVED.
+   */
+  async approveSiteReview(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    reviewId: string,
+  ): Promise<MappedSubmittal & { siteReviews: MappedSubmittalSiteReview[] }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.UNDER_SITE_REVIEW) {
+      throw new BadRequestException(
+        'Site review can only be approved while UNDER_SITE_REVIEW',
+      );
+    }
+
+    const review = await this.getSiteReviewOrThrow(
+      ctx.companyId,
+      submittalId,
+      reviewId,
+    );
+    if (review.siteRepUserId !== ctx.userId) {
+      throw new ForbiddenException('Only the assigned site representative may approve');
+    }
+    if (review.status === SubmittalSiteReviewStatus.APPROVED) {
+      throw new BadRequestException('Site review already approved');
+    }
+
+    await this.prisma.submittalSiteReview.update({
+      where: { id: reviewId },
+      data: {
+        status: SubmittalSiteReviewStatus.APPROVED,
+        reviewedAt: new Date(),
+        reviewedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    const pending = await this.prisma.submittalSiteReview.count({
+      where: {
+        submittalId,
+        companyId: ctx.companyId,
+        status: { not: SubmittalSiteReviewStatus.APPROVED },
+      },
+    });
+
+    if (pending === 0) {
+      await this.prisma.submittal.update({
+        where: { id: submittalId },
+        data: {
+          status: SubmittalStatus.SITE_APPROVED,
+          updatedBy: ctx.userId,
+        },
+      });
+      await this.notifySiteReviewComplete(
+        ctx,
+        projectId,
+        submittalId,
+        submittal.submittalNumber,
+        submittal.submittedBy,
+        submittal.taskDisciplineId,
+      );
+    } else {
+      await this.notifyCreatorSiteRepApproved(
+        ctx,
+        projectId,
+        submittalId,
+        submittal.submittalNumber,
+        submittal.submittedBy,
+      );
+    }
+
+    const detail = await this.getSubmittal(ctx, projectId, submittalId);
+    return detail;
+  }
+
+  /**
+   * Site rep comments without approving — stays UNDER_SITE_REVIEW (option B).
+   */
+  async commentSiteReview(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    reviewId: string,
+    dto: SubmittalSiteReviewCommentDto,
+  ): Promise<MappedSubmittalSiteReview> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.UNDER_SITE_REVIEW) {
+      throw new BadRequestException(
+        'Site review comments are only allowed while UNDER_SITE_REVIEW',
+      );
+    }
+
+    const review = await this.getSiteReviewOrThrow(
+      ctx.companyId,
+      submittalId,
+      reviewId,
+    );
+    if (review.siteRepUserId !== ctx.userId) {
+      throw new ForbiddenException('Only the assigned site representative may comment');
+    }
+
+    const comment = dto.comment.trim();
+    if (!comment) {
+      throw new BadRequestException('Comment is required');
+    }
+
+    const updated = await this.prisma.submittalSiteReview.update({
+      where: { id: reviewId },
+      data: {
+        status: SubmittalSiteReviewStatus.COMMENTED,
+        comment,
+        reviewedAt: new Date(),
+        reviewedBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.notifyCreatorSiteRepCommented(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      comment,
+    );
+
+    const [mapped] = await this.enrichSiteReviews(ctx.companyId, [
+      mapSubmittalSiteReview(updated),
+    ]);
+    return mapped!;
+  }
+
+  /**
+   * Option B partial reset: after a CR is resolved, D.Lead/creator resets only
+   * the commenting site rep back to PENDING. Other approvals are preserved.
+   */
+  async requestSiteReviewReReview(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    reviewId: string,
+  ): Promise<MappedSubmittalSiteReview> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.UNDER_SITE_REVIEW) {
+      throw new BadRequestException(
+        'Re-review can only be requested while UNDER_SITE_REVIEW',
+      );
+    }
+
+    const isCreator = submittal.submittedBy === ctx.userId;
+    const isLead =
+      submittal.taskDisciplineId != null &&
+      (await this.isDisciplineLead(ctx, submittal.taskDisciplineId));
+    if (!isCreator && !isLead) {
+      throw new ForbiddenException(
+        'Only the creator or discipline lead may request re-review',
+      );
+    }
+
+    const review = await this.getSiteReviewOrThrow(
+      ctx.companyId,
+      submittalId,
+      reviewId,
+    );
+    if (review.status !== SubmittalSiteReviewStatus.COMMENTED) {
+      throw new BadRequestException(
+        'Re-review is only available for COMMENTED site reviews',
+      );
+    }
+
+    const updated = await this.prisma.submittalSiteReview.update({
+      where: { id: reviewId },
+      data: {
+        status: SubmittalSiteReviewStatus.PENDING,
+        reviewedAt: null,
+        reviewedBy: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.notifySiteRepRerequested(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      review.siteRepUserId,
+    );
+
+    const [mapped] = await this.enrichSiteReviews(ctx.companyId, [
+      mapSubmittalSiteReview(updated),
+    ]);
+    return mapped!;
   }
 
   /**
@@ -688,8 +926,10 @@ export class SubmittalsService {
       submittalId,
       itemId,
     );
-    if (item.submittal.issuedAt) {
-      throw new BadRequestException('Submittal is already issued');
+    if (item.submittal.issuedAt || item.submittal.status !== SubmittalStatus.DRAFT) {
+      throw new BadRequestException(
+        'Documents can only be selected while the submittal is DRAFT',
+      );
     }
 
     return this.loadLockedEdvsForPackage(ctx.companyId, item.designPackageId);
@@ -712,7 +952,7 @@ export class SubmittalsService {
       submittalId,
       itemId,
     );
-    if (item.submittal.issuedAt) {
+    if (item.submittal.issuedAt || item.submittal.status !== SubmittalStatus.DRAFT) {
       throw new BadRequestException('Cannot change document selection after issue');
     }
 
@@ -749,7 +989,7 @@ export class SubmittalsService {
       submittalId,
       itemId,
     );
-    if (item.submittal.issuedAt) {
+    if (item.submittal.issuedAt || item.submittal.status !== SubmittalStatus.DRAFT) {
       throw new BadRequestException('Cannot change document selection after issue');
     }
 
@@ -776,8 +1016,10 @@ export class SubmittalsService {
     dto: AddSubmittalItemsDto,
   ): Promise<WorkflowResultSnapshot> {
     const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
-    if (submittal.issuedAt) {
-      throw new NotFoundException('Cannot add items to issued submittal');
+    if (submittal.issuedAt || submittal.status !== SubmittalStatus.DRAFT) {
+      throw new BadRequestException(
+        'Cannot add items unless the submittal is DRAFT',
+      );
     }
 
     return this.workflowKernel.execute({
@@ -812,6 +1054,15 @@ export class SubmittalsService {
           ? `${dto.idempotencyKey}:${submittalId}`
           : undefined,
       });
+      if (result.siteReviewStarted && result.siteRepUserIds?.length) {
+        await this.notifySiteRepsReviewRequested(
+          ctx,
+          projectId,
+          submittalId,
+          submittal.submittalNumber,
+          result.siteRepUserIds,
+        );
+      }
       results.push(result);
     }
     return results;
@@ -845,6 +1096,14 @@ export class SubmittalsService {
     if (dto.status !== undefined && VERDICT_SUBMITTAL_STATUSES.has(dto.status)) {
       throw new BadRequestException(
         'Submittal verdict status must be set through the review endpoint, not direct update.',
+      );
+    }
+    if (
+      dto.status === SubmittalStatus.UNDER_SITE_REVIEW ||
+      dto.status === SubmittalStatus.SITE_APPROVED
+    ) {
+      throw new BadRequestException(
+        'Site review statuses must be set through the issue and site-review endpoints, not direct update.',
       );
     }
 
@@ -1459,7 +1718,7 @@ export class SubmittalsService {
     const item = await this.prisma.submittalItem.findFirst({
       where: { id: itemId, companyId, submittalId },
       include: {
-        submittal: { select: { projectId: true, issuedAt: true } },
+        submittal: { select: { projectId: true, issuedAt: true, status: true } },
         designPackage: { select: SUBMITTAL_ITEM_PACKAGE_SELECT },
       },
     });
@@ -1520,9 +1779,265 @@ export class SubmittalsService {
   }
 
   private assertSubmittalIssuable(status: SubmittalStatus): void {
-    if (status !== SubmittalStatus.DRAFT) {
+    if (
+      status !== SubmittalStatus.DRAFT &&
+      status !== SubmittalStatus.SITE_APPROVED
+    ) {
       throw new BadRequestException(
-        'Only DRAFT submittals can be issued.',
+        'Only DRAFT or SITE_APPROVED submittals can be issued.',
+      );
+    }
+  }
+
+  private async getSiteReviewOrThrow(
+    companyId: string,
+    submittalId: string,
+    reviewId: string,
+  ) {
+    const review = await this.prisma.submittalSiteReview.findFirst({
+      where: { id: reviewId, companyId, submittalId },
+    });
+    if (!review) {
+      throw new NotFoundException('Site review not found');
+    }
+    return review;
+  }
+
+  private async isDisciplineLead(
+    ctx: PmContext,
+    taskDisciplineId: string,
+  ): Promise<boolean> {
+    const disc = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        id: taskDisciplineId,
+        companyId: ctx.companyId,
+        disciplineLeadUserId: ctx.userId,
+      }),
+      select: { id: true },
+    });
+    return Boolean(disc);
+  }
+
+  private async enrichSiteReviews(
+    companyId: string,
+    reviews: MappedSubmittalSiteReview[],
+  ): Promise<MappedSubmittalSiteReview[]> {
+    if (reviews.length === 0) {
+      return [];
+    }
+    const userIds = [...new Set(reviews.map((r) => r.siteRepUserId))];
+    const users = await this.prisma.user.findMany({
+      where: { companyId, id: { in: userIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        chineseName: true,
+        email: true,
+      },
+    });
+    const byId = new Map(
+      users.map((user) => [user.id, formatUserDisplayName(user)]),
+    );
+    return reviews.map((review) => ({
+      ...review,
+      siteRepUserName: byId.get(review.siteRepUserId) ?? null,
+    }));
+  }
+
+  private async notifySiteRepsReviewRequested(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    siteRepUserIds: readonly string[],
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+    const link = `/projects/${projectId}/submittals`;
+    for (const recipientId of siteRepUserIds) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: SITE_REVIEW_REQUESTED_EVENT,
+            subject: `Site review required — ${submittalNumber}`,
+            body: `External release ${submittalNumber} is waiting for your site review before it can be issued.`,
+            variables: { projectId, submittalId, submittalNumber, link },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Site review requested notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+  }
+
+  private async notifyCreatorSiteRepApproved(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    submittedBy: string,
+  ): Promise<void> {
+    if (!this.notificationService || submittedBy === ctx.userId) {
+      return;
+    }
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: submittedBy,
+          eventType: SITE_REVIEW_APPROVED_EVENT,
+          subject: `Site review approved — ${submittalNumber}`,
+          body: `A site representative approved their review on ${submittalNumber}. Waiting for remaining approvals.`,
+          variables: {
+            projectId,
+            submittalId,
+            submittalNumber,
+            link: `/projects/${projectId}/submittals`,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Site review approved notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async notifySiteReviewComplete(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    submittedBy: string,
+    taskDisciplineId: string | null,
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+    const recipients = new Set<string>([submittedBy]);
+    if (taskDisciplineId) {
+      const disc = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({ id: taskDisciplineId, companyId: ctx.companyId }),
+        select: { disciplineLeadUserId: true },
+      });
+      if (disc?.disciplineLeadUserId) {
+        recipients.add(disc.disciplineLeadUserId);
+      }
+    }
+    recipients.delete(ctx.userId);
+    for (const recipientId of recipients) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: SITE_REVIEW_ALL_APPROVED_EVENT,
+            subject: `Site review complete — ${submittalNumber}`,
+            body: `All site representatives approved ${submittalNumber}. You can now issue the release.`,
+            variables: {
+              projectId,
+              submittalId,
+              submittalNumber,
+              link: `/projects/${projectId}/submittals`,
+            },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Site review complete notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+  }
+
+  private async notifyCreatorSiteRepCommented(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    submittedBy: string,
+    taskDisciplineId: string | null,
+    comment: string,
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+    const recipients = new Set<string>([submittedBy]);
+    if (taskDisciplineId) {
+      const disc = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({ id: taskDisciplineId, companyId: ctx.companyId }),
+        select: { disciplineLeadUserId: true },
+      });
+      if (disc?.disciplineLeadUserId) {
+        recipients.add(disc.disciplineLeadUserId);
+      }
+    }
+    recipients.delete(ctx.userId);
+    for (const recipientId of recipients) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType: SITE_REVIEW_COMMENTED_EVENT,
+            subject: `Site review comment — ${submittalNumber}`,
+            body: `A site representative commented on ${submittalNumber}: ${comment}`,
+            variables: {
+              projectId,
+              submittalId,
+              submittalNumber,
+              link: `/projects/${projectId}/submittals`,
+            },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'Site review commented notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+  }
+
+  private async notifySiteRepRerequested(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    siteRepUserId: string,
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: siteRepUserId,
+          eventType: SITE_REVIEW_REREQUESTED_EVENT,
+          subject: `Re-review requested — ${submittalNumber}`,
+          body: `Please re-review external release ${submittalNumber} after the latest changes.`,
+          variables: {
+            projectId,
+            submittalId,
+            submittalNumber,
+            link: `/projects/${projectId}/submittals`,
+          },
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Site review re-request notification failed',
+        error instanceof Error ? error.message : String(error),
       );
     }
   }

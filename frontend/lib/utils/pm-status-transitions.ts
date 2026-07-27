@@ -44,6 +44,8 @@ export const SUBMITTAL_DIRECT_TRANSITIONS: Record<
   SubmittalStatus[]
 > = {
   DRAFT: ['SUBMITTED'],
+  UNDER_SITE_REVIEW: [],
+  SITE_APPROVED: [],
   SUBMITTED: ['DRAFT'],
   UNDER_REVIEW: [],
   APPROVED: [],

@@ -45,6 +45,7 @@ import {
   IsEnum,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -953,6 +954,13 @@ export class IssueSubmittalDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+}
+
+export class SubmittalSiteReviewCommentDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  comment!: string;
 }
 
 export class AddSubmittalItemsDto {

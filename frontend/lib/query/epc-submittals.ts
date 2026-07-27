@@ -77,6 +77,102 @@ export function useIssueSubmittal() {
   });
 }
 
+function invalidateSubmittalDetail(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  submittalId: string,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: submittalKeys.lists(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: submittalKeys.detail(projectId, submittalId),
+  });
+}
+
+export function useApproveSubmittalSiteReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      reviewId,
+    }: {
+      projectId: string;
+      submittalId: string;
+      reviewId: string;
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/site-reviews/${reviewId}/approve`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useCommentSubmittalSiteReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      reviewId,
+      comment,
+    }: {
+      projectId: string;
+      submittalId: string;
+      reviewId: string;
+      comment: string;
+    }) =>
+      apiPost(
+        `${submittalsBase(projectId)}/${submittalId}/site-reviews/${reviewId}/comment`,
+        { comment },
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useRequestSubmittalSiteReReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      reviewId,
+    }: {
+      projectId: string;
+      submittalId: string;
+      reviewId: string;
+    }) =>
+      apiPost(
+        `${submittalsBase(projectId)}/${submittalId}/site-reviews/${reviewId}/request-re-review`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
 export function useAddSubmittalItems() {
   const queryClient = useQueryClient();
 

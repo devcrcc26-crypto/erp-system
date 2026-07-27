@@ -93,12 +93,16 @@ export type RfiStatus =
 
 export type SubmittalStatus =
   | 'DRAFT'
+  | 'UNDER_SITE_REVIEW'
+  | 'SITE_APPROVED'
   | 'SUBMITTED'
   | 'UNDER_REVIEW'
   | 'APPROVED'
   | 'APPROVED_WITH_COMMENTS'
   | 'REVISE_AND_RESUBMIT'
   | 'REJECTED';
+
+export type SubmittalSiteReviewStatus = 'PENDING' | 'APPROVED' | 'COMMENTED';
 
 export type SubmittalPurpose =
   | 'IN_CONSTRUCTION'
@@ -460,6 +464,7 @@ export interface Submittal {
   specReference: string | null;
   revisionNumber: number;
   status: SubmittalStatus;
+  siteReviewRequired?: boolean;
   submissionDate: string | null;
   dueDate: string | null;
   reviewDate: string | null;
@@ -467,6 +472,20 @@ export interface Submittal {
   createdAt: string;
   updatedAt: string;
   items?: SubmittalItem[];
+  siteReviews?: SubmittalSiteReviewRow[];
+}
+
+export interface SubmittalSiteReviewRow {
+  id: string;
+  submittalId: string;
+  siteRepUserId: string;
+  siteRepUserName?: string | null;
+  status: SubmittalSiteReviewStatus;
+  comment: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SubmittalEdvSnapshotRow {

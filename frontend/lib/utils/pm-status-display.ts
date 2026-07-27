@@ -46,6 +46,8 @@ export function submittalStatusVariant(
 ): StatusBadgeVariant {
   const variants: Record<SubmittalStatus, StatusBadgeVariant> = {
     DRAFT: 'default',
+    UNDER_SITE_REVIEW: 'warning',
+    SITE_APPROVED: 'success',
     SUBMITTED: 'info',
     UNDER_REVIEW: 'warning',
     APPROVED: 'success',

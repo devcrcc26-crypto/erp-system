@@ -1,5 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, SubmittalPreparedByRole, SubmittalPurpose } from '@prisma/client';
+import {
+  Prisma,
+  SubmittalPreparedByRole,
+  SubmittalPurpose,
+  SubmittalSiteReviewStatus,
+  SubmittalStatus,
+} from '@prisma/client';
 import { DesignPackageProjectedStatus } from '../../domain/contracts/enums/design-package-projected-status.enum';
 import { EdvStatus } from '../../domain/contracts/enums/edv-status.enum';
 import { EpcWorkflowAction } from '../../domain/contracts/enums/epc-workflow-action.enum';
@@ -21,6 +27,7 @@ import {
 import { WorkflowTransactionRunner } from './workflow-transaction-runner.service';
 import { PermissionResolverService } from './permission-resolver.service';
 import { SubmittalSnapshotService } from './submittal-snapshot.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 
 /**
  * Design-package submittal workflow - snapshot at issue, no EDV mutation.
@@ -154,6 +161,9 @@ export class SubmittalWorkflowService {
 
   /**
    * Issues submittal - freezes immutable snapshots per package item.
+   * When any linked package has a site representative, routes to UNDER_SITE_REVIEW
+   * and creates one SubmittalSiteReview per distinct site rep. Otherwise SUBMITTED.
+   * From SITE_APPROVED, final-issues to SUBMITTED (snapshots already frozen).
    */
   async issueSubmittal(
     command: IssueSubmittalCommand,
@@ -177,6 +187,14 @@ export class SubmittalWorkflowService {
       if (submittal.items.length === 0) {
         throw new BadRequestException('Submittal has no design package items');
       }
+
+      const isFinalIssue = submittal.status === SubmittalStatus.SITE_APPROVED;
+      const isDraftIssue = submittal.status === SubmittalStatus.DRAFT;
+      if (!isFinalIssue && !isDraftIssue) {
+        throw new BadRequestException(
+          'Only DRAFT or SITE_APPROVED submittals can be issued.',
+        );
+      }
       if (submittal.issuedAt) {
         throw new ConflictException('Submittal already issued');
       }
@@ -191,7 +209,6 @@ export class SubmittalWorkflowService {
           command.companyId,
           submittal.items[0]!.designPackageId,
         ),
-        // First package loads subtask-level FK overrides for Layer 3.
         designPackageId: submittal.items[0]!.designPackageId,
       });
 
@@ -233,6 +250,92 @@ export class SubmittalWorkflowService {
         affectedEdvIds.push(...snapshot.snapshotEdvIds);
       }
 
+      if (isFinalIssue) {
+        await this.epcSubmittalRepository.issueSubmittal(
+          tx,
+          command.submittalId,
+          command.actorId,
+        );
+
+        await this.epcSubmittalRepository.appendWorkflowIntentEvent(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          entityId: command.submittalId,
+          action: 'ISSUE_SUBMITTAL',
+          beforeState: { status: submittal.status },
+          afterState: {
+            status: SubmittalStatus.SUBMITTED,
+            snapshotEdvIds: affectedEdvIds,
+          },
+          correlationId,
+        });
+
+        return {
+          commandType: 'IssueSubmittal',
+          correlationId,
+          affectedEdvIds,
+          edvStatuses: {},
+          submittalId: command.submittalId,
+          intentEventIds: [],
+          resultingStatus: SubmittalStatus.SUBMITTED,
+        };
+      }
+
+      const siteRepUserIds = await this.collectDistinctSiteRepUserIds(
+        tx,
+        command.companyId,
+        submittal.items.map((i) => i.designPackageId),
+      );
+
+      if (siteRepUserIds.length > 0) {
+        await tx.submittalSiteReview.createMany({
+          data: siteRepUserIds.map((siteRepUserId) => ({
+            companyId: command.companyId,
+            submittalId: command.submittalId,
+            siteRepUserId,
+            status: SubmittalSiteReviewStatus.PENDING,
+            createdBy: command.actorId,
+            updatedBy: command.actorId,
+          })),
+          skipDuplicates: true,
+        });
+
+        await tx.submittal.update({
+          where: { id: command.submittalId },
+          data: {
+            status: SubmittalStatus.UNDER_SITE_REVIEW,
+            siteReviewRequired: true,
+            updatedBy: command.actorId,
+          },
+        });
+
+        await this.epcSubmittalRepository.appendWorkflowIntentEvent(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          entityId: command.submittalId,
+          action: 'START_SITE_REVIEW',
+          beforeState: { status: submittal.status },
+          afterState: {
+            status: SubmittalStatus.UNDER_SITE_REVIEW,
+            siteRepUserIds,
+            snapshotEdvIds: affectedEdvIds,
+          },
+          correlationId,
+        });
+
+        return {
+          commandType: 'IssueSubmittal',
+          correlationId,
+          affectedEdvIds,
+          edvStatuses: {},
+          submittalId: command.submittalId,
+          intentEventIds: [],
+          siteReviewStarted: true,
+          siteRepUserIds,
+          resultingStatus: SubmittalStatus.UNDER_SITE_REVIEW,
+        };
+      }
+
       await this.epcSubmittalRepository.issueSubmittal(
         tx,
         command.submittalId,
@@ -246,7 +349,7 @@ export class SubmittalWorkflowService {
         action: 'ISSUE_SUBMITTAL',
         beforeState: { status: submittal.status },
         afterState: {
-          status: 'SUBMITTED',
+          status: SubmittalStatus.SUBMITTED,
           snapshotEdvIds: affectedEdvIds,
         },
         correlationId,
@@ -259,8 +362,34 @@ export class SubmittalWorkflowService {
         edvStatuses: {},
         submittalId: command.submittalId,
         intentEventIds: [],
+        resultingStatus: SubmittalStatus.SUBMITTED,
       };
     });
+  }
+
+  private async collectDistinctSiteRepUserIds(
+    tx: PrismaTx,
+    companyId: string,
+    designPackageIds: readonly string[],
+  ): Promise<string[]> {
+    if (designPackageIds.length === 0) {
+      return [];
+    }
+    const packages = await tx.designPackage.findMany({
+      where: activeOnly({
+        companyId,
+        id: { in: [...designPackageIds] },
+        siteRepresentativeUserId: { not: null },
+      }),
+      select: { siteRepresentativeUserId: true },
+    });
+    return [
+      ...new Set(
+        packages
+          .map((pkg) => pkg.siteRepresentativeUserId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
   }
 
   /**
@@ -279,8 +408,10 @@ export class SubmittalWorkflowService {
       if (!submittal) {
         throw new NotFoundException('Submittal not found');
       }
-      if (submittal.issuedAt) {
-        throw new ConflictException('Cannot add items to issued submittal');
+      if (submittal.issuedAt || submittal.status !== SubmittalStatus.DRAFT) {
+        throw new ConflictException(
+          'Cannot add items unless the submittal is DRAFT',
+        );
       }
 
       await this.permissionResolver.assertActionAllowed({

@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { Button, Checkbox, Modal, Space, Spin } from 'antd';
+import { Button, Checkbox, Input, Modal, Space, Spin } from 'antd';
 import { DownloadOutlined, FileOutlined } from '@ant-design/icons';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import type {
   SubmittalDetail,
   SubmittalItem,
   SubmittalItemReleasableEdv,
   SubmittalPurpose,
+  SubmittalSiteReviewRow,
 } from '@/lib/api/project-management.types';
 import { apiGet } from '@/lib/api/client';
 import { layout } from '@/lib/theme/layout';
@@ -20,8 +23,14 @@ import {
   useExcludeSubmittalItemEdv,
   useIncludeSubmittalItemEdv,
 } from '@/lib/query/submittals';
-import { useIssueSubmittal } from '@/lib/query/epc-submittals';
+import {
+  useApproveSubmittalSiteReview,
+  useCommentSubmittalSiteReview,
+  useIssueSubmittal,
+  useRequestSubmittalSiteReReview,
+} from '@/lib/query/epc-submittals';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 function releaseTargetLabel(purpose: SubmittalPurpose | null): string {
@@ -32,6 +41,30 @@ function releaseTargetLabel(purpose: SubmittalPurpose | null): string {
     return 'consultant';
   }
   return 'external reviewers';
+}
+
+function siteReviewStatusLabel(
+  status: SubmittalSiteReviewRow['status'],
+): string {
+  if (status === 'APPROVED') {
+    return 'Approved';
+  }
+  if (status === 'COMMENTED') {
+    return 'Commented';
+  }
+  return 'Pending';
+}
+
+function siteReviewStatusVariant(
+  status: SubmittalSiteReviewRow['status'],
+): StatusBadgeVariant {
+  if (status === 'APPROVED') {
+    return 'success';
+  }
+  if (status === 'COMMENTED') {
+    return 'warning';
+  }
+  return 'default';
 }
 
 function DraftItemEdvList({
@@ -211,6 +244,177 @@ function ReleasedSnapshotList({
   );
 }
 
+function SiteReviewPanel({
+  projectId,
+  submittal,
+  submittalId,
+  onUpdated,
+}: {
+  projectId: string;
+  submittal: SubmittalDetail;
+  submittalId: string;
+  onUpdated: () => void;
+}): React.ReactNode {
+  const messageApi = useAppMessage();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const approveReview = useApproveSubmittalSiteReview();
+  const commentReview = useCommentSubmittalSiteReview();
+  const requestReReview = useRequestSubmittalSiteReReview();
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+
+  const reviews = submittal.siteReviews ?? [];
+  const isCreator = currentUserId === submittal.submittedBy;
+  const isLead = currentUserId === submittal.disciplineLeadUserId;
+
+  return (
+    <section className={`${layout.drawerSection} mb-4`}>
+      <h3 className={`${layout.drawerHeading} mb-2`}>Site review</h3>
+      <p className={`mb-3 ${layout.drawerMutedText}`}>
+        All assigned site representatives must approve before this release can be
+        issued.
+      </p>
+      <ul className="space-y-3">
+        {reviews.map((review) => {
+          const isMyReview = currentUserId === review.siteRepUserId;
+          const canAct =
+            isMyReview &&
+            submittal.status === 'UNDER_SITE_REVIEW' &&
+            review.status !== 'APPROVED';
+          return (
+            <li
+              key={review.id}
+              className="rounded border border-[var(--color-border)] p-3"
+            >
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium text-[var(--color-text-primary)]">
+                  {review.siteRepUserName ?? review.siteRepUserId}
+                </span>
+                <StatusBadge
+                  label={siteReviewStatusLabel(review.status)}
+                  variant={siteReviewStatusVariant(review.status)}
+                />
+              </div>
+              {review.comment ? (
+                <p className={`mb-2 whitespace-pre-wrap ${layout.drawerMutedText}`}>
+                  {review.comment}
+                </p>
+              ) : null}
+              {canAct ? (
+                <div className="mt-2 space-y-2">
+                  <Input.TextArea
+                    rows={2}
+                    placeholder="Optional comment"
+                    value={commentDrafts[review.id] ?? ''}
+                    onChange={(event) =>
+                      setCommentDrafts((prev) => ({
+                        ...prev,
+                        [review.id]: event.target.value,
+                      }))
+                    }
+                  />
+                  <Space wrap>
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={approveReview.isPending}
+                      onClick={() =>
+                        void approveReview
+                          .mutateAsync({
+                            projectId,
+                            submittalId,
+                            reviewId: review.id,
+                          })
+                          .then(() => {
+                            messageApi.success('Site review approved');
+                            onUpdated();
+                          })
+                          .catch((error: unknown) => {
+                            notifyApiError(
+                              error,
+                              'Failed to approve site review',
+                              messageApi,
+                            );
+                          })
+                      }
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="small"
+                      loading={commentReview.isPending}
+                      onClick={() => {
+                        const comment = (commentDrafts[review.id] ?? '').trim();
+                        if (!comment) {
+                          messageApi.error('Enter a comment');
+                          return;
+                        }
+                        void commentReview
+                          .mutateAsync({
+                            projectId,
+                            submittalId,
+                            reviewId: review.id,
+                            comment,
+                          })
+                          .then(() => {
+                            messageApi.success('Comment submitted');
+                            setCommentDrafts((prev) => ({
+                              ...prev,
+                              [review.id]: '',
+                            }));
+                            onUpdated();
+                          })
+                          .catch((error: unknown) => {
+                            notifyApiError(
+                              error,
+                              'Failed to submit comment',
+                              messageApi,
+                            );
+                          });
+                      }}
+                    >
+                      Comment only
+                    </Button>
+                  </Space>
+                </div>
+              ) : null}
+              {(isCreator || isLead) &&
+              review.status === 'COMMENTED' &&
+              submittal.status === 'UNDER_SITE_REVIEW' ? (
+                <Button
+                  size="small"
+                  className="mt-2"
+                  loading={requestReReview.isPending}
+                  onClick={() =>
+                    void requestReReview
+                      .mutateAsync({
+                        projectId,
+                        submittalId,
+                        reviewId: review.id,
+                      })
+                      .then(() => {
+                        messageApi.success('Re-review requested');
+                        onUpdated();
+                      })
+                      .catch((error: unknown) => {
+                        notifyApiError(
+                          error,
+                          'Failed to request re-review',
+                          messageApi,
+                        );
+                      })
+                  }
+                >
+                  Request re-review
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export default function ExternalReleaseDocumentsSection({
   projectId,
   submittal,
@@ -225,6 +429,10 @@ export default function ExternalReleaseDocumentsSection({
   const messageApi = useAppMessage();
   const issueSubmittal = useIssueSubmittal();
   const isDraft = submittal.status === 'DRAFT' && !submittal.issuedAt;
+  const isUnderSiteReview = submittal.status === 'UNDER_SITE_REVIEW';
+  const isSiteApproved = submittal.status === 'SITE_APPROVED';
+  const showFrozenDocs =
+    isUnderSiteReview || isSiteApproved || Boolean(submittal.issuedAt);
 
   const edvQueries = useQueries({
     queries: submittal.items.map((item) => ({
@@ -251,17 +459,25 @@ export default function ExternalReleaseDocumentsSection({
     return count;
   }, [isDraft, submittal.items, edvQueries]);
 
-  function handleIssue(): void {
+  function handleIssue(fromSiteApproved = false): void {
     Modal.confirm({
-      title: 'Issue this package?',
-      content: `The document snapshots will be frozen. This cannot be undone. Issue to ${releaseTargetLabel(submittal.submittalPurpose)}?`,
+      title: fromSiteApproved
+        ? 'Issue release to external party?'
+        : 'Issue this package?',
+      content: fromSiteApproved
+        ? `Site review is complete. Issue to ${releaseTargetLabel(submittal.submittalPurpose)}?`
+        : `The document snapshots will be frozen. If any subtask has a site representative, they must approve before final issue. Issue to ${releaseTargetLabel(submittal.submittalPurpose)}?`,
       okText: 'Issue',
       cancelText: 'Cancel',
       onOk: () =>
         issueSubmittal
           .mutateAsync({ projectId, submittalId })
-          .then(() => {
-            messageApi.success('Release issued to external reviewers');
+          .then((result) => {
+            if (result.siteReviewStarted) {
+              messageApi.success('Sent for site review');
+            } else {
+              messageApi.success('Release issued to external reviewers');
+            }
             onUpdated();
           })
           .catch((error: unknown) => {
@@ -281,7 +497,7 @@ export default function ExternalReleaseDocumentsSection({
           >
             <p className={`mb-2 font-medium ${layout.drawerHeading}`}>
               {item.fullSubtaskCode ?? item.packageCode ?? '—'} —{' '}
-            {item.packageName ?? 'Unknown subtask'}
+              {item.packageName ?? 'Unknown subtask'}
             </p>
             <DraftItemEdvList
               projectId={projectId}
@@ -316,7 +532,7 @@ export default function ExternalReleaseDocumentsSection({
             className="mt-4"
             loading={issueSubmittal.isPending}
             disabled={selectedCount === 0}
-            onClick={handleIssue}
+            onClick={() => handleIssue(false)}
           >
             {`Issue ${selectedCount} document${selectedCount === 1 ? '' : 's'} to ${releaseTargetLabel(submittal.submittalPurpose)}`}
           </Button>
@@ -327,18 +543,42 @@ export default function ExternalReleaseDocumentsSection({
 
   return (
     <section className={layout.drawerSection}>
-      <h3 className={`${layout.drawerHeading} mb-3`}>Released documents</h3>
+      {(isUnderSiteReview || isSiteApproved) && (
+        <SiteReviewPanel
+          projectId={projectId}
+          submittal={submittal}
+          submittalId={submittalId}
+          onUpdated={onUpdated}
+        />
+      )}
+
+      <h3 className={`${layout.drawerHeading} mb-3`}>
+        {showFrozenDocs && !submittal.issuedAt
+          ? 'Documents pending issue'
+          : 'Released documents'}
+      </h3>
       <ReleasedSnapshotList projectId={projectId} items={submittal.items} />
 
       <h4 className={`${layout.drawerHeading} mb-2 mt-4`}>Additional attachments</h4>
       {submittal.attachmentFolderId ? (
         <DocumentAttachmentPanel
           folderId={submittal.attachmentFolderId}
-          readOnly
+          readOnly={Boolean(submittal.issuedAt)}
           title=""
           description=""
         />
       ) : null}
+
+      {isSiteApproved && (
+        <Button
+          type="primary"
+          className="mt-4"
+          loading={issueSubmittal.isPending}
+          onClick={() => handleIssue(true)}
+        >
+          {`Issue to ${releaseTargetLabel(submittal.submittalPurpose)}`}
+        </Button>
+      )}
     </section>
   );
 }

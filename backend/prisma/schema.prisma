@@ -165,6 +165,7 @@ model Company {
   reviewContextSnapshots  ReviewContextSnapshot[]
   reviewComments          ReviewComment[]
   submittalItems          SubmittalItem[]
+  submittalSiteReviews    SubmittalSiteReview[]
   externalReviewTriggers  ExternalReviewTrigger[]
   deliverables            Deliverable[]
   changeRequests          ProjectChangeRequest[]
@@ -497,6 +498,8 @@ model User {
   reviewedSubmittals     Submittal[]            @relation("SubmittalReviewedBy")
   assignedSubmittals     Submittal[]            @relation("SubmittalAssignedTo")
   submittalReviews       SubmittalReview[]
+  submittalSiteReviewsAsRep SubmittalSiteReview[] @relation("SubmittalSiteRep")
+  submittalSiteReviewsReviewed SubmittalSiteReview[] @relation("SubmittalSiteReviewReviewedBy")
   drawingVersions        DrawingVersion[]
   dailyLogsAsEngineer    DailyLog[]
   supervisedLogs         DailyLog[]              @relation("DailyLogSupervisor")
@@ -1204,12 +1207,20 @@ enum IncidentSeverity {
 
 enum SubmittalStatus {
   DRAFT
+  UNDER_SITE_REVIEW
+  SITE_APPROVED
   SUBMITTED
   UNDER_REVIEW
   APPROVED
   APPROVED_WITH_COMMENTS
   REVISE_AND_RESUBMIT
   REJECTED
+}
+
+enum SubmittalSiteReviewStatus {
+  PENDING
+  APPROVED
+  COMMENTED
 }
 
 enum SubmittalItemType {
@@ -2150,6 +2161,7 @@ model Submittal {
   specReference   String?         @map("spec_reference")
   revisionNumber  Int             @default(1) @map("revision_number")
   status          SubmittalStatus @default(DRAFT)
+  siteReviewRequired Boolean      @default(false) @map("site_review_required")
   submissionDate  DateTime?       @map("submission_date") @db.Date
   dueDate         DateTime?       @map("due_date") @db.Date
   reviewDate      DateTime?       @map("review_date") @db.Date
@@ -2167,6 +2179,7 @@ model Submittal {
   assignee       User?           @relation("SubmittalAssignedTo", fields: [assignedTo], references: [id])
   reviewer       User?           @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
   reviews   SubmittalReview[]
+  siteReviews SubmittalSiteReview[]
   items     SubmittalItem[]
   externalReviewTriggers ExternalReviewTrigger[]
 
@@ -2195,6 +2208,32 @@ model SubmittalReview {
   @@index([submittalId], map: "idx_submittal_review_submittal_id")
   @@index([attachmentDocumentId], map: "idx_submittal_review_attachment_document_id")
   @@map("submittal_review")
+}
+
+model SubmittalSiteReview {
+  id            String                    @id @default(uuid())
+  companyId     String                    @map("company_id")
+  submittalId   String                    @map("submittal_id")
+  siteRepUserId String                    @map("site_rep_user_id")
+  status        SubmittalSiteReviewStatus @default(PENDING)
+  comment       String?
+  reviewedAt    DateTime?                 @map("reviewed_at")
+  reviewedBy    String?                   @map("reviewed_by")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  createdBy     String                    @map("created_by")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  updatedBy     String                    @map("updated_by")
+
+  company   Company   @relation(fields: [companyId], references: [id])
+  submittal Submittal @relation(fields: [submittalId], references: [id])
+  siteRep   User      @relation("SubmittalSiteRep", fields: [siteRepUserId], references: [id])
+  reviewer  User?     @relation("SubmittalSiteReviewReviewedBy", fields: [reviewedBy], references: [id])
+
+  @@unique([submittalId, siteRepUserId], map: "uq_submittal_site_review_submittal_rep")
+  @@index([companyId], map: "idx_submittal_site_review_company_id")
+  @@index([submittalId], map: "idx_submittal_site_review_submittal_id")
+  @@index([siteRepUserId], map: "idx_submittal_site_review_site_rep_user_id")
+  @@map("submittal_site_review")
 }
 
 model SubmittalItem {

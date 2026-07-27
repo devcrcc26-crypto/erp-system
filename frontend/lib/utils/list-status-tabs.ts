@@ -10,8 +10,9 @@ export const RFI_RESOLVED_STATUSES = 'CLOSED';
 export const CHANGE_REQUEST_ACTIVE_STATUSES = 'DRAFT,SUBMITTED';
 export const CHANGE_REQUEST_RESOLVED_STATUSES = 'APPROVED,REJECTED,CLOSED';
 
-/** External release table statuses: Draft → Issued (SUBMITTED). */
-export const EXTERNAL_RELEASE_DRAFT_STATUSES = 'DRAFT';
+/** External release table statuses: Draft → Site review → Issued (SUBMITTED). */
+export const EXTERNAL_RELEASE_DRAFT_STATUSES =
+  'DRAFT,UNDER_SITE_REVIEW,SITE_APPROVED';
 export const EXTERNAL_RELEASE_ISSUED_STATUSES = 'SUBMITTED';
 
 export const CONSTRUCTION_SUBMITTAL_ACTIVE_STATUSES =

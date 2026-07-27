@@ -25,6 +25,7 @@ import {
   BatchIssueSubmittalsDto,
   BatchAddSubmittalItemsDto,
   PmListQueryDto,
+  SubmittalSiteReviewCommentDto,
   UpdateSubmittalDto,
 } from '../../application/dtos/pm.dtos';
 import { SubmittalsService } from '../../application/services/submittals.service';
@@ -126,6 +127,62 @@ export class SubmittalsController {
     @Body() dto: IssueSubmittalDto,
   ): Promise<unknown> {
     return this.submittalsService.issueSubmittal(this.ctx(user), projectId, id, dto);
+  }
+
+  @Post(':id/site-reviews/:reviewId/approve')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Site representative approves their review' })
+  approveSiteReview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('reviewId') reviewId: string,
+  ): Promise<unknown> {
+    return this.submittalsService.approveSiteReview(
+      this.ctx(user),
+      projectId,
+      id,
+      reviewId,
+    );
+  }
+
+  @Post(':id/site-reviews/:reviewId/comment')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Site representative comments without approving' })
+  commentSiteReview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('reviewId') reviewId: string,
+    @Body() dto: SubmittalSiteReviewCommentDto,
+  ): Promise<unknown> {
+    return this.submittalsService.commentSiteReview(
+      this.ctx(user),
+      projectId,
+      id,
+      reviewId,
+      dto,
+    );
+  }
+
+  @Post(':id/site-reviews/:reviewId/request-re-review')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Partial reset (option B): reset a COMMENTED site review to PENDING after CR resolution',
+  })
+  requestSiteReviewReReview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('reviewId') reviewId: string,
+  ): Promise<unknown> {
+    return this.submittalsService.requestSiteReviewReReview(
+      this.ctx(user),
+      projectId,
+      id,
+      reviewId,
+    );
   }
 
   @Post(':id/items')

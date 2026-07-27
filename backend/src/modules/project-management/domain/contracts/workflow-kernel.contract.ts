@@ -187,6 +187,10 @@ export interface WorkflowResultSnapshot {
   readonly submittalId?: string;
   readonly newEdvId?: string;
   readonly intentEventIds: readonly string[];
+  /** Set when DRAFT issue routes to site review instead of SUBMITTED. */
+  readonly siteReviewStarted?: boolean;
+  readonly siteRepUserIds?: readonly string[];
+  readonly resultingStatus?: string;
 }
 
 export interface WorkflowKernel {

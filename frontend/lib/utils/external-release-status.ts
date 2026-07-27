@@ -3,5 +3,14 @@ import { formatSubmittalStatus } from '@/lib/utils/pm-status-display';
 
 /** External releases are "Issued" rather than "Submitted" once sent out. */
 export function formatExternalReleaseStatus(status: SubmittalStatus): string {
-  return status === 'SUBMITTED' ? 'Issued' : formatSubmittalStatus(status);
+  if (status === 'SUBMITTED') {
+    return 'Issued';
+  }
+  if (status === 'UNDER_SITE_REVIEW') {
+    return 'Under Site Review';
+  }
+  if (status === 'SITE_APPROVED') {
+    return 'Site Approved';
+  }
+  return formatSubmittalStatus(status);
 }

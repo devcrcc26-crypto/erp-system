@@ -225,6 +225,7 @@ export interface MappedSubmittal {
   specReference: string | null;
   revisionNumber: number;
   status: Submittal['status'];
+  siteReviewRequired: boolean;
   submissionDate: string | null;
   dueDate: string | null;
   reviewDate: string | null;
@@ -232,6 +233,20 @@ export interface MappedSubmittal {
   createdAt: string;
   updatedAt: string;
   items?: MappedSubmittalItem[];
+  siteReviews?: MappedSubmittalSiteReview[];
+}
+
+export interface MappedSubmittalSiteReview {
+  id: string;
+  submittalId: string;
+  siteRepUserId: string;
+  siteRepUserName?: string | null;
+  status: string;
+  comment: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface MappedSubmittalItem {
@@ -598,6 +613,7 @@ export function mapSubmittal(
     specReference: row.specReference,
     revisionNumber: row.revisionNumber,
     status: row.status,
+    siteReviewRequired: row.siteReviewRequired ?? false,
     submissionDate: toDateString(row.submissionDate),
     dueDate: toDateString(row.dueDate),
     reviewDate: toDateString(row.reviewDate),
@@ -605,6 +621,33 @@ export function mapSubmittal(
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
     items: row.items?.map(mapSubmittalItem),
+  };
+}
+
+/**
+ * Maps a SubmittalSiteReview row to the API response shape.
+ */
+export function mapSubmittalSiteReview(row: {
+  id: string;
+  submittalId: string;
+  siteRepUserId: string;
+  status: string;
+  comment: string | null;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): MappedSubmittalSiteReview {
+  return {
+    id: row.id,
+    submittalId: row.submittalId,
+    siteRepUserId: row.siteRepUserId,
+    status: row.status,
+    comment: row.comment,
+    reviewedAt: toIsoString(row.reviewedAt),
+    reviewedBy: row.reviewedBy,
+    createdAt: toIsoString(row.createdAt)!,
+    updatedAt: toIsoString(row.updatedAt)!,
   };
 }
 

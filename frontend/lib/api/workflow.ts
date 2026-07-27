@@ -31,6 +31,8 @@ export const RFI_WORKFLOW: WorkflowStep[] = [
 
 export const SUBMITTAL_WORKFLOW: WorkflowStep[] = [
   { key: 'DRAFT', label: 'Draft' },
+  { key: 'UNDER_SITE_REVIEW', label: 'Under Site Review' },
+  { key: 'SITE_APPROVED', label: 'Site Approved' },
   { key: 'SUBMITTED', label: 'Submitted' },
   { key: 'UNDER_REVIEW', label: 'Under Review' },
   { key: 'APPROVED', label: 'Approved' },

@@ -535,6 +535,9 @@ export interface WorkflowResultSnapshot {
   submittalId?: string;
   newEdvId?: string;
   intentEventIds: readonly string[];
+  siteReviewStarted?: boolean;
+  siteRepUserIds?: readonly string[];
+  resultingStatus?: string;
 }
 
 // --- Request payloads ---
