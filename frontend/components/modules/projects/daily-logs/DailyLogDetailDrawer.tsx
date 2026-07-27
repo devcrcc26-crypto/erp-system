@@ -134,7 +134,7 @@ export default function DailyLogDetailDrawer({
             <div className="flex flex-wrap gap-2">
               <Tag>
                 Workforce:{' '}
-                <strong>{log.totalWorkers || log.workforceCount || 0}</strong>
+                <strong>{log.totalWorkers || log.workforceCount || 0}</strong>  
               </Tag>
               <Tag>
                 Equipment: <strong>{log.equipmentCount}</strong>
