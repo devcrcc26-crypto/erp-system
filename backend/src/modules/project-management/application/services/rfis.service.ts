@@ -97,6 +97,8 @@ export interface RfiSubtaskOption {
   fullCode: string;
   designerUserId: string | null;
   designerName: string | null;
+  siteRepresentativeUserId: string | null;
+  siteRepresentativeName: string | null;
 }
 
 export interface RfiProjectOption {
@@ -335,6 +337,7 @@ export class RfisService {
       select: {
         subtaskIndex: true,
         designerUserId: true,
+        siteRepresentativeUserId: true,
         taskDisciplineId: true,
         taskDiscipline: {
           select: {
@@ -355,6 +358,11 @@ export class RfisService {
     if (pkg.taskDiscipline.task.projectId !== projectId) {
       throw new NotFoundException('Subtask not found');
     }
+
+    const assignedTo =
+      dto.directTo === 'SITE_TEAM' && pkg.siteRepresentativeUserId
+        ? pkg.siteRepresentativeUserId
+        : pkg.designerUserId;
 
     if (dto.sourceEntityType && dto.sourceEntityId) {
       await validateSourceEntity(
@@ -384,7 +392,7 @@ export class RfisService {
         companyId: ctx.companyId,
         projectId,
         raisedBy: ctx.userId,
-        assignedTo: pkg.designerUserId,
+        assignedTo,
         taskDisciplineId: pkg.taskDisciplineId,
         linkedDesignPackageId: dto.linkedDesignPackageId,
         rfiNumber,
@@ -476,6 +484,15 @@ export class RfisService {
             email: true,
           },
         },
+        siteRepresentativeUserId: true,
+        siteRepresentative: {
+          select: {
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
         ...DESIGN_PACKAGE_FULL_CODE_SELECT,
       },
       orderBy: { packageCode: 'asc' },
@@ -493,6 +510,10 @@ export class RfisService {
       designerUserId: pkg.designerUserId,
       designerName: pkg.designerUser
         ? formatUserDisplayName(pkg.designerUser)
+        : null,
+      siteRepresentativeUserId: pkg.siteRepresentativeUserId,
+      siteRepresentativeName: pkg.siteRepresentative
+        ? formatUserDisplayName(pkg.siteRepresentative)
         : null,
     }));
   }

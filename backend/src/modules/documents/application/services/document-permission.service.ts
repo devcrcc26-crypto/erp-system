@@ -474,6 +474,7 @@ export class DocumentPermissionService {
         disciplinaryLeaderUserId: true,
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
+        siteRepresentativeUserId: true,
       },
     });
     if (!pkg) {
@@ -487,6 +488,7 @@ export class DocumentPermissionService {
       pkg.disciplinaryLeaderUserId,
       pkg.deptDeputyChiefUserId,
       pkg.instituteChiefUserId,
+      pkg.siteRepresentativeUserId,
     ]
       .filter((id): id is string => Boolean(id))
       .includes(userId);
@@ -548,6 +550,7 @@ export class DocumentPermissionService {
         disciplinaryLeaderUserId: true,
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
+        siteRepresentativeUserId: true,
       },
     });
     if (!pkg) {
@@ -561,6 +564,7 @@ export class DocumentPermissionService {
       pkg.disciplinaryLeaderUserId,
       pkg.deptDeputyChiefUserId,
       pkg.instituteChiefUserId,
+      pkg.siteRepresentativeUserId,
     ]
       .filter((id): id is string => Boolean(id))
       .includes(userId);
@@ -621,6 +625,7 @@ export class DocumentPermissionService {
         disciplinaryLeaderUserId: true,
         deptDeputyChiefUserId: true,
         instituteChiefUserId: true,
+        siteRepresentativeUserId: true,
       },
     });
     if (!pkg) {
@@ -634,6 +639,7 @@ export class DocumentPermissionService {
       pkg.disciplinaryLeaderUserId,
       pkg.deptDeputyChiefUserId,
       pkg.instituteChiefUserId,
+      pkg.siteRepresentativeUserId,
     ]
       .filter((id): id is string => Boolean(id))
       .includes(userId);

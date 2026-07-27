@@ -74,6 +74,8 @@ export interface RfiSubtaskOption {
   fullCode: string;
   designerUserId: string | null;
   designerName: string | null;
+  siteRepresentativeUserId: string | null;
+  siteRepresentativeName: string | null;
 }
 
 export interface RfiProjectOption {
@@ -1123,6 +1125,7 @@ export interface CreateRfiRequest {
   dueDate?: string;
   sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
   sourceEntityId?: string;
+  directTo?: 'DESIGN_TEAM' | 'SITE_TEAM';
 }
 
 export type UpdateRfiRequest = Partial<CreateRfiRequest> & {

@@ -709,6 +709,15 @@ export class CreateRfiDto {
   @IsOptional()
   @IsString()
   sourceEntityId?: string;
+
+  @ApiPropertyOptional({
+    enum: ['DESIGN_TEAM', 'SITE_TEAM'],
+    description: 'Which team the RFI is directed to; determines auto-assignment.',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['DESIGN_TEAM', 'SITE_TEAM'])
+  directTo?: 'DESIGN_TEAM' | 'SITE_TEAM';
 }
 
 export class UpdateRfiDto extends PartialType(CreateRfiDto) {

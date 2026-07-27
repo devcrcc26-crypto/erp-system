@@ -8,6 +8,7 @@ import {
   Drawer,
   Form,
   Input,
+  Radio,
   Select,
   Space,
   Typography,
@@ -98,6 +99,7 @@ interface RfiFormValues {
   dueDate?: Dayjs;
   sourceEntityType?: 'MEETING' | 'CORRESPONDENCE' | 'DAILY_LOG' | 'SUBMITTAL_REVIEW';
   sourceEntityId?: string;
+  directTo?: 'DESIGN_TEAM' | 'SITE_TEAM';
 }
 
 export function RfiFormDrawer({
@@ -196,10 +198,17 @@ export function RfiFormDrawer({
 
   const rfiSource = Form.useWatch('rfiSource', form);
   const title = Form.useWatch('title', form);
+  const directTo = Form.useWatch('directTo', form) ?? 'DESIGN_TEAM';
   const submitDisabled =
     !selectedPackageId ||
     !rfiSource ||
     !title?.trim();
+
+  const hasSiteRep = Boolean(selectedSubtask?.siteRepresentativeUserId);
+  const autoAssignedToName =
+    hasSiteRep && directTo === 'SITE_TEAM'
+      ? selectedSubtask?.siteRepresentativeName
+      : selectedSubtask?.designerName;
 
   async function uploadQueuedFiles(folderId: string): Promise<void> {
     setUploading(true);
@@ -224,6 +233,7 @@ export function RfiFormDrawer({
       dueDate: values.dueDate?.toISOString(),
       sourceEntityType: values.sourceEntityType || undefined,
       sourceEntityId: values.sourceEntityId || undefined,
+      directTo: hasSiteRep ? values.directTo ?? 'DESIGN_TEAM' : undefined,
     };
     try {
       const result = await createRfi.mutateAsync({
@@ -305,6 +315,7 @@ export function RfiFormDrawer({
             options={subtaskOptions}
             onChange={() => {
               form.setFieldValue('sourceEntityId', undefined);
+              form.setFieldValue('directTo', 'DESIGN_TEAM');
             }}
           />
         </Form.Item>
@@ -319,13 +330,33 @@ export function RfiFormDrawer({
           />
         </Form.Item>
 
+        {hasSiteRep && (
+          <Form.Item
+            name="directTo"
+            label="Direct to"
+            initialValue="DESIGN_TEAM"
+          >
+            <Radio.Group>
+              <Radio value="DESIGN_TEAM">
+                Design Team
+                <span className="ml-1 text-muted text-xs">
+                  ({selectedSubtask?.designerName ?? 'No designer assigned'})
+                </span>
+              </Radio>
+              <Radio value="SITE_TEAM">
+                Site Team
+                <span className="ml-1 text-muted text-xs">
+                  ({selectedSubtask?.siteRepresentativeName})
+                </span>
+              </Radio>
+            </Radio.Group>
+          </Form.Item>
+        )}
+
         {selectedSubtask && (
           <Form.Item label="Assigned to">
             <Typography.Text type="secondary">
-              Auto-assigned to:{' '}
-              <strong>
-                {selectedSubtask.designerName ?? 'No designer assigned'}
-              </strong>
+              Auto-assigned to: <strong>{autoAssignedToName ?? 'No designer assigned'}</strong>
             </Typography.Text>
           </Form.Item>
         )}
