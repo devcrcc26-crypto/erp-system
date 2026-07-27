@@ -78,6 +78,7 @@ import { MyChangeRequestsController } from './presentation/controllers/my-change
 import { MyRfisController } from './presentation/controllers/my-rfis.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
+import { MyDailyLogsController } from './presentation/controllers/my-daily-logs.controller';
 import { DeliverablesController } from './presentation/controllers/deliverables.controller';
 import { DesignPackagesController } from './presentation/controllers/design-packages.controller';
 import { DrawingsController } from './presentation/controllers/drawings.controller';
@@ -142,6 +143,7 @@ const workflowBullProcessors = redisEnabled
     EpcWorkspaceController,
     WorkflowEventsController,
     DailyLogsController,
+    MyDailyLogsController,
     MeetingsController,
     CorrespondenceController,
     RisksController,

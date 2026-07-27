@@ -51,6 +51,13 @@ export const dailyLogKeys = {
     [...dailyLogKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, dailyLogId: string) =>
     [...dailyLogKeys.details(projectId), dailyLogId] as const,
+  myLists: () => [...dailyLogKeys.all, 'my'] as const,
+  myList: (params: PaginationParams & PmListFilters = { page: 1, limit: 20 }) =>
+    [...dailyLogKeys.myLists(), params] as const,
+  allLists: () => [...dailyLogKeys.all, 'company-all'] as const,
+  allList: (params: PaginationParams & PmListFilters = { page: 1, limit: 20 }) =>
+    [...dailyLogKeys.allLists(), params] as const,
+  myProjects: () => [...dailyLogKeys.all, 'my-projects'] as const,
 };
 
 export function useDailyLogs(
@@ -101,7 +108,86 @@ export function useCreateDailyLog() {
       void queryClient.invalidateQueries({
         queryKey: dailyLogKeys.lists(variables.projectId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.myLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.allLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.myProjects(),
+      });
     },
+  });
+}
+
+export interface DailyLogProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
+/**
+ * Cross-project daily logs relevant to the signed-in user.
+ */
+export function useMyDailyLogs(
+  params: PaginationParams & PmListFilters = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<DailyLog>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: dailyLogKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<DailyLog>(`/daily-logs/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Company-wide daily logs (portfolio / admin users).
+ */
+export function useAllDailyLogs(
+  params: PaginationParams & PmListFilters = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<DailyLog>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: dailyLogKeys.allList(params),
+    queryFn: () =>
+      apiGetPaginated<DailyLog>(`/daily-logs/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+/**
+ * Projects where the current user has relevant daily logs.
+ */
+export function useMyDailyLogProjects(enabled = true) {
+  return useQuery({
+    queryKey: dailyLogKeys.myProjects(),
+    queryFn: () => apiGet<DailyLogProjectOption[]>('/daily-logs/my/projects'),
+    enabled,
+    retry: false,
   });
 }
 
@@ -132,6 +218,12 @@ export function useUpdateDailyLog() {
           variables.dailyLogId,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.myLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.allLists(),
+      });
     },
   });
 }
@@ -153,6 +245,15 @@ export function useDeleteDailyLog() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: dailyLogKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.myLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.allLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: dailyLogKeys.myProjects(),
       });
     },
   });

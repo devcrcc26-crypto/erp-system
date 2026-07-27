@@ -21,6 +21,11 @@ export const PM_SITE_ENGINEER_NAME: readonly [string, string][] = [
   ['siteEngineerId', 'siteEngineerName'],
 ];
 
+export const PM_DAILY_LOG_USER_NAMES: readonly [string, string][] = [
+  ['siteEngineerId', 'siteEngineerName'],
+  ['supervisorId', 'supervisorName'],
+];
+
 export const PM_ORGANIZER_NAME: readonly [string, string][] = [
   ['organizerId', 'organizerName'],
 ];

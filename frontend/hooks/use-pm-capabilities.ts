@@ -156,6 +156,23 @@ export function useCanViewIssues(): boolean {
 }
 
 /**
+ * Global Daily Logs — full-access / FK designer-lead always; otherwise only when
+ * dailyLogs.canView without portfolio projects.canView (project sidebar otherwise).
+ */
+export function useCanViewDailyLogs(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  if (epc.navFullAccess) {
+    return true;
+  }
+  const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+  if (isFkUser) {
+    return true;
+  }
+  return pm.dailyLogs.canView && !pm.projects.canView;
+}
+
+/**
  * Any EPC global workspace nav entry.
  */
 export function useCanViewEpcWorkspaces(): boolean {

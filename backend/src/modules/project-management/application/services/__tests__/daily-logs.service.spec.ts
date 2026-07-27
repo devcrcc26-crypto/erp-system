@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DailyLogsService } from '../daily-logs.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
@@ -21,14 +22,25 @@ describe('DailyLogsService', () => {
   function buildDailyLog(status: string) {
     return {
       id: dailyLogId,
+      companyId: ctx.companyId,
       projectId,
       siteEngineerId: ctx.userId,
+      logNumber: 'DL-PRJ-001',
       logDate: new Date('2026-01-01'),
       shift: 'Day',
       weatherCondition: 'Clear',
       temperatureC: null,
       rainfallMm: null,
+      humidity: null,
       workSummary: 'Initial summary',
+      workforceCount: null,
+      contractorName: null,
+      issues: null,
+      delays: null,
+      equipmentNotes: null,
+      materials: null,
+      supervisorId: null,
+      supervisedAt: null,
       status,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
@@ -72,7 +84,11 @@ describe('DailyLogsService', () => {
     };
 
     projectScopeService = {
-      getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+      getProjectOrThrow: jest.fn().mockResolvedValue({
+        id: projectId,
+        companyId: ctx.companyId,
+        projectCode: 'PRJ',
+      }),
     };
 
     service = new DailyLogsService(
@@ -83,6 +99,15 @@ describe('DailyLogsService', () => {
           .fn()
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/daily-logs/2026-01-01' }),
       } as unknown as EngineeringDocumentFolderService,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+        }),
+      } as unknown as PermissionService,
     );
   });
 

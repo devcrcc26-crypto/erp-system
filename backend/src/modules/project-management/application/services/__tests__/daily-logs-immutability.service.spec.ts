@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DailyLogsService } from '../daily-logs.service';
 import { PmContext } from '../../types/pm-context.type';
@@ -20,14 +21,25 @@ describe('DailyLogsService immutability', () => {
   function buildDailyLog(status: string) {
     return {
       id: dailyLogId,
+      companyId: ctx.companyId,
       projectId,
       siteEngineerId: ctx.userId,
+      logNumber: 'DL-PRJ-001',
       logDate: new Date('2026-01-01'),
       shift: 'Day',
       weatherCondition: 'Clear',
       temperatureC: null,
       rainfallMm: null,
+      humidity: null,
       workSummary: 'Initial summary',
+      workforceCount: null,
+      contractorName: null,
+      issues: null,
+      delays: null,
+      equipmentNotes: null,
+      materials: null,
+      supervisorId: null,
+      supervisedAt: null,
       status,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       createdBy: ctx.userId,
@@ -60,6 +72,15 @@ describe('DailyLogsService immutability', () => {
           .fn()
           .mockResolvedValue({ id: 'folder-1' }),
       } as unknown as EngineeringDocumentFolderService,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+        }),
+      } as unknown as PermissionService,
     );
   });
 

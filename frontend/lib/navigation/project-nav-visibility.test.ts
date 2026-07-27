@@ -253,6 +253,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
@@ -260,6 +261,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
 
@@ -332,6 +334,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     change_requests: { ...moduleCaps, canView: true },
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
@@ -339,6 +342,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
 
@@ -382,6 +386,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: { ...moduleCaps, canView: true },
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
   const pmNoView = {
@@ -389,6 +394,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
   const pmWithProjects = {
@@ -396,6 +402,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    dailyLogs: moduleCaps,
     projects: { ...moduleCaps, canView: true },
   };
 
@@ -447,5 +454,63 @@ describe('canViewGlobalNavKey — rfis', () => {
         pmWithProjects,
       ),
     ).toBe(true);
+  });
+});
+
+describe('canViewGlobalNavKey — daily-logs', () => {
+  const moduleCaps = {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+  const pmDailyLogCanView = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+    rfis: moduleCaps,
+    issues: moduleCaps,
+    dailyLogs: { ...moduleCaps, canView: true },
+    projects: moduleCaps,
+  };
+  const pmNoView = {
+    submittals: moduleCaps,
+    change_requests: moduleCaps,
+    rfis: moduleCaps,
+    issues: moduleCaps,
+    dailyLogs: moduleCaps,
+    projects: moduleCaps,
+  };
+
+  it('allows designer and discipline leader to see /daily-logs', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/daily-logs',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+    expect(
+      canViewGlobalNavKey(
+        '/daily-logs',
+        { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+  });
+
+  it('allows users with pm.dailyLogs.canView', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/daily-logs',
+        EMPTY_EPC_CAPABILITIES,
+        pmDailyLogCanView,
+      ),
+    ).toBe(true);
+  });
+
+  it('hides /daily-logs without capability or FK role', () => {
+    expect(
+      canViewGlobalNavKey('/daily-logs', EMPTY_EPC_CAPABILITIES, pmNoView),
+    ).toBe(false);
   });
 });

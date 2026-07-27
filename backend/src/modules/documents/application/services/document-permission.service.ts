@@ -88,6 +88,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.DAILY_LOG &&
+      folder.contextId &&
+      (await this.canUploadDailyLogFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -176,6 +184,14 @@ export class DocumentPermissionService {
       folder.contextType === FolderContextType.CHANGE_REQUEST &&
       folder.contextId &&
       (await this.canUploadCrFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
+    if (
+      folder.contextType === FolderContextType.DAILY_LOG &&
+      folder.contextId &&
+      (await this.canUploadDailyLogFolder(userId, companyId, folder, roleNames))
     ) {
       return;
     }
@@ -621,6 +637,69 @@ export class DocumentPermissionService {
     ]
       .filter((id): id is string => Boolean(id))
       .includes(userId);
+  }
+
+  /**
+   * True when the user may upload into a DAILY_LOG folder as creator,
+   * supervisor, full-access role, or FK package assignee on the project.
+   */
+  private async canUploadDailyLogFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const log = await this.prisma.dailyLog.findFirst({
+      where: activeOnly({
+        id: folder.contextId,
+        companyId,
+      }),
+      select: {
+        projectId: true,
+        createdBy: true,
+        supervisorId: true,
+      },
+    });
+    if (!log) {
+      return false;
+    }
+
+    if (log.createdBy === userId || log.supervisorId === userId) {
+      return true;
+    }
+
+    const hasFkRole = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        companyId,
+        taskDiscipline: {
+          task: {
+            projectId: log.projectId,
+          },
+        },
+        OR: [
+          { designerUserId: userId },
+          { disciplinaryLeaderUserId: userId },
+          { reviewerUserId: userId },
+          { supportingDesignerUserId: userId },
+          { deptDeputyChiefUserId: userId },
+          { instituteChiefUserId: userId },
+        ],
+      }),
+      select: { id: true },
+    });
+
+    return hasFkRole !== null;
   }
 
   private async hasPmModuleWriteForFolder(

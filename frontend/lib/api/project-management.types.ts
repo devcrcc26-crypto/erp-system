@@ -560,19 +560,35 @@ export interface DrawingLink {
 
 export interface DailyLog {
   id: string;
+  companyId: string;
   projectId: string;
+  projectName?: string;
+  projectCode?: string;
   siteEngineerId: string;
   siteEngineerName?: string | null;
+  logNumber: string | null;
   logDate: string;
   shift: string | null;
   weatherCondition: string | null;
   temperatureC: string | null;
   rainfallMm: string | null;
+  humidity: string | null;
   workSummary: string | null;
+  workforceCount: number | null;
+  contractorName: string | null;
+  issues: string | null;
+  delays: string | null;
+  /** Free-text equipment notes from create/update; detail also has `equipment` entry rows. */
+  equipmentNotes: string | null;
+  materials: string | null;
+  supervisorId: string | null;
+  supervisorName?: string | null;
+  supervisedAt: string | null;
   status: string;
   totalWorkers: number;
   createdAt: string;
   updatedAt: string;
+  createdBy: string;
 }
 
 export interface DailyLogWorkforce {
@@ -1111,7 +1127,15 @@ export interface CreateDailyLogRequest {
   weatherCondition?: string;
   temperatureC?: number;
   rainfallMm?: number;
+  humidity?: number;
   workSummary?: string;
+  workforceCount?: number;
+  contractorName?: string;
+  issues?: string;
+  delays?: string;
+  equipment?: string;
+  materials?: string;
+  supervisorId?: string;
 }
 
 export type UpdateDailyLogRequest = Partial<CreateDailyLogRequest> & {

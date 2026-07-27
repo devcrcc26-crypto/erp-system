@@ -782,8 +782,10 @@ export async function seedProjectBundle(
     update: {},
     create: {
       id: dailyLogId,
+      companyId,
       projectId,
       siteEngineerId: users.engineerUserId,
+      logNumber: `DL-${def.code}-001`,
       logDate: d('2026-03-14'),
       shift: 'DAY',
       weatherCondition: 'Clear, light wind',

@@ -1,5 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DailyLogsService } from '../daily-logs.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
@@ -10,24 +11,37 @@ describe('DailyLogsService uniqueness', () => {
   const ctx: PmContext = { companyId: 'company-1', userId: 'user-1' };
   const projectId = 'project-1';
 
-  let prisma: { dailyLog: { create: jest.Mock } };
+  let prisma: { dailyLog: { create: jest.Mock; count: jest.Mock } };
   let service: DailyLogsService;
 
   beforeEach(() => {
     prisma = {
-      dailyLog: { create: jest.fn() },
+      dailyLog: { create: jest.fn(), count: jest.fn().mockResolvedValue(0) },
     };
 
     service = new DailyLogsService(
       prisma as unknown as PrismaService,
       {
-        getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+        getProjectOrThrow: jest.fn().mockResolvedValue({
+          id: projectId,
+          companyId: ctx.companyId,
+          projectCode: 'PRJ',
+        }),
       } as unknown as ProjectScopeService,
       {
         ensureDailyLogFolder: jest
           .fn()
           .mockResolvedValue({ id: 'folder-1' }),
       } as unknown as EngineeringDocumentFolderService,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue(['System Administrator']),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: true,
+          canCreate: true,
+          canEdit: true,
+          canDelete: true,
+        }),
+      } as unknown as PermissionService,
     );
   });
 

@@ -324,19 +324,33 @@ export interface MappedDrawingLink {
 
 export interface MappedDailyLog {
   id: string;
+  companyId: string;
   projectId: string;
   siteEngineerId: string;
   siteEngineerName?: string | null;
+  logNumber: string | null;
   logDate: string;
   shift: string | null;
   weatherCondition: string | null;
   temperatureC: string | null;
   rainfallMm: string | null;
+  humidity: string | null;
   workSummary: string | null;
+  workforceCount: number | null;
+  contractorName: string | null;
+  issues: string | null;
+  delays: string | null;
+  /** Free-text equipment notes (DB column `equipment`). Distinct from detail `equipment` entries. */
+  equipmentNotes: string | null;
+  materials: string | null;
+  supervisorId: string | null;
+  supervisorName?: string | null;
+  supervisedAt: string | null;
   status: string;
   totalWorkers: number;
   createdAt: string;
   updatedAt: string;
+  createdBy: string;
 }
 
 export interface MappedDailyLogWorkforce {
@@ -684,18 +698,30 @@ export function mapDailyLog(
 
   return {
     id: row.id,
+    companyId: row.companyId,
     projectId: row.projectId,
     siteEngineerId: row.siteEngineerId,
+    logNumber: row.logNumber,
     logDate: toDateString(row.logDate)!,
     shift: row.shift,
     weatherCondition: row.weatherCondition,
     temperatureC: decimalToString(row.temperatureC),
     rainfallMm: decimalToString(row.rainfallMm),
+    humidity: decimalToString(row.humidity),
     workSummary: row.workSummary,
+    workforceCount: row.workforceCount,
+    contractorName: row.contractorName,
+    issues: row.issues,
+    delays: row.delays,
+    equipmentNotes: row.equipmentNotes,
+    materials: row.materials,
+    supervisorId: row.supervisorId,
+    supervisedAt: toIsoString(row.supervisedAt),
     status: row.status,
     totalWorkers,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+    createdBy: row.createdBy,
   };
 }
 

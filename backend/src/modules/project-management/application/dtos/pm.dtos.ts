@@ -1059,8 +1059,49 @@ export class CreateDailyLogDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  humidity?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   workSummary?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  workforceCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  contractorName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  issues?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  delays?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  equipment?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  materials?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  supervisorId?: string;
 }
 
 export class UpdateDailyLogDto extends PartialType(CreateDailyLogDto) {

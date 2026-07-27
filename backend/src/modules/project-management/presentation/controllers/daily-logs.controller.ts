@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -40,7 +41,7 @@ export class DailyLogsController {
   }
 
   @Get()
-  @RequirePermission('daily_logs', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project daily logs' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,7 +52,7 @@ export class DailyLogsController {
   }
 
   @Post()
-  @RequirePermission('daily_logs', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create daily log' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -203,7 +204,7 @@ export class DailyLogsController {
   }
 
   @Get(':id')
-  @RequirePermission('daily_logs', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get daily log by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -214,7 +215,7 @@ export class DailyLogsController {
   }
 
   @Patch(':id')
-  @RequirePermission('daily_logs', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update daily log' })
   update(
     @CurrentUser() user: AuthenticatedUser,

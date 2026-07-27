@@ -170,6 +170,7 @@ model Company {
   changeRequests          ProjectChangeRequest[]
   rfis                    Rfi[]
   issues                  Issue[]
+  dailyLogs               DailyLog[]
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
@@ -498,6 +499,7 @@ model User {
   submittalReviews       SubmittalReview[]
   drawingVersions        DrawingVersion[]
   dailyLogsAsEngineer    DailyLog[]
+  supervisedLogs         DailyLog[]              @relation("DailyLogSupervisor")
   organizedMeetings      Meeting[]
   meetingAgendaItems     MeetingAgendaItem[]
   meetingAttendees       MeetingAttendee[]
@@ -2353,25 +2355,38 @@ model DrawingLink {
 }
 
 model DailyLog {
-  id                String   @id @default(uuid())
-  projectId         String   @map("project_id")
-  siteEngineerId    String   @map("site_engineer_id")
-  logDate           DateTime @map("log_date") @db.Date
+  id                String    @id @default(uuid())
+  companyId         String    @map("company_id")
+  projectId         String    @map("project_id")
+  siteEngineerId    String    @map("site_engineer_id")
+  logNumber         String?   @map("log_number")
+  logDate           DateTime  @map("log_date") @db.Date
   shift             String?
-  weatherCondition  String?  @map("weather_condition")
-  temperatureC      Decimal? @map("temperature_c") @db.Decimal(6, 2)
-  rainfallMm        Decimal? @map("rainfall_mm") @db.Decimal(8, 2)
-  workSummary       String?  @map("work_summary")
-  status            String   @default("DRAFT")
-  createdAt         DateTime @default(now()) @map("created_at")
-  createdBy         String   @map("created_by")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  updatedBy         String   @map("updated_by")
+  weatherCondition  String?   @map("weather_condition")
+  temperatureC      Decimal?  @map("temperature_c") @db.Decimal(6, 2)
+  rainfallMm        Decimal?  @map("rainfall_mm") @db.Decimal(8, 2)
+  humidity          Decimal?  @db.Decimal(6, 2)
+  workSummary       String?   @map("work_summary")
+  workforceCount    Int?      @map("workforce_count")
+  contractorName    String?   @map("contractor_name")
+  issues            String?
+  delays            String?
+  equipmentNotes    String?   @map("equipment")
+  materials         String?
+  supervisorId      String?   @map("supervisor_id")
+  supervisedAt      DateTime? @map("supervised_at")
+  status            String    @default("DRAFT")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  createdBy         String    @map("created_by")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  updatedBy         String    @map("updated_by")
   deletedAt         DateTime? @map("deleted_at")
-  deletedBy         String?  @map("deleted_by")
+  deletedBy         String?   @map("deleted_by")
 
+  company    Company             @relation(fields: [companyId], references: [id])
   project    Project             @relation(fields: [projectId], references: [id])
   engineer   User                @relation(fields: [siteEngineerId], references: [id])
+  supervisor User?               @relation("DailyLogSupervisor", fields: [supervisorId], references: [id])
   workforce  DailyLogWorkforce[]
   equipment  DailyLogEquipment[]
   visitors   DailyLogVisitor[]
@@ -2379,6 +2394,9 @@ model DailyLog {
 
   @@index([projectId], map: "idx_daily_log_project_id")
   @@index([projectId, deletedAt], map: "idx_daily_log_project_deleted")
+  @@index([companyId], map: "idx_daily_log_company_id")
+  @@index([companyId, deletedAt], map: "idx_daily_log_company_deleted")
+  @@index([supervisorId], map: "idx_daily_log_supervisor_id")
   @@unique([projectId, logDate, shift], map: "daily_log_project_date_shift_unique")
   @@map("daily_log")
 }

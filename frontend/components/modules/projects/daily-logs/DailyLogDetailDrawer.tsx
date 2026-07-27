@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Collapse,
+  Descriptions,
   Divider,
   Drawer,
   Form,
@@ -23,6 +24,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -61,7 +63,15 @@ interface DailyLogEditValues {
   weatherCondition?: string;
   temperatureC?: number;
   rainfallMm?: number;
+  humidity?: number;
+  contractorName?: string;
+  workforceCount?: number;
   workSummary?: string;
+  issues?: string;
+  delays?: string;
+  equipment?: string;
+  materials?: string;
+  supervisorId?: string;
 }
 
 interface WorkforceFormValues {
@@ -203,7 +213,15 @@ export default function DailyLogDetailDrawer({
           weatherCondition: values.weatherCondition?.trim() || undefined,
           temperatureC: values.temperatureC,
           rainfallMm: values.rainfallMm,
+          humidity: values.humidity,
+          contractorName: values.contractorName?.trim() || undefined,
+          workforceCount: values.workforceCount,
           workSummary: values.workSummary?.trim() || undefined,
+          issues: values.issues?.trim() || undefined,
+          delays: values.delays?.trim() || undefined,
+          equipment: values.equipment?.trim() || undefined,
+          materials: values.materials?.trim() || undefined,
+          supervisorId: values.supervisorId || undefined,
         },
       });
       messageApi.success('Daily log updated');
@@ -522,53 +540,16 @@ export default function DailyLogDetailDrawer({
 
   function renderSummaryHeader(currentLog: DailyLogDetail): React.ReactNode {
     return (
-      <div className={layout.drawerSurface}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <dl className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
-            <div>
-              <dt className={layout.drawerMetaLabel}>
-                Date
-              </dt>
-              <dd className={`mt-1 ${layout.drawerHeading}`}>
-                {formatProjectDate(currentLog.logDate)}
-              </dd>
-            </div>
-            <div>
-              <dt className={layout.drawerMetaLabel}>
-                Shift
-              </dt>
-              <dd className={`mt-1 ${layout.drawerMutedText}`}>
-                {currentLog.shift ?? '-'}
-              </dd>
-            </div>
-            <div>
-              <dt className={layout.drawerMetaLabel}>
-                Site engineer
-              </dt>
-              <dd className={`mt-1 ${layout.drawerMutedText}`}>
-                {resolveUserDisplay(currentLog.siteEngineerId, currentLog.siteEngineerName)}
-              </dd>
-            </div>
-            <div>
-              <dt className={layout.drawerMetaLabel}>
-                Workers on site
-              </dt>
-              <dd className={`mt-1 ${layout.drawerMutedText}`}>
-                {currentLog.totalWorkers}
-              </dd>
-            </div>
-          </dl>
-
-          <div className="flex w-full flex-col gap-2 lg:w-56">
-            <span className={layout.drawerMetaLabel}>
-              Status
-            </span>
+      <section className={layout.drawerSection}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className={layout.drawerHeading}>Details</p>
+          <div className="flex items-center gap-2">
             <StatusBadge
               label={formatDailyLogStatus(currentLog.status)}
               variant={dailyLogStatusVariant(currentLog.status)}
             />
             <Select
-              className="w-full"
+              className="w-40"
               value={currentLog.status}
               onChange={(value: string) => void handleStatusChange(value)}
               loading={updateDailyLog.isPending}
@@ -579,7 +560,80 @@ export default function DailyLogDetailDrawer({
             />
           </div>
         </div>
-      </div>
+        <Descriptions
+          className={layout.drawerDescriptionsClass}
+          column={1}
+          size="small"
+          bordered
+        >
+          <Descriptions.Item label="Log number">
+            {currentLog.logNumber ?? '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Log date">
+            {formatProjectDate(currentLog.logDate)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Shift">
+            {currentLog.shift ?? '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Weather">
+            {currentLog.weatherCondition ?? '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Temperature">
+            {currentLog.temperatureC != null
+              ? `${currentLog.temperatureC} °C`
+              : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Rainfall">
+            {currentLog.rainfallMm != null
+              ? `${currentLog.rainfallMm} mm`
+              : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Humidity">
+            {currentLog.humidity != null ? `${currentLog.humidity}%` : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Contractor">
+            {currentLog.contractorName ?? '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Workforce count">
+            {currentLog.workforceCount ?? currentLog.totalWorkers ?? '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Site engineer">
+            {resolveUserDisplay(
+              currentLog.siteEngineerId,
+              currentLog.siteEngineerName,
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Supervisor">
+            {currentLog.supervisorId
+              ? resolveUserDisplay(
+                  currentLog.supervisorId,
+                  currentLog.supervisorName,
+                )
+              : '—'}
+          </Descriptions.Item>
+          {currentLog.supervisedAt && (
+            <Descriptions.Item label="Supervised at">
+              {formatProjectDate(currentLog.supervisedAt)}
+            </Descriptions.Item>
+          )}
+        </Descriptions>
+      </section>
+    );
+  }
+
+  function renderNarrativeSection(
+    title: string,
+    value: string | null | undefined,
+  ): React.ReactNode {
+    return (
+      <section className={layout.drawerSection}>
+        <p className={`mb-1 ${layout.drawerHeading}`}>{title}</p>
+        <div className={layout.drawerSurface}>
+          <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+            {value?.trim() ? value : '-'}
+          </p>
+        </div>
+      </section>
     );
   }
 
@@ -598,58 +652,96 @@ export default function DailyLogDetailDrawer({
             }}
           />
         )}
-        <DrawerSection
-          title="Weather & conditions"
-          description="Record site weather and environmental conditions for the day."
-          bordered={false}
-        >
-          <Form<DailyLogEditValues>
-            form={editForm}
-            key={currentLog.id}
-            layout="vertical"
-            className="erp-drawer-form"
-            initialValues={{
-              weatherCondition: currentLog.weatherCondition ?? undefined,
-              temperatureC: currentLog.temperatureC
-                ? Number(currentLog.temperatureC)
-                : undefined,
-              rainfallMm: currentLog.rainfallMm
-                ? Number(currentLog.rainfallMm)
-                : undefined,
-              workSummary: currentLog.workSummary ?? undefined,
-            }}
-            onFinish={(values: DailyLogEditValues) => void handleSave(values)}
+
+        {renderNarrativeSection('Work description', currentLog.workSummary)}
+        {renderNarrativeSection('Issues / problems', currentLog.issues)}
+        {renderNarrativeSection('Delays', currentLog.delays)}
+        {renderNarrativeSection(
+          'Equipment on site',
+          currentLog.equipmentNotes,
+        )}
+        {renderNarrativeSection(
+          'Materials delivered / used',
+          currentLog.materials,
+        )}
+
+        {isEditable && (
+          <DrawerSection
+            title="Edit log"
+            description="Update weather, workforce, and narrative fields."
+            bordered={false}
           >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Form.Item
-                className="sm:col-span-3"
-                label="Weather"
-                name="weatherCondition"
-              >
-                <Input
-                  disabled={!isEditable}
-                  placeholder="e.g. Clear, overcast, windy"
-                />
+            <Form<DailyLogEditValues>
+              form={editForm}
+              key={currentLog.id}
+              layout="vertical"
+              className="erp-drawer-form"
+              initialValues={{
+                weatherCondition: currentLog.weatherCondition ?? undefined,
+                temperatureC: currentLog.temperatureC
+                  ? Number(currentLog.temperatureC)
+                  : undefined,
+                rainfallMm: currentLog.rainfallMm
+                  ? Number(currentLog.rainfallMm)
+                  : undefined,
+                humidity: currentLog.humidity
+                  ? Number(currentLog.humidity)
+                  : undefined,
+                contractorName: currentLog.contractorName ?? undefined,
+                workforceCount: currentLog.workforceCount ?? undefined,
+                workSummary: currentLog.workSummary ?? undefined,
+                issues: currentLog.issues ?? undefined,
+                delays: currentLog.delays ?? undefined,
+                equipment: currentLog.equipmentNotes ?? undefined,
+                materials: currentLog.materials ?? undefined,
+                supervisorId: currentLog.supervisorId ?? undefined,
+              }}
+              onFinish={(values: DailyLogEditValues) => void handleSave(values)}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Form.Item
+                  className="sm:col-span-3"
+                  label="Weather"
+                  name="weatherCondition"
+                >
+                  <Input placeholder="e.g. Clear, overcast, windy" />
+                </Form.Item>
+                <Form.Item label="Temperature (°C)" name="temperatureC">
+                  <InputNumber className="!w-full" />
+                </Form.Item>
+                <Form.Item label="Rainfall (mm)" name="rainfallMm">
+                  <InputNumber className="!w-full" min={0} />
+                </Form.Item>
+                <Form.Item label="Humidity (%)" name="humidity">
+                  <InputNumber className="!w-full" min={0} max={100} />
+                </Form.Item>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Form.Item label="Contractor name" name="contractorName">
+                  <Input />
+                </Form.Item>
+                <Form.Item label="Workforce count" name="workforceCount">
+                  <InputNumber className="!w-full" min={0} precision={0} />
+                </Form.Item>
+              </div>
+              <Form.Item label="Work description" name="workSummary">
+                <Input.TextArea rows={4} />
               </Form.Item>
-              <Form.Item label="Temperature (°C)" name="temperatureC">
-                <InputNumber className="!w-full" disabled={!isEditable} />
+              <Form.Item label="Issues / problems" name="issues">
+                <Input.TextArea rows={3} />
               </Form.Item>
-              <Form.Item label="Rainfall (mm)" name="rainfallMm">
-                <InputNumber
-                  className="!w-full"
-                  min={0}
-                  disabled={!isEditable}
-                />
+              <Form.Item label="Delays" name="delays">
+                <Input.TextArea rows={3} />
               </Form.Item>
-            </div>
-            <Form.Item label="Work summary" name="workSummary">
-              <Input.TextArea
-                rows={5}
-                disabled={!isEditable}
-                placeholder="Describe work completed on site today"
-              />
-            </Form.Item>
-            {isEditable && (
+              <Form.Item label="Equipment on site" name="equipment">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Form.Item label="Materials delivered / used" name="materials">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Form.Item label="Supervisor" name="supervisorId">
+                <UserSelect placeholder="Optional supervisor" />
+              </Form.Item>
               <div className="flex justify-end">
                 <Button
                   type="primary"
@@ -659,9 +751,9 @@ export default function DailyLogDetailDrawer({
                   Save changes
                 </Button>
               </div>
-            )}
-          </Form>
-        </DrawerSection>
+            </Form>
+          </DrawerSection>
+        )}
       </div>
     );
   }
@@ -921,7 +1013,8 @@ export default function DailyLogDetailDrawer({
         onClose={onClose}
         title={
           log
-            ? `Daily log - ${formatProjectDate(log.logDate)}`
+            ? log.logNumber?.trim() ||
+              `Daily log - ${formatProjectDate(log.logDate)}`
             : 'Daily log detail'
         }
         destroyOnHidden
@@ -1008,14 +1101,14 @@ export default function DailyLogDetailDrawer({
                   children: renderVisitorsSafetyTab(log),
                 },
                 {
-                  key: 'photos',
-                  label: 'Photos',
+                  key: 'files',
+                  label: 'Files',
                   children: (
                     <DocumentAttachmentPanel
                       folderId={log.attachmentFolderId ?? undefined}
                       readOnly={!isEditable}
-                      title="Site photos"
-                      description="Upload site photos and videos for this daily log."
+                      title="Site Files"
+                      description="Upload site files and videos for this daily log."
                     />
                   ),
                 },
