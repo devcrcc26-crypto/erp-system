@@ -1,4 +1,8 @@
 -- ER external approval workflow: statuses + approval/feedback tables
+-- Postgres cannot alter an enum column type while a typed DEFAULT remains.
+
+ALTER TABLE submittal
+  ALTER COLUMN status DROP DEFAULT;
 
 ALTER TYPE "SubmittalStatus" RENAME TO "SubmittalStatus_old";
 
@@ -26,6 +30,9 @@ ALTER TABLE submittal_review
   USING status::text::"SubmittalStatus";
 
 DROP TYPE "SubmittalStatus_old";
+
+ALTER TABLE submittal
+  ALTER COLUMN status SET DEFAULT 'DRAFT'::"SubmittalStatus";
 
 CREATE TABLE IF NOT EXISTS submittal_external_approval (
   id TEXT PRIMARY KEY,

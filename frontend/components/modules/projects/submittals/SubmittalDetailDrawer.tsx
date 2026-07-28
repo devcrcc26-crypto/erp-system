@@ -305,9 +305,9 @@ export default function SubmittalDetailDrawer({
           review.status === 'APPROVED_WITH_COMMENTS',
       ) ?? latestReview;
 
-  const leadOutcome = Form.useWatch('status', leadForm) as
-    | SubmittalStatus
-    | undefined;
+  const [leadOutcome, setLeadOutcome] = useState<SubmittalStatus | undefined>(
+    'APPROVED',
+  );
   const leadNeedsEvidence =
     leadOutcome !== undefined &&
     OUTCOMES_NEEDING_COMMENT_OR_FILE.has(leadOutcome);
@@ -418,6 +418,7 @@ export default function SubmittalDetailDrawer({
         },
       });
       leadForm.resetFields();
+      setLeadOutcome('APPROVED');
       setLeadAttachmentId(null);
       setLeadAttachmentName(null);
       messageApi.success('Approval recorded');
@@ -520,9 +521,13 @@ export default function SubmittalDetailDrawer({
       open={open}
       onClose={onClose}
       title={
-        submittal
-          ? `${submittal.submittalNumber} - ${submittal.title}`
-          : 'Submittal detail'
+        submittal ? (
+          <span className="block max-w-full break-words whitespace-normal">
+            {submittal.submittalNumber} - {submittal.title}
+          </span>
+        ) : (
+          'Submittal detail'
+        )
       }
       destroyOnHidden
     >
@@ -1054,6 +1059,11 @@ export default function SubmittalDetailDrawer({
                 layout="vertical"
                 className="erp-drawer-form"
                 initialValues={{ status: 'APPROVED' }}
+                onValuesChange={(changed) => {
+                  if (changed.status !== undefined) {
+                    setLeadOutcome(changed.status);
+                  }
+                }}
                 onFinish={(values: ReviewFormValues) =>
                   void handleLeadApproval(values)
                 }

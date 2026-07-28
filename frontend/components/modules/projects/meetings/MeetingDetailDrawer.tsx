@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -12,43 +12,695 @@ import {
   Input,
   Modal,
   Radio,
+  Select,
+  Space,
+  TimePicker,
 } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import IssueDetailDrawer from '@/components/modules/projects/issues/IssueDetailDrawer';
+import CreateIssueFromActionItemModal from '@/components/modules/projects/meetings/CreateIssueFromActionItemModal';
 import type {
   ActionItem,
   MeetingAttendee,
+  MeetingDetail,
+  MeetingScope,
 } from '@/lib/api/project-management.types';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
-import { useAppMessage } from '@/hooks/use-app-message';
+import { useAppMessage, useAppModal } from '@/hooks/use-app-message';
+import {
+  useEpcCapabilities,
+  usePmCapabilities,
+} from '@/hooks/use-pm-capabilities';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   useAddMeetingActionItem,
   useAddMeetingAttendee,
   useCancelMeeting,
-  useCreateIssueFromActionItem,
   useDeleteMeeting,
+  useEligibleMeetingSubtasks,
   useMeeting,
   useRemoveMeetingActionItem,
   useRemoveMeetingAttendee,
   useUpdateMeeting,
   useUpdateMeetingActionItem,
 } from '@/lib/query/meetings';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { ApiRequestError } from '@/lib/api/errors';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  formatIssueStatus,
   formatMeetingStatus,
+  issueStatusVariant,
   meetingStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const ACTIVE_MINUTES_STATUSES = new Set(['SCHEDULED', 'IN_PROGRESS', 'CONDUCTED']);
+
+function actionItemTitle(item: ActionItem): string {
+  if (item.title?.trim()) return item.title.trim();
+  const desc = item.description.trim();
+  return desc.length > 50 ? `${desc.slice(0, 50)}…` : desc;
+}
+
+function AddAttendeeForm({
+  projectId,
+  meetingId,
+  existingUserIds,
+  canEdit,
+  onAdded,
+}: {
+  projectId: string;
+  meetingId: string;
+  existingUserIds: string[];
+  canEdit: boolean;
+  onAdded: () => void;
+}): React.ReactNode {
+  const [form] = Form.useForm();
+  const [attendeeType, setAttendeeType] = useState<'INTERNAL' | 'EXTERNAL'>(
+    'INTERNAL',
+  );
+  const messageApi = useAppMessage();
+  const addAttendee = useAddMeetingAttendee();
+
+  if (!canEdit) return null;
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      className="erp-drawer-form !mt-3"
+      onFinish={(values: {
+        userIds?: string[];
+        externalName?: string;
+        organization?: string;
+        roleAtMeeting?: string;
+        email?: string;
+      }) => {
+        void (async () => {
+          try {
+            if (attendeeType === 'INTERNAL') {
+              const userIds = values.userIds ?? [];
+              for (const userId of userIds) {
+                await addAttendee.mutateAsync({
+                  projectId,
+                  meetingId,
+                  body: { attendeeType: 'INTERNAL', userId },
+                });
+              }
+              messageApi.success(
+                userIds.length > 1 ? 'Attendees added' : 'Attendee added',
+              );
+            } else {
+              await addAttendee.mutateAsync({
+                projectId,
+                meetingId,
+                body: {
+                  attendeeType: 'EXTERNAL',
+                  externalName: values.externalName,
+                  organization: values.organization,
+                  roleAtMeeting: values.roleAtMeeting,
+                  email: values.email,
+                },
+              });
+              messageApi.success('Attendee added');
+            }
+            form.resetFields();
+            onAdded();
+          } catch (e: unknown) {
+            notifyApiError(e, 'Failed to add attendee', messageApi);
+          }
+        })();
+      }}
+    >
+      <Radio.Group
+        className="!mb-2"
+        value={attendeeType}
+        onChange={(e) => {
+          setAttendeeType(e.target.value);
+          form.resetFields();
+        }}
+      >
+        <Radio value="INTERNAL">Internal</Radio>
+        <Radio value="EXTERNAL">External</Radio>
+      </Radio.Group>
+      {attendeeType === 'INTERNAL' ? (
+        <Form.Item
+          name="userIds"
+          label="Project team members"
+          rules={[{ required: true, message: 'Select at least one user' }]}
+        >
+          <UserSelect
+            mode="multiple"
+            placeholder="Select team members"
+            excludeUserIds={existingUserIds}
+          />
+        </Form.Item>
+      ) : (
+        <>
+          <Form.Item
+            name="externalName"
+            label="Name"
+            rules={[{ required: true, message: 'Name is required' }]}
+          >
+            <Input placeholder="Eng. Yohannes" />
+          </Form.Item>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Form.Item name="organization" label="Company">
+              <Input />
+            </Form.Item>
+            <Form.Item name="roleAtMeeting" label="Discipline">
+              <Input placeholder="Structural reviewer" />
+            </Form.Item>
+            <Form.Item name="email" label="Email">
+              <Input type="email" />
+            </Form.Item>
+          </div>
+        </>
+      )}
+      <Button
+        type="primary"
+        htmlType="submit"
+        icon={<PlusOutlined />}
+        loading={addAttendee.isPending}
+      >
+        Add attendee
+      </Button>
+    </Form>
+  );
+}
+
+function AddActionItemForm({
+  projectId,
+  meetingId,
+  canEdit,
+  onAdded,
+}: {
+  projectId: string;
+  meetingId: string;
+  canEdit: boolean;
+  onAdded: () => void;
+}): React.ReactNode {
+  const [form] = Form.useForm();
+  const messageApi = useAppMessage();
+  const addAction = useAddMeetingActionItem();
+
+  if (!canEdit) return null;
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      className="erp-drawer-form !mt-3"
+      onFinish={(values: {
+        title?: string;
+        ownerId?: string;
+        description: string;
+        dueDate?: Dayjs;
+      }) =>
+        void addAction
+          .mutateAsync({
+            projectId,
+            meetingId,
+            body: {
+              title: values.title?.trim() || undefined,
+              ownerId: values.ownerId,
+              description: values.description.trim(),
+              dueDate: values.dueDate?.format('YYYY-MM-DD'),
+            },
+          })
+          .then(() => {
+            messageApi.success('Action item added');
+            form.resetFields();
+            onAdded();
+          })
+          .catch((e: unknown) =>
+            notifyApiError(e, 'Failed to add action item', messageApi),
+          )
+      }
+    >
+      <Form.Item name="title" label="Title">
+        <Input placeholder="Short summary of the action" />
+      </Form.Item>
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[{ required: true }]}
+      >
+        <Input.TextArea rows={2} />
+      </Form.Item>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Form.Item name="ownerId" label="Assigned to">
+          <UserSelect allowClear />
+        </Form.Item>
+        <Form.Item name="dueDate" label="Due date">
+          <DatePicker className="w-full" />
+        </Form.Item>
+      </div>
+      <Button
+        type="primary"
+        htmlType="submit"
+        icon={<PlusOutlined />}
+        loading={addAction.isPending}
+      >
+        Add action item
+      </Button>
+    </Form>
+  );
+}
+
+function EditMeetingModal({
+  open,
+  projectId,
+  meeting,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  projectId: string;
+  meeting: MeetingDetail;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  return (
+    <Modal
+      title="Edit meeting"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+      width={640}
+    >
+      {open ? (
+        <EditMeetingForm
+          projectId={projectId}
+          meeting={meeting}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+function EditMeetingForm({
+  projectId,
+  meeting,
+  onClose,
+  onSaved,
+}: {
+  projectId: string;
+  meeting: MeetingDetail;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  const [form] = Form.useForm();
+  const [scope, setScope] = useState<MeetingScope>(
+    (meeting.scope as MeetingScope) ?? 'PROJECT',
+  );
+  const messageApi = useAppMessage();
+  const updateMeeting = useUpdateMeeting();
+
+  const disciplinesQuery = useProjectDisciplines(projectId, true);
+  const disciplineOptions = useMemo(
+    () =>
+      (disciplinesQuery.data ?? []).map((d) => ({
+        value: d.id,
+        label: d.disciplineName,
+      })),
+    [disciplinesQuery.data],
+  );
+
+  const subtasksQuery = useEligibleMeetingSubtasks(projectId, true);
+  const subtaskOptions = useMemo(
+    () =>
+      (subtasksQuery.data ?? []).map((s) => ({
+        value: s.id,
+        label: `${s.fullCode} — ${s.name}`,
+        taskDisciplineId: s.taskDisciplineId,
+      })),
+    [subtasksQuery.data],
+  );
+
+  useEffect(() => {
+    form.setFieldsValue({
+      title: meeting.title,
+      meetingDate: meeting.meetingDate ? dayjs(meeting.meetingDate) : undefined,
+      startTime: meeting.startTime
+        ? dayjs(meeting.startTime, 'HH:mm')
+        : undefined,
+      endTime: meeting.endTime ? dayjs(meeting.endTime, 'HH:mm') : undefined,
+      location: meeting.location ?? undefined,
+      agenda: meeting.agenda ?? undefined,
+      scope: (meeting.scope as MeetingScope) ?? 'PROJECT',
+      taskDisciplineId: meeting.taskDisciplineId ?? undefined,
+      designPackageId: meeting.designPackageId ?? undefined,
+    });
+    setScope((meeting.scope as MeetingScope) ?? 'PROJECT');
+  }, [form, meeting]);
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      className="erp-drawer-form"
+      onValuesChange={(changed) => {
+        if (changed.scope !== undefined) {
+          setScope(changed.scope);
+        }
+      }}
+      onFinish={(values: {
+        title: string;
+        meetingDate: Dayjs;
+        startTime?: Dayjs;
+        endTime?: Dayjs;
+        location?: string;
+        agenda?: string;
+        scope: MeetingScope;
+        taskDisciplineId?: string;
+        designPackageId?: string;
+      }) =>
+        void updateMeeting
+          .mutateAsync({
+            projectId,
+            meetingId: meeting.id,
+            body: {
+              title: values.title.trim(),
+              meetingDate: values.meetingDate.format('YYYY-MM-DD'),
+              startTime: values.startTime?.format('HH:mm'),
+              endTime: values.endTime?.format('HH:mm'),
+              location: values.location?.trim() || undefined,
+              agenda: values.agenda?.trim() || undefined,
+              scope: values.scope,
+              taskDisciplineId:
+                values.scope !== 'PROJECT' ? values.taskDisciplineId : undefined,
+              designPackageId:
+                values.scope === 'SUBTASK' ? values.designPackageId : undefined,
+            },
+          })
+          .then(() => {
+            messageApi.success('Meeting updated');
+            onSaved();
+            onClose();
+          })
+          .catch((e: unknown) =>
+            notifyApiError(e, 'Failed to update meeting', messageApi),
+          )
+      }
+    >
+      <Form.Item
+        name="title"
+        label="Title"
+        rules={[{ required: true, message: 'Title is required' }]}
+      >
+        <Input />
+      </Form.Item>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Form.Item
+          name="meetingDate"
+          label="Meeting date"
+          rules={[{ required: true }]}
+        >
+          <DatePicker className="w-full" />
+        </Form.Item>
+        <Form.Item name="startTime" label="Start time">
+          <TimePicker className="w-full" format="HH:mm" />
+        </Form.Item>
+        <Form.Item name="endTime" label="End time">
+          <TimePicker className="w-full" format="HH:mm" />
+        </Form.Item>
+      </div>
+      <Form.Item name="location" label="Location">
+        <Input />
+      </Form.Item>
+      <Form.Item name="agenda" label="Agenda">
+        <Input.TextArea rows={3} />
+      </Form.Item>
+      <Form.Item name="scope" label="Scope">
+        <Radio.Group
+          onChange={() => {
+            form.setFieldValue('taskDisciplineId', undefined);
+            form.setFieldValue('designPackageId', undefined);
+          }}
+        >
+          <Radio value="PROJECT">Project-wide</Radio>
+          <Radio value="DISCIPLINE">Discipline</Radio>
+          <Radio value="SUBTASK">Subtask</Radio>
+        </Radio.Group>
+      </Form.Item>
+      {(scope === 'DISCIPLINE' || scope === 'SUBTASK') && (
+        <Form.Item
+          name="taskDisciplineId"
+          label="Discipline"
+          rules={[{ required: true, message: 'Discipline is required' }]}
+        >
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={disciplineOptions}
+            loading={disciplinesQuery.isLoading}
+          />
+        </Form.Item>
+      )}
+      {scope === 'SUBTASK' && (
+        <Form.Item
+          name="designPackageId"
+          label="Subtask"
+          rules={[{ required: true, message: 'Subtask is required' }]}
+        >
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={subtaskOptions}
+            loading={subtasksQuery.isLoading}
+            onChange={(value: string) => {
+              const match = subtaskOptions.find((o) => o.value === value);
+              if (match) {
+                form.setFieldValue('taskDisciplineId', match.taskDisciplineId);
+              }
+            }}
+          />
+        </Form.Item>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={updateMeeting.isPending}
+        >
+          Save
+        </Button>
+      </div>
+    </Form>
+  );
+}
+
+function ActionItemViewModal({
+  open,
+  item,
+  resolveUserDisplay,
+  onClose,
+  onOpenIssue,
+}: {
+  open: boolean;
+  item: ActionItem | null;
+  resolveUserDisplay: (id: string | null | undefined, fallback?: string | null) => string;
+  onClose: () => void;
+  onOpenIssue: (issueId: string) => void;
+}): React.ReactNode {
+  if (!item) return null;
+  return (
+    <Modal
+      title="Action item"
+      open={open}
+      onCancel={onClose}
+      footer={[
+        <Button key="close" onClick={onClose}>
+          Close
+        </Button>,
+      ]}
+      destroyOnHidden
+    >
+      <Descriptions column={1} size="small" bordered>
+        <Descriptions.Item label="Title">
+          {item.title?.trim() || '—'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Description">
+          <span className="whitespace-pre-wrap">{item.description}</span>
+        </Descriptions.Item>
+        <Descriptions.Item label="Assigned to">
+          {item.ownerId
+            ? resolveUserDisplay(item.ownerId, item.ownerName)
+            : (item.assignedToName ?? '—')}
+        </Descriptions.Item>
+        <Descriptions.Item label="Due date">
+          {item.dueDate ? formatProjectDate(item.dueDate) : '—'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Status">
+          {item.status === 'CLOSED' ? 'Done' : 'Open'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Linked issue">
+          {item.linkedIssueId ? (
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => onOpenIssue(item.linkedIssueId!)}
+            >
+              {item.linkedIssueNumber ?? item.linkedIssueId}
+            </Button>
+          ) : (
+            '—'
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Created by">
+          {resolveUserDisplay(item.createdBy)}
+        </Descriptions.Item>
+        <Descriptions.Item label="Created">
+          {item.createdAt ? formatProjectDate(item.createdAt) : '—'}
+        </Descriptions.Item>
+      </Descriptions>
+    </Modal>
+  );
+}
+
+function ActionItemEditModal({
+  open,
+  projectId,
+  meetingId,
+  item,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  projectId: string;
+  meetingId: string;
+  item: ActionItem | null;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  return (
+    <Modal
+      title="Edit action item"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+    >
+      {open && item ? (
+        <ActionItemEditForm
+          projectId={projectId}
+          meetingId={meetingId}
+          item={item}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+function ActionItemEditForm({
+  projectId,
+  meetingId,
+  item,
+  onClose,
+  onSaved,
+}: {
+  projectId: string;
+  meetingId: string;
+  item: ActionItem;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  const [form] = Form.useForm();
+  const messageApi = useAppMessage();
+  const updateAction = useUpdateMeetingActionItem();
+
+  useEffect(() => {
+    form.setFieldsValue({
+      title: item.title ?? undefined,
+      description: item.description,
+      ownerId: item.ownerId ?? undefined,
+      dueDate: item.dueDate ? dayjs(item.dueDate) : undefined,
+    });
+  }, [form, item]);
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      className="erp-drawer-form"
+      onFinish={(values: {
+        title?: string;
+        description: string;
+        ownerId?: string;
+        dueDate?: Dayjs;
+      }) =>
+        void updateAction
+          .mutateAsync({
+            projectId,
+            meetingId,
+            actionItemId: item.id,
+            body: {
+              title: values.title?.trim() || undefined,
+              description: values.description.trim(),
+              ownerId: values.ownerId,
+              dueDate: values.dueDate?.format('YYYY-MM-DD'),
+            },
+          })
+          .then(() => {
+            messageApi.success('Action item updated');
+            onSaved();
+            onClose();
+          })
+          .catch((e: unknown) =>
+            notifyApiError(e, 'Failed to update action item', messageApi),
+          )
+      }
+    >
+      <Form.Item name="title" label="Title">
+        <Input placeholder="Short summary of the action" />
+      </Form.Item>
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[{ required: true }]}
+      >
+        <Input.TextArea rows={3} />
+      </Form.Item>
+      <Form.Item name="ownerId" label="Assigned to">
+        <UserSelect allowClear />
+      </Form.Item>
+      <Form.Item name="dueDate" label="Due date">
+        <DatePicker className="w-full" />
+      </Form.Item>
+      <div className="flex justify-end gap-2">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={updateAction.isPending}
+        >
+          Save
+        </Button>
+      </div>
+    </Form>
+  );
+}
 
 function scopeLabel(meeting: {
   scope: string | null;
@@ -76,30 +728,46 @@ export default function MeetingDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [attendeeType, setAttendeeType] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [minutesDraft, setMinutesDraft] = useState('');
+  const [createIssueItem, setCreateIssueItem] = useState<ActionItem | null>(null);
+  const [viewActionItem, setViewActionItem] = useState<ActionItem | null>(null);
+  const [editActionItem, setEditActionItem] = useState<ActionItem | null>(null);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const open = Boolean(meetingId);
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
+  const modalApi = useAppModal();
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
 
   const meetingQuery = useMeeting(projectId, meetingId ?? '', open);
   const updateMeeting = useUpdateMeeting();
   const cancelMeeting = useCancelMeeting();
   const deleteMeeting = useDeleteMeeting();
-  const addAttendee = useAddMeetingAttendee();
   const removeAttendee = useRemoveMeetingAttendee();
-  const addAction = useAddMeetingActionItem();
   const updateAction = useUpdateMeetingActionItem();
   const removeAction = useRemoveMeetingActionItem();
-  const createIssueFromAction = useCreateIssueFromActionItem();
 
   const meeting = meetingQuery.data;
   const canEditMinutes = Boolean(meeting) && ACTIVE_MINUTES_STATUSES.has(meeting!.status);
   const isCancellable = meeting?.status === 'SCHEDULED';
   const isCancelled = meeting?.status === 'CANCELLED';
+  const canEdit =
+    Boolean(meeting) &&
+    !isCancelled &&
+    (meeting!.createdBy === currentUserId ||
+      pm.projects.canView ||
+      epc.navFullAccess);
 
-  const [attendeeForm] = Form.useForm();
-  const [actionForm] = Form.useForm();
+  const existingUserIds = useMemo(
+    () =>
+      (meeting?.attendees ?? [])
+        .filter((a) => a.attendeeType === 'INTERNAL' && a.userId)
+        .map((a) => a.userId as string),
+    [meeting?.attendees],
+  );
 
   async function handleSaveMinutes(): Promise<void> {
     if (!meetingId) return;
@@ -140,22 +808,54 @@ export default function MeetingDetailDrawer({
     }
   }
 
-  function handleCreateIssue(item: ActionItem): void {
-    if (!meetingId) return;
-    Modal.confirm({
-      title: 'Create an Issue from this action item?',
-      content: item.description,
-      okText: 'Create',
-      cancelText: 'Cancel',
+  function canCreateIssueFromActionItem(item: ActionItem): boolean {
+    if (epc.navFullAccess) return true;
+    if (meeting?.createdBy && currentUserId === meeting.createdBy) return true;
+    if (item.ownerId && currentUserId === item.ownerId) return true;
+    return false;
+  }
+
+  function confirmRemoveAttendee(record: MeetingAttendee): void {
+    const name =
+      record.attendeeType === 'INTERNAL'
+        ? resolveUserDisplay(record.userId, record.userName)
+        : (record.externalName ?? 'attendee');
+    modalApi.confirm({
+      title: 'Remove attendee',
+      content: `Remove ${name} from this meeting?`,
+      okText: 'Remove',
+      okType: 'danger',
       onOk: () =>
-        createIssueFromAction
-          .mutateAsync({ projectId, meetingId, actionItemId: item.id })
-          .then(() => {
-            messageApi.success('Issue created and linked');
-            onUpdated();
+        removeAttendee
+          .mutateAsync({
+            projectId,
+            meetingId: meetingId!,
+            attendeeId: record.id,
           })
-          .catch((error: unknown) =>
-            notifyApiError(error, 'Failed to create issue', messageApi),
+          .then(() => onUpdated())
+          .catch((e: unknown) =>
+            notifyApiError(e, 'Failed to remove attendee', messageApi),
+          ),
+    });
+  }
+
+  function confirmDeleteActionItem(record: ActionItem): void {
+    modalApi.confirm({
+      title: 'Delete action item',
+      content:
+        'This action item will be permanently removed. Continue?',
+      okText: 'Delete',
+      okType: 'danger',
+      onOk: () =>
+        removeAction
+          .mutateAsync({
+            projectId,
+            meetingId: meetingId!,
+            actionItemId: record.id,
+          })
+          .then(() => onUpdated())
+          .catch((e: unknown) =>
+            notifyApiError(e, 'Failed to delete action item', messageApi),
           ),
     });
   }
@@ -176,10 +876,10 @@ export default function MeetingDetailDrawer({
       render: (v: string | null) => v ?? '-',
     },
     {
-      title: 'Role',
+      title: 'Discipline',
       dataIndex: 'roleAtMeeting',
       key: 'roleAtMeeting',
-      render: (v: string | null) => v ?? '-',
+      render: (v: string | null) => v ?? '—',
     },
     {
       title: 'Type',
@@ -187,7 +887,7 @@ export default function MeetingDetailDrawer({
       key: 'attendeeType',
       render: (v: string) => (v === 'INTERNAL' ? 'Internal' : 'External'),
     },
-    ...(!isCancelled
+    ...(canEdit
       ? [
           {
             title: '',
@@ -199,18 +899,7 @@ export default function MeetingDetailDrawer({
                 danger
                 size="small"
                 icon={<DeleteOutlined />}
-                onClick={() =>
-                  void removeAttendee
-                    .mutateAsync({
-                      projectId,
-                      meetingId: meetingId!,
-                      attendeeId: record.id,
-                    })
-                    .then(() => onUpdated())
-                    .catch((e: unknown) =>
-                      notifyApiError(e, 'Failed to remove attendee', messageApi),
-                    )
-                }
+                onClick={() => confirmRemoveAttendee(record)}
               />
             ),
           },
@@ -220,10 +909,10 @@ export default function MeetingDetailDrawer({
 
   const actionColumns: ColumnsType<ActionItem> = [
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
+      title: 'Title',
+      key: 'title',
       ellipsis: true,
+      render: (_: unknown, record: ActionItem) => actionItemTitle(record),
     },
     {
       title: 'Assigned to',
@@ -242,72 +931,97 @@ export default function MeetingDetailDrawer({
     {
       title: 'Status',
       key: 'status',
-      width: 90,
+      width: 100,
       render: (_: unknown, record: ActionItem) => (
         <Checkbox
           checked={record.status === 'CLOSED'}
           disabled={isCancelled}
-          onChange={(e) =>
-            void updateAction
-              .mutateAsync({
+          onChange={(e) => {
+            updateAction.mutate(
+              {
                 projectId,
                 meetingId: meetingId!,
                 actionItemId: record.id,
                 body: { status: e.target.checked ? 'CLOSED' : 'OPEN' },
-              })
-              .then(() => onUpdated())
-              .catch((err: unknown) =>
-                notifyApiError(err, 'Failed to update action item', messageApi),
-              )
-          }
+              },
+              {
+                onError: (err: unknown) =>
+                  notifyApiError(err, 'Failed to update action item', messageApi),
+              },
+            );
+          }}
         >
           {record.status === 'CLOSED' ? 'Done' : 'Open'}
         </Checkbox>
       ),
     },
     {
-      title: 'Issue',
-      key: 'issue',
-      render: (_: unknown, record: ActionItem) =>
-        record.linkedIssueId ? (
-          <span>{record.linkedIssueNumber ?? record.linkedIssueId}</span>
-        ) : (
+      title: 'Actions',
+      key: 'actions',
+      width: 220,
+      render: (_: unknown, record: ActionItem) => (
+        <Space size={0} wrap>
           <Button
             type="link"
-            className="!px-0"
-            loading={createIssueFromAction.isPending}
-            onClick={() => handleCreateIssue(record)}
+            size="small"
+            className="!px-1"
+            icon={<EyeOutlined />}
+            onClick={() => setViewActionItem(record)}
           >
-            Create Issue →
+            View
           </Button>
-        ),
-    },
-    ...(!isCancelled
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: ActionItem) => (
+          {record.linkedIssueId ? (
+            <span className="inline-flex items-center gap-1">
+              <Button
+                type="link"
+                size="small"
+                className="!px-1"
+                onClick={() => setSelectedIssueId(record.linkedIssueId)}
+              >
+                {record.linkedIssueNumber ?? 'Issue'}
+              </Button>
+              {record.linkedIssueStatus && (
+                <span className="shrink-0">
+                  <StatusBadge
+                    label={formatIssueStatus(record.linkedIssueStatus)}
+                    variant={issueStatusVariant(record.linkedIssueStatus)}
+                  />
+                </span>
+              )}
+            </span>
+          ) : canCreateIssueFromActionItem(record) ? (
+            <Button
+              type="link"
+              size="small"
+              className="!px-1"
+              onClick={() => setCreateIssueItem(record)}
+            >
+              Create Issue
+            </Button>
+          ) : null}
+          {canEdit && (
+            <>
+              <Button
+                type="link"
+                size="small"
+                className="!px-1"
+                icon={<EditOutlined />}
+                onClick={() => setEditActionItem(record)}
+              >
+                Edit
+              </Button>
               <Button
                 type="text"
                 danger
                 size="small"
                 icon={<DeleteOutlined />}
-                onClick={() =>
-                  void removeAction
-                    .mutateAsync({
-                      projectId,
-                      meetingId: meetingId!,
-                      actionItemId: record.id,
-                    })
-                    .then(() => onUpdated())
-                }
+                onClick={() => confirmDeleteActionItem(record)}
               />
-            ),
-          },
-        ]
-      : []),
+            </>
+          )}
+        </Space>
+      ),
+    },
   ];
 
   return (
@@ -318,13 +1032,18 @@ export default function MeetingDetailDrawer({
         onClose={onClose}
         title={
           meeting ? (
-            <span className="flex flex-wrap items-center gap-2">
-              {meeting.meetingNumber} — {meeting.title}
-              <StatusBadge
-                label={formatMeetingStatus(meeting.status)}
-                variant={meetingStatusVariant(meeting.status)}
-              />
-            </span>
+            <div className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden">
+              <span className="shrink-0 font-mono text-[13px] font-semibold">
+                {meeting.meetingNumber}
+              </span>
+              <span className="min-w-0 truncate text-[13px]">{meeting.title}</span>
+              <span className="shrink-0">
+                <StatusBadge
+                  label={formatMeetingStatus(meeting.status)}
+                  variant={meetingStatusVariant(meeting.status)}
+                />
+              </span>
+            </div>
           ) : (
             'Meeting'
           )
@@ -363,38 +1082,53 @@ export default function MeetingDetailDrawer({
               />
             )}
 
-            <Descriptions
-              className={layout.drawerDescriptionsClass}
-              column={1}
-              size="small"
-              bordered
-            >
-              <Descriptions.Item label="Meeting date">
-                {formatProjectDate(meeting.meetingDate)}
-              </Descriptions.Item>
-              {(meeting.startTime || meeting.endTime) && (
-                <Descriptions.Item label="Time">
-                  {meeting.startTime ?? '—'} – {meeting.endTime ?? '—'}
+            <section className={layout.drawerSection}>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className={layout.drawerHeading}>Meeting info</h3>
+                {canEdit && (
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setEditMeetingOpen(true)}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </div>
+              <Descriptions
+                className={layout.drawerDescriptionsClass}
+                column={1}
+                size="small"
+                bordered
+              >
+                <Descriptions.Item label="Meeting date">
+                  {formatProjectDate(meeting.meetingDate)}
                 </Descriptions.Item>
-              )}
-              {meeting.location && (
-                <Descriptions.Item label="Location">
-                  {meeting.location}
+                {(meeting.startTime || meeting.endTime) && (
+                  <Descriptions.Item label="Time">
+                    {meeting.startTime ?? '—'} – {meeting.endTime ?? '—'}
+                  </Descriptions.Item>
+                )}
+                {meeting.location && (
+                  <Descriptions.Item label="Location">
+                    {meeting.location}
+                  </Descriptions.Item>
+                )}
+                <Descriptions.Item label="Scope">
+                  {scopeLabel(meeting)}
                 </Descriptions.Item>
-              )}
-              <Descriptions.Item label="Scope">
-                {scopeLabel(meeting)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Created by">
-                {resolveUserDisplay(meeting.createdBy, meeting.organizerName)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <StatusBadge
-                  label={formatMeetingStatus(meeting.status)}
-                  variant={meetingStatusVariant(meeting.status)}
-                />
-              </Descriptions.Item>
-            </Descriptions>
+                <Descriptions.Item label="Created by">
+                  {resolveUserDisplay(meeting.createdBy, meeting.organizerName)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  <StatusBadge
+                    label={formatMeetingStatus(meeting.status)}
+                    variant={meetingStatusVariant(meeting.status)}
+                  />
+                </Descriptions.Item>
+              </Descriptions>
+            </section>
 
             {meeting.agenda && (
               <section className={layout.drawerSection}>
@@ -416,80 +1150,13 @@ export default function MeetingDetailDrawer({
                 locale={{ emptyText: 'No attendees yet' }}
               />
               {!isCancelled && (
-                <Form
-                  form={attendeeForm}
-                  layout="vertical"
-                  className="erp-drawer-form !mt-3"
-                  onFinish={(values: {
-                    userId?: string;
-                    externalName?: string;
-                    organization?: string;
-                    roleAtMeeting?: string;
-                    email?: string;
-                  }) =>
-                    void addAttendee
-                      .mutateAsync({
-                        projectId,
-                        meetingId: meeting.id,
-                        body: { attendeeType, ...values },
-                      })
-                      .then(() => {
-                        messageApi.success('Attendee added');
-                        attendeeForm.resetFields();
-                        onUpdated();
-                      })
-                      .catch((e: unknown) =>
-                        notifyApiError(e, 'Failed to add attendee', messageApi),
-                      )
-                  }
-                >
-                  <Radio.Group
-                    className="!mb-2"
-                    value={attendeeType}
-                    onChange={(e) => setAttendeeType(e.target.value)}
-                  >
-                    <Radio value="INTERNAL">Internal</Radio>
-                    <Radio value="EXTERNAL">External</Radio>
-                  </Radio.Group>
-                  {attendeeType === 'INTERNAL' ? (
-                    <Form.Item
-                      name="userId"
-                      label="Project team member"
-                      rules={[{ required: true, message: 'Select a user' }]}
-                    >
-                      <UserSelect />
-                    </Form.Item>
-                  ) : (
-                    <Form.Item
-                      name="externalName"
-                      label="Name"
-                      rules={[{ required: true, message: 'Name is required' }]}
-                    >
-                      <Input placeholder="Eng. Yohannes" />
-                    </Form.Item>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <Form.Item name="organization" label="Company">
-                      <Input />
-                    </Form.Item>
-                    <Form.Item name="roleAtMeeting" label="Role">
-                      <Input placeholder="Structural reviewer" />
-                    </Form.Item>
-                    {attendeeType === 'EXTERNAL' && (
-                      <Form.Item name="email" label="Email">
-                        <Input type="email" />
-                      </Form.Item>
-                    )}
-                  </div>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addAttendee.isPending}
-                  >
-                    Add attendee
-                  </Button>
-                </Form>
+                <AddAttendeeForm
+                  projectId={projectId}
+                  meetingId={meeting.id}
+                  existingUserIds={existingUserIds}
+                  canEdit={canEdit}
+                  onAdded={onUpdated}
+                />
               )}
             </section>
 
@@ -525,59 +1192,12 @@ export default function MeetingDetailDrawer({
                 locale={{ emptyText: 'No action items' }}
               />
               {!isCancelled && (
-                <Form
-                  form={actionForm}
-                  layout="vertical"
-                  className="erp-drawer-form !mt-3"
-                  onFinish={(values: {
-                    ownerId?: string;
-                    description: string;
-                    dueDate?: Dayjs;
-                  }) =>
-                    void addAction
-                      .mutateAsync({
-                        projectId,
-                        meetingId: meeting.id,
-                        body: {
-                          ownerId: values.ownerId,
-                          description: values.description.trim(),
-                          dueDate: values.dueDate?.format('YYYY-MM-DD'),
-                        },
-                      })
-                      .then(() => {
-                        messageApi.success('Action item added');
-                        actionForm.resetFields();
-                        onUpdated();
-                      })
-                      .catch((e: unknown) =>
-                        notifyApiError(e, 'Failed to add action item', messageApi),
-                      )
-                  }
-                >
-                  <Form.Item
-                    name="description"
-                    label="Description"
-                    rules={[{ required: true }]}
-                  >
-                    <Input.TextArea rows={2} />
-                  </Form.Item>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Form.Item name="ownerId" label="Assigned to">
-                      <UserSelect allowClear />
-                    </Form.Item>
-                    <Form.Item name="dueDate" label="Due date">
-                      <DatePicker className="w-full" />
-                    </Form.Item>
-                  </div>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    loading={addAction.isPending}
-                  >
-                    Add action item
-                  </Button>
-                </Form>
+                <AddActionItemForm
+                  projectId={projectId}
+                  meetingId={meeting.id}
+                  canEdit={canEdit}
+                  onAdded={onUpdated}
+                />
               )}
             </section>
 
@@ -615,6 +1235,55 @@ export default function MeetingDetailDrawer({
         confirmLoading={deleteMeeting.isPending}
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteOpen(false)}
+      />
+
+      {meeting && (
+        <EditMeetingModal
+          open={editMeetingOpen}
+          projectId={projectId}
+          meeting={meeting}
+          onClose={() => setEditMeetingOpen(false)}
+          onSaved={onUpdated}
+        />
+      )}
+
+      <ActionItemViewModal
+        open={Boolean(viewActionItem)}
+        item={viewActionItem}
+        resolveUserDisplay={resolveUserDisplay}
+        onClose={() => setViewActionItem(null)}
+        onOpenIssue={(issueId) => {
+          setViewActionItem(null);
+          setSelectedIssueId(issueId);
+        }}
+      />
+
+      {meetingId && (
+        <ActionItemEditModal
+          open={Boolean(editActionItem)}
+          projectId={projectId}
+          meetingId={meetingId}
+          item={editActionItem}
+          onClose={() => setEditActionItem(null)}
+          onSaved={onUpdated}
+        />
+      )}
+
+      {meetingId && (
+        <CreateIssueFromActionItemModal
+          projectId={projectId}
+          meetingId={meetingId}
+          actionItem={createIssueItem}
+          onClose={() => setCreateIssueItem(null)}
+          onCreated={onUpdated}
+        />
+      )}
+
+      <IssueDetailDrawer
+        projectId={projectId}
+        issueId={selectedIssueId}
+        onClose={() => setSelectedIssueId(null)}
+        onUpdated={onUpdated}
       />
     </>
   );

@@ -102,9 +102,7 @@ export default function SubmittalPackageDrawer({
   const messageApi = useAppMessage();
   const [stageBlocked, setStageBlocked] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const taskDisciplineId = Form.useWatch('taskDisciplineId', form) as
-    | string
-    | undefined;
+  const [taskDisciplineId, setTaskDisciplineId] = useState<string | undefined>();
   const disciplines = disciplinesQuery.data ?? [];
 
   const projectOptions = useMemo(
@@ -156,13 +154,17 @@ export default function SubmittalPackageDrawer({
   }, [open, projectIdProp, form]);
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
     setSelectedPackageId(null);
     form.setFieldValue('designPackageId', undefined);
-  }, [taskDisciplineId, form]);
+  }, [taskDisciplineId, form, open]);
 
   function handleProjectChange(nextProjectId: string): void {
     setSelectedProjectId(nextProjectId);
     setStageBlocked(false);
+    setTaskDisciplineId(undefined);
     form.setFieldsValue({
       projectId: nextProjectId,
       taskDisciplineId: undefined,
@@ -175,6 +177,7 @@ export default function SubmittalPackageDrawer({
     setSelectedProjectId(projectIdProp ?? null);
     setStageBlocked(false);
     setSelectedPackageId(null);
+    setTaskDisciplineId(undefined);
     form.resetFields();
     onClose();
   }
@@ -223,53 +226,58 @@ export default function SubmittalPackageDrawer({
         />
       )}
 
-      <SubmittalPackageForm
-        form={form}
-        showProjectSelector={showProjectSelector}
-        projectOptions={projectOptions}
-        projectOptionsLoading={projectsQuery.isLoading}
-        onProjectChange={handleProjectChange}
-        hasSelectedProject={hasSelectedProject}
-        disciplines={disciplines}
-        disciplinesLoading={disciplinesQuery.isLoading}
-        lockablePackages={lockablePackages}
-        isLoadingPackages={isLoadingPackages}
-        hasSelectedDiscipline={hasSelectedDiscipline}
-        selectedPackage={selectedPackage}
-        selectedPackageId={selectedPackageId}
-        onSelectedPackageChange={setSelectedPackageId}
-        onSubmit={async (values) => {
-          const projectId = selectedProjectId ?? values.projectId ?? projectIdProp;
-          if (!projectId) {
-            messageApi.error('Select a project');
-            return;
-          }
-          try {
-            setStageBlocked(false);
-            const result = await createSubmittal.mutateAsync({
-              projectId,
-              body: {
-                title: values.title.trim(),
-                designPackageIds: [values.designPackageId],
-                description: values.description?.trim() || undefined,
-                submittalPurpose: values.submittalPurpose,
-                preparedByRole: 'DISCIPLINE_LEAD',
-                taskDisciplineId: values.taskDisciplineId,
-              },
-            });
-            messageApi.success('External release created');
-            form.resetFields();
-            onCreated(result.id);
-            onClose();
-          } catch (error) {
-            if (isProjectStageBlockedError(error)) {
-              setStageBlocked(true);
+      {open ? (
+        <SubmittalPackageForm
+          form={form}
+          showProjectSelector={showProjectSelector}
+          projectOptions={projectOptions}
+          projectOptionsLoading={projectsQuery.isLoading}
+          onProjectChange={handleProjectChange}
+          hasSelectedProject={hasSelectedProject}
+          disciplines={disciplines}
+          disciplinesLoading={disciplinesQuery.isLoading}
+          lockablePackages={lockablePackages}
+          isLoadingPackages={isLoadingPackages}
+          hasSelectedDiscipline={hasSelectedDiscipline}
+          selectedPackage={selectedPackage}
+          selectedPackageId={selectedPackageId}
+          onSelectedPackageChange={setSelectedPackageId}
+          onDisciplineChange={setTaskDisciplineId}
+          onSubmit={async (values) => {
+            const projectId = selectedProjectId ?? values.projectId ?? projectIdProp;
+            if (!projectId) {
+              messageApi.error('Select a project');
               return;
             }
-            notifyApiError(error, 'Failed to create external release', messageApi);
-          }
-        }}
-      />
+            try {
+              setStageBlocked(false);
+              const result = await createSubmittal.mutateAsync({
+                projectId,
+                body: {
+                  title: values.title.trim(),
+                  designPackageIds: [values.designPackageId],
+                  description: values.description?.trim() || undefined,
+                  submittalPurpose: values.submittalPurpose,
+                  preparedByRole: 'DISCIPLINE_LEAD',
+                  taskDisciplineId: values.taskDisciplineId,
+                },
+              });
+              messageApi.success('External release created');
+              form.resetFields();
+              setTaskDisciplineId(undefined);
+              setSelectedPackageId(null);
+              onCreated(result.id);
+              onClose();
+            } catch (error) {
+              if (isProjectStageBlockedError(error)) {
+                setStageBlocked(true);
+                return;
+              }
+              notifyApiError(error, 'Failed to create external release', messageApi);
+            }
+          }}
+        />
+      ) : null}
     </Drawer>
   );
 }
@@ -289,6 +297,7 @@ function SubmittalPackageForm({
   selectedPackage,
   selectedPackageId,
   onSelectedPackageChange,
+  onDisciplineChange,
   onSubmit,
 }: {
   form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
@@ -311,6 +320,7 @@ function SubmittalPackageForm({
   selectedPackage: DesignPackage | null;
   selectedPackageId: string | null;
   onSelectedPackageChange: (packageId: string | null) => void;
+  onDisciplineChange: (disciplineId: string | undefined) => void;
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
   return (
@@ -319,6 +329,15 @@ function SubmittalPackageForm({
       layout="vertical"
       className="erp-drawer-form"
       initialValues={{ submittalPurpose: 'DISCIPLINE_SITE' as SubmittalPurpose }}
+      onValuesChange={(changed) => {
+        if ('taskDisciplineId' in changed) {
+          onDisciplineChange(
+            typeof changed.taskDisciplineId === 'string'
+              ? changed.taskDisciplineId
+              : undefined,
+          );
+        }
+      }}
       onFinish={(values: SubmittalPackageFormValues) => void onSubmit(values)}
     >
       {showProjectSelector && (

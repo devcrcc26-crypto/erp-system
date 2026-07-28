@@ -79,4 +79,9 @@ export class SendNotificationDto {
   @ApiPropertyOptional({ description: 'Template variables e.g. { firstName: "John" }' })
   @IsOptional()
   variables?: Record<string, string>;
+
+  @ApiPropertyOptional({ description: 'In-app link to navigate to when the notification is clicked' })
+  @IsOptional()
+  @IsString()
+  link?: string;
 }

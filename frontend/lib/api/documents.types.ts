@@ -6,6 +6,7 @@ export interface InAppNotification {
   recipientId: string;
   subject: string;
   body: string;
+  link: string | null;
   status: string;
   sentAt: string | null;
   readAt: string | null;

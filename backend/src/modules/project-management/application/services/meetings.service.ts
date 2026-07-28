@@ -4,9 +4,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { IssueSeverity, MeetingStatus, Prisma } from '@prisma/client';
 import { formatDesignPackageFullCode } from '../../../../shared/discipline-number.util';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -18,6 +20,7 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   CreateActionItemDto,
+  CreateIssueFromActionItemDto,
   CreateMeetingAgendaItemDto,
   CreateMeetingAttendeeDto,
   CreateMeetingDto,
@@ -57,10 +60,11 @@ import {
 import { loadRaisedItemsForSource } from '../utils/source-entity.util';
 import { disciplineAssigneeOr, subtaskRoleOr } from '../../domain/task-access-scope.util';
 import { DisciplineScopeService } from './discipline-scope.service';
-import { DocumentNumberService } from './document-number.service';
 import { EngineeringDocumentFolderService } from './engineering-document-folder.service';
 import { IssuesService } from './issues.service';
 import { ProjectScopeService } from './project-scope.service';
+
+const ACTION_ITEM_ASSIGNED_EVENT = 'meeting.action_item.assigned';
 
 const MEETING_SORT_FIELDS = new Set([
   'createdAt',
@@ -77,7 +81,7 @@ const MEETING_DETAIL_INCLUDE = {
   actionItems: {
     where: { deletedAt: null },
     orderBy: { createdAt: 'asc' as const },
-    include: { linkedIssue: { select: { issueNumber: true } } },
+    include: { linkedIssue: { select: { issueNumber: true, status: true } } },
   },
 };
 
@@ -106,11 +110,11 @@ export class MeetingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectScopeService: ProjectScopeService,
-    private readonly documentNumberService: DocumentNumberService,
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly permissionService: PermissionService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly issuesService: IssuesService,
+    @Optional() private readonly notificationService?: NotificationService,
   ) {}
 
   /**
@@ -320,7 +324,7 @@ export class MeetingsService {
     projectId: string,
     dto: CreateMeetingDto,
   ): Promise<MappedMeetingDetail> {
-    await this.projectScopeService.getProjectOrThrow(ctx, projectId);
+    const project = await this.projectScopeService.getProjectOrThrow(ctx, projectId);
     await this.assertCanAccessMeeting(ctx, { projectId }, 'create');
 
     const scope = dto.scope ?? 'PROJECT';
@@ -364,10 +368,14 @@ export class MeetingsService {
       taskDisciplineId = null;
     }
 
-    const meetingNumber = await this.documentNumberService.getNextNumber(
-      ctx,
-      'MEETING',
-    );
+    const count = await this.prisma.meeting.count({
+      where: {
+        projectId,
+        deletedAt: null,
+      },
+    });
+    const seq = String(count + 1).padStart(3, '0');
+    const meetingNumber = `MTG-${project.projectCode}-${seq}`;
 
     const meetingDate = new Date(dto.meetingDate);
     const status =
@@ -424,6 +432,43 @@ export class MeetingsService {
 
     const minutesNewlySet = Boolean(dto.minutes?.trim()) && !existing.minutes?.trim();
 
+    let taskDisciplineId: string | null | undefined = dto.taskDisciplineId;
+    let designPackageId: string | null | undefined = dto.designPackageId;
+    if (dto.scope === 'SUBTASK' && dto.designPackageId) {
+      const pkg = await this.prisma.designPackage.findFirst({
+        where: activeOnly({
+          id: dto.designPackageId,
+          companyId: ctx.companyId,
+          taskDiscipline: { task: { projectId, deletedAt: null } },
+        }),
+        select: { id: true, taskDisciplineId: true },
+      });
+      if (!pkg) {
+        throw new NotFoundException('Subtask not found on this project');
+      }
+      designPackageId = pkg.id;
+      taskDisciplineId = pkg.taskDisciplineId;
+    } else if (dto.scope === 'DISCIPLINE' && dto.taskDisciplineId) {
+      const discipline = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({
+          id: dto.taskDisciplineId,
+          companyId: ctx.companyId,
+          task: { projectId, deletedAt: null },
+        }),
+        select: { id: true },
+      });
+      if (!discipline) {
+        throw new NotFoundException('Discipline not found on this project');
+      }
+      taskDisciplineId = discipline.id;
+      designPackageId = null;
+    } else if (dto.scope === 'PROJECT') {
+      taskDisciplineId = null;
+      designPackageId = null;
+    } else if (dto.designPackageId) {
+      await this.assertPackageInProject(ctx, projectId, dto.designPackageId);
+    }
+
     const row = await this.prisma.meeting.update({
       where: { id: meetingId },
       data: {
@@ -435,6 +480,15 @@ export class MeetingsService {
         endTime: dto.endTime,
         agenda: dto.agenda,
         minutes: dto.minutes,
+        scope: dto.scope,
+        taskDisciplineId:
+          dto.scope !== undefined || dto.taskDisciplineId !== undefined
+            ? taskDisciplineId
+            : undefined,
+        designPackageId:
+          dto.scope !== undefined || dto.designPackageId !== undefined
+            ? designPackageId
+            : undefined,
         status: minutesNewlySet ? MeetingStatus.COMPLETED : undefined,
         minutesIssuedAt: minutesNewlySet ? new Date() : undefined,
         updatedBy: ctx.userId,
@@ -581,24 +635,69 @@ export class MeetingsService {
         throw new BadRequestException('userId is required for an internal attendee');
       }
       await this.assertUserInCompany(ctx, dto.userId);
+      const existingInternal = await this.prisma.meetingAttendee.findFirst({
+        where: { meetingId, userId: dto.userId },
+      });
+      if (existingInternal) {
+        throw new BadRequestException('User is already an attendee');
+      }
     } else if (!dto.externalName?.trim()) {
       throw new BadRequestException('name is required for an external attendee');
+    } else {
+      const existingExternal = await this.prisma.meetingAttendee.findFirst({
+        where: {
+          meetingId,
+          externalName: dto.externalName.trim(),
+          userId: null,
+        },
+      });
+      if (existingExternal) {
+        throw new BadRequestException('Attendee already added');
+      }
+    }
+
+    let organization: string | undefined =
+      attendeeType === 'INTERNAL' ? 'CCECC' : (dto.organization ?? undefined);
+    let roleAtMeeting: string | null | undefined =
+      attendeeType === 'INTERNAL' ? undefined : (dto.roleAtMeeting ?? undefined);
+    let email: string | undefined =
+      attendeeType === 'INTERNAL' ? undefined : (dto.email ?? undefined);
+
+    if (attendeeType === 'INTERNAL' && dto.userId) {
+      const user = await this.prisma.user.findFirst({
+        where: { id: dto.userId, companyId: ctx.companyId },
+        select: {
+          email: true,
+          department: { select: { name: true } },
+          engineeringDiscipline: { select: { name: true } },
+          position: { select: { title: true } },
+        },
+      });
+      roleAtMeeting =
+        user?.engineeringDiscipline?.name ??
+        user?.department?.name ??
+        user?.position?.title ??
+        null;
+      email = user?.email ?? undefined;
     }
 
     const row = await this.prisma.meetingAttendee.create({
       data: {
         meetingId,
         userId: attendeeType === 'INTERNAL' ? dto.userId : undefined,
-        externalName: dto.externalName,
-        organization: dto.organization,
-        roleAtMeeting: dto.roleAtMeeting,
-        email: dto.email,
+        externalName: attendeeType === 'INTERNAL' ? undefined : dto.externalName,
+        organization,
+        roleAtMeeting,
+        email,
         attended: dto.attended ?? false,
         createdBy: ctx.userId,
       },
     });
 
-    return mapMeetingAttendee(row);
+    const [mapped] = await this.enrichAttendeeProfiles(ctx.companyId, [
+      mapMeetingAttendee(row),
+    ]);
+    return mapped;
   }
 
   /**
@@ -671,16 +770,54 @@ export class MeetingsService {
         meetingId,
         ownerId: dto.ownerId,
         assignedToName: dto.assignedToName,
+        title: dto.title?.trim() || null,
         description: dto.description,
         dueDate: parseOptionalDate(dto.dueDate),
         designPackageId: dto.designPackageId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
-      include: { linkedIssue: { select: { issueNumber: true } } },
+      include: { linkedIssue: { select: { issueNumber: true, status: true } } },
     });
 
-    return mapActionItem(row);
+    const mapped = mapActionItem(row);
+    await this.sendActionItemAssignedNotification(ctx, projectId, meeting, mapped);
+    return mapped;
+  }
+
+  private async sendActionItemAssignedNotification(
+    ctx: PmContext,
+    projectId: string,
+    meeting: { id: string; meetingNumber: string },
+    item: MappedActionItem,
+  ): Promise<void> {
+    if (!this.notificationService || !item.ownerId) {
+      return;
+    }
+
+    try {
+      await this.notificationService.send(
+        { companyId: ctx.companyId, userId: ctx.userId },
+        {
+          recipientId: item.ownerId,
+          eventType: ACTION_ITEM_ASSIGNED_EVENT,
+          subject: `Action item assigned — ${meeting.meetingNumber}`,
+          body: `You have been assigned an action item from meeting ${meeting.meetingNumber}: ${item.description}\nDue: ${item.dueDate ?? 'No due date'}`,
+          variables: {
+            projectId,
+            meetingId: meeting.id,
+            meetingNumber: meeting.meetingNumber,
+            actionItemId: item.id,
+          },
+          link: `/projects/${projectId}/meetings?meetingId=${meeting.id}`,
+        },
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        'Action item assigned notification failed',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   /**
@@ -700,17 +837,23 @@ export class MeetingsService {
     const closing = dto.status === 'CLOSED' && existing.status !== 'CLOSED';
     const reopening = dto.status && dto.status !== 'CLOSED' && existing.status === 'CLOSED';
 
+    if (dto.ownerId) {
+      await this.assertUserInCompany(ctx, dto.ownerId);
+    }
+
     const row = await this.prisma.actionItem.update({
       where: { id: actionItemId },
       data: {
+        title: dto.title !== undefined ? dto.title.trim() || null : undefined,
         description: dto.description,
+        ownerId: dto.ownerId,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         status: dto.status,
         closedAt: closing ? new Date() : reopening ? null : undefined,
         completedBy: closing ? ctx.userId : reopening ? null : undefined,
         updatedBy: ctx.userId,
       },
-      include: { linkedIssue: { select: { issueNumber: true } } },
+      include: { linkedIssue: { select: { issueNumber: true, status: true } } },
     });
 
     return mapActionItem(row);
@@ -742,19 +885,22 @@ export class MeetingsService {
     projectId: string,
     meetingId: string,
     actionItemId: string,
+    dto?: CreateIssueFromActionItemDto,
   ): Promise<MappedIssue> {
     const meeting = await this.getMeetingDetailOrThrow(projectId, meetingId);
-    await this.assertCanAccessMeeting(ctx, meeting, 'edit');
     const item = await this.getActionItemOrThrow(meetingId, actionItemId);
+    await this.assertCanCreateIssueFromActionItem(ctx, meeting, item);
 
     if (item.linkedIssueId) {
       throw new BadRequestException('This action item already has a linked issue');
     }
 
+    const designPackageId = dto?.designPackageId ?? item.designPackageId ?? undefined;
     let taskDisciplineId: string | undefined;
-    if (item.designPackageId) {
+    if (designPackageId) {
+      await this.assertPackageInProject(ctx, projectId, designPackageId);
       const pkg = await this.prisma.designPackage.findFirst({
-        where: activeOnly({ id: item.designPackageId, companyId: ctx.companyId }),
+        where: activeOnly({ id: designPackageId, companyId: ctx.companyId }),
         select: { taskDisciplineId: true },
       });
       taskDisciplineId = pkg?.taskDisciplineId;
@@ -766,7 +912,7 @@ export class MeetingsService {
       severity: IssueSeverity.MEDIUM,
       assignedTo: item.ownerId ?? undefined,
       taskDisciplineId,
-      linkedDesignPackageId: item.designPackageId ?? undefined,
+      linkedDesignPackageId: designPackageId,
       dueDate: item.dueDate ? item.dueDate.toISOString() : undefined,
       sourceEntityType: 'MEETING',
       sourceEntityId: meetingId,
@@ -914,6 +1060,35 @@ export class MeetingsService {
     throw new ForbiddenException('Access denied');
   }
 
+  /**
+   * Only the meeting creator, the person the action item is assigned to,
+   * or a full-access role (PA/SA/PM) may create an Issue from an action item.
+   */
+  private async assertCanCreateIssueFromActionItem(
+    ctx: PmContext,
+    meeting: { createdBy: string },
+    item: { ownerId: string | null },
+  ): Promise<void> {
+    if (meeting.createdBy === ctx.userId) {
+      return;
+    }
+    if (item.ownerId && item.ownerId === ctx.userId) {
+      return;
+    }
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    if (hasFullProjectDataAccess(roleNames)) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'Only the meeting creator, the assigned person, or a project administrator can create an issue from this action item',
+    );
+  }
+
   private async assertPackageInProject(
     ctx: PmContext,
     projectId: string,
@@ -1003,12 +1178,64 @@ export class MeetingsService {
       ),
     ]);
 
+    const attendeesWithProfile = await this.enrichAttendeeProfiles(
+      ctx.companyId,
+      attendees,
+    );
+
     return {
       ...withOrganizer,
       agendaItems,
-      attendees,
+      attendees: attendeesWithProfile,
       actionItems,
     };
+  }
+
+  /**
+   * For internal attendees, replaces the free-text organization/role fields
+   * with the attendee's current department/position from their user profile.
+   */
+  private async enrichAttendeeProfiles<T extends { userId: string | null }>(
+    companyId: string,
+    attendees: T[],
+  ): Promise<T[]> {
+    const userIds = [
+      ...new Set(
+        attendees
+          .map((a) => a.userId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+    ];
+    if (userIds.length === 0) {
+      return attendees;
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds }, companyId },
+      select: {
+        id: true,
+        department: { select: { name: true } },
+        engineeringDiscipline: { select: { name: true } },
+        position: { select: { title: true } },
+      },
+    });
+    const profileMap = new Map(users.map((u) => [u.id, u]));
+
+    return attendees.map((attendee) => {
+      if (!attendee.userId) {
+        return attendee;
+      }
+      const profile = profileMap.get(attendee.userId);
+      return {
+        ...attendee,
+        organization: 'CCECC',
+        roleAtMeeting:
+          profile?.engineeringDiscipline?.name ??
+          profile?.department?.name ??
+          profile?.position?.title ??
+          null,
+      };
+    });
   }
 
   private async loadMeetingRaisedItems(

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Alert, Form, Input, Modal, Radio } from 'antd';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -32,7 +33,7 @@ export default function ExternalFeedbackModal({
 }: ExternalFeedbackModalProps): React.ReactNode {
   const [form] = Form.useForm<FeedbackFormValues>();
   const messageApi = useAppMessage();
-  const kind = Form.useWatch('kind', form) as 'COMMENT' | 'REJECTION' | undefined;
+  const [kind, setKind] = useState<'COMMENT' | 'REJECTION'>('COMMENT');
 
   const recordSiteFeedback = useRecordSiteFeedback();
   const recordConsultantFeedback = useRecordConsultantFeedback();
@@ -60,6 +61,7 @@ export default function ExternalFeedbackModal({
       }
       messageApi.success('Feedback recorded');
       form.resetFields();
+      setKind('COMMENT');
       onSuccess();
       onClose();
     } catch (error) {
@@ -69,6 +71,7 @@ export default function ExternalFeedbackModal({
 
   function handleCancel(): void {
     form.resetFields();
+    setKind('COMMENT');
     onClose();
   }
 
@@ -86,6 +89,11 @@ export default function ExternalFeedbackModal({
         form={form}
         layout="vertical"
         initialValues={{ kind: 'COMMENT' }}
+        onValuesChange={(changed) => {
+          if (changed.kind === 'COMMENT' || changed.kind === 'REJECTION') {
+            setKind(changed.kind);
+          }
+        }}
         onFinish={(values: FeedbackFormValues) => void handleSubmit(values)}
       >
         <Form.Item

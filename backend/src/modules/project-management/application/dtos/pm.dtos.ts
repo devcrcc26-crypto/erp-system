@@ -1324,9 +1324,7 @@ export class CreateMeetingDto {
   agenda?: string;
 }
 
-export class UpdateMeetingDto extends PartialType(
-  OmitType(CreateMeetingDto, ['scope', 'taskDisciplineId', 'designPackageId'] as const),
-) {
+export class UpdateMeetingDto extends PartialType(CreateMeetingDto) {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -1464,6 +1462,11 @@ export class CreateActionItemDto {
   @IsString()
   assignedToName?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @ApiProperty()
   @IsString()
   description!: string;
@@ -1483,7 +1486,17 @@ export class UpdateActionItemDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  ownerId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -1494,6 +1507,15 @@ export class UpdateActionItemDto {
   @IsOptional()
   @IsString()
   status?: string;
+}
+
+export class CreateIssueFromActionItemDto {
+  @ApiPropertyOptional({
+    description: 'Optional subtask (design package) to link the created issue to',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
 }
 
 export class CreateCorrespondenceDto {

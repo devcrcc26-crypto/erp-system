@@ -3,6 +3,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge, Button, Dropdown, Empty, Spin, Typography } from 'antd';
 import { BellOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -23,15 +24,21 @@ dayjs.extend(relativeTime);
 function NotificationItem({
   notification,
   onRead,
+  onNavigate,
 }: {
   notification: InAppNotification;
   onRead: (id: string) => void;
+  onNavigate: (notification: InAppNotification) => void;
 }): React.ReactNode {
   const isUnread = !notification.readAt;
+  const clickable = Boolean(notification.link);
 
   return (
     <div
-      className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isUnread ? 'bg-orange-50/60' : ''}`}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onNavigate(notification) : undefined}
+      className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isUnread ? 'bg-orange-50/60' : ''} ${clickable ? 'cursor-pointer hover:bg-slate-50' : ''}`}
     >
       <div className="min-w-0 flex-1">
         <p
@@ -60,7 +67,10 @@ function NotificationItem({
           type="link"
           size="small"
           icon={<CheckOutlined />}
-          onClick={() => onRead(notification.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRead(notification.id);
+          }}
         >
           Mark read
         </Button>
@@ -73,6 +83,7 @@ function NotificationItem({
  * Header bell dropdown for in-app notifications.
  */
 export default function NotificationPanel(): React.ReactNode {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const permLoading = usePermissionsLoading();
   const canViewNotifications = useAuthStore(
@@ -90,6 +101,15 @@ export default function NotificationPanel(): React.ReactNode {
 
   const unreadCount = allowed ? (unreadQuery.data?.count ?? 0) : 0;
   const notifications = allowed ? (notificationsQuery.data?.data ?? []) : [];
+
+  function handleNavigate(notification: InAppNotification): void {
+    if (!notification.link) return;
+    if (!notification.readAt) {
+      void markRead.mutateAsync(notification.id);
+    }
+    setOpen(false);
+    router.push(notification.link);
+  }
 
   const dropdownContent = (
     <div
@@ -144,6 +164,7 @@ export default function NotificationPanel(): React.ReactNode {
               key={notification.id}
               notification={notification}
               onRead={(id) => void markRead.mutateAsync(id)}
+              onNavigate={handleNavigate}
             />
           ))}
         </div>

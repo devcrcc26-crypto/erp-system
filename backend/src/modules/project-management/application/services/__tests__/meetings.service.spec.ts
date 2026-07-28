@@ -2,7 +2,6 @@ import { MeetingType } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
-import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { IssuesService } from '../issues.service';
 import { MeetingsService } from '../meetings.service';
@@ -44,7 +43,7 @@ describe('MeetingsService', () => {
   }
 
   let prisma: {
-    meeting: { findFirst: jest.Mock; create: jest.Mock };
+    meeting: { findFirst: jest.Mock; create: jest.Mock; count: jest.Mock };
     meetingAgendaItem: { create: jest.Mock; aggregate: jest.Mock };
     meetingAttendee: { create: jest.Mock };
     actionItem: { create: jest.Mock };
@@ -58,6 +57,7 @@ describe('MeetingsService', () => {
       meeting: {
         findFirst: jest.fn(),
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       meetingAgendaItem: {
         create: jest.fn(),
@@ -78,15 +78,13 @@ describe('MeetingsService', () => {
       getProjectOrThrow: jest.fn().mockResolvedValue({
         id: projectId,
         companyId: ctx.companyId,
+        projectCode: 'PRJ',
       }),
     };
 
     service = new MeetingsService(
       prisma as unknown as PrismaService,
       projectScopeService as unknown as ProjectScopeService,
-      {
-        getNextNumber: jest.fn().mockResolvedValue('MET-00001'),
-      } as unknown as DocumentNumberService,
       {
         ensureMeetingFolder: jest
           .fn()
@@ -134,9 +132,31 @@ describe('MeetingsService', () => {
           organizerId: ctx.userId,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
+          meetingNumber: 'MTG-PRJ-001',
         }),
         include: expect.any(Object),
       });
+    });
+
+    it('numbers meetings sequentially per project using the project code', async () => {
+      prisma.meeting.count.mockResolvedValue(4);
+      prisma.meeting.create.mockResolvedValue(buildMeeting());
+
+      await service.createMeeting(ctx, projectId, {
+        meetingType: MeetingType.PROGRESS,
+        title: 'Weekly progress review',
+        meetingDate: '2026-06-01T10:00:00.000Z',
+        location: 'Site office',
+      });
+
+      expect(prisma.meeting.count).toHaveBeenCalledWith({
+        where: { projectId, deletedAt: null },
+      });
+      expect(prisma.meeting.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ meetingNumber: 'MTG-PRJ-005' }),
+        }),
+      );
     });
   });
 

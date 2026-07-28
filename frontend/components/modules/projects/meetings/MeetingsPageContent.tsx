@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -78,16 +79,14 @@ interface MeetingFormValues {
   agenda?: string;
 }
 
-export function MeetingFormDrawer({
-  open,
+function MeetingCreateFormBody({
   projectId: projectIdProp,
-  showProjectSelector = false,
+  showProjectSelector,
   onClose,
   onSaved,
 }: {
-  open: boolean;
   projectId?: string;
-  showProjectSelector?: boolean;
+  showProjectSelector: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
@@ -99,7 +98,7 @@ export function MeetingFormDrawer({
   const createMeeting = useCreateMeeting();
   const messageApi = useAppMessage();
 
-  const projectsQuery = useAllProjects({}, open && showProjectSelector);
+  const projectsQuery = useAllProjects({}, showProjectSelector);
   const projectOptions = useMemo(
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
@@ -111,7 +110,7 @@ export function MeetingFormDrawer({
 
   const disciplinesQuery = useProjectDisciplines(
     effectiveProjectId,
-    open && Boolean(effectiveProjectId),
+    Boolean(effectiveProjectId),
   );
   const disciplineOptions = useMemo(
     () =>
@@ -124,7 +123,7 @@ export function MeetingFormDrawer({
 
   const subtasksQuery = useEligibleMeetingSubtasks(
     effectiveProjectId,
-    open && Boolean(effectiveProjectId),
+    Boolean(effectiveProjectId),
   );
   const subtaskOptions = useMemo(
     () =>
@@ -136,7 +135,7 @@ export function MeetingFormDrawer({
     [subtasksQuery.data],
   );
 
-  const scope = Form.useWatch('scope', form) ?? 'PROJECT';
+  const [scope, setScope] = useState<MeetingScope>('PROJECT');
 
   async function handleSubmit(values: MeetingFormValues): Promise<void> {
     if (!effectiveProjectId) {
@@ -163,6 +162,7 @@ export function MeetingFormDrawer({
       });
       messageApi.success('Meeting created');
       form.resetFields();
+      setScope('PROJECT');
       onSaved();
       onClose();
     } catch (error) {
@@ -171,18 +171,16 @@ export function MeetingFormDrawer({
   }
 
   return (
-    <Drawer
-      {...wideDetailDrawerProps}
-      open={open}
-      title="New meeting"
-      onClose={onClose}
-      destroyOnHidden
-    >
       <Form<MeetingFormValues>
         form={form}
         layout="vertical"
         className="erp-drawer-form"
         initialValues={{ meetingDate: dayjs(), meetingType: 'PROGRESS', scope: 'PROJECT' }}
+        onValuesChange={(changed) => {
+          if (changed.scope !== undefined) {
+            setScope(changed.scope);
+          }
+        }}
         onFinish={(values: MeetingFormValues) => void handleSubmit(values)}
       >
         {showProjectSelector && (
@@ -306,6 +304,38 @@ export function MeetingFormDrawer({
           </Button>
         </div>
       </Form>
+  );
+}
+
+export function MeetingFormDrawer({
+  open,
+  projectId,
+  showProjectSelector = false,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  projectId?: string;
+  showProjectSelector?: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  return (
+    <Drawer
+      {...wideDetailDrawerProps}
+      open={open}
+      title="New meeting"
+      onClose={onClose}
+      destroyOnHidden
+    >
+      {open ? (
+        <MeetingCreateFormBody
+          projectId={projectId}
+          showProjectSelector={showProjectSelector}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      ) : null}
     </Drawer>
   );
 }
@@ -316,10 +346,21 @@ export default function MeetingsPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<MeetingStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const meetingIdParam = searchParams.get('meetingId');
+    if (meetingIdParam) {
+      setSelectedMeetingId(meetingIdParam);
+      router.replace(`/projects/${projectId}/meetings`, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const resolveUserDisplay = useUserDisplayResolver();
   const permLoading = usePermissionsLoading();

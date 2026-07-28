@@ -468,6 +468,40 @@ export function useUpdateMeetingActionItem() {
         `${meetingsPath(projectId)}/${meetingId}/action-items/${actionItemId}`,
         body,
       ),
+    onMutate: async (variables) => {
+      const detailKey = meetingKeys.detail(
+        variables.projectId,
+        variables.meetingId,
+      );
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous = queryClient.getQueryData<MeetingDetail>(detailKey);
+      if (previous && variables.body.status) {
+        queryClient.setQueryData<MeetingDetail>(detailKey, {
+          ...previous,
+          actionItems: previous.actionItems.map((row) =>
+            row.id === variables.actionItemId
+              ? {
+                  ...row,
+                  status: variables.body.status!,
+                  closedAt:
+                    variables.body.status === 'CLOSED'
+                      ? new Date().toISOString()
+                      : null,
+                }
+              : row,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          meetingKeys.detail(variables.projectId, variables.meetingId),
+          context.previous,
+        );
+      }
+    },
     onSuccess: (item, variables) => {
       patchMeetingDetail(queryClient, variables, (meeting) => ({
         ...meeting,
@@ -475,6 +509,8 @@ export function useUpdateMeetingActionItem() {
           row.id === variables.actionItemId ? item : row,
         ),
       }));
+    },
+    onSettled: (_data, _error, variables) => {
       invalidateMeetingDetail(queryClient, variables);
     },
   });
@@ -516,21 +552,28 @@ export function useCreateIssueFromActionItem() {
       projectId,
       meetingId,
       actionItemId,
+      designPackageId,
     }: {
       projectId: string;
       meetingId: string;
       actionItemId: string;
+      designPackageId?: string;
     }) =>
       apiPost<Issue>(
         `${meetingsPath(projectId)}/${meetingId}/action-items/${actionItemId}/create-issue`,
-        {},
+        { designPackageId },
       ),
     onSuccess: (issue, variables) => {
       patchMeetingDetail(queryClient, variables, (meeting) => ({
         ...meeting,
         actionItems: meeting.actionItems.map((row) =>
           row.id === variables.actionItemId
-            ? { ...row, linkedIssueId: issue.id, linkedIssueNumber: issue.issueNumber }
+            ? {
+                ...row,
+                linkedIssueId: issue.id,
+                linkedIssueNumber: issue.issueNumber,
+                linkedIssueStatus: issue.status,
+              }
             : row,
         ),
       }));

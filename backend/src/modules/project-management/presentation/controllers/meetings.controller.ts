@@ -17,6 +17,7 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateActionItemDto,
+  CreateIssueFromActionItemDto,
   CreateMeetingAgendaItemDto,
   CreateMeetingAttendeeDto,
   CreateMeetingDto,
@@ -234,12 +235,14 @@ export class MeetingsController {
     @Param('projectId') projectId: string,
     @Param('id') id: string,
     @Param('actionItemId') actionItemId: string,
+    @Body() dto: CreateIssueFromActionItemDto,
   ): Promise<unknown> {
     return this.meetingsService.createIssueFromActionItem(
       this.ctx(user),
       projectId,
       id,
       actionItemId,
+      dto,
     );
   }
 

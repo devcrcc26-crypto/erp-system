@@ -788,6 +788,7 @@ model Notification {
   channel     NotificationChannel
   subject     String
   body        String
+  link        String?
   status      NotificationStatus @default(PENDING)
   sentAt      DateTime?          @map("sent_at")
   readAt      DateTime?          @map("read_at")
@@ -2752,6 +2753,7 @@ model ActionItem {
   id              String    @id @default(uuid())
   meetingId       String    @map("meeting_id")
   ownerId         String?   @map("owner_id")
+  title           String?
   description     String
   dueDate         DateTime? @map("due_date") @db.Date
   status          String    @default("OPEN")

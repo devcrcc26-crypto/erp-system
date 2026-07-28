@@ -831,6 +831,7 @@ export interface ActionItem {
   ownerId: string | null;
   ownerName?: string | null;
   assignedToName: string | null;
+  title: string | null;
   description: string;
   dueDate: string | null;
   status: string;
@@ -838,7 +839,10 @@ export interface ActionItem {
   completedBy: string | null;
   linkedIssueId: string | null;
   linkedIssueNumber?: string | null;
+  linkedIssueStatus?: IssueStatus | null;
   designPackageId: string | null;
+  createdAt?: string;
+  createdBy?: string;
 }
 
 export interface MeetingDetail extends Meeting {
@@ -1349,9 +1353,7 @@ export interface CreateMeetingRequest {
   agenda?: string;
 }
 
-export type UpdateMeetingRequest = Partial<
-  Omit<CreateMeetingRequest, 'scope' | 'taskDisciplineId' | 'designPackageId'>
-> & {
+export type UpdateMeetingRequest = Partial<CreateMeetingRequest> & {
   minutes?: string;
 };
 
@@ -1383,13 +1385,16 @@ export type UpdateMeetingAttendeeRequest = Partial<
 export interface CreateActionItemRequest {
   ownerId?: string;
   assignedToName?: string;
+  title?: string;
   description: string;
   dueDate?: string;
   designPackageId?: string;
 }
 
 export interface UpdateActionItemRequest {
+  title?: string;
   description?: string;
+  ownerId?: string;
   dueDate?: string;
   status?: string;
 }

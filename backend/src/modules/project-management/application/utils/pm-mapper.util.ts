@@ -15,6 +15,7 @@ import {
   DrawingVersion,
   Issue,
   IssueResponse,
+  IssueStatus,
   Meeting,
   MeetingAgendaItem,
   MeetingAttendee,
@@ -534,6 +535,7 @@ export interface MappedActionItem {
   ownerId: string | null;
   ownerName?: string | null;
   assignedToName: string | null;
+  title: string | null;
   description: string;
   dueDate: string | null;
   status: string;
@@ -541,7 +543,10 @@ export interface MappedActionItem {
   completedBy: string | null;
   linkedIssueId: string | null;
   linkedIssueNumber?: string | null;
+  linkedIssueStatus?: IssueStatus | null;
   designPackageId: string | null;
+  createdAt: string;
+  createdBy: string;
 }
 
 export type MappedMyMeeting = MappedMeeting & {
@@ -1077,13 +1082,16 @@ export function mapMeetingAttendee(row: MeetingAttendee): MappedMeetingAttendee 
 }
 
 export function mapActionItem(
-  row: ActionItem & { linkedIssue?: { issueNumber: string } | null },
+  row: ActionItem & {
+    linkedIssue?: { issueNumber: string; status: IssueStatus } | null;
+  },
 ): MappedActionItem {
   return {
     id: row.id,
     meetingId: row.meetingId,
     ownerId: row.ownerId,
     assignedToName: row.assignedToName,
+    title: row.title ?? null,
     description: row.description,
     dueDate: toDateString(row.dueDate),
     status: row.status,
@@ -1091,7 +1099,10 @@ export function mapActionItem(
     completedBy: row.completedBy,
     linkedIssueId: row.linkedIssueId,
     linkedIssueNumber: row.linkedIssue?.issueNumber ?? null,
+    linkedIssueStatus: row.linkedIssue?.status ?? null,
     designPackageId: row.designPackageId,
+    createdAt: toIsoString(row.createdAt)!,
+    createdBy: row.createdBy,
   };
 }
 
@@ -1099,7 +1110,9 @@ export function mapMeetingDetail(
   row: Meeting & {
     agendaItems: MeetingAgendaItem[];
     attendees: MeetingAttendee[];
-    actionItems: (ActionItem & { linkedIssue?: { issueNumber: string } | null })[];
+    actionItems: (ActionItem & {
+      linkedIssue?: { issueNumber: string; status: IssueStatus } | null;
+    })[];
   },
   attachmentFolderId: string | null = null,
   raisedItems?: {

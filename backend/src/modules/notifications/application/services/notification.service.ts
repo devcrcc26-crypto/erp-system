@@ -88,6 +88,7 @@ export class NotificationService {
           channel: NotificationChannel.IN_APP,
           subject,
           body,
+          link: dto.link,
           status: NotificationStatus.SENT,
           readAt: null,
           sentAt: new Date(),
