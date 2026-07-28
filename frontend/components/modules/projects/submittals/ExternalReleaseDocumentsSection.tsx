@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { Button, Checkbox, Input, Modal, Space, Spin } from 'antd';
+import { Alert, Button, Checkbox, Input, Modal, Space, Spin } from 'antd';
 import { DownloadOutlined, FileOutlined } from '@ant-design/icons';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -432,9 +432,34 @@ export default function ExternalReleaseDocumentsSection({
   const isUnderSiteReview = submittal.status === 'UNDER_SITE_REVIEW';
   const isSiteApproved = submittal.status === 'SITE_APPROVED';
   const isConsultantReviewed = submittal.status === 'CONSULTANT_REVIEWED';
-  const isReadyToIssue = isSiteApproved || isConsultantReviewed;
+  const hasSiteRep =
+    submittal.items?.some(
+      (item) => Boolean(item.siteRepName) || Boolean(item.siteRepresentativeUserId),
+    ) ?? false;
+  const hasConsultant =
+    submittal.items?.some((item) => Boolean(item.consultantName)) ?? false;
+  const canIssue =
+    (!hasSiteRep && !hasConsultant && submittal.status === 'DRAFT') ||
+    (hasSiteRep && !hasConsultant && submittal.status === 'SITE_APPROVED') ||
+    submittal.status === 'CONSULTANT_REVIEWED';
+  const canStartReview =
+    isDraft && (hasSiteRep || hasConsultant);
   const showFrozenDocs =
-    isUnderSiteReview || isSiteApproved || isConsultantReviewed || Boolean(submittal.issuedAt);
+    isUnderSiteReview ||
+    isSiteApproved ||
+    isConsultantReviewed ||
+    Boolean(submittal.issuedAt) ||
+    submittal.status === 'PENDING_CONSULTANT_REVIEW';
+
+  const issueBlockedMessage = (() => {
+    if (submittal.status === 'DRAFT' && hasSiteRep) {
+      return 'Site representative approval required before issuing.';
+    }
+    if (submittal.status === 'SITE_APPROVED' && hasConsultant) {
+      return 'Consultant approval required before issuing.';
+    }
+    return 'External approvals required before issuing.';
+  })();
 
   const edvQueries = useQueries({
     queries: submittal.items.map((item) => ({
@@ -528,7 +553,7 @@ export default function ExternalReleaseDocumentsSection({
           <p className={layout.drawerMutedText}>Loading attachment folder…</p>
         )}
 
-        {submittal.items.length > 0 && (
+        {submittal.items.length > 0 && canIssue && (
           <Button
             type="primary"
             className="mt-4"
@@ -539,6 +564,27 @@ export default function ExternalReleaseDocumentsSection({
             {`Issue ${selectedCount} document${selectedCount === 1 ? '' : 's'} to ${releaseTargetLabel(submittal.submittalPurpose)}`}
           </Button>
         )}
+        {submittal.items.length > 0 && canStartReview && (
+          <Button
+            type="primary"
+            className="mt-4"
+            loading={issueSubmittal.isPending}
+            disabled={selectedCount === 0}
+            onClick={() => handleIssue(false)}
+          >
+            {`Submit ${selectedCount} document${selectedCount === 1 ? '' : 's'} for review`}
+          </Button>
+        )}
+        {!canIssue &&
+          submittal.status !== 'SUBMITTED' &&
+          submittal.status !== 'WITHDRAWN' && (
+            <Alert
+              className="mt-4"
+              type="info"
+              showIcon
+              title={issueBlockedMessage}
+            />
+          )}
       </section>
     );
   }
@@ -571,7 +617,7 @@ export default function ExternalReleaseDocumentsSection({
         />
       ) : null}
 
-      {isReadyToIssue && (
+      {canIssue && (
         <Button
           type="primary"
           className="mt-4"
@@ -581,6 +627,16 @@ export default function ExternalReleaseDocumentsSection({
           {`Issue to ${releaseTargetLabel(submittal.submittalPurpose)}`}
         </Button>
       )}
+      {!canIssue &&
+        submittal.status !== 'SUBMITTED' &&
+        submittal.status !== 'WITHDRAWN' && (
+          <Alert
+            className="mt-4"
+            type="info"
+            showIcon
+            title={issueBlockedMessage}
+          />
+        )}
     </section>
   );
 }

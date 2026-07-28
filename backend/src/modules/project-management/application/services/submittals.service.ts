@@ -727,7 +727,7 @@ export class SubmittalsService {
     dto: IssueSubmittalDto,
   ): Promise<WorkflowResultSnapshot> {
     const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
-    this.assertSubmittalIssuable(submittal.status);
+    this.assertSubmittalIssuable(submittal);
 
     const result = await this.workflowKernel.execute({
       type: 'IssueSubmittal',
@@ -1088,7 +1088,7 @@ export class SubmittalsService {
     const results: WorkflowResultSnapshot[] = [];
     for (const submittalId of dto.submittalIds) {
       const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
-      this.assertSubmittalIssuable(submittal.status);
+      this.assertSubmittalIssuable(submittal);
       const result = await this.workflowKernel.execute({
         type: 'IssueSubmittal',
         companyId: ctx.companyId,
@@ -1656,6 +1656,20 @@ export class SubmittalsService {
   private async getSubmittalOrThrow(projectId: string, submittalId: string) {
     const row = await this.prisma.submittal.findFirst({
       where: activeOnly({ id: submittalId, projectId }),
+      include: {
+        items: {
+          include: {
+            designPackage: {
+              select: {
+                siteRepType: true,
+                siteRepName: true,
+                siteRepresentativeUserId: true,
+                consultantName: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!row) {
       throw new NotFoundException('Submittal not found');
@@ -1825,14 +1839,55 @@ export class SubmittalsService {
     }
   }
 
-  private assertSubmittalIssuable(status: SubmittalStatus): void {
-    if (
-      status !== SubmittalStatus.DRAFT &&
-      status !== SubmittalStatus.SITE_APPROVED &&
-      status !== SubmittalStatus.CONSULTANT_REVIEWED
-    ) {
+  private assertSubmittalIssuable(submittal: {
+    status: SubmittalStatus;
+    items: Array<{
+      designPackage?: {
+        siteRepType?: string | null;
+        siteRepName?: string | null;
+        siteRepresentativeUserId?: string | null;
+        consultantName?: string | null;
+      } | null;
+    }>;
+  }): void {
+    const hasSiteRep = submittal.items.some(
+      (item) =>
+        Boolean(item.designPackage?.siteRepName?.trim()) ||
+        Boolean(item.designPackage?.siteRepresentativeUserId),
+    );
+    const hasConsultant = submittal.items.some((item) =>
+      Boolean(item.designPackage?.consultantName?.trim()),
+    );
+    const status = submittal.status;
+
+    // DRAFT starts the external-review pipeline (or direct issue when no parties).
+    if (status === SubmittalStatus.DRAFT) {
+      return;
+    }
+
+    // No external parties → final issue only from DRAFT (handled above).
+    if (!hasSiteRep && !hasConsultant) {
       throw new BadRequestException(
-        'Only DRAFT, SITE_APPROVED, or CONSULTANT_REVIEWED submittals can be issued.',
+        'No external parties. Issue from DRAFT.',
+      );
+    }
+
+    // Site rep only, no consultant → issue from SITE_APPROVED
+    if (hasSiteRep && !hasConsultant) {
+      if (status !== SubmittalStatus.SITE_APPROVED) {
+        throw new BadRequestException(
+          'Site representative must approve before issuing.',
+        );
+      }
+      return;
+    }
+
+    // Consultant only or both → issue from CONSULTANT_REVIEWED
+    if (status !== SubmittalStatus.CONSULTANT_REVIEWED) {
+      throw new BadRequestException(
+        hasConsultant && hasSiteRep
+          ? 'Both site representative and consultant must approve before issuing.'
+          : 'Consultant must approve before issuing.',
       );
     }
   }
