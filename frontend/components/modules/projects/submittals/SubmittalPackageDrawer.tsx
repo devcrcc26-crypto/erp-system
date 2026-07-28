@@ -13,11 +13,7 @@ import {
   Space,
   Spin,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
 import type {
   DesignPackage,
   DesignPackageProjectedStatus,
@@ -38,12 +34,11 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface SubmittalPackageFormValues {
   projectId?: string;
-  title: string;
-  description?: string;
-  recipientName?: string;
   submittalPurpose: SubmittalPurpose;
   taskDisciplineId: string;
-  designPackageIds: string[];
+  designPackageId: string;
+  title: string;
+  description?: string;
 }
 
 const EXTERNAL_RELEASE_PURPOSES: {
@@ -106,6 +101,7 @@ export default function SubmittalPackageDrawer({
   const createSubmittal = useCreateDesignSubmittal();
   const messageApi = useAppMessage();
   const [stageBlocked, setStageBlocked] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const taskDisciplineId = Form.useWatch('taskDisciplineId', form) as
     | string
     | undefined;
@@ -140,6 +136,10 @@ export default function SubmittalPackageDrawer({
       ),
     [packagesQuery.data],
   );
+  const selectedPackage = useMemo(
+    () => lockablePackages.find((pkg) => pkg.id === selectedPackageId) ?? null,
+    [lockablePackages, selectedPackageId],
+  );
 
   const isLoadingPackages = packagesQuery.isLoading;
   const hasSelectedProject = Boolean(effectiveProjectId);
@@ -155,19 +155,26 @@ export default function SubmittalPackageDrawer({
     }
   }, [open, projectIdProp, form]);
 
+  useEffect(() => {
+    setSelectedPackageId(null);
+    form.setFieldValue('designPackageId', undefined);
+  }, [taskDisciplineId, form]);
+
   function handleProjectChange(nextProjectId: string): void {
     setSelectedProjectId(nextProjectId);
     setStageBlocked(false);
     form.setFieldsValue({
       projectId: nextProjectId,
       taskDisciplineId: undefined,
-      designPackageIds: undefined,
+      designPackageId: undefined,
     });
+    setSelectedPackageId(null);
   }
 
   function handleClose(): void {
     setSelectedProjectId(projectIdProp ?? null);
     setStageBlocked(false);
+    setSelectedPackageId(null);
     form.resetFields();
     onClose();
   }
@@ -228,6 +235,9 @@ export default function SubmittalPackageDrawer({
         lockablePackages={lockablePackages}
         isLoadingPackages={isLoadingPackages}
         hasSelectedDiscipline={hasSelectedDiscipline}
+        selectedPackage={selectedPackage}
+        selectedPackageId={selectedPackageId}
+        onSelectedPackageChange={setSelectedPackageId}
         onSubmit={async (values) => {
           const projectId = selectedProjectId ?? values.projectId ?? projectIdProp;
           if (!projectId) {
@@ -240,8 +250,7 @@ export default function SubmittalPackageDrawer({
               projectId,
               body: {
                 title: values.title.trim(),
-                designPackageIds: values.designPackageIds,
-                recipientName: values.recipientName?.trim() || undefined,
+                designPackageIds: [values.designPackageId],
                 description: values.description?.trim() || undefined,
                 submittalPurpose: values.submittalPurpose,
                 preparedByRole: 'DISCIPLINE_LEAD',
@@ -277,6 +286,9 @@ function SubmittalPackageForm({
   lockablePackages,
   isLoadingPackages,
   hasSelectedDiscipline,
+  selectedPackage,
+  selectedPackageId,
+  onSelectedPackageChange,
   onSubmit,
 }: {
   form: ReturnType<typeof Form.useForm<SubmittalPackageFormValues>>[0];
@@ -296,26 +308,11 @@ function SubmittalPackageForm({
   lockablePackages: DesignPackage[];
   isLoadingPackages: boolean;
   hasSelectedDiscipline: boolean;
+  selectedPackage: DesignPackage | null;
+  selectedPackageId: string | null;
+  onSelectedPackageChange: (packageId: string | null) => void;
   onSubmit: (values: SubmittalPackageFormValues) => Promise<void>;
 }): React.ReactNode {
-  const purpose = Form.useWatch('submittalPurpose', form) as
-    | SubmittalPurpose
-    | undefined;
-
-  const packageColumns: ColumnsType<DesignPackage> = [
-    { title: 'Subtask', dataIndex: 'name', key: 'name' },
-    {
-      title: 'Status',
-      key: 'status',
-      render: (_value, record) => (
-        <ProjectedStatusBadge
-          status={record.projectedStatus}
-          pending={record.projectionPending}
-        />
-      ),
-    },
-  ];
-
   return (
     <Form<SubmittalPackageFormValues>
       form={form}
@@ -349,18 +346,6 @@ function SubmittalPackageForm({
         <Select options={EXTERNAL_RELEASE_PURPOSES} />
       </Form.Item>
 
-      {purpose === 'DISCIPLINE_SITE' && (
-        <Form.Item name="recipientName" label="Site recipient">
-          <Input placeholder="e.g. Site Manager, Foreman, Site office" />
-        </Form.Item>
-      )}
-
-      {purpose === 'DISCIPLINE_CONSULTANT' && (
-        <Form.Item name="recipientName" label="Consultant recipient">
-          <Input placeholder="e.g. Consultant name, company, contact person" />
-        </Form.Item>
-      )}
-
       <Form.Item
         name="taskDisciplineId"
         label="Discipline"
@@ -376,17 +361,6 @@ function SubmittalPackageForm({
               ? `${d.disciplineNumber} — ${d.disciplineName ?? ''}`
               : (d.disciplineName ?? formatDisciplineLabel(d.disciplineIndex)),
           }))}
-        />
-      </Form.Item>
-
-      <Form.Item name="title" label="Title" rules={[{ required: true }]}>
-        <Input />
-      </Form.Item>
-
-      <Form.Item name="description" label="Description">
-        <Input.TextArea
-          rows={3}
-          placeholder="Add notes about this release package (optional)"
         />
       </Form.Item>
 
@@ -430,32 +404,80 @@ function SubmittalPackageForm({
         !isLoadingPackages &&
         lockablePackages.length > 0 && (
           <>
-            <FormLayout title="Approved subtasks" className="mb-4">
-              <DataTable<DesignPackage>
-                rowKey="id"
-                size="small"
-                columns={packageColumns}
-                dataSource={lockablePackages}
-                locale={{ emptyText: 'No approved subtasks available' }}
-              />
-            </FormLayout>
-
             <Form.Item
-              name="designPackageIds"
-              label="Subtasks"
-              rules={[{ required: true, message: 'Select at least one subtask' }]}
+              name="designPackageId"
+              label="Subtask"
+              rules={[{ required: true, message: 'Select a subtask' }]}
             >
               <Select
-                mode="multiple"
-                placeholder="Select approved subtasks"
+                placeholder="Select approved subtask"
+                showSearch
+                optionFilterProp="label"
                 options={lockablePackages.map((pkg) => ({
                   value: pkg.id,
-                  label: pkg.name,
+                  label: `${pkg.packageCode ?? pkg.name} — ${pkg.name} (${pkg.projectedStatus})`,
                 }))}
+                value={selectedPackageId ?? undefined}
+                onChange={(id) => onSelectedPackageChange(id)}
               />
             </Form.Item>
+
+            {selectedPackage && (
+              <div className="mb-4 flex flex-col gap-2">
+                {(selectedPackage.siteRepName ||
+                  selectedPackage.siteRepresentativeName) && (
+                  <div className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-3">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                      Site Representative
+                    </p>
+                    <p className="text-sm text-[var(--color-text-primary)]">
+                      {selectedPackage.siteRepName ??
+                        selectedPackage.siteRepresentativeName}
+                      {selectedPackage.siteRepCompany &&
+                        ` — ${selectedPackage.siteRepCompany}`}
+                    </p>
+                  </div>
+                )}
+
+                {selectedPackage.consultantName && (
+                  <div className="rounded-lg border border-[var(--color-border-tertiary)] bg-[var(--color-surface-secondary)] p-3">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                      Client Consultant
+                    </p>
+                    <p className="text-sm text-[var(--color-text-primary)]">
+                      {selectedPackage.consultantName}
+                      {selectedPackage.consultantTitle &&
+                        ` — ${selectedPackage.consultantTitle}`}
+                      {selectedPackage.consultantCompany &&
+                        ` (${selectedPackage.consultantCompany})`}
+                    </p>
+                  </div>
+                )}
+
+                {!selectedPackage.siteRepName &&
+                  !selectedPackage.siteRepresentativeName &&
+                  !selectedPackage.consultantName && (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="No external parties assigned to this subtask. The release will be issued directly without external review."
+                    />
+                  )}
+              </div>
+            )}
           </>
         )}
+
+      <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+        <Input />
+      </Form.Item>
+
+      <Form.Item name="description" label="Description">
+        <Input.TextArea
+          rows={3}
+          placeholder="Add notes about this release package (optional)"
+        />
+      </Form.Item>
     </Form>
   );
 }
