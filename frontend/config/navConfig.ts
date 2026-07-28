@@ -62,6 +62,7 @@ export interface IconRailVisibility {
   canViewChangeRequests: boolean;
   canViewRfis: boolean;
   canViewIssues: boolean;
+  canViewMeetings: boolean;
   canViewDailyLogs: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
@@ -85,6 +86,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewChangeRequests,
     canViewRfis,
     canViewIssues,
+    canViewMeetings,
     canViewDailyLogs,
     canViewAuditLogs,
     canManageUsers,
@@ -165,6 +167,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/issues',
       iconKey: 'issues',
       visible: canViewIssues,
+    },
+    {
+      key: '/meetings',
+      labelKey: 'nav.meetings',
+      href: '/meetings',
+      iconKey: 'meetings',
+      visible: canViewMeetings,
     },
     {
       key: '/daily-logs',

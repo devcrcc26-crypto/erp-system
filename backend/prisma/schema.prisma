@@ -1326,6 +1326,15 @@ enum MeetingStatus {
   CONDUCTED
   MINUTES_ISSUED
   CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MeetingScope {
+  PROJECT
+  DISCIPLINE
+  SUBTASK
 }
 
 enum CloseoutStatus {
@@ -1723,6 +1732,7 @@ model TaskDiscipline {
   rfis                  Rfi[]
   issues                Issue[]
   submittals            Submittal[]
+  meetings              Meeting[]
 
   @@index([taskId], map: "idx_task_discipline_task_id")
   @@index([companyId], map: "idx_task_discipline_company_id")
@@ -1869,6 +1879,8 @@ model DesignPackage {
   linkedIssues               Issue[]                  @relation("IssueLinkedDesignPackage")
   linkedChangeRequests       ProjectChangeRequest[]   @relation("ChangeRequestLinkedDesignPackage")
   linkedExternalReviewTriggers ExternalReviewTrigger[] @relation("TriggerLinkedDesignPackage")
+  meetings                    Meeting[]
+  actionItems                 ActionItem[]
 
   @@index([companyId], map: "idx_design_package_company_id")
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
@@ -2668,6 +2680,13 @@ model Meeting {
   location         String?
   status           MeetingStatus @default(SCHEDULED)
   minutesIssuedAt  DateTime?     @map("minutes_issued_at")
+  scope            MeetingScope? @default(PROJECT)
+  taskDisciplineId String?       @map("task_discipline_id")
+  designPackageId  String?       @map("design_package_id")
+  minutes          String?
+  agenda           String?
+  startTime        String?       @map("start_time")
+  endTime          String?       @map("end_time")
   createdAt        DateTime      @default(now()) @map("created_at")
   createdBy        String        @map("created_by")
   updatedAt        DateTime      @updatedAt @map("updated_at")
@@ -2675,14 +2694,18 @@ model Meeting {
   deletedAt        DateTime?     @map("deleted_at")
   deletedBy        String?       @map("deleted_by")
 
-  project     Project            @relation(fields: [projectId], references: [id])
-  organizer   User               @relation(fields: [organizerId], references: [id])
-  agendaItems MeetingAgendaItem[]
-  attendees   MeetingAttendee[]
-  actionItems ActionItem[]
+  project        Project             @relation(fields: [projectId], references: [id])
+  organizer      User                @relation(fields: [organizerId], references: [id])
+  taskDiscipline TaskDiscipline?     @relation(fields: [taskDisciplineId], references: [id])
+  designPackage  DesignPackage?      @relation(fields: [designPackageId], references: [id])
+  agendaItems    MeetingAgendaItem[]
+  attendees      MeetingAttendee[]
+  actionItems    ActionItem[]
 
   @@index([projectId], map: "idx_meeting_project_id")
   @@index([projectId, deletedAt], map: "idx_meeting_project_deleted")
+  @@index([taskDisciplineId], map: "idx_meeting_task_discipline_id")
+  @@index([designPackageId], map: "idx_meeting_design_package_id")
   @@map("meeting")
 }
 
@@ -2713,6 +2736,7 @@ model MeetingAttendee {
   externalName   String?  @map("external_name")
   organization   String?
   roleAtMeeting  String?  @map("role_at_meeting")
+  email          String?
   attended       Boolean  @default(false)
   createdAt      DateTime @default(now()) @map("created_at")
   createdBy      String   @map("created_by")
@@ -2725,24 +2749,32 @@ model MeetingAttendee {
 }
 
 model ActionItem {
-  id          String    @id @default(uuid())
-  meetingId   String    @map("meeting_id")
-  ownerId     String    @map("owner_id")
-  description String
-  dueDate     DateTime? @map("due_date") @db.Date
-  status      String    @default("OPEN")
-  closedAt    DateTime? @map("closed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  createdBy   String    @map("created_by")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  updatedBy   String    @map("updated_by")
-  deletedAt   DateTime? @map("deleted_at")
-  deletedBy   String?   @map("deleted_by")
+  id              String    @id @default(uuid())
+  meetingId       String    @map("meeting_id")
+  ownerId         String?   @map("owner_id")
+  description     String
+  dueDate         DateTime? @map("due_date") @db.Date
+  status          String    @default("OPEN")
+  closedAt        DateTime? @map("closed_at")
+  assignedToName  String?   @map("assigned_to_name")
+  linkedIssueId   String?   @map("linked_issue_id")
+  designPackageId String?   @map("design_package_id")
+  completedBy     String?   @map("completed_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  createdBy       String    @map("created_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  updatedBy       String    @map("updated_by")
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       String?   @map("deleted_by")
 
-  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  owner   User    @relation(fields: [ownerId], references: [id])
+  meeting       Meeting        @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  owner         User?          @relation(fields: [ownerId], references: [id])
+  linkedIssue   Issue?         @relation(fields: [linkedIssueId], references: [id])
+  designPackage DesignPackage? @relation(fields: [designPackageId], references: [id])
 
   @@index([meetingId], map: "idx_action_item_meeting_id")
+  @@index([linkedIssueId], map: "idx_action_item_linked_issue_id")
+  @@index([designPackageId], map: "idx_action_item_design_package_id")
   @@map("action_item")
 }
 
@@ -2841,6 +2873,7 @@ model Issue {
   resolvedByUser      User?           @relation("IssueResolvedBy", fields: [resolvedBy], references: [id])
   reopenedByUser      User?           @relation("IssueReopenedBy", fields: [reopenedBy], references: [id])
   responses           IssueResponse[]
+  linkedActionItems   ActionItem[]
 
   @@index([projectId], map: "idx_issue_project_id")
   @@index([taskDisciplineId], map: "idx_issue_task_discipline_id")

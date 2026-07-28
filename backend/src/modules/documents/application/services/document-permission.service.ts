@@ -96,6 +96,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.MEETING &&
+      folder.contextId &&
+      (await this.canUploadMeetingFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -643,6 +651,69 @@ export class DocumentPermissionService {
     ]
       .filter((id): id is string => Boolean(id))
       .includes(userId);
+  }
+
+  /**
+   * Meeting attachment folders: creator, attendee, FK role on any project
+   * subtask, or full access.
+   */
+  private async canUploadMeetingFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const meeting = await this.prisma.meeting.findFirst({
+      where: {
+        id: folder.contextId,
+        deletedAt: null,
+        project: activeOnly({ companyId }),
+      },
+      select: { createdBy: true, projectId: true },
+    });
+    if (!meeting) {
+      return false;
+    }
+
+    if (meeting.createdBy === userId) {
+      return true;
+    }
+
+    const isAttendee = await this.prisma.meetingAttendee.findFirst({
+      where: { meetingId: folder.contextId, userId },
+      select: { id: true },
+    });
+    if (isAttendee) {
+      return true;
+    }
+
+    const hasFkRole = await this.prisma.designPackage.findFirst({
+      where: activeOnly({
+        companyId,
+        taskDiscipline: { task: { projectId: meeting.projectId, deletedAt: null } },
+        OR: [
+          { designerUserId: userId },
+          { disciplinaryLeaderUserId: userId },
+          { reviewerUserId: userId },
+          { supportingDesignerUserId: userId },
+          { deptDeputyChiefUserId: userId },
+          { instituteChiefUserId: userId },
+        ],
+      }),
+      select: { id: true },
+    });
+    return Boolean(hasFkRole);
   }
 
   /**

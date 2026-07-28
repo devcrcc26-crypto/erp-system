@@ -7,6 +7,7 @@ import {
   CorrespondenceStatus,
   CorrespondenceType,
   IssueSeverity,
+  MeetingScope,
   MeetingStatus,
   MeetingType,
   ProjectContractType,
@@ -1291,13 +1292,45 @@ export class CreateMeetingDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({ enum: MeetingScope })
+  @IsOptional()
+  @IsEnum(MeetingScope)
+  scope?: MeetingScope;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  endTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  agenda?: string;
 }
 
-export class UpdateMeetingDto extends PartialType(CreateMeetingDto) {
-  @ApiPropertyOptional({ enum: MeetingStatus })
+export class UpdateMeetingDto extends PartialType(
+  OmitType(CreateMeetingDto, ['scope', 'taskDisciplineId', 'designPackageId'] as const),
+) {
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(MeetingStatus)
-  status?: MeetingStatus;
+  @IsString()
+  minutes?: string;
 }
 
 export class CreateMeetingAgendaItemDto {
@@ -1356,6 +1389,12 @@ export class UpdateMeetingAgendaItemDto {
 }
 
 export class CreateMeetingAttendeeDto {
+  @ApiPropertyOptional({ enum: ['INTERNAL', 'EXTERNAL'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['INTERNAL', 'EXTERNAL'])
+  attendeeType?: 'INTERNAL' | 'EXTERNAL';
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityUuid()
@@ -1375,6 +1414,11 @@ export class CreateMeetingAttendeeDto {
   @IsOptional()
   @IsString()
   roleAtMeeting?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  email?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -1400,14 +1444,25 @@ export class UpdateMeetingAttendeeDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  email?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsBoolean()
   attended?: boolean;
 }
 
 export class CreateActionItemDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsEntityUuid()
-  ownerId!: string;
+  ownerId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  assignedToName?: string;
 
   @ApiProperty()
   @IsString()
@@ -1417,6 +1472,11 @@ export class CreateActionItemDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
 }
 
 export class UpdateActionItemDto {

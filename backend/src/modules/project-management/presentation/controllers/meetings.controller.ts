@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateActionItemDto,
@@ -42,7 +43,7 @@ export class MeetingsController {
   }
 
   @Get()
-  @RequirePermission('meetings', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project meetings' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -53,7 +54,7 @@ export class MeetingsController {
   }
 
   @Post()
-  @RequirePermission('meetings', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create meeting' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -118,7 +119,7 @@ export class MeetingsController {
   }
 
   @Post(':id/attendees')
-  @RequirePermission('meetings', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add attendee' })
   addAttendee(
     @CurrentUser() user: AuthenticatedUser,
@@ -135,7 +136,7 @@ export class MeetingsController {
   }
 
   @Patch(':id/attendees/:attendeeId')
-  @RequirePermission('meetings', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update attendee' })
   updateAttendee(
     @CurrentUser() user: AuthenticatedUser,
@@ -154,7 +155,7 @@ export class MeetingsController {
   }
 
   @Delete(':id/attendees/:attendeeId')
-  @RequirePermission('meetings', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove attendee' })
   async removeAttendee(
     @CurrentUser() user: AuthenticatedUser,
@@ -172,7 +173,7 @@ export class MeetingsController {
   }
 
   @Post(':id/action-items')
-  @RequirePermission('meetings', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Add action item' })
   addActionItem(
     @CurrentUser() user: AuthenticatedUser,
@@ -189,7 +190,7 @@ export class MeetingsController {
   }
 
   @Patch(':id/action-items/:actionItemId')
-  @RequirePermission('meetings', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update action item' })
   updateActionItem(
     @CurrentUser() user: AuthenticatedUser,
@@ -208,7 +209,7 @@ export class MeetingsController {
   }
 
   @Delete(':id/action-items/:actionItemId')
-  @RequirePermission('meetings', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Remove action item' })
   async removeActionItem(
     @CurrentUser() user: AuthenticatedUser,
@@ -225,8 +226,35 @@ export class MeetingsController {
     return { message: 'Action item removed' };
   }
 
+  @Post(':id/action-items/:actionItemId/create-issue')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Create an Issue from a meeting action item' })
+  createIssueFromActionItem(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('actionItemId') actionItemId: string,
+  ): Promise<unknown> {
+    return this.meetingsService.createIssueFromActionItem(
+      this.ctx(user),
+      projectId,
+      id,
+      actionItemId,
+    );
+  }
+
+  @Get('eligible-subtasks')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List subtasks eligible for a subtask-scoped meeting' })
+  listEligibleSubtasks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+  ): Promise<unknown> {
+    return this.meetingsService.listEligibleSubtasks(this.ctx(user), projectId);
+  }
+
   @Get(':id')
-  @RequirePermission('meetings', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get meeting by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -237,7 +265,7 @@ export class MeetingsController {
   }
 
   @Patch(':id')
-  @RequirePermission('meetings', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update meeting' })
   update(
     @CurrentUser() user: AuthenticatedUser,
@@ -251,6 +279,17 @@ export class MeetingsController {
       id,
       dto,
     );
+  }
+
+  @Patch(':id/cancel')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Cancel a scheduled meeting' })
+  cancel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.meetingsService.cancelMeeting(this.ctx(user), projectId, id);
   }
 
   @Delete(':id')

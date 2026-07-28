@@ -1,20 +1,17 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { useState } from 'react';
 import {
-  Badge,
+  Alert,
   Button,
   Checkbox,
-  Collapse,
   DatePicker,
-  Divider,
+  Descriptions,
   Drawer,
   Form,
   Input,
-  Select,
-  Tabs,
+  Modal,
+  Radio,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -24,35 +21,26 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
-import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ActionItem,
-  ChangeRequestSummary,
-  IssueSummary,
-  MeetingAgendaItem,
   MeetingAttendee,
-  MeetingStatus,
-  RfiSummary,
 } from '@/lib/api/project-management.types';
-import { MEETING_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useAddMeetingActionItem,
-  useAddMeetingAgendaItem,
   useAddMeetingAttendee,
+  useCancelMeeting,
+  useCreateIssueFromActionItem,
   useDeleteMeeting,
   useMeeting,
   useRemoveMeetingActionItem,
-  useRemoveMeetingAgendaItem,
   useRemoveMeetingAttendee,
   useUpdateMeeting,
   useUpdateMeetingActionItem,
-  useUpdateMeetingAttendee,
 } from '@/lib/query/meetings';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
-import { tokens } from '@/lib/theme/tokens';
+import { ApiRequestError } from '@/lib/api/errors';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatMeetingStatus,
@@ -60,30 +48,20 @@ import {
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-function AddCollapse({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactNode {
-  return (
-    <Collapse
-      ghost
-      className="!mt-2"
-      items={[
-        {
-          key: 'add',
-          label: (
-            <span className="text-sm font-medium" style={{ color: tokens.colorTeal600 }}>
-              {label}
-            </span>
-          ),
-          children: <div className="pt-1">{children}</div>,
-        },
-      ]}
-    />
-  );
+const ACTIVE_MINUTES_STATUSES = new Set(['SCHEDULED', 'IN_PROGRESS', 'CONDUCTED']);
+
+function scopeLabel(meeting: {
+  scope: string | null;
+  taskDisciplineName?: string | null;
+  designPackageName?: string | null;
+}): string {
+  if (meeting.scope === 'SUBTASK') {
+    return meeting.designPackageName ?? 'Subtask';
+  }
+  if (meeting.scope === 'DISCIPLINE') {
+    return meeting.taskDisciplineName ?? 'Discipline';
+  }
+  return 'Project-wide';
 }
 
 export default function MeetingDetailDrawer({
@@ -98,35 +76,54 @@ export default function MeetingDetailDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [attendeeType, setAttendeeType] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  const [minutesDraft, setMinutesDraft] = useState('');
   const open = Boolean(meetingId);
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
 
   const meetingQuery = useMeeting(projectId, meetingId ?? '', open);
   const updateMeeting = useUpdateMeeting();
+  const cancelMeeting = useCancelMeeting();
   const deleteMeeting = useDeleteMeeting();
-  const addAgenda = useAddMeetingAgendaItem();
-  const removeAgenda = useRemoveMeetingAgendaItem();
   const addAttendee = useAddMeetingAttendee();
-  const updateAttendee = useUpdateMeetingAttendee();
   const removeAttendee = useRemoveMeetingAttendee();
   const addAction = useAddMeetingActionItem();
   const updateAction = useUpdateMeetingActionItem();
   const removeAction = useRemoveMeetingActionItem();
+  const createIssueFromAction = useCreateIssueFromActionItem();
 
   const meeting = meetingQuery.data;
-  const isEditable =
-    meeting?.status === 'SCHEDULED' || meeting?.status === 'CONDUCTED';
+  const canEditMinutes = Boolean(meeting) && ACTIVE_MINUTES_STATUSES.has(meeting!.status);
+  const isCancellable = meeting?.status === 'SCHEDULED';
+  const isCancelled = meeting?.status === 'CANCELLED';
 
-  async function handleStatusChange(status: MeetingStatus): Promise<void> {
+  const [attendeeForm] = Form.useForm();
+  const [actionForm] = Form.useForm();
+
+  async function handleSaveMinutes(): Promise<void> {
     if (!meetingId) return;
     try {
-      await updateMeeting.mutateAsync({ projectId, meetingId, body: { status } });
-      messageApi.success('Meeting status updated');
+      await updateMeeting.mutateAsync({
+        projectId,
+        meetingId,
+        body: { minutes: minutesDraft },
+      });
+      messageApi.success('Minutes saved');
       onUpdated();
     } catch (error) {
-      notifyApiError(error, 'Failed to update status', messageApi);
+      notifyApiError(error, 'Failed to save minutes', messageApi);
+    }
+  }
+
+  async function handleCancelMeeting(): Promise<void> {
+    if (!meetingId) return;
+    try {
+      await cancelMeeting.mutateAsync({ projectId, meetingId });
+      messageApi.success('Meeting cancelled');
+      onUpdated();
+    } catch (error) {
+      notifyApiError(error, 'Failed to cancel meeting', messageApi);
     }
   }
 
@@ -143,58 +140,37 @@ export default function MeetingDetailDrawer({
     }
   }
 
-  const agendaColumns: ColumnsType<MeetingAgendaItem> = [
-    { title: '#', dataIndex: 'itemOrder', key: 'itemOrder', width: 48 },
-    { title: 'Topic', dataIndex: 'topic', key: 'topic' },
-    {
-      title: 'Presenter',
-      dataIndex: 'presenterId',
-      key: 'presenterId',
-      render: (id: string | null, record: MeetingAgendaItem) =>
-        id ? resolveUserDisplay(id, record.presenterName) : '-',
-    },
-    ...(isEditable
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 48,
-            render: (_: unknown, record: MeetingAgendaItem) => (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={() =>
-                  void removeAgenda
-                    .mutateAsync({
-                      projectId,
-                      meetingId: meetingId!,
-                      agendaItemId: record.id,
-                    })
-                    .then(() => onUpdated())
-                    .catch((e: unknown) =>
-                      notifyApiError(e, 'Failed to remove item', messageApi),
-                    )
-                }
-              />
-            ),
-          },
-        ]
-      : []),
-  ];
+  function handleCreateIssue(item: ActionItem): void {
+    if (!meetingId) return;
+    Modal.confirm({
+      title: 'Create an Issue from this action item?',
+      content: item.description,
+      okText: 'Create',
+      cancelText: 'Cancel',
+      onOk: () =>
+        createIssueFromAction
+          .mutateAsync({ projectId, meetingId, actionItemId: item.id })
+          .then(() => {
+            messageApi.success('Issue created and linked');
+            onUpdated();
+          })
+          .catch((error: unknown) =>
+            notifyApiError(error, 'Failed to create issue', messageApi),
+          ),
+    });
+  }
 
   const attendeeColumns: ColumnsType<MeetingAttendee> = [
     {
       title: 'Name',
       key: 'name',
       render: (_: unknown, r: MeetingAttendee) =>
-        r.userId
+        r.attendeeType === 'INTERNAL'
           ? resolveUserDisplay(r.userId, r.userName)
           : (r.externalName ?? '-'),
     },
     {
-      title: 'Organization',
+      title: 'Company',
       dataIndex: 'organization',
       key: 'organization',
       render: (v: string | null) => v ?? '-',
@@ -206,27 +182,12 @@ export default function MeetingDetailDrawer({
       render: (v: string | null) => v ?? '-',
     },
     {
-      title: 'Attended',
-      dataIndex: 'attended',
-      key: 'attended',
-      render: (attended: boolean, record: MeetingAttendee) => (
-        <Checkbox
-          checked={attended}
-          disabled={!isEditable}
-          onChange={(e) =>
-            void updateAttendee
-              .mutateAsync({
-                projectId,
-                meetingId: meetingId!,
-                attendeeId: record.id,
-                body: { attended: e.target.checked },
-              })
-              .then(() => onUpdated())
-          }
-        />
-      ),
+      title: 'Type',
+      dataIndex: 'attendeeType',
+      key: 'attendeeType',
+      render: (v: string) => (v === 'INTERNAL' ? 'Internal' : 'External'),
     },
-    ...(isEditable
+    ...(!isCancelled
       ? [
           {
             title: '',
@@ -246,6 +207,9 @@ export default function MeetingDetailDrawer({
                       attendeeId: record.id,
                     })
                     .then(() => onUpdated())
+                    .catch((e: unknown) =>
+                      notifyApiError(e, 'Failed to remove attendee', messageApi),
+                    )
                 }
               />
             ),
@@ -262,11 +226,12 @@ export default function MeetingDetailDrawer({
       ellipsis: true,
     },
     {
-      title: 'Owner',
-      dataIndex: 'ownerId',
-      key: 'ownerId',
-      render: (id: string, record: ActionItem) =>
-        resolveUserDisplay(id, record.ownerName),
+      title: 'Assigned to',
+      key: 'assignedTo',
+      render: (_: unknown, record: ActionItem) =>
+        record.ownerId
+          ? resolveUserDisplay(record.ownerId, record.ownerName)
+          : (record.assignedToName ?? '-'),
     },
     {
       title: 'Due',
@@ -276,32 +241,48 @@ export default function MeetingDetailDrawer({
     },
     {
       title: 'Status',
-      dataIndex: 'status',
       key: 'status',
-      render: (status: string, record: ActionItem) =>
-        isEditable ? (
-          <Select
-            size="small"
-            value={status}
-            className="min-w-[100px]"
-            options={[
-              { value: 'OPEN', label: 'Open' },
-              { value: 'CLOSED', label: 'Closed' },
-            ]}
-            onChange={(value: string) =>
-              void updateAction.mutateAsync({
+      width: 90,
+      render: (_: unknown, record: ActionItem) => (
+        <Checkbox
+          checked={record.status === 'CLOSED'}
+          disabled={isCancelled}
+          onChange={(e) =>
+            void updateAction
+              .mutateAsync({
                 projectId,
                 meetingId: meetingId!,
                 actionItemId: record.id,
-                body: { status: value },
-              }).then(() => onUpdated())
-            }
-          />
+                body: { status: e.target.checked ? 'CLOSED' : 'OPEN' },
+              })
+              .then(() => onUpdated())
+              .catch((err: unknown) =>
+                notifyApiError(err, 'Failed to update action item', messageApi),
+              )
+          }
+        >
+          {record.status === 'CLOSED' ? 'Done' : 'Open'}
+        </Checkbox>
+      ),
+    },
+    {
+      title: 'Issue',
+      key: 'issue',
+      render: (_: unknown, record: ActionItem) =>
+        record.linkedIssueId ? (
+          <span>{record.linkedIssueNumber ?? record.linkedIssueId}</span>
         ) : (
-          status
+          <Button
+            type="link"
+            className="!px-0"
+            loading={createIssueFromAction.isPending}
+            onClick={() => handleCreateIssue(record)}
+          >
+            Create Issue →
+          </Button>
         ),
     },
-    ...(isEditable
+    ...(!isCancelled
       ? [
           {
             title: '',
@@ -314,11 +295,13 @@ export default function MeetingDetailDrawer({
                 size="small"
                 icon={<DeleteOutlined />}
                 onClick={() =>
-                  void removeAction.mutateAsync({
-                    projectId,
-                    meetingId: meetingId!,
-                    actionItemId: record.id,
-                  }).then(() => onUpdated())
+                  void removeAction
+                    .mutateAsync({
+                      projectId,
+                      meetingId: meetingId!,
+                      actionItemId: record.id,
+                    })
+                    .then(() => onUpdated())
                 }
               />
             ),
@@ -333,10 +316,22 @@ export default function MeetingDetailDrawer({
         {...wideDetailDrawerProps}
         open={open}
         onClose={onClose}
-        title={meeting ? `${meeting.meetingNumber} - ${meeting.title}` : 'Meeting'}
+        title={
+          meeting ? (
+            <span className="flex flex-wrap items-center gap-2">
+              {meeting.meetingNumber} — {meeting.title}
+              <StatusBadge
+                label={formatMeetingStatus(meeting.status)}
+                variant={meetingStatusVariant(meeting.status)}
+              />
+            </span>
+          ) : (
+            'Meeting'
+          )
+        }
         destroyOnHidden
         extra={
-          meeting && isEditable ? (
+          meeting && isCancellable ? (
             <Button danger onClick={() => setDeleteOpen(true)}>
               Delete
             </Button>
@@ -359,359 +354,254 @@ export default function MeetingDetailDrawer({
         )}
         {meeting && (
           <div className={layout.drawerStack}>
-            <div className={layout.drawerSurface}>
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className={layout.drawerMetaLabel}>
-                    {meeting.meetingType.replace(/_/g, ' ')}
-                  </p>
-                  <p className={`mt-1 ${layout.drawerHeading}`}>
-                    {formatProjectDate(meeting.meetingDate)}
-                    {meeting.location ? ` · ${meeting.location}` : ''}
-                  </p>
-                  <p className={`mt-1 ${layout.drawerMutedText}`}>
-                    Organizer: {resolveUserDisplay(meeting.organizerId, meeting.organizerName)}
-                  </p>
+            {isCancelled && (
+              <Alert
+                type="error"
+                showIcon
+                title="This meeting has been cancelled"
+                description="No further changes can be made."
+              />
+            )}
+
+            <Descriptions
+              className={layout.drawerDescriptionsClass}
+              column={1}
+              size="small"
+              bordered
+            >
+              <Descriptions.Item label="Meeting date">
+                {formatProjectDate(meeting.meetingDate)}
+              </Descriptions.Item>
+              {(meeting.startTime || meeting.endTime) && (
+                <Descriptions.Item label="Time">
+                  {meeting.startTime ?? '—'} – {meeting.endTime ?? '—'}
+                </Descriptions.Item>
+              )}
+              {meeting.location && (
+                <Descriptions.Item label="Location">
+                  {meeting.location}
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="Scope">
+                {scopeLabel(meeting)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Created by">
+                {resolveUserDisplay(meeting.createdBy, meeting.organizerName)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <StatusBadge
+                  label={formatMeetingStatus(meeting.status)}
+                  variant={meetingStatusVariant(meeting.status)}
+                />
+              </Descriptions.Item>
+            </Descriptions>
+
+            {meeting.agenda && (
+              <section className={layout.drawerSection}>
+                <h3 className={`${layout.drawerHeading} mb-2`}>Agenda</h3>
+                <div className={layout.drawerSurface}>
+                  <p className="whitespace-pre-wrap">{meeting.agenda}</p>
                 </div>
-                <div className="w-full max-w-xs">
-                  <StatusBadge
-                    label={formatMeetingStatus(meeting.status)}
-                    variant={meetingStatusVariant(meeting.status)}
-                  />
-                  <Select
-                    className="mt-2 w-full"
-                    value={meeting.status}
-                    onChange={(v: MeetingStatus) => void handleStatusChange(v)}
-                    options={MEETING_WORKFLOW.map((s) => ({
-                      value: s.key,
-                      label: s.label,
-                    }))}
-                  />
-                </div>
+              </section>
+            )}
+
+            <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>Attendees</h3>
+              <DataTable
+                size="small"
+                rowKey="id"
+                pagination={false}
+                dataSource={meeting.attendees}
+                columns={attendeeColumns}
+                locale={{ emptyText: 'No attendees yet' }}
+              />
+              {!isCancelled && (
+                <Form
+                  form={attendeeForm}
+                  layout="vertical"
+                  className="erp-drawer-form !mt-3"
+                  onFinish={(values: {
+                    userId?: string;
+                    externalName?: string;
+                    organization?: string;
+                    roleAtMeeting?: string;
+                    email?: string;
+                  }) =>
+                    void addAttendee
+                      .mutateAsync({
+                        projectId,
+                        meetingId: meeting.id,
+                        body: { attendeeType, ...values },
+                      })
+                      .then(() => {
+                        messageApi.success('Attendee added');
+                        attendeeForm.resetFields();
+                        onUpdated();
+                      })
+                      .catch((e: unknown) =>
+                        notifyApiError(e, 'Failed to add attendee', messageApi),
+                      )
+                  }
+                >
+                  <Radio.Group
+                    className="!mb-2"
+                    value={attendeeType}
+                    onChange={(e) => setAttendeeType(e.target.value)}
+                  >
+                    <Radio value="INTERNAL">Internal</Radio>
+                    <Radio value="EXTERNAL">External</Radio>
+                  </Radio.Group>
+                  {attendeeType === 'INTERNAL' ? (
+                    <Form.Item
+                      name="userId"
+                      label="Project team member"
+                      rules={[{ required: true, message: 'Select a user' }]}
+                    >
+                      <UserSelect />
+                    </Form.Item>
+                  ) : (
+                    <Form.Item
+                      name="externalName"
+                      label="Name"
+                      rules={[{ required: true, message: 'Name is required' }]}
+                    >
+                      <Input placeholder="Eng. Yohannes" />
+                    </Form.Item>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Form.Item name="organization" label="Company">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="roleAtMeeting" label="Role">
+                      <Input placeholder="Structural reviewer" />
+                    </Form.Item>
+                    {attendeeType === 'EXTERNAL' && (
+                      <Form.Item name="email" label="Email">
+                        <Input type="email" />
+                      </Form.Item>
+                    )}
+                  </div>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<PlusOutlined />}
+                    loading={addAttendee.isPending}
+                  >
+                    Add attendee
+                  </Button>
+                </Form>
+              )}
+            </section>
+
+            <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>Minutes</h3>
+              <Input.TextArea
+                rows={5}
+                defaultValue={meeting.minutes ?? ''}
+                disabled={!canEditMinutes}
+                placeholder="Record meeting minutes here"
+                onChange={(e) => setMinutesDraft(e.target.value)}
+              />
+              {canEditMinutes && (
+                <Button
+                  type="primary"
+                  className="!mt-2"
+                  loading={updateMeeting.isPending}
+                  onClick={() => void handleSaveMinutes()}
+                >
+                  Save minutes
+                </Button>
+              )}
+            </section>
+
+            <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>Action items</h3>
+              <DataTable
+                size="small"
+                rowKey="id"
+                pagination={false}
+                dataSource={meeting.actionItems}
+                columns={actionColumns}
+                locale={{ emptyText: 'No action items' }}
+              />
+              {!isCancelled && (
+                <Form
+                  form={actionForm}
+                  layout="vertical"
+                  className="erp-drawer-form !mt-3"
+                  onFinish={(values: {
+                    ownerId?: string;
+                    description: string;
+                    dueDate?: Dayjs;
+                  }) =>
+                    void addAction
+                      .mutateAsync({
+                        projectId,
+                        meetingId: meeting.id,
+                        body: {
+                          ownerId: values.ownerId,
+                          description: values.description.trim(),
+                          dueDate: values.dueDate?.format('YYYY-MM-DD'),
+                        },
+                      })
+                      .then(() => {
+                        messageApi.success('Action item added');
+                        actionForm.resetFields();
+                        onUpdated();
+                      })
+                      .catch((e: unknown) =>
+                        notifyApiError(e, 'Failed to add action item', messageApi),
+                      )
+                  }
+                >
+                  <Form.Item
+                    name="description"
+                    label="Description"
+                    rules={[{ required: true }]}
+                  >
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Form.Item name="ownerId" label="Assigned to">
+                      <UserSelect allowClear />
+                    </Form.Item>
+                    <Form.Item name="dueDate" label="Due date">
+                      <DatePicker className="w-full" />
+                    </Form.Item>
+                  </div>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    icon={<PlusOutlined />}
+                    loading={addAction.isPending}
+                  >
+                    Add action item
+                  </Button>
+                </Form>
+              )}
+            </section>
+
+            <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>Attachments</h3>
+              <DocumentAttachmentPanel
+                folderId={meeting.attachmentFolderId ?? undefined}
+                readOnly={isCancelled}
+                title=""
+                description="Minutes, presentations, and supporting files."
+              />
+            </section>
+
+            {isCancellable && (
+              <div className="flex justify-end">
+                <Button
+                  danger
+                  loading={cancelMeeting.isPending}
+                  onClick={() => void handleCancelMeeting()}
+                >
+                  Cancel meeting
+                </Button>
               </div>
-            </div>
-
-            <WorkflowStepper
-              className="erp-drawer-workflow"
-              steps={MEETING_WORKFLOW}
-              currentStatus={meeting.status}
-            />
-
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              destroyOnHidden
-              items={[
-                {
-                  key: 'agenda',
-                  label: (
-                    <span className="inline-flex items-center gap-2">
-                      Agenda
-                      {meeting.agendaItems.length > 0 && (
-                        <Badge count={meeting.agendaItems.length} size="small" color="#F47B20" />
-                      )}
-                    </span>
-                  ),
-                  children: (
-                    <div className={layout.drawerStack}>
-                      <DataTable
-                        size="small"
-                        rowKey="id"
-                        pagination={false}
-                        dataSource={meeting.agendaItems}
-                        columns={agendaColumns}
-                        locale={{ emptyText: 'No agenda items' }}
-                      />
-                      {isEditable && (
-                        <AddCollapse label="Add agenda item">
-                          <Form
-                            layout="vertical"
-                            className="erp-drawer-form"
-                            onFinish={(values: {
-                              topic: string;
-                              presenterId?: string;
-                              discussionNotes?: string;
-                            }) =>
-                              void addAgenda
-                                .mutateAsync({
-                                  projectId,
-                                  meetingId: meeting.id,
-                                  body: {
-                                    topic: values.topic.trim(),
-                                    presenterId: values.presenterId,
-                                    discussionNotes:
-                                      values.discussionNotes?.trim(),
-                                  },
-                                })
-                                .then(() => {
-                                  messageApi.success('Agenda item added');
-                                  onUpdated();
-                                })
-                                .catch((e: unknown) =>
-                                  notifyApiError(e, 'Failed to add item', messageApi),
-                                )
-                            }
-                          >
-                            <Form.Item
-                              name="topic"
-                              label="Topic"
-                              rules={[{ required: true }]}
-                            >
-                              <Input />
-                            </Form.Item>
-                            <Form.Item name="presenterId" label="Presenter">
-                              <UserSelect allowClear />
-                            </Form.Item>
-                            <Form.Item name="discussionNotes" label="Notes">
-                              <Input.TextArea rows={2} />
-                            </Form.Item>
-                            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                              Add item
-                            </Button>
-                          </Form>
-                        </AddCollapse>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'attendees',
-                  label: (
-                    <span className="inline-flex items-center gap-2">
-                      Attendees
-                      {meeting.attendees.length > 0 && (
-                        <Badge count={meeting.attendees.length} size="small" color="#F47B20" />
-                      )}
-                    </span>
-                  ),
-                  children: (
-                    <div className={layout.drawerStack}>
-                      <DataTable
-                        size="small"
-                        rowKey="id"
-                        pagination={false}
-                        dataSource={meeting.attendees}
-                        columns={attendeeColumns}
-                        locale={{ emptyText: 'No attendees' }}
-                      />
-                      {isEditable && (
-                        <AddCollapse label="Add attendee">
-                          <Form
-                            layout="vertical"
-                            className="erp-drawer-form"
-                            onFinish={(values: {
-                              userId?: string;
-                              externalName?: string;
-                              organization?: string;
-                              roleAtMeeting?: string;
-                            }) =>
-                              void addAttendee
-                                .mutateAsync({
-                                  projectId,
-                                  meetingId: meeting.id,
-                                  body: values,
-                                })
-                                .then(() => {
-                                  messageApi.success('Attendee added');
-                                  onUpdated();
-                                })
-                                .catch((e: unknown) =>
-                                  notifyApiError(e, 'Failed to add attendee', messageApi),
-                                )
-                            }
-                          >
-                            <Form.Item name="userId" label="User (internal)">
-                              <UserSelect allowClear />
-                            </Form.Item>
-                            <Form.Item name="externalName" label="External name">
-                              <Input placeholder="If not a system user" />
-                            </Form.Item>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <Form.Item name="organization" label="Organization">
-                                <Input />
-                              </Form.Item>
-                              <Form.Item name="roleAtMeeting" label="Role">
-                                <Input placeholder="Chair, observer…" />
-                              </Form.Item>
-                            </div>
-                            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                              Add attendee
-                            </Button>
-                          </Form>
-                        </AddCollapse>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'actions',
-                  label: (
-                    <span className="inline-flex items-center gap-2">
-                      Action items
-                      {meeting.actionItems.length > 0 && (
-                        <Badge count={meeting.actionItems.length} size="small" color="#F47B20" />
-                      )}
-                    </span>
-                  ),
-                  children: (
-                    <div className={layout.drawerStack}>
-                      <DataTable
-                        size="small"
-                        rowKey="id"
-                        pagination={false}
-                        dataSource={meeting.actionItems}
-                        columns={actionColumns}
-                        locale={{ emptyText: 'No action items' }}
-                      />
-                      {isEditable && (
-                        <AddCollapse label="Add action item">
-                          <Form
-                            layout="vertical"
-                            className="erp-drawer-form"
-                            onFinish={(values: {
-                              ownerId: string;
-                              description: string;
-                              dueDate?: Dayjs;
-                            }) =>
-                              void addAction
-                                .mutateAsync({
-                                  projectId,
-                                  meetingId: meeting.id,
-                                  body: {
-                                    ownerId: values.ownerId,
-                                    description: values.description.trim(),
-                                    dueDate: values.dueDate?.format('YYYY-MM-DD'),
-                                  },
-                                })
-                                .then(() => {
-                                  messageApi.success('Action item added');
-                                  onUpdated();
-                                })
-                            }
-                          >
-                            <Form.Item
-                              name="ownerId"
-                              label="Owner"
-                              rules={[{ required: true }]}
-                            >
-                              <UserSelect />
-                            </Form.Item>
-                            <Form.Item
-                              name="description"
-                              label="Description"
-                              rules={[{ required: true }]}
-                            >
-                              <Input.TextArea rows={2} />
-                            </Form.Item>
-                            <Form.Item name="dueDate" label="Due date">
-                              <DatePicker className="w-full" />
-                            </Form.Item>
-                            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                              Add action item
-                            </Button>
-                          </Form>
-                        </AddCollapse>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'attachments',
-                  label: 'Attachments',
-                  children: (
-                    <DocumentAttachmentPanel
-                      folderId={meeting.attachmentFolderId ?? undefined}
-                      readOnly={!isEditable}
-                      title="Meeting documents"
-                      description="Minutes, presentations, and supporting files."
-                    />
-                  ),
-                },
-                {
-                  key: 'raised',
-                  label: (
-                    <span className="inline-flex items-center gap-2">
-                      Raised items
-                      {((meeting.raisedRfis?.length ?? 0) +
-                        (meeting.raisedIssues?.length ?? 0) +
-                        (meeting.raisedChangeRequests?.length ?? 0)) > 0 && (
-                        <Badge
-                          count={
-                            (meeting.raisedRfis?.length ?? 0) +
-                            (meeting.raisedIssues?.length ?? 0) +
-                            (meeting.raisedChangeRequests?.length ?? 0)
-                          }
-                          size="small"
-                          color="#F47B20"
-                        />
-                      )}
-                    </span>
-                  ),
-                  children: (
-                    <div className={layout.drawerStack}>
-                      {(meeting.raisedRfis?.length ?? 0) > 0 && (
-                        <section>
-                          <p className={`mb-2 ${layout.drawerHeading}`}>RFIs</p>
-                          <DataTable<RfiSummary>
-                            size="small"
-                            rowKey="id"
-                            pagination={false}
-                            dataSource={meeting.raisedRfis ?? []}
-                            columns={[
-                              { title: 'RFI #', dataIndex: 'rfiNumber', key: 'rfiNumber', width: 90 },
-                              { title: 'Subject', dataIndex: 'subject', key: 'subject', ellipsis: true },
-                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
-                              { title: 'Priority', dataIndex: 'priority', key: 'priority', width: 90 },
-                            ]}
-                          />
-                        </section>
-                      )}
-                      {(meeting.raisedIssues?.length ?? 0) > 0 && (
-                        <section>
-                          <p className={`mb-2 ${layout.drawerHeading}`}>Issues</p>
-                          <DataTable<IssueSummary>
-                            size="small"
-                            rowKey="id"
-                            pagination={false}
-                            dataSource={meeting.raisedIssues ?? []}
-                            columns={[
-                              { title: 'Issue #', dataIndex: 'issueNumber', key: 'issueNumber', width: 90 },
-                              { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true },
-                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
-                              { title: 'Severity', dataIndex: 'severity', key: 'severity', width: 90 },
-                            ]}
-                          />
-                        </section>
-                      )}
-                      {(meeting.raisedChangeRequests?.length ?? 0) > 0 && (
-                        <section>
-                          <p className={`mb-2 ${layout.drawerHeading}`}>Change Requests</p>
-                          <DataTable<ChangeRequestSummary>
-                            size="small"
-                            rowKey="id"
-                            pagination={false}
-                            dataSource={meeting.raisedChangeRequests ?? []}
-                            columns={[
-                              { title: 'CR #', dataIndex: 'changeNumber', key: 'changeNumber', width: 90 },
-                              { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true },
-                              { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
-                            ]}
-                          />
-                        </section>
-                      )}
-                      {(meeting.raisedRfis?.length ?? 0) === 0 &&
-                        (meeting.raisedIssues?.length ?? 0) === 0 &&
-                        (meeting.raisedChangeRequests?.length ?? 0) === 0 && (
-                          <p className={layout.drawerMutedText}>
-                            No RFIs, issues, or change requests have been raised from this meeting.
-                          </p>
-                        )}
-                    </div>
-                  ),
-                },
-              ]}
-            />
-            <Divider className="!my-0" />
+            )}
           </div>
         )}
       </Drawer>
@@ -719,7 +609,7 @@ export default function MeetingDetailDrawer({
       <ConfirmDialog
         open={deleteOpen}
         title="Delete meeting?"
-        description="This will remove the meeting and all agenda, attendee, and action item records."
+        description="This will remove the meeting and all attendee and action item records."
         confirmLabel="Delete"
         danger
         confirmLoading={deleteMeeting.isPending}

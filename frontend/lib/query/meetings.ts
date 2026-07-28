@@ -19,11 +19,14 @@ import type {
   CreateMeetingAgendaItemRequest,
   CreateMeetingAttendeeRequest,
   CreateMeetingRequest,
+  Issue,
   Meeting,
   MeetingAgendaItem,
   MeetingAttendee,
   MeetingDetail,
   MeetingStatus,
+  MeetingSubtaskOption,
+  MyMeeting,
   PmListFilters,
   UpdateActionItemRequest,
   UpdateMeetingAgendaItemRequest,
@@ -53,6 +56,18 @@ export const meetingKeys = {
     [...meetingKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, meetingId: string) =>
     [...meetingKeys.details(projectId), meetingId] as const,
+  myList: (
+    params: PaginationParams & PmListFilters & { status?: MeetingStatus } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...meetingKeys.all, 'my', params] as const,
+  allList: (
+    params: PaginationParams & PmListFilters & { status?: MeetingStatus } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...meetingKeys.all, 'all', params] as const,
 };
 
 export function useMeetings(
@@ -92,6 +107,56 @@ export function useMeeting(
   });
 }
 
+export function useEligibleMeetingSubtasks(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...meetingKeys.all, projectId, 'eligible-subtasks'] as const,
+    queryFn: () =>
+      apiGet<MeetingSubtaskOption[]>(
+        `${meetingsPath(projectId)}/eligible-subtasks`,
+      ),
+    enabled: Boolean(projectId) && enabled,
+    retry: false,
+  });
+}
+
+export function useMyMeetings(
+  params: PaginationParams & PmListFilters & { status?: MeetingStatus } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<MyMeeting>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: meetingKeys.myList(params),
+    queryFn: () => apiGetPaginated<MyMeeting>(`/meetings/my${toQueryString(params)}`),
+    enabled,
+    ...options,
+  });
+}
+
+export function useAllMeetings(
+  params: PaginationParams & PmListFilters & { status?: MeetingStatus } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+  options?: Omit<
+    UseQueryOptions<PaginatedResult<MyMeeting>>,
+    'queryKey' | 'queryFn'
+  >,
+) {
+  return useQuery({
+    queryKey: meetingKeys.allList(params),
+    queryFn: () => apiGetPaginated<MyMeeting>(`/meetings/all${toQueryString(params)}`),
+    enabled,
+    ...options,
+  });
+}
+
 export function useCreateMeeting() {
   const queryClient = useQueryClient();
 
@@ -127,6 +192,31 @@ export function useUpdateMeeting() {
       apiPatch<MeetingDetail>(
         `${meetingsPath(projectId)}/${meetingId}`,
         body,
+      ),
+    onSuccess: (data, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        ...data,
+      }));
+      invalidateMeetingDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useCancelMeeting() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      meetingId,
+    }: {
+      projectId: string;
+      meetingId: string;
+    }) =>
+      apiPatch<MeetingDetail>(
+        `${meetingsPath(projectId)}/${meetingId}/cancel`,
+        {},
       ),
     onSuccess: (data, variables) => {
       patchMeetingDetail(queryClient, variables, (meeting) => ({
@@ -411,6 +501,37 @@ export function useRemoveMeetingActionItem() {
         ...meeting,
         actionItems: meeting.actionItems.filter(
           (row) => row.id !== variables.actionItemId,
+        ),
+      }));
+      invalidateMeetingDetail(queryClient, variables);
+    },
+  });
+}
+
+export function useCreateIssueFromActionItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      meetingId,
+      actionItemId,
+    }: {
+      projectId: string;
+      meetingId: string;
+      actionItemId: string;
+    }) =>
+      apiPost<Issue>(
+        `${meetingsPath(projectId)}/${meetingId}/action-items/${actionItemId}/create-issue`,
+        {},
+      ),
+    onSuccess: (issue, variables) => {
+      patchMeetingDetail(queryClient, variables, (meeting) => ({
+        ...meeting,
+        actionItems: meeting.actionItems.map((row) =>
+          row.id === variables.actionItemId
+            ? { ...row, linkedIssueId: issue.id, linkedIssueNumber: issue.issueNumber }
+            : row,
         ),
       }));
       invalidateMeetingDetail(queryClient, variables);

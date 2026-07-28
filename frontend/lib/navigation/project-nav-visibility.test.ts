@@ -253,6 +253,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -261,6 +262,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -334,6 +336,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     change_requests: { ...moduleCaps, canView: true },
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -342,6 +345,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -386,6 +390,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: { ...moduleCaps, canView: true },
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -394,6 +399,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -402,6 +408,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: { ...moduleCaps, canView: true },
   };
@@ -469,6 +476,7 @@ describe('canViewGlobalNavKey — daily-logs', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: { ...moduleCaps, canView: true },
     projects: moduleCaps,
   };
@@ -477,6 +485,7 @@ describe('canViewGlobalNavKey — daily-logs', () => {
     change_requests: moduleCaps,
     rfis: moduleCaps,
     issues: moduleCaps,
+    meetings: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };

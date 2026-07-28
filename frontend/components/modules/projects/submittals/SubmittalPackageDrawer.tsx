@@ -460,7 +460,7 @@ function SubmittalPackageForm({
                     <Alert
                       type="info"
                       showIcon
-                      message="No external parties assigned to this subtask. The release will be issued directly without external review."
+                      title="No external parties assigned to this subtask. The release will be issued directly without external review."
                     />
                   )}
               </div>

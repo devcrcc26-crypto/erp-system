@@ -88,6 +88,7 @@ import { EpcWorkspaceController } from './presentation/controllers/epc-workspace
 import { IssuesController } from './presentation/controllers/issues.controller';
 import { MyIssuesController } from './presentation/controllers/my-issues.controller';
 import { MeetingsController } from './presentation/controllers/meetings.controller';
+import { MyMeetingsController } from './presentation/controllers/my-meetings.controller';
 import { ProjectsController } from './presentation/controllers/projects.controller';
 import { PunchItemsController } from './presentation/controllers/punch-items.controller';
 import { ReviewBatchController } from './presentation/controllers/review-batch.controller';
@@ -145,6 +146,7 @@ const workflowBullProcessors = redisEnabled
     DailyLogsController,
     MyDailyLogsController,
     MeetingsController,
+    MyMeetingsController,
     CorrespondenceController,
     RisksController,
     PunchItemsController,

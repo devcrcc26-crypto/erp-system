@@ -271,7 +271,13 @@ export function canViewGlobalNavKey(
   epc: EpcCapabilities,
   pm?: Pick<
     PmCapabilities,
-    'submittals' | 'change_requests' | 'rfis' | 'issues' | 'dailyLogs' | 'projects'
+    | 'submittals'
+    | 'change_requests'
+    | 'rfis'
+    | 'issues'
+    | 'meetings'
+    | 'dailyLogs'
+    | 'projects'
   > | null,
 ): boolean {
   if (epc.navFullAccess) {
@@ -300,6 +306,14 @@ export function canViewGlobalNavKey(
       return true;
     }
     return pm?.dailyLogs?.canView ?? false;
+  }
+
+  if (key === '/meetings') {
+    const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+    if (isFkUser) {
+      return true;
+    }
+    return pm?.meetings?.canView ?? false;
   }
 
   // Submittals never use the "no design persona → allow all" shortcut.

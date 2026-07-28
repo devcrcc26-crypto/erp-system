@@ -1,7 +1,10 @@
 import { MeetingType } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
+import { DisciplineScopeService } from '../discipline-scope.service';
 import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
+import { IssuesService } from '../issues.service';
 import { MeetingsService } from '../meetings.service';
 import { PmContext } from '../../types/pm-context.type';
 import { ProjectScopeService } from '../project-scope.service';
@@ -89,6 +92,24 @@ describe('MeetingsService', () => {
           .fn()
           .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/meetings/MET-00001' }),
       } as unknown as EngineeringDocumentFolderService,
+      {
+        getUserRoleNames: jest.fn().mockResolvedValue([]),
+        getUserModulePermissions: jest.fn().mockResolvedValue({
+          canView: false,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canApprove: false,
+          canExport: false,
+        }),
+      } as unknown as PermissionService,
+      {
+        hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
+        getAssignedDisciplineIds: jest.fn().mockResolvedValue([]),
+      } as unknown as DisciplineScopeService,
+      {
+        createIssue: jest.fn(),
+      } as unknown as IssuesService,
     );
   });
 
@@ -242,6 +263,7 @@ describe('MeetingsService', () => {
           ownerId,
           description: 'Submit revised programme',
         }),
+        include: expect.any(Object),
       });
       expect(result.status).toBe('OPEN');
     });

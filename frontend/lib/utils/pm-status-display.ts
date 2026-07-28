@@ -160,6 +160,9 @@ export function meetingStatusVariant(status: MeetingStatus): StatusBadgeVariant 
     CONDUCTED: 'warning',
     MINUTES_ISSUED: 'success',
     CLOSED: 'default',
+    IN_PROGRESS: 'warning',
+    COMPLETED: 'success',
+    CANCELLED: 'error',
   };
   return variants[status];
 }

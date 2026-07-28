@@ -46,6 +46,9 @@ export const SUBMITTAL_WORKFLOW: WorkflowStep[] = [
 
 export const MEETING_WORKFLOW: WorkflowStep[] = [
   { key: 'SCHEDULED', label: 'Scheduled' },
+  { key: 'IN_PROGRESS', label: 'In Progress' },
+  { key: 'COMPLETED', label: 'Completed' },
+  { key: 'CANCELLED', label: 'Cancelled' },
   { key: 'CONDUCTED', label: 'Conducted' },
   { key: 'MINUTES_ISSUED', label: 'Minutes Issued' },
   { key: 'CLOSED', label: 'Closed' },

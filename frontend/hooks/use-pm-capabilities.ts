@@ -156,6 +156,23 @@ export function useCanViewIssues(): boolean {
 }
 
 /**
+ * Global Meetings — full-access / FK designer-lead always; otherwise only when
+ * meetings.canView without portfolio projects.canView (project sidebar otherwise).
+ */
+export function useCanViewMeetings(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  if (epc.navFullAccess) {
+    return true;
+  }
+  const isFkUser = epc.navDesigner || epc.navDisciplineLeader;
+  if (isFkUser) {
+    return true;
+  }
+  return pm.meetings.canView && !pm.projects.canView;
+}
+
+/**
  * Global Daily Logs — full-access / FK designer-lead always; otherwise only when
  * dailyLogs.canView without portfolio projects.canView (project sidebar otherwise).
  */

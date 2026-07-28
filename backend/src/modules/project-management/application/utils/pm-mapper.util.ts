@@ -486,9 +486,20 @@ export interface MappedMeeting {
   meetingType: Meeting['meetingType'];
   title: string;
   meetingDate: string;
+  startTime: string | null;
+  endTime: string | null;
   location: string | null;
   status: Meeting['status'];
   minutesIssuedAt: string | null;
+  scope: Meeting['scope'];
+  taskDisciplineId: string | null;
+  taskDisciplineName?: string | null;
+  designPackageId: string | null;
+  designPackageName?: string | null;
+  agenda: string | null;
+  minutes: string | null;
+  createdBy: string;
+  attendeeCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -507,24 +518,36 @@ export interface MappedMeetingAgendaItem {
 export interface MappedMeetingAttendee {
   id: string;
   meetingId: string;
+  attendeeType: 'INTERNAL' | 'EXTERNAL';
   userId: string | null;
   userName?: string | null;
   externalName: string | null;
   organization: string | null;
   roleAtMeeting: string | null;
+  email: string | null;
   attended: boolean;
 }
 
 export interface MappedActionItem {
   id: string;
   meetingId: string;
-  ownerId: string;
+  ownerId: string | null;
   ownerName?: string | null;
+  assignedToName: string | null;
   description: string;
   dueDate: string | null;
   status: string;
   closedAt: string | null;
+  completedBy: string | null;
+  linkedIssueId: string | null;
+  linkedIssueNumber?: string | null;
+  designPackageId: string | null;
 }
+
+export type MappedMyMeeting = MappedMeeting & {
+  projectName: string;
+  projectCode: string;
+};
 
 export interface MappedMeetingDetail extends MappedMeeting {
   attachmentFolderId: string | null;
@@ -997,7 +1020,9 @@ export function mapDailyLogDetail(
   };
 }
 
-export function mapMeeting(row: Meeting): MappedMeeting {
+export function mapMeeting(
+  row: Meeting & { _count?: { attendees: number } },
+): MappedMeeting {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -1006,9 +1031,18 @@ export function mapMeeting(row: Meeting): MappedMeeting {
     meetingType: row.meetingType,
     title: row.title,
     meetingDate: toIsoString(row.meetingDate)!,
+    startTime: row.startTime,
+    endTime: row.endTime,
     location: row.location,
     status: row.status,
     minutesIssuedAt: toIsoString(row.minutesIssuedAt),
+    scope: row.scope,
+    taskDisciplineId: row.taskDisciplineId,
+    designPackageId: row.designPackageId,
+    agenda: row.agenda,
+    minutes: row.minutes,
+    createdBy: row.createdBy,
+    attendeeCount: row._count?.attendees,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };
@@ -1032,23 +1066,32 @@ export function mapMeetingAttendee(row: MeetingAttendee): MappedMeetingAttendee 
   return {
     id: row.id,
     meetingId: row.meetingId,
+    attendeeType: row.userId ? 'INTERNAL' : 'EXTERNAL',
     userId: row.userId,
     externalName: row.externalName,
     organization: row.organization,
     roleAtMeeting: row.roleAtMeeting,
+    email: row.email,
     attended: row.attended,
   };
 }
 
-export function mapActionItem(row: ActionItem): MappedActionItem {
+export function mapActionItem(
+  row: ActionItem & { linkedIssue?: { issueNumber: string } | null },
+): MappedActionItem {
   return {
     id: row.id,
     meetingId: row.meetingId,
     ownerId: row.ownerId,
+    assignedToName: row.assignedToName,
     description: row.description,
     dueDate: toDateString(row.dueDate),
     status: row.status,
     closedAt: toIsoString(row.closedAt),
+    completedBy: row.completedBy,
+    linkedIssueId: row.linkedIssueId,
+    linkedIssueNumber: row.linkedIssue?.issueNumber ?? null,
+    designPackageId: row.designPackageId,
   };
 }
 
@@ -1056,7 +1099,7 @@ export function mapMeetingDetail(
   row: Meeting & {
     agendaItems: MeetingAgendaItem[];
     attendees: MeetingAttendee[];
-    actionItems: ActionItem[];
+    actionItems: (ActionItem & { linkedIssue?: { issueNumber: string } | null })[];
   },
   attachmentFolderId: string | null = null,
   raisedItems?: {

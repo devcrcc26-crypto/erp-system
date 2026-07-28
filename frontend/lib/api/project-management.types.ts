@@ -169,7 +169,10 @@ export type MeetingStatus =
   | 'SCHEDULED'
   | 'CONDUCTED'
   | 'MINUTES_ISSUED'
-  | 'CLOSED';
+  | 'CLOSED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export type CloseoutStatus =
   | 'PRACTICAL_COMPLETION'
@@ -754,6 +757,15 @@ export interface DailyLogDetail extends DailyLog {
   materials: DailyLogMaterial[];
 }
 
+export type MeetingScope = 'PROJECT' | 'DISCIPLINE' | 'SUBTASK';
+
+export interface MeetingSubtaskOption {
+  id: string;
+  name: string;
+  fullCode: string;
+  taskDisciplineId: string;
+}
+
 export interface Meeting {
   id: string;
   projectId: string;
@@ -763,15 +775,31 @@ export interface Meeting {
   meetingType: MeetingType;
   title: string;
   meetingDate: string;
+  startTime: string | null;
+  endTime: string | null;
   location: string | null;
   status: MeetingStatus;
   minutesIssuedAt: string | null;
+  scope: MeetingScope | null;
+  taskDisciplineId: string | null;
+  taskDisciplineName?: string | null;
+  designPackageId: string | null;
+  designPackageName?: string | null;
+  agenda: string | null;
+  minutes: string | null;
+  createdBy: string;
+  attendeeCount?: number;
   createdAt: string;
   updatedAt: string;
   raisedRfis?: RfiSummary[];
   raisedIssues?: IssueSummary[];
   raisedChangeRequests?: ChangeRequestSummary[];
 }
+
+export type MyMeeting = Meeting & {
+  projectName: string;
+  projectCode: string;
+};
 
 export interface MeetingAgendaItem {
   id: string;
@@ -787,23 +815,30 @@ export interface MeetingAgendaItem {
 export interface MeetingAttendee {
   id: string;
   meetingId: string;
+  attendeeType: 'INTERNAL' | 'EXTERNAL';
   userId: string | null;
   userName?: string | null;
   externalName: string | null;
   organization: string | null;
   roleAtMeeting: string | null;
+  email: string | null;
   attended: boolean;
 }
 
 export interface ActionItem {
   id: string;
   meetingId: string;
-  ownerId: string;
+  ownerId: string | null;
   ownerName?: string | null;
+  assignedToName: string | null;
   description: string;
   dueDate: string | null;
   status: string;
   closedAt: string | null;
+  completedBy: string | null;
+  linkedIssueId: string | null;
+  linkedIssueNumber?: string | null;
+  designPackageId: string | null;
 }
 
 export interface MeetingDetail extends Meeting {
@@ -1306,10 +1341,18 @@ export interface CreateMeetingRequest {
   title: string;
   meetingDate: string;
   location?: string;
+  scope?: MeetingScope;
+  taskDisciplineId?: string;
+  designPackageId?: string;
+  startTime?: string;
+  endTime?: string;
+  agenda?: string;
 }
 
-export type UpdateMeetingRequest = Partial<CreateMeetingRequest> & {
-  status?: MeetingStatus;
+export type UpdateMeetingRequest = Partial<
+  Omit<CreateMeetingRequest, 'scope' | 'taskDisciplineId' | 'designPackageId'>
+> & {
+  minutes?: string;
 };
 
 export interface CreateMeetingAgendaItemRequest {
@@ -1324,21 +1367,25 @@ export type UpdateMeetingAgendaItemRequest =
   Partial<CreateMeetingAgendaItemRequest>;
 
 export interface CreateMeetingAttendeeRequest {
+  attendeeType?: 'INTERNAL' | 'EXTERNAL';
   userId?: string;
   externalName?: string;
   organization?: string;
   roleAtMeeting?: string;
+  email?: string;
   attended?: boolean;
 }
 
 export type UpdateMeetingAttendeeRequest = Partial<
-  Omit<CreateMeetingAttendeeRequest, 'userId'>
+  Omit<CreateMeetingAttendeeRequest, 'userId' | 'attendeeType'>
 >;
 
 export interface CreateActionItemRequest {
-  ownerId: string;
+  ownerId?: string;
+  assignedToName?: string;
   description: string;
   dueDate?: string;
+  designPackageId?: string;
 }
 
 export interface UpdateActionItemRequest {
