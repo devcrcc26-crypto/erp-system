@@ -33,12 +33,15 @@ export const SUBMITTAL_WORKFLOW: WorkflowStep[] = [
   { key: 'DRAFT', label: 'Draft' },
   { key: 'UNDER_SITE_REVIEW', label: 'Under Site Review' },
   { key: 'SITE_APPROVED', label: 'Site Approved' },
+  { key: 'PENDING_CONSULTANT_REVIEW', label: 'Pending Consultant Review' },
+  { key: 'CONSULTANT_REVIEWED', label: 'Consultant Reviewed' },
   { key: 'SUBMITTED', label: 'Submitted' },
   { key: 'UNDER_REVIEW', label: 'Under Review' },
   { key: 'APPROVED', label: 'Approved' },
   { key: 'APPROVED_WITH_COMMENTS', label: 'Approved with Comments' },
   { key: 'REVISE_AND_RESUBMIT', label: 'Revise and Resubmit' },
   { key: 'REJECTED', label: 'Rejected' },
+  { key: 'WITHDRAWN', label: 'Withdrawn' },
 ];
 
 export const MEETING_WORKFLOW: WorkflowStep[] = [

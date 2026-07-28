@@ -48,6 +48,7 @@ describe('Submittal status guard', () => {
       {} as never,
       {} as never,
       {} as never,
+      { getUserRoleNames: jest.fn().mockResolvedValue([]) } as never,
     );
   });
 

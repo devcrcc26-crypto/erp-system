@@ -31,6 +31,7 @@ import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import {
   EXTERNAL_RELEASE_DRAFT_STATUSES,
   EXTERNAL_RELEASE_ISSUED_STATUSES,
+  EXTERNAL_RELEASE_WITHDRAWN_STATUSES,
 } from '@/lib/utils/list-status-tabs';
 import SubmittalDetailDrawer from '@/components/modules/projects/submittals/SubmittalDetailDrawer';
 import SubmittalPackageDrawer from '@/components/modules/projects/submittals/SubmittalPackageDrawer';
@@ -94,6 +95,11 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
     ...filterParams,
     status: EXTERNAL_RELEASE_ISSUED_STATUSES,
   };
+  const withdrawnListParams = {
+    ...(activeTab === 'withdrawn' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_WITHDRAWN_STATUSES,
+  };
 
   const myDraftQuery = useMySubmittals(
     draftListParams,
@@ -101,6 +107,10 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   );
   const myIssuedQuery = useMySubmittals(
     issuedListParams,
+    capabilitiesReady && canAccessPage && !portfolioMode,
+  );
+  const myWithdrawnQuery = useMySubmittals(
+    withdrawnListParams,
     capabilitiesReady && canAccessPage && !portfolioMode,
   );
   const allDraftQuery = useAllExternalReleases(
@@ -111,10 +121,20 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
     issuedListParams,
     capabilitiesReady && canAccessPage && portfolioMode,
   );
+  const allWithdrawnQuery = useAllExternalReleases(
+    withdrawnListParams,
+    capabilitiesReady && canAccessPage && portfolioMode,
+  );
 
   const draftQuery = portfolioMode ? allDraftQuery : myDraftQuery;
   const issuedQuery = portfolioMode ? allIssuedQuery : myIssuedQuery;
-  const submittalsQuery = activeTab === 'active' ? draftQuery : issuedQuery;
+  const withdrawnQuery = portfolioMode ? allWithdrawnQuery : myWithdrawnQuery;
+  const submittalsQuery =
+    activeTab === 'active'
+      ? draftQuery
+      : activeTab === 'closed'
+        ? issuedQuery
+        : withdrawnQuery;
 
   const projectsQuery = useAllProjects(
     {},
@@ -219,6 +239,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
   const meta = submittalsQuery.data?.meta;
   const draftCount = draftQuery.data?.meta.total;
   const issuedCount = issuedQuery.data?.meta.total;
+  const withdrawnCount = withdrawnQuery.data?.meta.total;
 
   return (
     <>
@@ -258,10 +279,12 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
             setActiveTab(key);
             resetPage();
           }}
-          activeLabel="Draft"
+          activeLabel="In Progress"
           closedLabel="Issued"
+          thirdLabel="Withdrawn"
           activeCount={draftCount}
           closedCount={issuedCount}
+          thirdCount={withdrawnCount}
         />
 
         <Space wrap className="!mb-4">
@@ -309,9 +332,11 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
                 description={
                   activeTab === 'active'
                     ? 'Draft external releases appear here.'
-                    : portfolioMode
-                      ? 'Issued external releases from all projects appear here.'
-                      : 'Issued external releases you created, or that belong to disciplines you lead, appear here.'
+                    : activeTab === 'withdrawn'
+                      ? 'Withdrawn external releases appear here.'
+                      : portfolioMode
+                        ? 'Issued external releases from all projects appear here.'
+                        : 'Issued external releases you created, or that belong to disciplines you lead, appear here.'
                 }
                 action={
                   canCreate && !apiUnavailable && activeTab === 'active'
@@ -353,6 +378,7 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
           onUpdated={() => {
             void draftQuery.refetch();
             void issuedQuery.refetch();
+            void withdrawnQuery.refetch();
           }}
         />
       )}

@@ -234,6 +234,8 @@ export interface MappedSubmittal {
   updatedAt: string;
   items?: MappedSubmittalItem[];
   siteReviews?: MappedSubmittalSiteReview[];
+  externalApprovals?: MappedSubmittalExternalApproval[];
+  externalFeedback?: MappedSubmittalExternalFeedback[];
 }
 
 export interface MappedSubmittalSiteReview {
@@ -249,6 +251,31 @@ export interface MappedSubmittalSiteReview {
   updatedAt: string;
 }
 
+export interface MappedSubmittalExternalApproval {
+  id: string;
+  submittalId: string;
+  approvalType: string;
+  approvedByName: string;
+  onBehalfOf: string;
+  approvedAt: string;
+  notes: string | null;
+  evidenceFolderId: string | null;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface MappedSubmittalExternalFeedback {
+  id: string;
+  submittalId: string;
+  feedbackFrom: string;
+  feedbackKind: string;
+  comment: string;
+  evidenceFolderId: string | null;
+  linkedCrId: string | null;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface MappedSubmittalItem {
   id: string;
   submittalId: string;
@@ -257,6 +284,17 @@ export interface MappedSubmittalItem {
   /** Full subtask number e.g. 26-ETO-035-01-003 when overseas task number is present. */
   fullSubtaskCode?: string | null;
   packageName: string | null;
+  siteRepType?: string | null;
+  siteRepName?: string | null;
+  siteRepEmail?: string | null;
+  siteRepPhone?: string | null;
+  siteRepCompany?: string | null;
+  siteRepresentativeUserId?: string | null;
+  consultantName?: string | null;
+  consultantTitle?: string | null;
+  consultantEmail?: string | null;
+  consultantPhone?: string | null;
+  consultantCompany?: string | null;
   itemType: SubmittalItem['itemType'];
   sortOrder: number;
   snapshotCaptured: boolean;
@@ -273,6 +311,17 @@ export type SubmittalItemDesignPackageSelect = {
   packageCode: string;
   name: string;
   subtaskIndex?: number | null;
+  siteRepType?: string | null;
+  siteRepName?: string | null;
+  siteRepEmail?: string | null;
+  siteRepPhone?: string | null;
+  siteRepCompany?: string | null;
+  siteRepresentativeUserId?: string | null;
+  consultantName?: string | null;
+  consultantTitle?: string | null;
+  consultantEmail?: string | null;
+  consultantPhone?: string | null;
+  consultantCompany?: string | null;
   taskDiscipline?: {
     disciplineIndex: number | null;
     task: { overseasTaskNumber: string | null };
@@ -651,6 +700,56 @@ export function mapSubmittalSiteReview(row: {
   };
 }
 
+export function mapSubmittalExternalApproval(row: {
+  id: string;
+  submittalId: string;
+  approvalType: string;
+  approvedByName: string;
+  onBehalfOf: string;
+  approvedAt: Date;
+  notes: string | null;
+  evidenceFolderId: string | null;
+  createdAt: Date;
+  createdBy: string;
+}): MappedSubmittalExternalApproval {
+  return {
+    id: row.id,
+    submittalId: row.submittalId,
+    approvalType: row.approvalType,
+    approvedByName: row.approvedByName,
+    onBehalfOf: row.onBehalfOf,
+    approvedAt: toIsoString(row.approvedAt)!,
+    notes: row.notes,
+    evidenceFolderId: row.evidenceFolderId,
+    createdAt: toIsoString(row.createdAt)!,
+    createdBy: row.createdBy,
+  };
+}
+
+export function mapSubmittalExternalFeedback(row: {
+  id: string;
+  submittalId: string;
+  feedbackFrom: string;
+  feedbackKind: string;
+  comment: string;
+  evidenceFolderId: string | null;
+  linkedCrId: string | null;
+  createdAt: Date;
+  createdBy: string;
+}): MappedSubmittalExternalFeedback {
+  return {
+    id: row.id,
+    submittalId: row.submittalId,
+    feedbackFrom: row.feedbackFrom,
+    feedbackKind: row.feedbackKind,
+    comment: row.comment,
+    evidenceFolderId: row.evidenceFolderId,
+    linkedCrId: row.linkedCrId,
+    createdAt: toIsoString(row.createdAt)!,
+    createdBy: row.createdBy,
+  };
+}
+
 export function mapSubmittalItem(
   row: SubmittalItem & {
     designPackage?: SubmittalItemDesignPackageSelect | null;
@@ -679,6 +778,17 @@ export function mapSubmittalItem(
     packageCode: pkg?.packageCode ?? null,
     fullSubtaskCode,
     packageName: pkg?.name ?? null,
+    siteRepType: pkg?.siteRepType ?? null,
+    siteRepName: pkg?.siteRepName ?? null,
+    siteRepEmail: pkg?.siteRepEmail ?? null,
+    siteRepPhone: pkg?.siteRepPhone ?? null,
+    siteRepCompany: pkg?.siteRepCompany ?? null,
+    siteRepresentativeUserId: pkg?.siteRepresentativeUserId ?? null,
+    consultantName: pkg?.consultantName ?? null,
+    consultantTitle: pkg?.consultantTitle ?? null,
+    consultantEmail: pkg?.consultantEmail ?? null,
+    consultantPhone: pkg?.consultantPhone ?? null,
+    consultantCompany: pkg?.consultantCompany ?? null,
     itemType: row.itemType,
     sortOrder: row.sortOrder,
     snapshotCaptured: row.snapshotCaptured,

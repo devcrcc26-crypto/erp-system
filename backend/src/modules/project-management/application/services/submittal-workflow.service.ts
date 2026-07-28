@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   Prisma,
+  SiteRepType,
   SubmittalPreparedByRole,
   SubmittalPurpose,
   SubmittalSiteReviewStatus,
@@ -188,11 +189,13 @@ export class SubmittalWorkflowService {
         throw new BadRequestException('Submittal has no design package items');
       }
 
-      const isFinalIssue = submittal.status === SubmittalStatus.SITE_APPROVED;
+      const isFinalIssue =
+        submittal.status === SubmittalStatus.SITE_APPROVED ||
+        submittal.status === SubmittalStatus.CONSULTANT_REVIEWED;
       const isDraftIssue = submittal.status === SubmittalStatus.DRAFT;
       if (!isFinalIssue && !isDraftIssue) {
         throw new BadRequestException(
-          'Only DRAFT or SITE_APPROVED submittals can be issued.',
+          'Only DRAFT, SITE_APPROVED, or CONSULTANT_REVIEWED submittals can be issued.',
         );
       }
       if (submittal.issuedAt) {
@@ -281,24 +284,26 @@ export class SubmittalWorkflowService {
         };
       }
 
-      const siteRepUserIds = await this.collectDistinctSiteRepUserIds(
+      const routing = await this.resolveExternalReviewRouting(
         tx,
         command.companyId,
         submittal.items.map((i) => i.designPackageId),
       );
 
-      if (siteRepUserIds.length > 0) {
-        await tx.submittalSiteReview.createMany({
-          data: siteRepUserIds.map((siteRepUserId) => ({
-            companyId: command.companyId,
-            submittalId: command.submittalId,
-            siteRepUserId,
-            status: SubmittalSiteReviewStatus.PENDING,
-            createdBy: command.actorId,
-            updatedBy: command.actorId,
-          })),
-          skipDuplicates: true,
-        });
+      if (routing.hasSiteRep) {
+        if (routing.internalSiteRepUserIds.length > 0) {
+          await tx.submittalSiteReview.createMany({
+            data: routing.internalSiteRepUserIds.map((siteRepUserId) => ({
+              companyId: command.companyId,
+              submittalId: command.submittalId,
+              siteRepUserId,
+              status: SubmittalSiteReviewStatus.PENDING,
+              createdBy: command.actorId,
+              updatedBy: command.actorId,
+            })),
+            skipDuplicates: true,
+          });
+        }
 
         await tx.submittal.update({
           where: { id: command.submittalId },
@@ -317,7 +322,7 @@ export class SubmittalWorkflowService {
           beforeState: { status: submittal.status },
           afterState: {
             status: SubmittalStatus.UNDER_SITE_REVIEW,
-            siteRepUserIds,
+            siteRepUserIds: routing.internalSiteRepUserIds,
             snapshotEdvIds: affectedEdvIds,
           },
           correlationId,
@@ -331,8 +336,41 @@ export class SubmittalWorkflowService {
           submittalId: command.submittalId,
           intentEventIds: [],
           siteReviewStarted: true,
-          siteRepUserIds,
+          siteRepUserIds: routing.internalSiteRepUserIds,
           resultingStatus: SubmittalStatus.UNDER_SITE_REVIEW,
+        };
+      }
+
+      if (routing.hasConsultant) {
+        await tx.submittal.update({
+          where: { id: command.submittalId },
+          data: {
+            status: SubmittalStatus.PENDING_CONSULTANT_REVIEW,
+            updatedBy: command.actorId,
+          },
+        });
+
+        await this.epcSubmittalRepository.appendWorkflowIntentEvent(tx, {
+          companyId: command.companyId,
+          actorId: command.actorId,
+          entityId: command.submittalId,
+          action: 'START_CONSULTANT_REVIEW',
+          beforeState: { status: submittal.status },
+          afterState: {
+            status: SubmittalStatus.PENDING_CONSULTANT_REVIEW,
+            snapshotEdvIds: affectedEdvIds,
+          },
+          correlationId,
+        });
+
+        return {
+          commandType: 'IssueSubmittal',
+          correlationId,
+          affectedEdvIds,
+          edvStatuses: {},
+          submittalId: command.submittalId,
+          intentEventIds: [],
+          resultingStatus: SubmittalStatus.PENDING_CONSULTANT_REVIEW,
         };
       }
 
@@ -365,6 +403,71 @@ export class SubmittalWorkflowService {
         resultingStatus: SubmittalStatus.SUBMITTED,
       };
     });
+  }
+
+  private async resolveExternalReviewRouting(
+    tx: PrismaTx,
+    companyId: string,
+    designPackageIds: readonly string[],
+  ): Promise<{
+    hasSiteRep: boolean;
+    hasConsultant: boolean;
+    internalSiteRepUserIds: string[];
+  }> {
+    if (designPackageIds.length === 0) {
+      return {
+        hasSiteRep: false,
+        hasConsultant: false,
+        internalSiteRepUserIds: [],
+      };
+    }
+    const packages = await tx.designPackage.findMany({
+      where: activeOnly({
+        companyId,
+        id: { in: [...designPackageIds] },
+      }),
+      select: {
+        siteRepType: true,
+        siteRepName: true,
+        siteRepresentativeUserId: true,
+        consultantName: true,
+      },
+    });
+
+    let hasSiteRep = false;
+    let hasConsultant = false;
+    const internalIds = new Set<string>();
+
+    for (const pkg of packages) {
+      const isInternal = pkg.siteRepType === SiteRepType.INTERNAL;
+      const packageHasSiteRep = isInternal
+        ? Boolean(pkg.siteRepresentativeUserId)
+        : Boolean(pkg.siteRepName?.trim());
+      if (packageHasSiteRep) {
+        hasSiteRep = true;
+      }
+      if (isInternal && pkg.siteRepresentativeUserId) {
+        internalIds.add(pkg.siteRepresentativeUserId);
+      }
+      // Legacy rows: siteRepresentativeUserId set without siteRepType
+      if (
+        !pkg.siteRepType &&
+        pkg.siteRepresentativeUserId &&
+        !pkg.siteRepName
+      ) {
+        hasSiteRep = true;
+        internalIds.add(pkg.siteRepresentativeUserId);
+      }
+      if (pkg.consultantName?.trim()) {
+        hasConsultant = true;
+      }
+    }
+
+    return {
+      hasSiteRep,
+      hasConsultant,
+      internalSiteRepUserIds: [...internalIds],
+    };
   }
 
   private async collectDistinctSiteRepUserIds(

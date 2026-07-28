@@ -12,5 +12,14 @@ export function formatExternalReleaseStatus(status: SubmittalStatus): string {
   if (status === 'SITE_APPROVED') {
     return 'Site Approved';
   }
+  if (status === 'PENDING_CONSULTANT_REVIEW') {
+    return 'Pending Consultant Review';
+  }
+  if (status === 'CONSULTANT_REVIEWED') {
+    return 'Consultant Reviewed';
+  }
+  if (status === 'WITHDRAWN') {
+    return 'Withdrawn';
+  }
   return formatSubmittalStatus(status);
 }

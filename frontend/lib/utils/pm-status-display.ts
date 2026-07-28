@@ -48,12 +48,15 @@ export function submittalStatusVariant(
     DRAFT: 'default',
     UNDER_SITE_REVIEW: 'warning',
     SITE_APPROVED: 'success',
+    PENDING_CONSULTANT_REVIEW: 'warning',
+    CONSULTANT_REVIEWED: 'success',
     SUBMITTED: 'info',
     UNDER_REVIEW: 'warning',
     APPROVED: 'success',
     APPROVED_WITH_COMMENTS: 'success',
     REVISE_AND_RESUBMIT: 'orange',
     REJECTED: 'error',
+    WITHDRAWN: 'default',
   };
   return variants[status];
 }

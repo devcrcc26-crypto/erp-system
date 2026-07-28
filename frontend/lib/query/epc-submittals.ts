@@ -246,3 +246,138 @@ export function useBatchAddSubmittalItems() {
     },
   });
 }
+
+export function useRecordSiteApproval() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body,
+    }: {
+      projectId: string;
+      submittalId: string;
+      body: { approvedAt?: string; notes?: string };
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/site-approve`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useRecordSiteFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body,
+    }: {
+      projectId: string;
+      submittalId: string;
+      body: { kind: 'COMMENT' | 'REJECTION'; comment: string };
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/site-feedback`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useRecordConsultantApproval() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body,
+    }: {
+      projectId: string;
+      submittalId: string;
+      body: { approvedAt?: string; notes?: string };
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/consultant-approve`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useRecordConsultantFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body,
+    }: {
+      projectId: string;
+      submittalId: string;
+      body: { kind: 'COMMENT' | 'REJECTION'; comment: string };
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/consultant-feedback`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}
+
+export function useWithdrawSubmittal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      submittalId,
+      body = {},
+    }: {
+      projectId: string;
+      submittalId: string;
+      body?: { reason?: string };
+    }) =>
+      apiPost<Submittal>(
+        `${submittalsBase(projectId)}/${submittalId}/withdraw`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateSubmittalDetail(
+        queryClient,
+        variables.projectId,
+        variables.submittalId,
+      );
+    },
+  });
+}

@@ -25,8 +25,11 @@ import {
   BatchIssueSubmittalsDto,
   BatchAddSubmittalItemsDto,
   PmListQueryDto,
+  RecordExternalApprovalDto,
+  RecordExternalFeedbackDto,
   SubmittalSiteReviewCommentDto,
   UpdateSubmittalDto,
+  WithdrawSubmittalDto,
 } from '../../application/dtos/pm.dtos';
 import { SubmittalsService } from '../../application/services/submittals.service';
 import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
@@ -182,6 +185,91 @@ export class SubmittalsController {
       projectId,
       id,
       reviewId,
+    );
+  }
+
+  @Post(':id/site-approve')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Record site representative approval on an ER' })
+  recordSiteApproval(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RecordExternalApprovalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.recordSiteApproval(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/site-feedback')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Record site representative feedback on an ER' })
+  recordSiteFeedback(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RecordExternalFeedbackDto,
+  ): Promise<unknown> {
+    return this.submittalsService.recordSiteFeedback(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/consultant-approve')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Record consultant approval on an ER' })
+  recordConsultantApproval(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RecordExternalApprovalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.recordConsultantApproval(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/consultant-feedback')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Record consultant feedback on an ER' })
+  recordConsultantFeedback(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RecordExternalFeedbackDto,
+  ): Promise<unknown> {
+    return this.submittalsService.recordConsultantFeedback(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/withdraw')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Withdraw an external release before issue' })
+  withdraw(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: WithdrawSubmittalDto,
+  ): Promise<unknown> {
+    return this.submittalsService.withdrawSubmittal(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
     );
   }
 

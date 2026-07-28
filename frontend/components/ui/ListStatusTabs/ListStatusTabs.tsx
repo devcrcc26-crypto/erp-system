@@ -2,7 +2,7 @@
 
 import { Badge, Tabs } from 'antd';
 
-export type ListStatusTabKey = 'active' | 'closed';
+export type ListStatusTabKey = 'active' | 'closed' | 'withdrawn';
 
 export interface ListStatusTabsProps {
   activeKey: ListStatusTabKey;
@@ -11,11 +11,15 @@ export interface ListStatusTabsProps {
   closedLabel: string;
   activeCount?: number;
   closedCount?: number;
+  /** Optional third tab label (e.g. "Withdrawn") */
+  thirdLabel?: string;
+  thirdCount?: number;
   className?: string;
 }
 
 /**
  * Shared Active/Closed (or Open/Resolved) list tabs with count badges.
+ * Supports an optional third tab via thirdLabel prop.
  */
 export default function ListStatusTabs({
   activeKey,
@@ -24,6 +28,8 @@ export default function ListStatusTabs({
   closedLabel,
   activeCount,
   closedCount,
+  thirdLabel,
+  thirdCount,
   className = '!mb-4',
 }: ListStatusTabsProps): React.ReactNode {
   return (
@@ -66,6 +72,27 @@ export default function ListStatusTabs({
           ),
           children: null,
         },
+        ...(thirdLabel
+          ? [
+              {
+                key: 'withdrawn',
+                label: (
+                  <span>
+                    {thirdLabel}
+                    {thirdCount !== undefined ? (
+                      <Badge
+                        count={thirdCount}
+                        showZero
+                        color="var(--color-text-tertiary)"
+                        className="ml-2"
+                      />
+                    ) : null}
+                  </span>
+                ),
+                children: null,
+              },
+            ]
+          : []),
       ]}
     />
   );

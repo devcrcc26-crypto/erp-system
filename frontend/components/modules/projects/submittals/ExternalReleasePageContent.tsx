@@ -33,6 +33,7 @@ import { formatSubmittalItemCodesSummary } from '@/lib/utils/submittal-display';
 import {
   EXTERNAL_RELEASE_DRAFT_STATUSES,
   EXTERNAL_RELEASE_ISSUED_STATUSES,
+  EXTERNAL_RELEASE_WITHDRAWN_STATUSES,
 } from '@/lib/utils/list-status-tabs';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
@@ -77,6 +78,11 @@ export default function ExternalReleasePageContent({
     ...filterParams,
     status: EXTERNAL_RELEASE_ISSUED_STATUSES,
   };
+  const withdrawnListParams = {
+    ...(activeTab === 'withdrawn' ? params : { page: 1 as const, limit: 1 as const }),
+    ...filterParams,
+    status: EXTERNAL_RELEASE_WITHDRAWN_STATUSES,
+  };
 
   const draftQuery = useSubmittals(
     projectId,
@@ -88,12 +94,24 @@ export default function ExternalReleasePageContent({
     issuedListParams,
     !permLoading && lens.canViewSubmittals,
   );
-  const submittalsQuery = activeTab === 'active' ? draftQuery : issuedQuery;
+  const withdrawnQuery = useSubmittals(
+    projectId,
+    withdrawnListParams,
+    !permLoading && lens.canViewSubmittals,
+  );
+
+  const submittalsQuery =
+    activeTab === 'active'
+      ? draftQuery
+      : activeTab === 'closed'
+        ? issuedQuery
+        : withdrawnQuery;
 
   const submittals = submittalsQuery.data?.data ?? [];
   const meta = submittalsQuery.data?.meta;
   const draftCount = draftQuery.data?.meta.total;
   const issuedCount = issuedQuery.data?.meta.total;
+  const withdrawnCount = withdrawnQuery.data?.meta.total;
 
   const columns: ColumnsType<Submittal> = useMemo(
     () => [
@@ -227,10 +245,12 @@ export default function ExternalReleasePageContent({
             setActiveTab(key);
             resetPage();
           }}
-          activeLabel="Draft"
+          activeLabel="In Progress"
           closedLabel="Issued"
+          thirdLabel="Withdrawn"
           activeCount={draftCount}
           closedCount={issuedCount}
+          thirdCount={withdrawnCount}
         />
 
         <Space wrap className="!mb-4">
@@ -282,7 +302,9 @@ export default function ExternalReleasePageContent({
                 description={
                   activeTab === 'active'
                     ? 'Draft releases appear here before they are issued.'
-                    : 'Issue approved subtasks to site engineers or consultants'
+                    : activeTab === 'withdrawn'
+                      ? 'Withdrawn releases appear here.'
+                      : 'Issue approved subtasks to site engineers or consultants'
                 }
                 action={
                   canCreateRelease && !apiUnavailable && activeTab === 'active'
@@ -315,6 +337,7 @@ export default function ExternalReleasePageContent({
         onUpdated={() => {
           void draftQuery.refetch();
           void issuedQuery.refetch();
+          void withdrawnQuery.refetch();
         }}
       />
     </>

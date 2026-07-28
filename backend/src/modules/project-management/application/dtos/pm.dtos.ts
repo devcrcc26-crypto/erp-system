@@ -963,6 +963,39 @@ export class SubmittalSiteReviewCommentDto {
   comment!: string;
 }
 
+export class RecordExternalApprovalDto {
+  @ApiPropertyOptional({ format: 'date-time' })
+  @IsOptional()
+  @IsDateString()
+  approvedAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class RecordExternalFeedbackDto {
+  @ApiProperty({ enum: ['COMMENT', 'REJECTION'] })
+  @IsIn(['COMMENT', 'REJECTION'])
+  kind!: 'COMMENT' | 'REJECTION';
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  comment!: string;
+}
+
+export class WithdrawSubmittalDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
 export class AddSubmittalItemsDto {
   @ApiProperty({ type: [String] })
   @IsArray()

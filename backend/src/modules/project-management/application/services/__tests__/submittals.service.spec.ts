@@ -120,6 +120,7 @@ describe('SubmittalsService', () => {
       } as unknown as EngineeringDocumentFolderService,
       {} as never,
       taskAccessScopeService as unknown as TaskAccessScopeService,
+      { getUserRoleNames: jest.fn().mockResolvedValue([]) } as never,
     );
   });
 

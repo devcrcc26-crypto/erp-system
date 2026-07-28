@@ -19,16 +19,23 @@ import {
   BatchIssueSubmittalsDto,
   BatchAddSubmittalItemsDto,
   PmListQueryDto,
+  RecordExternalApprovalDto,
+  RecordExternalFeedbackDto,
   SubmittalSiteReviewCommentDto,
   UpdateSubmittalDto,
+  WithdrawSubmittalDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapSubmittal,
+  mapSubmittalExternalApproval,
+  mapSubmittalExternalFeedback,
   mapSubmittalItem,
   mapSubmittalReview,
   mapSubmittalSiteReview,
   MappedSubmittal,
+  MappedSubmittalExternalApproval,
+  MappedSubmittalExternalFeedback,
   MappedSubmittalItem,
   MappedSubmittalReview,
   MappedSubmittalSiteReview,
@@ -47,18 +54,35 @@ import { WorkflowResultSnapshot } from '../../domain/contracts/workflow-kernel.c
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
 import { parseStatusFilter } from '../utils/parse-status-filter.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 
 const SITE_REVIEW_REQUESTED_EVENT = 'submittal.site_review_requested';
 const SITE_REVIEW_APPROVED_EVENT = 'submittal.site_review_approved';
 const SITE_REVIEW_ALL_APPROVED_EVENT = 'submittal.site_review_all_approved';
 const SITE_REVIEW_COMMENTED_EVENT = 'submittal.site_review_commented';
 const SITE_REVIEW_REREQUESTED_EVENT = 'submittal.site_review_rerequested';
+const EXTERNAL_SITE_APPROVAL_EVENT = 'submittal.external_site_approval';
+const EXTERNAL_CONSULTANT_APPROVAL_EVENT = 'submittal.external_consultant_approval';
+const EXTERNAL_FEEDBACK_EVENT = 'submittal.external_feedback';
+const EXTERNAL_WITHDRAWN_EVENT = 'submittal.external_withdrawn';
 
 /** Package fields needed to compute fullSubtaskCode on mapped items. */
 const SUBMITTAL_ITEM_PACKAGE_SELECT = {
   packageCode: true,
   name: true,
   subtaskIndex: true,
+  siteRepType: true,
+  siteRepName: true,
+  siteRepEmail: true,
+  siteRepPhone: true,
+  siteRepCompany: true,
+  siteRepresentativeUserId: true,
+  consultantName: true,
+  consultantTitle: true,
+  consultantEmail: true,
+  consultantPhone: true,
+  consultantCompany: true,
   taskDiscipline: {
     select: {
       disciplineIndex: true,
@@ -88,12 +112,14 @@ const VERDICT_SUBMITTAL_STATUSES = new Set<SubmittalStatus>([
   SubmittalStatus.REJECTED,
 ]);
 
-/** Direct PATCH only. Site-review transitions go through dedicated endpoints / issue. */
 const SUBMITTAL_STATUS_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ['SUBMITTED'],
   UNDER_SITE_REVIEW: [],
   SITE_APPROVED: [],
+  PENDING_CONSULTANT_REVIEW: [],
+  CONSULTANT_REVIEWED: [],
   SUBMITTED: ['DRAFT'],
+  WITHDRAWN: [],
   UNDER_REVIEW: [],
 };
 
@@ -132,6 +158,7 @@ export class SubmittalsService {
     private readonly engineeringDocumentFolderService: EngineeringDocumentFolderService,
     private readonly disciplineScopeService: DisciplineScopeService,
     private readonly taskAccessScopeService: TaskAccessScopeService,
+    private readonly permissionService: PermissionService,
     @Optional()
     private readonly notificationService?: NotificationService,
   ) {}
@@ -260,6 +287,8 @@ export class SubmittalsService {
     MappedSubmittal & {
       items: MappedSubmittalItem[];
       siteReviews: MappedSubmittalSiteReview[];
+      externalApprovals: MappedSubmittalExternalApproval[];
+      externalFeedback: MappedSubmittalExternalFeedback[];
       attachmentFolderId: string | null;
     }
   > {
@@ -273,6 +302,12 @@ export class SubmittalsService {
           },
         },
         siteReviews: {
+          orderBy: { createdAt: 'asc' },
+        },
+        externalApprovals: {
+          orderBy: { createdAt: 'asc' },
+        },
+        externalFeedback: {
           orderBy: { createdAt: 'asc' },
         },
         taskDiscipline: { select: { disciplineLeadUserId: true } },
@@ -310,6 +345,8 @@ export class SubmittalsService {
         disciplineLeadUserId: row.taskDiscipline?.disciplineLeadUserId ?? null,
         items: row.items.map(mapSubmittalItem),
         siteReviews,
+        externalApprovals: row.externalApprovals.map(mapSubmittalExternalApproval),
+        externalFeedback: row.externalFeedback.map(mapSubmittalExternalFeedback),
         attachmentFolderId: attachmentFolder.id,
       },
       PM_SUBMITTAL_USER_NAMES,
@@ -761,10 +798,17 @@ export class SubmittalsService {
     });
 
     if (pending === 0) {
+      const hasConsultant = await this.submittalHasConsultant(
+        ctx.companyId,
+        submittalId,
+      );
+      const nextStatus = hasConsultant
+        ? SubmittalStatus.PENDING_CONSULTANT_REVIEW
+        : SubmittalStatus.SITE_APPROVED;
       await this.prisma.submittal.update({
         where: { id: submittalId },
         data: {
-          status: SubmittalStatus.SITE_APPROVED,
+          status: nextStatus,
           updatedBy: ctx.userId,
         },
       });
@@ -1100,7 +1144,10 @@ export class SubmittalsService {
     }
     if (
       dto.status === SubmittalStatus.UNDER_SITE_REVIEW ||
-      dto.status === SubmittalStatus.SITE_APPROVED
+      dto.status === SubmittalStatus.SITE_APPROVED ||
+      dto.status === SubmittalStatus.PENDING_CONSULTANT_REVIEW ||
+      dto.status === SubmittalStatus.CONSULTANT_REVIEWED ||
+      dto.status === SubmittalStatus.WITHDRAWN
     ) {
       throw new BadRequestException(
         'Site review statuses must be set through the issue and site-review endpoints, not direct update.',
@@ -1781,12 +1828,355 @@ export class SubmittalsService {
   private assertSubmittalIssuable(status: SubmittalStatus): void {
     if (
       status !== SubmittalStatus.DRAFT &&
-      status !== SubmittalStatus.SITE_APPROVED
+      status !== SubmittalStatus.SITE_APPROVED &&
+      status !== SubmittalStatus.CONSULTANT_REVIEWED
     ) {
       throw new BadRequestException(
-        'Only DRAFT or SITE_APPROVED submittals can be issued.',
+        'Only DRAFT, SITE_APPROVED, or CONSULTANT_REVIEWED submittals can be issued.',
       );
     }
+  }
+
+  /**
+   * Records site representative approval on behalf of an external/internal site rep.
+   */
+  async recordSiteApproval(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: RecordExternalApprovalDto,
+  ): Promise<MappedSubmittal & {
+    items: MappedSubmittalItem[];
+    siteReviews: MappedSubmittalSiteReview[];
+    externalApprovals: MappedSubmittalExternalApproval[];
+    externalFeedback: MappedSubmittalExternalFeedback[];
+    attachmentFolderId: string | null;
+  }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.UNDER_SITE_REVIEW) {
+      throw new BadRequestException(
+        'Site approval can only be recorded while UNDER_SITE_REVIEW',
+      );
+    }
+    await this.assertCanRecordExternalResponse(ctx, projectId, submittalId);
+
+    const parties = await this.loadExternalPartiesForSubmittal(
+      ctx.companyId,
+      submittalId,
+    );
+    const onBehalfOf =
+      parties.siteRepNames[0] ??
+      parties.siteRepInternalNames[0] ??
+      'Site representative';
+    const approvedByName = await this.resolveUserDisplayName(ctx);
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+    );
+
+    await this.prisma.submittalExternalApproval.create({
+      data: {
+        companyId: ctx.companyId,
+        submittalId,
+        approvalType: 'SITE',
+        approvedByName,
+        onBehalfOf,
+        approvedAt: dto.approvedAt ? new Date(dto.approvedAt) : new Date(),
+        notes: dto.notes?.trim() || null,
+        evidenceFolderId: folder.id,
+        createdBy: ctx.userId,
+      },
+    });
+
+    const nextStatus = parties.hasConsultant
+      ? SubmittalStatus.PENDING_CONSULTANT_REVIEW
+      : SubmittalStatus.SITE_APPROVED;
+    await this.prisma.submittal.update({
+      where: { id: submittalId },
+      data: { status: nextStatus, updatedBy: ctx.userId },
+    });
+
+    await this.notifyExternalApprovalRecorded(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      EXTERNAL_SITE_APPROVAL_EVENT,
+      `Site approval recorded for ER ${submittal.submittalNumber}.`,
+    );
+
+    return this.getSubmittal(ctx, projectId, submittalId);
+  }
+
+  /**
+   * Records consultant approval on behalf of the client consultant.
+   */
+  async recordConsultantApproval(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: RecordExternalApprovalDto,
+  ): Promise<MappedSubmittal & {
+    items: MappedSubmittalItem[];
+    siteReviews: MappedSubmittalSiteReview[];
+    externalApprovals: MappedSubmittalExternalApproval[];
+    externalFeedback: MappedSubmittalExternalFeedback[];
+    attachmentFolderId: string | null;
+  }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.PENDING_CONSULTANT_REVIEW) {
+      throw new BadRequestException(
+        'Consultant approval can only be recorded while PENDING_CONSULTANT_REVIEW',
+      );
+    }
+    await this.assertCanRecordExternalResponse(ctx, projectId, submittalId);
+
+    const parties = await this.loadExternalPartiesForSubmittal(
+      ctx.companyId,
+      submittalId,
+    );
+    const onBehalfOf = parties.consultantNames[0] ?? 'Consultant';
+    const approvedByName = await this.resolveUserDisplayName(ctx);
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+    );
+
+    await this.prisma.submittalExternalApproval.create({
+      data: {
+        companyId: ctx.companyId,
+        submittalId,
+        approvalType: 'CONSULTANT',
+        approvedByName,
+        onBehalfOf,
+        approvedAt: dto.approvedAt ? new Date(dto.approvedAt) : new Date(),
+        notes: dto.notes?.trim() || null,
+        evidenceFolderId: folder.id,
+        createdBy: ctx.userId,
+      },
+    });
+
+    await this.prisma.submittal.update({
+      where: { id: submittalId },
+      data: {
+        status: SubmittalStatus.CONSULTANT_REVIEWED,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.notifyExternalApprovalRecorded(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      EXTERNAL_CONSULTANT_APPROVAL_EVENT,
+      `Consultant approval recorded. ER ${submittal.submittalNumber} is ready to issue.`,
+    );
+
+    return this.getSubmittal(ctx, projectId, submittalId);
+  }
+
+  /**
+   * Records site feedback (comment or rejection). Rejection returns ER to DRAFT.
+   */
+  async recordSiteFeedback(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: RecordExternalFeedbackDto,
+  ): Promise<MappedSubmittal & {
+    items: MappedSubmittalItem[];
+    siteReviews: MappedSubmittalSiteReview[];
+    externalApprovals: MappedSubmittalExternalApproval[];
+    externalFeedback: MappedSubmittalExternalFeedback[];
+    attachmentFolderId: string | null;
+  }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.UNDER_SITE_REVIEW) {
+      throw new BadRequestException(
+        'Site feedback can only be recorded while UNDER_SITE_REVIEW',
+      );
+    }
+    await this.assertCanRecordExternalResponse(ctx, projectId, submittalId);
+
+    const comment = dto.comment.trim();
+    if (!comment) {
+      throw new BadRequestException('Comment is required');
+    }
+
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+    );
+
+    await this.prisma.submittalExternalFeedback.create({
+      data: {
+        companyId: ctx.companyId,
+        submittalId,
+        feedbackFrom: 'SITE',
+        feedbackKind: dto.kind,
+        comment,
+        evidenceFolderId: folder.id,
+        createdBy: ctx.userId,
+      },
+    });
+
+    if (dto.kind === 'REJECTION') {
+      await this.prisma.submittal.update({
+        where: { id: submittalId },
+        data: { status: SubmittalStatus.DRAFT, updatedBy: ctx.userId },
+      });
+    }
+
+    await this.notifyExternalApprovalRecorded(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      EXTERNAL_FEEDBACK_EVENT,
+      `Site feedback recorded on ER ${submittal.submittalNumber}.`,
+    );
+
+    return this.getSubmittal(ctx, projectId, submittalId);
+  }
+
+  /**
+   * Records consultant feedback. Rejection returns ER to DRAFT.
+   */
+  async recordConsultantFeedback(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: RecordExternalFeedbackDto,
+  ): Promise<MappedSubmittal & {
+    items: MappedSubmittalItem[];
+    siteReviews: MappedSubmittalSiteReview[];
+    externalApprovals: MappedSubmittalExternalApproval[];
+    externalFeedback: MappedSubmittalExternalFeedback[];
+    attachmentFolderId: string | null;
+  }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (submittal.status !== SubmittalStatus.PENDING_CONSULTANT_REVIEW) {
+      throw new BadRequestException(
+        'Consultant feedback can only be recorded while PENDING_CONSULTANT_REVIEW',
+      );
+    }
+    await this.assertCanRecordExternalResponse(ctx, projectId, submittalId);
+
+    const comment = dto.comment.trim();
+    if (!comment) {
+      throw new BadRequestException('Comment is required');
+    }
+
+    const folder = await this.engineeringDocumentFolderService.ensureSubmittalFolder(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+    );
+
+    await this.prisma.submittalExternalFeedback.create({
+      data: {
+        companyId: ctx.companyId,
+        submittalId,
+        feedbackFrom: 'CONSULTANT',
+        feedbackKind: dto.kind,
+        comment,
+        evidenceFolderId: folder.id,
+        createdBy: ctx.userId,
+      },
+    });
+
+    if (dto.kind === 'REJECTION') {
+      await this.prisma.submittal.update({
+        where: { id: submittalId },
+        data: { status: SubmittalStatus.DRAFT, updatedBy: ctx.userId },
+      });
+    }
+
+    await this.notifyExternalApprovalRecorded(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      EXTERNAL_FEEDBACK_EVENT,
+      `Consultant feedback recorded on ER ${submittal.submittalNumber}.`,
+    );
+
+    return this.getSubmittal(ctx, projectId, submittalId);
+  }
+
+  /**
+   * Withdraws an ER that has not yet been issued externally.
+   */
+  async withdrawSubmittal(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    dto: WithdrawSubmittalDto,
+  ): Promise<MappedSubmittal & {
+    items: MappedSubmittalItem[];
+    siteReviews: MappedSubmittalSiteReview[];
+    externalApprovals: MappedSubmittalExternalApproval[];
+    externalFeedback: MappedSubmittalExternalFeedback[];
+    attachmentFolderId: string | null;
+  }> {
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (
+      submittal.status === SubmittalStatus.SUBMITTED ||
+      submittal.status === SubmittalStatus.WITHDRAWN
+    ) {
+      throw new BadRequestException(
+        'Submitted or already withdrawn releases cannot be withdrawn',
+      );
+    }
+    await this.assertCanRecordExternalResponse(ctx, projectId, submittalId);
+
+    const reason = dto.reason?.trim();
+    if (reason) {
+      await this.prisma.submittalExternalFeedback.create({
+        data: {
+          companyId: ctx.companyId,
+          submittalId,
+          feedbackFrom: 'WITHDRAW',
+          feedbackKind: 'COMMENT',
+          comment: reason,
+          createdBy: ctx.userId,
+        },
+      });
+    }
+
+    await this.prisma.submittal.update({
+      where: { id: submittalId },
+      data: { status: SubmittalStatus.WITHDRAWN, updatedBy: ctx.userId },
+    });
+
+    await this.notifyExternalApprovalRecorded(
+      ctx,
+      projectId,
+      submittalId,
+      submittal.submittalNumber,
+      submittal.submittedBy,
+      submittal.taskDisciplineId,
+      EXTERNAL_WITHDRAWN_EVENT,
+      `External release ${submittal.submittalNumber} was withdrawn.`,
+    );
+
+    return this.getSubmittal(ctx, projectId, submittalId);
   }
 
   private async getSiteReviewOrThrow(
@@ -1816,6 +2206,182 @@ export class SubmittalsService {
       select: { id: true },
     });
     return Boolean(disc);
+  }
+
+  private async assertCanRecordExternalResponse(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      ctx.userId,
+      ctx.companyId,
+    );
+    if (hasFullProjectDataAccess(roleNames)) {
+      return;
+    }
+
+    const submittal = await this.getSubmittalOrThrow(projectId, submittalId);
+    if (
+      submittal.taskDisciplineId &&
+      (await this.isDisciplineLead(ctx, submittal.taskDisciplineId))
+    ) {
+      return;
+    }
+
+    const designerItem = await this.prisma.submittalItem.findFirst({
+      where: {
+        submittalId,
+        companyId: ctx.companyId,
+        designPackage: {
+          designerUserId: ctx.userId,
+          deletedAt: null,
+        },
+      },
+      select: { id: true },
+    });
+    if (designerItem) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'Only the discipline lead, designer, or a project admin may record external responses',
+    );
+  }
+
+  private async loadExternalPartiesForSubmittal(
+    companyId: string,
+    submittalId: string,
+  ): Promise<{
+    hasConsultant: boolean;
+    siteRepNames: string[];
+    siteRepInternalNames: string[];
+    consultantNames: string[];
+  }> {
+    const items = await this.prisma.submittalItem.findMany({
+      where: { companyId, submittalId },
+      include: {
+        designPackage: {
+          select: {
+            siteRepType: true,
+            siteRepName: true,
+            siteRepresentativeUserId: true,
+            consultantName: true,
+            siteRepresentative: {
+              select: {
+                firstName: true,
+                lastName: true,
+                chineseName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const siteRepNames: string[] = [];
+    const siteRepInternalNames: string[] = [];
+    const consultantNames: string[] = [];
+    let hasConsultant = false;
+
+    for (const item of items) {
+      const pkg = item.designPackage;
+      if (!pkg) {
+        continue;
+      }
+      if (pkg.siteRepName?.trim()) {
+        siteRepNames.push(pkg.siteRepName.trim());
+      }
+      if (pkg.siteRepresentative) {
+        siteRepInternalNames.push(formatUserDisplayName(pkg.siteRepresentative));
+      }
+      if (pkg.consultantName?.trim()) {
+        hasConsultant = true;
+        consultantNames.push(pkg.consultantName.trim());
+      }
+    }
+
+    return {
+      hasConsultant,
+      siteRepNames: [...new Set(siteRepNames)],
+      siteRepInternalNames: [...new Set(siteRepInternalNames)],
+      consultantNames: [...new Set(consultantNames)],
+    };
+  }
+
+  private async submittalHasConsultant(
+    companyId: string,
+    submittalId: string,
+  ): Promise<boolean> {
+    const parties = await this.loadExternalPartiesForSubmittal(
+      companyId,
+      submittalId,
+    );
+    return parties.hasConsultant;
+  }
+
+  private async resolveUserDisplayName(ctx: PmContext): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: ctx.userId, companyId: ctx.companyId },
+      select: {
+        firstName: true,
+        lastName: true,
+        chineseName: true,
+        email: true,
+      },
+    });
+    return user ? formatUserDisplayName(user) : ctx.userId;
+  }
+
+  private async notifyExternalApprovalRecorded(
+    ctx: PmContext,
+    projectId: string,
+    submittalId: string,
+    submittalNumber: string,
+    submittedBy: string,
+    taskDisciplineId: string | null,
+    eventType: string,
+    body: string,
+  ): Promise<void> {
+    if (!this.notificationService) {
+      return;
+    }
+    const recipients = new Set<string>([submittedBy]);
+    if (taskDisciplineId) {
+      const disc = await this.prisma.taskDiscipline.findFirst({
+        where: activeOnly({ id: taskDisciplineId, companyId: ctx.companyId }),
+        select: { disciplineLeadUserId: true },
+      });
+      if (disc?.disciplineLeadUserId) {
+        recipients.add(disc.disciplineLeadUserId);
+      }
+    }
+    recipients.delete(ctx.userId);
+    for (const recipientId of recipients) {
+      try {
+        await this.notificationService.send(
+          { companyId: ctx.companyId, userId: ctx.userId },
+          {
+            recipientId,
+            eventType,
+            subject: `ER ${submittalNumber}`,
+            body,
+            variables: {
+              projectId,
+              submittalId,
+              submittalNumber,
+              link: `/projects/${projectId}/submittals`,
+            },
+          },
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          'External approval notification failed',
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
   }
 
   private async enrichSiteReviews(

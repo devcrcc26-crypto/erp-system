@@ -166,6 +166,8 @@ model Company {
   reviewComments          ReviewComment[]
   submittalItems          SubmittalItem[]
   submittalSiteReviews    SubmittalSiteReview[]
+  submittalExternalApprovals SubmittalExternalApproval[]
+  submittalExternalFeedback  SubmittalExternalFeedback[]
   externalReviewTriggers  ExternalReviewTrigger[]
   deliverables            Deliverable[]
   changeRequests          ProjectChangeRequest[]
@@ -500,6 +502,8 @@ model User {
   submittalReviews       SubmittalReview[]
   submittalSiteReviewsAsRep SubmittalSiteReview[] @relation("SubmittalSiteRep")
   submittalSiteReviewsReviewed SubmittalSiteReview[] @relation("SubmittalSiteReviewReviewedBy")
+  submittalExternalApprovalsCreated SubmittalExternalApproval[] @relation("ApprovalCreator")
+  submittalExternalFeedbackCreated  SubmittalExternalFeedback[] @relation("FeedbackCreator")
   drawingVersions        DrawingVersion[]
   dailyLogsAsEngineer    DailyLog[]
   supervisedLogs         DailyLog[]              @relation("DailyLogSupervisor")
@@ -846,6 +850,8 @@ model DocumentFolder {
   documentAccess DocumentAccess[]
   drawings       Drawing[]
   changeRequests ProjectChangeRequest[] @relation("ChangeRequestAttachmentFolder")
+  submittalExternalApprovals SubmittalExternalApproval[]
+  submittalExternalFeedback  SubmittalExternalFeedback[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1209,7 +1215,10 @@ enum SubmittalStatus {
   DRAFT
   UNDER_SITE_REVIEW
   SITE_APPROVED
+  PENDING_CONSULTANT_REVIEW
+  CONSULTANT_REVIEWED
   SUBMITTED
+  WITHDRAWN
   UNDER_REVIEW
   APPROVED
   APPROVED_WITH_COMMENTS
@@ -2195,6 +2204,8 @@ model Submittal {
   reviewer       User?           @relation("SubmittalReviewedBy", fields: [reviewedBy], references: [id])
   reviews   SubmittalReview[]
   siteReviews SubmittalSiteReview[]
+  externalApprovals SubmittalExternalApproval[] @relation("SubmittalApprovals")
+  externalFeedback  SubmittalExternalFeedback[] @relation("SubmittalFeedback")
   items     SubmittalItem[]
   externalReviewTriggers ExternalReviewTrigger[]
 
@@ -2203,6 +2214,52 @@ model Submittal {
   @@index([assignedTo], map: "idx_submittal_assigned_to")
   @@index([projectId, deletedAt], map: "idx_submittal_project_deleted")
   @@map("submittal")
+}
+
+model SubmittalExternalApproval {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  submittalId      String   @map("submittal_id")
+  approvalType     String   @map("approval_type")
+  approvedByName   String   @map("approved_by_name")
+  onBehalfOf       String   @map("on_behalf_of")
+  approvedAt       DateTime @map("approved_at")
+  notes            String?
+  evidenceFolderId String?  @map("evidence_folder_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  createdBy        String   @map("created_by")
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  submittal      Submittal       @relation("SubmittalApprovals", fields: [submittalId], references: [id])
+  creator        User            @relation("ApprovalCreator", fields: [createdBy], references: [id])
+  evidenceFolder DocumentFolder? @relation(fields: [evidenceFolderId], references: [id])
+
+  @@index([companyId], map: "idx_submittal_external_approval_company_id")
+  @@index([submittalId], map: "idx_submittal_external_approval_submittal_id")
+  @@map("submittal_external_approval")
+}
+
+model SubmittalExternalFeedback {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  submittalId      String   @map("submittal_id")
+  feedbackFrom     String   @map("feedback_from")
+  feedbackKind     String   @map("feedback_kind")
+  comment          String
+  evidenceFolderId String?  @map("evidence_folder_id")
+  linkedCrId       String?  @map("linked_cr_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  createdBy        String   @map("created_by")
+
+  company        Company               @relation(fields: [companyId], references: [id])
+  submittal      Submittal             @relation("SubmittalFeedback", fields: [submittalId], references: [id])
+  creator        User                  @relation("FeedbackCreator", fields: [createdBy], references: [id])
+  evidenceFolder DocumentFolder?       @relation(fields: [evidenceFolderId], references: [id])
+  linkedCr       ProjectChangeRequest? @relation(fields: [linkedCrId], references: [id])
+
+  @@index([companyId], map: "idx_submittal_external_feedback_company_id")
+  @@index([submittalId], map: "idx_submittal_external_feedback_submittal_id")
+  @@map("submittal_external_feedback")
 }
 
 model SubmittalReview {
@@ -2395,6 +2452,7 @@ model ProjectChangeRequest {
   attachmentFolder    DocumentFolder? @relation("ChangeRequestAttachmentFolder", fields: [attachmentFolderId], references: [id])
   assignee            User?           @relation("ChangeRequestAssignedTo", fields: [assignedTo], references: [id])
   linkedFromRfi       Rfi[]           @relation("RfiLinkedCr")
+  submittalExternalFeedback SubmittalExternalFeedback[]
 
   @@unique([companyId, changeNumber], map: "uq_project_change_request_company_number")
   @@index([companyId], map: "idx_project_change_request_company_id")

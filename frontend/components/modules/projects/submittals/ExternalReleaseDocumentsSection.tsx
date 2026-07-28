@@ -431,8 +431,10 @@ export default function ExternalReleaseDocumentsSection({
   const isDraft = submittal.status === 'DRAFT' && !submittal.issuedAt;
   const isUnderSiteReview = submittal.status === 'UNDER_SITE_REVIEW';
   const isSiteApproved = submittal.status === 'SITE_APPROVED';
+  const isConsultantReviewed = submittal.status === 'CONSULTANT_REVIEWED';
+  const isReadyToIssue = isSiteApproved || isConsultantReviewed;
   const showFrozenDocs =
-    isUnderSiteReview || isSiteApproved || Boolean(submittal.issuedAt);
+    isUnderSiteReview || isSiteApproved || isConsultantReviewed || Boolean(submittal.issuedAt);
 
   const edvQueries = useQueries({
     queries: submittal.items.map((item) => ({
@@ -569,7 +571,7 @@ export default function ExternalReleaseDocumentsSection({
         />
       ) : null}
 
-      {isSiteApproved && (
+      {isReadyToIssue && (
         <Button
           type="primary"
           className="mt-4"

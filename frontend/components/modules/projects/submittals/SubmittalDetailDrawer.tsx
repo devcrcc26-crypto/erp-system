@@ -18,13 +18,24 @@ import {
   Timeline,
   Upload,
 } from 'antd';
-import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CommentOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
-import type { SubmittalStatus } from '@/lib/api/project-management.types';
+import type {
+  SubmittalStatus,
+  SubmittalExternalApproval,
+  SubmittalExternalFeedback,
+} from '@/lib/api/project-management.types';
 import { SUBMITTAL_WORKFLOW } from '@/lib/api/workflow';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAuthStore } from '@/stores/auth.store';
@@ -35,6 +46,7 @@ import {
   useSubmitSubmittalToLead,
   useUpdateSubmittal,
 } from '@/lib/query/submittals';
+import { useWithdrawSubmittal } from '@/lib/query/epc-submittals';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
 import { layout, submittalDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -51,6 +63,8 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatExternalReleasePurpose } from '@/lib/utils/external-release-purpose';
 import ExternalReleaseDocumentsSection from '@/components/modules/projects/submittals/ExternalReleaseDocumentsSection';
+import ExternalApprovalModal from '@/components/modules/projects/submittals/ExternalApprovalModal';
+import ExternalFeedbackModal from '@/components/modules/projects/submittals/ExternalFeedbackModal';
 
 interface ReviewFormValues {
   status: SubmittalStatus;
@@ -81,6 +95,84 @@ async function downloadDocumentById(documentId: string): Promise<void> {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+/** Returns the 4-step workflow steps for external releases based on whether
+ *  there is a site rep and/or consultant in any package item. */
+function buildExternalSteps(
+  hasSiteRep: boolean,
+  hasConsultant: boolean,
+): { title: string }[] {
+  if (hasSiteRep && hasConsultant) {
+    return [
+      { title: 'Draft' },
+      { title: 'Site Review' },
+      { title: 'Consultant Review' },
+      { title: 'Issued' },
+    ];
+  }
+  if (hasSiteRep) {
+    return [
+      { title: 'Draft' },
+      { title: 'Site Review' },
+      { title: 'Site Approved' },
+      { title: 'Issued' },
+    ];
+  }
+  if (hasConsultant) {
+    return [
+      { title: 'Draft' },
+      { title: 'Consultant Review' },
+      { title: 'Consultant Reviewed' },
+      { title: 'Issued' },
+    ];
+  }
+  return [{ title: 'Draft' }, { title: 'Issued' }];
+}
+
+function getExternalStepCurrent(
+  status: SubmittalStatus,
+  hasSiteRep: boolean,
+  hasConsultant: boolean,
+): number {
+  if (status === 'WITHDRAWN') {
+    return -1;
+  }
+  if (hasSiteRep && hasConsultant) {
+    if (status === 'DRAFT') return 0;
+    if (status === 'UNDER_SITE_REVIEW' || status === 'SITE_APPROVED') return 1;
+    if (status === 'PENDING_CONSULTANT_REVIEW' || status === 'CONSULTANT_REVIEWED') return 2;
+    return 3;
+  }
+  if (hasSiteRep) {
+    if (status === 'DRAFT') return 0;
+    if (status === 'UNDER_SITE_REVIEW') return 1;
+    if (status === 'SITE_APPROVED') return 2;
+    return 3;
+  }
+  if (hasConsultant) {
+    if (status === 'DRAFT') return 0;
+    if (status === 'PENDING_CONSULTANT_REVIEW') return 1;
+    if (status === 'CONSULTANT_REVIEWED') return 2;
+    return 3;
+  }
+  return status === 'DRAFT' ? 0 : 1;
+}
+
+function formatExternalEventLabel(
+  approval: SubmittalExternalApproval | SubmittalExternalFeedback,
+): string {
+  if ('approvalType' in approval) {
+    return `${approval.approvalType === 'SITE' ? 'Site' : 'Consultant'} approval recorded`;
+  }
+  const from =
+    approval.feedbackFrom === 'SITE'
+      ? 'Site'
+      : approval.feedbackFrom === 'CONSULTANT'
+        ? 'Consultant'
+        : 'Withdrawal';
+  const kind = approval.feedbackKind === 'REJECTION' ? 'rejection' : 'comment';
+  return `${from} ${kind} recorded`;
+}
+
 export default function SubmittalDetailDrawer({
   projectId,
   submittalId,
@@ -103,6 +195,15 @@ export default function SubmittalDetailDrawer({
   const [leadAttachmentName, setLeadAttachmentName] = useState<string | null>(
     null,
   );
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalModalMode, setApprovalModalMode] = useState<
+    'SITE' | 'CONSULTANT'
+  >('SITE');
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackModalMode, setFeedbackModalMode] = useState<
+    'SITE' | 'CONSULTANT'
+  >('SITE');
+
   const [designerForm] = Form.useForm<{ comments?: string }>();
   const [designerRejectForm] = Form.useForm<DesignerRejectFormValues>();
   const [leadForm] = Form.useForm<ReviewFormValues>();
@@ -117,6 +218,7 @@ export default function SubmittalDetailDrawer({
   const addReview = useAddSubmittalReview();
   const submitToLead = useSubmitSubmittalToLead();
   const updateSubmittal = useUpdateSubmittal();
+  const withdrawSubmittal = useWithdrawSubmittal();
 
   const submittal = submittalQuery.data;
   const reviews = reviewsQuery.data ?? [];
@@ -124,6 +226,36 @@ export default function SubmittalDetailDrawer({
   const isExternalRelease =
     submittal?.submittalPurpose === 'DISCIPLINE_SITE' ||
     submittal?.submittalPurpose === 'DISCIPLINE_CONSULTANT';
+
+  // External release party detection — check ALL items, not just [0]
+  const hasSiteRep =
+    isExternalRelease &&
+    (submittal?.items ?? []).some(
+      (item) =>
+        Boolean(item.siteRepresentativeUserId) ||
+        Boolean(item.siteRepEmail) ||
+        Boolean(item.siteRepName),
+    );
+  const hasConsultant =
+    isExternalRelease &&
+    (submittal?.items ?? []).some(
+      (item) =>
+        Boolean(item.consultantName) ||
+        Boolean(item.consultantEmail),
+    );
+
+  // Build names for modals
+  const siteRepOnBehalfOf =
+    submittal?.items.find(
+      (i) => i.siteRepName ?? i.siteRepEmail,
+    )?.siteRepName ??
+    submittal?.items.find((i) => i.siteRepEmail)?.siteRepEmail ??
+    'Site representative';
+
+  const consultantOnBehalfOf =
+    submittal?.items.find((i) => i.consultantName)?.consultantName ??
+    submittal?.items.find((i) => i.consultantEmail)?.consultantEmail ??
+    'Consultant';
 
   const isAssignedDesigner =
     Boolean(submittal?.assignedTo) &&
@@ -328,6 +460,60 @@ export default function SubmittalDetailDrawer({
     }
   }
 
+  function handleWithdraw(): void {
+    if (!submittalId || !submittal) return;
+    Modal.confirm({
+      title: 'Withdraw this release?',
+      content:
+        'The release will be marked as withdrawn. A new revision can be created if needed.',
+      okText: 'Withdraw',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancel',
+      onOk: () =>
+        withdrawSubmittal
+          .mutateAsync({ projectId, submittalId })
+          .then(() => {
+            messageApi.success('Release withdrawn');
+            onUpdated();
+            void submittalQuery.refetch();
+          })
+          .catch((error: unknown) => {
+            notifyApiError(error, 'Failed to withdraw release', messageApi);
+          }),
+    });
+  }
+
+  function handleCreateRevision(): void {
+    if (!submittal) return;
+    messageApi.info(
+      `Create a new external release with title: "${submittal.title} (Rev ${submittal.revisionNumber + 1})"`,
+    );
+  }
+
+  function handleExternalActionSuccess(): void {
+    onUpdated();
+    void submittalQuery.refetch();
+  }
+
+  const externalApprovals = submittal?.externalApprovals ?? [];
+  const externalFeedback = submittal?.externalFeedback ?? [];
+
+  // Merged timeline items sorted by createdAt
+  type TimelineEvent =
+    | (SubmittalExternalApproval & { _type: 'approval' })
+    | (SubmittalExternalFeedback & { _type: 'feedback' });
+
+  const externalTimeline: TimelineEvent[] = [
+    ...externalApprovals.map(
+      (a) => ({ ...a, _type: 'approval' as const }),
+    ),
+    ...externalFeedback.map(
+      (f) => ({ ...f, _type: 'feedback' as const }),
+    ),
+  ].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+
   return (
     <Drawer
       {...submittalDrawerProps}
@@ -359,21 +545,25 @@ export default function SubmittalDetailDrawer({
       {submittal && (
         <div className={layout.drawerStack}>
           {isExternalRelease ? (
-            <Steps
-              size="small"
-              className="erp-drawer-workflow"
-              current={submittal.status === 'DRAFT' ? 0 : 1}
-              items={[
-                {
-                  title: 'Draft',
-                  content: 'Being prepared',
-                },
-                {
-                  title: 'Issued',
-                  content: 'Sent externally',
-                },
-              ]}
-            />
+            submittal.status === 'WITHDRAWN' ? (
+              <Alert
+                type="warning"
+                showIcon
+                className="erp-drawer-workflow"
+                message="This release has been withdrawn."
+              />
+            ) : (
+              <Steps
+                size="small"
+                className="erp-drawer-workflow"
+                current={getExternalStepCurrent(
+                  submittal.status,
+                  hasSiteRep,
+                  hasConsultant,
+                )}
+                items={buildExternalSteps(hasSiteRep, hasConsultant)}
+              />
+            )
           ) : (
             <WorkflowStepper
               className="erp-drawer-workflow"
@@ -415,6 +605,130 @@ export default function SubmittalDetailDrawer({
             />
           )}
 
+          {/* External release contextual banners and actions */}
+          {isExternalRelease && submittal.status === 'UNDER_SITE_REVIEW' && (
+            <Alert
+              type="info"
+              showIcon
+              message="Awaiting site representative review"
+              description="Record the site approval or feedback once received."
+              action={
+                <Space wrap>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => {
+                      setApprovalModalMode('SITE');
+                      setApprovalModalOpen(true);
+                    }}
+                  >
+                    Record Site Approval
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<CommentOutlined />}
+                    onClick={() => {
+                      setFeedbackModalMode('SITE');
+                      setFeedbackModalOpen(true);
+                    }}
+                  >
+                    Record Site Feedback
+                  </Button>
+                </Space>
+              }
+            />
+          )}
+
+          {isExternalRelease &&
+            submittal.status === 'PENDING_CONSULTANT_REVIEW' && (
+              <Alert
+                type="info"
+                showIcon
+                message="Sent to consultant for review"
+                description="Record the consultant approval or feedback once received."
+                action={
+                  <Space wrap>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<CheckCircleOutlined />}
+                      onClick={() => {
+                        setApprovalModalMode('CONSULTANT');
+                        setApprovalModalOpen(true);
+                      }}
+                    >
+                      Record Consultant Approval
+                    </Button>
+                    <Button
+                      size="small"
+                      icon={<CommentOutlined />}
+                      onClick={() => {
+                        setFeedbackModalMode('CONSULTANT');
+                        setFeedbackModalOpen(true);
+                      }}
+                    >
+                      Record Consultant Feedback
+                    </Button>
+                  </Space>
+                }
+              />
+            )}
+
+          {isExternalRelease &&
+            submittal.status === 'SITE_APPROVED' &&
+            !hasConsultant && (
+              <Alert
+                type="success"
+                showIcon
+                message="Site review complete — ready to issue"
+                description="All site representatives have approved. You can now issue this release."
+              />
+            )}
+
+          {isExternalRelease && submittal.status === 'CONSULTANT_REVIEWED' && (
+            <Alert
+              type="success"
+              showIcon
+              message="Consultant review complete — ready to issue"
+              description="The consultant has reviewed. You can now issue this release."
+            />
+          )}
+
+          {isExternalRelease && submittal.status === 'WITHDRAWN' && (
+            <Alert
+              type="warning"
+              showIcon
+              message="This release was withdrawn."
+              description="Create a new revision if you need to re-issue."
+              action={
+                <Button
+                  size="small"
+                  onClick={handleCreateRevision}
+                >
+                  Create Revision
+                </Button>
+              }
+            />
+          )}
+
+          {/* Withdraw button — available when in-progress (not SUBMITTED/WITHDRAWN) */}
+          {isExternalRelease &&
+            submittal.status !== 'SUBMITTED' &&
+            submittal.status !== 'WITHDRAWN' && (
+              <div className="flex justify-end">
+                <Button
+                  danger
+                  size="small"
+                  icon={<CloseCircleOutlined />}
+                  loading={withdrawSubmittal.isPending}
+                  onClick={handleWithdraw}
+                >
+                  Withdraw Release
+                </Button>
+              </div>
+            )}
+
           <Descriptions
             className={layout.drawerDescriptionsClass}
             column={1}
@@ -427,7 +741,9 @@ export default function SubmittalDetailDrawer({
                   isExternalRelease
                     ? submittal.status === 'DRAFT'
                       ? 'Draft'
-                      : 'Issued'
+                      : submittal.status === 'SUBMITTED'
+                        ? 'Issued'
+                        : formatSubmittalStatus(submittal.status)
                     : formatSubmittalStatus(submittal.status)
                 }
                 variant={submittalStatusVariant(submittal.status)}
@@ -899,15 +1215,97 @@ export default function SubmittalDetailDrawer({
           </section>
           )}
 
-          {isExternalRelease && (
+          {/* External release activity timeline */}
+          {isExternalRelease && externalTimeline.length > 0 && (
+            <section className={layout.drawerSection}>
+              <h3 className={`${layout.drawerHeading} mb-3`}>
+                External activity
+              </h3>
+              <Timeline
+                className="erp-drawer-timeline"
+                items={externalTimeline.map((event) => ({
+                  color:
+                    event._type === 'approval'
+                      ? 'green'
+                      : (event as SubmittalExternalFeedback).feedbackKind ===
+                          'REJECTION'
+                        ? 'red'
+                        : 'blue',
+                  content: (
+                    <div>
+                      <p className="font-medium text-[var(--color-text-primary)]">
+                        {formatExternalEventLabel(event)}
+                      </p>
+                      <p className={`mt-0.5 ${layout.drawerMetaLabel}`}>
+                        {dayjs(event.createdAt).format('D MMM YYYY, HH:mm')}
+                      </p>
+                      {event._type === 'approval' &&
+                        (event as SubmittalExternalApproval).onBehalfOf && (
+                          <p className={layout.drawerMutedText}>
+                            On behalf of:{' '}
+                            {(event as SubmittalExternalApproval).onBehalfOf}
+                          </p>
+                        )}
+                      {event._type === 'approval' &&
+                        (event as SubmittalExternalApproval).notes && (
+                          <p
+                            className={`mt-1 whitespace-pre-wrap ${layout.drawerMutedText}`}
+                          >
+                            {(event as SubmittalExternalApproval).notes}
+                          </p>
+                        )}
+                      {event._type === 'feedback' && (
+                        <p
+                          className={`mt-1 whitespace-pre-wrap ${layout.drawerMutedText}`}
+                        >
+                          {(event as SubmittalExternalFeedback).comment}
+                        </p>
+                      )}
+                    </div>
+                  ),
+                }))}
+              />
+            </section>
+          )}
+
+          {isExternalRelease && externalTimeline.length === 0 && (
             <Alert
               type="info"
               showIcon
               className="mt-4"
-              title="External feedback is handled outside the system. Create an Issue, RFI, or Change Request to action any feedback received."
+              title="No external activity recorded yet."
+              description="Use the action buttons above to record site or consultant responses."
             />
           )}
         </div>
+      )}
+
+      {/* External approval modal */}
+      {submittal && submittalId && (
+        <ExternalApprovalModal
+          open={approvalModalOpen}
+          mode={approvalModalMode}
+          onBehalfOf={
+            approvalModalMode === 'SITE' ? siteRepOnBehalfOf : consultantOnBehalfOf
+          }
+          projectId={projectId}
+          submittalId={submittalId}
+          attachmentFolderId={submittal.attachmentFolderId}
+          onClose={() => setApprovalModalOpen(false)}
+          onSuccess={handleExternalActionSuccess}
+        />
+      )}
+
+      {/* External feedback modal */}
+      {submittal && submittalId && (
+        <ExternalFeedbackModal
+          open={feedbackModalOpen}
+          mode={feedbackModalMode}
+          projectId={projectId}
+          submittalId={submittalId}
+          onClose={() => setFeedbackModalOpen(false)}
+          onSuccess={handleExternalActionSuccess}
+        />
       )}
     </Drawer>
   );

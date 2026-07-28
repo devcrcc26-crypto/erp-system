@@ -95,12 +95,15 @@ export type SubmittalStatus =
   | 'DRAFT'
   | 'UNDER_SITE_REVIEW'
   | 'SITE_APPROVED'
+  | 'PENDING_CONSULTANT_REVIEW'
+  | 'CONSULTANT_REVIEWED'
   | 'SUBMITTED'
   | 'UNDER_REVIEW'
   | 'APPROVED'
   | 'APPROVED_WITH_COMMENTS'
   | 'REVISE_AND_RESUBMIT'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'WITHDRAWN';
 
 export type SubmittalSiteReviewStatus = 'PENDING' | 'APPROVED' | 'COMMENTED';
 
@@ -522,12 +525,52 @@ export interface SubmittalItem {
   snapshotPayload: SubmittalEdvSnapshotRow[];
   contentHash: string | null;
   capturedAt: string | null;
+  /** External party — site representative fields */
+  siteRepType?: string | null;
+  siteRepName?: string | null;
+  siteRepEmail?: string | null;
+  siteRepPhone?: string | null;
+  siteRepCompany?: string | null;
+  siteRepresentativeUserId?: string | null;
+  /** External party — consultant fields */
+  consultantName?: string | null;
+  consultantTitle?: string | null;
+  consultantEmail?: string | null;
+  consultantPhone?: string | null;
+  consultantCompany?: string | null;
   createdAt: string;
+}
+
+export interface SubmittalExternalApproval {
+  id: string;
+  submittalId: string;
+  approvalType: 'SITE' | 'CONSULTANT';
+  approvedByName: string;
+  onBehalfOf: string | null;
+  approvedAt: string;
+  notes: string | null;
+  evidenceFolderId: string | null;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface SubmittalExternalFeedback {
+  id: string;
+  submittalId: string;
+  feedbackFrom: 'SITE' | 'CONSULTANT' | 'WITHDRAW';
+  feedbackKind: 'COMMENT' | 'REJECTION';
+  comment: string;
+  evidenceFolderId: string | null;
+  linkedCrId: string | null;
+  createdAt: string;
+  createdBy: string;
 }
 
 export interface SubmittalDetail extends Submittal {
   items: SubmittalItem[];
   attachmentFolderId: string | null;
+  externalApprovals?: SubmittalExternalApproval[];
+  externalFeedback?: SubmittalExternalFeedback[];
 }
 
 export interface SubmittalReview {

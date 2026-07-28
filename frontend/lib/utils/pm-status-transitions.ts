@@ -46,12 +46,15 @@ export const SUBMITTAL_DIRECT_TRANSITIONS: Record<
   DRAFT: ['SUBMITTED'],
   UNDER_SITE_REVIEW: [],
   SITE_APPROVED: [],
+  PENDING_CONSULTANT_REVIEW: [],
+  CONSULTANT_REVIEWED: [],
   SUBMITTED: ['DRAFT'],
   UNDER_REVIEW: [],
   APPROVED: [],
   APPROVED_WITH_COMMENTS: [],
   REVISE_AND_RESUBMIT: [],
   REJECTED: [],
+  WITHDRAWN: [],
 };
 
 export function nextStatusOptions<T extends string>(
