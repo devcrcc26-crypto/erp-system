@@ -102,6 +102,11 @@ export default function SubtaskRolesModal({
         <SubtaskRolesFormFields
           projectId={projectId}
           reviewLevel={subtask?.reviewLevel}
+          initialSiteRepType={
+            subtask
+              ? (toSubtaskRolesFormValues(subtask).siteRepType ?? 'EXTERNAL')
+              : 'EXTERNAL'
+          }
         />
       </Form>
     </Modal>

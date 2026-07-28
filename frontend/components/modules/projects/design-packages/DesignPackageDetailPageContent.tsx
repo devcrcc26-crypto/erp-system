@@ -503,12 +503,43 @@ export default function DesignPackageDetailPageContent({
               {formatTaskReviewLevelLabel(pkg.reviewLevel)}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">Site Representative</p>
-            <p className="text-sm font-medium">
-              {pkg.siteRepresentativeName ?? '—'}
-            </p>
-          </div>
+          {(pkg.siteRepName || pkg.siteRepresentativeName) && (
+            <div>
+              <p className={layout.drawerMetaLabel}>Site Representative</p>
+              <p className="text-sm font-medium">
+                {pkg.siteRepType === 'INTERNAL'
+                  ? (pkg.siteRepresentativeName ?? '—')
+                  : (pkg.siteRepName ?? '—')}
+              </p>
+              {pkg.siteRepType !== 'INTERNAL' && pkg.siteRepCompany ? (
+                <p className={layout.drawerMutedText}>{pkg.siteRepCompany}</p>
+              ) : null}
+              {pkg.siteRepType !== 'INTERNAL' && pkg.siteRepPhone ? (
+                <p className={layout.drawerMutedText}>{pkg.siteRepPhone}</p>
+              ) : null}
+              {pkg.siteRepType !== 'INTERNAL' && pkg.siteRepEmail ? (
+                <p className={layout.drawerMutedText}>{pkg.siteRepEmail}</p>
+              ) : null}
+            </div>
+          )}
+          {pkg.consultantName ? (
+            <div>
+              <p className={layout.drawerMetaLabel}>Client Consultant</p>
+              <p className="text-sm font-medium">
+                {pkg.consultantName}
+                {pkg.consultantTitle ? ` — ${pkg.consultantTitle}` : ''}
+              </p>
+              {pkg.consultantCompany ? (
+                <p className={layout.drawerMutedText}>{pkg.consultantCompany}</p>
+              ) : null}
+              {pkg.consultantPhone ? (
+                <p className={layout.drawerMutedText}>{pkg.consultantPhone}</p>
+              ) : null}
+              {pkg.consultantEmail ? (
+                <p className={layout.drawerMutedText}>{pkg.consultantEmail}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <ProjectionLagHelper pending={pkg.projectionPending} />

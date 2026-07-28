@@ -1358,6 +1358,11 @@ enum DesignPackageStatus {
   CLOSED
 }
 
+enum SiteRepType {
+  INTERNAL
+  EXTERNAL
+}
+
 enum TaskDisciplineProjectedStatus {
   IN_PROGRESS
   PENDING_LEAD
@@ -1811,6 +1816,16 @@ model DesignPackage {
   disciplineOwnerUserId      String?                      @map("discipline_owner_user_id")
   supportingDesignerUserId   String?                      @map("supporting_designer_user_id")
   siteRepresentativeUserId   String?                      @map("site_representative_user_id")
+  siteRepType                SiteRepType?                 @default(EXTERNAL) @map("site_rep_type")
+  siteRepName                String?                      @map("site_rep_name")
+  siteRepEmail               String?                      @map("site_rep_email")
+  siteRepPhone               String?                      @map("site_rep_phone")
+  siteRepCompany             String?                      @map("site_rep_company")
+  consultantName             String?                      @map("consultant_name")
+  consultantTitle            String?                      @map("consultant_title")
+  consultantEmail            String?                      @map("consultant_email")
+  consultantPhone            String?                      @map("consultant_phone")
+  consultantCompany          String?                      @map("consultant_company")
   briefText         String?                      @map("brief_text")
   sourceEntityType  String?                      @map("source_entity_type")
   sourceEntityId    String?                      @map("source_entity_id")

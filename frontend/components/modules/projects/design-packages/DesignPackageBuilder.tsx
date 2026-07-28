@@ -375,10 +375,15 @@ export default function DesignPackageBuilder({
         ) : null}
 
         {step === 1 ? (
-          <SubtaskRolesFormFields
-            projectId={projectId}
-            reviewLevel={reviewLevel}
-          />
+        <SubtaskRolesFormFields
+          projectId={projectId}
+          reviewLevel={reviewLevel}
+          initialSiteRepType={
+            editing
+              ? (toSubtaskRolesFormValues(editing).siteRepType ?? 'EXTERNAL')
+              : 'EXTERNAL'
+          }
+        />
         ) : null}
       </Form>
     </Drawer>

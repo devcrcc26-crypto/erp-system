@@ -1,5 +1,5 @@
 import type { DesignPackage } from '@/lib/api/epc.types';
-import type { UpdateDesignPackageRequest } from '@/lib/api/epc.types';
+import type { SiteRepType, UpdateDesignPackageRequest } from '@/lib/api/epc.types';
 
 export type InstituteChiefMode = 'SYSTEM_USER' | 'EXTERNAL_PERSON';
 
@@ -13,7 +13,24 @@ export interface SubtaskRolesFormValues {
   instituteChiefMode?: InstituteChiefMode;
   instituteChiefUserId?: string;
   instituteChiefName?: string;
+  siteRepType?: SiteRepType;
   siteRepresentativeUserId?: string;
+  siteRepName?: string;
+  siteRepEmail?: string;
+  siteRepPhone?: string;
+  siteRepCompany?: string;
+  consultantName?: string;
+  consultantTitle?: string;
+  consultantEmail?: string;
+  consultantPhone?: string;
+  consultantCompany?: string;
+}
+
+function resolveSiteRepType(subtask: DesignPackage): SiteRepType {
+  if (subtask.siteRepType === 'INTERNAL' || subtask.siteRepType === 'EXTERNAL') {
+    return subtask.siteRepType;
+  }
+  return subtask.siteRepresentativeUserId ? 'INTERNAL' : 'EXTERNAL';
 }
 
 export function toSubtaskRolesFormValues(
@@ -29,7 +46,17 @@ export function toSubtaskRolesFormValues(
     instituteChiefMode: subtask.instituteChiefName ? 'EXTERNAL_PERSON' : 'SYSTEM_USER',
     instituteChiefUserId: subtask.instituteChiefUserId ?? undefined,
     instituteChiefName: subtask.instituteChiefName ?? undefined,
+    siteRepType: resolveSiteRepType(subtask),
     siteRepresentativeUserId: subtask.siteRepresentativeUserId ?? undefined,
+    siteRepName: subtask.siteRepName ?? undefined,
+    siteRepEmail: subtask.siteRepEmail ?? undefined,
+    siteRepPhone: subtask.siteRepPhone ?? undefined,
+    siteRepCompany: subtask.siteRepCompany ?? undefined,
+    consultantName: subtask.consultantName ?? undefined,
+    consultantTitle: subtask.consultantTitle ?? undefined,
+    consultantEmail: subtask.consultantEmail ?? undefined,
+    consultantPhone: subtask.consultantPhone ?? undefined,
+    consultantCompany: subtask.consultantCompany ?? undefined,
   };
 }
 
@@ -66,6 +93,7 @@ export function defaultSubtaskRolesFromDiscipline(
     deptDeputyChiefUserId: discipline.chiefUserId ?? undefined,
     instituteChiefMode: 'SYSTEM_USER',
     instituteChiefUserId: discipline.instituteChiefUserId ?? undefined,
+    siteRepType: 'EXTERNAL',
   };
 }
 
@@ -95,6 +123,7 @@ export function mergeSubtaskRolesWithDisciplineDefaults(
       values.deptDeputyChiefUserId ?? defaults.deptDeputyChiefUserId,
     instituteChiefUserId:
       values.instituteChiefUserId ?? defaults.instituteChiefUserId,
+    siteRepType: values.siteRepType ?? defaults.siteRepType,
   };
 }
 
@@ -102,6 +131,8 @@ export function toSubtaskRolesPayload(
   values: SubtaskRolesFormValues,
 ): UpdateDesignPackageRequest {
   const isExternal = values.instituteChiefMode === 'EXTERNAL_PERSON';
+  const siteRepType = values.siteRepType ?? 'EXTERNAL';
+  const isInternalSiteRep = siteRepType === 'INTERNAL';
   return {
     designerUserId: values.designerUserId,
     supportingDesignerUserId: values.supportingDesignerUserId,
@@ -111,6 +142,18 @@ export function toSubtaskRolesPayload(
     deptDeputyChiefUserId: values.deptDeputyChiefUserId,
     instituteChiefUserId: isExternal ? undefined : values.instituteChiefUserId,
     instituteChiefName: isExternal ? values.instituteChiefName : undefined,
-    siteRepresentativeUserId: values.siteRepresentativeUserId,
+    siteRepType,
+    siteRepresentativeUserId: isInternalSiteRep
+      ? values.siteRepresentativeUserId
+      : null,
+    siteRepName: isInternalSiteRep ? null : values.siteRepName,
+    siteRepEmail: isInternalSiteRep ? null : values.siteRepEmail,
+    siteRepPhone: isInternalSiteRep ? null : values.siteRepPhone,
+    siteRepCompany: isInternalSiteRep ? null : values.siteRepCompany,
+    consultantName: values.consultantName,
+    consultantTitle: values.consultantTitle,
+    consultantEmail: values.consultantEmail,
+    consultantPhone: values.consultantPhone,
+    consultantCompany: values.consultantCompany,
   };
 }

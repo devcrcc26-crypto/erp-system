@@ -91,6 +91,16 @@ export interface MappedDesignPackage {
   supportingDesignerUserId: string | null;
   siteRepresentativeUserId: string | null;
   siteRepresentativeName: string | null;
+  siteRepType: DesignPackage['siteRepType'];
+  siteRepName: string | null;
+  siteRepEmail: string | null;
+  siteRepPhone: string | null;
+  siteRepCompany: string | null;
+  consultantName: string | null;
+  consultantTitle: string | null;
+  consultantEmail: string | null;
+  consultantPhone: string | null;
+  consultantCompany: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -278,6 +288,16 @@ export function mapDesignPackage(
     siteRepresentativeName: row.siteRepresentative
       ? formatUserDisplayName(row.siteRepresentative)
       : null,
+    siteRepType: row.siteRepType ?? null,
+    siteRepName: row.siteRepName ?? null,
+    siteRepEmail: row.siteRepEmail ?? null,
+    siteRepPhone: row.siteRepPhone ?? null,
+    siteRepCompany: row.siteRepCompany ?? null,
+    consultantName: row.consultantName ?? null,
+    consultantTitle: row.consultantTitle ?? null,
+    consultantEmail: row.consultantEmail ?? null,
+    consultantPhone: row.consultantPhone ?? null,
+    consultantCompany: row.consultantCompany ?? null,
     briefText: row.briefText,
     sourceEntityType: row.sourceEntityType,
     sourceEntityId: row.sourceEntityId,

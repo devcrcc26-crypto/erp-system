@@ -33,6 +33,8 @@ export type DesignPackageProjectedStatus =
 
 export type DesignPackageStatus = 'OPEN' | 'SUBMITTED' | 'CLOSED';
 
+export type SiteRepType = 'INTERNAL' | 'EXTERNAL';
+
 export type TaskDisciplineProjectedStatus =
   | 'IN_PROGRESS'
   | 'PENDING_LEAD'
@@ -158,6 +160,16 @@ export interface DesignPackage {
   supportingDesignerUserId: string | null;
   siteRepresentativeUserId: string | null;
   siteRepresentativeName: string | null;
+  siteRepType: SiteRepType | null;
+  siteRepName: string | null;
+  siteRepEmail: string | null;
+  siteRepPhone: string | null;
+  siteRepCompany: string | null;
+  consultantName: string | null;
+  consultantTitle: string | null;
+  consultantEmail: string | null;
+  consultantPhone: string | null;
+  consultantCompany: string | null;
   briefText: string | null;
   sourceEntityType: string | null;
   sourceEntityId: string | null;
@@ -594,7 +606,17 @@ export interface CreateDesignPackageRequest {
   instituteChiefName?: string;
   disciplineOwnerUserId?: string;
   supportingDesignerUserId?: string;
-  siteRepresentativeUserId?: string;
+  siteRepresentativeUserId?: string | null;
+  siteRepType?: SiteRepType;
+  siteRepName?: string | null;
+  siteRepEmail?: string | null;
+  siteRepPhone?: string | null;
+  siteRepCompany?: string | null;
+  consultantName?: string | null;
+  consultantTitle?: string | null;
+  consultantEmail?: string | null;
+  consultantPhone?: string | null;
+  consultantCompany?: string | null;
 }
 
 export type UpdateDesignPackageRequest = Partial<CreateDesignPackageRequest>;

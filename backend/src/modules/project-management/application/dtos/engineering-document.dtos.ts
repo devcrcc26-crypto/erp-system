@@ -22,6 +22,7 @@ import {
   EdvStatus,
   EngineeringDocumentType,
   ReviewTier,
+  SiteRepType,
   TaskDisciplineProjectedStatus,
   UrgencyLevel,
   WorkflowEntityType,
@@ -451,6 +452,65 @@ export class CreateDesignPackageDto {
   @IsOptional()
   @IsEntityUuid()
   siteRepresentativeUserId?: string;
+
+  @ApiPropertyOptional({ enum: SiteRepType })
+  @IsOptional()
+  @IsEnum(SiteRepType)
+  siteRepType?: SiteRepType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  siteRepName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(320)
+  siteRepEmail?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  siteRepPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  siteRepCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  consultantName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  consultantTitle?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(320)
+  consultantEmail?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  consultantPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  consultantCompany?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

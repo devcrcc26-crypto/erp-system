@@ -13,6 +13,7 @@ import {
   ReviewSession,
   ReviewSessionStatus,
   ReviewTier,
+  SiteRepType,
   WorkflowEntityType,
 } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
@@ -186,6 +187,8 @@ export class DesignPackagesService {
       );
     }
     const instituteChiefName = dto.instituteChiefName ?? null;
+    const siteRepType = dto.siteRepType ?? SiteRepType.EXTERNAL;
+    const externalParties = this.resolveExternalPartiesOnWrite(dto, siteRepType);
 
     const packageOverrides = {
       designerUserId: dto.designerUserId ?? discipline.designerUserId ?? null,
@@ -204,7 +207,7 @@ export class DesignPackagesService {
         ? null
         : dto.instituteChiefUserId ?? discipline.instituteChiefUserId ?? null,
       instituteChiefName,
-      siteRepresentativeUserId: dto.siteRepresentativeUserId ?? null,
+      siteRepresentativeUserId: externalParties.siteRepresentativeUserId,
     };
     const effectiveChain = this.getEffectiveApprovalChain(packageOverrides, discipline);
 
@@ -303,6 +306,16 @@ export class DesignPackagesService {
         sourceEntityType: dto.sourceEntityType,
         sourceEntityId: dto.sourceEntityId,
         instituteChiefName,
+        siteRepType: externalParties.siteRepType,
+        siteRepName: externalParties.siteRepName,
+        siteRepEmail: externalParties.siteRepEmail,
+        siteRepPhone: externalParties.siteRepPhone,
+        siteRepCompany: externalParties.siteRepCompany,
+        consultantName: externalParties.consultantName,
+        consultantTitle: externalParties.consultantTitle,
+        consultantEmail: externalParties.consultantEmail,
+        consultantPhone: externalParties.consultantPhone,
+        consultantCompany: externalParties.consultantCompany,
         ...this.buildPackageApprovalChainCreateRelations(packageOverrides),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
@@ -391,6 +404,54 @@ export class DesignPackagesService {
       );
     }
 
+    const nextSiteRepType =
+      dto.siteRepType ?? existing.siteRepType ?? SiteRepType.EXTERNAL;
+    const externalParties = this.resolveExternalPartiesOnWrite(
+      {
+        siteRepresentativeUserId:
+          dto.siteRepresentativeUserId !== undefined
+            ? dto.siteRepresentativeUserId
+            : existing.siteRepresentativeUserId ?? undefined,
+        siteRepName:
+          dto.siteRepName !== undefined
+            ? dto.siteRepName
+            : existing.siteRepName ?? undefined,
+        siteRepEmail:
+          dto.siteRepEmail !== undefined
+            ? dto.siteRepEmail
+            : existing.siteRepEmail ?? undefined,
+        siteRepPhone:
+          dto.siteRepPhone !== undefined
+            ? dto.siteRepPhone
+            : existing.siteRepPhone ?? undefined,
+        siteRepCompany:
+          dto.siteRepCompany !== undefined
+            ? dto.siteRepCompany
+            : existing.siteRepCompany ?? undefined,
+        consultantName:
+          dto.consultantName !== undefined
+            ? dto.consultantName
+            : existing.consultantName ?? undefined,
+        consultantTitle:
+          dto.consultantTitle !== undefined
+            ? dto.consultantTitle
+            : existing.consultantTitle ?? undefined,
+        consultantEmail:
+          dto.consultantEmail !== undefined
+            ? dto.consultantEmail
+            : existing.consultantEmail ?? undefined,
+        consultantPhone:
+          dto.consultantPhone !== undefined
+            ? dto.consultantPhone
+            : existing.consultantPhone ?? undefined,
+        consultantCompany:
+          dto.consultantCompany !== undefined
+            ? dto.consultantCompany
+            : existing.consultantCompany ?? undefined,
+      },
+      nextSiteRepType,
+    );
+
     const chainFkChanged =
       dto.designerUserId !== undefined ||
       dto.supportingDesignerUserId !== undefined ||
@@ -400,7 +461,8 @@ export class DesignPackagesService {
       dto.deptDeputyChiefUserId !== undefined ||
       dto.instituteChiefUserId !== undefined ||
       dto.instituteChiefName !== undefined ||
-      dto.siteRepresentativeUserId !== undefined;
+      dto.siteRepresentativeUserId !== undefined ||
+      dto.siteRepType !== undefined;
 
     const priorEffectiveChain = this.getEffectiveApprovalChain(
       {
@@ -471,11 +533,7 @@ export class DesignPackagesService {
       ),
       instituteChiefUserId: nextInstituteChiefUserId,
       instituteChiefName: nextInstituteChiefName,
-      siteRepresentativeUserId: this.resolveRoleOnUpdate(
-        dto.siteRepresentativeUserId,
-        existing.siteRepresentativeUserId,
-        null,
-      ),
+      siteRepresentativeUserId: externalParties.siteRepresentativeUserId,
     };
     const nextEffectiveChain = this.getEffectiveApprovalChain(
       nextPackageOverrides,
@@ -511,6 +569,16 @@ export class DesignPackagesService {
       projectedStatus: dto.projectedStatus,
       requiredTiers,
       instituteChiefName: nextInstituteChiefName,
+      siteRepType: externalParties.siteRepType,
+      siteRepName: externalParties.siteRepName,
+      siteRepEmail: externalParties.siteRepEmail,
+      siteRepPhone: externalParties.siteRepPhone,
+      siteRepCompany: externalParties.siteRepCompany,
+      consultantName: externalParties.consultantName,
+      consultantTitle: externalParties.consultantTitle,
+      consultantEmail: externalParties.consultantEmail,
+      consultantPhone: externalParties.consultantPhone,
+      consultantCompany: externalParties.consultantCompany,
       ...(chainFkChanged
         ? this.buildPackageApprovalChainUpdateRelations(nextPackageOverrides)
         : {}),
@@ -1241,6 +1309,51 @@ export class DesignPackagesService {
       slaDeadlineAt: row.slaDeadlineAt?.toISOString() ?? null,
       slaOverdue,
       openedAt: row.openedAt.toISOString(),
+    };
+  }
+
+  private resolveExternalPartiesOnWrite(
+    dto: {
+      siteRepresentativeUserId?: string | null;
+      siteRepName?: string | null;
+      siteRepEmail?: string | null;
+      siteRepPhone?: string | null;
+      siteRepCompany?: string | null;
+      consultantName?: string | null;
+      consultantTitle?: string | null;
+      consultantEmail?: string | null;
+      consultantPhone?: string | null;
+      consultantCompany?: string | null;
+    },
+    siteRepType: SiteRepType,
+  ): {
+    siteRepType: SiteRepType;
+    siteRepresentativeUserId: string | null;
+    siteRepName: string | null;
+    siteRepEmail: string | null;
+    siteRepPhone: string | null;
+    siteRepCompany: string | null;
+    consultantName: string | null;
+    consultantTitle: string | null;
+    consultantEmail: string | null;
+    consultantPhone: string | null;
+    consultantCompany: string | null;
+  } {
+    const isInternal = siteRepType === SiteRepType.INTERNAL;
+    return {
+      siteRepType,
+      siteRepresentativeUserId: isInternal
+        ? (dto.siteRepresentativeUserId ?? null)
+        : null,
+      siteRepName: isInternal ? null : (dto.siteRepName ?? null),
+      siteRepEmail: isInternal ? null : (dto.siteRepEmail ?? null),
+      siteRepPhone: isInternal ? null : (dto.siteRepPhone ?? null),
+      siteRepCompany: isInternal ? null : (dto.siteRepCompany ?? null),
+      consultantName: dto.consultantName ?? null,
+      consultantTitle: dto.consultantTitle ?? null,
+      consultantEmail: dto.consultantEmail ?? null,
+      consultantPhone: dto.consultantPhone ?? null,
+      consultantCompany: dto.consultantCompany ?? null,
     };
   }
 
