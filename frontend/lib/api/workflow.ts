@@ -77,9 +77,10 @@ export const PUNCH_ITEM_WORKFLOW: WorkflowStep[] = [
 
 export const RISK_WORKFLOW: WorkflowStep[] = [
   { key: 'OPEN', label: 'Open' },
-  { key: 'MONITORING', label: 'Monitoring' },
   { key: 'MITIGATED', label: 'Mitigated' },
+  { key: 'ACCEPTED', label: 'Accepted' },
   { key: 'CLOSED', label: 'Closed' },
+  { key: 'MONITORING', label: 'Monitoring (legacy)' },
 ];
 
 export const CLOSEOUT_WORKFLOW: WorkflowStep[] = [

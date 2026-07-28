@@ -142,9 +142,19 @@ export type RiskCategory =
   | 'SAFETY'
   | 'QUALITY'
   | 'ENVIRONMENTAL'
-  | 'CONTRACTUAL';
+  | 'CONTRACTUAL'
+  | 'TECHNICAL'
+  | 'FINANCIAL'
+  | 'LEGAL'
+  | 'POLITICAL'
+  | 'OTHER';
 
-export type RiskStatus = 'OPEN' | 'MONITORING' | 'MITIGATED' | 'CLOSED';
+export type RiskStatus =
+  | 'OPEN'
+  | 'MONITORING'
+  | 'MITIGATED'
+  | 'ACCEPTED'
+  | 'CLOSED';
 
 export type CorrespondenceType =
   | 'LETTER'
@@ -887,9 +897,42 @@ export interface Risk {
   contingencyPlan: string | null;
   reviewDate: string | null;
   status: RiskStatus;
+  residualLikelihood: number | null;
+  residualImpact: number | null;
+  residualScore: number | null;
   attachmentFolderId: string | null;
+  createdBy: string;
+  createdByName?: string | null;
   createdAt: string;
   updatedAt: string;
+  projectName?: string | null;
+  projectCode?: string | null;
+}
+
+export interface RiskProjectOption {
+  id: string;
+  projectCode: string;
+  name: string;
+}
+
+export interface RiskReview {
+  id: string;
+  riskId: string;
+  reviewedBy: string;
+  reviewedByName?: string | null;
+  reviewedAt: string;
+  previousStatus: string | null;
+  newStatus: string | null;
+  previousScore: number | null;
+  newScore: number | null;
+  previousResidualScore: number | null;
+  newResidualScore: number | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface RiskDetail extends Risk {
+  reviews: RiskReview[];
 }
 
 export interface IssueProjectOption {
@@ -1413,7 +1456,6 @@ export type UpdateCorrespondenceRequest = Partial<CreateCorrespondenceRequest> &
 };
 
 export interface CreateRiskRequest {
-  riskIdCode: string;
   title: string;
   description?: string;
   category: RiskCategory;
@@ -1427,6 +1469,10 @@ export interface CreateRiskRequest {
 
 export type UpdateRiskRequest = Partial<CreateRiskRequest> & {
   status?: RiskStatus;
+  residualLikelihood?: number;
+  residualImpact?: number;
+  clearResidual?: boolean;
+  reviewNotes?: string;
 };
 
 export interface CreateIssueRequest {

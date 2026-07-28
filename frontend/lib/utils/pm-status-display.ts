@@ -196,6 +196,7 @@ export function riskStatusVariant(status: RiskStatus): StatusBadgeVariant {
     OPEN: 'error',
     MONITORING: 'warning',
     MITIGATED: 'success',
+    ACCEPTED: 'cyan',
     CLOSED: 'default',
   };
   return variants[status];
@@ -205,11 +206,36 @@ export function formatRiskCategory(category: RiskCategory): string {
   return category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Score bands over a 1-25 (probability × impact) range: green/yellow/orange/red. */
 export function riskScoreVariant(score: number): StatusBadgeVariant {
-  if (score >= 15) return 'error';
-  if (score >= 8) return 'warning';
-  if (score >= 4) return 'orange';
-  return 'default';
+  if (score >= 20) return 'error';
+  if (score >= 10) return 'orange';
+  if (score >= 5) return 'warning';
+  return 'success';
+}
+
+export const RISK_LIKELIHOOD_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: 'Very Low' },
+  { value: 2, label: 'Low' },
+  { value: 3, label: 'Medium' },
+  { value: 4, label: 'High' },
+  { value: 5, label: 'Very High' },
+];
+
+export const RISK_IMPACT_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: 'Negligible' },
+  { value: 2, label: 'Minor' },
+  { value: 3, label: 'Moderate' },
+  { value: 4, label: 'Major' },
+  { value: 5, label: 'Critical' },
+];
+
+export function formatRiskLikelihood(value: number): string {
+  return RISK_LIKELIHOOD_OPTIONS.find((o) => o.value === value)?.label ?? String(value);
+}
+
+export function formatRiskImpactLevel(value: number): string {
+  return RISK_IMPACT_OPTIONS.find((o) => o.value === value)?.label ?? String(value);
 }
 
 export function formatPunchItemStatus(status: PunchItemStatus): string {

@@ -104,6 +104,14 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      folder.contextType === FolderContextType.RISK &&
+      folder.contextId &&
+      (await this.canUploadRiskFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.create');
   }
 
@@ -200,6 +208,14 @@ export class DocumentPermissionService {
       folder.contextType === FolderContextType.DAILY_LOG &&
       folder.contextId &&
       (await this.canUploadDailyLogFolder(userId, companyId, folder, roleNames))
+    ) {
+      return;
+    }
+
+    if (
+      folder.contextType === FolderContextType.RISK &&
+      folder.contextId &&
+      (await this.canUploadRiskFolder(userId, companyId, folder, roleNames))
     ) {
       return;
     }
@@ -714,6 +730,53 @@ export class DocumentPermissionService {
       select: { id: true },
     });
     return Boolean(hasFkRole);
+  }
+
+  /**
+   * Risk attachment folders: owner, creator, discipline lead on the risk's
+   * project, or full access. Mirrors RisksService#assertCanAccessRisk.
+   */
+  private async canUploadRiskFolder(
+    userId: string,
+    companyId: string,
+    folder: { contextId: string | null },
+    roleNames?: readonly string[],
+  ): Promise<boolean> {
+    if (!folder.contextId) {
+      return false;
+    }
+
+    const resolvedRoles =
+      roleNames ??
+      (await this.permissionService.getUserRoleNames(userId, companyId));
+    if (hasFullProjectDataAccess(resolvedRoles)) {
+      return true;
+    }
+
+    const risk = await this.prisma.risk.findFirst({
+      where: activeOnly({
+        id: folder.contextId,
+        project: activeOnly({ companyId }),
+      }),
+      select: { ownerId: true, createdBy: true, projectId: true },
+    });
+    if (!risk) {
+      return false;
+    }
+
+    if (risk.ownerId === userId || risk.createdBy === userId) {
+      return true;
+    }
+
+    const isDLead = await this.prisma.taskDiscipline.findFirst({
+      where: activeOnly({
+        companyId,
+        task: { projectId: risk.projectId, deletedAt: null },
+        disciplineLeadUserId: userId,
+      }),
+      select: { id: true },
+    });
+    return Boolean(isDLead);
   }
 
   /**

@@ -94,6 +94,7 @@ import { PunchItemsController } from './presentation/controllers/punch-items.con
 import { ReviewBatchController } from './presentation/controllers/review-batch.controller';
 import { ReviewCommentsController } from './presentation/controllers/review-comments.controller';
 import { RisksController } from './presentation/controllers/risks.controller';
+import { MyRisksController } from './presentation/controllers/my-risks.controller';
 import { RfisController } from './presentation/controllers/rfis.controller';
 import { ScheduleController } from './presentation/controllers/schedule.controller';
 import {
@@ -149,6 +150,7 @@ const workflowBullProcessors = redisEnabled
     MyMeetingsController,
     CorrespondenceController,
     RisksController,
+    MyRisksController,
     PunchItemsController,
     CloseoutController,
     ChangeRequestsController,

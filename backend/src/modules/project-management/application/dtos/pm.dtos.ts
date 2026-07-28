@@ -1553,9 +1553,12 @@ export class UpdateCorrespondenceDto extends PartialType(CreateCorrespondenceDto
 }
 
 export class CreateRiskDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'Ignored on create — the risk number is always server-generated.',
+  })
+  @IsOptional()
   @IsString()
-  riskIdCode!: string;
+  riskIdCode?: string;
 
   @ApiProperty()
   @IsString()
@@ -1609,6 +1612,40 @@ export class UpdateRiskDto extends PartialType(CreateRiskDto) {
   @IsOptional()
   @IsEnum(RiskStatus)
   status?: RiskStatus;
+
+  @ApiPropertyOptional({
+    description: 'Residual likelihood after mitigation, 1 (very low) - 5 (very high).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualLikelihood?: number;
+
+  @ApiPropertyOptional({
+    description: 'Residual impact after mitigation, 1 (negligible) - 5 (critical).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualImpact?: number;
+
+  @ApiPropertyOptional({
+    description: 'Explicitly clears the residual assessment when true.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  clearResidual?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Optional note recorded on the risk review log entry for this update.',
+  })
+  @IsOptional()
+  @IsString()
+  reviewNotes?: string;
 }
 
 export class CreateIssueDto {
@@ -1850,6 +1887,22 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEntityUuid()
   projectId?: string;
+
+  @ApiPropertyOptional({ description: 'Risk matrix cell filter: exact probability (1-5).' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  probability?: number;
+
+  @ApiPropertyOptional({ description: 'Risk matrix cell filter: exact impact (1-5).' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  impact?: number;
 }
 
 export class DailyLogListQueryDto extends PmListQueryDto {

@@ -488,6 +488,7 @@ model User {
   reportDefinitions      ReportDefinition[]
   ledDepartments         Department[]           @relation("DepartmentLeader")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
+  riskReviewsAsReviewer  RiskReview[]           @relation("RiskReviewer")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
   supervisingChiefTasks  Task[]                 @relation("TaskSupervisingChief")
@@ -1291,12 +1292,19 @@ enum RiskCategory {
   QUALITY
   ENVIRONMENTAL
   CONTRACTUAL
+  TECHNICAL
+  FINANCIAL
+  LEGAL
+  POLITICAL
+  OTHER
 }
 
 enum RiskStatus {
   OPEN
+  /// @deprecated legacy pre-workflow status, retained for existing rows only
   MONITORING
   MITIGATED
+  ACCEPTED
   CLOSED
 }
 
@@ -2821,6 +2829,9 @@ model Risk {
   contingencyPlan  String?      @map("contingency_plan")
   reviewDate       DateTime?    @map("review_date") @db.Date
   status           RiskStatus   @default(OPEN)
+  residualLikelihood Int?       @map("residual_likelihood")
+  residualImpact     Int?       @map("residual_impact")
+  residualScore      Int?       @map("residual_score")
   createdAt        DateTime     @default(now()) @map("created_at")
   createdBy        String       @map("created_by")
   updatedAt        DateTime     @updatedAt @map("updated_at")
@@ -2828,12 +2839,34 @@ model Risk {
   deletedAt        DateTime?    @map("deleted_at")
   deletedBy        String?      @map("deleted_by")
 
-  project Project @relation(fields: [projectId], references: [id])
-  owner   User    @relation(fields: [ownerId], references: [id])
+  project Project      @relation(fields: [projectId], references: [id])
+  owner   User         @relation(fields: [ownerId], references: [id])
+  reviews RiskReview[]
 
   @@index([projectId], map: "idx_risk_project_id")
   @@index([projectId, deletedAt], map: "idx_risk_project_deleted")
   @@map("risk")
+}
+
+model RiskReview {
+  id                    String   @id @default(uuid())
+  riskId                String   @map("risk_id")
+  reviewedBy            String   @map("reviewed_by")
+  reviewedAt            DateTime @default(now()) @map("reviewed_at")
+  previousStatus        String?  @map("previous_status")
+  newStatus             String?  @map("new_status")
+  previousScore         Int?     @map("previous_score")
+  newScore              Int?     @map("new_score")
+  previousResidualScore Int?     @map("previous_residual_score")
+  newResidualScore      Int?     @map("new_residual_score")
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  risk     Risk @relation(fields: [riskId], references: [id])
+  reviewer User @relation("RiskReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([riskId], map: "idx_risk_review_risk_id")
+  @@map("risk_review")
 }
 
 model Issue {

@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -10,14 +11,13 @@ import {
   Drawer,
   Form,
   Input,
-  InputNumber,
   Select,
   Space,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { ShieldAlert } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -34,9 +34,12 @@ import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCreateRisk, useRisks } from '@/lib/query/risks';
+import { useAllProjects } from '@/lib/query/projects';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  RISK_IMPACT_OPTIONS,
+  RISK_LIKELIHOOD_OPTIONS,
   formatRiskCategory,
   formatRiskStatus,
   riskScoreVariant,
@@ -45,16 +48,9 @@ import {
 import { RISK_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import RiskDetailDrawer from '@/components/modules/projects/risks/RiskDetailDrawer';
+import RiskMatrix, { type RiskMatrixCell } from '@/components/modules/projects/risks/RiskMatrix';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
-
-const CATEGORY_OPTIONS: { value: RiskCategory; label: string }[] = [
-  { value: 'COST', label: 'Cost' },
-  { value: 'SCHEDULE', label: 'Schedule' },
-  { value: 'SAFETY', label: 'Safety' },
-  { value: 'QUALITY', label: 'Quality' },
-  { value: 'ENVIRONMENTAL', label: 'Environmental' },
-  { value: 'CONTRACTUAL', label: 'Contractual' },
-];
+import { RISK_CATEGORY_OPTIONS as CATEGORY_OPTIONS } from '@/lib/constants/risk-options';
 
 const STATUS_OPTIONS = RISK_WORKFLOW.map((step) => ({
   value: step.key as RiskStatus,
@@ -62,49 +58,76 @@ const STATUS_OPTIONS = RISK_WORKFLOW.map((step) => ({
 }));
 
 interface RiskFormValues {
-  riskIdCode: string;
   title: string;
-  description?: string;
   category: RiskCategory;
+  description: string;
   probability: number;
   impact: number;
-  ownerId: string;
   mitigationPlan?: string;
   contingencyPlan?: string;
+  ownerId: string;
   reviewDate?: Dayjs;
 }
 
-function RiskFormDrawer({
+export function RiskFormDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
   const [form] = Form.useForm<RiskFormValues>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
   const createRisk = useCreateRisk();
   const messageApi = useAppMessage();
   const probability = Form.useWatch('probability', form) ?? 1;
   const impact = Form.useWatch('impact', form) ?? 1;
 
+  const projectsQuery = useAllProjects({}, open && showProjectSelector);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.projectCode} — ${p.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
+    }
+  }, [open, form, showProjectSelector, projectIdProp]);
+
   async function handleSubmit(values: RiskFormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     try {
       await createRisk.mutateAsync({
-        projectId,
+        projectId: effectiveProjectId,
         body: {
-          riskIdCode: values.riskIdCode.trim(),
           title: values.title.trim(),
-          description: values.description?.trim() || undefined,
           category: values.category,
+          description: values.description.trim(),
           probability: values.probability,
           impact: values.impact,
-          ownerId: values.ownerId,
           mitigationPlan: values.mitigationPlan?.trim() || undefined,
           contingencyPlan: values.contingencyPlan?.trim() || undefined,
+          ownerId: values.ownerId,
           reviewDate: values.reviewDate?.format('YYYY-MM-DD'),
         },
       });
@@ -132,22 +155,19 @@ function RiskFormDrawer({
         initialValues={{ category: 'SCHEDULE', probability: 3, impact: 3 }}
         onFinish={(values: RiskFormValues) => void handleSubmit(values)}
       >
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label="Risk ID"
-            name="riskIdCode"
-            rules={[{ required: true, message: 'Risk ID is required' }]}
-          >
-            <Input placeholder="R-001" />
+        {showProjectSelector && (
+          <Form.Item label="Project" required>
+            <Select
+              showSearch
+              placeholder="Select project"
+              options={projectOptions}
+              loading={projectsQuery.isLoading}
+              optionFilterProp="label"
+              value={selectedProjectId ?? undefined}
+              onChange={(value: string) => setSelectedProjectId(value)}
+            />
           </Form.Item>
-          <Form.Item
-            label="Category"
-            name="category"
-            rules={[{ required: true }]}
-          >
-            <Select options={CATEGORY_OPTIONS} />
-          </Form.Item>
-        </div>
+        )}
         <Form.Item
           label="Title"
           name="title"
@@ -155,30 +175,22 @@ function RiskFormDrawer({
         >
           <Input />
         </Form.Item>
-        <Form.Item label="Description" name="description">
-          <Input.TextArea rows={3} />
+        <Form.Item label="Category" name="category" rules={[{ required: true }]}>
+          <Select options={CATEGORY_OPTIONS} />
         </Form.Item>
         <Form.Item
-          label="Owner"
-          name="ownerId"
-          rules={[{ required: true, message: 'Owner is required' }]}
+          label="Description"
+          name="description"
+          rules={[{ required: true, message: 'Description is required' }]}
         >
-          <UserSelect />
+          <Input.TextArea rows={3} />
         </Form.Item>
         <div className="grid gap-4 md:grid-cols-3 md:gap-x-4">
-          <Form.Item
-            label="Probability (1–5)"
-            name="probability"
-            rules={[{ required: true }]}
-          >
-            <InputNumber className="!w-full" min={1} max={5} />
+          <Form.Item label="Likelihood" name="probability" rules={[{ required: true }]}>
+            <Select options={RISK_LIKELIHOOD_OPTIONS} />
           </Form.Item>
-          <Form.Item
-            label="Impact (1–5)"
-            name="impact"
-            rules={[{ required: true }]}
-          >
-            <InputNumber className="!w-full" min={1} max={5} />
+          <Form.Item label="Impact" name="impact" rules={[{ required: true }]}>
+            <Select options={RISK_IMPACT_OPTIONS} />
           </Form.Item>
           <Form.Item label="Risk score">
             <div className="flex h-8 items-center">
@@ -189,14 +201,25 @@ function RiskFormDrawer({
             </div>
           </Form.Item>
         </div>
-        <Form.Item label="Mitigation plan" name="mitigationPlan">
+        <Form.Item
+          label="Mitigation"
+          name="mitigationPlan"
+          extra="Describe the planned mitigation for this risk"
+        >
           <Input.TextArea rows={3} />
+        </Form.Item>
+        <Form.Item
+          label="Owner"
+          name="ownerId"
+          rules={[{ required: true, message: 'Owner is required' }]}
+        >
+          <UserSelect />
+        </Form.Item>
+        <Form.Item label="Review date" name="reviewDate" extra="When to next review this risk">
+          <DatePicker className="w-full" />
         </Form.Item>
         <Form.Item label="Contingency plan" name="contingencyPlan">
           <Input.TextArea rows={2} />
-        </Form.Item>
-        <Form.Item label="Review date" name="reviewDate">
-          <DatePicker className="w-full" />
         </Form.Item>
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
@@ -215,17 +238,39 @@ export default function RisksPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<RiskStatus | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
+  const [matrixVisible, setMatrixVisible] = useState(true);
+  const [selectedCell, setSelectedCell] = useState<RiskMatrixCell | null>(null);
+
+  useEffect(() => {
+    const riskIdParam = searchParams.get('riskId');
+    if (riskIdParam) {
+      setSelectedRiskId(riskIdParam);
+      router.replace(`/projects/${projectId}/risks`, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const resolveUserDisplay = useUserDisplayResolver();
   const query = useRisks(projectId, {
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
+    probability: selectedCell?.likelihood,
+    impact: selectedCell?.impact,
   });
+
+  // Unfiltered, high-limit fetch just to build accurate matrix counts.
+  const matrixQuery = useRisks(
+    projectId,
+    { page: 1, limit: 500 },
+    matrixVisible,
+  );
 
   const columns: ColumnsType<Risk> = useMemo(
     () => [
@@ -331,6 +376,28 @@ export default function RisksPageContent({
           />
         )}
 
+        <div className="!mb-4 flex items-center justify-between">
+          <h3 className={layout.drawerHeading}>Risk matrix</h3>
+          <Button
+            size="small"
+            onClick={() => setMatrixVisible((v) => !v)}
+          >
+            {matrixVisible ? 'Hide Matrix' : 'Show Matrix'}
+          </Button>
+        </div>
+        {matrixVisible && (
+          <div className={`!mb-4 ${layout.drawerSurface}`}>
+            <RiskMatrix
+              risks={matrixQuery.data?.data ?? []}
+              selectedCell={selectedCell}
+              onCellClick={(cell) => {
+                resetPage();
+                setSelectedCell(cell);
+              }}
+            />
+          </div>
+        )}
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search risks"
@@ -352,6 +419,11 @@ export default function RisksPageContent({
               setStatusFilter(value);
             }}
           />
+          {selectedCell && (
+            <Button size="small" onClick={() => setSelectedCell(null)}>
+              Clear matrix filter
+            </Button>
+          )}
         </Space>
 
         <DataTable<Risk>
@@ -376,14 +448,20 @@ export default function RisksPageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void query.refetch()}
+        onSaved={() => {
+          void query.refetch();
+          void matrixQuery.refetch();
+        }}
       />
 
       <RiskDetailDrawer
         projectId={projectId}
         riskId={selectedRiskId}
         onClose={() => setSelectedRiskId(null)}
-        onUpdated={() => void query.refetch()}
+        onUpdated={() => {
+          void query.refetch();
+          void matrixQuery.refetch();
+        }}
       />
     </>
     </ProjectModuleGate>

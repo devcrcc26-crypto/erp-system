@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -36,7 +37,7 @@ export class RisksController {
   }
 
   @Get()
-  @RequirePermission('risks', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List project risks' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -47,7 +48,7 @@ export class RisksController {
   }
 
   @Post()
-  @RequirePermission('risks', 'create')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Create risk' })
   create(
     @CurrentUser() user: AuthenticatedUser,
@@ -58,7 +59,7 @@ export class RisksController {
   }
 
   @Get(':id')
-  @RequirePermission('risks', 'view')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get risk by id' })
   get(
     @CurrentUser() user: AuthenticatedUser,
@@ -69,7 +70,7 @@ export class RisksController {
   }
 
   @Patch(':id')
-  @RequirePermission('risks', 'edit')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Update risk' })
   update(
     @CurrentUser() user: AuthenticatedUser,

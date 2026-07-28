@@ -17,6 +17,11 @@ export const PM_ISSUE_USER_NAMES: readonly [string, string][] = [
 
 export const PM_OWNER_NAME: readonly [string, string][] = [['ownerId', 'ownerName']];
 
+export const PM_RISK_USER_NAMES: readonly [string, string][] = [
+  ['ownerId', 'ownerName'],
+  ['createdBy', 'createdByName'],
+];
+
 export const PM_SITE_ENGINEER_NAME: readonly [string, string][] = [
   ['siteEngineerId', 'siteEngineerName'],
 ];

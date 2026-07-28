@@ -254,6 +254,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -263,6 +264,7 @@ describe('canViewGlobalNavKey — submittals', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -337,6 +339,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -346,6 +349,7 @@ describe('canViewGlobalNavKey — change requests', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -391,6 +395,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     rfis: { ...moduleCaps, canView: true },
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -400,6 +405,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };
@@ -409,6 +415,7 @@ describe('canViewGlobalNavKey — rfis', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: { ...moduleCaps, canView: true },
   };
@@ -477,6 +484,7 @@ describe('canViewGlobalNavKey — daily-logs', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: { ...moduleCaps, canView: true },
     projects: moduleCaps,
   };
@@ -486,6 +494,7 @@ describe('canViewGlobalNavKey — daily-logs', () => {
     rfis: moduleCaps,
     issues: moduleCaps,
     meetings: moduleCaps,
+    risks: moduleCaps,
     dailyLogs: moduleCaps,
     projects: moduleCaps,
   };

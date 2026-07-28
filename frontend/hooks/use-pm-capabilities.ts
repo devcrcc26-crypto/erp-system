@@ -173,6 +173,23 @@ export function useCanViewMeetings(): boolean {
 }
 
 /**
+ * Global Risks — full-access always; discipline leads always (risks are
+ * management-level, not a designer concern); otherwise only when
+ * risks.canView without portfolio projects.canView (project sidebar otherwise).
+ */
+export function useCanViewRisks(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  if (epc.navFullAccess) {
+    return true;
+  }
+  if (epc.navDisciplineLeader) {
+    return true;
+  }
+  return pm.risks.canView && !pm.projects.canView;
+}
+
+/**
  * Global Daily Logs — full-access / FK designer-lead always; otherwise only when
  * dailyLogs.canView without portfolio projects.canView (project sidebar otherwise).
  */

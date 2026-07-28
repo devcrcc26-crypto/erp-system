@@ -28,6 +28,7 @@ import {
   Rfi,
   RfiResponse,
   Risk,
+  RiskReview,
   Submittal,
   SubmittalItem,
   SubmittalReview,
@@ -599,9 +600,34 @@ export interface MappedRisk {
   contingencyPlan: string | null;
   reviewDate: string | null;
   status: Risk['status'];
+  residualLikelihood: number | null;
+  residualImpact: number | null;
+  residualScore: number | null;
   attachmentFolderId: string | null;
+  createdBy: string;
+  createdByName?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MappedRiskReview {
+  id: string;
+  riskId: string;
+  reviewedBy: string;
+  reviewedByName?: string | null;
+  reviewedAt: string;
+  previousStatus: string | null;
+  newStatus: string | null;
+  previousScore: number | null;
+  newScore: number | null;
+  previousResidualScore: number | null;
+  newResidualScore: number | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface MappedRiskDetail extends MappedRisk {
+  reviews: MappedRiskReview[];
 }
 
 export interface MappedPunchItem {
@@ -1181,9 +1207,30 @@ export function mapRisk(
     contingencyPlan: row.contingencyPlan,
     reviewDate: toDateString(row.reviewDate),
     status: row.status,
+    residualLikelihood: row.residualLikelihood,
+    residualImpact: row.residualImpact,
+    residualScore: row.residualScore,
     attachmentFolderId,
+    createdBy: row.createdBy,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+  };
+}
+
+export function mapRiskReview(row: RiskReview): MappedRiskReview {
+  return {
+    id: row.id,
+    riskId: row.riskId,
+    reviewedBy: row.reviewedBy,
+    reviewedAt: toIsoString(row.reviewedAt)!,
+    previousStatus: row.previousStatus,
+    newStatus: row.newStatus,
+    previousScore: row.previousScore,
+    newScore: row.newScore,
+    previousResidualScore: row.previousResidualScore,
+    newResidualScore: row.newResidualScore,
+    notes: row.notes,
+    createdAt: toIsoString(row.createdAt)!,
   };
 }
 

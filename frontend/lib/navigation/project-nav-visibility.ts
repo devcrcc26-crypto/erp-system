@@ -278,8 +278,23 @@ export function canViewGlobalNavKey(
     | 'meetings'
     | 'dailyLogs'
     | 'projects'
+    | 'risks'
   > | null,
 ): boolean {
+  // Risks intentionally deviates from the "full access always sees every
+  // global icon" rule below: full-access users always have the project
+  // sidebar, so the global Risks icon is reserved for discipline leads and
+  // risks.canView-only roles that lack project-sidebar access.
+  if (key === '/risks') {
+    if (epc.navDisciplineLeader) {
+      return true;
+    }
+    if (epc.navFullAccess) {
+      return false;
+    }
+    return pm?.risks?.canView ?? false;
+  }
+
   if (epc.navFullAccess) {
     return true;
   }

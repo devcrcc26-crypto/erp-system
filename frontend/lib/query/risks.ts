@@ -18,6 +18,8 @@ import type {
   PmListFilters,
   Risk,
   RiskCategory,
+  RiskDetail,
+  RiskProjectOption,
   RiskStatus,
   UpdateRiskRequest,
 } from '@/lib/api/project-management.types';
@@ -34,7 +36,12 @@ export const riskKeys = {
   list: (
     projectId: string,
     params: PaginationParams &
-      PmListFilters & { status?: RiskStatus; category?: RiskCategory } = {
+      PmListFilters & {
+      status?: RiskStatus;
+      category?: RiskCategory;
+      probability?: number;
+      impact?: number;
+    } = {
       page: 1,
       limit: 20,
     },
@@ -43,12 +50,32 @@ export const riskKeys = {
     [...riskKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, riskId: string) =>
     [...riskKeys.details(projectId), riskId] as const,
+  myList: (
+    params: PaginationParams &
+      PmListFilters & { status?: string; category?: RiskCategory } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...riskKeys.all, 'my', params] as const,
+  allList: (
+    params: PaginationParams &
+      PmListFilters & { status?: string; category?: RiskCategory } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...riskKeys.all, 'all', params] as const,
+  myProjects: () => [...riskKeys.all, 'my', 'projects'] as const,
 };
 
 export function useRisks(
   projectId: string,
   params: PaginationParams &
-    PmListFilters & { status?: RiskStatus; category?: RiskCategory } = {
+    PmListFilters & {
+      status?: RiskStatus;
+      category?: RiskCategory;
+      probability?: number;
+      impact?: number;
+    } = {
     page: 1,
     limit: 20,
   },
@@ -68,7 +95,7 @@ export function useRisks(
 export function useRisk(projectId: string, riskId: string, enabled = true) {
   return useQuery({
     queryKey: riskKeys.detail(projectId, riskId),
-    queryFn: () => apiGet<Risk>(`${risksPath(projectId)}/${riskId}`),
+    queryFn: () => apiGet<RiskDetail>(`${risksPath(projectId)}/${riskId}`),
     enabled: Boolean(projectId) && Boolean(riskId) && enabled,
     retry: false,
   });
@@ -114,6 +141,55 @@ export function useUpdateRisk() {
         queryKey: riskKeys.detail(variables.projectId, variables.riskId),
       });
     },
+  });
+}
+
+export function useMyRisks(
+  params: PaginationParams &
+    PmListFilters & { status?: string; category?: RiskCategory } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<UseQueryOptions<PaginatedResult<Risk>>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: riskKeys.myList(params),
+    queryFn: () => apiGetPaginated<Risk>(`/risks/my${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+export function useAllRisks(
+  params: PaginationParams &
+    PmListFilters & { status?: string; category?: RiskCategory } = {
+    page: 1,
+    limit: 20,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  },
+  enabled = true,
+  options?: Omit<UseQueryOptions<PaginatedResult<Risk>>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: riskKeys.allList(params),
+    queryFn: () => apiGetPaginated<Risk>(`/risks/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
+    ...options,
+  });
+}
+
+export function useMyRiskProjects(enabled = true) {
+  return useQuery({
+    queryKey: riskKeys.myProjects(),
+    queryFn: () => apiGet<RiskProjectOption[]>('/risks/my/projects'),
+    enabled,
+    retry: false,
   });
 }
 

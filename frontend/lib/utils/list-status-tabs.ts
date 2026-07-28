@@ -24,6 +24,9 @@ export const CONSTRUCTION_SUBMITTAL_COMPLETED_STATUSES =
 export const PROJECT_ACTIVE_STATUSES = 'NOT_STARTED,IN_PROGRESS,ON_HOLD';
 export const PROJECT_CLOSED_STATUSES = 'COMPLETED,CANCELLED';
 
+export const RISK_OPEN_STATUSES = 'OPEN,MITIGATED,ACCEPTED';
+export const RISK_RESOLVED_STATUSES = 'CLOSED';
+
 /**
  * Resolves the API status param: a single Select value overrides the tab set.
  */
