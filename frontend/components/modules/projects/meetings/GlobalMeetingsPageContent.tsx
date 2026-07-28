@@ -145,9 +145,13 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
             type="link"
             className="!px-0"
             style={{ color: tokens.colorTeal600 }}
-            onClick={() =>
-              setSelected({ projectId: record.projectId, meetingId: record.id })
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected({
+                projectId: record.projectId,
+                meetingId: record.id,
+              });
+            }}
           >
             {value}
           </Button>

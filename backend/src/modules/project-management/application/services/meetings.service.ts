@@ -809,7 +809,7 @@ export class MeetingsService {
             meetingNumber: meeting.meetingNumber,
             actionItemId: item.id,
           },
-          link: `/projects/${projectId}/meetings?meetingId=${meeting.id}`,
+          link: `/projects/${projectId}/meetings/${meeting.id}`,
         },
       );
     } catch (error: unknown) {

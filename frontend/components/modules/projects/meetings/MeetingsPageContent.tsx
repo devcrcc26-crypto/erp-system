@@ -90,6 +90,7 @@ function MeetingCreateFormBody({
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
+  const router = useRouter();
   const [form] = Form.useForm<MeetingFormValues>();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     projectIdProp ?? null,
@@ -143,7 +144,7 @@ function MeetingCreateFormBody({
       return;
     }
     try {
-      await createMeeting.mutateAsync({
+      const created = await createMeeting.mutateAsync({
         projectId: effectiveProjectId,
         body: {
           meetingType: values.meetingType,
@@ -165,6 +166,7 @@ function MeetingCreateFormBody({
       setScope('PROJECT');
       onSaved();
       onClose();
+      router.push(`/projects/${effectiveProjectId}/meetings/${created.id}`);
     } catch (error) {
       notifyApiError(error, 'Failed to create meeting', messageApi);
     }
@@ -380,7 +382,10 @@ export default function MeetingsPageContent({
           <Button
             type="link"
             className="!px-0"
-            onClick={() => setSelectedMeetingId(record.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedMeetingId(record.id);
+            }}
           >
             {value}
           </Button>
@@ -491,6 +496,10 @@ export default function MeetingsPageContent({
           columns={columns}
           dataSource={meetings}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedMeetingId(record.id),
+            style: { cursor: 'pointer' },
+          })}
           locale={{
             emptyText: (
               <TableEmptyState
