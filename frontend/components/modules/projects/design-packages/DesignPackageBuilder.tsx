@@ -9,6 +9,7 @@ import type {
   UrgencyLevel,
 } from '@/lib/api/project-management.types';
 import type { CreateDesignPackageRequest } from '@/lib/api/epc.types';
+import SubtaskExternalPartiesFormFields from '@/components/modules/projects/design-packages/SubtaskExternalPartiesFormFields';
 import SubtaskRolesFormFields from '@/components/modules/projects/design-packages/SubtaskRolesFormFields';
 import {
   type SubtaskRolesFormValues,
@@ -176,6 +177,19 @@ export default function DesignPackageBuilder({
 
   async function handleSubmit(): Promise<void> {
     const mergedValues = form.getFieldsValue(true) as BuilderFormValues;
+    const showInstituteChief =
+      mergedValues.reviewLevel == null ||
+      mergedValues.reviewLevel === 'COMPANY_REVIEW';
+    if (
+      showInstituteChief &&
+      mergedValues.instituteChiefMode === 'EXTERNAL_PERSON' &&
+      !mergedValues.instituteChiefName?.trim()
+    ) {
+      messageApi.error("External person's name is required");
+      setStep(1);
+      return;
+    }
+
     const body: CreateDesignPackageRequest = {
       ...toPackagePayload(mergedValues),
       ...toSubtaskRolesPayload(mergedValues),
@@ -214,7 +228,7 @@ export default function DesignPackageBuilder({
     }
   }
 
-  async function handleNext(): Promise<void> {
+  async function handleNextFromDetails(): Promise<void> {
     if (requiresDisciplinePick && !selectedDisciplineId) {
       messageApi.error('Select a discipline for this subtask');
       return;
@@ -246,13 +260,29 @@ export default function DesignPackageBuilder({
     }
   }
 
+  function handleNextFromRoles(): void {
+    setStep(2);
+  }
+
   function renderFooter(): React.ReactNode {
     if (step === 0) {
       return (
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="primary" onClick={() => void handleNext()}>
+          <Button type="primary" onClick={() => void handleNextFromDetails()}>
             Next: assign roles
+          </Button>
+        </div>
+      );
+    }
+
+    if (step === 1) {
+      return (
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => setStep(0)}>Back</Button>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="primary" onClick={handleNextFromRoles}>
+            Next: external parties
           </Button>
         </div>
       );
@@ -260,7 +290,7 @@ export default function DesignPackageBuilder({
 
     return (
       <div className="flex justify-end gap-2">
-        <Button onClick={() => setStep(0)}>Back</Button>
+        <Button onClick={() => setStep(1)}>Back</Button>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           type="primary"
@@ -296,6 +326,7 @@ export default function DesignPackageBuilder({
         items={[
           { title: 'Subtask details' },
           { title: 'Assign roles' },
+          { title: 'External parties' },
         ]}
       />
 
@@ -375,15 +406,22 @@ export default function DesignPackageBuilder({
         ) : null}
 
         {step === 1 ? (
-        <SubtaskRolesFormFields
-          projectId={projectId}
-          reviewLevel={reviewLevel}
-          initialSiteRepType={
-            editing
-              ? (toSubtaskRolesFormValues(editing).siteRepType ?? 'EXTERNAL')
-              : 'EXTERNAL'
-          }
-        />
+          <SubtaskRolesFormFields
+            projectId={projectId}
+            reviewLevel={reviewLevel}
+            includeExternalParties={false}
+          />
+        ) : null}
+
+        {step === 2 ? (
+          <SubtaskExternalPartiesFormFields
+            projectId={projectId}
+            initialSiteRepType={
+              editing
+                ? (toSubtaskRolesFormValues(editing).siteRepType ?? 'EXTERNAL')
+                : 'EXTERNAL'
+            }
+          />
         ) : null}
       </Form>
     </Drawer>
