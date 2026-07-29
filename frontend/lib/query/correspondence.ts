@@ -129,6 +129,9 @@ export function useCreateCorrespondence() {
         queryKey: correspondenceKeys.lists(variables.projectId),
       });
       void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.details(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
         queryKey: correspondenceKeys.globalLists(),
       });
     },

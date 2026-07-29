@@ -583,6 +583,7 @@ export interface MappedCorrespondence {
   projectName?: string | null;
   projectCode?: string | null;
   senderUserId: string | null;
+  recipientUserId: string | null;
   referenceNumber: string;
   correspondenceType: Correspondence['correspondenceType'];
   direction: Correspondence['direction'];
@@ -596,6 +597,8 @@ export interface MappedCorrespondence {
   status: Correspondence['status'];
   parentId: string | null;
   sentAt: string | null;
+  sentBy: string | null;
+  sentByName?: string | null;
   acknowledgedAt: string | null;
   acknowledgedBy: string | null;
   acknowledgedByName?: string | null;
@@ -1232,6 +1235,7 @@ export function mapCorrespondence(
   nameLookup?: {
     acknowledgedByName?: string | null;
     createdByName?: string | null;
+    sentByName?: string | null;
   },
 ): MappedCorrespondence {
   return {
@@ -1241,6 +1245,7 @@ export function mapCorrespondence(
     projectName: row.project?.name ?? null,
     projectCode: row.project?.projectCode ?? null,
     senderUserId: row.senderUserId,
+    recipientUserId: row.recipientUserId,
     referenceNumber: row.referenceNumber,
     correspondenceType: row.correspondenceType,
     direction: row.direction,
@@ -1254,6 +1259,8 @@ export function mapCorrespondence(
     status: row.status,
     parentId: row.parentId,
     sentAt: toIsoString(row.sentAt),
+    sentBy: row.sentBy,
+    sentByName: nameLookup?.sentByName ?? null,
     acknowledgedAt: toIsoString(row.acknowledgedAt),
     acknowledgedBy: row.acknowledgedBy,
     acknowledgedByName: nameLookup?.acknowledgedByName ?? null,

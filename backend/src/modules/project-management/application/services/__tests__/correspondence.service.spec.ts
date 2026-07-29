@@ -25,6 +25,7 @@ describe('CorrespondenceService', () => {
       companyId: ctx.companyId,
       projectId,
       senderUserId: ctx.userId,
+      recipientUserId: null,
       referenceNumber: 'COR-OUT-PRJ-001',
       correspondenceType: CorrespondenceType.LETTER,
       direction: CorrespondenceDirection.OUTGOING,
@@ -38,6 +39,7 @@ describe('CorrespondenceService', () => {
       status,
       parentId: null,
       sentAt: null,
+      sentBy: null,
       acknowledgedAt: null,
       acknowledgedBy: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
@@ -59,6 +61,10 @@ describe('CorrespondenceService', () => {
       update: jest.Mock;
     };
     user: { findMany: jest.Mock };
+    rfi: { findMany: jest.Mock };
+    issue: { findMany: jest.Mock };
+    projectChangeRequest: { findMany: jest.Mock };
+    $transaction: jest.Mock;
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
   let service: CorrespondenceService;
@@ -75,6 +81,12 @@ describe('CorrespondenceService', () => {
       user: {
         findMany: jest.fn().mockResolvedValue([]),
       },
+      rfi: { findMany: jest.fn().mockResolvedValue([]) },
+      issue: { findMany: jest.fn().mockResolvedValue([]) },
+      projectChangeRequest: { findMany: jest.fn().mockResolvedValue([]) },
+      $transaction: jest.fn((work: (client: typeof prisma) => Promise<unknown>) =>
+        work(prisma),
+      ),
     };
 
     projectScopeService = {
@@ -113,6 +125,7 @@ describe('CorrespondenceService', () => {
         subject: 'Notice of delay',
         senderName: 'Project Manager',
         recipientName: 'Client Representative',
+        senderUserId: 'user-sender',
         correspondenceDate: '2026-06-01',
       });
 
@@ -124,6 +137,7 @@ describe('CorrespondenceService', () => {
           status: CorrespondenceStatus.DRAFT,
           companyId: ctx.companyId,
           projectId,
+          senderUserId: 'user-sender',
         }),
       });
     });
@@ -133,6 +147,8 @@ describe('CorrespondenceService', () => {
         buildCorrespondence(CorrespondenceStatus.ACKNOWLEDGED, {
           direction: CorrespondenceDirection.INCOMING,
           referenceNumber: 'COR-IN-PRJ-2026-AAR-001',
+          senderUserId: null,
+          recipientUserId: 'user-recipient',
         }),
       );
 
@@ -142,12 +158,55 @@ describe('CorrespondenceService', () => {
         subject: 'Client letter',
         senderName: 'Client',
         recipientName: 'CCECC',
+        recipientUserId: 'user-recipient',
         correspondenceDate: '2026-06-01',
       });
 
       expect(prisma.correspondence.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           direction: CorrespondenceDirection.INCOMING,
+          status: CorrespondenceStatus.ACKNOWLEDGED,
+          acknowledgedBy: ctx.userId,
+          recipientUserId: 'user-recipient',
+          senderUserId: null,
+        }),
+      });
+    });
+
+    it('acknowledges SENT parent when a response is linked', async () => {
+      prisma.correspondence.findFirst.mockResolvedValue(
+        buildCorrespondence(CorrespondenceStatus.SENT, {
+          id: 'parent-1',
+        }),
+      );
+      prisma.correspondence.create.mockResolvedValue(
+        buildCorrespondence(CorrespondenceStatus.ACKNOWLEDGED, {
+          direction: CorrespondenceDirection.INCOMING,
+          parentId: 'parent-1',
+          senderUserId: null,
+          recipientUserId: 'user-recipient',
+        }),
+      );
+      prisma.correspondence.update.mockResolvedValue(
+        buildCorrespondence(CorrespondenceStatus.ACKNOWLEDGED, {
+          id: 'parent-1',
+        }),
+      );
+
+      await service.createCorrespondence(ctx, projectId, {
+        correspondenceType: CorrespondenceType.LETTER,
+        direction: CorrespondenceDirection.INCOMING,
+        subject: 'Reply',
+        senderName: 'Client',
+        recipientName: 'CCECC PM',
+        recipientUserId: 'user-recipient',
+        correspondenceDate: '2026-06-02',
+        parentId: 'parent-1',
+      });
+
+      expect(prisma.correspondence.update).toHaveBeenCalledWith({
+        where: { id: 'parent-1' },
+        data: expect.objectContaining({
           status: CorrespondenceStatus.ACKNOWLEDGED,
           acknowledgedBy: ctx.userId,
         }),
@@ -161,7 +220,9 @@ describe('CorrespondenceService', () => {
         buildCorrespondence(CorrespondenceStatus.DRAFT),
       );
       prisma.correspondence.update.mockResolvedValue(
-        buildCorrespondence(CorrespondenceStatus.SENT),
+        buildCorrespondence(CorrespondenceStatus.SENT, {
+          sentBy: ctx.userId,
+        }),
       );
 
       const result = await service.markAsSent(ctx, projectId, correspondenceId);
@@ -171,6 +232,7 @@ describe('CorrespondenceService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             status: CorrespondenceStatus.SENT,
+            sentBy: ctx.userId,
           }),
         }),
       );

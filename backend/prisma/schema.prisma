@@ -517,6 +517,8 @@ model User {
   meetingAttendees       MeetingAttendee[]
   meetingActionItems     ActionItem[]
   correspondenceSent         Correspondence[] @relation("CorrespondenceSender")
+  correspondenceReceived     Correspondence[] @relation("CorrespondenceRecipient")
+  correspondenceMarkedSent   Correspondence[] @relation("CorrespondenceSentBy")
   correspondenceAcknowledged Correspondence[] @relation("CorrespondenceAck")
   ownedRisks             Risk[]
   raisedIssues           Issue[]                @relation("IssueRaisedBy")
@@ -2801,6 +2803,7 @@ model Correspondence {
   companyId          String                   @map("company_id")
   projectId          String                   @map("project_id")
   senderUserId       String?                  @map("sender_user_id")
+  recipientUserId    String?                  @map("recipient_user_id")
   referenceNumber    String                   @map("reference_number")
   correspondenceType CorrespondenceType       @map("correspondence_type")
   direction          CorrespondenceDirection  @default(OUTGOING) @map("direction")
@@ -2814,6 +2817,7 @@ model Correspondence {
   status             CorrespondenceStatus     @default(DRAFT)
   parentId           String?                  @map("parent_correspondence_id")
   sentAt             DateTime?                @map("sent_at")
+  sentBy             String?                  @map("sent_by")
   acknowledgedAt     DateTime?                @map("acknowledged_at")
   acknowledgedBy     String?                  @map("acknowledged_by")
   createdAt          DateTime                 @default(now()) @map("created_at")
@@ -2823,18 +2827,22 @@ model Correspondence {
   deletedAt          DateTime?                @map("deleted_at")
   deletedBy          String?                  @map("deleted_by")
 
-  company      Company          @relation(fields: [companyId], references: [id])
-  project      Project          @relation(fields: [projectId], references: [id])
-  senderUser   User?            @relation("CorrespondenceSender", fields: [senderUserId], references: [id])
-  acknowledger User?            @relation("CorrespondenceAck", fields: [acknowledgedBy], references: [id])
-  parent       Correspondence?  @relation("CorrespondenceChain", fields: [parentId], references: [id])
-  responses    Correspondence[] @relation("CorrespondenceChain")
+  company        Company          @relation(fields: [companyId], references: [id])
+  project        Project          @relation(fields: [projectId], references: [id])
+  senderUser     User?            @relation("CorrespondenceSender", fields: [senderUserId], references: [id])
+  recipientUser  User?            @relation("CorrespondenceRecipient", fields: [recipientUserId], references: [id])
+  sentByUser     User?            @relation("CorrespondenceSentBy", fields: [sentBy], references: [id])
+  acknowledger   User?            @relation("CorrespondenceAck", fields: [acknowledgedBy], references: [id])
+  parent         Correspondence?  @relation("CorrespondenceChain", fields: [parentId], references: [id])
+  responses      Correspondence[] @relation("CorrespondenceChain")
 
   @@index([companyId], map: "idx_correspondence_company_id")
   @@index([companyId, deletedAt], map: "idx_correspondence_company_deleted")
   @@index([projectId], map: "idx_correspondence_project_id")
   @@index([projectId, deletedAt], map: "idx_correspondence_project_deleted")
   @@index([parentId], map: "idx_correspondence_parent_id")
+  @@index([sentBy], map: "idx_correspondence_sent_by")
+  @@index([recipientUserId], map: "idx_correspondence_recipient_user_id")
   @@map("correspondence")
 }
 

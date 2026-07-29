@@ -1550,6 +1550,22 @@ export class CreateCorrespondenceDto {
   @IsString()
   recipientCompany?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Named internal sender (project team user). Required for outgoing.',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  senderUserId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Named internal recipient (project team user). Required for incoming.',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  recipientUserId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -1633,6 +1649,16 @@ export class RespondCorrespondenceDto {
   @IsOptional()
   @IsString()
   recipientCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  senderUserId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  recipientUserId?: string;
 
   @ApiProperty()
   @IsDateString()

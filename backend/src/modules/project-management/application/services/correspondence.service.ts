@@ -193,50 +193,76 @@ export class CorrespondenceService {
       await this.assertParentInProject(projectId, dto.parentId);
     }
 
+    const isIncoming = dto.direction === CorrespondenceDirection.INCOMING;
+    if (!isIncoming && !dto.senderUserId) {
+      throw new BadRequestException(
+        'Outgoing correspondence requires a named sender (From)',
+      );
+    }
+    if (isIncoming && !dto.recipientUserId) {
+      throw new BadRequestException(
+        'Incoming correspondence requires a named recipient (To)',
+      );
+    }
+
     const referenceNumber = await this.buildReferenceNumber(
       projectId,
       project.projectCode,
       dto.direction,
     );
 
-    const isIncoming = dto.direction === CorrespondenceDirection.INCOMING;
     const now = new Date();
 
-    const row = await this.prisma.correspondence.create({
-      data: {
-        companyId: project.companyId,
-        projectId,
-        senderUserId: ctx.userId,
-        referenceNumber,
-        correspondenceType: dto.correspondenceType,
-        direction: dto.direction,
-        subject: dto.subject.trim(),
-        senderName: dto.senderName.trim(),
-        recipientName: dto.recipientName.trim(),
-        senderCompany: dto.senderCompany?.trim() || null,
-        recipientCompany: dto.recipientCompany?.trim() || null,
-        notes: dto.notes?.trim() || null,
-        correspondenceDate: new Date(dto.correspondenceDate),
-        parentId: dto.parentId ?? null,
-        status: isIncoming
-          ? CorrespondenceStatus.ACKNOWLEDGED
-          : CorrespondenceStatus.DRAFT,
-        acknowledgedAt: isIncoming ? now : null,
-        acknowledgedBy: isIncoming ? ctx.userId : null,
-        createdBy: ctx.userId,
-        updatedBy: ctx.userId,
-      },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.correspondence.create({
+        data: {
+          companyId: project.companyId,
+          projectId,
+          senderUserId: isIncoming ? null : (dto.senderUserId ?? null),
+          recipientUserId: isIncoming ? (dto.recipientUserId ?? null) : null,
+          referenceNumber,
+          correspondenceType: dto.correspondenceType,
+          direction: dto.direction,
+          subject: dto.subject.trim(),
+          senderName: dto.senderName.trim(),
+          recipientName: dto.recipientName.trim(),
+          senderCompany: dto.senderCompany?.trim() || null,
+          recipientCompany: dto.recipientCompany?.trim() || null,
+          notes: dto.notes?.trim() || null,
+          correspondenceDate: new Date(dto.correspondenceDate),
+          parentId: dto.parentId ?? null,
+          status: isIncoming
+            ? CorrespondenceStatus.ACKNOWLEDGED
+            : CorrespondenceStatus.DRAFT,
+          acknowledgedAt: isIncoming ? now : null,
+          acknowledgedBy: isIncoming ? ctx.userId : null,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (dto.parentId) {
+        const parent = await tx.correspondence.findFirst({
+          where: activeOnly({ id: dto.parentId, projectId }),
+          select: { id: true, status: true },
+        });
+        if (parent?.status === CorrespondenceStatus.SENT) {
+          await tx.correspondence.update({
+            where: { id: parent.id },
+            data: {
+              status: CorrespondenceStatus.ACKNOWLEDGED,
+              acknowledgedAt: now,
+              acknowledgedBy: ctx.userId,
+              updatedBy: ctx.userId,
+            },
+          });
+        }
+      }
+
+      return created;
     });
 
-    const folder =
-      await this.engineeringDocumentFolderService.ensureCorrespondenceFolder(
-        ctx,
-        projectId,
-        row.id,
-        row.referenceNumber,
-      );
-
-    return mapCorrespondence(row, folder.id);
+    return this.enrichCorrespondence(ctx, projectId, row);
   }
 
   /**
@@ -309,6 +335,7 @@ export class CorrespondenceService {
       data: {
         status: CorrespondenceStatus.SENT,
         sentAt: new Date(),
+        sentBy: ctx.userId,
         updatedBy: ctx.userId,
       },
       include: CORRESPONDENCE_DETAIL_INCLUDE,
@@ -405,6 +432,8 @@ export class CorrespondenceService {
       recipientName: dto.recipientName,
       senderCompany: dto.senderCompany,
       recipientCompany: dto.recipientCompany,
+      senderUserId: dto.senderUserId,
+      recipientUserId: dto.recipientUserId,
       notes: dto.notes,
       correspondenceDate: dto.correspondenceDate,
       parentId: parent.id,
@@ -546,7 +575,7 @@ export class CorrespondenceService {
       row.id,
     );
 
-    const userIds = [row.createdBy, row.acknowledgedBy].filter(
+    const userIds = [row.createdBy, row.acknowledgedBy, row.sentBy].filter(
       (id): id is string => Boolean(id),
     );
     const users =
@@ -568,6 +597,7 @@ export class CorrespondenceService {
       acknowledgedByName: row.acknowledgedBy
         ? (nameById.get(row.acknowledgedBy) ?? null)
         : null,
+      sentByName: row.sentBy ? (nameById.get(row.sentBy) ?? null) : null,
     });
   }
 

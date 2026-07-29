@@ -45,7 +45,8 @@ import {
   useCreateCorrespondence,
 } from '@/lib/query/correspondence';
 import { useUploadDocumentToFolder } from '@/lib/query/documents';
-import { useAllProjects } from '@/lib/query/projects';
+import { useAllProjects, useProjectTeam } from '@/lib/query/projects';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -66,6 +67,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { useAuthStore } from '@/stores/auth.store';
 import CorrespondenceDetailDrawer from '@/components/modules/projects/correspondence/CorrespondenceDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
+import ProjectTeamUserSelect from '@/components/ui/ProjectTeamUserSelect/ProjectTeamUserSelect';
 
 const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'LETTER', label: 'Letter' },
@@ -87,6 +89,8 @@ interface CorrespondenceFormValues {
   correspondenceType: CorrespondenceType;
   subject: string;
   correspondenceDate: Dayjs;
+  senderUserId?: string;
+  recipientUserId?: string;
   senderName: string;
   senderCompany?: string;
   recipientName: string;
@@ -97,13 +101,21 @@ interface CorrespondenceFormValues {
 
 function directionDefaults(
   direction: CorrespondenceDirection,
+  currentUserId: string | undefined,
   currentUserName: string,
 ): Pick<
   CorrespondenceFormValues,
-  'senderName' | 'senderCompany' | 'recipientName' | 'recipientCompany'
+  | 'senderUserId'
+  | 'recipientUserId'
+  | 'senderName'
+  | 'senderCompany'
+  | 'recipientName'
+  | 'recipientCompany'
 > {
   if (direction === 'OUTGOING') {
     return {
+      senderUserId: currentUserId,
+      recipientUserId: undefined,
       senderName: currentUserName,
       senderCompany: DEFAULT_COMPANY,
       recipientName: '',
@@ -111,6 +123,8 @@ function directionDefaults(
     };
   }
   return {
+    senderUserId: undefined,
+    recipientUserId: currentUserId,
     senderName: '',
     senderCompany: '',
     recipientName: currentUserName,
@@ -147,10 +161,48 @@ export function CorrespondenceFormDrawer({
 
   const currentUser = useAuthStore((state) => state.user);
   const currentUserName = currentUser ? formatUserName(currentUser) : '';
+  const currentUserId = currentUser?.id;
 
   const createItem = useCreateCorrespondence();
   const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
+
+  const defaultDirection = initialDirection ?? 'OUTGOING';
+  const watchedDirection = Form.useWatch('direction', form) as
+    | CorrespondenceDirection
+    | undefined;
+  const isOutgoing = (watchedDirection ?? defaultDirection) === 'OUTGOING';
+
+  const teamQuery = useProjectTeam(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId),
+  );
+  const usersDirectoryQuery = useFullUsersDirectory({
+    enabled: open && Boolean(effectiveProjectId),
+  });
+  const teamNameByUserId = useMemo(() => {
+    const fromTeam = new Map(
+      (teamQuery.data ?? [])
+        .filter((member) => member.userName)
+        .map((member) => [member.userId, member.userName as string]),
+    );
+    for (const user of usersDirectoryQuery.data ?? []) {
+      if (!fromTeam.has(user.id)) {
+        fromTeam.set(user.id, formatUserName(user));
+      }
+    }
+    return fromTeam;
+  }, [teamQuery.data, usersDirectoryQuery.data]);
+
+  function resolveTeamMemberName(userId: string | undefined): string {
+    if (!userId) {
+      return '';
+    }
+    if (userId === currentUserId && currentUserName) {
+      return currentUserName;
+    }
+    return teamNameByUserId.get(userId) ?? '';
+  }
 
   const projectsQuery = useAllProjects({}, open && showProjectSelector);
   const projectOptions = useMemo(
@@ -175,8 +227,6 @@ export function CorrespondenceFormDrawer({
       })),
     [parentOptionsQuery.data?.data],
   );
-
-  const defaultDirection = initialDirection ?? 'OUTGOING';
 
   useEffect(() => {
     if (open && projectIdProp) {
@@ -218,6 +268,14 @@ export function CorrespondenceFormDrawer({
           recipientName: values.recipientName.trim(),
           senderCompany: values.senderCompany?.trim() || undefined,
           recipientCompany: values.recipientCompany?.trim() || undefined,
+          senderUserId:
+            values.direction === 'OUTGOING'
+              ? values.senderUserId
+              : undefined,
+          recipientUserId:
+            values.direction === 'INCOMING'
+              ? values.recipientUserId
+              : undefined,
           notes: values.notes?.trim() || undefined,
           correspondenceDate: values.correspondenceDate.format('YYYY-MM-DD'),
           parentId: values.parentId || undefined,
@@ -271,12 +329,32 @@ export function CorrespondenceFormDrawer({
             correspondenceType: 'LETTER',
             correspondenceDate: dayjs(),
             parentId: initialParentId,
-            ...directionDefaults(defaultDirection, currentUserName),
+            ...directionDefaults(
+              defaultDirection,
+              currentUserId,
+              currentUserName,
+            ),
           }}
           onValuesChange={(changed: Partial<CorrespondenceFormValues>) => {
             if (changed.direction !== undefined) {
               form.setFieldsValue(
-                directionDefaults(changed.direction, currentUserName),
+                directionDefaults(
+                  changed.direction,
+                  currentUserId,
+                  currentUserName,
+                ),
+              );
+            }
+            if (changed.senderUserId !== undefined) {
+              form.setFieldValue(
+                'senderName',
+                resolveTeamMemberName(changed.senderUserId),
+              );
+            }
+            if (changed.recipientUserId !== undefined) {
+              form.setFieldValue(
+                'recipientName',
+                resolveTeamMemberName(changed.recipientUserId),
               );
             }
           }}
@@ -337,29 +415,80 @@ export function CorrespondenceFormDrawer({
           </Form.Item>
 
           <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-            <Form.Item
-              label="From (name)"
-              name="senderName"
-              rules={[{ required: true, message: 'Sender name is required' }]}
-            >
-              <Input />
-            </Form.Item>
+            {isOutgoing ? (
+              <Form.Item
+                label="From (name)"
+                name="senderUserId"
+                rules={[
+                  { required: true, message: 'Select who this is from' },
+                ]}
+              >
+                {effectiveProjectId ? (
+                  <ProjectTeamUserSelect
+                    projectId={effectiveProjectId}
+                    placeholder="Select project team member"
+                  />
+                ) : (
+                  <Select disabled placeholder="Select a project first" />
+                )}
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label="From (name)"
+                name="senderName"
+                rules={[
+                  { required: true, message: 'Sender name is required' },
+                ]}
+              >
+                <Input placeholder="External sender name" />
+              </Form.Item>
+            )}
             <Form.Item label="From (company)" name="senderCompany">
               <Input />
             </Form.Item>
           </div>
           <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-            <Form.Item
-              label="To (name)"
-              name="recipientName"
-              rules={[{ required: true, message: 'Recipient name is required' }]}
-            >
-              <Input />
-            </Form.Item>
+            {isOutgoing ? (
+              <Form.Item
+                label="To (name)"
+                name="recipientName"
+                rules={[
+                  { required: true, message: 'Recipient name is required' },
+                ]}
+              >
+                <Input placeholder="External recipient name" />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label="To (name)"
+                name="recipientUserId"
+                rules={[
+                  { required: true, message: 'Select who this is to' },
+                ]}
+              >
+                {effectiveProjectId ? (
+                  <ProjectTeamUserSelect
+                    projectId={effectiveProjectId}
+                    placeholder="Select project team member"
+                  />
+                ) : (
+                  <Select disabled placeholder="Select a project first" />
+                )}
+              </Form.Item>
+            )}
             <Form.Item label="To (company)" name="recipientCompany">
               <Input />
             </Form.Item>
           </div>
+          {isOutgoing ? (
+            <Form.Item name="senderName" hidden>
+              <Input />
+            </Form.Item>
+          ) : (
+            <Form.Item name="recipientName" hidden>
+              <Input />
+            </Form.Item>
+          )}
 
           <Form.Item label="In response to (optional)" name="parentId">
             <Select

@@ -882,6 +882,7 @@ export interface Correspondence {
   projectName?: string | null;
   projectCode?: string | null;
   senderUserId: string | null;
+  recipientUserId: string | null;
   referenceNumber: string;
   correspondenceType: CorrespondenceType;
   direction: CorrespondenceDirection;
@@ -895,6 +896,8 @@ export interface Correspondence {
   status: CorrespondenceStatus;
   parentId: string | null;
   sentAt: string | null;
+  sentBy: string | null;
+  sentByName?: string | null;
   acknowledgedAt: string | null;
   acknowledgedBy: string | null;
   acknowledgedByName?: string | null;
@@ -1495,6 +1498,8 @@ export interface CreateCorrespondenceRequest {
   recipientName: string;
   senderCompany?: string;
   recipientCompany?: string;
+  senderUserId?: string;
+  recipientUserId?: string;
   notes?: string;
   correspondenceDate: string;
   parentId?: string;
@@ -1511,6 +1516,8 @@ export interface RespondCorrespondenceRequest {
   recipientName: string;
   senderCompany?: string;
   recipientCompany?: string;
+  senderUserId?: string;
+  recipientUserId?: string;
   correspondenceDate: string;
   notes?: string;
 }

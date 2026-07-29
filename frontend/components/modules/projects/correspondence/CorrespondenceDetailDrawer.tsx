@@ -23,6 +23,11 @@ import {
   formatCorrespondenceDirection,
   formatCorrespondenceStatus,
 } from '@/lib/utils/pm-status-display';
+import {
+  formatCorrespondenceAcknowledgedAttribution,
+  formatCorrespondenceRecordedAttribution,
+  formatCorrespondenceSentAttribution,
+} from '@/lib/utils/correspondence-attribution';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 export default function CorrespondenceDetailDrawer({
@@ -184,24 +189,24 @@ export default function CorrespondenceDetailDrawer({
                     variant={correspondenceStatusVariant(item.status)}
                   />
                 </Descriptions.Item>
+                <Descriptions.Item label="Recorded">
+                  {formatCorrespondenceRecordedAttribution(item)}
+                  {item.createdAt
+                    ? ` · ${formatProjectDate(item.createdAt)}`
+                    : ''}
+                </Descriptions.Item>
                 {item.sentAt && (
-                  <Descriptions.Item label="Sent on">
-                    {formatProjectDate(item.sentAt)}
+                  <Descriptions.Item label="Sent">
+                    {formatCorrespondenceSentAttribution(item)}
+                    {` · ${formatProjectDate(item.sentAt)}`}
                   </Descriptions.Item>
                 )}
                 {item.acknowledgedAt && (
-                  <Descriptions.Item label="Acknowledged on">
-                    {formatProjectDate(item.acknowledgedAt)}
+                  <Descriptions.Item label="Acknowledged">
+                    {formatCorrespondenceAcknowledgedAttribution(item)}
+                    {` · ${formatProjectDate(item.acknowledgedAt)}`}
                   </Descriptions.Item>
                 )}
-                {item.acknowledgedByName && (
-                  <Descriptions.Item label="Acknowledged by">
-                    {item.acknowledgedByName}
-                  </Descriptions.Item>
-                )}
-                <Descriptions.Item label="Created by">
-                  {item.createdByName ?? '—'}
-                </Descriptions.Item>
               </Descriptions>
             </section>
 
