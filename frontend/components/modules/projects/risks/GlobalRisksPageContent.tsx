@@ -34,7 +34,10 @@ import {
 } from '@/lib/utils/list-status-tabs';
 import { RiskFormDrawer } from '@/components/modules/projects/risks/RisksPageContent';
 import RiskDetailDrawer from '@/components/modules/projects/risks/RiskDetailDrawer';
-import RiskMatrix, { type RiskMatrixCell } from '@/components/modules/projects/risks/RiskMatrix';
+import RiskMatrix, {
+  matchesRiskMatrixCell,
+  type RiskMatrixCell,
+} from '@/components/modules/projects/risks/RiskMatrix';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import {
   useCanViewRisks,
@@ -74,8 +77,6 @@ export default function GlobalRisksPageContent(): React.ReactNode {
 
   const filterParams = {
     search: search.trim() || undefined,
-    probability: selectedCell?.likelihood,
-    impact: selectedCell?.impact,
     projectId: portfolioMode ? projectFilter : undefined,
   };
 
@@ -111,16 +112,25 @@ export default function GlobalRisksPageContent(): React.ReactNode {
   const resolvedQuery = portfolioMode ? allResolvedQuery : myResolvedQuery;
   const risksQuery = activeTab === 'active' ? openQuery : resolvedQuery;
 
-  // Unfiltered, high-limit fetch just to build accurate matrix counts (active tab only).
+  // Full set for matrix counts + cell-click filtering (API max limit is 100).
   const myMatrixQuery = useMyRisks(
-    { page: 1, limit: 500 },
+    { page: 1, limit: 100 },
     capabilitiesReady && canAccessPage && !portfolioMode && matrixVisible && activeTab === 'active',
   );
   const allMatrixQuery = useAllRisks(
-    { page: 1, limit: 500 },
+    { page: 1, limit: 100 },
     capabilitiesReady && canAccessPage && portfolioMode && matrixVisible && activeTab === 'active',
   );
   const matrixQuery = portfolioMode ? allMatrixQuery : myMatrixQuery;
+  const matrixRisks = matrixQuery.data?.data ?? [];
+
+  const tableRows = useMemo(() => {
+    const rows = risksQuery.data?.data ?? [];
+    if (!selectedCell || activeTab !== 'active') {
+      return rows;
+    }
+    return matrixRisks.filter((risk) => matchesRiskMatrixCell(risk, selectedCell));
+  }, [risksQuery.data?.data, matrixRisks, selectedCell, activeTab]);
 
   const myProjectsQuery = useMyRiskProjects(capabilitiesReady && !portfolioMode && canCreate);
   const allProjectsQuery = useAllProjects({}, capabilitiesReady && portfolioMode);
@@ -232,7 +242,6 @@ export default function GlobalRisksPageContent(): React.ReactNode {
     risksQuery.error instanceof ApiRequestError &&
     (risksQuery.error.status === 404 || risksQuery.error.status === 0);
 
-  const rows = risksQuery.data?.data ?? [];
   const meta = risksQuery.data?.meta;
   const openCount = openQuery.data?.meta?.total ?? 0;
   const resolvedCount = resolvedQuery.data?.meta?.total ?? 0;
@@ -278,6 +287,7 @@ export default function GlobalRisksPageContent(): React.ReactNode {
           onChange={(key) => {
             setActiveTab(key);
             setStatusFilter(undefined);
+            setSelectedCell(null);
             resetPage();
           }}
           activeLabel="Active"
@@ -297,7 +307,7 @@ export default function GlobalRisksPageContent(): React.ReactNode {
             {matrixVisible && (
               <div className={`!mb-4 ${layout.drawerSurface}`}>
                 <RiskMatrix
-                  risks={matrixQuery.data?.data ?? []}
+                  risks={matrixRisks}
                   selectedCell={selectedCell}
                   onCellClick={(cell) => {
                     resetPage();
@@ -362,8 +372,10 @@ export default function GlobalRisksPageContent(): React.ReactNode {
         <DataTable<Risk>
           rowKey="id"
           columns={columns}
-          dataSource={rows}
-          pagination={bindMeta(meta)}
+          dataSource={tableRows}
+          pagination={
+            selectedCell && activeTab === 'active' ? false : bindMeta(meta)
+          }
           onRow={(record) => ({
             onClick: () => setSelected({ projectId: record.projectId, riskId: record.id }),
             style: { cursor: 'pointer' },

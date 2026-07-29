@@ -48,7 +48,10 @@ import {
 import { RISK_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import RiskDetailDrawer from '@/components/modules/projects/risks/RiskDetailDrawer';
-import RiskMatrix, { type RiskMatrixCell } from '@/components/modules/projects/risks/RiskMatrix';
+import RiskMatrix, {
+  matchesRiskMatrixCell,
+  type RiskMatrixCell,
+} from '@/components/modules/projects/risks/RiskMatrix';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
 import { RISK_CATEGORY_OPTIONS as CATEGORY_OPTIONS } from '@/lib/constants/risk-options';
 
@@ -252,16 +255,23 @@ export default function RisksPageContent({
     ...params,
     search: search.trim() || undefined,
     status: statusFilter,
-    probability: selectedCell?.likelihood,
-    impact: selectedCell?.impact,
   });
 
-  // Unfiltered, high-limit fetch just to build accurate matrix counts.
+  // Full set for matrix counts + cell-click filtering (API max limit is 100).
   const matrixQuery = useRisks(
     projectId,
-    { page: 1, limit: 500 },
+    { page: 1, limit: 100 },
     matrixVisible,
   );
+
+  const matrixRisks = matrixQuery.data?.data ?? [];
+  const tableRows = useMemo(() => {
+    const rows = query.data?.data ?? [];
+    if (!selectedCell) {
+      return rows;
+    }
+    return matrixRisks.filter((risk) => matchesRiskMatrixCell(risk, selectedCell));
+  }, [query.data?.data, matrixRisks, selectedCell]);
 
   const columns: ColumnsType<Risk> = useMemo(
     () => [
@@ -334,9 +344,6 @@ export default function RisksPageContent({
     return <PageLoadingSkeleton />;
   }
 
-  const rows = query.data?.data ?? [];
-  const meta = query.data?.meta;
-
   return (
     <ProjectModuleGate projectId={projectId} module="risks">
     <>
@@ -379,13 +386,26 @@ export default function RisksPageContent({
         {matrixVisible && (
           <div className={`!mb-4 ${layout.drawerSurface}`}>
             <RiskMatrix
-              risks={matrixQuery.data?.data ?? []}
+              risks={matrixRisks}
               selectedCell={selectedCell}
               onCellClick={(cell) => {
                 resetPage();
                 setSelectedCell(cell);
               }}
             />
+            {matrixQuery.isError && (
+              <Alert
+                type="warning"
+                showIcon
+                className="!mt-3"
+                title="Unable to load risk matrix"
+                description={
+                  matrixQuery.error instanceof ApiRequestError
+                    ? matrixQuery.error.message
+                    : 'Matrix counts may be incomplete.'
+                }
+              />
+            )}
           </div>
         )}
 
@@ -420,8 +440,8 @@ export default function RisksPageContent({
         <DataTable<Risk>
           rowKey="id"
           columns={columns}
-          dataSource={rows}
-          pagination={bindMeta(meta)}
+          dataSource={tableRows}
+          pagination={selectedCell ? false : bindMeta(query.data?.meta)}
           locale={{
             emptyText: (
               <TableEmptyState

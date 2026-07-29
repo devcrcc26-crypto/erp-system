@@ -12,6 +12,48 @@ export interface RiskMatrixCell {
   impact: number;
 }
 
+type MatrixRisk = Pick<
+  Risk,
+  | 'probability'
+  | 'impact'
+  | 'residualLikelihood'
+  | 'residualImpact'
+  | 'status'
+>;
+
+/**
+ * Matrix grid position for a risk: residual when present, else inherent.
+ * Closed risks are omitted from the matrix.
+ */
+export function getRiskMatrixPosition(
+  risk: MatrixRisk,
+): RiskMatrixCell | null {
+  if (risk.status === 'CLOSED') {
+    return null;
+  }
+
+  const likelihood =
+    risk.residualLikelihood != null
+      ? risk.residualLikelihood
+      : risk.probability;
+  const impact =
+    risk.residualImpact != null ? risk.residualImpact : risk.impact;
+
+  return { likelihood, impact };
+}
+
+/** True when the risk belongs on the given matrix cell (same residual/inherent rules). */
+export function matchesRiskMatrixCell(
+  risk: MatrixRisk,
+  cell: RiskMatrixCell,
+): boolean {
+  const pos = getRiskMatrixPosition(risk);
+  if (!pos) {
+    return false;
+  }
+  return pos.likelihood === cell.likelihood && pos.impact === cell.impact;
+}
+
 function cellColor(score: number): string {
   if (score >= 20) return '#fef2f2';
   if (score >= 10) return '#fff7ed';
@@ -29,14 +71,18 @@ export default function RiskMatrix({
   selectedCell,
   onCellClick,
 }: {
-  risks: Pick<Risk, 'probability' | 'impact'>[];
+  risks: MatrixRisk[];
   selectedCell: RiskMatrixCell | null;
   onCellClick: (cell: RiskMatrixCell | null) => void;
 }): React.ReactNode {
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const risk of risks) {
-      const key = `${risk.probability}-${risk.impact}`;
+      const pos = getRiskMatrixPosition(risk);
+      if (!pos) {
+        continue;
+      }
+      const key = `${pos.likelihood}-${pos.impact}`;
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -96,7 +142,10 @@ export default function RiskMatrix({
                         onCellClick(
                           isSelected
                             ? null
-                            : { likelihood: likelihood.value, impact: impact.value },
+                            : {
+                                likelihood: likelihood.value,
+                                impact: impact.value,
+                              },
                         )
                       }
                       className="flex h-12 w-full flex-col items-center justify-center rounded transition-shadow"
