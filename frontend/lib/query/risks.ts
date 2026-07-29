@@ -208,6 +208,98 @@ export function useUpdateRiskMitigation() {
   });
 }
 
+function invalidateRiskQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  riskId: string,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: riskKeys.lists(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: riskKeys.detail(projectId, riskId),
+  });
+  void queryClient.invalidateQueries({ queryKey: riskKeys.all });
+}
+
+export function useAcceptRisk() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      riskId,
+      notes,
+    }: {
+      projectId: string;
+      riskId: string;
+      notes?: string;
+    }) =>
+      apiPost<Risk>(`${risksPath(projectId)}/${riskId}/accept`, {
+        notes,
+      }),
+    onSuccess: (_data, variables) => {
+      invalidateRiskQueries(
+        queryClient,
+        variables.projectId,
+        variables.riskId,
+      );
+    },
+  });
+}
+
+export function useCloseRisk() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      riskId,
+      notes,
+    }: {
+      projectId: string;
+      riskId: string;
+      notes?: string;
+    }) =>
+      apiPost<Risk>(`${risksPath(projectId)}/${riskId}/close`, {
+        notes,
+      }),
+    onSuccess: (_data, variables) => {
+      invalidateRiskQueries(
+        queryClient,
+        variables.projectId,
+        variables.riskId,
+      );
+    },
+  });
+}
+
+export function useReopenRisk() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      riskId,
+      notes,
+    }: {
+      projectId: string;
+      riskId: string;
+      notes: string;
+    }) =>
+      apiPost<Risk>(`${risksPath(projectId)}/${riskId}/reopen`, {
+        notes,
+      }),
+    onSuccess: (_data, variables) => {
+      invalidateRiskQueries(
+        queryClient,
+        variables.projectId,
+        variables.riskId,
+      );
+    },
+  });
+}
+
 export function useMyRisks(
   params: PaginationParams &
     PmListFilters & { status?: string; category?: RiskCategory } = {

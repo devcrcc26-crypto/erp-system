@@ -20,6 +20,7 @@ import {
   CreateRiskDto,
   CreateRiskMitigationDto,
   PmListQueryDto,
+  RiskStatusActionDto,
   UpdateRiskDto,
   UpdateRiskMitigationDto,
 } from '../dtos/pm.dtos';
@@ -66,14 +67,12 @@ const RISK_SORT_FIELDS = new Set([
 ]);
 
 /**
- * Manual status transitions. MITIGATED is never a manual target — it is only
- * ever reached automatically when a residual assessment is first recorded
- * (see updateRisk). MONITORING is a legacy pre-workflow status kept only so
- * existing rows remain editable; it has no place in the new workflow.
+ * Allowed status transitions. OPEN → MITIGATED is auto-only via addMitigation;
+ * callers must not set MITIGATED through updateRisk / accept / close / reopen.
  */
 const RISK_STATUS_TRANSITIONS: Record<string, RiskStatus[]> = {
-  OPEN: [RiskStatus.ACCEPTED],
-  MITIGATED: [RiskStatus.CLOSED],
+  OPEN: [RiskStatus.MITIGATED, RiskStatus.ACCEPTED],
+  MITIGATED: [RiskStatus.CLOSED, RiskStatus.OPEN],
   ACCEPTED: [RiskStatus.CLOSED, RiskStatus.OPEN],
   CLOSED: [RiskStatus.OPEN],
   MONITORING: [RiskStatus.OPEN, RiskStatus.CLOSED],
@@ -366,6 +365,15 @@ export class RisksService {
     const existing = await this.getRiskOrThrow(projectId, riskId);
     await this.assertCanAccessRisk(ctx, existing, 'edit');
 
+    if (
+      existing.status !== RiskStatus.OPEN &&
+      existing.status !== RiskStatus.MITIGATED
+    ) {
+      throw new BadRequestException(
+        `Cannot add mitigation while risk status is ${existing.status}`,
+      );
+    }
+
     const residualScore = this.calculateScore(
       dto.residualLikelihood,
       dto.residualImpact,
@@ -393,6 +401,89 @@ export class RisksService {
     await this.syncRiskFromBestMitigation(ctx, existing, dto.notes?.trim());
 
     return this.getRisk(ctx, projectId, riskId);
+  }
+
+  /**
+   * Accepts an OPEN risk without further mitigation (OPEN → ACCEPTED).
+   */
+  async acceptRisk(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    dto: RiskStatusActionDto,
+  ): Promise<MappedRisk> {
+    return this.transitionRiskStatus(
+      ctx,
+      projectId,
+      riskId,
+      RiskStatus.ACCEPTED,
+      [RiskStatus.OPEN],
+      dto.notes,
+    );
+  }
+
+  /**
+   * Closes a MITIGATED or ACCEPTED risk (→ CLOSED).
+   */
+  async closeRisk(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    dto: RiskStatusActionDto,
+  ): Promise<MappedRisk> {
+    return this.transitionRiskStatus(
+      ctx,
+      projectId,
+      riskId,
+      RiskStatus.CLOSED,
+      [RiskStatus.MITIGATED, RiskStatus.ACCEPTED],
+      dto.notes,
+    );
+  }
+
+  /**
+   * Reopens a MITIGATED, ACCEPTED, or CLOSED risk to OPEN and clears residual fields.
+   */
+  async reopenRisk(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    dto: RiskStatusActionDto,
+  ): Promise<MappedRisk> {
+    const existing = await this.getRiskOrThrow(projectId, riskId);
+    await this.assertCanAccessRisk(ctx, existing, 'edit');
+
+    const allowedFrom: RiskStatus[] = [
+      RiskStatus.MITIGATED,
+      RiskStatus.ACCEPTED,
+      RiskStatus.CLOSED,
+    ];
+    if (!allowedFrom.includes(existing.status)) {
+      throw new BadRequestException(
+        `Cannot transition from ${existing.status} to ${RiskStatus.OPEN}`,
+      );
+    }
+
+    const notes = dto.notes?.trim();
+    if (!notes) {
+      throw new BadRequestException('Notes are required when reopening a risk');
+    }
+
+    const row = await this.prisma.risk.update({
+      where: { id: riskId },
+      data: {
+        status: RiskStatus.OPEN,
+        residualLikelihood: null,
+        residualImpact: null,
+        residualScore: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.recordReviewIfChanged(ctx, existing, row, notes);
+    await this.sendRiskStatusChangedNotification(ctx, row, existing.status);
+
+    return this.enrichRisk(ctx, projectId, row);
   }
 
   /**
@@ -465,9 +556,8 @@ export class RisksService {
 
   /**
    * Resolves the risk's next status: an explicit, validated manual
-   * transition takes priority; otherwise the residual-assessment auto
-   * transition (OPEN -> MITIGATED on first assessment, MITIGATED -> OPEN
-   * when the assessment is cleared) is applied if it fires.
+   * transition takes priority. MITIGATED cannot be set manually.
+   * OPEN → MITIGATED is applied only by addMitigation.
    */
   private resolveStatus(
     existing: Risk,
@@ -478,29 +568,80 @@ export class RisksService {
     if (dto.status && dto.status !== existing.status) {
       if (dto.status === RiskStatus.MITIGATED) {
         throw new BadRequestException(
-          'MITIGATED is set automatically when a residual assessment is recorded, not selected manually',
+          'MITIGATED is set automatically when a mitigation attempt is recorded, not selected manually',
         );
       }
       const allowed = RISK_STATUS_TRANSITIONS[existing.status] ?? [];
       if (!allowed.includes(dto.status)) {
         throw new BadRequestException(
-          `Cannot transition risk from ${existing.status} to ${dto.status}`,
+          `Cannot transition from ${existing.status} to ${dto.status}`,
         );
       }
       return dto.status;
     }
 
-    const residualWasSet = existing.residualLikelihood != null && existing.residualImpact != null;
-    const residualNowSet = residualLikelihood != null && residualImpact != null;
+    const residualWasSet =
+      existing.residualLikelihood != null && existing.residualImpact != null;
+    const residualNowSet =
+      residualLikelihood != null && residualImpact != null;
 
-    if (!residualWasSet && residualNowSet && existing.status === RiskStatus.OPEN) {
+    if (
+      !residualWasSet &&
+      residualNowSet &&
+      existing.status === RiskStatus.OPEN
+    ) {
       return RiskStatus.MITIGATED;
     }
-    if (residualWasSet && !residualNowSet && existing.status === RiskStatus.MITIGATED) {
+    if (
+      residualWasSet &&
+      !residualNowSet &&
+      existing.status === RiskStatus.MITIGATED
+    ) {
       return RiskStatus.OPEN;
     }
 
     return existing.status;
+  }
+
+  /**
+   * Shared status transition for accept / close actions.
+   */
+  private async transitionRiskStatus(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    targetStatus: RiskStatus,
+    allowedFrom: RiskStatus[],
+    notes?: string,
+  ): Promise<MappedRisk> {
+    const existing = await this.getRiskOrThrow(projectId, riskId);
+    await this.assertCanAccessRisk(ctx, existing, 'edit');
+
+    if (!allowedFrom.includes(existing.status)) {
+      throw new BadRequestException(
+        `Cannot transition from ${existing.status} to ${targetStatus}`,
+      );
+    }
+
+    const allowed = RISK_STATUS_TRANSITIONS[existing.status] ?? [];
+    if (!allowed.includes(targetStatus)) {
+      throw new BadRequestException(
+        `Cannot transition from ${existing.status} to ${targetStatus}`,
+      );
+    }
+
+    const row = await this.prisma.risk.update({
+      where: { id: riskId },
+      data: {
+        status: targetStatus,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.recordReviewIfChanged(ctx, existing, row, notes?.trim());
+    await this.sendRiskStatusChangedNotification(ctx, row, existing.status);
+
+    return this.enrichRisk(ctx, projectId, row);
   }
 
   private async recordReviewIfChanged(

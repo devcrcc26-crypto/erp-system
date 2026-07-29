@@ -1648,6 +1648,13 @@ export class UpdateRiskDto extends PartialType(CreateRiskDto) {
   reviewNotes?: string;
 }
 
+export class RiskStatusActionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
 export class CreateRiskMitigationDto {
   @ApiProperty()
   @IsString()

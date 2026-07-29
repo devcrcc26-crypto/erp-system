@@ -19,6 +19,7 @@ import {
   CreateRiskDto,
   CreateRiskMitigationDto,
   PmListQueryDto,
+  RiskStatusActionDto,
   UpdateRiskDto,
   UpdateRiskMitigationDto,
 } from '../../application/dtos/pm.dtos';
@@ -89,6 +90,42 @@ export class RisksController {
       mitigationId,
       dto,
     );
+  }
+
+  @Post(':id/accept')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Accept an open risk without mitigation' })
+  accept(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RiskStatusActionDto,
+  ): Promise<unknown> {
+    return this.risksService.acceptRisk(this.ctx(user), projectId, id, dto);
+  }
+
+  @Post(':id/close')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Close a mitigated or accepted risk' })
+  close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RiskStatusActionDto,
+  ): Promise<unknown> {
+    return this.risksService.closeRisk(this.ctx(user), projectId, id, dto);
+  }
+
+  @Post(':id/reopen')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Reopen a mitigated, accepted, or closed risk' })
+  reopen(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RiskStatusActionDto,
+  ): Promise<unknown> {
+    return this.risksService.reopenRisk(this.ctx(user), projectId, id, dto);
   }
 
   @Get(':id')

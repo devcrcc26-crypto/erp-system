@@ -25,13 +25,18 @@ import type {
 } from '@/lib/api/project-management.types';
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useEpcCapabilities } from '@/hooks/use-pm-capabilities';
+import {
+  useEpcCapabilities,
+  usePmCapabilities,
+} from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 import {
+  useAcceptRisk,
   useAddRiskMitigation,
+  useCloseRisk,
   useDeleteRisk,
+  useReopenRisk,
   useRisk,
-  useUpdateRisk,
 } from '@/lib/query/risks';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -48,31 +53,6 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 type StatusActionKey = 'accept' | 'close' | 'reopen';
-
-const ACTION_CONFIG: Record<
-  StatusActionKey,
-  { title: string; description: string; confirmLabel: string; targetStatus: RiskStatus }
-> = {
-  accept: {
-    title: 'Accept risk',
-    description: 'Accept this risk without mitigation?',
-    confirmLabel: 'Accept',
-    targetStatus: 'ACCEPTED',
-  },
-  close: {
-    title: 'Close risk',
-    description:
-      'Close this risk? This means the mitigation is complete and the risk is no longer active.',
-    confirmLabel: 'Close',
-    targetStatus: 'CLOSED',
-  },
-  reopen: {
-    title: 'Reopen risk',
-    description: 'Reopen this risk and return it to Open status?',
-    confirmLabel: 'Reopen',
-    targetStatus: 'OPEN',
-  },
-};
 
 function residualScoreBackground(score: number): string {
   if (score >= 20) return 'rgba(220, 38, 38, 0.12)';
@@ -160,17 +140,47 @@ function StatusActionModal({
   onClose: () => void;
 }): React.ReactNode {
   const [notes, setNotes] = useState('');
+  const [notesError, setNotesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setNotes('');
+      setNotesError(null);
     }
   }, [open]);
 
   if (!action) {
     return null;
   }
-  const config = ACTION_CONFIG[action];
+
+  const copy: Record<
+    StatusActionKey,
+    { title: string; description: string; confirmLabel: string; notesRequired: boolean }
+  > = {
+    accept: {
+      title: 'Accept Risk',
+      description:
+        'Accept this risk without mitigation? The project acknowledges this risk and will proceed without additional mitigation measures.',
+      confirmLabel: 'Accept Risk',
+      notesRequired: false,
+    },
+    close: {
+      title: 'Close Risk',
+      description:
+        'Close this risk? This means the risk is no longer active — either the mitigation was verified or the condition no longer applies.',
+      confirmLabel: 'Close Risk',
+      notesRequired: false,
+    },
+    reopen: {
+      title: 'Reopen Risk',
+      description:
+        'Reopen this risk? The status will return to Open and the risk will need to be reassessed.',
+      confirmLabel: 'Reopen',
+      notesRequired: true,
+    },
+  };
+
+  const config = copy[action];
 
   return (
     <ConfirmDialog
@@ -179,16 +189,31 @@ function StatusActionModal({
       description={config.description}
       confirmLabel={config.confirmLabel}
       confirmLoading={loading}
-      onConfirm={() => onConfirm(notes)}
+      onConfirm={() => {
+        if (config.notesRequired && !notes.trim()) {
+          setNotesError('Notes are required when reopening a risk');
+          return;
+        }
+        onConfirm(notes.trim());
+      }}
       onCancel={onClose}
     >
       <Input.TextArea
         rows={3}
-        placeholder="Notes (optional)"
+        placeholder={
+          config.notesRequired ? 'Notes (required)' : 'Notes (optional)'
+        }
         value={notes}
-        onChange={(e) => setNotes(e.target.value)}
+        status={notesError ? 'error' : undefined}
+        onChange={(e) => {
+          setNotes(e.target.value);
+          if (notesError) setNotesError(null);
+        }}
         className="!mt-3"
       />
+      {notesError && (
+        <p className="mt-1 text-xs text-red-600">{notesError}</p>
+      )}
     </ConfirmDialog>
   );
 }
@@ -405,33 +430,60 @@ export default function RiskDetailDrawer({
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
 
   const riskQuery = useRisk(projectId, riskId ?? '', open);
-  const updateRisk = useUpdateRisk();
+  const acceptRisk = useAcceptRisk();
+  const closeRisk = useCloseRisk();
+  const reopenRisk = useReopenRisk();
   const deleteRisk = useDeleteRisk();
 
   const risk = riskQuery.data;
-  const canEdit = Boolean(risk) && (epc.navFullAccess || risk!.ownerId === currentUserId);
-  const canAct = canEdit && risk?.status !== 'CLOSED';
+  const canEdit =
+    Boolean(risk) && (epc.navFullAccess || risk!.ownerId === currentUserId);
+  const canAct = Boolean(
+    risk &&
+      (risk.ownerId === currentUserId ||
+        risk.createdBy === currentUserId ||
+        pm.projects.canView),
+  );
+  const canAddMitigation =
+    canAct && (risk?.status === 'OPEN' || risk?.status === 'MITIGATED');
+  const statusActionPending =
+    acceptRisk.isPending || closeRisk.isPending || reopenRisk.isPending;
 
   const mitigations = risk?.mitigations ?? [];
   const bestMitigation = mitigations[0] ?? null;
   const otherMitigations = mitigations.slice(1);
 
-  async function handleStatusAction(action: StatusActionKey, notes: string): Promise<void> {
+  async function handleStatusAction(
+    action: StatusActionKey,
+    notes: string,
+  ): Promise<void> {
     if (!riskId) return;
     try {
-      await updateRisk.mutateAsync({
-        projectId,
-        riskId,
-        body: {
-          status: ACTION_CONFIG[action].targetStatus,
-          reviewNotes: notes.trim() || undefined,
-        },
-      });
-      messageApi.success(
-        `Risk ${formatRiskStatus(ACTION_CONFIG[action].targetStatus).toLowerCase()}`,
-      );
+      if (action === 'accept') {
+        await acceptRisk.mutateAsync({
+          projectId,
+          riskId,
+          notes: notes || undefined,
+        });
+        messageApi.success('Risk accepted');
+      } else if (action === 'close') {
+        await closeRisk.mutateAsync({
+          projectId,
+          riskId,
+          notes: notes || undefined,
+        });
+        messageApi.success('Risk closed');
+      } else {
+        await reopenRisk.mutateAsync({
+          projectId,
+          riskId,
+          notes,
+        });
+        messageApi.success('Risk reopened');
+      }
       setStatusAction(null);
       onUpdated();
     } catch (error) {
@@ -453,37 +505,42 @@ export default function RiskDetailDrawer({
   }
 
   function renderActions(): React.ReactNode {
-    if (!risk || !canEdit) return null;
+    if (!risk || !canAct) return null;
+
     switch (risk.status) {
       case 'OPEN':
         return (
-          <Button block onClick={() => setStatusAction('accept')}>
-            Accept risk
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              type="primary"
+              block
+              onClick={() => setStatusAction('accept')}
+            >
+              Accept Risk
+            </Button>
+          </div>
         );
       case 'MITIGATED':
-        return (
-          <Button block onClick={() => setStatusAction('close')}>
-            Close risk
-          </Button>
-        );
       case 'ACCEPTED':
+        return (
+          <div className="flex flex-col gap-2">
+            <Button
+              type="primary"
+              block
+              onClick={() => setStatusAction('close')}
+            >
+              Close Risk
+            </Button>
+            <Button block onClick={() => setStatusAction('reopen')}>
+              Reopen
+            </Button>
+          </div>
+        );
       case 'CLOSED':
         return (
           <Button block onClick={() => setStatusAction('reopen')}>
-            Reopen risk
+            Reopen Risk
           </Button>
-        );
-      case 'MONITORING':
-        return (
-          <div className="flex gap-2">
-            <Button block onClick={() => setStatusAction('reopen')}>
-              Move to open
-            </Button>
-            <Button block onClick={() => setStatusAction('close')}>
-              Close risk
-            </Button>
-          </div>
         );
       default:
         return null;
@@ -588,7 +645,7 @@ export default function RiskDetailDrawer({
             <section className={layout.drawerSection}>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className={layout.drawerHeading}>Mitigation & Residual Risk</h3>
-                {canAct && (
+                {canAddMitigation && (
                   <Button
                     size="small"
                     icon={<PlusOutlined />}
@@ -725,7 +782,7 @@ export default function RiskDetailDrawer({
       <StatusActionModal
         open={Boolean(statusAction)}
         action={statusAction}
-        loading={updateRisk.isPending}
+        loading={statusActionPending}
         onConfirm={(notes) =>
           statusAction && void handleStatusAction(statusAction, notes)
         }
