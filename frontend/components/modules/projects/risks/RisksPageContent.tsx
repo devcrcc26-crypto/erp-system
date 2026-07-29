@@ -459,6 +459,10 @@ export default function RisksPageContent({
           columns={columns}
           dataSource={tableRows}
           pagination={selectedCell ? false : bindMeta(query.data?.meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedRiskId(record.id),
+            className: 'cursor-pointer',
+          })}
           locale={{
             emptyText: (
               <TableEmptyState
