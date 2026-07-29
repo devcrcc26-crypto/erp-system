@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PunchItem, PunchItemSeverity, PunchItemStatus } from '@prisma/client';
+import { PermissionService } from '../../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
-import { DocumentNumberService } from '../document-number.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
 import { PunchItemsService } from '../punch-items.service';
 import { PmContext } from '../../types/pm-context.type';
@@ -11,24 +11,31 @@ describe('PunchItemsService verification guard', () => {
   const projectId = 'project-1';
   const punchItemId = 'punch-1';
   const raiserUserId = 'user-raiser';
-  const verifierUserId = 'user-verifier';
   const assigneeUserId = 'user-assignee';
 
   function buildPunchItem(overrides: Partial<PunchItem> = {}): PunchItem {
     return {
       id: punchItemId,
+      companyId: 'company-1',
       projectId,
       raisedBy: raiserUserId,
       assignedTo: assigneeUserId,
-      punchNumber: 'PN-001',
+      punchNumber: 'PL-PRJ-001',
       description: 'Cracked tile in lobby',
       roomOrArea: 'Lobby',
       tradeResponsible: 'Tiling',
+      category: null,
       severity: PunchItemSeverity.MINOR,
       status: PunchItemStatus.CORRECTED,
       dueDate: null,
+      resolutionNote: 'Fixed',
       correctedAt: new Date('2026-06-01T00:00:00.000Z'),
       verifiedAt: null,
+      verifiedBy: null,
+      closedAt: null,
+      closedBy: null,
+      taskDisciplineId: null,
+      designPackageId: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       createdBy: raiserUserId,
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
@@ -42,6 +49,7 @@ describe('PunchItemsService verification guard', () => {
   let prisma: {
     punchItem: { findFirst: jest.Mock; update: jest.Mock };
   };
+  let permissionService: { getUserRoleNames: jest.Mock };
   let service: PunchItemsService;
 
   beforeEach(() => {
@@ -51,88 +59,61 @@ describe('PunchItemsService verification guard', () => {
         update: jest.fn(),
       },
     };
+    permissionService = {
+      getUserRoleNames: jest.fn().mockResolvedValue([]),
+    };
 
     service = new PunchItemsService(
       prisma as unknown as PrismaService,
       {
-        getProjectOrThrow: jest.fn().mockResolvedValue({ id: projectId }),
+        getProjectOrThrow: jest.fn().mockResolvedValue({
+          id: projectId,
+          companyId: 'company-1',
+          projectCode: 'PRJ',
+        }),
       } as unknown as ProjectScopeService,
-      {} as unknown as DocumentNumberService,
       {
         ensurePunchItemFolder: jest
           .fn()
-          .mockResolvedValue({ id: 'folder-1', path: '/projects/demo/punch/PN-001' }),
+          .mockResolvedValue({
+            id: 'folder-1',
+            path: '/projects/demo/punch/PL-PRJ-001',
+          }),
       } as unknown as EngineeringDocumentFolderService,
+      permissionService as unknown as PermissionService,
     );
   });
 
-  it('throws ForbiddenException when the raiser tries to verify their own punch item', async () => {
+  it('allows the raiser to verify a corrected punch item', async () => {
     const ctx: PmContext = { companyId: 'company-1', userId: raiserUserId };
+    const existing = buildPunchItem();
+    prisma.punchItem.findFirst.mockResolvedValue(existing);
+    prisma.punchItem.update.mockResolvedValue({
+      ...existing,
+      status: PunchItemStatus.VERIFIED,
+      verifiedAt: new Date('2026-06-02T00:00:00.000Z'),
+      verifiedBy: raiserUserId,
+    });
+
+    const result = await service.verifyPunchItem(ctx, projectId, punchItemId);
+
+    expect(prisma.punchItem.update).toHaveBeenCalled();
+    expect(result.status).toBe(PunchItemStatus.VERIFIED);
+  });
+
+  it('throws ForbiddenException when the assignee tries to verify their own fix', async () => {
+    const ctx: PmContext = { companyId: 'company-1', userId: assigneeUserId };
     prisma.punchItem.findFirst.mockResolvedValue(buildPunchItem());
+    permissionService.getUserRoleNames.mockResolvedValue(['Project Manager']);
 
     await expect(
-      service.updatePunchItem(ctx, projectId, punchItemId, {
-        status: PunchItemStatus.VERIFIED,
-      }),
+      service.verifyPunchItem(ctx, projectId, punchItemId),
     ).rejects.toThrow(
       new ForbiddenException(
-        'The person who raised a punch item cannot verify their own item. A second person must verify.',
+        'The person who corrected the item cannot verify their own fix.',
       ),
     );
 
     expect(prisma.punchItem.update).not.toHaveBeenCalled();
-  });
-
-  it('allows a different user to verify a punch item', async () => {
-    const ctx: PmContext = { companyId: 'company-1', userId: verifierUserId };
-    const existing = buildPunchItem();
-    prisma.punchItem.findFirst.mockResolvedValue(existing);
-    prisma.punchItem.update.mockResolvedValue({
-      ...existing,
-      status: PunchItemStatus.VERIFIED,
-      verifiedAt: new Date('2026-06-02T00:00:00.000Z'),
-      updatedBy: verifierUserId,
-    });
-
-    const result = await service.updatePunchItem(ctx, projectId, punchItemId, {
-      status: PunchItemStatus.VERIFIED,
-    });
-
-    expect(prisma.punchItem.update).toHaveBeenCalled();
-    expect(result.status).toBe(PunchItemStatus.VERIFIED);
-  });
-
-  it('throws ForbiddenException when the assignee is also the raiser and tries to verify', async () => {
-    const ctx: PmContext = { companyId: 'company-1', userId: raiserUserId };
-    prisma.punchItem.findFirst.mockResolvedValue(
-      buildPunchItem({ assignedTo: raiserUserId }),
-    );
-
-    await expect(
-      service.updatePunchItem(ctx, projectId, punchItemId, {
-        status: PunchItemStatus.VERIFIED,
-      }),
-    ).rejects.toThrow(ForbiddenException);
-
-    expect(prisma.punchItem.update).not.toHaveBeenCalled();
-  });
-
-  it('allows the assignee to verify when they are not the raiser', async () => {
-    const ctx: PmContext = { companyId: 'company-1', userId: assigneeUserId };
-    const existing = buildPunchItem();
-    prisma.punchItem.findFirst.mockResolvedValue(existing);
-    prisma.punchItem.update.mockResolvedValue({
-      ...existing,
-      status: PunchItemStatus.VERIFIED,
-      verifiedAt: new Date('2026-06-02T00:00:00.000Z'),
-      updatedBy: assigneeUserId,
-    });
-
-    const result = await service.updatePunchItem(ctx, projectId, punchItemId, {
-      status: PunchItemStatus.VERIFIED,
-    });
-
-    expect(prisma.punchItem.update).toHaveBeenCalled();
-    expect(result.status).toBe(PunchItemStatus.VERIFIED);
   });
 });

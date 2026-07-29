@@ -19,7 +19,6 @@ import {
   ProjectTeamRole,
   ProjectType,
   PunchItemSeverity,
-  PunchItemStatus,
   RfiPriority,
   RfiSource,
   RfiStatus,
@@ -1926,6 +1925,11 @@ export class CreatePunchItemDto {
   @IsString()
   tradeResponsible?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  category?: string;
+
   @ApiProperty({ enum: PunchItemSeverity })
   @IsEnum(PunchItemSeverity)
   severity!: PunchItemSeverity;
@@ -1939,13 +1943,37 @@ export class CreatePunchItemDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  taskDisciplineId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  designPackageId?: string;
 }
 
-export class UpdatePunchItemDto extends PartialType(CreatePunchItemDto) {
-  @ApiPropertyOptional({ enum: PunchItemStatus })
+export class UpdatePunchItemDto extends PartialType(CreatePunchItemDto) {}
+
+export class AssignPunchItemDto {
+  @ApiProperty()
+  @IsEntityUuid()
+  assignedTo!: string;
+}
+
+export class CorrectPunchItemDto {
+  @ApiProperty()
+  @IsString()
+  resolutionNote!: string;
+}
+
+export class ReopenPunchItemDto {
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(PunchItemStatus)
-  status?: PunchItemStatus;
+  @IsString()
+  reason?: string;
 }
 
 export class UpdateCloseoutDto {

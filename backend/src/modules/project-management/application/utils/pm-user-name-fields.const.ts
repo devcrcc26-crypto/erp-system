@@ -8,6 +8,13 @@ export const PM_RAISED_ASSIGNED_NAMES: readonly [string, string][] = [
   ['assignedTo', 'assignedToName'],
 ];
 
+export const PM_PUNCH_ITEM_USER_NAMES: readonly [string, string][] = [
+  ['raisedBy', 'raisedByName'],
+  ['assignedTo', 'assignedToName'],
+  ['verifiedBy', 'verifiedByName'],
+  ['closedBy', 'closedByName'],
+];
+
 export const PM_ISSUE_USER_NAMES: readonly [string, string][] = [
   ['raisedBy', 'raisedByName'],
   ['assignedTo', 'assignedToName'],

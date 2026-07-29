@@ -678,6 +678,7 @@ export interface MappedRiskDetail extends MappedRisk {
 
 export interface MappedPunchItem {
   id: string;
+  companyId: string;
   projectId: string;
   raisedBy: string;
   raisedByName?: string | null;
@@ -687,11 +688,20 @@ export interface MappedPunchItem {
   description: string;
   roomOrArea: string | null;
   tradeResponsible: string | null;
+  category: string | null;
   severity: PunchItem['severity'];
   status: PunchItem['status'];
   dueDate: string | null;
+  resolutionNote: string | null;
   correctedAt: string | null;
   verifiedAt: string | null;
+  verifiedBy: string | null;
+  verifiedByName?: string | null;
+  closedAt: string | null;
+  closedBy: string | null;
+  closedByName?: string | null;
+  taskDisciplineId: string | null;
+  designPackageId: string | null;
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1381,6 +1391,7 @@ export function mapPunchItem(
 ): MappedPunchItem {
   return {
     id: row.id,
+    companyId: row.companyId,
     projectId: row.projectId,
     raisedBy: row.raisedBy,
     assignedTo: row.assignedTo,
@@ -1388,11 +1399,18 @@ export function mapPunchItem(
     description: row.description,
     roomOrArea: row.roomOrArea,
     tradeResponsible: row.tradeResponsible,
+    category: row.category,
     severity: row.severity,
     status: row.status,
     dueDate: toDateString(row.dueDate),
+    resolutionNote: row.resolutionNote,
     correctedAt: toIsoString(row.correctedAt),
     verifiedAt: toIsoString(row.verifiedAt),
+    verifiedBy: row.verifiedBy,
+    closedAt: toIsoString(row.closedAt),
+    closedBy: row.closedBy,
+    taskDisciplineId: row.taskDisciplineId,
+    designPackageId: row.designPackageId,
     attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,

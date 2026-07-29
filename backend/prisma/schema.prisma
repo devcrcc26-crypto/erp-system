@@ -174,6 +174,7 @@ model Company {
   rfis                    Rfi[]
   issues                  Issue[]
   correspondence          Correspondence[]
+  punchItems              PunchItem[]
   dailyLogs               DailyLog[]
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
@@ -528,6 +529,8 @@ model User {
   issueResponses         IssueResponse[]
   raisedPunchItems       PunchItem[]            @relation("PunchRaisedBy")
   assignedPunchItems     PunchItem[]            @relation("PunchAssignedTo")
+  verifiedPunchItems     PunchItem[]            @relation("PunchVerifiedBy")
+  closedPunchItems       PunchItem[]            @relation("PunchClosedBy")
   verifiedChecklistItems CloseoutChecklistItem[]
   designerDisciplines      TaskDiscipline[] @relation("DisciplineDesigner")
   reviewerDisciplines      TaskDiscipline[] @relation("DisciplineReviewer")
@@ -1750,6 +1753,7 @@ model TaskDiscipline {
   deliverables          Deliverable[]
   rfis                  Rfi[]
   issues                Issue[]
+  punchItems            PunchItem[]
   submittals            Submittal[]
   meetings              Meeting[]
 
@@ -1896,6 +1900,7 @@ model DesignPackage {
   attachments    DesignPackageAttachment[]
   linkedRfis                 Rfi[]                    @relation("RfiLinkedDesignPackage")
   linkedIssues               Issue[]                  @relation("IssueLinkedDesignPackage")
+  linkedPunchItems           PunchItem[]              @relation("PunchPackage")
   linkedChangeRequests       ProjectChangeRequest[]   @relation("ChangeRequestLinkedDesignPackage")
   linkedExternalReviewTriggers ExternalReviewTrigger[] @relation("TriggerLinkedDesignPackage")
   meetings                    Meeting[]
@@ -2993,6 +2998,7 @@ model IssueResponse {
 
 model PunchItem {
   id               String            @id @default(uuid())
+  companyId        String            @map("company_id")
   projectId        String            @map("project_id")
   raisedBy         String            @map("raised_by")
   assignedTo       String?           @map("assigned_to")
@@ -3000,11 +3006,18 @@ model PunchItem {
   description      String
   roomOrArea       String?           @map("room_or_area")
   tradeResponsible String?           @map("trade_responsible")
+  category         String?
   severity         PunchItemSeverity
   status           PunchItemStatus   @default(RAISED)
   dueDate          DateTime?         @map("due_date") @db.Date
+  resolutionNote   String?           @map("resolution_note")
   correctedAt      DateTime?         @map("corrected_at")
   verifiedAt       DateTime?         @map("verified_at")
+  verifiedBy       String?           @map("verified_by")
+  closedAt         DateTime?         @map("closed_at")
+  closedBy         String?           @map("closed_by")
+  taskDisciplineId String?           @map("task_discipline_id")
+  designPackageId  String?           @map("design_package_id")
   createdAt        DateTime          @default(now()) @map("created_at")
   createdBy        String            @map("created_by")
   updatedAt        DateTime          @updatedAt @map("updated_at")
@@ -3012,12 +3025,23 @@ model PunchItem {
   deletedAt        DateTime?         @map("deleted_at")
   deletedBy        String?           @map("deleted_by")
 
-  project  Project @relation(fields: [projectId], references: [id])
-  raiser   User    @relation("PunchRaisedBy", fields: [raisedBy], references: [id])
-  assignee User?   @relation("PunchAssignedTo", fields: [assignedTo], references: [id])
+  company          Company           @relation(fields: [companyId], references: [id])
+  project          Project           @relation(fields: [projectId], references: [id])
+  raiser           User              @relation("PunchRaisedBy", fields: [raisedBy], references: [id])
+  assignee         User?             @relation("PunchAssignedTo", fields: [assignedTo], references: [id])
+  verifier         User?             @relation("PunchVerifiedBy", fields: [verifiedBy], references: [id])
+  closer           User?             @relation("PunchClosedBy", fields: [closedBy], references: [id])
+  taskDiscipline   TaskDiscipline?   @relation(fields: [taskDisciplineId], references: [id])
+  designPackage    DesignPackage?    @relation("PunchPackage", fields: [designPackageId], references: [id])
 
+  @@index([companyId], map: "idx_punch_item_company_id")
+  @@index([companyId, deletedAt], map: "idx_punch_item_company_deleted")
   @@index([projectId], map: "idx_punch_item_project_id")
   @@index([projectId, deletedAt], map: "idx_punch_item_project_deleted")
+  @@index([verifiedBy], map: "idx_punch_item_verified_by")
+  @@index([closedBy], map: "idx_punch_item_closed_by")
+  @@index([taskDisciplineId], map: "idx_punch_item_task_discipline_id")
+  @@index([designPackageId], map: "idx_punch_item_design_package_id")
   @@map("punch_item")
 }
 

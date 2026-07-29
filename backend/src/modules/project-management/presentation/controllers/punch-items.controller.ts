@@ -15,8 +15,11 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  AssignPunchItemDto,
+  CorrectPunchItemDto,
   CreatePunchItemDto,
   PmListQueryDto,
+  ReopenPunchItemDto,
   UpdatePunchItemDto,
 } from '../../application/dtos/pm.dtos';
 import { PunchItemsService } from '../../application/services/punch-items.service';
@@ -78,7 +81,7 @@ export class PunchItemsController {
 
   @Patch(':id')
   @RequirePermission('punch_items', 'edit')
-  @ApiOperation({ summary: 'Update punch item' })
+  @ApiOperation({ summary: 'Update punch item fields (status via actions only)' })
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('projectId') projectId: string,
@@ -86,6 +89,87 @@ export class PunchItemsController {
     @Body() dto: UpdatePunchItemDto,
   ): Promise<unknown> {
     return this.punchItemsService.updatePunchItem(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/assign')
+  @RequirePermission('punch_items', 'edit')
+  @ApiOperation({ summary: 'Assign a raised punch item' })
+  assign(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: AssignPunchItemDto,
+  ): Promise<unknown> {
+    return this.punchItemsService.assignPunchItem(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/correct')
+  @RequirePermission('punch_items', 'edit')
+  @ApiOperation({ summary: 'Mark punch item as corrected' })
+  correct(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CorrectPunchItemDto,
+  ): Promise<unknown> {
+    return this.punchItemsService.correctPunchItem(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/verify')
+  @RequirePermission('punch_items', 'edit')
+  @ApiOperation({ summary: 'Verify a corrected punch item' })
+  verify(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.punchItemsService.verifyPunchItem(
+      this.ctx(user),
+      projectId,
+      id,
+    );
+  }
+
+  @Post(':id/close')
+  @RequirePermission('punch_items', 'edit')
+  @ApiOperation({ summary: 'Close a verified punch item' })
+  close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.punchItemsService.closePunchItem(
+      this.ctx(user),
+      projectId,
+      id,
+    );
+  }
+
+  @Post(':id/reopen')
+  @RequirePermission('punch_items', 'edit')
+  @ApiOperation({ summary: 'Reopen a corrected, verified, or closed punch item' })
+  reopen(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: ReopenPunchItemDto,
+  ): Promise<unknown> {
+    return this.punchItemsService.reopenPunchItem(
       this.ctx(user),
       projectId,
       id,
