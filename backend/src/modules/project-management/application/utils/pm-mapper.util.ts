@@ -626,8 +626,24 @@ export interface MappedRiskReview {
   createdAt: string;
 }
 
+export interface MappedRiskMitigation {
+  id: string;
+  riskId: string;
+  attemptNumber: number;
+  mitigationStrategy: string;
+  residualLikelihood: number;
+  residualImpact: number;
+  residualScore: number;
+  notes: string | null;
+  assessedBy: string;
+  assessorName?: string | null;
+  assessedAt: string;
+  createdAt: string;
+}
+
 export interface MappedRiskDetail extends MappedRisk {
   reviews: MappedRiskReview[];
+  mitigations: MappedRiskMitigation[];
 }
 
 export interface MappedPunchItem {
@@ -1230,6 +1246,41 @@ export function mapRiskReview(row: RiskReview): MappedRiskReview {
     previousResidualScore: row.previousResidualScore,
     newResidualScore: row.newResidualScore,
     notes: row.notes,
+    createdAt: toIsoString(row.createdAt)!,
+  };
+}
+
+export function mapRiskMitigation(
+  row: {
+    id: string;
+    riskId: string;
+    attemptNumber: number;
+    mitigationStrategy: string;
+    residualLikelihood: number;
+    residualImpact: number;
+    residualScore: number;
+    notes: string | null;
+    assessedBy: string;
+    assessedAt: Date;
+    createdAt: Date;
+    assessor?: { firstName: string | null; lastName: string | null } | null;
+  },
+): MappedRiskMitigation {
+  const first = row.assessor?.firstName?.trim() ?? '';
+  const last = row.assessor?.lastName?.trim() ?? '';
+  const assessorName = `${first} ${last}`.trim() || null;
+  return {
+    id: row.id,
+    riskId: row.riskId,
+    attemptNumber: row.attemptNumber,
+    mitigationStrategy: row.mitigationStrategy,
+    residualLikelihood: row.residualLikelihood,
+    residualImpact: row.residualImpact,
+    residualScore: row.residualScore,
+    notes: row.notes,
+    assessedBy: row.assessedBy,
+    assessorName,
+    assessedAt: toIsoString(row.assessedAt)!,
     createdAt: toIsoString(row.createdAt)!,
   };
 }

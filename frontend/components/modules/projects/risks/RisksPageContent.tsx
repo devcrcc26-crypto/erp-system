@@ -63,7 +63,6 @@ interface RiskFormValues {
   description: string;
   probability: number;
   impact: number;
-  mitigationPlan?: string;
   contingencyPlan?: string;
   ownerId: string;
   reviewDate?: Dayjs;
@@ -125,7 +124,6 @@ export function RiskFormDrawer({
           description: values.description.trim(),
           probability: values.probability,
           impact: values.impact,
-          mitigationPlan: values.mitigationPlan?.trim() || undefined,
           contingencyPlan: values.contingencyPlan?.trim() || undefined,
           ownerId: values.ownerId,
           reviewDate: values.reviewDate?.format('YYYY-MM-DD'),
@@ -201,13 +199,6 @@ export function RiskFormDrawer({
             </div>
           </Form.Item>
         </div>
-        <Form.Item
-          label="Mitigation"
-          name="mitigationPlan"
-          extra="Describe the planned mitigation for this risk"
-        >
-          <Input.TextArea rows={3} />
-        </Form.Item>
         <Form.Item
           label="Owner"
           name="ownerId"

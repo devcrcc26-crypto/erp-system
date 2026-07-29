@@ -18,15 +18,19 @@ import {
 } from '../../../../shared/utils/pagination.util';
 import {
   CreateRiskDto,
+  CreateRiskMitigationDto,
   PmListQueryDto,
   UpdateRiskDto,
+  UpdateRiskMitigationDto,
 } from '../dtos/pm.dtos';
 import { PmContext } from '../types/pm-context.type';
 import {
   mapRisk,
+  mapRiskMitigation,
   mapRiskReview,
   MappedRisk,
   MappedRiskDetail,
+  MappedRiskReview,
   parseOptionalDate,
 } from '../utils/pm-mapper.util';
 import { buildPmOrderBy } from '../utils/pm-pagination.util';
@@ -350,6 +354,97 @@ export class RisksService {
   }
 
   /**
+   * Adds a mitigation attempt and syncs the risk residual fields to the
+   * lowest residual-score attempt (best mitigation). Auto-transitions OPEN → MITIGATED.
+   */
+  async addMitigation(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    dto: CreateRiskMitigationDto,
+  ): Promise<MappedRiskDetail> {
+    const existing = await this.getRiskOrThrow(projectId, riskId);
+    await this.assertCanAccessRisk(ctx, existing, 'edit');
+
+    const residualScore = this.calculateScore(
+      dto.residualLikelihood,
+      dto.residualImpact,
+    );
+
+    const maxAttempt = await this.prisma.riskMitigation.aggregate({
+      where: { riskId },
+      _max: { attemptNumber: true },
+    });
+    const attemptNumber = (maxAttempt._max.attemptNumber ?? 0) + 1;
+
+    await this.prisma.riskMitigation.create({
+      data: {
+        riskId,
+        attemptNumber,
+        mitigationStrategy: dto.mitigationStrategy.trim(),
+        residualLikelihood: dto.residualLikelihood,
+        residualImpact: dto.residualImpact,
+        residualScore,
+        notes: dto.notes?.trim() || null,
+        assessedBy: ctx.userId,
+      },
+    });
+
+    await this.syncRiskFromBestMitigation(ctx, existing, dto.notes?.trim());
+
+    return this.getRisk(ctx, projectId, riskId);
+  }
+
+  /**
+   * Updates an existing mitigation attempt and re-syncs the risk to the best score.
+   */
+  async updateMitigation(
+    ctx: PmContext,
+    projectId: string,
+    riskId: string,
+    mitigationId: string,
+    dto: UpdateRiskMitigationDto,
+  ): Promise<MappedRiskDetail> {
+    const existing = await this.getRiskOrThrow(projectId, riskId);
+    await this.assertCanAccessRisk(ctx, existing, 'edit');
+
+    const mitigation = await this.prisma.riskMitigation.findFirst({
+      where: { id: mitigationId, riskId },
+    });
+    if (!mitigation) {
+      throw new NotFoundException('Mitigation attempt not found');
+    }
+
+    const residualLikelihood =
+      dto.residualLikelihood ?? mitigation.residualLikelihood;
+    const residualImpact = dto.residualImpact ?? mitigation.residualImpact;
+    const residualScore = this.calculateScore(residualLikelihood, residualImpact);
+
+    await this.prisma.riskMitigation.update({
+      where: { id: mitigationId },
+      data: {
+        mitigationStrategy:
+          dto.mitigationStrategy !== undefined
+            ? dto.mitigationStrategy.trim()
+            : undefined,
+        residualLikelihood:
+          dto.residualLikelihood !== undefined ? dto.residualLikelihood : undefined,
+        residualImpact:
+          dto.residualImpact !== undefined ? dto.residualImpact : undefined,
+        residualScore:
+          dto.residualLikelihood !== undefined || dto.residualImpact !== undefined
+            ? residualScore
+            : undefined,
+        notes: dto.notes !== undefined ? dto.notes.trim() || null : undefined,
+      },
+    });
+
+    await this.syncRiskFromBestMitigation(ctx, existing, dto.notes?.trim());
+
+    return this.getRisk(ctx, projectId, riskId);
+  }
+
+  /**
    * Soft-deletes a risk scoped to a project.
    */
   async deleteRisk(
@@ -480,18 +575,83 @@ export class RisksService {
   ): Promise<MappedRiskDetail> {
     const base = await this.enrichRisk(ctx, projectId, row);
 
-    const reviewRows = await this.prisma.riskReview.findMany({
-      where: { riskId: row.id },
-      orderBy: { reviewedAt: 'desc' },
-    });
-    const reviews = await enrichRowsWithUserDisplayNames(
+    const [reviewRows, mitigationRows] = await Promise.all([
+      this.prisma.riskReview.findMany({
+        where: { riskId: row.id },
+        orderBy: { reviewedAt: 'desc' },
+      }),
+      this.prisma.riskMitigation.findMany({
+        where: { riskId: row.id },
+        orderBy: [{ residualScore: 'asc' }, { attemptNumber: 'asc' }],
+        include: {
+          assessor: { select: { firstName: true, lastName: true } },
+        },
+      }),
+    ]);
+
+    const reviews: MappedRiskReview[] = await enrichRowsWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
       reviewRows.map(mapRiskReview),
       PM_REVIEWED_BY_NAME,
     );
 
-    return { ...base, reviews };
+    return {
+      ...base,
+      reviews,
+      mitigations: mitigationRows.map(mapRiskMitigation),
+    };
+  }
+
+  /**
+   * Sets the risk residual fields from the lowest-scoring mitigation attempt
+   * and records a review log entry when values change. Auto-sets MITIGATED
+   * when the risk is still OPEN.
+   */
+  private async syncRiskFromBestMitigation(
+    ctx: PmContext,
+    existing: Risk,
+    notes?: string,
+  ): Promise<Risk> {
+    const best = await this.prisma.riskMitigation.findFirst({
+      where: { riskId: existing.id },
+      orderBy: [{ residualScore: 'asc' }, { attemptNumber: 'asc' }],
+    });
+
+    if (!best) {
+      return existing;
+    }
+
+    const nextStatus =
+      existing.status === RiskStatus.OPEN
+        ? RiskStatus.MITIGATED
+        : existing.status;
+
+    const updated = await this.prisma.risk.update({
+      where: { id: existing.id },
+      data: {
+        residualLikelihood: best.residualLikelihood,
+        residualImpact: best.residualImpact,
+        residualScore: best.residualScore,
+        mitigationPlan: best.mitigationStrategy,
+        status: nextStatus,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.recordReviewIfChanged(
+      ctx,
+      existing,
+      updated,
+      notes ||
+        `Mitigation attempt recorded (score ${best.residualScore})`,
+    );
+
+    if (updated.status !== existing.status) {
+      await this.sendRiskStatusChangedNotification(ctx, updated, existing.status);
+    }
+
+    return updated;
   }
 
   private async mapMyRiskRows(

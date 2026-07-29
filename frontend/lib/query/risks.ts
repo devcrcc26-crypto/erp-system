@@ -14,6 +14,7 @@ import {
   apiPost,
 } from '@/lib/api/client';
 import type {
+  CreateRiskMitigationRequest,
   CreateRiskRequest,
   PmListFilters,
   Risk,
@@ -21,6 +22,7 @@ import type {
   RiskDetail,
   RiskProjectOption,
   RiskStatus,
+  UpdateRiskMitigationRequest,
   UpdateRiskRequest,
 } from '@/lib/api/project-management.types';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
@@ -140,6 +142,68 @@ export function useUpdateRisk() {
       void queryClient.invalidateQueries({
         queryKey: riskKeys.detail(variables.projectId, variables.riskId),
       });
+    },
+  });
+}
+
+export function useAddRiskMitigation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      riskId,
+      body,
+    }: {
+      projectId: string;
+      riskId: string;
+      body: CreateRiskMitigationRequest;
+    }) =>
+      apiPost<RiskDetail>(
+        `${risksPath(projectId)}/${riskId}/mitigations`,
+        body,
+      ),
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(
+        riskKeys.detail(variables.projectId, variables.riskId),
+        data,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: riskKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({ queryKey: riskKeys.all });
+    },
+  });
+}
+
+export function useUpdateRiskMitigation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      riskId,
+      mitigationId,
+      body,
+    }: {
+      projectId: string;
+      riskId: string;
+      mitigationId: string;
+      body: UpdateRiskMitigationRequest;
+    }) =>
+      apiPatch<RiskDetail>(
+        `${risksPath(projectId)}/${riskId}/mitigations/${mitigationId}`,
+        body,
+      ),
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(
+        riskKeys.detail(variables.projectId, variables.riskId),
+        data,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: riskKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({ queryKey: riskKeys.all });
     },
   });
 }

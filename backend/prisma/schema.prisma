@@ -489,6 +489,7 @@ model User {
   ledDepartments         Department[]           @relation("DepartmentLeader")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   riskReviewsAsReviewer  RiskReview[]           @relation("RiskReviewer")
+  riskMitigationsAssessed RiskMitigation[]      @relation("MitigationAssessor")
   projectTeamMemberships ProjectTeam[]
   dispatcherTasks        Task[]                 @relation("TaskDispatcher")
   supervisingChiefTasks  Task[]                 @relation("TaskSupervisingChief")
@@ -2842,10 +2843,32 @@ model Risk {
   project Project      @relation(fields: [projectId], references: [id])
   owner   User         @relation(fields: [ownerId], references: [id])
   reviews RiskReview[]
+  mitigations RiskMitigation[] @relation("RiskMitigations")
 
   @@index([projectId], map: "idx_risk_project_id")
   @@index([projectId, deletedAt], map: "idx_risk_project_deleted")
   @@map("risk")
+}
+
+model RiskMitigation {
+  id                 String   @id @default(uuid())
+  riskId             String   @map("risk_id")
+  attemptNumber      Int      @default(1) @map("attempt_number")
+  mitigationStrategy String   @map("mitigation_strategy")
+  residualLikelihood Int      @map("residual_likelihood")
+  residualImpact     Int      @map("residual_impact")
+  residualScore      Int      @map("residual_score")
+  notes              String?
+  assessedBy         String   @map("assessed_by")
+  assessedAt         DateTime @default(now()) @map("assessed_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  risk     Risk @relation("RiskMitigations", fields: [riskId], references: [id], onDelete: Cascade)
+  assessor User @relation("MitigationAssessor", fields: [assessedBy], references: [id])
+
+  @@index([riskId], map: "idx_risk_mitigation_risk_id")
+  @@index([riskId, residualScore], map: "idx_risk_mitigation_risk_score")
+  @@map("risk_mitigation")
 }
 
 model RiskReview {

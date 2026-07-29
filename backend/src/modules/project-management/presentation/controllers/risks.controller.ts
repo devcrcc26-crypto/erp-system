@@ -17,8 +17,10 @@ import { RequirePermission } from '../../../../shared/permissions/require-permis
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateRiskDto,
+  CreateRiskMitigationDto,
   PmListQueryDto,
   UpdateRiskDto,
+  UpdateRiskMitigationDto,
 } from '../../application/dtos/pm.dtos';
 import { RisksService } from '../../application/services/risks.service';
 import { PmModuleAccessGuard } from '../guards/pm-module-access.guard';
@@ -56,6 +58,37 @@ export class RisksController {
     @Body() dto: CreateRiskDto,
   ): Promise<unknown> {
     return this.risksService.createRisk(this.ctx(user), projectId, dto);
+  }
+
+  @Post(':id/mitigations')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Add a mitigation attempt to a risk' })
+  addMitigation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateRiskMitigationDto,
+  ): Promise<unknown> {
+    return this.risksService.addMitigation(this.ctx(user), projectId, id, dto);
+  }
+
+  @Patch(':id/mitigations/:mitigationId')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Update a mitigation attempt on a risk' })
+  updateMitigation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Param('mitigationId') mitigationId: string,
+    @Body() dto: UpdateRiskMitigationDto,
+  ): Promise<unknown> {
+    return this.risksService.updateMitigation(
+      this.ctx(user),
+      projectId,
+      id,
+      mitigationId,
+      dto,
+    );
   }
 
   @Get(':id')

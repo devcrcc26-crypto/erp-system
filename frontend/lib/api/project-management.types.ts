@@ -931,8 +931,24 @@ export interface RiskReview {
   createdAt: string;
 }
 
+export interface RiskMitigation {
+  id: string;
+  riskId: string;
+  attemptNumber: number;
+  mitigationStrategy: string;
+  residualLikelihood: number;
+  residualImpact: number;
+  residualScore: number;
+  notes: string | null;
+  assessedBy: string;
+  assessorName?: string | null;
+  assessedAt: string;
+  createdAt: string;
+}
+
 export interface RiskDetail extends Risk {
   reviews: RiskReview[];
+  mitigations: RiskMitigation[];
 }
 
 export interface IssueProjectOption {
@@ -1461,7 +1477,6 @@ export interface CreateRiskRequest {
   category: RiskCategory;
   probability: number;
   impact: number;
-  mitigationPlan?: string;
   contingencyPlan?: string;
   reviewDate?: string;
   ownerId: string;
@@ -1473,7 +1488,22 @@ export type UpdateRiskRequest = Partial<CreateRiskRequest> & {
   residualImpact?: number;
   clearResidual?: boolean;
   reviewNotes?: string;
+  mitigationPlan?: string;
 };
+
+export interface CreateRiskMitigationRequest {
+  mitigationStrategy: string;
+  residualLikelihood: number;
+  residualImpact: number;
+  notes?: string;
+}
+
+export interface UpdateRiskMitigationRequest {
+  mitigationStrategy?: string;
+  residualLikelihood?: number;
+  residualImpact?: number;
+  notes?: string;
+}
 
 export interface CreateIssueRequest {
   issueType: string;

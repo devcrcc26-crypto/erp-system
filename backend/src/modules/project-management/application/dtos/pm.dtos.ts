@@ -1648,6 +1648,59 @@ export class UpdateRiskDto extends PartialType(CreateRiskDto) {
   reviewNotes?: string;
 }
 
+export class CreateRiskMitigationDto {
+  @ApiProperty()
+  @IsString()
+  mitigationStrategy!: string;
+
+  @ApiProperty({ description: 'Residual likelihood after mitigation, 1-5.' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualLikelihood!: number;
+
+  @ApiProperty({ description: 'Residual impact after mitigation, 1-5.' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualImpact!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateRiskMitigationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  mitigationStrategy?: string;
+
+  @ApiPropertyOptional({ description: 'Residual likelihood after mitigation, 1-5.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualLikelihood?: number;
+
+  @ApiPropertyOptional({ description: 'Residual impact after mitigation, 1-5.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  residualImpact?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
 export class CreateIssueDto {
   @ApiProperty()
   @IsString()
