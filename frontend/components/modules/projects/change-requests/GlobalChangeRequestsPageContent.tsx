@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
@@ -49,6 +50,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
  * Global change requests list — cross-project, current-user relevant only.
  */
 export default function GlobalChangeRequestsPageContent(): React.ReactNode {
+  const router = useRouter();
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
@@ -180,8 +182,27 @@ export default function GlobalChangeRequestsPageContent(): React.ReactNode {
         key: 'createdAt',
         render: (value: string) => formatProjectDate(value),
       },
+      {
+        title: '',
+        key: 'open',
+        width: 70,
+        render: (_: unknown, record: ProjectChangeRequest) => (
+          <Button
+            type="link"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(
+                `/projects/${record.projectId}/change-requests/${record.id}`,
+              );
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [router],
   );
 
   if (

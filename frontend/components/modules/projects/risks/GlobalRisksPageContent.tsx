@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { ShieldAlert } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
@@ -52,6 +53,7 @@ import { tokens } from '@/lib/theme/tokens';
  * Global Risks list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalRisksPageContent(): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -225,8 +227,25 @@ export default function GlobalRisksPageContent(): React.ReactNode {
         key: 'project',
         render: (_: unknown, record: Risk) => record.projectCode?.trim() || '—',
       },
+      {
+        title: '',
+        key: 'open',
+        width: 70,
+        render: (_: unknown, record: Risk) => (
+          <Button
+            type="link"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${record.projectId}/risks/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [router],
   );
 
   if (!capabilitiesReady || (risksQuery.isLoading && !risksQuery.data)) {

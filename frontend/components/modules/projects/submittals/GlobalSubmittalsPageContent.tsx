@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
@@ -52,6 +53,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
  * Global construction submittals list — cross-project, current-user relevant only.
  */
 export default function GlobalSubmittalsPageContent(): React.ReactNode {
+  const router = useRouter();
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
@@ -210,8 +212,24 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
           </span>
         ),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Submittal) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${record.projectId}/submittals/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay, t],
+    [resolveUserDisplay, router, t],
   );
 
   if (!capabilitiesReady || (submittalsQuery.isLoading && !submittalsQuery.data)) {

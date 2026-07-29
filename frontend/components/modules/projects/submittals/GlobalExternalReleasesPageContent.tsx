@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
@@ -54,6 +55,7 @@ const EXTERNAL_PURPOSES: SubmittalPurpose[] = [
  * Global external releases list — cross-project, current-user relevant only.
  */
 export default function GlobalExternalReleasesPageContent(): React.ReactNode {
+  const router = useRouter();
   const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
@@ -212,8 +214,26 @@ export default function GlobalExternalReleasesPageContent(): React.ReactNode {
         render: (_: unknown, record: Submittal) =>
           record.projectCode?.trim() || '-',
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Submittal) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(
+                `/projects/${record.projectId}/external-releases/${record.id}`,
+              );
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [router],
   );
 
   if (!capabilitiesReady || (submittalsQuery.isLoading && !submittalsQuery.data)) {

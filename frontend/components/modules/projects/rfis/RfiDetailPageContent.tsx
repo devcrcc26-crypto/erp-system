@@ -199,7 +199,6 @@ export default function RfiDetailPageContent({
   useEffect(() => {
     resetResponseAttachment();
     setResponseModalOpen(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfiId]);
 
   async function uploadResponseFile(file: File): Promise<string | null> {

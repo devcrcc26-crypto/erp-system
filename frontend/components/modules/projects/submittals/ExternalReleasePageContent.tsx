@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Send } from 'lucide-react';
@@ -49,6 +50,7 @@ export default function ExternalReleasePageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -171,8 +173,24 @@ export default function ExternalReleasePageContent({
         key: 'issuedAt',
         render: (value: string | null) => formatProjectDate(value),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Submittal) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/external-releases/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [projectId, router],
   );
 
   if (
@@ -294,6 +312,10 @@ export default function ExternalReleasePageContent({
           columns={columns}
           dataSource={submittals}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedSubmittalId(record.id),
+            className: 'cursor-pointer',
+          })}
           locale={{
             emptyText: (
               <TableEmptyState

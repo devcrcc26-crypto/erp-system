@@ -52,6 +52,7 @@ export default function SubmittalsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -181,8 +182,24 @@ export default function SubmittalsPageContent({
         key: 'contractor',
         render: (value: string | null) => value ?? '-',
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Submittal) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/submittals/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay],
+    [projectId, resolveUserDisplay, router],
   );
 
   if (
@@ -312,6 +329,10 @@ export default function SubmittalsPageContent({
           columns={columns}
           dataSource={submittals}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedSubmittalId(record.id),
+            className: 'cursor-pointer',
+          })}
           locale={{
             emptyText: (
               <TableEmptyState

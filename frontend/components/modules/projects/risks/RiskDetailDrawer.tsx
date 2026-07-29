@@ -14,6 +14,7 @@ import {
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge, { type StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
@@ -426,6 +427,7 @@ export default function RiskDetailDrawer({
   const [statusAction, setStatusAction] = useState<StatusActionKey | null>(null);
   const [mitigationOpen, setMitigationOpen] = useState(false);
   const open = Boolean(riskId);
+  const router = useRouter();
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -591,6 +593,18 @@ export default function RiskDetailDrawer({
         )}
         {risk && (
           <div className={layout.drawerStack}>
+            <div className="mb-2 flex justify-end">
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  onClose();
+                  router.push(`/projects/${projectId}/risks/${risk.id}`);
+                }}
+              >
+                Open full page →
+              </Button>
+            </div>
             <Descriptions
               className={layout.drawerDescriptionsClass}
               column={1}

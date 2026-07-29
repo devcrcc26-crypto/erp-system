@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Button, Select, Space, Table } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { GitBranch } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
@@ -46,6 +47,7 @@ export default function ChangeRequestList({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const pm = usePmCapabilities();
   const epc = useEpcCapabilities();
   const isSystemAdministrator = useAuthStore(
@@ -152,8 +154,25 @@ export default function ChangeRequestList({
         key: 'createdAt',
         render: (value: string) => formatProjectDate(value),
       },
+      {
+        title: '',
+        key: 'open',
+        width: 70,
+        render: (_: unknown, record: ProjectChangeRequest) => (
+          <Button
+            type="link"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/change-requests/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [projectId, router],
   );
 
   if (permLoading || (listQuery.isLoading && !listQuery.data)) {

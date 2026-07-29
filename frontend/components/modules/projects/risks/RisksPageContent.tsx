@@ -336,8 +336,25 @@ export default function RisksPageContent({
           />
         ),
       },
+      {
+        title: '',
+        key: 'open',
+        width: 70,
+        render: (_: unknown, record: Risk) => (
+          <Button
+            type="link"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/risks/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay],
+    [resolveUserDisplay, router, projectId],
   );
 
   if (query.isLoading) {
