@@ -1,5 +1,3 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -10,42 +8,64 @@ import {
   Drawer,
   Form,
   Input,
+  Radio,
   Select,
   Space,
+  Upload,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { Mail } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
-import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   Correspondence,
+  CorrespondenceDirection,
   CorrespondenceStatus,
   CorrespondenceType,
 } from '@/lib/api/project-management.types';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
+  useEpcCapabilities,
+  usePermissionsLoading,
+  usePmCapabilities,
+} from '@/hooks/use-pm-capabilities';
+import {
   useCorrespondence,
   useCreateCorrespondence,
 } from '@/lib/query/correspondence';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
+import { useAllProjects } from '@/lib/query/projects';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 import {
+  correspondenceDirectionVariant,
   correspondenceStatusVariant,
+  formatCorrespondenceDirection,
   formatCorrespondenceStatus,
 } from '@/lib/utils/pm-status-display';
-import { CORRESPONDENCE_WORKFLOW } from '@/lib/api/workflow';
+import {
+  CORRESPONDENCE_ACTIVE_STATUSES,
+  CORRESPONDENCE_CLOSED_STATUSES,
+  buildTabStatusFilterOptions,
+  resolveTabStatusFilter,
+} from '@/lib/utils/list-status-tabs';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useAuthStore } from '@/stores/auth.store';
 import CorrespondenceDetailDrawer from '@/components/modules/projects/correspondence/CorrespondenceDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
-import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 
 const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'LETTER', label: 'Letter' },
@@ -55,68 +75,181 @@ const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
   { value: 'MEMO', label: 'Memo' },
 ];
 
-const STATUS_OPTIONS = CORRESPONDENCE_WORKFLOW.map((step) => ({
-  value: step.key as CorrespondenceStatus,
-  label: step.label,
-}));
+const DIRECTION_OPTIONS: { value: CorrespondenceDirection; label: string }[] = [
+  { value: 'OUTGOING', label: 'Outgoing' },
+  { value: 'INCOMING', label: 'Incoming' },
+];
+
+const DEFAULT_COMPANY = 'CCECC';
 
 interface CorrespondenceFormValues {
+  direction: CorrespondenceDirection;
   correspondenceType: CorrespondenceType;
   subject: string;
-  senderName: string;
-  recipientName: string;
   correspondenceDate: Dayjs;
-  referenceNumber?: string;
+  senderName: string;
+  senderCompany?: string;
+  recipientName: string;
+  recipientCompany?: string;
+  parentId?: string;
+  notes?: string;
 }
 
-function CorrespondenceFormDrawer({
+function directionDefaults(
+  direction: CorrespondenceDirection,
+  currentUserName: string,
+): Pick<
+  CorrespondenceFormValues,
+  'senderName' | 'senderCompany' | 'recipientName' | 'recipientCompany'
+> {
+  if (direction === 'OUTGOING') {
+    return {
+      senderName: currentUserName,
+      senderCompany: DEFAULT_COMPANY,
+      recipientName: '',
+      recipientCompany: '',
+    };
+  }
+  return {
+    senderName: '',
+    senderCompany: '',
+    recipientName: currentUserName,
+    recipientCompany: DEFAULT_COMPANY,
+  };
+}
+
+export function CorrespondenceFormDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
+  initialParentId,
+  initialDirection,
+  lockedDirection = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
+  initialParentId?: string;
+  initialDirection?: CorrespondenceDirection;
+  lockedDirection?: boolean;
   onClose: () => void;
   onSaved: (created: Correspondence) => void;
 }): React.ReactNode {
   const [form] = Form.useForm<CorrespondenceFormValues>();
-  const [created, setCreated] = useState<Correspondence | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const currentUser = useAuthStore((state) => state.user);
+  const currentUserName = currentUser ? formatUserName(currentUser) : '';
+
   const createItem = useCreateCorrespondence();
+  const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
+
+  const projectsQuery = useAllProjects({}, open && showProjectSelector);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.projectCode} — ${p.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
+
+  const parentOptionsQuery = useCorrespondence(
+    effectiveProjectId,
+    { page: 1, limit: 100 },
+    open && Boolean(effectiveProjectId),
+  );
+  const parentOptions = useMemo(
+    () =>
+      (parentOptionsQuery.data?.data ?? []).map((c) => ({
+        value: c.id,
+        label: `${c.referenceNumber} — ${c.subject}`,
+      })),
+    [parentOptionsQuery.data?.data],
+  );
+
+  const defaultDirection = initialDirection ?? 'OUTGOING';
+
+  useEffect(() => {
+    if (open && projectIdProp) {
+      setSelectedProjectId(projectIdProp);
+    }
+  }, [open, projectIdProp]);
 
   useEffect(() => {
     if (!open) {
-      setCreated(null);
-    }
-  }, [open]);
-
-  function handleClose(): void {
-    if (!created) {
       form.resetFields();
+      setQueuedFiles([]);
+      setUploading(false);
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
     }
-    setCreated(null);
-    onClose();
+  }, [open, form, showProjectSelector, projectIdProp]);
+
+  async function uploadQueuedFiles(folderId: string): Promise<void> {
+    setUploading(true);
+    await Promise.all(
+      queuedFiles.map((file) => uploadDocument.mutateAsync({ folderId, file })),
+    );
   }
 
   async function handleSubmit(values: CorrespondenceFormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     try {
       const result = await createItem.mutateAsync({
-        projectId,
+        projectId: effectiveProjectId,
         body: {
           correspondenceType: values.correspondenceType,
+          direction: values.direction,
           subject: values.subject.trim(),
           senderName: values.senderName.trim(),
           recipientName: values.recipientName.trim(),
+          senderCompany: values.senderCompany?.trim() || undefined,
+          recipientCompany: values.recipientCompany?.trim() || undefined,
+          notes: values.notes?.trim() || undefined,
           correspondenceDate: values.correspondenceDate.format('YYYY-MM-DD'),
-          referenceNumber: values.referenceNumber?.trim() || undefined,
+          parentId: values.parentId || undefined,
         },
       });
-      setCreated(result);
-      messageApi.success('Correspondence created — attach files below');
+
+      if (queuedFiles.length > 0 && result.attachmentFolderId) {
+        try {
+          await uploadQueuedFiles(result.attachmentFolderId);
+        } catch (uploadError) {
+          notifyApiError(
+            uploadError,
+            'Correspondence created but file upload failed. Upload from the detail drawer.',
+            messageApi,
+          );
+          form.resetFields();
+          setQueuedFiles([]);
+          onSaved(result);
+          onClose();
+          return;
+        }
+      }
+
+      messageApi.success('Correspondence created');
+      form.resetFields();
+      setQueuedFiles([]);
       onSaved(result);
+      onClose();
     } catch (error) {
       notifyApiError(error, 'Failed to create correspondence', messageApi);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -124,40 +257,61 @@ function CorrespondenceFormDrawer({
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
-      title={created ? 'Attach correspondence files' : 'New correspondence'}
-      onClose={handleClose}
+      title={lockedDirection ? 'Record response' : 'New correspondence'}
+      onClose={onClose}
       destroyOnHidden
     >
-      {created ? (
-        <div className="flex flex-col gap-4">
-          <Alert
-            type="success"
-            showIcon
-            title={`${created.referenceNumber} created`}
-            description="Upload the letter, notice, or supporting documents for this correspondence record."
-          />
-          <DocumentAttachmentPanel
-            folderId={created.attachmentFolderId ?? undefined}
-            title="Correspondence files"
-            description="Upload letters, scanned documents, email PDFs, and other supporting files."
-          />
-          <div className="flex justify-end">
-            <Button type="primary" onClick={handleClose}>
-              Done
-            </Button>
-          </div>
-        </div>
-      ) : (
+      {open ? (
         <Form<CorrespondenceFormValues>
           form={form}
           layout="vertical"
           className="erp-drawer-form"
           initialValues={{
-            correspondenceDate: dayjs(),
+            direction: defaultDirection,
             correspondenceType: 'LETTER',
+            correspondenceDate: dayjs(),
+            parentId: initialParentId,
+            ...directionDefaults(defaultDirection, currentUserName),
           }}
-          onFinish={(values: CorrespondenceFormValues) => void handleSubmit(values)}
+          onValuesChange={(changed: Partial<CorrespondenceFormValues>) => {
+            if (changed.direction !== undefined) {
+              form.setFieldsValue(
+                directionDefaults(changed.direction, currentUserName),
+              );
+            }
+          }}
+          onFinish={(values: CorrespondenceFormValues) =>
+            void handleSubmit(values)
+          }
         >
+          {showProjectSelector && (
+            <Form.Item label="Project" required>
+              <Select
+                showSearch
+                placeholder="Select project"
+                options={projectOptions}
+                loading={projectsQuery.isLoading}
+                optionFilterProp="label"
+                value={selectedProjectId ?? undefined}
+                onChange={(value: string) => {
+                  setSelectedProjectId(value);
+                  form.setFieldValue('parentId', undefined);
+                }}
+              />
+            </Form.Item>
+          )}
+
+          <Form.Item
+            label="Direction"
+            name="direction"
+            rules={[{ required: true }]}
+          >
+            <Radio.Group disabled={lockedDirection}>
+              <Radio value="OUTGOING">Outgoing (we are sending)</Radio>
+              <Radio value="INCOMING">Incoming (we received)</Radio>
+            </Radio.Group>
+          </Form.Item>
+
           <Form.Item
             label="Type"
             name="correspondenceType"
@@ -165,9 +319,7 @@ function CorrespondenceFormDrawer({
           >
             <Select options={TYPE_OPTIONS} />
           </Form.Item>
-          <Form.Item label="Reference (optional)" name="referenceNumber">
-            <Input placeholder="Auto-generated if left blank" />
-          </Form.Item>
+
           <Form.Item
             label="Subject"
             name="subject"
@@ -175,22 +327,7 @@ function CorrespondenceFormDrawer({
           >
             <Input />
           </Form.Item>
-          <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-            <Form.Item
-              label="Sender"
-              name="senderName"
-              rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              label="Recipient"
-              name="recipientName"
-              rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-          </div>
+
           <Form.Item
             label="Date"
             name="correspondenceDate"
@@ -198,18 +335,85 @@ function CorrespondenceFormDrawer({
           >
             <DatePicker className="w-full" />
           </Form.Item>
+
+          <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label="From (name)"
+              name="senderName"
+              rules={[{ required: true, message: 'Sender name is required' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item label="From (company)" name="senderCompany">
+              <Input />
+            </Form.Item>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label="To (name)"
+              name="recipientName"
+              rules={[{ required: true, message: 'Recipient name is required' }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item label="To (company)" name="recipientCompany">
+              <Input />
+            </Form.Item>
+          </div>
+
+          <Form.Item label="In response to (optional)" name="parentId">
+            <Select
+              allowClear
+              showSearch
+              disabled={lockedDirection}
+              placeholder="Link to an earlier correspondence"
+              loading={parentOptionsQuery.isLoading}
+              optionFilterProp="label"
+              options={parentOptions}
+            />
+          </Form.Item>
+
+          <Form.Item label="Notes (optional)" name="notes">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Form.Item label="Attachments">
+            <Upload
+              multiple
+              beforeUpload={(file) => {
+                setQueuedFiles((prev) => [...prev, file]);
+                return false;
+              }}
+              onRemove={(file) => {
+                setQueuedFiles((prev) =>
+                  prev.filter(
+                    (f) => f.name !== file.name || f.size !== file.size,
+                  ),
+                );
+              }}
+              fileList={queuedFiles.map((f, i) => ({
+                uid: `${f.name}-${i}`,
+                name: f.name,
+                status: 'done' as const,
+              }))}
+            >
+              <Button icon={<UploadOutlined />}>Add files</Button>
+            </Upload>
+          </Form.Item>
+
           <div className="flex justify-end gap-2">
-            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={onClose}>Cancel</Button>
             <Button
               type="primary"
               htmlType="submit"
-              loading={createItem.isPending}
+              loading={createItem.isPending || uploading}
+              disabled={showProjectSelector && !effectiveProjectId}
             >
-              Create & attach files
+              Create correspondence
             </Button>
           </div>
         </Form>
-      )}
+      ) : null}
     </Drawer>
   );
 }
@@ -220,32 +424,90 @@ export default function CorrespondencePageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CorrespondenceStatus | undefined>();
-  const [createOpen, setCreateOpen] = useState(false);
+  const [directionFilter, setDirectionFilter] = useState<CorrespondenceDirection | undefined>();
+  const [typeFilter, setTypeFilter] = useState<CorrespondenceType | undefined>();
+  const [formState, setFormState] = useState<{
+    parentId?: string;
+    direction?: CorrespondenceDirection;
+    locked?: boolean;
+  } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const permLoading = usePermissionsLoading();
-  const query = useCorrespondence(projectId, {
-    ...params,
+  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
+  const canCreate = epc.navFullAccess || pm.correspondence.canCreate;
+
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
-  }, !permLoading);
+    direction: directionFilter,
+    correspondenceType: typeFilter,
+  };
+
+  const activeQuery = useCorrespondence(
+    projectId,
+    {
+      ...(activeTab === 'active' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: resolveTabStatusFilter(
+        CORRESPONDENCE_ACTIVE_STATUSES,
+        activeTab === 'active' ? statusFilter : undefined,
+      ),
+    },
+    !permLoading,
+  );
+  const closedQuery = useCorrespondence(
+    projectId,
+    {
+      ...(activeTab === 'closed' ? params : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: resolveTabStatusFilter(
+        CORRESPONDENCE_CLOSED_STATUSES,
+        activeTab === 'closed' ? statusFilter : undefined,
+      ),
+    },
+    !permLoading,
+  );
+
+  const query = activeTab === 'active' ? activeQuery : closedQuery;
+
+  const refetchLists = (): void => {
+    void activeQuery.refetch();
+    void closedQuery.refetch();
+  };
 
   const columns: ColumnsType<Correspondence> = useMemo(
     () => [
       {
-        title: 'Reference',
+        title: 'Ref #',
         dataIndex: 'referenceNumber',
         key: 'referenceNumber',
         render: (value: string, record) => (
           <Button
             type="link"
-            className="!px-0"
-            onClick={() => setSelectedId(record.id)}
+            className={`!px-0 ${layout.traceabilityLinkClass}`}
+            style={{ color: tokens.colorTeal600 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedId(record.id);
+            }}
           >
             {value}
           </Button>
+        ),
+      },
+      {
+        title: 'Direction',
+        dataIndex: 'direction',
+        key: 'direction',
+        render: (direction: CorrespondenceDirection) => (
+          <StatusBadge
+            label={formatCorrespondenceDirection(direction)}
+            variant={correspondenceDirectionVariant(direction)}
+          />
         ),
       },
       {
@@ -260,8 +522,22 @@ export default function CorrespondencePageContent({
         key: 'subject',
         ellipsis: true,
       },
-      { title: 'Sender', dataIndex: 'senderName', key: 'senderName' },
-      { title: 'Recipient', dataIndex: 'recipientName', key: 'recipientName' },
+      {
+        title: 'From',
+        key: 'from',
+        render: (_: unknown, record: Correspondence) =>
+          record.senderCompany
+            ? `${record.senderName} (${record.senderCompany})`
+            : record.senderName,
+      },
+      {
+        title: 'To',
+        key: 'to',
+        render: (_: unknown, record: Correspondence) =>
+          record.recipientCompany
+            ? `${record.recipientName} (${record.recipientCompany})`
+            : record.recipientName,
+      },
       {
         title: 'Date',
         dataIndex: 'correspondenceDate',
@@ -283,12 +559,14 @@ export default function CorrespondencePageContent({
     [],
   );
 
-  if (query.isLoading) {
+  if (permLoading || (query.isLoading && !query.data)) {
     return <PageLoadingSkeleton />;
   }
 
   const rows = query.data?.data ?? [];
   const meta = query.data?.meta;
+  const activeCount = activeQuery.data?.meta?.total ?? 0;
+  const closedCount = closedQuery.data?.meta?.total ?? 0;
 
   return (
     <ProjectModuleGate projectId={projectId} module="correspondence">
@@ -297,13 +575,15 @@ export default function CorrespondencePageContent({
         title="Correspondence"
         description="Formal letters, notices, instructions, and project communication."
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateOpen(true)}
-          >
-            New correspondence
-          </Button>
+          canCreate ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setFormState({})}
+            >
+              New correspondence
+            </Button>
+          ) : undefined
         }
       >
         {query.isError && (
@@ -320,6 +600,19 @@ export default function CorrespondencePageContent({
           />
         )}
 
+        <ListStatusTabs
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            setStatusFilter(undefined);
+            resetPage();
+          }}
+          activeLabel="Active"
+          closedLabel="Closed"
+          activeCount={activeCount}
+          closedCount={closedCount}
+        />
+
         <Space wrap className="!mb-4">
           <ListSearchInput
             placeholder="Search correspondence"
@@ -333,31 +626,75 @@ export default function CorrespondencePageContent({
           <Select
             allowClear
             placeholder="Status"
-            className={layout.filterControl}
-            options={STATUS_OPTIONS}
+            className={layout.filterControlSm}
             value={statusFilter}
             onChange={(value: CorrespondenceStatus | undefined) => {
               resetPage();
               setStatusFilter(value);
             }}
+            options={
+              activeTab === 'active'
+                ? buildTabStatusFilterOptions(
+                    CORRESPONDENCE_ACTIVE_STATUSES,
+                    formatCorrespondenceStatus,
+                  )
+                : buildTabStatusFilterOptions(
+                    CORRESPONDENCE_CLOSED_STATUSES,
+                    formatCorrespondenceStatus,
+                  )
+            }
+          />
+          <Select
+            allowClear
+            placeholder="Direction"
+            className={layout.filterControlXs}
+            value={directionFilter}
+            onChange={(value: CorrespondenceDirection | undefined) => {
+              resetPage();
+              setDirectionFilter(value);
+            }}
+            options={DIRECTION_OPTIONS}
+          />
+          <Select
+            allowClear
+            placeholder="Type"
+            className={layout.filterControlXs}
+            value={typeFilter}
+            onChange={(value: CorrespondenceType | undefined) => {
+              resetPage();
+              setTypeFilter(value);
+            }}
+            options={TYPE_OPTIONS}
           />
         </Space>
+
+        <TableUpdatingIndicator
+          active={query.isFetching && Boolean(query.data)}
+        />
 
         <DataTable<Correspondence>
           rowKey="id"
           columns={columns}
           dataSource={rows}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedId(record.id),
+            style: { cursor: 'pointer' },
+          })}
           locale={{
             emptyText: (
               <TableEmptyState
                 icon={<Mail />}
                 title="No correspondence"
                 description="Log formal project letters, notices, and instructions"
-                action={{
-                  label: 'New correspondence',
-                  onClick: () => setCreateOpen(true),
-                }}
+                action={
+                  canCreate
+                    ? {
+                        label: 'New correspondence',
+                        onClick: () => setFormState({}),
+                      }
+                    : undefined
+                }
               />
             ),
           }}
@@ -365,11 +702,15 @@ export default function CorrespondencePageContent({
       </FormLayout>
 
       <CorrespondenceFormDrawer
-        open={createOpen}
+        open={formState !== null}
         projectId={projectId}
-        onClose={() => setCreateOpen(false)}
+        initialParentId={formState?.parentId}
+        initialDirection={formState?.direction}
+        lockedDirection={formState?.locked}
+        onClose={() => setFormState(null)}
         onSaved={(created) => {
-          void query.refetch();
+          refetchLists();
+          setFormState(null);
           setSelectedId(created.id);
         }}
       />
@@ -378,7 +719,15 @@ export default function CorrespondencePageContent({
         projectId={projectId}
         correspondenceId={selectedId}
         onClose={() => setSelectedId(null)}
-        onUpdated={() => void query.refetch()}
+        onUpdated={() => refetchLists()}
+        onNavigateTo={(id) => setSelectedId(id)}
+        onOpenCreateResponse={(opts) =>
+          setFormState({
+            parentId: opts.parentId,
+            direction: opts.direction,
+            locked: true,
+          })
+        }
       />
     </>
     </ProjectModuleGate>

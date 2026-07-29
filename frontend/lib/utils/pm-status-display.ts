@@ -2,6 +2,7 @@ import type {
   IssueSeverity,
   IssueStatus,
   MeetingStatus,
+  CorrespondenceDirection,
   CorrespondenceStatus,
   PunchItemSeverity,
   PunchItemStatus,
@@ -185,6 +186,18 @@ export function correspondenceStatusVariant(
     CLOSED: 'default',
   };
   return variants[status];
+}
+
+export function formatCorrespondenceDirection(
+  direction: CorrespondenceDirection,
+): string {
+  return direction === 'INCOMING' ? 'Incoming' : 'Outgoing';
+}
+
+export function correspondenceDirectionVariant(
+  direction: CorrespondenceDirection,
+): StatusBadgeVariant {
+  return direction === 'INCOMING' ? 'info' : 'success';
 }
 
 export function formatRiskStatus(status: RiskStatus): string {

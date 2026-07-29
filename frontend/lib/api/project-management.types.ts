@@ -163,6 +163,8 @@ export type CorrespondenceType =
   | 'INSTRUCTION'
   | 'MEMO';
 
+export type CorrespondenceDirection = 'INCOMING' | 'OUTGOING';
+
 export type CorrespondenceStatus =
   | 'DRAFT'
   | 'SENT'
@@ -862,20 +864,47 @@ export interface MeetingDetail extends Meeting {
   actionItems: ActionItem[];
 }
 
+export interface CorrespondenceChainItem {
+  id: string;
+  referenceNumber: string;
+  subject: string;
+  direction: CorrespondenceDirection;
+  status: CorrespondenceStatus;
+  correspondenceDate?: string;
+  senderName?: string;
+  recipientName?: string;
+}
+
 export interface Correspondence {
   id: string;
+  companyId: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   senderUserId: string | null;
   referenceNumber: string;
   correspondenceType: CorrespondenceType;
+  direction: CorrespondenceDirection;
   subject: string;
   senderName: string;
   recipientName: string;
+  senderCompany: string | null;
+  recipientCompany: string | null;
+  notes: string | null;
   correspondenceDate: string;
   status: CorrespondenceStatus;
+  parentId: string | null;
+  sentAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedByName?: string | null;
+  createdBy: string;
+  createdByName?: string | null;
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
+  parent?: CorrespondenceChainItem | null;
+  responses?: CorrespondenceChainItem[];
   raisedRfis?: RfiSummary[];
   raisedIssues?: IssueSummary[];
   raisedChangeRequests?: ChangeRequestSummary[];
@@ -1460,16 +1489,31 @@ export interface UpdateActionItemRequest {
 
 export interface CreateCorrespondenceRequest {
   correspondenceType: CorrespondenceType;
+  direction: CorrespondenceDirection;
   subject: string;
   senderName: string;
   recipientName: string;
+  senderCompany?: string;
+  recipientCompany?: string;
+  notes?: string;
   correspondenceDate: string;
-  referenceNumber?: string;
+  parentId?: string;
 }
 
-export type UpdateCorrespondenceRequest = Partial<CreateCorrespondenceRequest> & {
-  status?: CorrespondenceStatus;
-};
+export type UpdateCorrespondenceRequest = Partial<
+  Omit<CreateCorrespondenceRequest, 'direction' | 'parentId'>
+>;
+
+export interface RespondCorrespondenceRequest {
+  correspondenceType: CorrespondenceType;
+  subject: string;
+  senderName: string;
+  recipientName: string;
+  senderCompany?: string;
+  recipientCompany?: string;
+  correspondenceDate: string;
+  notes?: string;
+}
 
 export interface CreateRiskRequest {
   title: string;

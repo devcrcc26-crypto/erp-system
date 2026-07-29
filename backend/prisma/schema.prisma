@@ -173,6 +173,7 @@ model Company {
   changeRequests          ProjectChangeRequest[]
   rfis                    Rfi[]
   issues                  Issue[]
+  correspondence          Correspondence[]
   dailyLogs               DailyLog[]
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
@@ -515,7 +516,8 @@ model User {
   meetingAgendaItems     MeetingAgendaItem[]
   meetingAttendees       MeetingAttendee[]
   meetingActionItems     ActionItem[]
-  correspondenceSent     Correspondence[]
+  correspondenceSent         Correspondence[] @relation("CorrespondenceSender")
+  correspondenceAcknowledged Correspondence[] @relation("CorrespondenceAck")
   ownedRisks             Risk[]
   raisedIssues           Issue[]                @relation("IssueRaisedBy")
   assignedIssues         Issue[]                @relation("IssueAssignedTo")
@@ -1315,6 +1317,11 @@ enum CorrespondenceType {
   NOTICE
   INSTRUCTION
   MEMO
+}
+
+enum CorrespondenceDirection {
+  INCOMING
+  OUTGOING
 }
 
 enum CorrespondenceStatus {
@@ -2790,28 +2797,44 @@ model ActionItem {
 }
 
 model Correspondence {
-  id                 String               @id @default(uuid())
-  projectId          String               @map("project_id")
-  senderUserId       String?              @map("sender_user_id")
-  referenceNumber    String               @map("reference_number")
-  correspondenceType CorrespondenceType   @map("correspondence_type")
+  id                 String                   @id @default(uuid())
+  companyId          String                   @map("company_id")
+  projectId          String                   @map("project_id")
+  senderUserId       String?                  @map("sender_user_id")
+  referenceNumber    String                   @map("reference_number")
+  correspondenceType CorrespondenceType       @map("correspondence_type")
+  direction          CorrespondenceDirection  @default(OUTGOING) @map("direction")
   subject            String
-  senderName         String               @map("sender_name")
-  recipientName      String               @map("recipient_name")
-  correspondenceDate DateTime             @map("correspondence_date") @db.Date
-  status             CorrespondenceStatus @default(DRAFT)
-  createdAt          DateTime             @default(now()) @map("created_at")
-  createdBy          String               @map("created_by")
-  updatedAt          DateTime             @updatedAt @map("updated_at")
-  updatedBy          String               @map("updated_by")
-  deletedAt          DateTime?            @map("deleted_at")
-  deletedBy          String?              @map("deleted_by")
+  senderName         String                   @map("sender_name")
+  recipientName      String                   @map("recipient_name")
+  senderCompany      String?                  @map("sender_company")
+  recipientCompany   String?                  @map("recipient_company")
+  notes              String?
+  correspondenceDate DateTime                 @map("correspondence_date") @db.Date
+  status             CorrespondenceStatus     @default(DRAFT)
+  parentId           String?                  @map("parent_correspondence_id")
+  sentAt             DateTime?                @map("sent_at")
+  acknowledgedAt     DateTime?                @map("acknowledged_at")
+  acknowledgedBy     String?                  @map("acknowledged_by")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  createdBy          String                   @map("created_by")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  updatedBy          String                   @map("updated_by")
+  deletedAt          DateTime?                @map("deleted_at")
+  deletedBy          String?                  @map("deleted_by")
 
-  project    Project @relation(fields: [projectId], references: [id])
-  senderUser User?   @relation(fields: [senderUserId], references: [id])
+  company      Company          @relation(fields: [companyId], references: [id])
+  project      Project          @relation(fields: [projectId], references: [id])
+  senderUser   User?            @relation("CorrespondenceSender", fields: [senderUserId], references: [id])
+  acknowledger User?            @relation("CorrespondenceAck", fields: [acknowledgedBy], references: [id])
+  parent       Correspondence?  @relation("CorrespondenceChain", fields: [parentId], references: [id])
+  responses    Correspondence[] @relation("CorrespondenceChain")
 
+  @@index([companyId], map: "idx_correspondence_company_id")
+  @@index([companyId, deletedAt], map: "idx_correspondence_company_deleted")
   @@index([projectId], map: "idx_correspondence_project_id")
   @@index([projectId, deletedAt], map: "idx_correspondence_project_deleted")
+  @@index([parentId], map: "idx_correspondence_parent_id")
   @@map("correspondence")
 }
 

@@ -77,6 +77,7 @@ import { ExternalReleasesController } from './presentation/controllers/external-
 import { MyChangeRequestsController } from './presentation/controllers/my-change-requests.controller';
 import { MyRfisController } from './presentation/controllers/my-rfis.controller';
 import { CorrespondenceController } from './presentation/controllers/correspondence.controller';
+import { CorrespondenceGlobalController } from './presentation/controllers/correspondence-global.controller';
 import { DailyLogsController } from './presentation/controllers/daily-logs.controller';
 import { MyDailyLogsController } from './presentation/controllers/my-daily-logs.controller';
 import { DeliverablesController } from './presentation/controllers/deliverables.controller';
@@ -149,6 +150,7 @@ const workflowBullProcessors = redisEnabled
     MeetingsController,
     MyMeetingsController,
     CorrespondenceController,
+    CorrespondenceGlobalController,
     RisksController,
     MyRisksController,
     PunchItemsController,

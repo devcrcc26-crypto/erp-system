@@ -118,6 +118,7 @@ export default function DocumentAttachmentPanel({
       extra={
         !readOnly ? (
           <Upload
+            multiple
             showUploadList={false}
             beforeUpload={(file: File) => {
               uploadDocument.mutate({ folderId, file });
@@ -130,7 +131,7 @@ export default function DocumentAttachmentPanel({
               icon={<UploadOutlined />}
               loading={uploadDocument.isPending}
             >
-              Upload file
+              Upload files
             </Button>
           </Upload>
         ) : undefined

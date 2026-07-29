@@ -15,27 +15,39 @@ import {
 } from '@/lib/api/client';
 import type {
   Correspondence,
+  CorrespondenceDirection,
   CorrespondenceStatus,
+  CorrespondenceType,
   CreateCorrespondenceRequest,
-  PmListFilters,
+  RespondCorrespondenceRequest,
   UpdateCorrespondenceRequest,
+  PmListFilters,
 } from '@/lib/api/project-management.types';
 import type { MessageResponse, PaginationMeta, PaginationParams } from '@/lib/api/types';
 import { projectPath, toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
+type CorrespondenceListParams = PaginationParams &
+  PmListFilters & {
+    status?: CorrespondenceStatus | string;
+    direction?: CorrespondenceDirection;
+    correspondenceType?: CorrespondenceType;
+  };
+
 const correspondencePath = (projectId: string): string =>
   projectPath(projectId, 'correspondence');
 
 export const correspondenceKeys = {
   all: ['pm', 'correspondence'] as const,
+  globalLists: () => [...correspondenceKeys.all, 'global', 'list'] as const,
+  globalList: (params: CorrespondenceListParams = { page: 1, limit: 20 }) =>
+    [...correspondenceKeys.globalLists(), params] as const,
   lists: (projectId: string) =>
     [...correspondenceKeys.all, projectId, 'list'] as const,
   list: (
     projectId: string,
-    params: PaginationParams &
-      PmListFilters & { status?: CorrespondenceStatus } = {
+    params: CorrespondenceListParams = {
       page: 1,
       limit: 20,
     },
@@ -48,8 +60,7 @@ export const correspondenceKeys = {
 
 export function useCorrespondence(
   projectId: string,
-  params: PaginationParams &
-    PmListFilters & { status?: CorrespondenceStatus } = {
+  params: CorrespondenceListParams = {
     page: 1,
     limit: 20,
   },
@@ -68,6 +79,21 @@ export function useCorrespondence(
     enabled: Boolean(projectId) && enabled,
     retry: false,
     ...options,
+  });
+}
+
+export function useAllCorrespondence(
+  params: CorrespondenceListParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: correspondenceKeys.globalList(params),
+    queryFn: () =>
+      apiGetPaginated<Correspondence>(
+        `/correspondence/all${toQueryString(params)}`,
+      ),
+    enabled,
+    retry: false,
   });
 }
 
@@ -102,6 +128,9 @@ export function useCreateCorrespondence() {
       void queryClient.invalidateQueries({
         queryKey: correspondenceKeys.lists(variables.projectId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.globalLists(),
+      });
     },
   });
 }
@@ -133,8 +162,58 @@ export function useUpdateCorrespondence() {
           variables.correspondenceId,
         ),
       });
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.globalLists(),
+      });
     },
   });
+}
+
+function useCorrespondenceAction(pathSuffix: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      correspondenceId,
+      body,
+    }: {
+      projectId: string;
+      correspondenceId: string;
+      body?: RespondCorrespondenceRequest;
+    }) =>
+      apiPost<Correspondence>(
+        `${correspondencePath(projectId)}/${correspondenceId}/${pathSuffix}`,
+        body ?? {},
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.details(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.globalLists(),
+      });
+    },
+  });
+}
+
+export function useMarkCorrespondenceSent() {
+  return useCorrespondenceAction('send');
+}
+
+export function useAcknowledgeCorrespondence() {
+  return useCorrespondenceAction('acknowledge');
+}
+
+export function useCloseCorrespondence() {
+  return useCorrespondenceAction('close');
+}
+
+export function useRespondCorrespondence() {
+  return useCorrespondenceAction('respond');
 }
 
 export function useDeleteCorrespondence() {
@@ -154,6 +233,9 @@ export function useDeleteCorrespondence() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: correspondenceKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: correspondenceKeys.globalLists(),
       });
     },
   });

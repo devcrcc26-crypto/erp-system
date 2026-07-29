@@ -295,6 +295,10 @@ export function canViewGlobalNavKey(
     return pm?.risks?.canView ?? false;
   }
 
+  if (key === '/correspondence') {
+    return epc.navFullAccess;
+  }
+
   if (epc.navFullAccess) {
     return true;
   }

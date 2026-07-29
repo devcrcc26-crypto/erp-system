@@ -565,20 +565,47 @@ export interface MappedMeetingDetail extends MappedMeeting {
   raisedChangeRequests?: RaisedChangeRequestSummary[];
 }
 
+export interface MappedCorrespondenceChainItem {
+  id: string;
+  referenceNumber: string;
+  subject: string;
+  direction: Correspondence['direction'];
+  status: Correspondence['status'];
+  correspondenceDate?: string;
+  senderName?: string;
+  recipientName?: string;
+}
+
 export interface MappedCorrespondence {
   id: string;
+  companyId: string;
   projectId: string;
+  projectName?: string | null;
+  projectCode?: string | null;
   senderUserId: string | null;
   referenceNumber: string;
   correspondenceType: Correspondence['correspondenceType'];
+  direction: Correspondence['direction'];
   subject: string;
   senderName: string;
   recipientName: string;
+  senderCompany: string | null;
+  recipientCompany: string | null;
+  notes: string | null;
   correspondenceDate: string;
   status: Correspondence['status'];
+  parentId: string | null;
+  sentAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedByName?: string | null;
+  createdBy: string;
+  createdByName?: string | null;
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
+  parent?: MappedCorrespondenceChainItem | null;
+  responses?: MappedCorrespondenceChainItem[];
   raisedRfis?: RaisedRfiSummary[];
   raisedIssues?: RaisedIssueSummary[];
   raisedChangeRequests?: RaisedChangeRequestSummary[];
@@ -1176,28 +1203,84 @@ export function mapMeetingDetail(
 }
 
 export function mapCorrespondence(
-  row: Correspondence,
+  row: Correspondence & {
+    parent?: {
+      id: string;
+      referenceNumber: string;
+      subject: string;
+      direction: Correspondence['direction'];
+      status: Correspondence['status'];
+    } | null;
+    responses?: Array<{
+      id: string;
+      referenceNumber: string;
+      subject: string;
+      direction: Correspondence['direction'];
+      status: Correspondence['status'];
+      correspondenceDate: Date;
+      senderName: string;
+      recipientName: string;
+    }>;
+    project?: { id: string; name: string; projectCode: string } | null;
+  },
   attachmentFolderId: string | null = null,
   raisedItems?: {
     raisedRfis: RaisedRfiSummary[];
     raisedIssues: RaisedIssueSummary[];
     raisedChangeRequests: RaisedChangeRequestSummary[];
   },
+  nameLookup?: {
+    acknowledgedByName?: string | null;
+    createdByName?: string | null;
+  },
 ): MappedCorrespondence {
   return {
     id: row.id,
+    companyId: row.companyId,
     projectId: row.projectId,
+    projectName: row.project?.name ?? null,
+    projectCode: row.project?.projectCode ?? null,
     senderUserId: row.senderUserId,
     referenceNumber: row.referenceNumber,
     correspondenceType: row.correspondenceType,
+    direction: row.direction,
     subject: row.subject,
     senderName: row.senderName,
     recipientName: row.recipientName,
+    senderCompany: row.senderCompany,
+    recipientCompany: row.recipientCompany,
+    notes: row.notes,
     correspondenceDate: toDateString(row.correspondenceDate)!,
     status: row.status,
+    parentId: row.parentId,
+    sentAt: toIsoString(row.sentAt),
+    acknowledgedAt: toIsoString(row.acknowledgedAt),
+    acknowledgedBy: row.acknowledgedBy,
+    acknowledgedByName: nameLookup?.acknowledgedByName ?? null,
+    createdBy: row.createdBy,
+    createdByName: nameLookup?.createdByName ?? null,
     attachmentFolderId,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
+    parent: row.parent
+      ? {
+          id: row.parent.id,
+          referenceNumber: row.parent.referenceNumber,
+          subject: row.parent.subject,
+          direction: row.parent.direction,
+          status: row.parent.status,
+        }
+      : null,
+    responses: (row.responses ?? []).map((response) => ({
+      id: response.id,
+      referenceNumber: response.referenceNumber,
+      subject: response.subject,
+      direction: response.direction,
+      status: response.status,
+      correspondenceDate: toDateString(response.correspondenceDate)!,
+      senderName: response.senderName,
+      recipientName: response.recipientName,
+    })),
     raisedRfis: raisedItems?.raisedRfis ?? [],
     raisedIssues: raisedItems?.raisedIssues ?? [],
     raisedChangeRequests: raisedItems?.raisedChangeRequests ?? [],

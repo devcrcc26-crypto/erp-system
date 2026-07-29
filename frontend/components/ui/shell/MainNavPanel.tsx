@@ -21,6 +21,7 @@ import {
   useCanViewMyWork,
   useCanViewReviewInbox,
   useCanViewChangeRequests,
+  useCanViewCorrespondence,
   useCanViewExternalReleases,
   useCanViewDailyLogs,
   useCanViewIssues,
@@ -201,6 +202,7 @@ export default function MainNavPanel({
   const canViewIssues = useCanViewIssues();
   const canViewRisks = useCanViewRisks();
   const canViewMeetings = useCanViewMeetings();
+  const canViewCorrespondence = useCanViewCorrespondence();
   const canViewDailyLogs = useCanViewDailyLogs();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canManageUsers = useCanManageUsers();
@@ -220,6 +222,7 @@ export default function MainNavPanel({
     canViewIssues: !permLoading && canViewIssues,
     canViewRisks: !permLoading && canViewRisks,
     canViewMeetings: !permLoading && canViewMeetings,
+    canViewCorrespondence: !permLoading && canViewCorrespondence,
     canViewDailyLogs: !permLoading && canViewDailyLogs,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,

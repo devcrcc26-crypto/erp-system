@@ -41,6 +41,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/rfis': 'nav.rfis',
   '/issues': 'nav.issues',
   '/risks': 'nav.risks',
+  '/correspondence': 'nav.correspondence',
   '/daily-logs': 'nav.dailyLogs',
   '/users': 'nav.users',
   '/teams': 'nav.teams',
@@ -65,6 +66,7 @@ export interface IconRailVisibility {
   canViewIssues: boolean;
   canViewRisks: boolean;
   canViewMeetings: boolean;
+  canViewCorrespondence: boolean;
   canViewDailyLogs: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
@@ -90,6 +92,7 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewIssues,
     canViewRisks,
     canViewMeetings,
+    canViewCorrespondence,
     canViewDailyLogs,
     canViewAuditLogs,
     canManageUsers,
@@ -184,6 +187,13 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       href: '/meetings',
       iconKey: 'meetings',
       visible: canViewMeetings,
+    },
+    {
+      key: '/correspondence',
+      labelKey: 'nav.correspondence',
+      href: '/correspondence',
+      iconKey: 'correspondence',
+      visible: canViewCorrespondence,
     },
     {
       key: '/daily-logs',

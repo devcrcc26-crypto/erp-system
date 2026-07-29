@@ -4,6 +4,7 @@ import {
   CloseoutStatus,
   CommissionMode,
   CompletionStatus,
+  CorrespondenceDirection,
   CorrespondenceStatus,
   CorrespondenceType,
   IssueSeverity,
@@ -1523,6 +1524,10 @@ export class CreateCorrespondenceDto {
   @IsEnum(CorrespondenceType)
   correspondenceType!: CorrespondenceType;
 
+  @ApiProperty({ enum: CorrespondenceDirection })
+  @IsEnum(CorrespondenceDirection)
+  direction!: CorrespondenceDirection;
+
   @ApiProperty()
   @IsString()
   subject!: string;
@@ -1535,6 +1540,100 @@ export class CreateCorrespondenceDto {
   @IsString()
   recipientName!: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  senderCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  recipientCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty()
+  @IsDateString()
+  correspondenceDate!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  parentId?: string;
+}
+
+export class UpdateCorrespondenceDto {
+  @ApiPropertyOptional({ enum: CorrespondenceType })
+  @IsOptional()
+  @IsEnum(CorrespondenceType)
+  correspondenceType?: CorrespondenceType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  senderName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  recipientName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  senderCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  recipientCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  correspondenceDate?: string;
+}
+
+export class RespondCorrespondenceDto {
+  @ApiProperty({ enum: CorrespondenceType })
+  @IsEnum(CorrespondenceType)
+  correspondenceType!: CorrespondenceType;
+
+  @ApiProperty()
+  @IsString()
+  subject!: string;
+
+  @ApiProperty()
+  @IsString()
+  senderName!: string;
+
+  @ApiProperty()
+  @IsString()
+  recipientName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  senderCompany?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  recipientCompany?: string;
+
   @ApiProperty()
   @IsDateString()
   correspondenceDate!: string;
@@ -1542,14 +1641,7 @@ export class CreateCorrespondenceDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  referenceNumber?: string;
-}
-
-export class UpdateCorrespondenceDto extends PartialType(CreateCorrespondenceDto) {
-  @ApiPropertyOptional({ enum: CorrespondenceStatus })
-  @IsOptional()
-  @IsEnum(CorrespondenceStatus)
-  status?: CorrespondenceStatus;
+  notes?: string;
 }
 
 export class CreateRiskDto {
@@ -1937,6 +2029,16 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   submittalPurpose?: string;
+
+  @ApiPropertyOptional({ enum: CorrespondenceDirection })
+  @IsOptional()
+  @IsEnum(CorrespondenceDirection)
+  direction?: CorrespondenceDirection;
+
+  @ApiPropertyOptional({ enum: CorrespondenceType })
+  @IsOptional()
+  @IsEnum(CorrespondenceType)
+  correspondenceType?: CorrespondenceType;
 
   @ApiPropertyOptional()
   @IsOptional()

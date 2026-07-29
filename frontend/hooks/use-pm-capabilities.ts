@@ -173,6 +173,15 @@ export function useCanViewMeetings(): boolean {
 }
 
 /**
+ * Global Correspondence — full-access only (project managers use the
+ * project sidebar; the global page is reserved for portfolio administrators).
+ */
+export function useCanViewCorrespondence(): boolean {
+  const epc = useEpcCapabilities();
+  return epc.navFullAccess;
+}
+
+/**
  * Global Risks — full-access always; discipline leads always (risks are
  * management-level, not a designer concern); otherwise only when
  * risks.canView without portfolio projects.canView (project sidebar otherwise).

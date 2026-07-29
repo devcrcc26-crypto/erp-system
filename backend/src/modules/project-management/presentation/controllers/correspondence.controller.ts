@@ -17,6 +17,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreateCorrespondenceDto,
   PmListQueryDto,
+  RespondCorrespondenceDto,
   UpdateCorrespondenceDto,
 } from '../../application/dtos/pm.dtos';
 import { CorrespondenceService } from '../../application/services/correspondence.service';
@@ -90,6 +91,64 @@ export class CorrespondenceController {
     @Body() dto: UpdateCorrespondenceDto,
   ): Promise<unknown> {
     return this.correspondenceService.updateCorrespondence(
+      this.ctx(user),
+      projectId,
+      id,
+      dto,
+    );
+  }
+
+  @Post(':id/send')
+  @RequirePermission('correspondence', 'edit')
+  @ApiOperation({ summary: 'Mark outgoing correspondence as sent' })
+  send(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.correspondenceService.markAsSent(this.ctx(user), projectId, id);
+  }
+
+  @Post(':id/acknowledge')
+  @RequirePermission('correspondence', 'edit')
+  @ApiOperation({ summary: 'Record acknowledgement of sent correspondence' })
+  acknowledge(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.correspondenceService.recordAcknowledgement(
+      this.ctx(user),
+      projectId,
+      id,
+    );
+  }
+
+  @Post(':id/close')
+  @RequirePermission('correspondence', 'edit')
+  @ApiOperation({ summary: 'Close correspondence' })
+  close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.correspondenceService.closeCorrespondence(
+      this.ctx(user),
+      projectId,
+      id,
+    );
+  }
+
+  @Post(':id/respond')
+  @RequirePermission('correspondence', 'create')
+  @ApiOperation({ summary: 'Create a response linked to this correspondence' })
+  respond(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: RespondCorrespondenceDto,
+  ): Promise<unknown> {
+    return this.correspondenceService.createResponse(
       this.ctx(user),
       projectId,
       id,

@@ -1,134 +1,106 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Divider,
-  Drawer,
-  Form,
-  Input,
-  Select,
-} from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import { Alert, Button, Descriptions, Drawer } from 'antd';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
 import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  CorrespondenceStatus,
-  CorrespondenceType,
-} from '@/lib/api/project-management.types';
-import { CORRESPONDENCE_WORKFLOW } from '@/lib/api/workflow';
+import type { CorrespondenceDirection } from '@/lib/api/project-management.types';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcCapabilities, usePmCapabilities } from '@/hooks/use-pm-capabilities';
 import {
+  useAcknowledgeCorrespondence,
+  useCloseCorrespondence,
   useCorrespondenceItem,
-  useDeleteCorrespondence,
-  useUpdateCorrespondence,
+  useMarkCorrespondenceSent,
 } from '@/lib/query/correspondence';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  correspondenceDirectionVariant,
   correspondenceStatusVariant,
+  formatCorrespondenceDirection,
   formatCorrespondenceStatus,
 } from '@/lib/utils/pm-status-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-const TYPE_OPTIONS: { value: CorrespondenceType; label: string }[] = [
-  { value: 'LETTER', label: 'Letter' },
-  { value: 'EMAIL', label: 'Email' },
-  { value: 'NOTICE', label: 'Notice' },
-  { value: 'INSTRUCTION', label: 'Instruction' },
-  { value: 'MEMO', label: 'Memo' },
-];
-
-interface CorrespondenceEditValues {
-  correspondenceType: CorrespondenceType;
-  subject: string;
-  senderName: string;
-  recipientName: string;
-  correspondenceDate: Dayjs;
-  referenceNumber?: string;
-}
 
 export default function CorrespondenceDetailDrawer({
   projectId,
   correspondenceId,
   onClose,
   onUpdated,
+  onNavigateTo,
+  onOpenCreateResponse,
 }: {
   projectId: string;
   correspondenceId: string | null;
   onClose: () => void;
   onUpdated: () => void;
+  onNavigateTo?: (id: string) => void;
+  onOpenCreateResponse?: (opts: {
+    parentId: string;
+    direction: CorrespondenceDirection;
+  }) => void;
 }): React.ReactNode {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [form] = Form.useForm<CorrespondenceEditValues>();
+  const [sendOpen, setSendOpen] = useState(false);
+  const [ackOpen, setAckOpen] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const open = Boolean(correspondenceId);
   const messageApi = useAppMessage();
+  const pm = usePmCapabilities();
+  const epc = useEpcCapabilities();
 
   const itemQuery = useCorrespondenceItem(projectId, correspondenceId ?? '', open);
-  const updateItem = useUpdateCorrespondence();
-  const deleteItem = useDeleteCorrespondence();
+  const markSent = useMarkCorrespondenceSent();
+  const acknowledge = useAcknowledgeCorrespondence();
+  const closeItem = useCloseCorrespondence();
 
   const item = itemQuery.data;
-  const isEditable = item?.status === 'DRAFT';
+  const canEdit = epc.navFullAccess || pm.correspondence.canEdit;
+  const canCreate = epc.navFullAccess || pm.correspondence.canCreate;
   const canUploadAttachments = item !== undefined && item.status !== 'CLOSED';
+  const oppositeDirection: CorrespondenceDirection =
+    item?.direction === 'INCOMING' ? 'OUTGOING' : 'INCOMING';
 
-  async function handleStatusChange(status: CorrespondenceStatus): Promise<void> {
+  async function refresh(): Promise<void> {
+    onUpdated();
+    await itemQuery.refetch();
+  }
+
+  async function handleMarkSent(): Promise<void> {
     if (!correspondenceId) return;
     try {
-      await updateItem.mutateAsync({
-        projectId,
-        correspondenceId,
-        body: { status },
-      });
-      messageApi.success('Status updated');
-      onUpdated();
-      void itemQuery.refetch();
+      await markSent.mutateAsync({ projectId, correspondenceId });
+      messageApi.success('Correspondence marked as sent');
+      setSendOpen(false);
+      await refresh();
     } catch (error) {
-      notifyApiError(error, 'Failed to update status', messageApi);
+      notifyApiError(error, 'Failed to mark correspondence as sent', messageApi);
     }
   }
 
-  async function handleSave(values: CorrespondenceEditValues): Promise<void> {
-    if (!correspondenceId || !isEditable) return;
+  async function handleAcknowledge(): Promise<void> {
+    if (!correspondenceId) return;
     try {
-      await updateItem.mutateAsync({
-        projectId,
-        correspondenceId,
-        body: {
-          correspondenceType: values.correspondenceType,
-          subject: values.subject.trim(),
-          senderName: values.senderName.trim(),
-          recipientName: values.recipientName.trim(),
-          correspondenceDate: values.correspondenceDate.format('YYYY-MM-DD'),
-          referenceNumber: values.referenceNumber?.trim() || undefined,
-        },
-      });
-      messageApi.success('Correspondence updated');
-      onUpdated();
-      void itemQuery.refetch();
+      await acknowledge.mutateAsync({ projectId, correspondenceId });
+      messageApi.success('Acknowledgement recorded');
+      setAckOpen(false);
+      await refresh();
     } catch (error) {
-      notifyApiError(error, 'Failed to update correspondence', messageApi);
+      notifyApiError(error, 'Failed to record acknowledgement', messageApi);
     }
   }
 
-  async function handleDelete(): Promise<void> {
+  async function handleClose(): Promise<void> {
     if (!correspondenceId) return;
     try {
-      await deleteItem.mutateAsync({ projectId, correspondenceId });
-      messageApi.success('Correspondence deleted');
-      setDeleteOpen(false);
-      onUpdated();
-      onClose();
+      await closeItem.mutateAsync({ projectId, correspondenceId });
+      messageApi.success('Correspondence closed');
+      setCloseConfirmOpen(false);
+      await refresh();
     } catch (error) {
-      notifyApiError(error, 'Failed to delete correspondence', messageApi);
+      notifyApiError(error, 'Failed to close correspondence', messageApi);
     }
   }
 
@@ -139,18 +111,25 @@ export default function CorrespondenceDetailDrawer({
         open={open}
         onClose={onClose}
         title={
-          item
-            ? `${item.referenceNumber} - ${item.subject}`
-            : 'Correspondence'
+          item ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[14px] font-semibold">
+                {item.referenceNumber}
+              </span>
+              <StatusBadge
+                label={formatCorrespondenceStatus(item.status)}
+                variant={correspondenceStatusVariant(item.status)}
+              />
+              <StatusBadge
+                label={formatCorrespondenceDirection(item.direction)}
+                variant={correspondenceDirectionVariant(item.direction)}
+              />
+            </div>
+          ) : (
+            'Correspondence'
+          )
         }
         destroyOnHidden
-        extra={
-          item && isEditable ? (
-            <Button danger onClick={() => setDeleteOpen(true)}>
-              Delete
-            </Button>
-          ) : undefined
-        }
       >
         {itemQuery.isLoading && (
           <div className="flex flex-col gap-3">
@@ -168,115 +147,132 @@ export default function CorrespondenceDetailDrawer({
         )}
         {item && (
           <div className={layout.drawerStack}>
-            <div className={layout.drawerSurface}>
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className={layout.drawerMetaLabel}>
-                    {item.correspondenceType.replace(/_/g, ' ')}
-                  </p>
-                  <p className={`mt-1 ${layout.drawerHeading}`}>
-                    {formatProjectDate(item.correspondenceDate)}
-                  </p>
-                  <p className={`mt-1 ${layout.drawerMutedText}`}>
-                    {item.senderName} → {item.recipientName}
-                  </p>
-                </div>
-                <div className="w-full max-w-xs">
+            <section className={layout.drawerSection}>
+              <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
+              <Descriptions
+                className={layout.drawerDescriptionsClass}
+                column={1}
+                size="small"
+                bordered
+              >
+                <Descriptions.Item label="Direction">
+                  <StatusBadge
+                    label={formatCorrespondenceDirection(item.direction)}
+                    variant={correspondenceDirectionVariant(item.direction)}
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="Type">
+                  {item.correspondenceType.replace(/_/g, ' ')}
+                </Descriptions.Item>
+                <Descriptions.Item label="Subject">
+                  {item.subject}
+                </Descriptions.Item>
+                <Descriptions.Item label="Date">
+                  {formatProjectDate(item.correspondenceDate)}
+                </Descriptions.Item>
+                <Descriptions.Item label="From">
+                  {item.senderName}
+                  {item.senderCompany ? ` (${item.senderCompany})` : ''}
+                </Descriptions.Item>
+                <Descriptions.Item label="To">
+                  {item.recipientName}
+                  {item.recipientCompany ? ` (${item.recipientCompany})` : ''}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
                   <StatusBadge
                     label={formatCorrespondenceStatus(item.status)}
                     variant={correspondenceStatusVariant(item.status)}
                   />
-                  <Select
-                    className="mt-2 w-full"
-                    value={item.status}
-                    onChange={(v: CorrespondenceStatus) =>
-                      void handleStatusChange(v)
-                    }
-                    options={CORRESPONDENCE_WORKFLOW.map((s) => ({
-                      value: s.key,
-                      label: s.label,
-                    }))}
-                  />
+                </Descriptions.Item>
+                {item.sentAt && (
+                  <Descriptions.Item label="Sent on">
+                    {formatProjectDate(item.sentAt)}
+                  </Descriptions.Item>
+                )}
+                {item.acknowledgedAt && (
+                  <Descriptions.Item label="Acknowledged on">
+                    {formatProjectDate(item.acknowledgedAt)}
+                  </Descriptions.Item>
+                )}
+                {item.acknowledgedByName && (
+                  <Descriptions.Item label="Acknowledged by">
+                    {item.acknowledgedByName}
+                  </Descriptions.Item>
+                )}
+                <Descriptions.Item label="Created by">
+                  {item.createdByName ?? '—'}
+                </Descriptions.Item>
+              </Descriptions>
+            </section>
+
+            {item.notes && (
+              <section className={layout.drawerSection}>
+                <p className={`mb-2 ${layout.drawerHeading}`}>Notes</p>
+                <div className={layout.drawerSurface}>
+                  <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
+                    {item.notes}
+                  </p>
                 </div>
-              </div>
-            </div>
+              </section>
+            )}
 
-            <WorkflowStepper
-              className="erp-drawer-workflow"
-              steps={CORRESPONDENCE_WORKFLOW}
-              currentStatus={item.status}
-            />
-
-            <Form<CorrespondenceEditValues>
-              key={item.id}
-              form={form}
-              layout="vertical"
-              className="erp-drawer-form"
-              disabled={!isEditable}
-              initialValues={{
-                correspondenceType: item.correspondenceType,
-                subject: item.subject,
-                senderName: item.senderName,
-                recipientName: item.recipientName,
-                correspondenceDate: dayjs(item.correspondenceDate),
-                referenceNumber: item.referenceNumber,
-              }}
-              onFinish={(values: CorrespondenceEditValues) =>
-                void handleSave(values)
-              }
-            >
-              <Form.Item
-                name="correspondenceType"
-                label="Type"
-                rules={[{ required: true }]}
-              >
-                <Select options={TYPE_OPTIONS} />
-              </Form.Item>
-              <Form.Item name="referenceNumber" label="Reference number">
-                <Input disabled />
-              </Form.Item>
-              <Form.Item
-                name="subject"
-                label="Subject"
-                rules={[{ required: true }]}
-              >
-                <Input />
-              </Form.Item>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Form.Item
-                  name="senderName"
-                  label="Sender"
-                  rules={[{ required: true }]}
-                >
-                  <Input />
-                </Form.Item>
-                <Form.Item
-                  name="recipientName"
-                  label="Recipient"
-                  rules={[{ required: true }]}
-                >
-                  <Input />
-                </Form.Item>
-              </div>
-              <Form.Item
-                name="correspondenceDate"
-                label="Date"
-                rules={[{ required: true }]}
-              >
-                <DatePicker className="w-full" />
-              </Form.Item>
-              {isEditable && (
-                <div className="flex justify-end">
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={updateItem.isPending}
-                  >
-                    Save changes
-                  </Button>
+            <section className={layout.drawerSection}>
+              <p className={`mb-2 ${layout.drawerHeading}`}>Correspondence Chain</p>
+              {item.parent && (
+                <div className={`mb-3 ${layout.drawerSurface}`}>
+                  <p className={layout.drawerMetaLabel}>In Response To</p>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium text-[var(--color-text-primary)]">
+                        {item.parent.referenceNumber} — {item.parent.subject}
+                      </p>
+                      <StatusBadge
+                        label={formatCorrespondenceStatus(item.parent.status)}
+                        variant={correspondenceStatusVariant(item.parent.status)}
+                      />
+                    </div>
+                    <Button
+                      size="small"
+                      onClick={() => onNavigateTo?.(item.parent!.id)}
+                    >
+                      Open
+                    </Button>
+                  </div>
                 </div>
               )}
-            </Form>
+
+              {(item.responses?.length ?? 0) > 0 && (
+                <div>
+                  <p className={`mb-2 ${layout.drawerMetaLabel}`}>Responses</p>
+                  <ul className="erp-drawer-list">
+                    {(item.responses ?? []).map((response) => (
+                      <li
+                        key={response.id}
+                        className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-[var(--color-surface-secondary)]"
+                        onClick={() => onNavigateTo?.(response.id)}
+                      >
+                        <span className="font-mono text-xs">
+                          {response.referenceNumber}
+                        </span>
+                        <span className="flex-1 truncate px-2">
+                          {response.subject}
+                        </span>
+                        <StatusBadge
+                          label={formatCorrespondenceStatus(response.status)}
+                          variant={correspondenceStatusVariant(response.status)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!item.parent && (item.responses?.length ?? 0) === 0 && (
+                <p className={layout.drawerMutedText}>
+                  No related correspondence.
+                </p>
+              )}
+            </section>
 
             <DocumentAttachmentPanel
               folderId={item.attachmentFolderId ?? undefined}
@@ -347,20 +343,91 @@ export default function CorrespondenceDetailDrawer({
               </section>
             )}
 
-            <Divider className="!my-0" />
+            {item.status === 'CLOSED' && (
+              <Alert
+                type="info"
+                showIcon
+                title="This correspondence is closed and read-only."
+              />
+            )}
+
+            {item.status !== 'CLOSED' && (canEdit || canCreate) && (
+              <section className={layout.drawerSection}>
+                <div className="flex flex-col gap-2">
+                  {canEdit && item.status === 'DRAFT' && item.direction === 'OUTGOING' && (
+                    <Button
+                      type="primary"
+                      block
+                      onClick={() => setSendOpen(true)}
+                    >
+                      Mark as Sent
+                    </Button>
+                  )}
+                  {canEdit && item.status === 'SENT' && (
+                    <Button
+                      type="primary"
+                      block
+                      onClick={() => setAckOpen(true)}
+                    >
+                      Record Acknowledgement
+                    </Button>
+                  )}
+                  {(item.status === 'SENT' || item.status === 'ACKNOWLEDGED') &&
+                    canCreate &&
+                    onOpenCreateResponse && (
+                      <Button
+                        block
+                        onClick={() =>
+                          onOpenCreateResponse({
+                            parentId: item.id,
+                            direction: oppositeDirection,
+                          })
+                        }
+                      >
+                        Record Response
+                      </Button>
+                    )}
+                  {(item.status === 'SENT' || item.status === 'ACKNOWLEDGED') &&
+                    canEdit && (
+                      <Button block onClick={() => setCloseConfirmOpen(true)}>
+                        Close Correspondence
+                      </Button>
+                    )}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </Drawer>
 
       <ConfirmDialog
-        open={deleteOpen}
-        title="Delete correspondence?"
-        description="This will permanently remove this record and its attachments folder link."
-        confirmLabel="Delete"
-        danger
-        confirmLoading={deleteItem.isPending}
-        onConfirm={() => void handleDelete()}
-        onCancel={() => setDeleteOpen(false)}
+        open={sendOpen}
+        title="Mark as sent?"
+        description="This marks the correspondence as sent to the recipient."
+        confirmLabel="Mark as Sent"
+        confirmLoading={markSent.isPending}
+        onConfirm={() => void handleMarkSent()}
+        onCancel={() => setSendOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={ackOpen}
+        title="Record acknowledgement?"
+        description="This records that the recipient has acknowledged this correspondence."
+        confirmLabel="Record Acknowledgement"
+        confirmLoading={acknowledge.isPending}
+        onConfirm={() => void handleAcknowledge()}
+        onCancel={() => setAckOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        title="Close correspondence?"
+        description="Closed correspondence becomes read-only and cannot be edited or have new attachments."
+        confirmLabel="Close"
+        confirmLoading={closeItem.isPending}
+        onConfirm={() => void handleClose()}
+        onCancel={() => setCloseConfirmOpen(false)}
       />
     </>
   );
