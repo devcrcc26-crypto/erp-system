@@ -13,6 +13,7 @@ import {
   Space,
   Tag,
 } from 'antd';
+import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -85,6 +86,7 @@ export default function ChangeRequestDrawer({
   onUpdated: () => void;
 }): React.ReactNode {
   const pm = usePmCapabilities();
+  const router = useRouter();
   const resolveUserName = useUserNameLookup();
   const currentUser = useCurrentUser();
   const messageApi = useAppMessage();
@@ -265,6 +267,18 @@ export default function ChangeRequestDrawer({
 
         {cr && (
           <div className={layout.drawerStack}>
+            <div className="mb-2 flex justify-end">
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  onClose();
+                  router.push(`/projects/${projectId}/change-requests/${cr.id}`);
+                }}
+              >
+                Open full page →
+              </Button>
+            </div>
             {cr.status === 'SUBMITTED' && isCreator && !isAssignee && (
               <Alert
                 type="warning"

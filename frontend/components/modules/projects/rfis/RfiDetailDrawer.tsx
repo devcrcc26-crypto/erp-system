@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useRouter } from 'next/navigation';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { apiGet } from '@/lib/api/client';
@@ -120,6 +121,7 @@ export default function RfiDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
+  const router = useRouter();
   const [form] = Form.useForm<ResponseFormValues>();
   const resolveUserDisplay = useUserDisplayResolver();
   const open = Boolean(rfiId);
@@ -359,6 +361,18 @@ export default function RfiDetailDrawer({
 
       {rfi && (
         <div className={layout.drawerStack}>
+          <div className="mb-2 flex justify-end">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                onClose();
+                router.push(`/projects/${projectId}/rfis/${rfi.id}`);
+              }}
+            >
+              Open full page →
+            </Button>
+          </div>
           <section className={layout.drawerSection}>
             <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
             <Descriptions

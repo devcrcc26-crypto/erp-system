@@ -18,6 +18,7 @@ import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { type Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -473,6 +474,7 @@ export default function RfisPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -588,8 +590,24 @@ export default function RfisPageContent({
           </span>
         ),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Rfi) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/rfis/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay],
+    [resolveUserDisplay, router, projectId],
   );
 
   if (rfisQuery.isLoading && !rfisQuery.data) {
@@ -698,6 +716,10 @@ export default function RfisPageContent({
           columns={columns}
           dataSource={rfis}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedRfiId(record.id),
+            style: { cursor: 'pointer' },
+          })}
           locale={{
             emptyText: (
               <TableEmptyState

@@ -26,6 +26,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import WorkflowStepper from '@/components/ui/WorkflowStepper/WorkflowStepper';
@@ -184,6 +185,7 @@ export default function SubmittalDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
+  const router = useRouter();
   const [designerRejectOpen, setDesignerRejectOpen] = useState(false);
   const [designerRejectFileId, setDesignerRejectFileId] = useState<
     string | null
@@ -549,6 +551,22 @@ export default function SubmittalDetailDrawer({
 
       {submittal && (
         <div className={layout.drawerStack}>
+          <div className="mb-2 flex justify-end">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                const fullPagePath = isExternalRelease
+                  ? `/projects/${projectId}/external-releases/${submittal.id}`
+                  : `/projects/${projectId}/submittals/${submittal.id}`;
+                onClose();
+                router.push(fullPagePath);
+              }}
+            >
+              Open full page →
+            </Button>
+          </div>
+
           {isExternalRelease ? (
             submittal.status === 'WITHDRAWN' ? (
               <Alert

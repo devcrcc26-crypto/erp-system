@@ -5,6 +5,7 @@ import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { FileText } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -71,6 +72,7 @@ const PRIORITY_OPTIONS: Array<{ value: RfiPriority; label: string }> = [
  * Global RFIs list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalRfisPageContent(): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -239,8 +241,24 @@ export default function GlobalRfisPageContent(): React.ReactNode {
           </span>
         ),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Rfi) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${record.projectId}/rfis/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [router],
   );
 
   if (!capabilitiesReady || (rfisQuery.isLoading && !rfisQuery.data)) {

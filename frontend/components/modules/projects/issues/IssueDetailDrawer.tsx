@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useRouter } from 'next/navigation';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ChangeRequestDrawer from '@/components/modules/projects/change-requests/ChangeRequestDrawer';
 import CreateChangeRequestDrawer from '@/components/modules/projects/change-requests/CreateChangeRequestDrawer';
@@ -88,6 +89,7 @@ export default function IssueDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
+  const router = useRouter();
   const resolveUserDisplay = useUserDisplayResolver();
   const messageApi = useAppMessage();
   const pm = usePmCapabilities();
@@ -337,6 +339,18 @@ export default function IssueDetailDrawer({
 
       {issue && (
         <div className={layout.drawerStack}>
+          <div className="mb-2 flex justify-end">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                onClose();
+                router.push(`/projects/${projectId}/issues/${issue.id}`);
+              }}
+            >
+              Open full page →
+            </Button>
+          </div>
           <section className={layout.drawerSection}>
             <p className={`mb-2 ${layout.drawerHeading}`}>Details</p>
             <Descriptions

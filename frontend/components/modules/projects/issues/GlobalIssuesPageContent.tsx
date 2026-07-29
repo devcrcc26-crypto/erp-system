@@ -5,6 +5,7 @@ import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { AlertCircle } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import ListStatusTabs, {
@@ -55,6 +56,7 @@ const SEVERITY_OPTIONS: Array<{ value: IssueSeverity; label: string }> = [
  * Global Issues list — cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalIssuesPageContent(): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -228,8 +230,24 @@ export default function GlobalIssuesPageContent(): React.ReactNode {
           </span>
         ),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Issue) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${record.projectId}/issues/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [],
+    [router],
   );
 
   if (!capabilitiesReady || (issuesQuery.isLoading && !issuesQuery.data)) {

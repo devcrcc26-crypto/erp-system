@@ -18,6 +18,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { AlertCircle } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -379,6 +380,7 @@ export default function IssuesPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -495,8 +497,24 @@ export default function IssuesPageContent({
           </span>
         ),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 80,
+        render: (_: unknown, record: Issue) => (
+          <Button
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/projects/${projectId}/issues/${record.id}`);
+            }}
+          >
+            Open
+          </Button>
+        ),
+      },
     ],
-    [resolveUserDisplay],
+    [resolveUserDisplay, router, projectId],
   );
 
   if (issuesQuery.isLoading && !issuesQuery.data) {
@@ -608,6 +626,10 @@ export default function IssuesPageContent({
           columns={columns}
           dataSource={issues}
           pagination={bindMeta(meta)}
+          onRow={(record) => ({
+            onClick: () => setSelectedIssueId(record.id),
+            style: { cursor: 'pointer' },
+          })}
           locale={{
             emptyText: (
               <TableEmptyState
