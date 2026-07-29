@@ -111,7 +111,7 @@ function LoginForm(): React.ReactNode {
         <div className="p-5 sm:p-8">
           <div className="mb-6 text-center sm:mb-8">
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-              CCECC PWF
+              CCECC
             </h1>
             <p className="mt-2 text-sm text-slate-500">Sign in to your account</p>
           </div>

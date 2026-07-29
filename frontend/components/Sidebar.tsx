@@ -99,7 +99,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       style={{ backgroundColor: "#1e293b" }}
     >
       <header className="flex items-center justify-between px-7 pb-5 pt-8">
-        <h1 className="text-xl font-bold tracking-wide text-white">CCECC PWF</h1>
+        <h1 className="text-xl font-bold tracking-wide text-white">CCECC</h1>
         {onClose && (
           <button
             onClick={onClose}

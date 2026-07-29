@@ -4,7 +4,7 @@ import { QueryProvider } from "@/lib/query/provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CCECC PWF",
+  title: "CCECC",
   description: "",
 };
 
