@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import { Spin } from 'antd';
 import { BarChart3 } from 'lucide-react';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -45,7 +44,7 @@ function ChartCard({
         style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
       >
         <h3
-          className="text-[13px] font-medium leading-[1.5]"
+          className="text-[15px] font-semibold leading-[1.4] tracking-[-0.01em]"
           style={{ color: tokens.colorTextPrimary }}
         >
           {title}
@@ -140,159 +139,50 @@ function CompletionGauge({ value }: { value: number }): React.ReactNode {
   );
 }
 
-function DisciplineDumbbell({
+function DisciplineWorkloadBars({
   data,
 }: {
   data: DashboardChartDatum[];
 }): React.ReactNode {
-  const [tip, setTip] = useState<{
-    label: string;
-    value: number;
-    y: number;
-  } | null>(null);
-
-  const topTwo = data.slice(0, 2);
-  if (topTwo.length === 0) {
+  if (data.length === 0 || !data.some((entry) => entry.value > 0)) {
     return (
       <ChartEmpty description="Active disciplines will appear when schedule data exists" />
     );
   }
 
-  const W = 120;
-  const cx = W / 2;
-  const GAP = 8;
-  const R = 5;
-  const L = 62;
-
-  const first = topTwo[0];
-  const second = topTwo[1];
-
-  const archLabelY = 13;
-  const archDotY = archLabelY + 14;
-  const blueTopY = archDotY + R + GAP;
-  const blueBotY = blueTopY + L;
-  const mgmtDotY = blueBotY + GAP + R;
-  const grayTopY = mgmtDotY + R + GAP;
-  const grayBotY = grayTopY + L;
-  const mgmtLabelY = grayBotY + GAP + 10;
-  const H = mgmtLabelY + 4;
-
-  const tipW = 48;
-  const tipH = 20;
+  const rows = data.slice(0, 8);
 
   return (
-    <div style={{ height: CHART_HEIGHT }} className="flex items-center justify-center">
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} overflow="visible">
-        <text
-          x={cx}
-          y={archLabelY}
-          textAnchor="middle"
-          fontSize="11"
-          fontWeight="500"
-          fill={tokens.colorTextPrimary}
-          fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
-        >
-          {first.name}
-        </text>
-
-        <circle
-          cx={cx}
-          cy={archDotY}
-          r={R + 4}
-          fill="transparent"
-          style={{ cursor: 'pointer' }}
-          onMouseEnter={() =>
-            setTip({ label: first.name, value: first.value, y: archDotY })
-          }
-          onMouseLeave={() => setTip(null)}
+    <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+      <BarChart
+        data={rows}
+        layout="vertical"
+        margin={{ left: 8, right: 16, top: 4, bottom: 4 }}
+      >
+        <XAxis
+          type="number"
+          allowDecimals={false}
+          tick={{ fontSize: 11, fill: tokens.colorTextTertiary }}
+          axisLine={false}
+          tickLine={false}
         />
-        <circle
-          cx={cx}
-          cy={archDotY}
-          r={R}
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={88}
+          tick={{ fontSize: 11, fill: tokens.colorTextSecondary }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip />
+        <Bar
+          dataKey="value"
           fill={tokens.colorBlue400}
-          style={{ pointerEvents: 'none' }}
+          radius={[0, 4, 4, 0]}
+          barSize={14}
         />
-
-        <line
-          x1={cx}
-          y1={blueTopY}
-          x2={cx}
-          y2={blueBotY}
-          stroke={tokens.colorBlue400}
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-
-        {second ? (
-          <>
-            <circle
-              cx={cx}
-              cy={mgmtDotY}
-              r={R + 4}
-              fill="transparent"
-              style={{ cursor: 'pointer' }}
-              onMouseEnter={() =>
-                setTip({ label: second.name, value: second.value, y: mgmtDotY })
-              }
-              onMouseLeave={() => setTip(null)}
-            />
-            <circle
-              cx={cx}
-              cy={mgmtDotY}
-              r={R}
-              fill={tokens.colorBlue400}
-              style={{ pointerEvents: 'none' }}
-            />
-
-            <line
-              x1={cx}
-              y1={grayTopY}
-              x2={cx}
-              y2={grayBotY}
-              stroke={tokens.colorGray100}
-              strokeWidth={2}
-              strokeLinecap="round"
-            />
-
-            <text
-              x={cx}
-              y={mgmtLabelY}
-              textAnchor="middle"
-              fontSize="11"
-              fontWeight="500"
-              fill={tokens.colorTextPrimary}
-              fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
-            >
-              {second.name}
-            </text>
-          </>
-        ) : null}
-
-        {tip && (
-          <g>
-            <rect
-              x={cx + R + 6}
-              y={tip.y - tipH / 2}
-              width={tipW}
-              height={tipH}
-              rx={8}
-              fill={tokens.colorTextPrimary}
-            />
-            <text
-              x={cx + R + 6 + tipW / 2}
-              y={tip.y + 4}
-              textAnchor="middle"
-              fontSize="10"
-              fill={tokens.colorCardBg}
-              fontFamily="system-ui, -apple-system, 'Segoe UI', sans-serif"
-            >
-              {tip.label}: {tip.value}
-            </text>
-          </g>
-        )}
-      </svg>
-    </div>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -364,7 +254,11 @@ export default function DashboardCharts({
       </ChartCard>
 
       <ChartCard title="Discipline Workload" subtitle="Active tasks by discipline">
-        {loading ? <ChartLoading /> : <DisciplineDumbbell data={data.disciplineWorkload} />}
+        {loading ? (
+          <ChartLoading />
+        ) : (
+          <DisciplineWorkloadBars data={data.disciplineWorkload} />
+        )}
       </ChartCard>
 
       <ChartCard title="Priority Breakdown" subtitle="Tasks by priority level">

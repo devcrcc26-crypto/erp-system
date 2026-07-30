@@ -29,19 +29,36 @@ import type {
   MyDashboardActivityItem,
   PortfolioDashboardStats,
 } from '@/lib/api/reporting.types';
+import {
+  colorForStatus,
+  dashboardSemantic,
+  PUNCH_FUNNEL_RAMP,
+  type StatusSegment,
+} from '@/lib/dashboard/semantic-colors';
 import { useMyDashboard, usePortfolioDashboardStats } from '@/lib/query/dashboard';
 import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
 
 dayjs.extend(relativeTime);
 
-type IconComponent = ComponentType<{ className?: string }>;
+type IconComponent = ComponentType<{
+  className?: string;
+  style?: React.CSSProperties;
+}>;
+
+type UrgencyKind = 'overdue' | 'critical' | 'pending' | null;
 
 type KpiCardConfig = {
   key: string;
   label: string;
-  value: string;
-  subtext: string;
-  subtextDanger: boolean;
+  /** Primary metric (open count / active count). */
+  primaryValue: string;
+  /** Quiet secondary line under the primary number when not urgent. */
+  quietSubtext: string;
+  /** Urgency metric shown larger when present. */
+  urgencyValue: string | null;
+  urgencyCaption: string | null;
+  urgencyKind: UrgencyKind;
   link: string;
   icon: IconComponent;
 };
@@ -67,7 +84,9 @@ function SectionCard({
 }): React.ReactNode {
   return (
     <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-      <h3 className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">
+      <h3
+        className="mb-4 text-[15px] font-semibold tracking-[-0.01em] text-[var(--color-text-primary)]"
+      >
         {title}
       </h3>
       {children}
@@ -82,79 +101,72 @@ function statusCount(
   return map?.[key] ?? 0;
 }
 
-function buildIssueSlices(stats: PortfolioDashboardStats): ChartSlice[] {
+function buildIssueSegments(stats: PortfolioDashboardStats): StatusSegment[] {
   return [
     {
-      name: 'Open',
+      key: 'OPEN',
+      label: 'Open',
       value: statusCount(stats.issuesByStatus, 'OPEN'),
-      fill: '#f59e0b',
+      color: colorForStatus('OPEN'),
     },
     {
-      name: 'In Progress',
+      key: 'IN_PROGRESS',
+      label: 'In Progress',
       value: statusCount(stats.issuesByStatus, 'IN_PROGRESS'),
-      fill: '#3b82f6',
+      color: colorForStatus('IN_PROGRESS'),
     },
     {
-      name: 'Closed',
+      key: 'CLOSED',
+      label: 'Closed',
       value: statusCount(stats.issuesByStatus, 'CLOSED'),
-      fill: '#10b981',
+      color: colorForStatus('CLOSED'),
     },
-  ].filter((slice) => slice.value > 0);
+  ].filter((segment) => segment.value > 0);
 }
 
-function buildRiskSlices(stats: PortfolioDashboardStats): ChartSlice[] {
+function buildRiskSegments(stats: PortfolioDashboardStats): StatusSegment[] {
   return [
     {
-      name: 'Open',
+      key: 'OPEN',
+      label: 'Open',
       value: statusCount(stats.risksByStatus, 'OPEN'),
-      fill: '#f59e0b',
+      color: colorForStatus('OPEN'),
     },
     {
-      name: 'Mitigated',
+      key: 'MITIGATED',
+      label: 'Mitigated',
       value: statusCount(stats.risksByStatus, 'MITIGATED'),
-      fill: '#3b82f6',
+      color: colorForStatus('MITIGATED'),
     },
     {
-      name: 'Accepted',
+      key: 'ACCEPTED',
+      label: 'Accepted',
       value: statusCount(stats.risksByStatus, 'ACCEPTED'),
-      fill: '#8b5cf6',
+      color: colorForStatus('ACCEPTED'),
     },
     {
-      name: 'Closed',
+      key: 'CLOSED',
+      label: 'Closed',
       value: statusCount(stats.risksByStatus, 'CLOSED'),
-      fill: '#10b981',
+      color: colorForStatus('CLOSED'),
     },
-  ].filter((slice) => slice.value > 0);
+  ].filter((segment) => segment.value > 0);
 }
 
 function buildPunchBars(stats: PortfolioDashboardStats): BarDatum[] {
-  return [
-    {
-      name: 'Raised',
-      count: statusCount(stats.punchByStatus, 'RAISED'),
-      fill: '#6b7280',
-    },
-    {
-      name: 'Assigned',
-      count: statusCount(stats.punchByStatus, 'ASSIGNED'),
-      fill: '#3b82f6',
-    },
-    {
-      name: 'Corrected',
-      count: statusCount(stats.punchByStatus, 'CORRECTED'),
-      fill: '#f59e0b',
-    },
-    {
-      name: 'Verified',
-      count: statusCount(stats.punchByStatus, 'VERIFIED'),
-      fill: '#10b981',
-    },
-    {
-      name: 'Closed',
-      count: statusCount(stats.punchByStatus, 'CLOSED'),
-      fill: '#059669',
-    },
-  ];
+  const stages = [
+    { name: 'Raised', key: 'RAISED' },
+    { name: 'Assigned', key: 'ASSIGNED' },
+    { name: 'Corrected', key: 'CORRECTED' },
+    { name: 'Verified', key: 'VERIFIED' },
+    { name: 'Closed', key: 'CLOSED' },
+  ] as const;
+
+  return stages.map((stage, index) => ({
+    name: stage.name,
+    count: statusCount(stats.punchByStatus, stage.key),
+    fill: PUNCH_FUNNEL_RAMP[index] ?? dashboardSemantic.successStrong,
+  }));
 }
 
 function buildProjectSlices(stats: PortfolioDashboardStats): ChartSlice[] {
@@ -162,32 +174,94 @@ function buildProjectSlices(stats: PortfolioDashboardStats): ChartSlice[] {
     {
       name: 'Not Started',
       value: statusCount(stats.projectsByStatus, 'NOT_STARTED'),
-      fill: '#6b7280',
+      fill: colorForStatus('NOT_STARTED'),
     },
     {
       name: 'In Progress',
       value: statusCount(stats.projectsByStatus, 'IN_PROGRESS'),
-      fill: '#3b82f6',
+      fill: colorForStatus('IN_PROGRESS'),
     },
     {
       name: 'On Hold',
       value: statusCount(stats.projectsByStatus, 'ON_HOLD'),
-      fill: '#f59e0b',
+      fill: colorForStatus('ON_HOLD'),
     },
     {
       name: 'Completed',
       value: statusCount(stats.projectsByStatus, 'COMPLETED'),
-      fill: '#10b981',
+      fill: colorForStatus('COMPLETED'),
     },
     {
       name: 'Cancelled',
       value: statusCount(stats.projectsByStatus, 'CANCELLED'),
-      fill: '#ef4444',
+      fill: colorForStatus('CANCELLED'),
     },
   ].filter((slice) => slice.value > 0);
 }
 
-function DonutChart({ data }: { data: ChartSlice[] }): React.ReactNode {
+/**
+ * Horizontal stacked bar with inline count + status labels per segment.
+ */
+function StatusStackedBar({
+  segments,
+}: {
+  segments: StatusSegment[];
+}): React.ReactNode {
+  if (segments.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-[var(--color-text-tertiary)]">
+        No data
+      </p>
+    );
+  }
+
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+
+  return (
+    <div className="flex flex-col gap-3 py-2">
+      <div
+        className="flex h-10 w-full overflow-hidden rounded-md"
+        style={{ backgroundColor: tokens.colorSurfaceSecondary }}
+        role="img"
+        aria-label="Status distribution"
+      >
+        {segments.map((segment) => {
+          const widthPct = total > 0 ? (segment.value / total) * 100 : 0;
+          return (
+            <div
+              key={segment.key}
+              className="flex min-w-0 items-center justify-center transition-[width]"
+              style={{
+                width: `${widthPct}%`,
+                backgroundColor: segment.color,
+                minWidth: widthPct > 0 ? 4 : 0,
+              }}
+              title={`${segment.label}: ${segment.value}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {segments.map((segment) => (
+          <div key={segment.key} className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-sm"
+              style={{ backgroundColor: segment.color }}
+            />
+            <span className="text-[13px] font-semibold text-[var(--color-text-primary)]">
+              {segment.value.toLocaleString()}
+            </span>
+            <span className="text-[12px] text-[var(--color-text-secondary)]">
+              {segment.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProjectDonut({ data }: { data: ChartSlice[] }): React.ReactNode {
   if (data.length === 0) {
     return (
       <p className="flex h-[250px] items-center justify-center text-sm text-[var(--color-text-tertiary)]">
@@ -310,7 +384,14 @@ function OverdueAttention({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+      <div
+        className="rounded-lg px-4 py-3 text-sm"
+        style={{
+          border: `1px solid ${dashboardSemantic.success}`,
+          backgroundColor: dashboardSemantic.successBg,
+          color: dashboardSemantic.successStrong,
+        }}
+      >
         No overdue items. All on track.
       </div>
     );
@@ -322,7 +403,12 @@ function OverdueAttention({
         <Link
           key={item.key}
           href={item.href}
-          className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:border-red-300"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:opacity-90"
+          style={{
+            border: `1px solid ${dashboardSemantic.danger}`,
+            backgroundColor: dashboardSemantic.dangerBg,
+            color: dashboardSemantic.dangerStrong,
+          }}
         >
           <span>
             {item.count.toLocaleString()} {item.label}
@@ -344,58 +430,161 @@ function buildKpiCards(stats: PortfolioDashboardStats): KpiCardConfig[] {
     {
       key: 'projects',
       label: 'Projects',
-      value: stats.activeProjects.toLocaleString(),
-      subtext: `${stats.totalProjects.toLocaleString()} total`,
-      subtextDanger: false,
+      primaryValue: stats.activeProjects.toLocaleString(),
+      quietSubtext: `${stats.totalProjects.toLocaleString()} total`,
+      urgencyValue: null,
+      urgencyCaption: null,
+      urgencyKind: null,
       link: '/projects',
       icon: FolderOutlined,
     },
     {
       key: 'issues',
       label: 'Open Issues',
-      value: stats.openIssues.toLocaleString(),
-      subtext: `${stats.overdueIssues.toLocaleString()} overdue`,
-      subtextDanger: stats.overdueIssues > 0,
+      primaryValue: stats.openIssues.toLocaleString(),
+      quietSubtext: `${stats.overdueIssues.toLocaleString()} overdue`,
+      urgencyValue:
+        stats.overdueIssues > 0 ? stats.overdueIssues.toLocaleString() : null,
+      urgencyCaption: 'overdue',
+      urgencyKind: stats.overdueIssues > 0 ? 'overdue' : null,
       link: '/issues',
       icon: ExclamationCircleOutlined,
     },
     {
       key: 'rfis',
       label: 'Open RFIs',
-      value: stats.openRfis.toLocaleString(),
-      subtext: `${stats.overdueRfis.toLocaleString()} overdue`,
-      subtextDanger: stats.overdueRfis > 0,
+      primaryValue: stats.openRfis.toLocaleString(),
+      quietSubtext: `${stats.overdueRfis.toLocaleString()} overdue`,
+      urgencyValue:
+        stats.overdueRfis > 0 ? stats.overdueRfis.toLocaleString() : null,
+      urgencyCaption: 'overdue',
+      urgencyKind: stats.overdueRfis > 0 ? 'overdue' : null,
       link: '/rfis',
       icon: QuestionCircleOutlined,
     },
     {
       key: 'risks',
       label: 'Active Risks',
-      value: activeRisks.toLocaleString(),
-      subtext: `${stats.criticalRisks.toLocaleString()} critical`,
-      subtextDanger: stats.criticalRisks > 0,
+      primaryValue: activeRisks.toLocaleString(),
+      quietSubtext: `${stats.criticalRisks.toLocaleString()} critical`,
+      urgencyValue:
+        stats.criticalRisks > 0 ? stats.criticalRisks.toLocaleString() : null,
+      urgencyCaption: 'critical',
+      urgencyKind: stats.criticalRisks > 0 ? 'critical' : null,
       link: '/risks',
       icon: WarningOutlined,
     },
     {
       key: 'punch',
       label: 'Punch Items',
-      value: stats.openPunchItems.toLocaleString(),
-      subtext: `${stats.overduePunchItems.toLocaleString()} overdue`,
-      subtextDanger: stats.overduePunchItems > 0,
+      primaryValue: stats.openPunchItems.toLocaleString(),
+      quietSubtext: `${stats.overduePunchItems.toLocaleString()} overdue`,
+      urgencyValue:
+        stats.overduePunchItems > 0
+          ? stats.overduePunchItems.toLocaleString()
+          : null,
+      urgencyCaption: 'overdue',
+      urgencyKind: stats.overduePunchItems > 0 ? 'overdue' : null,
       link: '/punch-list',
       icon: ToolOutlined,
     },
     {
       key: 'reviews',
       label: 'Pending Reviews',
-      value: stats.pendingReviews.toLocaleString(),
-      subtext: 'awaiting approval',
-      subtextDanger: false,
+      primaryValue: stats.pendingReviews.toLocaleString(),
+      quietSubtext: 'awaiting approval',
+      urgencyValue: null,
+      urgencyCaption: 'awaiting approval',
+      urgencyKind: stats.pendingReviews > 0 ? 'pending' : null,
       link: '/review-inbox',
       icon: AuditOutlined,
     },
   ];
+}
+
+function KpiCard({ card }: { card: KpiCardConfig }): React.ReactNode {
+  const Icon = card.icon;
+  const isDanger =
+    card.urgencyKind === 'overdue' || card.urgencyKind === 'critical';
+  const isPending = card.urgencyKind === 'pending';
+
+  const borderStyle = isDanger
+    ? {
+        borderLeft: `3px solid ${dashboardSemantic.danger}`,
+        borderTop: `1px solid ${dashboardSemantic.quietBorder}`,
+        borderRight: `1px solid ${dashboardSemantic.quietBorder}`,
+        borderBottom: `1px solid ${dashboardSemantic.quietBorder}`,
+        borderRadius: '0 8px 8px 0',
+      }
+    : {
+        border: `1px solid ${dashboardSemantic.quietBorder}`,
+        borderRadius: 8,
+      };
+
+  return (
+    <Link href={card.link} className="block h-full">
+      <div
+        className="h-full cursor-pointer bg-white p-4 transition-shadow hover:shadow-sm"
+        style={borderStyle}
+      >
+        <div className="mb-3 flex items-center gap-2">
+          <Icon
+            className="text-[13px]"
+            style={{
+              color: isDanger
+                ? dashboardSemantic.danger
+                : tokens.colorTextSecondary,
+            }}
+          />
+          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+            {card.label}
+          </span>
+        </div>
+
+        {isDanger && card.urgencyValue ? (
+          <div className="flex flex-col gap-1">
+            <p
+              className="text-[28px] font-bold leading-none tracking-[-0.03em]"
+              style={{ color: dashboardSemantic.dangerStrong }}
+            >
+              {card.urgencyValue}
+            </p>
+            <p
+              className="text-[11px] font-semibold uppercase tracking-wide"
+              style={{ color: dashboardSemantic.danger }}
+            >
+              {card.urgencyCaption}
+            </p>
+            <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
+              <span className="font-medium text-[var(--color-text-primary)]">
+                {card.primaryValue}
+              </span>{' '}
+              {card.key === 'risks' ? 'active' : 'open'}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <p
+              className="text-[22px] font-semibold leading-none tracking-[-0.02em]"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {card.primaryValue}
+            </p>
+            <p
+              className="text-[11px]"
+              style={{
+                color: isPending
+                  ? dashboardSemantic.warning
+                  : tokens.colorTextTertiary,
+              }}
+            >
+              {card.quietSubtext}
+            </p>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
 }
 
 /**
@@ -435,41 +624,17 @@ export default function PortfolioDashboard({
   return (
     <div className={layout.sectionStack}>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.key} href={card.link} className="block">
-              <div className="cursor-pointer rounded-lg border border-[var(--color-border-tertiary)] p-4 transition-shadow hover:shadow-sm">
-                <div className="mb-2 flex items-center gap-2">
-                  <Icon className="text-[var(--color-text-secondary)]" />
-                  <span className="text-xs uppercase tracking-wider text-[var(--color-text-tertiary)]">
-                    {card.label}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                  {card.value}
-                </p>
-                <p
-                  className={`text-xs ${
-                    card.subtextDanger
-                      ? 'text-red-600'
-                      : 'text-[var(--color-text-tertiary)]'
-                  }`}
-                >
-                  {card.subtext}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {cards.map((card) => (
+          <KpiCard key={card.key} card={card} />
+        ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <SectionCard title="Issues by Status">
-          <DonutChart data={buildIssueSlices(stats)} />
+          <StatusStackedBar segments={buildIssueSegments(stats)} />
         </SectionCard>
         <SectionCard title="Risks by Status">
-          <DonutChart data={buildRiskSlices(stats)} />
+          <StatusStackedBar segments={buildRiskSegments(stats)} />
         </SectionCard>
       </div>
 
@@ -478,7 +643,7 @@ export default function PortfolioDashboard({
           <PunchBarChart data={buildPunchBars(stats)} />
         </SectionCard>
         <SectionCard title="Projects by Status">
-          <DonutChart data={buildProjectSlices(stats)} />
+          <ProjectDonut data={buildProjectSlices(stats)} />
         </SectionCard>
       </div>
 

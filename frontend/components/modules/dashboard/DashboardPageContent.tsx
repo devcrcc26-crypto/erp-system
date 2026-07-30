@@ -34,10 +34,15 @@ function ScheduleOverviewSection({
 
   return (
     <Collapse
+      className="dashboard-schedule-collapse"
       items={[
         {
           key: 'schedule-overview',
-          label: 'Schedule Overview',
+          label: (
+            <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--color-text-primary)]">
+              Schedule Overview
+            </span>
+          ),
           children: (
             <div className={layout.sectionStack}>
               <FilterSection
