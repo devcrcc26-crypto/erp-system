@@ -701,7 +701,10 @@ export interface MappedPunchItem {
   closedBy: string | null;
   closedByName?: string | null;
   taskDisciplineId: string | null;
+  disciplineName?: string | null;
   designPackageId: string | null;
+  packageCode?: string | null;
+  packageName?: string | null;
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;

@@ -1043,6 +1043,7 @@ export interface Issue {
 
 export interface PunchItem {
   id: string;
+  companyId: string;
   projectId: string;
   raisedBy: string;
   raisedByName?: string | null;
@@ -1052,11 +1053,23 @@ export interface PunchItem {
   description: string;
   roomOrArea: string | null;
   tradeResponsible: string | null;
+  category: string | null;
   severity: PunchItemSeverity;
   status: PunchItemStatus;
   dueDate: string | null;
+  resolutionNote: string | null;
   correctedAt: string | null;
   verifiedAt: string | null;
+  verifiedBy: string | null;
+  verifiedByName?: string | null;
+  closedAt: string | null;
+  closedBy: string | null;
+  closedByName?: string | null;
+  taskDisciplineId: string | null;
+  disciplineName?: string | null;
+  designPackageId: string | null;
+  packageCode?: string | null;
+  packageName?: string | null;
   attachmentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1600,14 +1613,15 @@ export interface CreatePunchItemRequest {
   description: string;
   roomOrArea?: string;
   tradeResponsible?: string;
+  category?: string;
   severity: PunchItemSeverity;
   assignedTo?: string;
   dueDate?: string;
+  taskDisciplineId?: string;
+  designPackageId?: string;
 }
 
-export type UpdatePunchItemRequest = Partial<CreatePunchItemRequest> & {
-  status?: PunchItemStatus;
-};
+export type UpdatePunchItemRequest = Partial<CreatePunchItemRequest>;
 
 export interface UpdateCloseoutRequest {
   practicalCompletionDate?: string;

@@ -163,3 +163,150 @@ export function useDeletePunchItem() {
     },
   });
 }
+
+function invalidatePunchItemQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  punchItemId: string,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: punchItemKeys.lists(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: punchItemKeys.detail(projectId, punchItemId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: punchItemKeys.all,
+  });
+}
+
+export function useAssignPunchItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      punchItemId,
+      assignedTo,
+    }: {
+      projectId: string;
+      punchItemId: string;
+      assignedTo: string;
+    }) =>
+      apiPost<PunchItem>(
+        `${punchItemsPath(projectId)}/${punchItemId}/assign`,
+        { assignedTo },
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePunchItemQueries(
+        queryClient,
+        variables.projectId,
+        variables.punchItemId,
+      );
+    },
+  });
+}
+
+export function useCorrectPunchItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      punchItemId,
+      resolutionNote,
+    }: {
+      projectId: string;
+      punchItemId: string;
+      resolutionNote: string;
+    }) =>
+      apiPost<PunchItem>(
+        `${punchItemsPath(projectId)}/${punchItemId}/correct`,
+        { resolutionNote },
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePunchItemQueries(
+        queryClient,
+        variables.projectId,
+        variables.punchItemId,
+      );
+    },
+  });
+}
+
+export function useVerifyPunchItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      punchItemId,
+    }: {
+      projectId: string;
+      punchItemId: string;
+    }) =>
+      apiPost<PunchItem>(
+        `${punchItemsPath(projectId)}/${punchItemId}/verify`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePunchItemQueries(
+        queryClient,
+        variables.projectId,
+        variables.punchItemId,
+      );
+    },
+  });
+}
+
+export function useClosePunchItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      punchItemId,
+    }: {
+      projectId: string;
+      punchItemId: string;
+    }) =>
+      apiPost<PunchItem>(
+        `${punchItemsPath(projectId)}/${punchItemId}/close`,
+        {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePunchItemQueries(
+        queryClient,
+        variables.projectId,
+        variables.punchItemId,
+      );
+    },
+  });
+}
+
+export function useReopenPunchItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      punchItemId,
+      reason,
+    }: {
+      projectId: string;
+      punchItemId: string;
+      reason?: string;
+    }) =>
+      apiPost<PunchItem>(
+        `${punchItemsPath(projectId)}/${punchItemId}/reopen`,
+        reason?.trim() ? { reason: reason.trim() } : {},
+      ),
+    onSuccess: (_data, variables) => {
+      invalidatePunchItemQueries(
+        queryClient,
+        variables.projectId,
+        variables.punchItemId,
+      );
+    },
+  });
+}

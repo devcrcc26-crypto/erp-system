@@ -257,6 +257,24 @@ export function formatPunchItemStatus(status: PunchItemStatus): string {
   );
 }
 
+const PUNCH_CATEGORY_LABELS: Record<string, string> = {
+  STRUCTURAL: 'Structural',
+  ARCHITECTURAL: 'Architectural',
+  MEP: 'MEP',
+  CIVIL: 'Civil',
+  FINISHING: 'Finishing',
+  LANDSCAPING: 'Landscaping',
+  SAFETY: 'Safety',
+  OTHER: 'Other',
+};
+
+export function formatPunchCategory(category: string): string {
+  return (
+    PUNCH_CATEGORY_LABELS[category] ??
+    category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
 export function punchItemStatusVariant(
   status: PunchItemStatus,
 ): StatusBadgeVariant {

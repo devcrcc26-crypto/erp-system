@@ -485,10 +485,37 @@ export class PunchItemsService {
       );
     }
 
+    const mapped = mapPunchItem(row, attachmentFolderId);
+
+    if (row.taskDisciplineId) {
+      const discipline = await this.prisma.taskDiscipline.findFirst({
+        where: {
+          id: row.taskDisciplineId,
+          companyId: ctx.companyId,
+          deletedAt: null,
+        },
+        select: { disciplineName: true },
+      });
+      mapped.disciplineName = discipline?.disciplineName ?? null;
+    }
+
+    if (row.designPackageId) {
+      const designPackage = await this.prisma.designPackage.findFirst({
+        where: {
+          id: row.designPackageId,
+          companyId: ctx.companyId,
+          deletedAt: null,
+        },
+        select: { packageCode: true, name: true },
+      });
+      mapped.packageCode = designPackage?.packageCode ?? null;
+      mapped.packageName = designPackage?.name ?? null;
+    }
+
     return enrichWithUserDisplayNames(
       this.prisma,
       ctx.companyId,
-      mapPunchItem(row, attachmentFolderId),
+      mapped,
       PM_PUNCH_ITEM_USER_NAMES,
     );
   }

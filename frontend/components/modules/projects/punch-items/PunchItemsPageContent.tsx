@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -10,13 +10,16 @@ import {
   Drawer,
   Form,
   Input,
+  Radio,
   Select,
   Space,
+  Upload,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import type { UploadFile } from 'antd/es/upload/interface';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { ClipboardCheck } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -36,6 +39,10 @@ import {
   useCreatePunchItem,
   usePunchItems,
 } from '@/lib/query/punch-items';
+import { useDesignPackages } from '@/lib/query/design-packages';
+import { useProjectDisciplines } from '@/lib/query/disciplines';
+import { useUploadDocumentToFolder } from '@/lib/query/documents';
+import { useAllProjects } from '@/lib/query/projects';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
@@ -44,6 +51,7 @@ import {
   punchItemSeverityVariant,
   punchItemStatusVariant,
 } from '@/lib/utils/pm-status-display';
+import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
 import { PUNCH_ITEM_WORKFLOW } from '@/lib/api/workflow';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import PunchItemDetailDrawer from '@/components/modules/projects/punch-items/PunchItemDetailDrawer';
@@ -55,13 +63,30 @@ const SEVERITY_OPTIONS: { value: PunchItemSeverity; label: string }[] = [
   { value: 'CRITICAL', label: 'Critical' },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: 'STRUCTURAL', label: 'Structural' },
+  { value: 'ARCHITECTURAL', label: 'Architectural' },
+  { value: 'MEP', label: 'MEP' },
+  { value: 'CIVIL', label: 'Civil' },
+  { value: 'FINISHING', label: 'Finishing' },
+  { value: 'LANDSCAPING', label: 'Landscaping' },
+  { value: 'SAFETY', label: 'Safety' },
+  { value: 'OTHER', label: 'Other' },
+] as const;
+
 const STATUS_OPTIONS = PUNCH_ITEM_WORKFLOW.map((step) => ({
   value: step.key as PunchItemStatus,
   label: step.label,
 }));
 
+type PunchScope = 'PROJECT' | 'DISCIPLINE' | 'SUBTASK';
+
 interface PunchItemFormValues {
   description: string;
+  category?: string;
+  scope: PunchScope;
+  taskDisciplineId?: string;
+  designPackageId?: string;
   roomOrArea?: string;
   tradeResponsible?: string;
   severity: PunchItemSeverity;
@@ -69,40 +94,167 @@ interface PunchItemFormValues {
   dueDate?: Dayjs;
 }
 
-function PunchItemFormDrawer({
+export function PunchItemFormDrawer({
   open,
-  projectId,
+  projectId: projectIdProp,
+  showProjectSelector = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  projectId: string;
+  projectId?: string;
+  showProjectSelector?: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (created: PunchItem) => void;
 }): React.ReactNode {
   const [form] = Form.useForm<PunchItemFormValues>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    projectIdProp ?? null,
+  );
+  const effectiveProjectId = selectedProjectId ?? projectIdProp ?? '';
+  const [scope, setScope] = useState<PunchScope>('PROJECT');
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+
   const createItem = useCreatePunchItem();
+  const uploadDocument = useUploadDocumentToFolder();
   const messageApi = useAppMessage();
 
+  const projectsQuery = useAllProjects({}, open && showProjectSelector);
+  const projectOptions = useMemo(
+    () =>
+      (projectsQuery.data?.data ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.projectCode} — ${p.name}`,
+      })),
+    [projectsQuery.data?.data],
+  );
+
+  const disciplinesQuery = useProjectDisciplines(
+    effectiveProjectId,
+    open && Boolean(effectiveProjectId) && scope !== 'PROJECT',
+  );
+  const disciplineOptions = useMemo(
+    () =>
+      (disciplinesQuery.data ?? []).map((row) => {
+        const number = resolveDisciplineDisplayLabel(row);
+        return {
+          value: row.id,
+          label:
+            number === row.disciplineName
+              ? row.disciplineName
+              : `${number} — ${row.disciplineName}`,
+        };
+      }),
+    [disciplinesQuery.data],
+  );
+
+  const taskDisciplineId = Form.useWatch('taskDisciplineId', form);
+  const packagesQuery = useDesignPackages(
+    effectiveProjectId,
+    taskDisciplineId ?? '',
+    open &&
+      scope === 'SUBTASK' &&
+      Boolean(effectiveProjectId) &&
+      Boolean(taskDisciplineId),
+  );
+  const packageOptions = useMemo(
+    () =>
+      (packagesQuery.data ?? []).map((pkg) => ({
+        value: pkg.id,
+        label: `${pkg.packageCode} — ${pkg.name}`,
+      })),
+    [packagesQuery.data],
+  );
+
+  useEffect(() => {
+    if (open && projectIdProp) {
+      setSelectedProjectId(projectIdProp);
+    }
+  }, [open, projectIdProp]);
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      setFileList([]);
+      setScope('PROJECT');
+      setUploading(false);
+      if (showProjectSelector && !projectIdProp) {
+        setSelectedProjectId(null);
+      }
+    }
+  }, [open, form, showProjectSelector, projectIdProp]);
+
   async function handleSubmit(values: PunchItemFormValues): Promise<void> {
+    if (!effectiveProjectId) {
+      messageApi.error('Select a project first');
+      return;
+    }
     try {
-      await createItem.mutateAsync({
-        projectId,
+      const result = await createItem.mutateAsync({
+        projectId: effectiveProjectId,
         body: {
           description: values.description.trim(),
+          category: values.category || undefined,
+          severity: values.severity,
           roomOrArea: values.roomOrArea?.trim() || undefined,
           tradeResponsible: values.tradeResponsible?.trim() || undefined,
-          severity: values.severity,
-          assignedTo: values.assignedTo,
-          dueDate: values.dueDate?.format('YYYY-MM-DD'),
+          dueDate: values.dueDate
+            ? values.dueDate.format('YYYY-MM-DD')
+            : undefined,
+          assignedTo: values.assignedTo || undefined,
+          taskDisciplineId:
+            scope === 'DISCIPLINE' || scope === 'SUBTASK'
+              ? values.taskDisciplineId
+              : undefined,
+          designPackageId:
+            scope === 'SUBTASK' ? values.designPackageId : undefined,
         },
       });
+
+      if (fileList.length > 0 && result.attachmentFolderId) {
+        setUploading(true);
+        try {
+          const folderId = result.attachmentFolderId;
+          await Promise.all(
+            fileList.map(async (entry) => {
+              const file = entry.originFileObj;
+              if (!file) {
+                return;
+              }
+              await uploadDocument.mutateAsync({
+                folderId,
+                file: file as File,
+              });
+            }),
+          );
+        } catch (uploadError) {
+          notifyApiError(
+            uploadError,
+            'Punch item created but file upload failed. Upload from the detail drawer.',
+            messageApi,
+          );
+          form.resetFields();
+          setFileList([]);
+          setScope('PROJECT');
+          onSaved(result);
+          onClose();
+          return;
+        } finally {
+          setUploading(false);
+        }
+      }
+
       messageApi.success('Punch item created');
       form.resetFields();
-      onSaved();
+      setFileList([]);
+      setScope('PROJECT');
+      onSaved(result);
       onClose();
     } catch (error) {
       notifyApiError(error, 'Failed to create punch item', messageApi);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -114,54 +266,170 @@ function PunchItemFormDrawer({
       onClose={onClose}
       destroyOnHidden
     >
-      <Form<PunchItemFormValues>
-        form={form}
-        layout="vertical"
-        className="erp-drawer-form"
-        initialValues={{ severity: 'MINOR' }}
-        onFinish={(values: PunchItemFormValues) => void handleSubmit(values)}
-      >
-        <Form.Item
-          label="Description"
-          name="description"
-          rules={[{ required: true, message: 'Description is required' }]}
+      {open ? (
+        <Form<PunchItemFormValues>
+          form={form}
+          layout="vertical"
+          className="erp-drawer-form"
+          initialValues={{ severity: 'MINOR', scope: 'PROJECT' }}
+          onFinish={(values: PunchItemFormValues) => void handleSubmit(values)}
         >
-          <Input.TextArea rows={3} placeholder="Describe the defect or incomplete work" />
-        </Form.Item>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label="Room / area" name="roomOrArea">
-            <Input placeholder="Level 2, Room 204" />
-          </Form.Item>
-          <Form.Item label="Trade" name="tradeResponsible">
-            <Input placeholder="e.g. Painting" />
-          </Form.Item>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 md:gap-x-4">
+          {showProjectSelector && (
+            <Form.Item label="Project" required>
+              <Select
+                showSearch
+                placeholder="Select project"
+                options={projectOptions}
+                loading={projectsQuery.isLoading}
+                optionFilterProp="label"
+                value={selectedProjectId ?? undefined}
+                onChange={(value: string) => {
+                  setSelectedProjectId(value);
+                  form.setFieldValue('taskDisciplineId', undefined);
+                  form.setFieldValue('designPackageId', undefined);
+                }}
+              />
+            </Form.Item>
+          )}
+
           <Form.Item
-            label="Severity"
-            name="severity"
-            rules={[{ required: true }]}
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: 'Describe the defect' }]}
           >
-            <Select options={SEVERITY_OPTIONS} />
+            <Input.TextArea
+              rows={3}
+              placeholder="What is wrong? Describe the defect or incomplete work."
+            />
           </Form.Item>
-          <Form.Item label="Assigned to" name="assignedTo">
-            <UserSelect allowClear />
+
+          <Form.Item name="category" label="Category">
+            <Select
+              allowClear
+              placeholder="Select category"
+              options={[...CATEGORY_OPTIONS]}
+            />
           </Form.Item>
-        </div>
-        <Form.Item label="Due date" name="dueDate">
-          <DatePicker className="w-full" />
-        </Form.Item>
-        <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={createItem.isPending}
-          >
-            Create item
-          </Button>
-        </div>
-      </Form>
+
+          <Form.Item name="scope" label="Scope">
+            <Radio.Group
+              onChange={(e) => {
+                const next = e.target.value as PunchScope;
+                setScope(next);
+                form.setFieldValue('taskDisciplineId', undefined);
+                form.setFieldValue('designPackageId', undefined);
+              }}
+            >
+              <Radio value="PROJECT">Project-wide</Radio>
+              <Radio value="DISCIPLINE">Discipline</Radio>
+              <Radio value="SUBTASK">Subtask</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          {(scope === 'DISCIPLINE' || scope === 'SUBTASK') && (
+            <Form.Item
+              name="taskDisciplineId"
+              label="Discipline"
+              rules={[
+                {
+                  required: true,
+                  message: 'Select discipline',
+                },
+              ]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Select discipline"
+                loading={disciplinesQuery.isLoading}
+                disabled={!effectiveProjectId}
+                options={disciplineOptions}
+                onChange={() =>
+                  form.setFieldValue('designPackageId', undefined)
+                }
+              />
+            </Form.Item>
+          )}
+
+          {scope === 'SUBTASK' && (
+            <Form.Item
+              name="designPackageId"
+              label="Subtask"
+              rules={[
+                {
+                  required: true,
+                  message: 'Select subtask',
+                },
+              ]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Select subtask"
+                loading={packagesQuery.isLoading}
+                disabled={!taskDisciplineId}
+                options={packageOptions}
+              />
+            </Form.Item>
+          )}
+
+          <Form.Item name="roomOrArea" label="Location / Area">
+            <Input placeholder="Room, level, grid reference, or area description" />
+          </Form.Item>
+
+          <Form.Item name="tradeResponsible" label="Trade responsible">
+            <Input placeholder="Which trade or contractor is responsible for fixing" />
+          </Form.Item>
+
+          <div className="flex gap-3">
+            <Form.Item
+              name="severity"
+              label="Severity"
+              rules={[{ required: true }]}
+              className="flex-1"
+              initialValue="MINOR"
+            >
+              <Select options={SEVERITY_OPTIONS} />
+            </Form.Item>
+            <Form.Item name="dueDate" label="Due date" className="flex-1">
+              <DatePicker className="w-full" />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="assignedTo" label="Assign to">
+            <UserSelect
+              placeholder="Assign now or later from the detail drawer"
+              allowClear
+            />
+          </Form.Item>
+          <p className="mb-3 -mt-3 text-xs text-[var(--color-text-tertiary)]">
+            If assigned now, status will be set to Assigned automatically.
+          </p>
+
+          <Form.Item label="Photos / Evidence">
+            <Upload
+              multiple
+              beforeUpload={() => false}
+              fileList={fileList}
+              onChange={({ fileList: next }) => setFileList(next)}
+              listType="picture"
+            >
+              <Button icon={<UploadOutlined />}>Select files</Button>
+            </Upload>
+          </Form.Item>
+
+          <div className="flex justify-end gap-2">
+            <Button onClick={onClose}>Cancel</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={createItem.isPending || uploading}
+            >
+              Create item
+            </Button>
+          </div>
+        </Form>
+      ) : null}
     </Drawer>
   );
 }
@@ -349,7 +617,10 @@ export default function PunchItemsPageContent({
         open={createOpen}
         projectId={projectId}
         onClose={() => setCreateOpen(false)}
-        onSaved={() => void query.refetch()}
+        onSaved={(created) => {
+          void query.refetch();
+          setSelectedId(created.id);
+        }}
       />
 
       <PunchItemDetailDrawer
