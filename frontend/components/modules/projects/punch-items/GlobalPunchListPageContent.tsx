@@ -5,6 +5,7 @@ import { Alert, Button, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { ClipboardCheck } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import ListStatusTabs, {
@@ -69,6 +70,7 @@ const CATEGORY_OPTIONS = [
  * Global Punch List — cross-project portfolio list for D.Lead / PM / PA / SA.
  */
 export default function GlobalPunchListPageContent(): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -174,22 +176,36 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
           <Button
             type="link"
             className="!px-0"
-            onClick={() =>
-              setSelected({
-                projectId: record.projectId,
-                punchItemId: record.id,
-              })
-            }
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(
+                `/projects/${record.projectId}/punch-list/${record.id}`,
+              );
+            }}
           >
             {value}
           </Button>
         ),
       },
       {
-        title: 'Description',
-        dataIndex: 'description',
-        key: 'description',
+        title: 'Title',
+        dataIndex: 'title',
+        key: 'title',
         ellipsis: true,
+        render: (value: string, record) => (
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(
+                `/projects/${record.projectId}/punch-list/${record.id}`,
+              );
+            }}
+          >
+            {value}
+          </Button>
+        ),
       },
       {
         title: 'Category',
@@ -248,7 +264,7 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
             : '—',
       },
     ],
-    [resolveUserDisplay],
+    [resolveUserDisplay, router],
   );
 
   if (!capabilitiesReady || (punchQuery.isLoading && !punchQuery.data)) {

@@ -24,6 +24,7 @@ describe('PunchItemsService', () => {
       raisedBy: ctx.userId,
       assignedTo: 'user-assignee',
       punchNumber: 'PL-PRJ-001',
+      title: 'Cracked tile in lobby',
       description: 'Cracked tile in lobby',
       roomOrArea: 'Lobby',
       tradeResponsible: 'Tiling',
@@ -108,6 +109,7 @@ describe('PunchItemsService', () => {
       prisma.punchItem.create.mockResolvedValue(created);
 
       await service.createPunchItem(ctx, projectId, {
+        title: 'Cracked tile in lobby',
         description: 'Cracked tile in lobby',
         severity: PunchItemSeverity.MINOR,
       });
@@ -131,6 +133,7 @@ describe('PunchItemsService', () => {
       );
 
       await service.createPunchItem(ctx, projectId, {
+        title: 'Cracked tile in lobby',
         description: 'Cracked tile in lobby',
         severity: PunchItemSeverity.MINOR,
         assignedTo: 'user-assignee',

@@ -1913,6 +1913,10 @@ export class CreateIssueResponseDto {
 export class CreatePunchItemDto {
   @ApiProperty()
   @IsString()
+  title!: string;
+
+  @ApiProperty()
+  @IsString()
   description!: string;
 
   @ApiPropertyOptional()

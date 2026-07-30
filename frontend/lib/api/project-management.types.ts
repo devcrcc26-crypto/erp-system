@@ -1050,6 +1050,7 @@ export interface PunchItem {
   assignedTo: string | null;
   assignedToName?: string | null;
   punchNumber: string;
+  title: string;
   description: string;
   roomOrArea: string | null;
   tradeResponsible: string | null;
@@ -1612,6 +1613,7 @@ export interface CreateIssueResponseRequest {
 }
 
 export interface CreatePunchItemRequest {
+  title: string;
   description: string;
   roomOrArea?: string;
   tradeResponsible?: string;

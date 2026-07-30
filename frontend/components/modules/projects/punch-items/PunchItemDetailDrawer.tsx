@@ -12,6 +12,7 @@ import {
   Input,
   Modal,
 } from 'antd';
+import { useRouter } from 'next/navigation';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -63,6 +64,7 @@ export default function PunchItemDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }): React.ReactNode {
+  const router = useRouter();
   const [assignOpen, setAssignOpen] = useState(false);
   const [correctOpen, setCorrectOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
@@ -218,6 +220,9 @@ export default function PunchItemDetailDrawer({
               <span className="shrink-0 font-mono text-[13px] font-semibold">
                 {item.punchNumber}
               </span>
+              <span className="min-w-0 truncate text-[13px] font-medium">
+                {item.title}
+              </span>
               <span className="shrink-0">
                 <StatusBadge
                   label={formatPunchItemStatus(item.status)}
@@ -247,6 +252,20 @@ export default function PunchItemDetailDrawer({
         )}
         {item && (
           <div className={layout.drawerStack}>
+            <div className="mb-2 flex justify-end">
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                  onClose();
+                  router.push(
+                    `/projects/${projectId}/punch-list/${item.id}`,
+                  );
+                }}
+              >
+                Open full page →
+              </Button>
+            </div>
             <WorkflowStepper
               className="erp-drawer-workflow"
               steps={PUNCH_ITEM_WORKFLOW}
@@ -259,6 +278,9 @@ export default function PunchItemDetailDrawer({
               size="small"
               bordered
             >
+              <Descriptions.Item label="Title">
+                {item.title}
+              </Descriptions.Item>
               {item.category && (
                 <Descriptions.Item label="Category">
                   {formatPunchCategory(item.category)}
@@ -453,6 +475,7 @@ export default function PunchItemDetailDrawer({
       <Modal
         title="Assign Punch Item"
         open={assignOpen}
+        forceRender
         onOk={() => void handleAssign()}
         onCancel={() => {
           assignForm.resetFields();
@@ -475,6 +498,7 @@ export default function PunchItemDetailDrawer({
       <Modal
         title="Mark as Corrected"
         open={correctOpen}
+        forceRender
         onOk={() => void handleCorrect()}
         onCancel={() => {
           correctForm.resetFields();
@@ -509,6 +533,7 @@ export default function PunchItemDetailDrawer({
       <Modal
         title="Reopen Punch Item"
         open={reopenOpen}
+        forceRender
         onOk={() => void handleReopen()}
         onCancel={() => {
           reopenForm.resetFields();

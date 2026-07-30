@@ -21,6 +21,7 @@ describe('PunchItemsService verification guard', () => {
       raisedBy: raiserUserId,
       assignedTo: assigneeUserId,
       punchNumber: 'PL-PRJ-001',
+      title: 'Cracked tile in lobby',
       description: 'Cracked tile in lobby',
       roomOrArea: 'Lobby',
       tradeResponsible: 'Tiling',

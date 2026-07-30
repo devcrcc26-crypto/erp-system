@@ -685,6 +685,7 @@ export interface MappedPunchItem {
   assignedTo: string | null;
   assignedToName?: string | null;
   punchNumber: string;
+  title: string;
   description: string;
   roomOrArea: string | null;
   tradeResponsible: string | null;
@@ -1403,6 +1404,7 @@ export function mapPunchItem(
     raisedBy: row.raisedBy,
     assignedTo: row.assignedTo,
     punchNumber: row.punchNumber,
+    title: row.title,
     description: row.description,
     roomOrArea: row.roomOrArea,
     tradeResponsible: row.tradeResponsible,

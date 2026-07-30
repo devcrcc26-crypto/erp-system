@@ -45,6 +45,7 @@ const PUNCH_ITEM_SORT_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'punchNumber',
+  'title',
   'description',
   'status',
   'dueDate',
@@ -179,6 +180,7 @@ export class PunchItemsService {
         raisedBy: ctx.userId,
         assignedTo: dto.assignedTo ?? null,
         punchNumber,
+        title: dto.title.trim(),
         description: dto.description.trim(),
         roomOrArea: dto.roomOrArea?.trim() || null,
         tradeResponsible: dto.tradeResponsible?.trim() || null,
@@ -228,6 +230,7 @@ export class PunchItemsService {
       where: { id: punchItemId },
       data: {
         assignedTo: dto.assignedTo,
+        title: dto.title?.trim(),
         description: dto.description?.trim(),
         roomOrArea:
           dto.roomOrArea !== undefined
@@ -589,6 +592,7 @@ export class PunchItemsService {
       const term = query.search.trim();
       where.OR = [
         { punchNumber: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
         { description: { contains: term, mode: 'insensitive' } },
         { roomOrArea: { contains: term, mode: 'insensitive' } },
         { tradeResponsible: { contains: term, mode: 'insensitive' } },

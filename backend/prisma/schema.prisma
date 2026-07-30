@@ -3003,6 +3003,7 @@ model PunchItem {
   raisedBy         String            @map("raised_by")
   assignedTo       String?           @map("assigned_to")
   punchNumber      String            @map("punch_number")
+  title            String
   description      String
   roomOrArea       String?           @map("room_or_area")
   tradeResponsible String?           @map("trade_responsible")

@@ -20,6 +20,7 @@ import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { ClipboardCheck } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import ListStatusTabs, {
@@ -87,6 +88,7 @@ const CATEGORY_OPTIONS = [
 type PunchScope = 'PROJECT' | 'DISCIPLINE' | 'SUBTASK';
 
 interface PunchItemFormValues {
+  title: string;
   description: string;
   category?: string;
   scope: PunchScope;
@@ -195,6 +197,7 @@ export function PunchItemFormDrawer({
       const result = await createItem.mutateAsync({
         projectId: effectiveProjectId,
         body: {
+          title: values.title.trim(),
           description: values.description.trim(),
           category: values.category || undefined,
           severity: values.severity,
@@ -265,7 +268,6 @@ export function PunchItemFormDrawer({
       open={open}
       title="New punch item"
       onClose={onClose}
-      destroyOnHidden
     >
       <Form<PunchItemFormValues>
           form={form}
@@ -291,6 +293,14 @@ export function PunchItemFormDrawer({
               />
             </Form.Item>
           )}
+
+          <Form.Item
+            name="title"
+            label="Title"
+            rules={[{ required: true, message: 'Enter a short title' }]}
+          >
+            <Input placeholder="Short summary of the defect" maxLength={120} />
+          </Form.Item>
 
           <Form.Item
             name="description"
@@ -387,7 +397,6 @@ export function PunchItemFormDrawer({
               label="Severity"
               rules={[{ required: true }]}
               className="flex-1"
-              initialValue="MINOR"
             >
               <Select options={SEVERITY_OPTIONS} />
             </Form.Item>
@@ -438,6 +447,7 @@ export default function PunchItemsPageContent({
 }: {
   projectId: string;
 }): React.ReactNode {
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
@@ -514,17 +524,32 @@ export default function PunchItemsPageContent({
           <Button
             type="link"
             className="!px-0"
-            onClick={() => setSelectedId(record.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(`/projects/${projectId}/punch-list/${record.id}`);
+            }}
           >
             {value}
           </Button>
         ),
       },
       {
-        title: 'Description',
-        dataIndex: 'description',
-        key: 'description',
+        title: 'Title',
+        dataIndex: 'title',
+        key: 'title',
         ellipsis: true,
+        render: (value: string, record) => (
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              router.push(`/projects/${projectId}/punch-list/${record.id}`);
+            }}
+          >
+            {value}
+          </Button>
+        ),
       },
       {
         title: 'Category',
@@ -575,7 +600,7 @@ export default function PunchItemsPageContent({
         ),
       },
     ],
-    [resolveUserDisplay],
+    [projectId, resolveUserDisplay, router],
   );
 
   if (!capabilitiesReady || (query.isLoading && !query.data)) {
