@@ -22,9 +22,13 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ListStatusTabs, {
+  type ListStatusTabKey,
+} from '@/components/ui/ListStatusTabs/ListStatusTabs';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -35,6 +39,7 @@ import type {
 import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import {
   useCreatePunchItem,
   usePunchItems,
@@ -46,13 +51,18 @@ import { useAllProjects } from '@/lib/query/projects';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
+  formatPunchCategory,
   formatPunchItemStatus,
-  isOverdue,
   punchItemSeverityVariant,
   punchItemStatusVariant,
 } from '@/lib/utils/pm-status-display';
 import { resolveDisciplineDisplayLabel } from '@/lib/utils/discipline-number';
-import { PUNCH_ITEM_WORKFLOW } from '@/lib/api/workflow';
+import {
+  PUNCH_CLOSED_STATUSES,
+  PUNCH_OPEN_STATUSES,
+  PUNCH_VERIFIED_STATUSES,
+  resolveTabStatusFilter,
+} from '@/lib/utils/list-status-tabs';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import PunchItemDetailDrawer from '@/components/modules/projects/punch-items/PunchItemDetailDrawer';
 import ProjectModuleGate from '@/components/modules/projects/ProjectModuleGate';
@@ -73,11 +83,6 @@ const CATEGORY_OPTIONS = [
   { value: 'SAFETY', label: 'Safety' },
   { value: 'OTHER', label: 'Other' },
 ] as const;
-
-const STATUS_OPTIONS = PUNCH_ITEM_WORKFLOW.map((step) => ({
-  value: step.key as PunchItemStatus,
-  label: step.label,
-}));
 
 type PunchScope = 'PROJECT' | 'DISCIPLINE' | 'SUBTASK';
 
@@ -168,18 +173,14 @@ export function PunchItemFormDrawer({
   );
 
   useEffect(() => {
-    if (open && projectIdProp) {
-      setSelectedProjectId(projectIdProp);
-    }
-  }, [open, projectIdProp]);
-
-  useEffect(() => {
-    if (!open) {
+    if (open) {
       form.resetFields();
       setFileList([]);
       setScope('PROJECT');
       setUploading(false);
-      if (showProjectSelector && !projectIdProp) {
+      if (projectIdProp) {
+        setSelectedProjectId(projectIdProp);
+      } else if (showProjectSelector) {
         setSelectedProjectId(null);
       }
     }
@@ -266,8 +267,7 @@ export function PunchItemFormDrawer({
       onClose={onClose}
       destroyOnHidden
     >
-      {open ? (
-        <Form<PunchItemFormValues>
+      <Form<PunchItemFormValues>
           form={form}
           layout="vertical"
           className="erp-drawer-form"
@@ -429,7 +429,6 @@ export function PunchItemFormDrawer({
             </Button>
           </div>
         </Form>
-      ) : null}
     </Drawer>
   );
 }
@@ -440,17 +439,70 @@ export default function PunchItemsPageContent({
   projectId: string;
 }): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [activeTab, setActiveTab] = useState<ListStatusTabKey>('active');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PunchItemStatus | undefined>();
+  const [severityFilter, setSeverityFilter] = useState<
+    PunchItemSeverity | undefined
+  >();
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const resolveUserDisplay = useUserDisplayResolver();
-  const query = usePunchItems(projectId, {
-    ...params,
+  const capabilitiesReady = !usePermissionsLoading();
+
+  const filterParams = {
     search: search.trim() || undefined,
-    status: statusFilter,
-  });
+    severity: severityFilter,
+    category: categoryFilter,
+  };
+
+  const openQuery = usePunchItems(
+    projectId,
+    {
+      ...(activeTab === 'active'
+        ? params
+        : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: resolveTabStatusFilter(PUNCH_OPEN_STATUSES, undefined),
+    },
+    capabilitiesReady,
+  );
+
+  const verifiedQuery = usePunchItems(
+    projectId,
+    {
+      ...(activeTab === 'withdrawn'
+        ? params
+        : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: resolveTabStatusFilter(PUNCH_VERIFIED_STATUSES, undefined),
+    },
+    capabilitiesReady,
+  );
+
+  const closedQuery = usePunchItems(
+    projectId,
+    {
+      ...(activeTab === 'closed'
+        ? params
+        : { page: 1 as const, limit: 1 as const }),
+      ...filterParams,
+      status: resolveTabStatusFilter(PUNCH_CLOSED_STATUSES, undefined),
+    },
+    capabilitiesReady,
+  );
+
+  const query =
+    activeTab === 'active'
+      ? openQuery
+      : activeTab === 'withdrawn'
+        ? verifiedQuery
+        : closedQuery;
+
+  const openCount = openQuery.data?.meta.total ?? 0;
+  const verifiedCount = verifiedQuery.data?.meta.total ?? 0;
+  const closedCount = closedQuery.data?.meta.total ?? 0;
 
   const columns: ColumnsType<PunchItem> = useMemo(
     () => [
@@ -475,16 +527,11 @@ export default function PunchItemsPageContent({
         ellipsis: true,
       },
       {
-        title: 'Area',
-        dataIndex: 'roomOrArea',
-        key: 'roomOrArea',
-        render: (value: string | null) => value ?? '-',
-      },
-      {
-        title: 'Trade',
-        dataIndex: 'tradeResponsible',
-        key: 'tradeResponsible',
-        render: (value: string | null) => value ?? '-',
+        title: 'Category',
+        dataIndex: 'category',
+        key: 'category',
+        render: (value: string | null) =>
+          value ? formatPunchCategory(value) : '—',
       },
       {
         title: 'Severity',
@@ -498,24 +545,23 @@ export default function PunchItemsPageContent({
         ),
       },
       {
-        title: 'Assigned',
-        dataIndex: 'assignedTo',
+        title: 'Area',
+        dataIndex: 'roomOrArea',
+        key: 'roomOrArea',
+        ellipsis: true,
+        render: (value: string | null) => value ?? '—',
+      },
+      {
+        title: 'Assigned To',
         key: 'assignedTo',
         render: (_: unknown, record: PunchItem) =>
-          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '—'),
       },
       {
         title: 'Due',
         dataIndex: 'dueDate',
         key: 'dueDate',
-        render: (value: string | null, record) => {
-          const overdue = isOverdue(value) && record.status !== 'CLOSED';
-          return (
-            <span className={overdue ? 'text-red-600' : undefined}>
-              {formatProjectDate(value)}
-            </span>
-          );
-        },
+        render: (value: string | null) => formatProjectDate(value),
       },
       {
         title: 'Status',
@@ -532,7 +578,7 @@ export default function PunchItemsPageContent({
     [resolveUserDisplay],
   );
 
-  if (query.isLoading) {
+  if (!capabilitiesReady || (query.isLoading && !query.data)) {
     return <PageLoadingSkeleton />;
   }
 
@@ -541,95 +587,135 @@ export default function PunchItemsPageContent({
 
   return (
     <ProjectModuleGate projectId={projectId} module="punch_items">
-    <>
-      <FormLayout
-        title="Punch list"
-        description="Final walkthrough defects, corrections, and verification tracking."
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateOpen(true)}
-          >
-            New punch item
-          </Button>
-        }
-      >
-        {query.isError && (
-          <Alert
-            type="error"
-            showIcon
-            className="!mb-4"
-            title="Unable to load punch list"
-            description={
-              query.error instanceof ApiRequestError
-                ? query.error.message
-                : 'Please try again.'
-            }
-          />
-        )}
+      <>
+        <FormLayout
+          title="Punch list"
+          description="Final walkthrough defects, corrections, and verification tracking."
+          extra={
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateOpen(true)}
+            >
+              New punch item
+            </Button>
+          }
+        >
+          {query.isError && (
+            <Alert
+              type="error"
+              showIcon
+              className="!mb-4"
+              title="Unable to load punch list"
+              description={
+                query.error instanceof ApiRequestError
+                  ? query.error.message
+                  : 'Please try again.'
+              }
+            />
+          )}
 
-        <Space wrap className="!mb-4">
-          <ListSearchInput
-            placeholder="Search punch items"
-            className={layout.filterControl}
-            committedValue={search}
-            onCommit={(value) => {
+          <ListStatusTabs
+            activeKey={activeTab}
+            onChange={(key) => {
+              setActiveTab(key);
               resetPage();
-              setSearch(value);
+            }}
+            activeLabel="Open"
+            closedLabel="Closed"
+            thirdLabel="Verified"
+            thirdTabPosition="middle"
+            activeCount={openCount}
+            closedCount={closedCount}
+            thirdCount={verifiedCount}
+          />
+
+          <Space wrap className="!mb-4">
+            <ListSearchInput
+              placeholder="Search punch items"
+              className={layout.filterControl}
+              committedValue={search}
+              onCommit={(value) => {
+                resetPage();
+                setSearch(value);
+              }}
+            />
+            <Select
+              allowClear
+              placeholder="Severity"
+              className={layout.filterControl}
+              value={severityFilter}
+              onChange={(value: PunchItemSeverity | undefined) => {
+                resetPage();
+                setSeverityFilter(value);
+              }}
+              options={SEVERITY_OPTIONS}
+            />
+            <Select
+              allowClear
+              placeholder="Category"
+              className={layout.filterControl}
+              value={categoryFilter}
+              onChange={(value: string | undefined) => {
+                resetPage();
+                setCategoryFilter(value);
+              }}
+              options={[...CATEGORY_OPTIONS]}
+            />
+          </Space>
+
+          <TableUpdatingIndicator
+            active={query.isFetching && Boolean(query.data)}
+          />
+
+          <DataTable<PunchItem>
+            rowKey="id"
+            columns={columns}
+            dataSource={rows}
+            pagination={bindMeta(meta)}
+            onRow={(record) => ({
+              onClick: () => setSelectedId(record.id),
+              style: { cursor: 'pointer' },
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<ClipboardCheck />}
+                  title="No punch items"
+                  description="Record walkthrough defects and track correction to closeout"
+                  action={{
+                    label: 'New punch item',
+                    onClick: () => setCreateOpen(true),
+                  }}
+                />
+              ),
             }}
           />
-          <Select
-            allowClear
-            placeholder="Status"
-            className={layout.filterControl}
-            options={STATUS_OPTIONS}
-            value={statusFilter}
-            onChange={(value: PunchItemStatus | undefined) => {
-              resetPage();
-              setStatusFilter(value);
-            }}
-          />
-        </Space>
+        </FormLayout>
 
-        <DataTable<PunchItem>
-          rowKey="id"
-          columns={columns}
-          dataSource={rows}
-          pagination={bindMeta(meta)}
-          locale={{
-            emptyText: (
-              <TableEmptyState
-                icon={<ClipboardCheck />}
-                title="No punch items"
-                description="Record walkthrough defects and track correction to closeout"
-                action={{
-                  label: 'New punch item',
-                  onClick: () => setCreateOpen(true),
-                }}
-              />
-            ),
+        <PunchItemFormDrawer
+          open={createOpen}
+          projectId={projectId}
+          onClose={() => setCreateOpen(false)}
+          onSaved={(created) => {
+            void openQuery.refetch();
+            void verifiedQuery.refetch();
+            void closedQuery.refetch();
+            setSelectedId(created.id);
           }}
         />
-      </FormLayout>
 
-      <PunchItemFormDrawer
-        open={createOpen}
-        projectId={projectId}
-        onClose={() => setCreateOpen(false)}
-        onSaved={(created) => {
-          void query.refetch();
-          setSelectedId(created.id);
-        }}
-      />
-
-      <PunchItemDetailDrawer
-        projectId={projectId}
-        punchItemId={selectedId}
-        onClose={() => setSelectedId(null)}
-        onUpdated={() => void query.refetch()}
-      />
-    </>
+        <PunchItemDetailDrawer
+          projectId={projectId}
+          punchItemId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onUpdated={() => {
+            void openQuery.refetch();
+            void verifiedQuery.refetch();
+            void closedQuery.refetch();
+          }}
+        />
+      </>
     </ProjectModuleGate>
   );
 }

@@ -30,6 +30,10 @@ export const RISK_RESOLVED_STATUSES = 'CLOSED';
 export const CORRESPONDENCE_ACTIVE_STATUSES = 'DRAFT,SENT,ACKNOWLEDGED';
 export const CORRESPONDENCE_CLOSED_STATUSES = 'CLOSED';
 
+export const PUNCH_OPEN_STATUSES = 'RAISED,ASSIGNED,CORRECTED';
+export const PUNCH_VERIFIED_STATUSES = 'VERIFIED';
+export const PUNCH_CLOSED_STATUSES = 'CLOSED';
+
 /**
  * Resolves the API status param: a single Select value overrides the tab set.
  */

@@ -1071,6 +1071,8 @@ export interface PunchItem {
   packageCode?: string | null;
   packageName?: string | null;
   attachmentFolderId: string | null;
+  projectName?: string | null;
+  projectCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1651,6 +1653,8 @@ export type UpdateWarrantyRequest = Partial<CreateWarrantyRequest>;
 export interface PmListFilters {
   search?: string;
   status?: string;
+  severity?: string;
+  category?: string;
   /** Comma-separated list of SubmittalPurpose values to match any of. */
   submittalPurpose?: string;
   linkedDesignPackageId?: string;

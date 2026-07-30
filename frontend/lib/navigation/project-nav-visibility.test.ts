@@ -532,3 +532,58 @@ describe('canViewGlobalNavKey — daily-logs', () => {
     ).toBe(false);
   });
 });
+
+describe('canViewGlobalNavKey — punch-list', () => {
+  const moduleCaps = {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+  const pmPunchCanView = {
+    punchItems: { ...moduleCaps, canView: true },
+    risks: moduleCaps,
+    projects: moduleCaps,
+  };
+  const pmNoView = {
+    punchItems: moduleCaps,
+    risks: moduleCaps,
+    projects: moduleCaps,
+  };
+
+  it('shows /punch-list for discipline leaders', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/punch-list',
+        { ...EMPTY_EPC_CAPABILITIES, navDisciplineLeader: true },
+        pmNoView,
+      ),
+    ).toBe(true);
+  });
+
+  it('hides /punch-list for full-access (project sidebar instead)', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/punch-list',
+        { ...EMPTY_EPC_CAPABILITIES, navFullAccess: true },
+        pmPunchCanView,
+      ),
+    ).toBe(false);
+  });
+
+  it('shows /punch-list for punchItems.canView without full access', () => {
+    expect(
+      canViewGlobalNavKey('/punch-list', EMPTY_EPC_CAPABILITIES, pmPunchCanView),
+    ).toBe(true);
+  });
+
+  it('hides /punch-list for designers without punch capability', () => {
+    expect(
+      canViewGlobalNavKey(
+        '/punch-list',
+        { ...EMPTY_EPC_CAPABILITIES, navDesigner: true },
+        pmNoView,
+      ),
+    ).toBe(false);
+  });
+});

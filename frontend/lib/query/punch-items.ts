@@ -17,7 +17,6 @@ import type {
   CreatePunchItemRequest,
   PunchItem,
   PunchItemSeverity,
-  PunchItemStatus,
   PmListFilters,
   UpdatePunchItemRequest,
 } from '@/lib/api/project-management.types';
@@ -37,8 +36,9 @@ export const punchItemKeys = {
     projectId: string,
     params: PaginationParams &
       PmListFilters & {
-        status?: PunchItemStatus;
+        status?: string;
         severity?: PunchItemSeverity;
+        category?: string;
       } = {
       page: 1,
       limit: 20,
@@ -48,14 +48,27 @@ export const punchItemKeys = {
     [...punchItemKeys.all, projectId, 'detail'] as const,
   detail: (projectId: string, punchItemId: string) =>
     [...punchItemKeys.details(projectId), punchItemId] as const,
+  globalLists: () => [...punchItemKeys.all, 'global'] as const,
+  globalList: (
+    params: PaginationParams &
+      PmListFilters & {
+        status?: string;
+        severity?: PunchItemSeverity;
+        category?: string;
+      } = {
+      page: 1,
+      limit: 20,
+    },
+  ) => [...punchItemKeys.globalLists(), params] as const,
 };
 
 export function usePunchItems(
   projectId: string,
   params: PaginationParams &
     PmListFilters & {
-      status?: PunchItemStatus;
+      status?: string;
       severity?: PunchItemSeverity;
+      category?: string;
     } = {
     page: 1,
     limit: 20,
@@ -75,6 +88,27 @@ export function usePunchItems(
     enabled: Boolean(projectId) && enabled,
     retry: false,
     ...options,
+  });
+}
+
+export function useAllPunchItems(
+  params: PaginationParams &
+    PmListFilters & {
+      status?: string;
+      severity?: PunchItemSeverity;
+      category?: string;
+    } = {
+    page: 1,
+    limit: 20,
+  },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: punchItemKeys.globalList(params),
+    queryFn: () =>
+      apiGetPaginated<PunchItem>(`/punch-items/all${toQueryString(params)}`),
+    enabled,
+    retry: false,
   });
 }
 
@@ -106,6 +140,9 @@ export function useCreatePunchItem() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: punchItemKeys.lists(variables.projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: punchItemKeys.globalLists(),
       });
     },
   });
@@ -174,6 +211,9 @@ function invalidatePunchItemQueries(
   });
   void queryClient.invalidateQueries({
     queryKey: punchItemKeys.detail(projectId, punchItemId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: punchItemKeys.globalLists(),
   });
   void queryClient.invalidateQueries({
     queryKey: punchItemKeys.all,

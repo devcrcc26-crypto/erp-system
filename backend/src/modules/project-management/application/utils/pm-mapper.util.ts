@@ -706,6 +706,8 @@ export interface MappedPunchItem {
   packageCode?: string | null;
   packageName?: string | null;
   attachmentFolderId: string | null;
+  projectName?: string | null;
+  projectCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1389,7 +1391,9 @@ export function mapRiskMitigation(
 }
 
 export function mapPunchItem(
-  row: PunchItem,
+  row: PunchItem & {
+    project?: { name: string; projectCode: string } | null;
+  },
   attachmentFolderId: string | null = null,
 ): MappedPunchItem {
   return {
@@ -1415,6 +1419,8 @@ export function mapPunchItem(
     taskDisciplineId: row.taskDisciplineId,
     designPackageId: row.designPackageId,
     attachmentFolderId,
+    projectName: row.project?.name ?? null,
+    projectCode: row.project?.projectCode ?? null,
     createdAt: toIsoString(row.createdAt)!,
     updatedAt: toIsoString(row.updatedAt)!,
   };

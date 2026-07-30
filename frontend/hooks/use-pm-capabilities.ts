@@ -199,6 +199,19 @@ export function useCanViewRisks(): boolean {
 }
 
 /**
+ * Global Punch List — discipline leads always; otherwise only when
+ * punchItems.canView without portfolio projects.canView (project sidebar otherwise).
+ */
+export function useCanViewPunchList(): boolean {
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+  if (epc.navDisciplineLeader) {
+    return true;
+  }
+  return pm.punchItems.canView && !pm.projects.canView;
+}
+
+/**
  * Global Daily Logs — full-access / FK designer-lead always; otherwise only when
  * dailyLogs.canView without portfolio projects.canView (project sidebar otherwise).
  */

@@ -276,27 +276,27 @@ export function formatPunchCategory(category: string): string {
 }
 
 export function punchItemStatusVariant(
-  status: PunchItemStatus,
+  status: PunchItemStatus | string,
 ): StatusBadgeVariant {
-  const variants: Record<PunchItemStatus, StatusBadgeVariant> = {
-    RAISED: 'error',
-    ASSIGNED: 'warning',
-    CORRECTED: 'info',
+  const variants: Record<string, StatusBadgeVariant> = {
+    RAISED: 'default',
+    ASSIGNED: 'info',
+    CORRECTED: 'warning',
     VERIFIED: 'success',
-    CLOSED: 'default',
+    CLOSED: 'success',
   };
-  return variants[status];
+  return variants[status] ?? 'default';
 }
 
 export function punchItemSeverityVariant(
-  severity: PunchItemSeverity,
+  severity: PunchItemSeverity | string,
 ): StatusBadgeVariant {
-  const variants: Record<PunchItemSeverity, StatusBadgeVariant> = {
+  const variants: Record<string, StatusBadgeVariant> = {
     MINOR: 'default',
     MAJOR: 'warning',
     CRITICAL: 'error',
   };
-  return variants[severity];
+  return variants[severity] ?? 'default';
 }
 
 export function formatCloseoutStatus(status: CloseoutStatus): string {

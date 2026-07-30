@@ -10,6 +10,7 @@ import {
   FolderContextType,
   Issue,
   IssueResponse,
+  IssueSeverity,
   IssueStatus,
   Prisma,
   ExternalReviewTriggerType,
@@ -838,7 +839,7 @@ export class IssuesService {
       where.status = statusFilter;
     }
     if (query.severity) {
-      where.severity = query.severity;
+      where.severity = query.severity as IssueSeverity;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -873,7 +874,7 @@ export class IssuesService {
       where.status = statusFilter;
     }
     if (query.severity) {
-      where.severity = query.severity;
+      where.severity = query.severity as IssueSeverity;
     }
     if (query.search?.trim()) {
       const term = query.search.trim();
@@ -933,7 +934,7 @@ export class IssuesService {
       where.status = statusFilter;
     }
     if (query.severity) {
-      where.severity = query.severity;
+      where.severity = query.severity as IssueSeverity;
     }
 
     if (query.search?.trim()) {

@@ -269,16 +269,19 @@ const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
 export function canViewGlobalNavKey(
   key: string,
   epc: EpcCapabilities,
-  pm?: Pick<
-    PmCapabilities,
-    | 'submittals'
-    | 'change_requests'
-    | 'rfis'
-    | 'issues'
-    | 'meetings'
-    | 'dailyLogs'
-    | 'projects'
-    | 'risks'
+  pm?: Partial<
+    Pick<
+      PmCapabilities,
+      | 'submittals'
+      | 'change_requests'
+      | 'rfis'
+      | 'issues'
+      | 'meetings'
+      | 'dailyLogs'
+      | 'projects'
+      | 'risks'
+      | 'punchItems'
+    >
   > | null,
 ): boolean {
   // Risks intentionally deviates from the "full access always sees every
@@ -293,6 +296,16 @@ export function canViewGlobalNavKey(
       return false;
     }
     return pm?.risks?.canView ?? false;
+  }
+
+  if (key === '/punch-list') {
+    if (epc.navDisciplineLeader) {
+      return true;
+    }
+    if (epc.navFullAccess) {
+      return false;
+    }
+    return pm?.punchItems?.canView ?? false;
   }
 
   if (key === '/correspondence') {
@@ -340,7 +353,7 @@ export function canViewGlobalNavKey(
     return (
       epc.navDesigner ||
       epc.navDisciplineLeader ||
-      (pm?.submittals.canView ?? false)
+      (pm?.submittals?.canView ?? false)
     );
   }
 
@@ -348,7 +361,7 @@ export function canViewGlobalNavKey(
     return (
       epc.navDesigner ||
       epc.navDisciplineLeader ||
-      (pm?.submittals.canView ?? false)
+      (pm?.submittals?.canView ?? false)
     );
   }
 
@@ -356,7 +369,7 @@ export function canViewGlobalNavKey(
     return (
       epc.navDesigner ||
       epc.navDisciplineLeader ||
-      (pm?.change_requests.canView ?? false)
+      (pm?.change_requests?.canView ?? false)
     );
   }
 

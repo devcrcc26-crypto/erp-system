@@ -6,7 +6,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Prisma, PunchItemStatus } from '@prisma/client';
+import { Prisma, PunchItemSeverity, PunchItemStatus } from '@prisma/client';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { hasFullProjectDataAccess } from '../../../../shared/permissions/project-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -83,6 +83,44 @@ export class PunchItemsService {
 
     const [rows, total] = await Promise.all([
       this.prisma.punchItem.findMany({ where, skip, take, orderBy }),
+      this.prisma.punchItem.count({ where }),
+    ]);
+
+    const data = await enrichRowsWithUserDisplayNames(
+      this.prisma,
+      ctx.companyId,
+      rows.map((row) => mapPunchItem(row)),
+      PM_PUNCH_ITEM_USER_NAMES,
+    );
+
+    return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Company-wide punch items (portfolio / admin users).
+   */
+  async listAllPunchItems(
+    ctx: PmContext,
+    query: PmListQueryDto,
+  ): Promise<PaginatedResult<MappedPunchItem>> {
+    const where = this.buildListWhere(null, query, ctx.companyId);
+    const { skip, take } = buildPrismaPagination(query.page, query.limit);
+    const orderBy = buildPmOrderBy(
+      query.sortBy,
+      query.sortOrder,
+      PUNCH_ITEM_SORT_FIELDS,
+    );
+
+    const [rows, total] = await Promise.all([
+      this.prisma.punchItem.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          project: { select: { id: true, name: true, projectCode: true } },
+        },
+      }),
       this.prisma.punchItem.count({ where }),
     ]);
 
@@ -521,18 +559,30 @@ export class PunchItemsService {
   }
 
   private buildListWhere(
-    projectId: string,
+    projectId: string | null,
     query: PmListQueryDto,
     companyId: string,
   ): Prisma.PunchItemWhereInput {
     const where: Prisma.PunchItemWhereInput = activeOnly({
-      projectId,
       companyId,
+      ...(projectId ? { projectId } : {}),
     });
+
+    if (!projectId && query.projectId) {
+      where.projectId = query.projectId;
+    }
 
     const statusFilter = parseStatusFilter<PunchItemStatus>(query.status);
     if (statusFilter) {
       where.status = statusFilter;
+    }
+
+    if (query.severity?.trim()) {
+      where.severity = query.severity.trim() as PunchItemSeverity;
+    }
+
+    if (query.category?.trim()) {
+      where.category = query.category.trim();
     }
 
     if (query.search?.trim()) {

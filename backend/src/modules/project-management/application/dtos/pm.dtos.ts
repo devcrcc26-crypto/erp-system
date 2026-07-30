@@ -2066,10 +2066,20 @@ export class PmListQueryDto extends PaginationQueryDto {
   @IsString()
   status?: string;
 
-  @ApiPropertyOptional({ enum: IssueSeverity })
+  @ApiPropertyOptional({
+    description:
+      'Severity filter (issue or punch severity values depending on module).',
+  })
   @IsOptional()
-  @IsEnum(IssueSeverity)
-  severity?: IssueSeverity;
+  @IsString()
+  severity?: string;
+
+  @ApiPropertyOptional({
+    description: 'Category filter (e.g. punch item category).',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
 
   @ApiPropertyOptional({ enum: RfiPriority })
   @IsOptional()

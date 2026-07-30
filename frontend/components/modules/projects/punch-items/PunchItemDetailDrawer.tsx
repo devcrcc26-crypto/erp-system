@@ -99,11 +99,8 @@ export default function PunchItemDetailDrawer({
       setAssignOpen(false);
       setCorrectOpen(false);
       setReopenOpen(false);
-      assignForm.resetFields();
-      correctForm.resetFields();
-      reopenForm.resetFields();
     }
-  }, [open, assignForm, correctForm, reopenForm]);
+  }, [open]);
 
   async function afterAction(successMessage: string): Promise<void> {
     messageApi.success(successMessage);
@@ -120,8 +117,8 @@ export default function PunchItemDetailDrawer({
         punchItemId,
         assignedTo: values.assignedTo,
       });
-      setAssignOpen(false);
       assignForm.resetFields();
+      setAssignOpen(false);
       await afterAction('Punch item assigned');
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -140,8 +137,8 @@ export default function PunchItemDetailDrawer({
         punchItemId,
         resolutionNote: values.resolutionNote.trim(),
       });
-      setCorrectOpen(false);
       correctForm.resetFields();
+      setCorrectOpen(false);
       await afterAction('Punch item marked as corrected');
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -198,8 +195,8 @@ export default function PunchItemDetailDrawer({
         punchItemId,
         reason: values.reason?.trim() || undefined,
       });
-      setReopenOpen(false);
       reopenForm.resetFields();
+      setReopenOpen(false);
       await afterAction('Punch item reopened');
     } catch (error) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -458,12 +455,11 @@ export default function PunchItemDetailDrawer({
         open={assignOpen}
         onOk={() => void handleAssign()}
         onCancel={() => {
-          setAssignOpen(false);
           assignForm.resetFields();
+          setAssignOpen(false);
         }}
         okText="Assign"
         confirmLoading={assignItem.isPending}
-        destroyOnHidden
       >
         <Form form={assignForm} layout="vertical">
           <Form.Item
@@ -481,13 +477,12 @@ export default function PunchItemDetailDrawer({
         open={correctOpen}
         onOk={() => void handleCorrect()}
         onCancel={() => {
-          setCorrectOpen(false);
           correctForm.resetFields();
+          setCorrectOpen(false);
         }}
         okText="Mark Corrected"
         width={520}
         confirmLoading={correctItem.isPending}
-        destroyOnHidden
       >
         <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
           Describe what was done to fix this defect.
@@ -516,12 +511,11 @@ export default function PunchItemDetailDrawer({
         open={reopenOpen}
         onOk={() => void handleReopen()}
         onCancel={() => {
-          setReopenOpen(false);
           reopenForm.resetFields();
+          setReopenOpen(false);
         }}
         okText="Reopen"
         confirmLoading={reopenItem.isPending}
-        destroyOnHidden
       >
         <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
           This item will return to Assigned status for re-correction.
