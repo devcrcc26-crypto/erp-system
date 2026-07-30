@@ -150,6 +150,40 @@ export interface MappedProjectDashboardStats {
   scheduleVariancePct: number | null;
   plannedProgressPct: number | null;
   actualProgressPct: number | null;
+  inProgressIssues: number;
+  closedIssues: number;
+  answeredRfis: number;
+  closedRfis: number;
+  openRisks: number;
+  mitigatedRisks: number;
+  acceptedRisks: number;
+  closedRisks: number;
+  criticalRisks: number;
+  raisedPunch: number;
+  assignedPunch: number;
+  correctedPunch: number;
+  verifiedPunch: number;
+  closedPunch: number;
+  draftCrs: number;
+  submittedCrs: number;
+  approvedCrs: number;
+  rejectedCrs: number;
+  draftLogs: number;
+  submittedLogs: number;
+  approvedLogs: number;
+  upcomingMeetings: number;
+  completedMeetings: number;
+  openActions: number;
+  draftCorr: number;
+  sentCorr: number;
+  acknowledgedCorr: number;
+  activeSubmittals: number;
+  approvedSubmittals: number;
+  activeERs: number;
+  issuedERs: number;
+  subtasksByStatus: Record<string, number>;
+  overdueIssues: number;
+  overduePunch: number;
 }
 
 /**
@@ -1391,10 +1425,14 @@ export function mapRiskMitigation(
   };
 }
 
+/** Prisma PunchItem row (+ optional project join). `title` is required on the model. */
+type PunchItemMapperRow = PunchItem & {
+  title: string;
+  project?: { name: string; projectCode: string } | null;
+};
+
 export function mapPunchItem(
-  row: PunchItem & {
-    project?: { name: string; projectCode: string } | null;
-  },
+  row: PunchItemMapperRow,
   attachmentFolderId: string | null = null,
 ): MappedPunchItem {
   return {

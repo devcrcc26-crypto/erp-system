@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -17,7 +18,11 @@ import {
   CreateDashboardWidgetDto,
   UpdateDashboardWidgetDto,
 } from '../../application/dtos/reporting.dtos';
-import { DashboardService } from '../../application/services/dashboard.service';
+import {
+  DashboardService,
+  MyDashboardStats,
+  PortfolioDashboardStats,
+} from '../../application/services/dashboard.service';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
@@ -28,6 +33,28 @@ export class DashboardController {
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  @Get('portfolio')
+  @RequirePermission('projects', 'view')
+  @ApiOperation({
+    summary: 'Company-wide portfolio dashboard aggregates across PM modules',
+  })
+  portfolio(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PortfolioDashboardStats> {
+    return this.dashboardService.getPortfolioDashboard(this.ctx(user));
+  }
+
+  @Get('my')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'FK-scoped dashboard counts and recent activity for current user',
+  })
+  myDashboard(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MyDashboardStats> {
+    return this.dashboardService.getMyDashboard(this.ctx(user));
   }
 
   @Get('widgets')

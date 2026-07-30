@@ -5,10 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  Prisma,
-  RfiStatus,
+  CorrespondenceStatus,
+  DailyLogStatus,
+  DesignPackageProjectedStatus,
   IssueStatus,
+  MeetingStatus,
+  Prisma,
+  ProjectChangeRequestStatus,
   PunchItemStatus,
+  RfiStatus,
+  RiskStatus,
+  SubmittalPurpose,
+  SubmittalStatus,
   DeliverableStatus,
   Task,
   TaskStatus,
@@ -383,38 +391,260 @@ export class ProjectsService {
     today.setHours(0, 0, 0, 0);
 
     const projectWhere = activeOnly({ projectId });
+    const rfiOpenStatuses: RfiStatus[] = [
+      RfiStatus.DRAFT,
+      RfiStatus.SUBMITTED,
+      RfiStatus.UNDER_REVIEW,
+    ];
+    const punchOpenStatuses: PunchItemStatus[] = [
+      PunchItemStatus.RAISED,
+      PunchItemStatus.ASSIGNED,
+      PunchItemStatus.CORRECTED,
+    ];
+    const erPurposes: SubmittalPurpose[] = [
+      SubmittalPurpose.DISCIPLINE_SITE,
+      SubmittalPurpose.DISCIPLINE_CONSULTANT,
+    ];
 
-    const [openRfis, overdueRfis, openIssues, openPunchItems, tasks] =
-      await Promise.all([
-        this.prisma.rfi.count({
-          where: {
-            ...projectWhere,
-            status: { not: RfiStatus.CLOSED },
+    const [
+      openIssues,
+      inProgressIssues,
+      closedIssues,
+      openRfis,
+      answeredRfis,
+      closedRfis,
+      overdueRfis,
+      openRisks,
+      mitigatedRisks,
+      acceptedRisks,
+      closedRisks,
+      criticalRisks,
+      raisedPunch,
+      assignedPunch,
+      correctedPunch,
+      verifiedPunch,
+      closedPunch,
+      draftCrs,
+      submittedCrs,
+      approvedCrs,
+      rejectedCrs,
+      draftLogs,
+      submittedLogs,
+      approvedLogs,
+      upcomingMeetings,
+      completedMeetings,
+      openActions,
+      draftCorr,
+      sentCorr,
+      acknowledgedCorr,
+      activeSubmittals,
+      approvedSubmittals,
+      activeERs,
+      issuedERs,
+      subtaskStatusGroups,
+      overdueIssues,
+      overduePunch,
+      tasks,
+    ] = await Promise.all([
+      this.prisma.issue.count({
+        where: { ...projectWhere, status: IssueStatus.OPEN },
+      }),
+      this.prisma.issue.count({
+        where: { ...projectWhere, status: IssueStatus.IN_PROGRESS },
+      }),
+      this.prisma.issue.count({
+        where: { ...projectWhere, status: IssueStatus.CLOSED },
+      }),
+      this.prisma.rfi.count({
+        where: { ...projectWhere, status: { in: rfiOpenStatuses } },
+      }),
+      this.prisma.rfi.count({
+        where: { ...projectWhere, status: RfiStatus.ANSWERED },
+      }),
+      this.prisma.rfi.count({
+        where: { ...projectWhere, status: RfiStatus.CLOSED },
+      }),
+      this.prisma.rfi.count({
+        where: {
+          ...projectWhere,
+          status: { in: rfiOpenStatuses },
+          dueDate: { lt: today },
+        },
+      }),
+      this.prisma.risk.count({
+        where: { ...projectWhere, status: RiskStatus.OPEN },
+      }),
+      this.prisma.risk.count({
+        where: { ...projectWhere, status: RiskStatus.MITIGATED },
+      }),
+      this.prisma.risk.count({
+        where: { ...projectWhere, status: RiskStatus.ACCEPTED },
+      }),
+      this.prisma.risk.count({
+        where: { ...projectWhere, status: RiskStatus.CLOSED },
+      }),
+      this.prisma.risk.count({
+        where: {
+          ...projectWhere,
+          status: { in: [RiskStatus.OPEN, RiskStatus.MITIGATED] },
+          riskScore: { gte: 15 },
+        },
+      }),
+      this.prisma.punchItem.count({
+        where: { ...projectWhere, status: PunchItemStatus.RAISED },
+      }),
+      this.prisma.punchItem.count({
+        where: { ...projectWhere, status: PunchItemStatus.ASSIGNED },
+      }),
+      this.prisma.punchItem.count({
+        where: { ...projectWhere, status: PunchItemStatus.CORRECTED },
+      }),
+      this.prisma.punchItem.count({
+        where: { ...projectWhere, status: PunchItemStatus.VERIFIED },
+      }),
+      this.prisma.punchItem.count({
+        where: { ...projectWhere, status: PunchItemStatus.CLOSED },
+      }),
+      this.prisma.projectChangeRequest.count({
+        where: {
+          ...projectWhere,
+          status: ProjectChangeRequestStatus.DRAFT,
+        },
+      }),
+      this.prisma.projectChangeRequest.count({
+        where: {
+          ...projectWhere,
+          status: ProjectChangeRequestStatus.SUBMITTED,
+        },
+      }),
+      this.prisma.projectChangeRequest.count({
+        where: {
+          ...projectWhere,
+          status: ProjectChangeRequestStatus.APPROVED,
+        },
+      }),
+      this.prisma.projectChangeRequest.count({
+        where: {
+          ...projectWhere,
+          status: ProjectChangeRequestStatus.REJECTED,
+        },
+      }),
+      this.prisma.dailyLog.count({
+        where: { ...projectWhere, status: DailyLogStatus.DRAFT },
+      }),
+      this.prisma.dailyLog.count({
+        where: { ...projectWhere, status: DailyLogStatus.SUBMITTED },
+      }),
+      this.prisma.dailyLog.count({
+        where: { ...projectWhere, status: DailyLogStatus.APPROVED },
+      }),
+      this.prisma.meeting.count({
+        where: {
+          ...projectWhere,
+          status: {
+            in: [MeetingStatus.SCHEDULED, MeetingStatus.IN_PROGRESS],
+          },
+        },
+      }),
+      this.prisma.meeting.count({
+        where: { ...projectWhere, status: MeetingStatus.COMPLETED },
+      }),
+      this.prisma.actionItem.count({
+        where: {
+          deletedAt: null,
+          status: 'OPEN',
+          meeting: { projectId, deletedAt: null },
+        },
+      }),
+      this.prisma.correspondence.count({
+        where: { ...projectWhere, status: CorrespondenceStatus.DRAFT },
+      }),
+      this.prisma.correspondence.count({
+        where: { ...projectWhere, status: CorrespondenceStatus.SENT },
+      }),
+      this.prisma.correspondence.count({
+        where: {
+          ...projectWhere,
+          status: CorrespondenceStatus.ACKNOWLEDGED,
+        },
+      }),
+      this.prisma.submittal.count({
+        where: {
+          ...projectWhere,
+          submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+          status: {
+            in: [
+              SubmittalStatus.DRAFT,
+              SubmittalStatus.SUBMITTED,
+              SubmittalStatus.UNDER_REVIEW,
+            ],
+          },
+        },
+      }),
+      this.prisma.submittal.count({
+        where: {
+          ...projectWhere,
+          submittalPurpose: SubmittalPurpose.IN_CONSTRUCTION,
+          status: {
+            in: [
+              SubmittalStatus.APPROVED,
+              SubmittalStatus.APPROVED_WITH_COMMENTS,
+            ],
+          },
+        },
+      }),
+      this.prisma.submittal.count({
+        where: {
+          ...projectWhere,
+          submittalPurpose: { in: erPurposes },
+          status: {
+            notIn: [SubmittalStatus.SUBMITTED, SubmittalStatus.WITHDRAWN],
+          },
+        },
+      }),
+      this.prisma.submittal.count({
+        where: {
+          ...projectWhere,
+          submittalPurpose: { in: erPurposes },
+          status: SubmittalStatus.SUBMITTED,
+        },
+      }),
+      this.prisma.designPackage.groupBy({
+        by: ['projectedStatus'],
+        where: activeOnly({
+          taskDiscipline: {
+            deletedAt: null,
+            task: { projectId, deletedAt: null },
           },
         }),
-        this.prisma.rfi.count({
-          where: {
-            ...projectWhere,
-            dueDate: { lt: today },
-            status: { notIn: [RfiStatus.CLOSED, RfiStatus.ANSWERED] },
-          },
-        }),
-        this.prisma.issue.count({
-          where: {
-            ...projectWhere,
-            status: { not: IssueStatus.CLOSED },
-          },
-        }),
-        this.prisma.punchItem.count({
-          where: {
-            ...projectWhere,
-            status: { not: PunchItemStatus.CLOSED },
-          },
-        }),
-        this.prisma.task.findMany({
-          where: activeOnly({ projectId }),
-        }),
-      ]);
+        _count: { _all: true },
+      }),
+      this.prisma.issue.count({
+        where: {
+          ...projectWhere,
+          status: { in: [IssueStatus.OPEN, IssueStatus.IN_PROGRESS] },
+          dueDate: { lt: today },
+        },
+      }),
+      this.prisma.punchItem.count({
+        where: {
+          ...projectWhere,
+          status: { in: punchOpenStatuses },
+          dueDate: { lt: today },
+        },
+      }),
+      this.prisma.task.findMany({
+        where: activeOnly({ projectId }),
+      }),
+    ]);
+
+    const subtasksByStatus: Record<string, number> = {};
+    for (const status of Object.values(DesignPackageProjectedStatus)) {
+      subtasksByStatus[status] = 0;
+    }
+    for (const group of subtaskStatusGroups) {
+      subtasksByStatus[group.projectedStatus] = group._count._all;
+    }
 
     const taskProgressById = await this.computeTaskProgressMap(
       tasks.map((task) => task.id),
@@ -425,8 +655,43 @@ export class ProjectsService {
       openRfis,
       overdueRfis,
       openIssues,
-      openPunchItems,
+      openPunchItems:
+        raisedPunch + assignedPunch + correctedPunch + verifiedPunch,
       ...scheduleMetrics,
+      inProgressIssues,
+      closedIssues,
+      answeredRfis,
+      closedRfis,
+      openRisks,
+      mitigatedRisks,
+      acceptedRisks,
+      closedRisks,
+      criticalRisks,
+      raisedPunch,
+      assignedPunch,
+      correctedPunch,
+      verifiedPunch,
+      closedPunch,
+      draftCrs,
+      submittedCrs,
+      approvedCrs,
+      rejectedCrs,
+      draftLogs,
+      submittedLogs,
+      approvedLogs,
+      upcomingMeetings,
+      completedMeetings,
+      openActions,
+      draftCorr,
+      sentCorr,
+      acknowledgedCorr,
+      activeSubmittals,
+      approvedSubmittals,
+      activeERs,
+      issuedERs,
+      subtasksByStatus,
+      overdueIssues,
+      overduePunch,
     };
   }
 

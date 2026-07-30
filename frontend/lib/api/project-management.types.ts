@@ -1170,6 +1170,40 @@ export interface ProjectDashboardStats {
   scheduleVariancePct: number | null;
   plannedProgressPct: number | null;
   actualProgressPct: number | null;
+  inProgressIssues: number;
+  closedIssues: number;
+  answeredRfis: number;
+  closedRfis: number;
+  openRisks: number;
+  mitigatedRisks: number;
+  acceptedRisks: number;
+  closedRisks: number;
+  criticalRisks: number;
+  raisedPunch: number;
+  assignedPunch: number;
+  correctedPunch: number;
+  verifiedPunch: number;
+  closedPunch: number;
+  draftCrs: number;
+  submittedCrs: number;
+  approvedCrs: number;
+  rejectedCrs: number;
+  draftLogs: number;
+  submittedLogs: number;
+  approvedLogs: number;
+  upcomingMeetings: number;
+  completedMeetings: number;
+  openActions: number;
+  draftCorr: number;
+  sentCorr: number;
+  acknowledgedCorr: number;
+  activeSubmittals: number;
+  approvedSubmittals: number;
+  activeERs: number;
+  issuedERs: number;
+  subtasksByStatus: Record<string, number>;
+  overdueIssues: number;
+  overduePunch: number;
 }
 
 export type PmModuleKey =

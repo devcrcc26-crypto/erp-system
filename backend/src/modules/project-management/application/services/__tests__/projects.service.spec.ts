@@ -1,11 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import {
-  IssueStatus,
-  Prisma,
-  PunchItemStatus,
-  RfiStatus,
-  Task,
-} from '@prisma/client';
+import { Prisma, Task } from '@prisma/client';
 import { PrismaService } from '../../../../../shared/prisma/prisma.service';
 import { DisciplineScopeService } from '../discipline-scope.service';
 import { EngineeringDocumentFolderService } from '../engineering-document-folder.service';
@@ -35,7 +29,16 @@ describe('ProjectsService', () => {
     rfi: { count: jest.Mock };
     issue: { count: jest.Mock };
     punchItem: { count: jest.Mock };
+    risk: { count: jest.Mock };
+    projectChangeRequest: { count: jest.Mock };
+    dailyLog: { count: jest.Mock };
+    meeting: { count: jest.Mock };
+    actionItem: { count: jest.Mock };
+    correspondence: { count: jest.Mock };
+    submittal: { count: jest.Mock };
+    designPackage: { groupBy: jest.Mock };
     task: { findMany: jest.Mock };
+    taskDiscipline: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
   let projectScopeService: { getProjectOrThrow: jest.Mock };
@@ -59,16 +62,43 @@ describe('ProjectsService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       rfi: {
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       issue: {
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       punchItem: {
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      risk: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      projectChangeRequest: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      dailyLog: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      meeting: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      actionItem: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      correspondence: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      submittal: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      designPackage: {
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       task: {
-        findMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      taskDiscipline: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
       $transaction: jest.fn(),
     };
@@ -86,6 +116,9 @@ describe('ProjectsService', () => {
       {
         hasDisciplineScopeBypass: jest.fn().mockResolvedValue(true),
       } as unknown as DisciplineScopeService,
+      {
+        getVisibleProjectIds: jest.fn().mockResolvedValue(null),
+      } as never,
       {
         ensureProjectFolder: jest
           .fn()
@@ -468,24 +501,51 @@ describe('ProjectsService', () => {
   });
 
   describe('getDashboardStats', () => {
-    it('returns correct counts per project', async () => {
+    it('returns expanded PM module counts per project', async () => {
+      prisma.issue.count
+        .mockResolvedValueOnce(1) // OPEN
+        .mockResolvedValueOnce(2) // IN_PROGRESS
+        .mockResolvedValueOnce(3) // CLOSED
+        .mockResolvedValueOnce(0); // overdueIssues
       prisma.rfi.count
-        .mockResolvedValueOnce(4)
-        .mockResolvedValueOnce(2);
-      prisma.issue.count.mockResolvedValue(3);
-      prisma.punchItem.count.mockResolvedValue(5);
+        .mockResolvedValueOnce(4) // open
+        .mockResolvedValueOnce(1) // answered
+        .mockResolvedValueOnce(0) // closed
+        .mockResolvedValueOnce(2); // overdue
+      prisma.punchItem.count
+        .mockResolvedValueOnce(1) // raised
+        .mockResolvedValueOnce(2) // assigned
+        .mockResolvedValueOnce(1) // corrected
+        .mockResolvedValueOnce(1) // verified
+        .mockResolvedValueOnce(0) // closed
+        .mockResolvedValueOnce(0); // overduePunch
       prisma.task.findMany.mockResolvedValue([
         {
+          id: 'task-1',
           progressPct: 60,
           startDate: new Date('2026-01-01'),
           finishDate: new Date('2026-12-31'),
         },
         {
+          id: 'task-2',
           progressPct: 40,
           startDate: new Date('2026-01-01'),
           finishDate: new Date('2026-12-31'),
         },
       ] as Task[]);
+      prisma.taskDiscipline.findMany.mockResolvedValue([
+        {
+          taskId: 'task-1',
+          designPackages: [
+            { packageStatus: 'CLOSED' },
+            { packageStatus: 'OPEN' },
+          ],
+        },
+        {
+          taskId: 'task-2',
+          designPackages: [{ packageStatus: 'OPEN' }],
+        },
+      ]);
 
       const stats = await service.getDashboardStats(ctx, projectId);
 
@@ -493,40 +553,16 @@ describe('ProjectsService', () => {
         ctx,
         projectId,
       );
-      expect(prisma.rfi.count).toHaveBeenNthCalledWith(1, {
-        where: {
-          projectId,
-          deletedAt: null,
-          status: { not: RfiStatus.CLOSED },
-        },
-      });
-      expect(prisma.rfi.count).toHaveBeenNthCalledWith(2, {
-        where: {
-          projectId,
-          deletedAt: null,
-          dueDate: { lt: expect.any(Date) },
-          status: { notIn: [RfiStatus.CLOSED, RfiStatus.ANSWERED] },
-        },
-      });
-      expect(prisma.issue.count).toHaveBeenCalledWith({
-        where: {
-          projectId,
-          deletedAt: null,
-          status: { not: IssueStatus.CLOSED },
-        },
-      });
-      expect(prisma.punchItem.count).toHaveBeenCalledWith({
-        where: {
-          projectId,
-          deletedAt: null,
-          status: { not: PunchItemStatus.CLOSED },
-        },
-      });
       expect(stats.openRfis).toBe(4);
       expect(stats.overdueRfis).toBe(2);
-      expect(stats.openIssues).toBe(3);
+      expect(stats.openIssues).toBe(1);
+      expect(stats.inProgressIssues).toBe(2);
+      expect(stats.closedIssues).toBe(3);
       expect(stats.openPunchItems).toBe(5);
-      expect(stats.actualProgressPct).toBe(50);
+      expect(stats.raisedPunch).toBe(1);
+      expect(stats.assignedPunch).toBe(2);
+      expect(stats.subtasksByStatus.IN_PROGRESS).toBe(0);
+      expect(stats.actualProgressPct).toBe(25);
     });
   });
 
