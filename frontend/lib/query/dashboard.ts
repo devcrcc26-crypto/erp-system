@@ -4,6 +4,10 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client';
 import type { Project, Task } from '@/lib/api/project-management.types';
+import type {
+  MyDashboardStats,
+  PortfolioDashboardStats,
+} from '@/lib/api/reporting.types';
 import { applyDashboardFilters } from '@/lib/dashboard/apply-dashboard-filters';
 import { buildDashboardChartData } from '@/lib/dashboard/build-chart-data';
 import type {
@@ -79,7 +83,31 @@ export const dashboardKeys = {
   all: ['portfolio-dashboard'] as const,
   data: (projectId?: string) =>
     [...dashboardKeys.all, 'data', projectId ?? 'all'] as const,
+  portfolioStats: ['dashboard', 'portfolio'] as const,
+  myStats: ['dashboard', 'my'] as const,
 };
+
+/** Company-wide PM aggregates from GET /dashboard/portfolio. */
+export function usePortfolioDashboardStats(enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.portfolioStats,
+    queryFn: () => apiGet<PortfolioDashboardStats>('/dashboard/portfolio'),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/** FK-scoped personal dashboard from GET /dashboard/my. */
+export function useMyDashboard(enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.myStats,
+    queryFn: () => apiGet<MyDashboardStats>('/dashboard/my'),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
 
 /** Loads portfolio tasks and disciplines, then applies dashboard filters client-side. */
 export function usePortfolioDashboard(

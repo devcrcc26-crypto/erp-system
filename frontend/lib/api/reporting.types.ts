@@ -1,3 +1,50 @@
+/** Company-wide PM aggregates from GET /dashboard/portfolio. */
+export interface PortfolioDashboardStats {
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  totalUsers: number;
+  openIssues: number;
+  openRfis: number;
+  overdueRfis: number;
+  openRisks: number;
+  criticalRisks: number;
+  openPunchItems: number;
+  overduePunchItems: number;
+  overdueIssues: number;
+  pendingReviews: number;
+  activeCrs: number;
+  activeERs: number;
+  upcomingMeetings: number;
+  openActionItems: number;
+  pendingDailyLogs: number;
+  issuesByStatus: Record<string, number>;
+  rfisByStatus: Record<string, number>;
+  risksByStatus: Record<string, number>;
+  punchByStatus: Record<string, number>;
+  projectsByStatus: Record<string, number>;
+}
+
+/** Activity row from GET /dashboard/my. */
+export interface MyDashboardActivityItem {
+  type: string;
+  title: string;
+  date: string;
+  link: string;
+}
+
+/** FK-scoped personal dashboard from GET /dashboard/my. */
+export interface MyDashboardStats {
+  mySubtasks: number;
+  myActiveReviews: number;
+  myOpenIssues: number;
+  myOpenRfis: number;
+  myOpenActionItems: number;
+  myPendingDailyLogs: number;
+  myRisks: number;
+  recentActivity: MyDashboardActivityItem[];
+}
+
 /** Company-wide portfolio summary from GET /reports/portfolio-summary. */
 export interface PortfolioSummary {
   generatedAt: string;
