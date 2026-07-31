@@ -224,6 +224,12 @@ export class AssignUserRoleDto {
   roleId!: string;
 }
 
+export class SetPrimaryRoleDto {
+  @ApiProperty({ description: 'Role id to mark as the user primary role' })
+  @IsEntityUuid()
+  roleId!: string;
+}
+
 export class CreateDataScopeDto {
   @ApiProperty({ enum: ['COMPANY', 'BRANCH', 'DIVISION', 'DEPARTMENT', 'PROJECT', 'SELF'] })
   @IsString()

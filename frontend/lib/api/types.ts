@@ -174,6 +174,7 @@ export interface CreateUserResponse extends User {
 export interface UserRoleAssignment {
   id: string;
   roleId: string;
+  isPrimary?: boolean;
   role: {
     id: string;
     name: string;

@@ -19,6 +19,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AssignUserRoleDto,
   CreateUserDto,
+  SetPrimaryRoleDto,
   UpdateUserDto,
   UsersQueryDto,
 } from '../../application/dtos/user-management.dtos';
@@ -119,6 +120,21 @@ export class UsersController {
     @Body() dto: AssignUserRoleDto,
   ): Promise<unknown> {
     return this.userManagementService.assignUserRole(this.ctx(user), id, dto);
+  }
+
+  @Patch(':id/primary-role')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Set the primary role for a user' })
+  setPrimaryRole(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SetPrimaryRoleDto,
+  ): Promise<unknown> {
+    return this.userManagementService.setPrimaryRole(
+      this.ctx(user),
+      id,
+      dto.roleId,
+    );
   }
 
   @Delete(':id/roles/:roleId')

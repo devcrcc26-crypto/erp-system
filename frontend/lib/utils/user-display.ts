@@ -108,13 +108,19 @@ const ROLE_DISPLAY_PRIORITY: readonly string[] = [
 
 /**
  * Picks the single highest-ranking role name for compact UI (e.g. header avatar).
+ * Prefers an assignment marked isPrimary when present.
  */
 export function pickTopLevelRoleName(
-  roles: readonly { name: string }[] | null | undefined,
+  roles: readonly { name: string; isPrimary?: boolean }[] | null | undefined,
   emptyLabel = 'No role assigned',
 ): string {
   if (!roles || roles.length === 0) {
     return emptyLabel;
+  }
+
+  const primary = roles.find((role) => role.isPrimary === true);
+  if (primary?.name?.trim()) {
+    return primary.name.trim();
   }
 
   let bestName = roles[0]?.name ?? emptyLabel;

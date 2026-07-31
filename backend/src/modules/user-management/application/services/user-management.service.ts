@@ -110,6 +110,7 @@ export class UserManagementService {
             role: { select: { id: true, name: true } },
             dataScopes: { where: activeOnly({}) },
           },
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         },
       },
     });
@@ -397,6 +398,11 @@ export class UserManagementService {
     await this.getUser(ctx, userId);
     await this.getRole(ctx, dto.roleId);
 
+    const existingPrimary = await this.prisma.userRole.findFirst({
+      where: activeOnly({ userId, isPrimary: true }),
+      select: { id: true },
+    });
+
     return this.prisma.userRole.upsert({
       where: {
         userId_roleId: { userId, roleId: dto.roleId },
@@ -406,15 +412,50 @@ export class UserManagementService {
         updatedBy: ctx.userId,
         deletedAt: null,
         deletedBy: null,
+        ...(existingPrimary ? {} : { isPrimary: true }),
       },
       create: {
         userId,
         roleId: dto.roleId,
+        isPrimary: !existingPrimary,
         assignedBy: ctx.userId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
       },
     });
+  }
+
+  /**
+   * Marks one active role assignment as primary (clears any previous primary).
+   */
+  async setPrimaryRole(
+    ctx: AuditContext,
+    userId: string,
+    roleId: string,
+  ): Promise<unknown> {
+    await this.getUser(ctx, userId);
+    await this.getRole(ctx, roleId);
+
+    const assignment = await this.prisma.userRole.findFirst({
+      where: activeOnly({ userId, roleId }),
+      include: { role: { select: { id: true, name: true } } },
+    });
+    if (!assignment) {
+      throw new NotFoundException('User role assignment not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userRole.updateMany({
+        where: activeOnly({ userId, isPrimary: true }),
+        data: { isPrimary: false, updatedBy: ctx.userId },
+      });
+      await tx.userRole.update({
+        where: { id: assignment.id },
+        data: { isPrimary: true, updatedBy: ctx.userId },
+      });
+    });
+
+    return this.getUser(ctx, userId);
   }
 
   async revokeUserRole(
@@ -428,9 +469,29 @@ export class UserManagementService {
     if (!userRole) {
       throw new NotFoundException('User role assignment not found');
     }
-    await this.prisma.userRole.update({
-      where: { id: userRole.id },
-      data: { deletedAt: new Date(), deletedBy: ctx.userId },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userRole.update({
+        where: { id: userRole.id },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: ctx.userId,
+          isPrimary: false,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      if (userRole.isPrimary) {
+        const next = await tx.userRole.findFirst({
+          where: activeOnly({ userId }),
+          orderBy: { createdAt: 'asc' },
+        });
+        if (next) {
+          await tx.userRole.update({
+            where: { id: next.id },
+            data: { isPrimary: true, updatedBy: ctx.userId },
+          });
+        }
+      }
     });
   }
 
@@ -568,8 +629,10 @@ export class UserManagementService {
       select: {
         id: true,
         roleId: true,
+        isPrimary: true,
         role: { select: { id: true, name: true } },
       },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
     };
   }
 }

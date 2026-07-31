@@ -13,6 +13,7 @@ interface ChainTierDraft {
 /**
  * Builds Discipline Lead → HR Officer → (optional) General Manager chains
  * for HR workflows (leave, overtime, etc.).
+ * Role-based tiers resolve only users whose matching role is marked isPrimary.
  */
 @Injectable()
 export class HrApprovalChainService {
@@ -70,12 +71,14 @@ export class HrApprovalChainService {
       resolver: 'DISCIPLINE_LEAD',
     });
 
-    const hrOfficer = await this.findActiveUserByRoleName(
+    const hrOfficer = await this.findActiveUserByPrimaryRoleName(
       companyId,
       'HR Officer',
     );
     if (!hrOfficer) {
-      throw new BadRequestException('No HR Officer found in the system.');
+      throw new BadRequestException(
+        'No user with primary role HR Officer found.',
+      );
     }
 
     tiers.push({
@@ -86,13 +89,13 @@ export class HrApprovalChainService {
     });
 
     if (includeGeneralManager) {
-      const gm = await this.findActiveUserByRoleName(
+      const gm = await this.findActiveUserByPrimaryRoleName(
         companyId,
         'General Manager',
       );
       if (!gm) {
         throw new BadRequestException(
-          'No General Manager found in the system.',
+          'No user with primary role General Manager found.',
         );
       }
 
@@ -117,7 +120,10 @@ export class HrApprovalChainService {
     }));
   }
 
-  private async findActiveUserByRoleName(
+  /**
+   * Finds an active user whose primary role assignment matches the role name.
+   */
+  private async findActiveUserByPrimaryRoleName(
     companyId: string,
     roleName: string,
   ): Promise<{ id: string } | null> {
@@ -127,6 +133,7 @@ export class HrApprovalChainService {
         isActive: true,
         userRoles: {
           some: activeOnly({
+            isPrimary: true,
             role: activeOnly({
               companyId,
               name: roleName,

@@ -231,6 +231,27 @@ export function useAssignRole() {
   });
 }
 
+export function useSetPrimaryRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      roleId,
+    }: {
+      userId: string;
+      roleId: string;
+    }) =>
+      apiPatch<UserDetail>(`/users/${userId}/primary-role`, { roleId }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.detail(variables.userId),
+      });
+    },
+  });
+}
+
 export function useImportPreview() {
   return useMutation({
     mutationFn: async (file: File): Promise<ImportPreviewResult> => {

@@ -43,6 +43,7 @@ import {
   useDeleteUser,
   useResendInvitation,
   useRevokeRole,
+  useSetPrimaryRole,
   useUpdateUser,
   useUser,
   useUsers,
@@ -122,7 +123,11 @@ interface EditFormValues {
 }
 
 function formatUserRoleNames(user: User): string {
-  const roles = user.userRoles?.map((assignment) => assignment.role) ?? [];
+  const roles =
+    user.userRoles?.map((assignment) => ({
+      name: assignment.role.name,
+      isPrimary: assignment.isPrimary,
+    })) ?? [];
   const top = pickTopLevelRoleName(roles, '');
   return top || '-';
 }
@@ -423,6 +428,7 @@ function EditEmployeeModal({
   const updateUser = useUpdateUser();
   const assignRole = useAssignRole();
   const revokeRole = useRevokeRole();
+  const setPrimaryRole = useSetPrimaryRole();
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, open);
   const departmentIdValue = Form.useWatch('departmentId', form);
@@ -446,11 +452,17 @@ function EditEmployeeModal({
   const [error, setError] = useState<string | null>(null);
 
   const currentRoleId =
+    userQuery.data?.userRoles.find((assignment) => assignment.isPrimary)
+      ?.roleId ??
     userQuery.data?.userRoles[0]?.roleId ??
     userQuery.data?.userRoles[0]?.role?.id ??
+    user.userRoles?.find((assignment) => assignment.isPrimary)?.roleId ??
     user.userRoles?.[0]?.roleId ??
     user.userRoles?.[0]?.role?.id ??
     '';
+
+  const assignedRoles =
+    userQuery.data?.userRoles ?? user.userRoles ?? [];
 
   function resetFormValues(): void {
     const detail = userQuery.data ?? user;
@@ -521,7 +533,23 @@ function EditEmployeeModal({
   }
 
   const isSubmitting =
-    updateUser.isPending || assignRole.isPending || revokeRole.isPending;
+    updateUser.isPending ||
+    assignRole.isPending ||
+    revokeRole.isPending ||
+    setPrimaryRole.isPending;
+
+  async function handleSetPrimary(roleId: string): Promise<void> {
+    setError(null);
+    try {
+      await setPrimaryRole.mutateAsync({ userId: user.id, roleId });
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : t('users.setPrimaryRoleError'),
+      );
+    }
+  }
 
   return (
     <Modal
@@ -624,6 +652,42 @@ function EditEmployeeModal({
             />
           </Form.Item>
         </div>
+        {assignedRoles.length > 0 ? (
+          <div className="mb-4">
+            <div className="mb-2 text-sm font-medium text-slate-700">
+              {t('users.assignedRoles')}
+            </div>
+            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
+              {assignedRoles.map((assignment) => {
+                const roleId = assignment.roleId ?? assignment.role.id;
+                const isPrimary = Boolean(assignment.isPrimary);
+                return (
+                  <div
+                    key={assignment.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 px-3 py-2"
+                  >
+                    <Space size={8}>
+                      <span>{assignment.role.name}</span>
+                      {isPrimary ? (
+                        <Tag color="gold">{t('users.primaryRole')}</Tag>
+                      ) : null}
+                    </Space>
+                    {!isPrimary ? (
+                      <Button
+                        type="link"
+                        size="small"
+                        loading={setPrimaryRole.isPending}
+                        onClick={() => void handleSetPrimary(roleId)}
+                      >
+                        {t('users.setAsPrimary')}
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </Space>
+          </div>
+        ) : null}
         <Form.Item name="isActive" valuePropName="checked">
           <Checkbox>{t('common.activeAccount')}</Checkbox>
         </Form.Item>
@@ -1139,7 +1203,10 @@ export default function UsersPageContent(): React.ReactNode {
               ellipsis: { showTitle: true },
               render: (_, record) => {
                 const roles =
-                  record.userRoles?.map((assignment) => assignment.role) ?? [];
+                  record.userRoles?.map((assignment) => ({
+                    name: assignment.role.name,
+                    isPrimary: assignment.isPrimary,
+                  })) ?? [];
                 if (roles.length === 0) {
                   return '-';
                 }
@@ -1147,10 +1214,18 @@ export default function UsersPageContent(): React.ReactNode {
                 if (!topRole) {
                   return '-';
                 }
+                const isPrimary = roles.some(
+                  (role) => role.name === topRole && role.isPrimary,
+                );
                 return (
-                  <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
-                    {topRole}
-                  </Tag>
+                  <Space size={4}>
+                    <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
+                      {topRole}
+                    </Tag>
+                    {isPrimary ? (
+                      <Tag color="gold">{t('users.primaryRole')}</Tag>
+                    ) : null}
+                  </Space>
                 );
               },
             },
