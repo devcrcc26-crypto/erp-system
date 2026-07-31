@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Alert, Button, Modal } from 'antd';
+import { useState } from 'react';
+import { Alert, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import DisciplineCatalogFormDrawer from '@/components/modules/org/DisciplineCatalogFormDrawer';
 import {
   useCanManageDisciplinesCatalog,
@@ -16,7 +15,6 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import {
-  useAssignEngineeringDisciplineLeader,
   useDeleteEngineeringDiscipline,
   useEngineeringDisciplines,
   type EngineeringDiscipline,
@@ -35,24 +33,13 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
   const [editing, setEditing] = useState<EngineeringDiscipline | null>(null);
   const [readOnlyDrawer, setReadOnlyDrawer] = useState(false);
   const [deleting, setDeleting] = useState<EngineeringDiscipline | null>(null);
-  const [assigning, setAssigning] = useState<EngineeringDiscipline | null>(null);
-  const [leaderId, setLeaderId] = useState<string | undefined>(undefined);
 
   const disciplinesQuery = useEngineeringDisciplines(
     { page: 1, limit: 200, activeOnly: false },
     canView,
   );
   const deleteDiscipline = useDeleteEngineeringDiscipline();
-  const assignLeader = useAssignEngineeringDisciplineLeader();
   const disciplines = disciplinesQuery.data?.data ?? [];
-
-  useEffect(() => {
-    if (assigning) {
-      setLeaderId(assigning.leaderId ?? undefined);
-    } else {
-      setLeaderId(undefined);
-    }
-  }, [assigning]);
 
   const columns: ColumnsType<EngineeringDiscipline> = [
     { title: 'Discipline', dataIndex: 'name', key: 'name' },
@@ -89,7 +76,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
     {
       title: '',
       key: 'actions',
-      width: canManage ? 260 : 80,
+      width: 160,
       render: (_value, record) => (
         <div className="flex flex-wrap gap-2">
           <Button
@@ -104,23 +91,14 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
             {canManage ? 'Edit' : 'View'}
           </Button>
           {canManage ? (
-            <>
-              <Button
-                type="link"
-                className="!px-0"
-                onClick={() => setAssigning(record)}
-              >
-                Assign Leader
-              </Button>
-              <Button
-                type="link"
-                danger
-                className="!px-0"
-                onClick={() => setDeleting(record)}
-              >
-                Delete
-              </Button>
-            </>
+            <Button
+              type="link"
+              danger
+              className="!px-0"
+              onClick={() => setDeleting(record)}
+            >
+              Delete
+            </Button>
           ) : null}
         </div>
       ),
@@ -175,48 +153,6 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         }}
         onSaved={() => void disciplinesQuery.refetch()}
       />
-
-      <Modal
-        title={
-          assigning
-            ? `Assign leader — ${assigning.name}`
-            : 'Assign leader'
-        }
-        open={Boolean(assigning)}
-        okText="Save"
-        confirmLoading={assignLeader.isPending}
-        okButtonProps={{ disabled: !leaderId }}
-        onOk={() => {
-          if (!assigning || !leaderId) {
-            return;
-          }
-          void assignLeader
-            .mutateAsync({ id: assigning.id, leaderId })
-            .then(() => {
-              messageApi.success('Discipline leader assigned');
-              setAssigning(null);
-              void disciplinesQuery.refetch();
-            })
-            .catch((error: unknown) => {
-              notifyApiError(error, 'Failed to assign leader', messageApi);
-            });
-        }}
-        onCancel={() => setAssigning(null)}
-        destroyOnHidden
-      >
-        <p className="mb-3 text-sm text-[var(--ant-color-text-secondary)]">
-          Select an active user assigned to this discipline. They become the
-          first approver for leave requests from this discipline.
-        </p>
-        <UserSelect
-          value={leaderId}
-          onChange={(next) =>
-            setLeaderId(typeof next === 'string' ? next : undefined)
-          }
-          engineeringDisciplineId={assigning?.id}
-          placeholder="Search users in this discipline"
-        />
-      </Modal>
 
       <ConfirmDialog
         open={Boolean(deleting)}

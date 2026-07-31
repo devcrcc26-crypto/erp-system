@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Button, Drawer, Form, Input, Switch } from 'antd';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import {
   useCreateEngineeringDiscipline,
   useUpdateEngineeringDiscipline,
@@ -13,6 +14,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 interface DisciplineFormValues {
   name: string;
   nameZh?: string;
+  leaderId?: string;
   isActive: boolean;
 }
 
@@ -42,6 +44,7 @@ export default function DisciplineCatalogFormDrawer({
       form.setFieldsValue({
         name: editing.name,
         nameZh: editing.nameZh ?? undefined,
+        leaderId: editing.leaderId ?? undefined,
         isActive: editing.isActive,
       });
       return;
@@ -58,6 +61,7 @@ export default function DisciplineCatalogFormDrawer({
           body: {
             name: values.name.trim(),
             nameZh: values.nameZh?.trim() || undefined,
+            leaderId: values.leaderId ?? null,
             isActive: values.isActive,
           },
         });
@@ -66,6 +70,7 @@ export default function DisciplineCatalogFormDrawer({
         await createDiscipline.mutateAsync({
           name: values.name.trim(),
           nameZh: values.nameZh?.trim() || undefined,
+          leaderId: values.leaderId,
           isActive: values.isActive,
         });
         messageApi.success('Discipline created');
@@ -116,6 +121,13 @@ export default function DisciplineCatalogFormDrawer({
         </Form.Item>
         <Form.Item label="Name (Chinese)" name="nameZh">
           <Input />
+        </Form.Item>
+        <Form.Item
+          label="Discipline leader"
+          name="leaderId"
+          tooltip="First approver for leave requests from employees in this discipline"
+        >
+          <UserSelect placeholder="Select leader (optional)" disabled={readOnly} />
         </Form.Item>
         <Form.Item label="Active" name="isActive" valuePropName="checked">
           <Switch disabled={readOnly} />

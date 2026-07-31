@@ -165,8 +165,12 @@ export function useEngineeringDisciplineOptions(
 export function useCreateEngineeringDiscipline() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; nameZh?: string; isActive?: boolean }) =>
-      apiPost<EngineeringDiscipline>('/engineering-disciplines', body),
+    mutationFn: (body: {
+      name: string;
+      nameZh?: string;
+      isActive?: boolean;
+      leaderId?: string | null;
+    }) => apiPost<EngineeringDiscipline>('/engineering-disciplines', body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },
@@ -185,27 +189,9 @@ export function useUpdateEngineeringDiscipline() {
         name?: string;
         nameZh?: string;
         isActive?: boolean;
+        leaderId?: string | null;
       };
     }) => apiPatch<EngineeringDiscipline>(`/engineering-disciplines/${id}`, body),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
-    },
-  });
-}
-
-export function useAssignEngineeringDisciplineLeader() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      leaderId,
-    }: {
-      id: string;
-      leaderId: string;
-    }) =>
-      apiPatch<EngineeringDiscipline>(`/disciplines/${id}/leader`, {
-        leaderId,
-      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },

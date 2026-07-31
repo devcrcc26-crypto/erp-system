@@ -308,6 +308,15 @@ export class CreateDisciplineDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Optional discipline leader (Tier 1 leave approver)',
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value: unknown) => value !== null)
+  @IsString()
+  leaderId?: string | null;
 }
 
 export class UpdateDisciplineDto extends PartialType(CreateDisciplineDto) {}

@@ -421,6 +421,10 @@ export class CompanySetupService {
     }
 
     await this.assertDisciplineNameAvailable(ctx, name);
+    const leaderId = await this.resolveDisciplineLeaderId(
+      ctx,
+      dto.leaderId,
+    );
 
     try {
       return await this.prisma.discipline.create({
@@ -429,8 +433,20 @@ export class CompanySetupService {
           name,
           nameZh: dto.nameZh?.trim() || null,
           isActive: dto.isActive ?? true,
+          leaderId,
           createdBy: ctx.userId,
           updatedBy: ctx.userId,
+        },
+        include: {
+          leader: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+              email: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -453,14 +469,39 @@ export class CompanySetupService {
       await this.assertDisciplineNameAvailable(ctx, name, id);
     }
 
+    const data: Prisma.DisciplineUpdateInput = {
+      updatedBy: ctx.userId,
+    };
+    if (name !== undefined) {
+      data.name = name;
+    }
+    if (dto.nameZh !== undefined) {
+      data.nameZh = dto.nameZh?.trim() || null;
+    }
+    if (dto.isActive !== undefined) {
+      data.isActive = dto.isActive;
+    }
+    if (dto.leaderId !== undefined) {
+      const leaderId = await this.resolveDisciplineLeaderId(ctx, dto.leaderId);
+      data.leader = leaderId
+        ? { connect: { id: leaderId } }
+        : { disconnect: true };
+    }
+
     try {
       return await this.prisma.discipline.update({
         where: { id },
-        data: {
-          name,
-          nameZh: dto.nameZh?.trim(),
-          isActive: dto.isActive,
-          updatedBy: ctx.userId,
+        data,
+        include: {
+          leader: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+              email: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -1009,6 +1050,35 @@ export class CompanySetupService {
       throw new NotFoundException('Discipline not found');
     }
     return row;
+  }
+
+  /**
+   * Validates an optional discipline leader belongs to the company and is active.
+   */
+  private async resolveDisciplineLeaderId(
+    ctx: AuditContext,
+    leaderId: string | null | undefined,
+  ): Promise<string | null> {
+    if (leaderId === undefined || leaderId === null || leaderId === '') {
+      return null;
+    }
+
+    const leader = await this.prisma.user.findFirst({
+      where: activeOnly({
+        id: leaderId,
+        companyId: ctx.companyId,
+        isActive: true,
+      }),
+      select: { id: true },
+    });
+
+    if (!leader) {
+      throw new BadRequestException(
+        'Leader must be an active user in this company',
+      );
+    }
+
+    return leader.id;
   }
 
   /**
