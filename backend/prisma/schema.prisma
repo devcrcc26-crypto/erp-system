@@ -115,6 +115,23 @@ enum EmailVerificationPurpose {
   EMAIL_CHANGE
 }
 
+enum ApprovalRequestStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  RETURNED
+}
+
+enum ApprovalTierDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
 // ─── Company & Settings ──────────────────────────────────────────────────────
 
 model Company {
@@ -179,6 +196,8 @@ model Company {
   taskDisciplineReviews    TaskDisciplineReview[]
   designPackageAttachments DesignPackageAttachment[]
   reviewSessionAttachments ReviewSessionAttachment[]
+  approvalCategories       ApprovalCategory[]
+  approvalRequests         ApprovalRequest[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -554,6 +573,10 @@ model User {
   assignedReviewComments   ReviewComment[] @relation("ReviewCommentAssignee")
   capturedReviewSnapshots  ReviewContextSnapshot[] @relation("ReviewSnapshotCapturedBy")
   assignedChangeRequests   ProjectChangeRequest[] @relation("ChangeRequestAssignedTo")
+  createdCategories        ApprovalCategory[]     @relation("CategoryCreator")
+  approvalRequests         ApprovalRequest[]      @relation("RequestRequester")
+  approvalTiers            ApprovalTier[]         @relation("TierApprover")
+  approvalComments         ApprovalComment[]      @relation("ApprovalCommenter")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -862,6 +885,7 @@ model DocumentFolder {
   changeRequests ProjectChangeRequest[] @relation("ChangeRequestAttachmentFolder")
   submittalExternalApprovals SubmittalExternalApproval[]
   submittalExternalFeedback  SubmittalExternalFeedback[]
+  approvalRequests           ApprovalRequest[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -898,6 +922,7 @@ model Document {
   submittalReviewAttachments SubmittalReview[]
   rfiResponses             RfiResponse[]             @relation("RfiResponseDocument")
   issueResponses           IssueResponse[]           @relation("IssueResponseDocument")
+  approvalComments         ApprovalComment[]
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3161,4 +3186,105 @@ model ReviewSessionAttachment {
   @@index([reviewSessionId], map: "idx_review_session_attachment_session_id")
   @@index([documentId], map: "idx_review_session_attachment_document_id")
   @@map("review_session_attachments")
+}
+
+// ─── Approval Workflow ───────────────────────────────────────────────────────
+
+model ApprovalCategory {
+  id               String    @id @default(uuid())
+  companyId        String    @map("company_id")
+  name             String
+  code             String
+  description      String?
+  icon             String?
+  module           String    @default("GENERAL")
+  formSchema       Json      @default("[]") @map("form_schema")
+  approvalRules    Json      @default("[]") @map("approval_rules")
+  numberPrefix     String    @map("number_prefix")
+  isActive         Boolean   @default(true) @map("is_active")
+  allowAttachments Boolean   @default(true) @map("allow_attachments")
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdBy        String    @map("created_by")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  updatedBy        String    @map("updated_by")
+  deletedAt        DateTime? @map("deleted_at")
+  deletedBy        String?   @map("deleted_by")
+
+  company  Company           @relation(fields: [companyId], references: [id])
+  creator  User              @relation("CategoryCreator", fields: [createdBy], references: [id])
+  requests ApprovalRequest[]
+
+  @@unique([companyId, code])
+  @@map("approval_category")
+}
+
+model ApprovalRequest {
+  id                 String                @id @default(uuid())
+  companyId          String                @map("company_id")
+  categoryId         String                @map("category_id")
+  requestNumber      String                @map("request_number")
+  formData           Json                  @default("{}") @map("form_data")
+  requestedBy        String                @map("requested_by")
+  status             ApprovalRequestStatus @default(DRAFT)
+  currentTier        Int                   @default(0) @map("current_tier")
+  matchedRuleName    String?               @map("matched_rule_name")
+  submittedAt        DateTime?             @map("submitted_at")
+  completedAt        DateTime?             @map("completed_at")
+  attachmentFolderId String?               @map("attachment_folder_id")
+  notes              String?
+  createdAt          DateTime              @default(now()) @map("created_at")
+  createdBy          String                @map("created_by")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  updatedBy          String                @map("updated_by")
+  deletedAt          DateTime?             @map("deleted_at")
+  deletedBy          String?               @map("deleted_by")
+
+  company          Company           @relation(fields: [companyId], references: [id])
+  category         ApprovalCategory  @relation(fields: [categoryId], references: [id])
+  requester        User              @relation("RequestRequester", fields: [requestedBy], references: [id])
+  tiers            ApprovalTier[]
+  comments         ApprovalComment[]
+  attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([requestedBy])
+  @@map("approval_request")
+}
+
+model ApprovalTier {
+  id         String               @id @default(uuid())
+  requestId  String               @map("request_id")
+  tierOrder  Int                  @map("tier_order")
+  label      String
+  approverId String               @map("approver_id")
+  resolver   String
+  decision   ApprovalTierDecision @default(PENDING)
+  comment    String?
+  decidedAt  DateTime?            @map("decided_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  request  ApprovalRequest @relation(fields: [requestId], references: [id])
+  approver User            @relation("TierApprover", fields: [approverId], references: [id])
+
+  @@index([requestId])
+  @@index([approverId])
+  @@map("approval_tier")
+}
+
+model ApprovalComment {
+  id           String   @id @default(uuid())
+  requestId    String   @map("request_id")
+  commentBy    String   @map("comment_by")
+  commentText  String   @map("comment_text")
+  attachmentId String?  @map("attachment_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  request    ApprovalRequest @relation(fields: [requestId], references: [id])
+  commenter  User            @relation("ApprovalCommenter", fields: [commentBy], references: [id])
+  attachment Document?       @relation(fields: [attachmentId], references: [id])
+
+  @@map("approval_comment")
 }

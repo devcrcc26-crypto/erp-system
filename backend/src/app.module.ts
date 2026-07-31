@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CompanySetupModule } from './modules/company-setup/company-setup.module';
@@ -61,6 +62,7 @@ import { StorageModule } from './shared/storage/storage.module';
     DocumentsModule,
     ReportingModule,
     ProjectManagementModule,
+    ApprovalsModule,
   ],
   controllers: [AppController],
   providers: [
