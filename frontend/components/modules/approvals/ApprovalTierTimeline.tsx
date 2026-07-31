@@ -64,7 +64,7 @@ export default function ApprovalTierTimeline({
                       : isCurrent
                         ? 'blue'
                         : 'gray',
-              dot:
+              icon:
                 tier.decision === 'APPROVED' ? (
                   <CheckCircle2 size={16} color={tokens.colorGreen600} />
                 ) : tier.decision === 'PENDING' ? (

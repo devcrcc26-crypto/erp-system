@@ -243,7 +243,7 @@ export default function ApprovalDetailPageContent({
             padding: 24,
           }}
         >
-          <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <Typography.Text type="secondary">
               {request.requestNumber}
               {request.category?.name ? ` · ${request.category.name}` : ''}
@@ -295,7 +295,7 @@ export default function ApprovalDetailPageContent({
               description="No comments yet"
             />
           ) : (
-            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            <Space orientation="vertical" size={12} style={{ width: '100%' }}>
               {(request.comments ?? []).map((comment) => (
                 <div
                   key={comment.id}
@@ -359,7 +359,7 @@ export default function ApprovalDetailPageContent({
                         : isCurrent
                           ? 'blue'
                           : 'gray',
-                dot:
+                icon:
                   tier.decision === 'APPROVED' ? (
                     <CheckCircle2 size={16} color={tokens.colorGreen600} />
                   ) : tier.decision === 'PENDING' ? (
@@ -464,7 +464,7 @@ export default function ApprovalDetailPageContent({
           />
 
           {isActiveApprover && currentTier ? (
-            <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+            <Space orientation="vertical" style={{ width: '100%', marginTop: 8 }}>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 Actions for {currentTier.label}
               </Typography.Text>
