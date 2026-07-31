@@ -25,7 +25,7 @@ export default function HrComingSoonPage({
       <div
         className="rounded-lg border px-6 py-10"
         style={{
-          backgroundColor: tokens.colorBgContainer,
+          backgroundColor: tokens.colorCardBg,
           borderColor: tokens.colorBorder,
         }}
       >

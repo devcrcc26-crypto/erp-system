@@ -130,7 +130,7 @@ export default function DepartmentFormDrawer({
       <Drawer
         open={open}
         title={editing ? 'Edit department' : 'Add department'}
-        width={560}
+        size={560}
         className="erp-responsive-drawer"
         onClose={resetAndClose}
         destroyOnHidden

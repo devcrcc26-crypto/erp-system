@@ -9,6 +9,13 @@ export function useCanViewAuditLogs(): boolean {
   return useAuthStore((state) => state.capabilities.canViewAuditLogs);
 }
 
+/**
+ * True when the session can access Human Resources (hr.view permission).
+ */
+export function useCanViewHr(): boolean {
+  return useAuthStore((state) => state.capabilities.canViewHr);
+}
+
 /** True when the session can list and manage users. */
 export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);

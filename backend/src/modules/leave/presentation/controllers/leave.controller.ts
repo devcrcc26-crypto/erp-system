@@ -25,6 +25,7 @@ import { LeaveService } from '../../application/services/leave.service';
 @ApiTags('HR Leave Requests')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
+@RequirePermission('hr', 'view')
 @Controller('hr/leave-requests')
 export class LeaveController {
   constructor(
@@ -33,7 +34,6 @@ export class LeaveController {
   ) {}
 
   @Post()
-  @RequirePermission('leave', 'create')
   @ApiOperation({ summary: 'Submit a leave request' })
   submit(
     @CurrentUser() user: AuthenticatedUser,
@@ -44,7 +44,6 @@ export class LeaveController {
   }
 
   @Get()
-  @RequirePermission('leave', 'view')
   @ApiOperation({ summary: 'List leave requests' })
   list(
     @CurrentCompany() companyId: string,
@@ -54,7 +53,6 @@ export class LeaveController {
   }
 
   @Get('my')
-  @RequirePermission('leave', 'view')
   @ApiOperation({ summary: 'List my leave requests' })
   listMine(
     @CurrentUser() user: AuthenticatedUser,
@@ -65,7 +63,6 @@ export class LeaveController {
   }
 
   @Get('balances/me')
-  @RequirePermission('leave', 'view')
   @ApiOperation({ summary: 'Get my leave balances for a year' })
   myBalances(
     @CurrentUser() user: AuthenticatedUser,
@@ -81,7 +78,6 @@ export class LeaveController {
   }
 
   @Get(':id')
-  @RequirePermission('leave', 'view')
   @ApiOperation({ summary: 'Get a leave request with approval tiers' })
   getOne(
     @CurrentCompany() companyId: string,
@@ -91,7 +87,6 @@ export class LeaveController {
   }
 
   @Patch(':id/cancel')
-  @RequirePermission('leave', 'create')
   @ApiOperation({ summary: 'Cancel a draft or submitted leave request' })
   cancel(
     @CurrentUser() user: AuthenticatedUser,

@@ -97,6 +97,7 @@
     "hr": {
       "comingSoonTitle": "Coming soon",
       "comingSoonDescription": "{{module}} will be available in a future update.",
+      "accessDenied": "You do not have access to Human Resources.",
       "leave": {
         "new": "New leave request",
         "detail": "Leave request"

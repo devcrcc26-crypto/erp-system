@@ -97,6 +97,7 @@
     "hr": {
       "comingSoonTitle": "即将推出",
       "comingSoonDescription": "{{module}} 将在后续版本中提供。",
+      "accessDenied": "您无权访问人力资源模块。",
       "leave": {
         "new": "新建请假申请",
         "detail": "请假详情"

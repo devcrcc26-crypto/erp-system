@@ -149,6 +149,9 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can view company audit logs' })
   canViewAuditLogs!: boolean;
 
+  @ApiProperty({ description: 'Can access the Human Resources module (hr.view)' })
+  canViewHr!: boolean;
+
   @ApiProperty({
     description:
       'System Administrator — bypasses project team module gates and receives full RBAC.',

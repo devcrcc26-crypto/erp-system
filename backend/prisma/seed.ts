@@ -106,6 +106,8 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'approvals', action: 'approve', description: 'Approve, reject, return, or condition approval tiers' },
   { module: 'approvals', action: 'edit', description: 'Edit approval categories' },
 
+  { module: 'hr', action: 'view', description: 'Access Human Resources module and HR workflows' },
+
   { module: 'leave', action: 'view', description: 'View leave requests and balances' },
   { module: 'leave', action: 'create', description: 'Submit and cancel leave requests' },
   
@@ -879,17 +881,6 @@ function employeePermissionFlags(
     };
   }
 
-  if (module === 'leave' && (action === 'view' || action === 'create')) {
-    return {
-      canView: action === 'view',
-      canCreate: action === 'create',
-      canEdit: false,
-      canDelete: false,
-      canApprove: false,
-      canExport: false,
-    };
-  }
-
   return null;
 }
 
@@ -1048,6 +1039,46 @@ async function main(): Promise<void> {
     if (employeeFlags) {
       await upsertRolePermission(employeeRoleId, permission.id, employeeFlags);
     }
+  }
+
+  // Human Resources module access (hr.view) — exact role set from product requirements.
+  // System Administrator already receives full flags in the admin loop above.
+  const hrViewPermission = permissions.find(
+    (permission) => permission.module === 'hr' && permission.action === 'view',
+  );
+  if (hrViewPermission) {
+    const hrViewRoleNames = [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+    ] as const;
+    const hrViewFlags = viewOnlyFlags();
+    for (const roleName of hrViewRoleNames) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, hrViewPermission.id, hrViewFlags);
+    }
+  }
+
+  // Revoke legacy Employee leave permissions (HR is gated by hr.view).
+  for (const permission of permissions) {
+    if (permission.module !== 'leave') {
+      continue;
+    }
+    await prisma.rolePermission.updateMany({
+      where: {
+        roleId: employeeRoleId,
+        permissionId: permission.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: SYSTEM_USER_ID,
+        updatedBy: SYSTEM_USER_ID,
+      },
+    });
   }
 
   const pmRoleNames = [

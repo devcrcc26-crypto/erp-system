@@ -77,6 +77,7 @@ export class SessionCapabilitiesService {
       'roles',
       'notifications',
       'audit',
+      'hr',
       'schedule',
       'engineering_documents',
       'review_sessions',
@@ -100,6 +101,7 @@ export class SessionCapabilitiesService {
     const roles = permissionMap.roles;
     const notifications = permissionMap.notifications;
     const audit = permissionMap.audit;
+    const hr = permissionMap.hr;
     const schedule = permissionMap.schedule;
     const engineeringDocuments = permissionMap.engineering_documents;
     const reviewSessions = permissionMap.review_sessions;
@@ -112,6 +114,7 @@ export class SessionCapabilitiesService {
       canEditRoles: roles.canEdit,
       canViewNotifications: notifications.canView,
       canViewAuditLogs: audit.canView,
+      canViewHr: hr.canView,
       isSystemAdministrator: systemAdministrator,
       pm,
       epc: this.resolveEpcCapabilities(
