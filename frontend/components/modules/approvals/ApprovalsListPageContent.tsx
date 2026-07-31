@@ -164,7 +164,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         title="Approvals"
         description="Browse and act on approval requests."
       >
-        <Alert type="error" showIcon message={message} />
+        <Alert type="error" showIcon title={message} />
       </FormLayout>
     );
   }

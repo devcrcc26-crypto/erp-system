@@ -105,7 +105,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
         title="New approval request"
         description="Choose a category and submit a request."
       >
-        <Alert type="error" showIcon message={message} />
+        <Alert type="error" showIcon title={message} />
       </FormLayout>
     );
   }

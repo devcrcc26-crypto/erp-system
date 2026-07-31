@@ -218,7 +218,7 @@ export default function ApprovalDetailPageContent({
         >
           Back to Approvals
         </Button>
-        <Alert type="error" showIcon message={message} />
+        <Alert type="error" showIcon title={message} />
       </div>
     );
   }
@@ -490,7 +490,7 @@ export default function ApprovalDetailPageContent({
               type="info"
               showIcon
               style={{ marginTop: 8 }}
-              message={
+              title={
                 currentTier
                   ? `Waiting on ${currentTier.label} (${formatApprovalUserName(currentTier.approver)})`
                   : 'No active approval actions'
