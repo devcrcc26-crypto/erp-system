@@ -113,6 +113,10 @@ export interface ApprovalRequestDetail extends ApprovalRequestListItem {
   notes?: string | null;
   attachmentFolderId?: string | null;
   category?: ApprovalCategorySummary;
+  /** Category code mirrored for typed detail routing. */
+  categoryCode?: string | null;
+  /** Linked leave/overtime request id when this approval owns an HR record. */
+  sourceId?: string | null;
   tiers?: ApprovalTier[];
   comments?: ApprovalComment[];
   attachmentFolder?: { id: string; name: string; path: string } | null;

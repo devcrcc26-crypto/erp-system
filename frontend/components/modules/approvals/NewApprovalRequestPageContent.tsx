@@ -23,8 +23,14 @@ import {
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
+const CATEGORY_ROUTES: Record<string, string> = {
+  LEAVE_REQUEST: '/approvals/new/leave-request',
+  OVERTIME_APPLICATION: '/approvals/new/overtime',
+};
+
 /**
  * Two-step flow: pick a category, then fill and submit a dynamic form.
+ * Leave / overtime categories route to their typed HR form pages.
  */
 export default function NewApprovalRequestPageContent(): React.ReactNode {
   const router = useRouter();
@@ -52,6 +58,11 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   }, [selectedCategory]);
 
   function handleSelectCategory(category: ApprovalCategorySummary): void {
+    const typedRoute = CATEGORY_ROUTES[category.code];
+    if (typedRoute) {
+      router.push(typedRoute);
+      return;
+    }
     setSelectedCategory(category);
     setFormValues({});
     setErrors({});

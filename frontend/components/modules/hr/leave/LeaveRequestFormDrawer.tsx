@@ -101,7 +101,11 @@ export default function LeaveRequestFormDrawer({
       messageApi.success('Leave request submitted');
       onSubmitted?.();
       onClose();
-      router.push(`/hr/leave-requests/${created.id}`);
+      if (created.approvalRequestId) {
+        router.push(`/approvals/${created.approvalRequestId}`);
+      } else {
+        router.push(`/hr/leave-requests/${created.id}`);
+      }
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to submit leave request', messageApi);
     }

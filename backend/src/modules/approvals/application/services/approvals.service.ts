@@ -54,6 +54,8 @@ const REQUEST_DETAIL_INCLUDE = {
   attachmentFolder: {
     select: { id: true, name: true, path: true },
   },
+  leaveRequest: { select: { id: true } },
+  overtimeRequest: { select: { id: true } },
 } as const;
 
 export interface TierCondition {
@@ -225,6 +227,7 @@ export class ApprovalsService {
 
   /**
    * Fetches a request with tiers and comments, scoped to the company.
+   * Includes categoryCode and sourceId (linked leave/overtime row) for typed UI.
    */
   async getRequest(requestId: string, companyId: string): Promise<unknown> {
     const request = await this.prisma.approvalRequest.findFirst({
@@ -234,7 +237,17 @@ export class ApprovalsService {
     if (!request) {
       throw new NotFoundException('Approval request not found');
     }
-    return request;
+
+    const sourceId =
+      request.leaveRequest?.id ?? request.overtimeRequest?.id ?? null;
+
+    return {
+      ...request,
+      categoryCode: request.category?.code ?? null,
+      sourceId,
+      leaveRequest: undefined,
+      overtimeRequest: undefined,
+    };
   }
 
   /**

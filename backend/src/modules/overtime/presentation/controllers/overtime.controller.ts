@@ -66,6 +66,12 @@ export class OvertimeController {
   }
 
   @Get(':id')
+  @RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'overtime', action: 'view' },
+    { module: 'overtime', action: 'create' },
+    { module: 'approvals', action: 'view' },
+  )
   @ApiOperation({ summary: 'Get an overtime request with approval tiers' })
   getOne(
     @CurrentUser() user: AuthenticatedUser,

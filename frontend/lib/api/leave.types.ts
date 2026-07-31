@@ -71,6 +71,8 @@ export interface LeaveRequestListItem {
 export interface LeaveRequestDetail extends LeaveRequestListItem {
   creator?: LeaveUserSummary;
   approvalRequest?: LeaveApprovalSummary | null;
+  /** Balance for this leave type / year when loaded from detail. */
+  balance?: LeaveBalance | null;
 }
 
 export interface LeaveBalance {

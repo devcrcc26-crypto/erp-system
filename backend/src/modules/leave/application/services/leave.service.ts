@@ -272,7 +272,21 @@ export class LeaveService
     }
 
     await this.assertCanViewLeaveRequest(leave, companyId, userId);
-    return this.mapLeave(leave);
+
+    const mapped = this.mapLeave(leave);
+    const year = leave.startDate.getUTCFullYear();
+    const balances = (await this.leaveBalanceService.getBalance(
+      leave.employeeId,
+      year,
+      companyId,
+    )) as Array<Record<string, unknown>>;
+    const balance =
+      balances.find((row) => row.leaveType === leave.leaveType) ?? null;
+
+    return {
+      ...mapped,
+      balance,
+    };
   }
 
   /**

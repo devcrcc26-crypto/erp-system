@@ -558,6 +558,20 @@ export function resolveRouteMeta(
     };
   }
 
+  if (
+    pathname === '/approvals/new/leave-request' ||
+    pathname === '/approvals/new/overtime'
+  ) {
+    return {
+      titleKey: 'pages.approvals.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.approvals'), href: '/approvals' },
+        { label: t('pages.approvals.new'), href: '/approvals/new' },
+      ],
+    };
+  }
+
   if (pathname === '/approvals/new') {
     return {
       titleKey: 'pages.approvals.new',
@@ -580,16 +594,6 @@ export function resolveRouteMeta(
     };
   }
 
-  if (pathname === '/hr/leave-requests/new') {
-    return {
-      titleKey: 'nav.hr.leaveRequests',
-      breadcrumbs: [
-        { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
-      ],
-    };
-  }
-
   if (pathname.startsWith('/hr/leave-requests/')) {
     return {
       titleKey: 'pages.hr.leave.detail',
@@ -597,16 +601,6 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
         { label: t('pages.hr.leave.detail') },
-      ],
-    };
-  }
-
-  if (pathname === '/hr/overtime/new') {
-    return {
-      titleKey: 'nav.hr.overtime',
-      breadcrumbs: [
-        { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.overtime'), href: '/hr/overtime' },
       ],
     };
   }

@@ -4,8 +4,6 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Descriptions,
-  Empty,
   Input,
   Skeleton,
   Space,
@@ -14,11 +12,17 @@ import {
 } from 'antd';
 import { ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import GenericApprovalDetail from '@/components/modules/approvals/detail/GenericApprovalDetail';
+import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
+import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { ApprovalTier } from '@/lib/api/approvals.types';
+import type {
+  ApprovalRequestDetail,
+  ApprovalTier,
+} from '@/lib/api/approvals.types';
 import {
   useAddApprovalCondition,
   useApprovalRequest,
@@ -34,8 +38,6 @@ import {
   findCurrentTier,
   formatApprovalStatus,
   formatApprovalUserName,
-  formatFormDataValue,
-  getFormFieldLabels,
   parseTierConditions,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
@@ -44,8 +46,42 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
 
+function resolveCategoryCode(request: ApprovalRequestDetail): string {
+  return (request.categoryCode ?? request.category?.code ?? '').trim();
+}
+
+function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
+  const code = resolveCategoryCode(request);
+  const sourceId = request.sourceId ?? null;
+
+  switch (code) {
+    case 'LEAVE_REQUEST':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <LeaveRequestDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'OVERTIME_APPLICATION':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <OvertimeRequestDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    default:
+      return <GenericApprovalDetail request={request} />;
+  }
+}
+
 /**
- * Approval request detail with tier chain and approver actions.
+ * Approval request detail with typed HR body, tier chain, and approver actions.
  */
 export default function ApprovalDetailPageContent({
   requestId,
@@ -84,22 +120,6 @@ export default function ApprovalDetailPageContent({
     (request?.status === 'PENDING' ||
       request?.status === 'IN_REVIEW' ||
       request?.status === 'SUBMITTED');
-
-  const fieldLabels = useMemo(
-    () => getFormFieldLabels(request?.category?.formSchema),
-    [request?.category?.formSchema],
-  );
-
-  const formEntries = useMemo(() => {
-    const data = request?.formData ?? {};
-    return Object.entries(data)
-      .filter(([key]) => !key.startsWith('_'))
-      .map(([key, value]) => ({
-        key,
-        label: fieldLabels.get(key) ?? key,
-        value: formatFormDataValue(value),
-      }));
-  }, [request?.formData, fieldLabels]);
 
   const displayStatus = request
     ? resolveDisplayStatus(request.status, currentTier)
@@ -234,101 +254,35 @@ export default function ApprovalDetailPageContent({
         Back to Approvals
       </Button>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-            padding: 24,
-          }}
-        >
-          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-            <Typography.Text type="secondary">
-              {request.requestNumber}
-              {request.category?.name ? ` · ${request.category.name}` : ''}
-            </Typography.Text>
-            <Space wrap align="center">
-              <Typography.Title level={3} style={{ margin: 0 }}>
-                {request.title}
-              </Typography.Title>
-              {displayStatus ? (
-                <StatusBadge
-                  label={displayStatus.label}
-                  variant={displayStatus.variant}
-                />
-              ) : null}
-            </Space>
-            <Typography.Text type="secondary">
-              Submitted by {formatApprovalUserName(request.requester)}
-              {' · '}
-              {formatProjectDate(
-                request.submittedAt ?? request.createdAt ?? null,
-              )}
-            </Typography.Text>
+      <div className="mb-4">
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+          <Typography.Text type="secondary">
+            {request.requestNumber}
+            {request.category?.name ? ` · ${request.category.name}` : ''}
+          </Typography.Text>
+          <Space wrap align="center">
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              {request.title}
+            </Typography.Title>
+            {displayStatus ? (
+              <StatusBadge
+                label={displayStatus.label}
+                variant={displayStatus.variant}
+              />
+            ) : null}
           </Space>
+          <Typography.Text type="secondary">
+            Submitted by {formatApprovalUserName(request.requester)}
+            {' · '}
+            {formatProjectDate(
+              request.submittedAt ?? request.createdAt ?? null,
+            )}
+          </Typography.Text>
+        </Space>
+      </div>
 
-          <Typography.Title level={5} style={{ marginTop: 28 }}>
-            Request details
-          </Typography.Title>
-          {formEntries.length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="No form data"
-            />
-          ) : (
-            <Descriptions bordered size="small" column={1}>
-              {formEntries.map((entry) => (
-                <Descriptions.Item key={entry.key} label={entry.label}>
-                  {entry.value}
-                </Descriptions.Item>
-              ))}
-            </Descriptions>
-          )}
-
-          <Typography.Title level={5} style={{ marginTop: 28 }}>
-            Comments
-          </Typography.Title>
-          {(request.comments ?? []).length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="No comments yet"
-            />
-          ) : (
-            <Space orientation="vertical" size={12} style={{ width: '100%' }}>
-              {(request.comments ?? []).map((comment) => (
-                <div
-                  key={comment.id}
-                  style={{
-                    border: `1px solid ${tokens.colorBorder}`,
-                    borderRadius: 8,
-                    padding: 12,
-                    background: tokens.colorSurfaceSecondary,
-                  }}
-                >
-                  <Space
-                    style={{
-                      width: '100%',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Typography.Text strong>
-                      {formatApprovalUserName(comment.commenter)}
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {formatProjectDate(comment.createdAt)}
-                    </Typography.Text>
-                  </Space>
-                  <Typography.Paragraph
-                    style={{ marginBottom: 0, marginTop: 6 }}
-                  >
-                    {comment.commentText}
-                  </Typography.Paragraph>
-                </div>
-              ))}
-            </Space>
-          )}
-        </div>
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {renderTypedDetail(request)}
 
         <aside
           style={{

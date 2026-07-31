@@ -96,7 +96,11 @@ export default function OvertimeRequestFormDrawer({
       messageApi.success('Overtime request submitted');
       onSubmitted?.();
       onClose();
-      router.push(`/hr/overtime/${created.id}`);
+      if (created.approvalRequestId) {
+        router.push(`/approvals/${created.approvalRequestId}`);
+      } else {
+        router.push(`/hr/overtime/${created.id}`);
+      }
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to submit overtime request', messageApi);
     }
