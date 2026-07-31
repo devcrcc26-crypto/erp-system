@@ -29,7 +29,10 @@ import {
   type ApprovalDecisionListener,
   type ApprovalFinalDecision,
 } from '../ports/approval-decision.listener';
-import { ApprovalResolverService } from './approval-resolver.service';
+import {
+  ApprovalResolverService,
+  type MatchedApprovalRule,
+} from './approval-resolver.service';
 
 const APPROVAL_RETURNED_EVENT = 'approval.returned';
 const APPROVAL_PENDING_EVENT = 'approval.pending';
@@ -105,11 +108,13 @@ export class ApprovalsService {
 
   /**
    * Creates an approval request and materialises resolved tiers. Status PENDING.
+   * Pass `resolvedTiers` to skip category rule resolution (e.g. leave org chain).
    */
   async submitRequest(
     dto: SubmitRequestDto,
     companyId: string,
     userId: string,
+    options?: { resolvedTiers?: MatchedApprovalRule },
   ): Promise<unknown> {
     const category = await this.prisma.approvalCategory.findFirst({
       where: activeOnly({
@@ -149,12 +154,18 @@ export class ApprovalsService {
       }
     }
 
-    const matched = await this.resolver.resolveRule(
-      companyId,
-      userId,
-      category.approvalRules,
-      dto.formData,
-    );
+    const matched =
+      options?.resolvedTiers ??
+      (await this.resolver.resolveRule(
+        companyId,
+        userId,
+        category.approvalRules,
+        dto.formData,
+      ));
+
+    if (!matched.tiers || matched.tiers.length === 0) {
+      throw new BadRequestException('Approval chain has no tiers');
+    }
 
     const requestNumber = await this.nextRequestNumber(category.numberPrefix);
     const now = new Date();

@@ -24,11 +24,19 @@ import type {
   ApprovalDecisionListener,
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
+import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
 import {
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
+
+interface LeaveApprovalChainTier {
+  order: number;
+  label: string;
+  approverId: string;
+  resolver: string;
+}
 
 const USER_SELECT = {
   id: true,
@@ -92,6 +100,12 @@ export class LeaveService implements ApprovalDecisionListener {
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
 
+    const resolvedTiers = await this.buildLeaveApprovalChain(
+      userId,
+      days,
+      companyId,
+    );
+
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'LEAVE_REQUEST',
@@ -106,6 +120,12 @@ export class LeaveService implements ApprovalDecisionListener {
       },
       companyId,
       userId,
+      {
+        resolvedTiers: {
+          ruleName: 'Leave org chain',
+          tiers: resolvedTiers,
+        },
+      },
     )) as { id: string; requestNumber: string };
 
     const now = new Date();
@@ -445,6 +465,128 @@ export class LeaveService implements ApprovalDecisionListener {
       .split('_')
       .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
       .join(' ');
+  }
+
+  /**
+   * Builds leave approval tiers from org structure:
+   * 1) Discipline Lead, 2) HR Officer, 3) General Manager when days > 3.
+   * Duplicate approvers are collapsed (first occurrence wins).
+   */
+  async buildLeaveApprovalChain(
+    employeeId: string,
+    days: number,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const tiers: LeaveApprovalChainTier[] = [];
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      include: {
+        engineeringDiscipline: {
+          include: {
+            leader: {
+              select: { id: true, deletedAt: true, isActive: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    if (!employee.engineeringDiscipline) {
+      throw new BadRequestException(
+        "Employee is not assigned to an engineering discipline.",
+      );
+    }
+
+    const disciplineLeader = employee.engineeringDiscipline.leader;
+    if (
+      !disciplineLeader ||
+      disciplineLeader.deletedAt ||
+      !disciplineLeader.isActive
+    ) {
+      throw new BadRequestException(
+        "No discipline leader assigned for this employee's discipline.",
+      );
+    }
+
+    tiers.push({
+      order: 1,
+      label: 'Discipline Lead',
+      approverId: disciplineLeader.id,
+      resolver: 'DISCIPLINE_LEAD',
+    });
+
+    const hrOfficer = await this.findActiveUserByRoleName(
+      companyId,
+      'HR Officer',
+    );
+    if (!hrOfficer) {
+      throw new BadRequestException('No HR Officer found in the system.');
+    }
+
+    tiers.push({
+      order: 2,
+      label: 'HR Officer',
+      approverId: hrOfficer.id,
+      resolver: 'ROLE:HR Officer',
+    });
+
+    if (days > 3) {
+      const gm = await this.findActiveUserByRoleName(
+        companyId,
+        'General Manager',
+      );
+      if (!gm) {
+        throw new BadRequestException(
+          'No General Manager found in the system.',
+        );
+      }
+
+      tiers.push({
+        order: 3,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
+      });
+    }
+
+    const uniqueTiers = tiers.filter(
+      (tier, index, self) =>
+        index === self.findIndex((t) => t.approverId === tier.approverId),
+    );
+
+    return uniqueTiers.map((tier, index) => ({
+      tierOrder: index + 1,
+      label: tier.label,
+      approverId: tier.approverId,
+      resolver: tier.resolver,
+    }));
+  }
+
+  private async findActiveUserByRoleName(
+    companyId: string,
+    roleName: string,
+  ): Promise<{ id: string } | null> {
+    return this.prisma.user.findFirst({
+      where: activeOnly({
+        companyId,
+        isActive: true,
+        userRoles: {
+          some: activeOnly({
+            role: activeOnly({
+              companyId,
+              name: roleName,
+            }),
+          }),
+        },
+      }),
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   private mapLeave(row: Record<string, unknown>): Record<string, unknown> {

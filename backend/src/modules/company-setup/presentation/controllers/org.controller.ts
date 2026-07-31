@@ -24,6 +24,7 @@ import {
   CreatePositionDto,
   ListEngineeringDisciplinesQueryDto,
   OrgEntityListQueryDto,
+  AssignDisciplineLeaderDto,
   UpdateBranchDto,
   UpdateCostCentreDto,
   UpdateDepartmentDto,
@@ -204,6 +205,36 @@ export class OrgController {
     @Body() dto: UpdateDisciplineDto,
   ): Promise<unknown> {
     return this.companySetupService.updateDiscipline(this.ctx(user), id, dto);
+  }
+
+  @Patch('engineering-disciplines/:id/leader')
+  @RequirePermission('departments', 'edit')
+  @ApiOperation({ summary: 'Assign discipline leader' })
+  assignDisciplineLeader(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: AssignDisciplineLeaderDto,
+  ): Promise<unknown> {
+    return this.companySetupService.assignDisciplineLeader(
+      this.ctx(user),
+      id,
+      dto.leaderId,
+    );
+  }
+
+  @Patch('disciplines/:id/leader')
+  @RequirePermission('departments', 'edit')
+  @ApiOperation({ summary: 'Assign discipline leader (alias)' })
+  assignDisciplineLeaderAlias(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: AssignDisciplineLeaderDto,
+  ): Promise<unknown> {
+    return this.companySetupService.assignDisciplineLeader(
+      this.ctx(user),
+      id,
+      dto.leaderId,
+    );
   }
 
   @Delete('engineering-disciplines/:id')

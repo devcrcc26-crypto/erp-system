@@ -252,6 +252,36 @@ export function buildIconRailNav(
         visible: canViewDailyLogs,
       },
       {
+        key: '/kanban-board',
+        labelKey: 'nav.kanbanBoard',
+        href: '/kanban-board',
+        iconKey: 'kanban',
+        visible: canViewProjects,
+      },
+      {
+        key: '/reports',
+        labelKey: 'nav.reports',
+        href: '/reports',
+        iconKey: 'reports',
+        visible: canViewProjects,
+      },
+    ],
+  };
+
+  const humanResources: IconRailGroup = {
+    key: 'hr',
+    labelKey: 'nav.groups.humanResources',
+    storageKey: 'sidebar_hr_open',
+    defaultOpen: true,
+    items: [
+      {
+        key: '/users',
+        labelKey: 'nav.users',
+        href: '/users',
+        iconKey: 'users',
+        visible: canManageUsers,
+      },
+      {
         key: '/departments',
         labelKey: 'nav.departments',
         href: '/departments',
@@ -272,36 +302,6 @@ export function buildIconRailNav(
         iconKey: 'disciplines-catalog',
         visible: canViewDisciplinesCatalog,
       },
-      {
-        key: '/kanban-board',
-        labelKey: 'nav.kanbanBoard',
-        href: '/kanban-board',
-        iconKey: 'kanban',
-        visible: canViewProjects,
-      },
-      {
-        key: '/users',
-        labelKey: 'nav.users',
-        href: '/users',
-        iconKey: 'users',
-        visible: canManageUsers,
-      },
-      {
-        key: '/reports',
-        labelKey: 'nav.reports',
-        href: '/reports',
-        iconKey: 'reports',
-        visible: canViewProjects,
-      },
-    ],
-  };
-
-  const humanResources: IconRailGroup = {
-    key: 'hr',
-    labelKey: 'nav.groups.humanResources',
-    storageKey: 'sidebar_hr_open',
-    defaultOpen: true,
-    items: [
       {
         key: '/hr/leave-requests',
         labelKey: 'nav.hr.leaveRequests',

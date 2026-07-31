@@ -85,7 +85,7 @@ export default function DisciplineCatalogFormDrawer({
     <Drawer
       open={open}
       title={readOnly ? 'View discipline' : editing ? 'Edit discipline' : 'Add discipline'}
-      width={480}
+      size={480}
       className="erp-responsive-drawer"
       onClose={onClose}
       destroyOnHidden

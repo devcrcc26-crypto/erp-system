@@ -345,6 +345,7 @@ model Discipline {
   name      String
   nameZh    String?   @map("name_zh")
   isActive  Boolean   @default(true) @map("is_active")
+  leaderId  String?   @map("leader_id")
   createdAt DateTime  @default(now()) @map("created_at")
   createdBy String    @map("created_by")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -353,13 +354,15 @@ model Discipline {
   deletedBy String?   @map("deleted_by")
 
   company         Company          @relation(fields: [companyId], references: [id])
+  leader          User?            @relation("DisciplineLeader", fields: [leaderId], references: [id])
   taskDisciplines TaskDiscipline[]
-  users           User[]
+  users           User[]           @relation("UserEngineeringDiscipline")
 
   @@unique([companyId, name], map: "uq_engineering_discipline_company_name")
   @@index([companyId], map: "idx_engineering_discipline_company_id")
   @@index([companyId, deletedAt], map: "idx_engineering_discipline_company_deleted")
   @@index([companyId, isActive], map: "idx_engineering_discipline_company_active")
+  @@index([leaderId], map: "idx_discipline_leader")
   @@map("engineering_discipline")
 }
 
@@ -521,7 +524,7 @@ model User {
   company                Company                 @relation(fields: [companyId], references: [id])
   branch                 Branch?                 @relation(fields: [branchId], references: [id])
   department             Department?             @relation(fields: [departmentId], references: [id])
-  engineeringDiscipline  Discipline?             @relation(fields: [engineeringDisciplineId], references: [id])
+  engineeringDiscipline  Discipline?             @relation("UserEngineeringDiscipline", fields: [engineeringDisciplineId], references: [id])
   position               Position?               @relation(fields: [positionId], references: [id])
   sessions               UserSession[]
   passwordResetTokens    PasswordResetToken[]
@@ -533,6 +536,7 @@ model User {
   documentVersions       DocumentVersion[]
   reportDefinitions      ReportDefinition[]
   ledDepartments         Department[]           @relation("DepartmentLeader")
+  ledDisciplines         Discipline[]           @relation("DisciplineLeader")
   responsibleProjects    Project[]              @relation("ProjectResponsiblePerson")
   riskReviewsAsReviewer  RiskReview[]           @relation("RiskReviewer")
   riskMitigationsAssessed RiskMitigation[]      @relation("MitigationAssessor")

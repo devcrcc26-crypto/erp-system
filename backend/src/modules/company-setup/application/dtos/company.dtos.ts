@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
@@ -310,6 +311,13 @@ export class CreateDisciplineDto {
 }
 
 export class UpdateDisciplineDto extends PartialType(CreateDisciplineDto) {}
+
+export class AssignDisciplineLeaderDto {
+  @ApiProperty({ description: 'User id of the discipline leader' })
+  @IsString()
+  @IsNotEmpty()
+  leaderId!: string;
+}
 
 /** Query params for department / position lists. */
 export class OrgEntityListQueryDto extends PaginationQueryDto {

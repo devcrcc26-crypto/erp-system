@@ -14,6 +14,14 @@ export interface EngineeringDiscipline {
   name: string;
   nameZh: string | null;
   isActive: boolean;
+  leaderId: string | null;
+  leader?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    chineseName: string | null;
+    email: string | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -179,6 +187,25 @@ export function useUpdateEngineeringDiscipline() {
         isActive?: boolean;
       };
     }) => apiPatch<EngineeringDiscipline>(`/engineering-disciplines/${id}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+export function useAssignEngineeringDisciplineLeader() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      leaderId,
+    }: {
+      id: string;
+      leaderId: string;
+    }) =>
+      apiPatch<EngineeringDiscipline>(`/disciplines/${id}/leader`, {
+        leaderId,
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },

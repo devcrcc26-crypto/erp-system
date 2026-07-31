@@ -381,6 +381,15 @@ export class CompanySetupService {
         take,
         orderBy: { name: 'asc' },
         include: {
+          leader: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              chineseName: true,
+              email: true,
+            },
+          },
           _count: {
             select: {
               taskDisciplines: { where: { deletedAt: null } },
@@ -460,6 +469,53 @@ export class CompanySetupService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Assigns the discipline leader used as Tier 1 for leave approvals.
+   * Leader must be an active user in the same company and discipline.
+   */
+  async assignDisciplineLeader(
+    ctx: AuditContext,
+    id: string,
+    leaderId: string,
+  ): Promise<unknown> {
+    await this.findDisciplineOrThrow(ctx, id);
+
+    const leader = await this.prisma.user.findFirst({
+      where: activeOnly({
+        id: leaderId,
+        companyId: ctx.companyId,
+        isActive: true,
+        engineeringDisciplineId: id,
+      }),
+      select: { id: true },
+    });
+
+    if (!leader) {
+      throw new BadRequestException(
+        'Leader must be an active user assigned to this discipline',
+      );
+    }
+
+    return this.prisma.discipline.update({
+      where: { id },
+      data: {
+        leaderId: leader.id,
+        updatedBy: ctx.userId,
+      },
+      include: {
+        leader: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+      },
+    });
   }
 
   /**

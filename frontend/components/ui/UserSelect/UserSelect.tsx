@@ -23,6 +23,7 @@ export default function UserSelect({
   disabled = false,
   allowClear = true,
   excludeUserIds = [],
+  engineeringDisciplineId,
   className,
   mode,
 }: {
@@ -32,6 +33,8 @@ export default function UserSelect({
   disabled?: boolean;
   allowClear?: boolean;
   excludeUserIds?: string[];
+  /** When set, only users assigned to this engineering discipline are listed. */
+  engineeringDisciplineId?: string;
   className?: string;
   mode?: 'multiple';
 }): React.ReactNode {
@@ -44,7 +47,13 @@ export default function UserSelect({
   const options = useMemo(() => {
     const users = usersQuery.data ?? [];
     const baseOptions = users
-      .filter((user) => user.isActive && !excludeUserIds.includes(user.id))
+      .filter(
+        (user) =>
+          user.isActive &&
+          !excludeUserIds.includes(user.id) &&
+          (!engineeringDisciplineId ||
+            user.engineeringDisciplineId === engineeringDisciplineId),
+      )
       .map((user) => ({
         value: user.id,
         label: formatUserLabel(user),
@@ -60,7 +69,14 @@ export default function UserSelect({
       valueUserQuery.data,
       formatUserLabel,
     );
-  }, [usersQuery.data, excludeUserIds, singleValue, valueUserQuery.data, mode]);
+  }, [
+    usersQuery.data,
+    excludeUserIds,
+    engineeringDisciplineId,
+    singleValue,
+    valueUserQuery.data,
+    mode,
+  ]);
 
   const handleChange: SelectProps['onChange'] = (nextValue) => {
     if (mode === 'multiple') {
