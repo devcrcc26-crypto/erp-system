@@ -54,6 +54,7 @@ import {
   usePositions,
 } from '@/lib/query/org';
 import { exportUsersExcel } from '@/lib/utils/users-export-excel';
+import { pickTopLevelRoleName } from '@/lib/utils/user-display';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -121,9 +122,9 @@ interface EditFormValues {
 }
 
 function formatUserRoleNames(user: User): string {
-  const roleNames =
-    user.userRoles?.map((assignment) => assignment.role.name).join(', ') ?? '';
-  return roleNames || '-';
+  const roles = user.userRoles?.map((assignment) => assignment.role) ?? [];
+  const top = pickTopLevelRoleName(roles, '');
+  return top || '-';
 }
 
 function userStatusVariant(user: User): 'default' | 'warning' | 'success' {
@@ -1133,25 +1134,23 @@ export default function UsersPageContent(): React.ReactNode {
               },
             },
             {
-              title: t('common.roles'),
+              title: t('common.role'),
               key: 'roles',
               ellipsis: { showTitle: true },
               render: (_, record) => {
-                const roles = record.userRoles ?? [];
+                const roles =
+                  record.userRoles?.map((assignment) => assignment.role) ?? [];
                 if (roles.length === 0) {
                   return '-';
                 }
+                const topRole = pickTopLevelRoleName(roles, '');
+                if (!topRole) {
+                  return '-';
+                }
                 return (
-                  <>
-                    {roles.map((assignment) => (
-                      <Tag
-                        key={assignment.id}
-                        color={ROLE_COLOR_MAP[assignment.role.name] ?? 'default'}
-                      >
-                        {assignment.role.name}
-                      </Tag>
-                    ))}
-                  </>
+                  <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
+                    {topRole}
+                  </Tag>
                 );
               },
             },

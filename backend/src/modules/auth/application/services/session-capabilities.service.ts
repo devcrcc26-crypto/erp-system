@@ -78,6 +78,8 @@ export class SessionCapabilitiesService {
       'notifications',
       'audit',
       'hr',
+      'leave',
+      'overtime',
       'schedule',
       'engineering_documents',
       'review_sessions',
@@ -102,6 +104,8 @@ export class SessionCapabilitiesService {
     const notifications = permissionMap.notifications;
     const audit = permissionMap.audit;
     const hr = permissionMap.hr;
+    const leave = permissionMap.leave;
+    const overtime = permissionMap.overtime;
     const schedule = permissionMap.schedule;
     const engineeringDocuments = permissionMap.engineering_documents;
     const reviewSessions = permissionMap.review_sessions;
@@ -115,6 +119,10 @@ export class SessionCapabilitiesService {
       canViewNotifications: notifications.canView,
       canViewAuditLogs: audit.canView,
       canViewHr: hr.canView,
+      canViewLeave: leave.canView,
+      canCreateLeave: leave.canCreate,
+      canViewOvertime: overtime.canView,
+      canCreateOvertime: overtime.canCreate,
       isSystemAdministrator: systemAdministrator,
       pm,
       epc: this.resolveEpcCapabilities(

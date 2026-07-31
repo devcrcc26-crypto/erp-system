@@ -4,13 +4,17 @@ import { useState } from 'react';
 import { Collapse, Spin } from 'antd';
 import FilterSection from '@/components/FilterSection';
 import DashboardCharts from '@/components/charts/DashboardCharts';
+import HrDashboard from '@/components/modules/dashboard/HrDashboard';
 import PersonalDashboard from '@/components/modules/dashboard/PersonalDashboard';
 import PortfolioDashboard from '@/components/modules/dashboard/PortfolioDashboard';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import {
   useCapabilitiesReady,
   useEpcCapabilities,
+  usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
+import { hasDesignCycleNavPersona } from '@/lib/navigation/project-nav-visibility';
 import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilters } from '@/lib/dashboard/types';
 import { usePortfolioDashboard } from '@/lib/query/dashboard';
 import { layout } from '@/lib/theme/layout';
@@ -65,13 +69,33 @@ function ScheduleOverviewSection({
 }
 
 /**
- * Company home dashboard — portfolio for full-access roles, personal for FK users.
+ * True when the session is HR-focused and should not land on the project dashboard.
+ * HR Officers (hr.view without project portfolio access) get the HR home.
+ * Full-access / PM / design-cycle users keep the project dashboard.
+ */
+function usePreferHrDashboard(): boolean {
+  const canViewHr = useCanViewHr();
+  const epc = useEpcCapabilities();
+  const pm = usePmCapabilities();
+
+  if (!canViewHr) {
+    return false;
+  }
+  if (epc.navFullAccess || hasDesignCycleNavPersona(epc)) {
+    return false;
+  }
+  return !pm.projects.canView;
+}
+
+/**
+ * Company home dashboard — HR, portfolio, or personal based on session capabilities.
  */
 export default function DashboardPageContent(): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken));
   const capabilitiesReady = useCapabilitiesReady();
   const epc = useEpcCapabilities();
+  const preferHrDashboard = usePreferHrDashboard();
   const canFetch = authHydrated && isAuthenticated;
   const isFullAccess = epc.navFullAccess;
 
@@ -79,6 +103,14 @@ export default function DashboardPageContent(): React.ReactNode {
     return (
       <div className={layout.loadingCard}>
         <Spin />
+      </div>
+    );
+  }
+
+  if (preferHrDashboard) {
+    return (
+      <div className={layout.pageStack}>
+        <HrDashboard enabled={canFetch} />
       </div>
     );
   }

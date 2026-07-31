@@ -17,6 +17,7 @@ import { CompanySetupModule } from './modules/company-setup/company-setup.module
 import { DocumentsModule } from './modules/documents/documents.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OvertimeModule } from './modules/overtime/overtime.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
@@ -65,6 +66,7 @@ import { StorageModule } from './shared/storage/storage.module';
     ProjectManagementModule,
     ApprovalsModule,
     LeaveModule,
+    OvertimeModule,
   ],
   controllers: [AppController],
   providers: [

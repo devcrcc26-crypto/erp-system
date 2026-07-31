@@ -5,7 +5,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
@@ -24,11 +23,8 @@ import {
   ListRequestsDto,
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
-import {
-  APPROVAL_DECISION_LISTENER,
-  type ApprovalDecisionListener,
-  type ApprovalFinalDecision,
-} from '../ports/approval-decision.listener';
+import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
+import { ApprovalDecisionRegistry } from './approval-decision-registry.service';
 import {
   ApprovalResolverService,
   type MatchedApprovalRule,
@@ -80,7 +76,7 @@ export class ApprovalsService {
     private readonly prisma: PrismaService,
     private readonly resolver: ApprovalResolverService,
     private readonly notificationService: NotificationService,
-    private readonly moduleRef: ModuleRef,
+    private readonly decisionRegistry: ApprovalDecisionRegistry,
   ) {}
 
   /**
@@ -243,14 +239,27 @@ export class ApprovalsService {
 
   /**
    * Lists requests with optional filters and pagination.
+   * When `inbox` is set, scoping always uses the authenticated user id (never client-supplied ids).
    */
   async listRequests(
     filters: ListRequestsDto,
     companyId: string,
+    userId?: string,
   ): Promise<PaginatedResult<unknown>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
+
+    let submittedById = filters.submittedById;
+    let pendingApproverId = filters.pendingApproverId;
+
+    if (filters.inbox === 'MY_REQUESTS' && userId) {
+      submittedById = userId;
+      pendingApproverId = undefined;
+    } else if (filters.inbox === 'PENDING_MY_ACTION' && userId) {
+      pendingApproverId = userId;
+      submittedById = undefined;
+    }
 
     const where: Prisma.ApprovalRequestWhereInput = activeOnly({
       companyId,
@@ -258,8 +267,16 @@ export class ApprovalsService {
         ? { status: { in: filters.status } }
         : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(filters.submittedById
-        ? { requestedBy: filters.submittedById }
+      ...(submittedById ? { requestedBy: submittedById } : {}),
+      ...(pendingApproverId
+        ? {
+            tiers: {
+              some: {
+                approverId: pendingApproverId,
+                decision: 'PENDING',
+              },
+            },
+          }
         : {}),
       ...this.buildDateFilter(filters.dateFrom, filters.dateTo),
       ...(filters.search?.trim()
@@ -613,26 +630,13 @@ export class ApprovalsService {
   }
 
   /**
-   * Notifies optional domain listeners (e.g. Leave) of a terminal approval outcome.
+   * Notifies registered domain listeners (leave, overtime, …) of a terminal outcome.
    */
   private async dispatchFinalDecision(
     approvalRequestId: string,
     decision: ApprovalFinalDecision,
   ): Promise<void> {
-    try {
-      const listener = this.moduleRef.get<ApprovalDecisionListener>(
-        APPROVAL_DECISION_LISTENER,
-        { strict: false },
-      );
-      if (listener?.onApprovalDecision) {
-        await listener.onApprovalDecision(approvalRequestId, decision);
-      }
-    } catch (error: unknown) {
-      this.logger.warn(
-        `Approval decision listener failed for ${approvalRequestId} (${decision})`,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
+    await this.decisionRegistry.notify(approvalRequestId, decision);
   }
 
   private buildDateFilter(

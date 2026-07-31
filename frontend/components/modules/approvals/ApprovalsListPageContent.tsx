@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Select } from 'antd';
+import { Alert, Button, DatePicker, Select, Tabs } from 'antd';
 import { AuditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -14,6 +14,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -47,12 +48,17 @@ const STATUS_FILTER_OPTIONS: Array<{
   { value: 'DRAFT', label: 'Draft' },
 ];
 
+type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS';
+
 /**
- * Company-wide approval request inbox.
+ * User-scoped approval inbox — Pending My Action and My Requests tabs.
+ * Scoping is enforced server-side via the `inbox` query param (JWT user id).
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
+  const { t } = useEpcTranslation();
   const { params, resetPage, bindMeta } = useTablePagination();
+  const [inbox, setInbox] = useState<InboxTab>('PENDING_MY_ACTION');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApprovalRequestStatus[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();
@@ -64,13 +70,14 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const listParams = useMemo(
     () => ({
       ...params,
+      inbox,
       search: search.trim() || undefined,
       status: statusFilter.length > 0 ? statusFilter : undefined,
       categoryId,
       dateFrom: dateRange?.[0]?.startOf('day').toISOString(),
       dateTo: dateRange?.[1]?.endOf('day').toISOString(),
     }),
-    [params, search, statusFilter, categoryId, dateRange],
+    [params, inbox, search, statusFilter, categoryId, dateRange],
   );
 
   const listQuery = useApprovalRequests(listParams);
@@ -172,7 +179,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   return (
     <FormLayout
       title="Approvals"
-      description="Browse approval requests across the company."
+      description="Requests you submitted and items waiting for your action."
       extra={
         <Button
           type="primary"
@@ -183,6 +190,25 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         </Button>
       }
     >
+      <Tabs
+        activeKey={inbox}
+        onChange={(key) => {
+          setInbox(key as InboxTab);
+          resetPage();
+        }}
+        items={[
+          {
+            key: 'PENDING_MY_ACTION',
+            label: t('pages.approvals.tabs.pendingMyAction'),
+          },
+          {
+            key: 'MY_REQUESTS',
+            label: t('pages.approvals.tabs.myRequests'),
+          },
+        ]}
+        className="mb-2"
+      />
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <ListSearchInput
           committedValue={search}
@@ -246,7 +272,11 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             <TableEmptyState
               icon={<AuditOutlined />}
               title="No approval requests"
-              description="Submitted requests will appear here."
+              description={
+                inbox === 'PENDING_MY_ACTION'
+                  ? 'Nothing is waiting for your action.'
+                  : 'Requests you submit will appear here.'
+              }
             />
           ),
         }}

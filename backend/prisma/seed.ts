@@ -110,6 +110,9 @@ const PERMISSION_DEFINITIONS: Array<{
 
   { module: 'leave', action: 'view', description: 'View leave requests and balances' },
   { module: 'leave', action: 'create', description: 'Submit and cancel leave requests' },
+
+  { module: 'overtime', action: 'view', description: 'View overtime requests' },
+  { module: 'overtime', action: 'create', description: 'Submit and cancel overtime requests' },
   
   { module: 'documents', action: 'view', description: 'View documents' },
   { module: 'documents', action: 'create', description: 'Upload documents' },
@@ -1062,23 +1065,92 @@ async function main(): Promise<void> {
     }
   }
 
-  // Revoke legacy Employee leave permissions (HR is gated by hr.view).
-  for (const permission of permissions) {
-    if (permission.module !== 'leave') {
-      continue;
+  // Leave: create for Employee (own requests); HR Officer / leadership via hr.view.
+  const leaveView = permissions.find(
+    (permission) =>
+      permission.module === 'leave' && permission.action === 'view',
+  );
+  const leaveCreate = permissions.find(
+    (permission) =>
+      permission.module === 'leave' && permission.action === 'create',
+  );
+  if (leaveView) {
+    for (const roleName of [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, leaveView.id, viewOnlyFlags());
     }
-    await prisma.rolePermission.updateMany({
-      where: {
-        roleId: employeeRoleId,
-        permissionId: permission.id,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: new Date(),
-        deletedBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
-      },
-    });
+  }
+  if (leaveCreate) {
+    for (const roleName of [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+      'Employee',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, leaveCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  // Overtime: view for leadership/HR; create also for Employee (own requests).
+  const overtimeView = permissions.find(
+    (permission) =>
+      permission.module === 'overtime' && permission.action === 'view',
+  );
+  const overtimeCreate = permissions.find(
+    (permission) =>
+      permission.module === 'overtime' && permission.action === 'create',
+  );
+  if (overtimeView) {
+    for (const roleName of [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, overtimeView.id, viewOnlyFlags());
+    }
+  }
+  if (overtimeCreate) {
+    for (const roleName of [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+      'Employee',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, overtimeCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
   }
 
   const pmRoleNames = [

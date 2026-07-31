@@ -92,20 +92,39 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (employee) {
-      const leavePermissions = await prisma.permission.findMany({
-        where: { module: 'leave' },
+      const leaveCreate = await prisma.permission.findUnique({
+        where: { module_action: { module: 'leave', action: 'create' } },
         select: { id: true },
       });
-      if (leavePermissions.length > 0) {
-        await prisma.rolePermission.updateMany({
+      if (leaveCreate) {
+        await prisma.rolePermission.upsert({
           where: {
-            roleId: employee.id,
-            permissionId: { in: leavePermissions.map((p) => p.id) },
-            deletedAt: null,
+            roleId_permissionId: {
+              roleId: employee.id,
+              permissionId: leaveCreate.id,
+            },
           },
-          data: {
-            deletedAt: new Date(),
-            deletedBy: SYSTEM_USER_ID,
+          update: {
+            canView: true,
+            canCreate: true,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            deletedAt: null,
+            deletedBy: null,
+            updatedBy: SYSTEM_USER_ID,
+          },
+          create: {
+            roleId: employee.id,
+            permissionId: leaveCreate.id,
+            canView: true,
+            canCreate: true,
+            canEdit: false,
+            canDelete: false,
+            canApprove: false,
+            canExport: false,
+            createdBy: SYSTEM_USER_ID,
             updatedBy: SYSTEM_USER_ID,
           },
         });

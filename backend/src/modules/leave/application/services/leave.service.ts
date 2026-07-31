@@ -4,6 +4,8 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
@@ -14,29 +16,24 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import type {
   ApprovalDecisionListener,
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
-import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
+import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import {
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
-
-interface LeaveApprovalChainTier {
-  order: number;
-  label: string;
-  approverId: string;
-  resolver: string;
-}
 
 const USER_SELECT = {
   id: true,
@@ -66,14 +63,27 @@ const LEAVE_DETAIL_INCLUDE = {
  * Leave request lifecycle — owns leave data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
-export class LeaveService implements ApprovalDecisionListener {
+export class LeaveService
+  implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(LeaveService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly leaveBalanceService: LeaveBalanceService,
+    private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly decisionRegistry: ApprovalDecisionRegistry,
+    private readonly permissionService: PermissionService,
   ) {}
+
+  onModuleInit(): void {
+    this.decisionRegistry.register(this);
+  }
+
+  onModuleDestroy(): void {
+    this.decisionRegistry.unregister(this);
+  }
 
   /**
    * Creates a leave request, reserves balance, and opens an approval workflow.
@@ -100,10 +110,10 @@ export class LeaveService implements ApprovalDecisionListener {
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
 
-    const resolvedTiers = await this.buildLeaveApprovalChain(
+    const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
-      days,
       companyId,
+      days > 3,
     );
 
     const approval = (await this.approvalsService.submitRequest(
@@ -177,7 +187,7 @@ export class LeaveService implements ApprovalDecisionListener {
       throw error;
     }
 
-    return this.getRequest(leaveId, companyId);
+    return this.getRequest(leaveId, companyId, userId);
   }
 
   /**
@@ -241,13 +251,18 @@ export class LeaveService implements ApprovalDecisionListener {
       );
     }
 
-    return this.getRequest(id, companyId);
+    return this.getRequest(id, companyId, userId);
   }
 
   /**
    * Fetches a leave request with employee and approval tier details.
+   * HR viewers see any company request; others must be the employee or a tier approver.
    */
-  async getRequest(id: string, companyId: string): Promise<unknown> {
+  async getRequest(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
     const leave = await this.prisma.leaveRequest.findFirst({
       where: activeOnly({ id, companyId }),
       include: LEAVE_DETAIL_INCLUDE,
@@ -255,26 +270,38 @@ export class LeaveService implements ApprovalDecisionListener {
     if (!leave) {
       throw new NotFoundException('Leave request not found');
     }
+
+    await this.assertCanViewLeaveRequest(leave, companyId, userId);
     return this.mapLeave(leave);
   }
 
   /**
-   * Paginated company leave requests with filters.
+   * Paginated leave requests. HR viewers see company-wide; others see own rows only.
    */
   async listRequests(
     filters: ListLeaveRequestsDto,
     companyId: string,
+    userId: string,
   ): Promise<PaginatedResult<unknown>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
     const statuses = this.normalizeStatuses(filters.status);
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
 
     const where = activeOnly({
       companyId,
+      ...(isHrViewer ? {} : { employeeId: userId }),
       ...(statuses ? { status: { in: statuses } } : {}),
       ...(filters.leaveType ? { leaveType: filters.leaveType } : {}),
-      ...(filters.employeeId ? { employeeId: filters.employeeId } : {}),
+      ...(isHrViewer && filters.employeeId
+        ? { employeeId: filters.employeeId }
+        : {}),
       ...(filters.dateFrom || filters.dateTo
         ? {
             startDate: {
@@ -332,14 +359,53 @@ export class LeaveService implements ApprovalDecisionListener {
   }
 
   /**
-   * Leave requests for the authenticated employee.
+   * Leave requests for the authenticated employee (always employee-scoped).
    */
   async getMyRequests(
     userId: string,
     companyId: string,
     filters: ListLeaveRequestsDto,
   ): Promise<PaginatedResult<unknown>> {
-    return this.listRequests({ ...filters, employeeId: userId }, companyId);
+    return this.listRequests(
+      { ...filters, employeeId: userId },
+      companyId,
+      userId,
+    );
+  }
+
+  /**
+   * Ensures the caller may read this leave request.
+   */
+  private async assertCanViewLeaveRequest(
+    leave: {
+      employeeId: string;
+      approvalRequest?: {
+        tiers?: Array<{ approverId: string }>;
+      } | null;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (isHrViewer) {
+      return;
+    }
+
+    const isOwner = leave.employeeId === userId;
+    const isApprover =
+      leave.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
+      false;
+
+    if (!isOwner && !isApprover) {
+      throw new ForbiddenException(
+        'You do not have access to this leave request',
+      );
+    }
   }
 
   /**
@@ -465,128 +531,6 @@ export class LeaveService implements ApprovalDecisionListener {
       .split('_')
       .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
       .join(' ');
-  }
-
-  /**
-   * Builds leave approval tiers from org structure:
-   * 1) Discipline Lead, 2) HR Officer, 3) General Manager when days > 3.
-   * Duplicate approvers are collapsed (first occurrence wins).
-   */
-  async buildLeaveApprovalChain(
-    employeeId: string,
-    days: number,
-    companyId: string,
-  ): Promise<ResolvedApprovalTier[]> {
-    const tiers: LeaveApprovalChainTier[] = [];
-
-    const employee = await this.prisma.user.findFirst({
-      where: activeOnly({ id: employeeId, companyId }),
-      include: {
-        engineeringDiscipline: {
-          include: {
-            leader: {
-              select: { id: true, deletedAt: true, isActive: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!employee) {
-      throw new BadRequestException('Employee not found');
-    }
-
-    if (!employee.engineeringDiscipline) {
-      throw new BadRequestException(
-        "Employee is not assigned to an engineering discipline.",
-      );
-    }
-
-    const disciplineLeader = employee.engineeringDiscipline.leader;
-    if (
-      !disciplineLeader ||
-      disciplineLeader.deletedAt ||
-      !disciplineLeader.isActive
-    ) {
-      throw new BadRequestException(
-        "No discipline leader assigned for this employee's discipline.",
-      );
-    }
-
-    tiers.push({
-      order: 1,
-      label: 'Discipline Lead',
-      approverId: disciplineLeader.id,
-      resolver: 'DISCIPLINE_LEAD',
-    });
-
-    const hrOfficer = await this.findActiveUserByRoleName(
-      companyId,
-      'HR Officer',
-    );
-    if (!hrOfficer) {
-      throw new BadRequestException('No HR Officer found in the system.');
-    }
-
-    tiers.push({
-      order: 2,
-      label: 'HR Officer',
-      approverId: hrOfficer.id,
-      resolver: 'ROLE:HR Officer',
-    });
-
-    if (days > 3) {
-      const gm = await this.findActiveUserByRoleName(
-        companyId,
-        'General Manager',
-      );
-      if (!gm) {
-        throw new BadRequestException(
-          'No General Manager found in the system.',
-        );
-      }
-
-      tiers.push({
-        order: 3,
-        label: 'General Manager',
-        approverId: gm.id,
-        resolver: 'ROLE:General Manager',
-      });
-    }
-
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
-    );
-
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
-  }
-
-  private async findActiveUserByRoleName(
-    companyId: string,
-    roleName: string,
-  ): Promise<{ id: string } | null> {
-    return this.prisma.user.findFirst({
-      where: activeOnly({
-        companyId,
-        isActive: true,
-        userRoles: {
-          some: activeOnly({
-            role: activeOnly({
-              companyId,
-              name: roleName,
-            }),
-          }),
-        },
-      }),
-      select: { id: true },
-      orderBy: { createdAt: 'asc' },
-    });
   }
 
   private mapLeave(row: Record<string, unknown>): Record<string, unknown> {

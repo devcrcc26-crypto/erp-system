@@ -28,6 +28,8 @@ export interface IconRailGroup {
 }
 
 export interface IconRailNavStructure {
+  /** Items rendered above collapsible groups (e.g. Dashboard). */
+  readonly topItems: readonly IconRailItem[];
   readonly groups: readonly IconRailGroup[];
   readonly standalone: readonly IconRailItem[];
 }
@@ -100,6 +102,8 @@ export interface IconRailVisibility {
   canViewDailyLogs: boolean;
   canViewApprovals: boolean;
   canViewHr: boolean;
+  canAccessLeave: boolean;
+  canAccessOvertime: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -131,6 +135,8 @@ export function buildIconRailNav(
     canViewDailyLogs,
     canViewApprovals,
     canViewHr,
+    canAccessLeave,
+    canAccessOvertime,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -139,6 +145,16 @@ export function buildIconRailNav(
     canViewPositions,
     canViewDisciplinesCatalog,
   } = visibility;
+
+  const topItems: IconRailItem[] = [
+    {
+      key: '/',
+      labelKey: 'nav.dashboard',
+      href: '/',
+      iconKey: 'dashboard',
+      visible: true,
+    },
+  ];
 
   const projectManagement: IconRailGroup = {
     key: 'pm',
@@ -300,14 +316,14 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.leaveRequests',
         href: '/hr/leave-requests',
         iconKey: 'hr-leave',
-        visible: canViewHr,
+        visible: canAccessLeave,
       },
       {
         key: '/hr/overtime',
         labelKey: 'nav.hr.overtime',
         href: '/hr/overtime',
         iconKey: 'hr-overtime',
-        visible: canViewHr,
+        visible: canAccessOvertime,
       },
       {
         key: '/hr/expense-claims',
@@ -414,18 +430,20 @@ export function buildIconRailNav(
   ];
 
   return {
+    topItems,
     groups: [projectManagement, humanResources],
     standalone,
   };
 }
 
 /**
- * Flat list of all rail items (groups then standalone) for active-key resolution.
+ * Flat list of all rail items (top, groups, then standalone) for active-key resolution.
  */
 export function flattenIconRailNav(
   structure: IconRailNavStructure,
 ): IconRailItem[] {
   return [
+    ...structure.topItems,
     ...structure.groups.flatMap((group) => group.items),
     ...structure.standalone,
   ];
@@ -564,11 +582,10 @@ export function resolveRouteMeta(
 
   if (pathname === '/hr/leave-requests/new') {
     return {
-      titleKey: 'pages.hr.leave.new',
+      titleKey: 'nav.hr.leaveRequests',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
-        { label: t('pages.hr.leave.new') },
       ],
     };
   }
@@ -580,6 +597,27 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
         { label: t('pages.hr.leave.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/overtime/new') {
+    return {
+      titleKey: 'nav.hr.overtime',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.overtime'), href: '/hr/overtime' },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/overtime/')) {
+    return {
+      titleKey: 'pages.hr.overtime.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.overtime'), href: '/hr/overtime' },
+        { label: t('pages.hr.overtime.detail') },
       ],
     };
   }

@@ -124,6 +124,9 @@ export interface ListApprovalRequestsParams {
   status?: ApprovalRequestStatus | ApprovalRequestStatus[];
   categoryId?: string;
   submittedById?: string;
+  pendingApproverId?: string;
+  /** Server-enforced inbox scope — JWT user id is applied on the backend. */
+  inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION';
   dateFrom?: string;
   dateTo?: string;
   search?: string;

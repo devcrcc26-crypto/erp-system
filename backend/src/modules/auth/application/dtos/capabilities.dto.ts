@@ -152,6 +152,18 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can access the Human Resources module (hr.view)' })
   canViewHr!: boolean;
 
+  @ApiProperty({ description: 'Can view leave requests (leave.view)' })
+  canViewLeave!: boolean;
+
+  @ApiProperty({ description: 'Can submit leave requests (leave.create)' })
+  canCreateLeave!: boolean;
+
+  @ApiProperty({ description: 'Can view overtime requests (overtime.view)' })
+  canViewOvertime!: boolean;
+
+  @ApiProperty({ description: 'Can submit overtime requests (overtime.create)' })
+  canCreateOvertime!: boolean;
+
   @ApiProperty({
     description:
       'System Administrator — bypasses project team module gates and receives full RBAC.',

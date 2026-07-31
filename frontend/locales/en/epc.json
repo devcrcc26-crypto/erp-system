@@ -92,7 +92,11 @@
   "pages": {
     "approvals": {
       "detail": "Request detail",
-      "new": "New request"
+      "new": "New request",
+      "tabs": {
+        "pendingMyAction": "Pending My Action",
+        "myRequests": "My Requests"
+      }
     },
     "hr": {
       "comingSoonTitle": "Coming soon",
@@ -100,7 +104,47 @@
       "accessDenied": "You do not have access to Human Resources.",
       "leave": {
         "new": "New leave request",
-        "detail": "Leave request"
+        "detail": "Leave request",
+        "listTitle": "Leave Requests",
+        "myListTitle": "My Leave Requests",
+        "listDescription": "Submit and track employee leave through the approval workflow.",
+        "myListDescription": "View and submit your own leave requests."
+      },
+      "overtime": {
+        "new": "New overtime request",
+        "detail": "Overtime request",
+        "listTitle": "Overtime Requests",
+        "myListTitle": "My Overtime Requests",
+        "listDescription": "Submit and track overtime applications through the approval workflow.",
+        "myListDescription": "View and submit your own overtime requests."
+      }
+    },
+    "dashboard": {
+      "hr": {
+        "title": "HR Dashboard",
+        "subtitle": "Workforce requests, leave, and HR workflows at a glance.",
+        "recentLeave": "Recent leave requests",
+        "noRecentLeave": "No leave requests yet.",
+        "viewAllLeave": "View all leave requests",
+        "quickLinks": "HR shortcuts",
+        "kpi": {
+          "pendingLeave": "Pending leave",
+          "pendingLeaveHint": "Submitted or in review",
+          "approvedLeave": "Approved leave",
+          "approvedLeaveHint": "Company-wide approved",
+          "leaveModule": "Leave requests",
+          "leaveModuleHint": "Open leave register",
+          "users": "Users",
+          "usersHint": "Manage people & roles",
+          "open": "Open"
+        },
+        "links": {
+          "leave": "Review and process employee leave",
+          "overtime": "Overtime requests and approvals",
+          "expense": "Expense claims and reimbursements",
+          "users": "User accounts and role assignments",
+          "approvals": "Cross-module approval inbox"
+        }
       }
     },
     "disciplines": {

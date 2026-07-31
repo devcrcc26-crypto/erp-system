@@ -1,5 +1,6 @@
-import NewLeaveRequestPageContent from '@/components/modules/hr/leave/NewLeaveRequestPageContent';
+import { redirect } from 'next/navigation';
 
-export default function NewLeaveRequestPage(): React.ReactNode {
-  return <NewLeaveRequestPageContent />;
+/** Legacy /new route — create flow is a drawer on the list page. */
+export default function Page(): never {
+  redirect('/hr/leave-requests');
 }

@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   LeaveBalanceQueryDto,
@@ -25,7 +25,11 @@ import { LeaveService } from '../../application/services/leave.service';
 @ApiTags('HR Leave Requests')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequirePermission('hr', 'view')
+@RequireAnyPermission(
+  { module: 'hr', action: 'view' },
+  { module: 'leave', action: 'view' },
+  { module: 'leave', action: 'create' },
+)
 @Controller('hr/leave-requests')
 export class LeaveController {
   constructor(
@@ -44,12 +48,16 @@ export class LeaveController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List leave requests' })
+  @ApiOperation({
+    summary:
+      'List leave requests (company-wide for hr.view; own records otherwise)',
+  })
   list(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListLeaveRequestsDto,
   ): Promise<unknown> {
-    return this.leaveService.listRequests(query, companyId);
+    return this.leaveService.listRequests(query, companyId, user.userId);
   }
 
   @Get('my')
@@ -80,10 +88,11 @@ export class LeaveController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a leave request with approval tiers' })
   getOne(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.leaveService.getRequest(id, companyId);
+    return this.leaveService.getRequest(id, companyId, user.userId);
   }
 
   @Patch(':id/cancel')

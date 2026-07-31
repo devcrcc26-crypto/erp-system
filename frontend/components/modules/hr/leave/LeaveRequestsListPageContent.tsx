@@ -6,6 +6,7 @@ import { CalendarOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import LeaveRequestFormDrawer from '@/components/modules/hr/leave/LeaveRequestFormDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, {
   PageLoadingSkeleton,
@@ -14,6 +15,12 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
+import {
+  useCanAccessLeave,
+  useCanCreateLeave,
+  useCanViewHr,
+} from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -21,7 +28,8 @@ import type {
   LeaveRequestStatus,
   LeaveType,
 } from '@/lib/api/leave.types';
-import { useLeaveRequests } from '@/lib/query/leave';
+import { useLeaveRequests, useMyLeaveRequests } from '@/lib/query/leave';
+import { useUsersDirectory } from '@/lib/query/users';
 import {
   LEAVE_STATUS_OPTIONS,
   LEAVE_TYPE_OPTIONS,
@@ -32,19 +40,26 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 
 /**
- * Company leave request list with filters.
+ * Company or personal leave request list with filters.
  */
 export default function LeaveRequestsListPageContent(): React.ReactNode {
   const router = useRouter();
+  const { t } = useEpcTranslation();
+  const canAccess = useCanAccessLeave();
+  const canViewHr = useCanViewHr();
+  const canCreate = useCanCreateLeave();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeaveRequestStatus[]>([]);
   const [leaveType, setLeaveType] = useState<LeaveType | undefined>();
+  const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const listParams = useMemo(
     () => ({
@@ -52,13 +67,33 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       search: search.trim() || undefined,
       status: statusFilter.length > 0 ? statusFilter : undefined,
       leaveType,
+      employeeId: canViewHr ? employeeId : undefined,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
-    [params, search, statusFilter, leaveType, dateRange],
+    [
+      params,
+      search,
+      statusFilter,
+      leaveType,
+      employeeId,
+      dateRange,
+      canViewHr,
+    ],
   );
 
-  const listQuery = useLeaveRequests(listParams);
+  const companyListQuery = useLeaveRequests(listParams, canViewHr);
+  const myListQuery = useMyLeaveRequests(
+    listParams,
+    !canViewHr && canAccess,
+  );
+  const listQuery = canViewHr ? companyListQuery : myListQuery;
+
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: canViewHr },
+  );
+
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
@@ -69,11 +104,16 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       key: 'requestNumber',
       width: 120,
     },
-    {
-      title: 'Employee',
-      key: 'employee',
-      render: (_, row) => formatLeaveEmployeeName(row.employee),
-    },
+    ...(canViewHr
+      ? [
+          {
+            title: 'Employee',
+            key: 'employee',
+            render: (_: unknown, row: LeaveRequestListItem) =>
+              formatLeaveEmployeeName(row.employee),
+          } satisfies ColumnsType<LeaveRequestListItem>[number],
+        ]
+      : []),
     {
       title: 'Leave type',
       dataIndex: 'leaveType',
@@ -121,22 +161,42 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     },
   ];
 
+  if (!canAccess) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        title={t('pages.hr.accessDenied')}
+      />
+    );
+  }
+
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
   }
 
   return (
     <FormLayout
-      title="Leave Requests"
-      description="Submit and track employee leave through the approval workflow."
+      title={
+        canViewHr
+          ? t('pages.hr.leave.listTitle')
+          : t('pages.hr.leave.myListTitle')
+      }
+      description={
+        canViewHr
+          ? t('pages.hr.leave.listDescription')
+          : t('pages.hr.leave.myListDescription')
+      }
       extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => router.push('/hr/leave-requests/new')}
-        >
-          New Request
-        </Button>
+        canCreate ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+          >
+            {t('pages.hr.leave.new')}
+          </Button>
+        ) : undefined
       }
     >
       {listQuery.isError ? (
@@ -184,6 +244,24 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             resetPage();
           }}
         />
+        {canViewHr ? (
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Employee"
+            style={{ minWidth: 200 }}
+            options={(usersQuery.data?.data ?? []).map((user) => ({
+              value: user.id,
+              label: formatUserName(user),
+            }))}
+            value={employeeId}
+            onChange={(value: string | undefined) => {
+              setEmployeeId(value);
+              resetPage();
+            }}
+          />
+        ) : null}
         <DatePicker.RangePicker
           value={dateRange}
           onChange={(value) => {
@@ -213,6 +291,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           ),
         }}
         pagination={bindMeta(meta)}
+      />
+
+      <LeaveRequestFormDrawer
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmitted={() => void listQuery.refetch()}
       />
     </FormLayout>
   );

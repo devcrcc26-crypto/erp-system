@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import OvertimeRequestsListPageContent from '@/components/modules/hr/overtime/OvertimeRequestsListPageContent';
 
 export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.overtime" />;
+  return <OvertimeRequestsListPageContent />;
 }

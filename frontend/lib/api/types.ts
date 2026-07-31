@@ -394,6 +394,10 @@ export interface AuthCapabilities {
   canViewNotifications: boolean;
   canViewAuditLogs: boolean;
   canViewHr: boolean;
+  canViewLeave: boolean;
+  canCreateLeave: boolean;
+  canViewOvertime: boolean;
+  canCreateOvertime: boolean;
   isSystemAdministrator: boolean;
 }
 
@@ -441,6 +445,10 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewNotifications: false,
   canViewAuditLogs: false,
   canViewHr: false,
+  canViewLeave: false,
+  canCreateLeave: false,
+  canViewOvertime: false,
+  canCreateOvertime: false,
   isSystemAdministrator: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },

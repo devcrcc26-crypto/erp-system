@@ -5,6 +5,7 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -105,6 +106,23 @@ export class ListRequestsDto {
   @IsOptional()
   @IsEntityUuid()
   submittedById?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter to requests where this user has a PENDING approval tier',
+  })
+  @IsOptional()
+  @IsEntityUuid()
+  pendingApproverId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Server-enforced inbox scope. MY_REQUESTS / PENDING_MY_ACTION always use the JWT user id.',
+    enum: ['MY_REQUESTS', 'PENDING_MY_ACTION'],
+  })
+  @IsOptional()
+  @IsIn(['MY_REQUESTS', 'PENDING_MY_ACTION'])
+  inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION';
 
   @ApiPropertyOptional({ description: 'ISO date — filter submittedAt >= dateFrom' })
   @IsOptional()

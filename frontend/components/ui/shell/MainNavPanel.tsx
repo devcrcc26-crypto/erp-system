@@ -37,7 +37,7 @@ import {
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
-import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers, useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers, useCanViewHr, useCanAccessLeave, useCanAccessOvertime } from '@/hooks/use-auth-capabilities';
 import {
   useCanViewDepartmentsNav,
   useCanViewDisciplinesCatalogNav,
@@ -306,6 +306,8 @@ export default function MainNavPanel({
   const canViewDailyLogs = useCanViewDailyLogs();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canViewHr = useCanViewHr();
+  const canAccessLeave = useCanAccessLeave();
+  const canAccessOvertime = useCanAccessOvertime();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
   const canViewDepartments = useCanViewDepartmentsNav();
@@ -328,6 +330,8 @@ export default function MainNavPanel({
     canViewDailyLogs: !permLoading && canViewDailyLogs,
     canViewApprovals: !permLoading,
     canViewHr: !permLoading && canViewHr,
+    canAccessLeave: !permLoading && canAccessLeave,
+    canAccessOvertime: !permLoading && canAccessOvertime,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,
@@ -341,12 +345,14 @@ export default function MainNavPanel({
     return item.visible && canViewGlobalNavKey(item.key, epc, pm);
   }
 
+  const visibleTopItems = navStructure.topItems.filter(isItemVisible);
   const visibleGroups = navStructure.groups.map((group) => ({
     group,
     items: group.items.filter(isItemVisible),
   }));
   const visibleStandalone = navStructure.standalone.filter(isItemVisible);
   const visibleNavItems = flattenIconRailNav({
+    topItems: visibleTopItems,
     groups: visibleGroups.map(({ group, items }) => ({ ...group, items })),
     standalone: visibleStandalone,
   });
@@ -430,6 +436,21 @@ export default function MainNavPanel({
           ))
         ) : (
           <>
+            {visibleTopItems.length > 0 ? (
+              <section className="mb-1 flex flex-col gap-0.5">
+                {visibleTopItems.map((item) => (
+                  <RailNavButton
+                    key={item.key}
+                    item={item}
+                    label={t(item.labelKey)}
+                    isActive={selectedKey === item.key}
+                    isExpanded={isExpanded}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </section>
+            ) : null}
+
             {visibleGroups.map(({ group, items }) => (
               <RailNavGroup
                 key={group.key}

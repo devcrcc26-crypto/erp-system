@@ -43,12 +43,16 @@ export class ApprovalRequestsController {
 
   @Get()
   @RequirePermission('approvals', 'view')
-  @ApiOperation({ summary: 'List approval requests' })
+  @ApiOperation({
+    summary:
+      'List approval requests (use inbox=MY_REQUESTS|PENDING_MY_ACTION for user-scoped tabs)',
+  })
   list(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListRequestsDto,
   ): Promise<unknown> {
-    return this.approvalsService.listRequests(query, companyId);
+    return this.approvalsService.listRequests(query, companyId, user.userId);
   }
 
   @Get(':id')

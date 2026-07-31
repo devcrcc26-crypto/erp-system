@@ -95,7 +95,7 @@ export default function PositionFormDrawer({
     <Drawer
       open={open}
       title={readOnly ? 'View position' : editing ? 'Edit position' : 'Add position'}
-      width={480}
+      size={480}
       className="erp-responsive-drawer"
       onClose={onClose}
       destroyOnHidden
