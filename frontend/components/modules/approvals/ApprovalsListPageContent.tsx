@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, DatePicker, Select, Tabs } from 'antd';
 import { AuditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -15,6 +15,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -48,15 +49,16 @@ const STATUS_FILTER_OPTIONS: Array<{
   { value: 'DRAFT', label: 'Draft' },
 ];
 
-type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS';
+type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
 
 /**
- * User-scoped approval inbox — Pending My Action and My Requests tabs.
+ * Approval inbox — Pending My Action, My Requests, and All Requests (hr.view).
  * Scoping is enforced server-side via the `inbox` query param (JWT user id).
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+  const isFullAccess = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [inbox, setInbox] = useState<InboxTab>('PENDING_MY_ACTION');
   const [search, setSearch] = useState('');
@@ -65,6 +67,12 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  useEffect(() => {
+    if (inbox === 'ALL' && !isFullAccess) {
+      setInbox('PENDING_MY_ACTION');
+    }
+  }, [inbox, isFullAccess]);
 
   const categoriesQuery = useApprovalCategories();
   const listParams = useMemo(
@@ -179,7 +187,11 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   return (
     <FormLayout
       title="Approvals"
-      description="Requests you submitted and items waiting for your action."
+      description={
+        isFullAccess
+          ? 'Your actions, your submissions, and company-wide approval requests.'
+          : 'Requests you submitted and items waiting for your action.'
+      }
       extra={
         <Button
           type="primary"
@@ -205,6 +217,14 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             key: 'MY_REQUESTS',
             label: t('pages.approvals.tabs.myRequests'),
           },
+          ...(isFullAccess
+            ? [
+                {
+                  key: 'ALL' as const,
+                  label: t('pages.approvals.tabs.allRequests'),
+                },
+              ]
+            : []),
         ]}
         className="mb-2"
       />
@@ -275,7 +295,9 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               description={
                 inbox === 'PENDING_MY_ACTION'
                   ? 'Nothing is waiting for your action.'
-                  : 'Requests you submit will appear here.'
+                  : inbox === 'ALL'
+                    ? 'No approval requests match the current filters.'
+                    : 'Requests you submit will appear here.'
               }
             />
           ),

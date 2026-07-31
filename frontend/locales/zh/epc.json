@@ -95,7 +95,8 @@
       "new": "新建审批",
       "tabs": {
         "pendingMyAction": "待我处理",
-        "myRequests": "我的申请"
+        "myRequests": "我的申请",
+        "allRequests": "全部申请"
       }
     },
     "hr": {

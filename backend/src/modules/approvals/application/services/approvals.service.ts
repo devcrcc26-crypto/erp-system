@@ -13,6 +13,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -58,7 +59,7 @@ const REQUEST_DETAIL_INCLUDE = {
   overtimeRequest: { select: { id: true } },
 } as const;
 
-/** Interactive transaction options — leave/overtime submit must not hit the 5s default. */
+/** Interactive transaction options ? leave/overtime submit must not hit the 5s default. */
 const PRISMA_TX_OPTIONS = {
   maxWait: 10_000,
   timeout: 30_000,
@@ -85,6 +86,7 @@ export class ApprovalsService {
     private readonly resolver: ApprovalResolverService,
     private readonly notificationService: NotificationService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /**
@@ -228,7 +230,7 @@ export class ApprovalsService {
       await this.notifySafe(companyId, userId, {
         recipientId: firstApproverId,
         eventType: APPROVAL_PENDING_EVENT,
-        subject: `Approval required — ${created.requestNumber}`,
+        subject: `Approval required ? ${created.requestNumber}`,
         body: `${dto.title} (${created.requestNumber}) is awaiting your approval.`,
         link: `/approval-requests/${created.id}`,
         variables: {
@@ -244,8 +246,13 @@ export class ApprovalsService {
   /**
    * Fetches a request with tiers and comments, scoped to the company.
    * Includes categoryCode and sourceId (linked leave/overtime row) for typed UI.
+   * Access: hr.view / approvals.edit (full), requester, or any tier approver.
    */
-  async getRequest(requestId: string, companyId: string): Promise<unknown> {
+  async getRequest(
+    requestId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
     const request = await this.prisma.approvalRequest.findFirst({
       where: activeOnly({ id: requestId, companyId }),
       include: REQUEST_DETAIL_INCLUDE,
@@ -253,6 +260,8 @@ export class ApprovalsService {
     if (!request) {
       throw new NotFoundException('Approval request not found');
     }
+
+    await this.assertCanViewRequest(request, companyId, userId);
 
     const sourceId =
       request.leaveRequest?.id ?? request.overtimeRequest?.id ?? null;
@@ -268,26 +277,85 @@ export class ApprovalsService {
 
   /**
    * Lists requests with optional filters and pagination.
-   * When `inbox` is set, scoping always uses the authenticated user id (never client-supplied ids).
+   * Full access (hr.view or approvals.edit): company-wide.
+   * Otherwise: only requests the user submitted or is assigned to approve.
+   * When `inbox` is set, scoping always uses the authenticated user id.
    */
   async listRequests(
     filters: ListRequestsDto,
     companyId: string,
-    userId?: string,
+    userId: string,
   ): Promise<PaginatedResult<unknown>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
 
-    let submittedById = filters.submittedById;
-    let pendingApproverId = filters.pendingApproverId;
+    const isFullAccess = await this.hasApprovalsFullAccess(userId, companyId);
 
-    if (filters.inbox === 'MY_REQUESTS' && userId) {
+    let submittedById = isFullAccess ? filters.submittedById : undefined;
+    let pendingApproverId = isFullAccess
+      ? filters.pendingApproverId
+      : undefined;
+
+    if (filters.inbox === 'MY_REQUESTS') {
       submittedById = userId;
       pendingApproverId = undefined;
-    } else if (filters.inbox === 'PENDING_MY_ACTION' && userId) {
+    } else if (filters.inbox === 'PENDING_MY_ACTION') {
       pendingApproverId = userId;
       submittedById = undefined;
+    } else if (filters.inbox === 'ALL') {
+      // Company-wide for full access only; non-full-access falls back to own requests
+      submittedById = undefined;
+      pendingApproverId = undefined;
+      if (!isFullAccess) {
+        submittedById = userId;
+      }
+    }
+
+    const andClauses: Prisma.ApprovalRequestWhereInput[] = [];
+
+    if (!isFullAccess) {
+      andClauses.push({
+        OR: [
+          { requestedBy: userId },
+          { tiers: { some: { approverId: userId } } },
+        ],
+      });
+    }
+
+    if (submittedById) {
+      andClauses.push({ requestedBy: submittedById });
+    }
+
+    if (pendingApproverId) {
+      andClauses.push({
+        tiers: {
+          some: {
+            approverId: pendingApproverId,
+            decision: ApprovalTierDecision.PENDING,
+          },
+        },
+      });
+    }
+
+    const search = filters.search?.trim();
+    if (search) {
+      andClauses.push({
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: 'insensitive' as const,
+            },
+          },
+          {
+            requestNumber: {
+              contains: search,
+              mode: 'insensitive' as const,
+            },
+          },
+        ],
+      });
     }
 
     const where: Prisma.ApprovalRequestWhereInput = activeOnly({
@@ -296,36 +364,8 @@ export class ApprovalsService {
         ? { status: { in: filters.status } }
         : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(submittedById ? { requestedBy: submittedById } : {}),
-      ...(pendingApproverId
-        ? {
-            tiers: {
-              some: {
-                approverId: pendingApproverId,
-                decision: 'PENDING',
-              },
-            },
-          }
-        : {}),
       ...this.buildDateFilter(filters.dateFrom, filters.dateTo),
-      ...(filters.search?.trim()
-        ? {
-            OR: [
-              {
-                title: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                requestNumber: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
+      ...(andClauses.length > 0 ? { AND: andClauses } : {}),
     });
 
     const [rows, total] = await Promise.all([
@@ -359,7 +399,7 @@ export class ApprovalsService {
 
   /**
    * Approves the active tier; advances or completes the request.
-   * Unresolved conditions → CONDITIONALLY_APPROVED (no advance).
+   * Unresolved conditions ? CONDITIONALLY_APPROVED (no advance).
    */
   async approveTier(
     requestId: string,
@@ -387,7 +427,7 @@ export class ApprovalsService {
           decidedAt: new Date(),
         },
       });
-      return this.getRequest(request.id, request.companyId);
+      return this.getRequest(request.id, request.companyId, userId);
     }
 
     const nextApprover = await this.prisma.$transaction(
@@ -409,7 +449,7 @@ export class ApprovalsService {
       await this.notifySafe(request.companyId, userId, {
         recipientId: nextApprover.approverId,
         eventType: APPROVAL_PENDING_EVENT,
-        subject: `Approval required — ${request.requestNumber}`,
+        subject: `Approval required ? ${request.requestNumber}`,
         body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
         link: `/approval-requests/${request.id}`,
         variables: {
@@ -421,7 +461,7 @@ export class ApprovalsService {
       await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
-    return this.getRequest(request.id, request.companyId);
+    return this.getRequest(request.id, request.companyId, userId);
   }
 
   /**
@@ -466,7 +506,7 @@ export class ApprovalsService {
 
     await this.dispatchFinalDecision(request.id, 'REJECTED');
 
-    return this.getRequest(request.id, request.companyId);
+    return this.getRequest(request.id, request.companyId, userId);
   }
 
   /**
@@ -510,7 +550,7 @@ export class ApprovalsService {
     await this.notifySafe(request.companyId, userId, {
       recipientId: request.requestedBy,
       eventType: APPROVAL_RETURNED_EVENT,
-      subject: `Approval returned — ${request.requestNumber}`,
+      subject: `Approval returned ? ${request.requestNumber}`,
       body:
         note?.trim() ||
         `Your approval request ${request.requestNumber} was returned for revision.`,
@@ -523,7 +563,7 @@ export class ApprovalsService {
 
     await this.dispatchFinalDecision(request.id, 'RETURNED');
 
-    return this.getRequest(request.id, request.companyId);
+    return this.getRequest(request.id, request.companyId, userId);
   }
 
   /**
@@ -558,7 +598,7 @@ export class ApprovalsService {
       },
     });
 
-    return this.getRequest(request.id, request.companyId);
+    return this.getRequest(request.id, request.companyId, userId);
   }
 
   /**
@@ -661,11 +701,11 @@ export class ApprovalsService {
       await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
-    return this.getRequest(request.id, request.companyId);
+    return this.getRequest(request.id, request.companyId, userId);
   }
 
   /**
-   * Notifies registered domain listeners (leave, overtime, …) of a terminal outcome.
+   * Notifies registered domain listeners (leave, overtime, ?) of a terminal outcome.
    */
   private async dispatchFinalDecision(
     approvalRequestId: string,
@@ -687,6 +727,50 @@ export class ApprovalsService {
         ...(dateTo ? { lte: new Date(dateTo) } : {}),
       },
     };
+  }
+
+  /**
+   * Full company-wide visibility: hr.view (GM/MD/HR/Admin) or approvals.edit (admin).
+   */
+  private async hasApprovalsFullAccess(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const [hrView, approvalsAdmin] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+      this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'approvals',
+        'edit',
+      ),
+    ]);
+    return hrView || approvalsAdmin;
+  }
+
+  /**
+   * Ensures the caller may view this approval request.
+   */
+  private async assertCanViewRequest(
+    request: {
+      requestedBy: string;
+      tiers: Array<{ approverId: string }>;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const isFullAccess = await this.hasApprovalsFullAccess(userId, companyId);
+    if (isFullAccess) {
+      return;
+    }
+
+    const isRequester = request.requestedBy === userId;
+    const isApprover = request.tiers.some((t) => t.approverId === userId);
+    if (!isRequester && !isApprover) {
+      throw new ForbiddenException(
+        'You do not have access to this approval request',
+      );
+    }
   }
 
   private async nextRequestNumber(prefix: string): Promise<string> {

@@ -117,12 +117,12 @@ export class ListRequestsDto {
 
   @ApiPropertyOptional({
     description:
-      'Server-enforced inbox scope. MY_REQUESTS / PENDING_MY_ACTION always use the JWT user id.',
-    enum: ['MY_REQUESTS', 'PENDING_MY_ACTION'],
+      'Server-enforced inbox scope. MY_REQUESTS / PENDING_MY_ACTION always use the JWT user id. ALL is company-wide for full-access users only.',
+    enum: ['MY_REQUESTS', 'PENDING_MY_ACTION', 'ALL'],
   })
   @IsOptional()
-  @IsIn(['MY_REQUESTS', 'PENDING_MY_ACTION'])
-  inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION';
+  @IsIn(['MY_REQUESTS', 'PENDING_MY_ACTION', 'ALL'])
+  inbox?: 'MY_REQUESTS' | 'PENDING_MY_ACTION' | 'ALL';
 
   @ApiPropertyOptional({ description: 'ISO date — filter submittedAt >= dateFrom' })
   @IsOptional()

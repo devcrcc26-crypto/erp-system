@@ -12,8 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
-import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
-import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
+import { JwtAuthGuard } from '../../../../shared/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddConditionDto,
@@ -23,15 +22,19 @@ import {
 } from '../../application/dtos/approval.dtos';
 import { ApprovalsService } from '../../application/services/approvals.service';
 
+/**
+ * Approval requests — authenticated users only.
+ * Visibility is enforced in ApprovalsService (own + assigned vs hr.view full access).
+ * Tier actions still verify the caller is the assigned approver in the service.
+ */
 @ApiTags('Approval Requests')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('approval-requests')
 export class ApprovalRequestsController {
   constructor(private readonly approvalsService: ApprovalsService) {}
 
   @Post()
-  @RequirePermission('approvals', 'create')
   @ApiOperation({ summary: 'Submit an approval request' })
   submit(
     @CurrentUser() user: AuthenticatedUser,
@@ -42,10 +45,9 @@ export class ApprovalRequestsController {
   }
 
   @Get()
-  @RequirePermission('approvals', 'view')
   @ApiOperation({
     summary:
-      'List approval requests (use inbox=MY_REQUESTS|PENDING_MY_ACTION for user-scoped tabs)',
+      'List approval requests (scoped to requester/approver unless hr.view; use inbox tabs)',
   })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -56,17 +58,16 @@ export class ApprovalRequestsController {
   }
 
   @Get(':id')
-  @RequirePermission('approvals', 'view')
   @ApiOperation({ summary: 'Get an approval request with tiers and comments' })
   getOne(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.approvalsService.getRequest(id, companyId);
+    return this.approvalsService.getRequest(id, companyId, user.userId);
   }
 
   @Post(':id/tiers/:tierId/approve')
-  @RequirePermission('approvals', 'approve')
   @ApiOperation({ summary: 'Approve the current tier' })
   approve(
     @CurrentUser() user: AuthenticatedUser,
@@ -83,7 +84,6 @@ export class ApprovalRequestsController {
   }
 
   @Post(':id/tiers/:tierId/reject')
-  @RequirePermission('approvals', 'approve')
   @ApiOperation({ summary: 'Reject the current tier and request' })
   reject(
     @CurrentUser() user: AuthenticatedUser,
@@ -100,7 +100,6 @@ export class ApprovalRequestsController {
   }
 
   @Post(':id/tiers/:tierId/return')
-  @RequirePermission('approvals', 'approve')
   @ApiOperation({ summary: 'Return the request to the submitter' })
   returnToSubmitter(
     @CurrentUser() user: AuthenticatedUser,
@@ -117,7 +116,6 @@ export class ApprovalRequestsController {
   }
 
   @Post(':id/tiers/:tierId/conditions')
-  @RequirePermission('approvals', 'approve')
   @ApiOperation({ summary: 'Add a condition to the current tier' })
   addCondition(
     @CurrentUser() user: AuthenticatedUser,
@@ -134,7 +132,6 @@ export class ApprovalRequestsController {
   }
 
   @Patch(':id/tiers/:tierId/conditions/:index/resolve')
-  @RequirePermission('approvals', 'approve')
   @ApiOperation({ summary: 'Mark a tier condition as resolved' })
   resolveCondition(
     @CurrentUser() user: AuthenticatedUser,

@@ -95,7 +95,8 @@
       "new": "New request",
       "tabs": {
         "pendingMyAction": "Pending My Action",
-        "myRequests": "My Requests"
+        "myRequests": "My Requests",
+        "allRequests": "All Requests"
       }
     },
     "hr": {
