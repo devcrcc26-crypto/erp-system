@@ -101,13 +101,13 @@ export function useLeaveRequest(id: string, enabled = true) {
 }
 
 /**
- * Current user's leave balances for a calendar year.
+ * Current user's leave balances for a calendar year (auth-only endpoint).
  */
 export function useMyLeaveBalances(year: number, enabled = true) {
   return useQuery({
     queryKey: leaveKeys.myBalances(year),
     queryFn: () =>
-      apiGet<LeaveBalance[]>(`${LEAVE_PATH}/balances/me?year=${year}`),
+      apiGet<LeaveBalance[]>(`${LEAVE_PATH}/balance?year=${year}`),
     enabled,
     retry: false,
   });

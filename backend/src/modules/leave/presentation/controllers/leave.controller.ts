@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -38,7 +39,10 @@ export class LeaveController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Submit a leave request' })
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Submit a leave request (any authenticated user, own record)',
+  })
   submit(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
@@ -61,6 +65,7 @@ export class LeaveController {
   }
 
   @Get('my')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List my leave requests' })
   listMine(
     @CurrentUser() user: AuthenticatedUser,
@@ -70,9 +75,12 @@ export class LeaveController {
     return this.leaveService.getMyRequests(user.userId, companyId, query);
   }
 
-  @Get('balances/me')
-  @ApiOperation({ summary: 'Get my leave balances for a year' })
-  myBalances(
+  @Get('balance')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Get my leave balances for a year (auth only — own balances)',
+  })
+  getMyBalance(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: LeaveBalanceQueryDto,
@@ -83,6 +91,19 @@ export class LeaveController {
       year,
       companyId,
     );
+  }
+
+  @Get('balances/me')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Get my leave balances for a year (alias of GET balance)',
+  })
+  myBalances(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: LeaveBalanceQueryDto,
+  ): Promise<unknown> {
+    return this.getMyBalance(user, companyId, query);
   }
 
   @Get(':id')

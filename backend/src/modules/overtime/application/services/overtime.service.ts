@@ -92,6 +92,7 @@ export class OvertimeService
 
   /**
    * Creates an overtime request and opens an approval workflow.
+   * Org chain resolution runs before ApprovalsService writes.
    */
   async submitRequest(
     dto: SubmitOvertimeRequestDto,
@@ -121,13 +122,14 @@ export class OvertimeService
       }
     }
 
-    const title = `Overtime — ${dto.date} (${hours}h)`;
-
+    // Resolve chain BEFORE any approval write / transaction
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
       companyId,
       hours > 4,
     );
+
+    const title = `Overtime — ${dto.date} (${hours}h)`;
 
     const approval = (await this.approvalsService.submitRequest(
       {

@@ -58,6 +58,12 @@ const REQUEST_DETAIL_INCLUDE = {
   overtimeRequest: { select: { id: true } },
 } as const;
 
+/** Interactive transaction options — leave/overtime submit must not hit the 5s default. */
+const PRISMA_TX_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
 export interface TierCondition {
   text: string;
   resolved: boolean;
@@ -174,37 +180,47 @@ export class ApprovalsService {
 
     const created = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-      const request = await tx.approvalRequest.create({
-        data: {
-          id: randomUUID(),
-          companyId,
-          categoryId: category.id,
-          requestNumber,
-          title: dto.title,
-          formData,
-          requestedBy: userId,
-          status: ApprovalRequestStatus.PENDING,
-          currentTier: matched.tiers[0].tierOrder,
-          matchedRuleName: matched.ruleName,
-          submittedAt: now,
-          attachmentFolderId: dto.documentFolderId ?? null,
-          createdBy: userId,
-          updatedBy: userId,
-          tiers: {
-            create: matched.tiers.map((tier) => ({
-              id: randomUUID(),
-              tierOrder: tier.tierOrder,
-              label: tier.label,
-              approverId: tier.approverId,
-              resolver: tier.resolver,
-              decision: ApprovalTierDecision.PENDING,
-              conditions: [],
-            })),
+        const request = await tx.approvalRequest.create({
+          data: {
+            id: randomUUID(),
+            companyId,
+            categoryId: category.id,
+            requestNumber,
+            title: dto.title,
+            formData,
+            requestedBy: userId,
+            status: ApprovalRequestStatus.PENDING,
+            currentTier: matched.tiers[0].tierOrder,
+            matchedRuleName: matched.ruleName,
+            submittedAt: now,
+            attachmentFolderId: dto.documentFolderId ?? null,
+            createdBy: userId,
+            updatedBy: userId,
+            tiers: {
+              create: matched.tiers.map((tier) => ({
+                id: randomUUID(),
+                tierOrder: tier.tierOrder,
+                label: tier.label,
+                approverId: tier.approverId,
+                resolver: tier.resolver,
+                decision: ApprovalTierDecision.PENDING,
+                conditions: [],
+              })),
+            },
           },
-        },
-        include: REQUEST_DETAIL_INCLUDE,
-      });
-      return request;
+          select: {
+            id: true,
+            requestNumber: true,
+          },
+        });
+        return request;
+      },
+      PRISMA_TX_OPTIONS,
+    );
+
+    const detailed = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: created.id, companyId }),
+      include: REQUEST_DETAIL_INCLUDE,
     });
 
     const firstApproverId = matched.tiers[0]?.approverId;
@@ -222,7 +238,7 @@ export class ApprovalsService {
       });
     }
 
-    return created;
+    return detailed ?? created;
   }
 
   /**
@@ -376,20 +392,18 @@ export class ApprovalsService {
 
     const nextApprover = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-      await tx.approvalTier.update({
-        where: { id: tier.id },
-        data: {
-          decision: ApprovalTierDecision.APPROVED,
-          comment: note ?? tier.comment,
-          decidedAt: new Date(),
-        },
-      });
-      return this.advanceAfterTierApproval(
-        tx,
-        request.id,
-        userId,
-      );
-    });
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            decision: ApprovalTierDecision.APPROVED,
+            comment: note ?? tier.comment,
+            decidedAt: new Date(),
+          },
+        });
+        return this.advanceAfterTierApproval(tx, request.id, userId);
+      },
+      PRISMA_TX_OPTIONS,
+    );
 
     if (nextApprover) {
       await this.notifySafe(request.companyId, userId, {
@@ -428,24 +442,27 @@ export class ApprovalsService {
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
 
     const now = new Date();
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.approvalTier.update({
-        where: { id: tier.id },
-        data: {
-          decision: ApprovalTierDecision.REJECTED,
-          comment: note ?? null,
-          decidedAt: now,
-        },
-      });
-      await tx.approvalRequest.update({
-        where: { id: request.id },
-        data: {
-          status: ApprovalRequestStatus.REJECTED,
-          completedAt: now,
-          updatedBy: userId,
-        },
-      });
-    });
+    await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            decision: ApprovalTierDecision.REJECTED,
+            comment: note ?? null,
+            decidedAt: now,
+          },
+        });
+        await tx.approvalRequest.update({
+          where: { id: request.id },
+          data: {
+            status: ApprovalRequestStatus.REJECTED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      },
+      PRISMA_TX_OPTIONS,
+    );
 
     await this.dispatchFinalDecision(request.id, 'REJECTED');
 
@@ -469,23 +486,26 @@ export class ApprovalsService {
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
 
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.approvalTier.update({
-        where: { id: tier.id },
-        data: {
-          decision: ApprovalTierDecision.RETURNED,
-          comment: note ?? null,
-          decidedAt: new Date(),
-        },
-      });
-      await tx.approvalRequest.update({
-        where: { id: request.id },
-        data: {
-          status: ApprovalRequestStatus.RETURNED,
-          updatedBy: userId,
-        },
-      });
-    });
+    await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            decision: ApprovalTierDecision.RETURNED,
+            comment: note ?? null,
+            decidedAt: new Date(),
+          },
+        });
+        await tx.approvalRequest.update({
+          where: { id: request.id },
+          data: {
+            status: ApprovalRequestStatus.RETURNED,
+            updatedBy: userId,
+          },
+        });
+      },
+      PRISMA_TX_OPTIONS,
+    );
 
     await this.notifySafe(request.companyId, userId, {
       recipientId: request.requestedBy,
@@ -607,24 +627,26 @@ export class ApprovalsService {
 
     const nextApprover = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-      await tx.approvalTier.update({
-        where: { id: tier.id },
-        data: {
-          conditions: conditions as unknown as Prisma.InputJsonValue,
-          ...(shouldAdvance
-            ? {
-                decision: ApprovalTierDecision.APPROVED,
-                decidedAt: new Date(),
-              }
-            : {}),
-        },
-      });
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            conditions: conditions as unknown as Prisma.InputJsonValue,
+            ...(shouldAdvance
+              ? {
+                  decision: ApprovalTierDecision.APPROVED,
+                  decidedAt: new Date(),
+                }
+              : {}),
+          },
+        });
 
-      if (shouldAdvance) {
-        return this.advanceAfterTierApproval(tx, request.id, userId);
-      }
-      return null;
-    });
+        if (shouldAdvance) {
+          return this.advanceAfterTierApproval(tx, request.id, userId);
+        }
+        return null;
+      },
+      PRISMA_TX_OPTIONS,
+    );
 
     if (nextApprover) {
       await this.notifySafe(request.companyId, userId, {

@@ -5,7 +5,6 @@ import {
   Alert,
   Button,
   DatePicker,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -29,6 +28,7 @@ import {
   formatLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { tokens } from '@/lib/theme/tokens';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -37,8 +37,11 @@ interface LeaveFormValues {
   reason?: string;
 }
 
+const DEFAULT_LEAVE_TYPE: LeaveType = 'ANNUAL';
+
 /**
  * Standalone leave request form under Approvals → New Request (no HR layout).
+ * Auth alone is enough; leave/hr RBAC is enforced on HR list/detail pages.
  */
 export default function LeaveRequestFormContent(): React.ReactNode {
   const router = useRouter();
@@ -54,14 +57,14 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     | undefined;
 
   const selectedBalance = useMemo(() => {
-    if (!leaveType) {
+    if (!leaveType || !balancesQuery.data) {
       return undefined;
     }
-    return balancesQuery.data?.find((row) => row.leaveType === leaveType);
+    return balancesQuery.data.find((row) => row.leaveType === leaveType);
   }, [balancesQuery.data, leaveType]);
 
   useEffect(() => {
-    form.setFieldsValue({ days: 1 });
+    form.setFieldsValue({ days: 1, leaveType: DEFAULT_LEAVE_TYPE });
   }, [form]);
 
   useEffect(() => {
@@ -95,6 +98,61 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to submit leave request', messageApi);
     }
+  }
+
+  function renderBalancePanel(): React.ReactNode {
+    if (balancesQuery.isLoading) {
+      return (
+        <Typography.Text type="secondary">Loading balance…</Typography.Text>
+      );
+    }
+
+    if (balancesQuery.isError) {
+      return (
+        <Typography.Text type="danger">
+          {balancesQuery.error instanceof ApiRequestError
+            ? balancesQuery.error.message
+            : 'Failed to load leave balance'}
+        </Typography.Text>
+      );
+    }
+
+    if (!leaveType) {
+      return (
+        <Typography.Text type="secondary">
+          Select a leave type to view your balance.
+        </Typography.Text>
+      );
+    }
+
+    if (!selectedBalance) {
+      return (
+        <Typography.Text type="secondary">
+          No balance record — contact HR
+        </Typography.Text>
+      );
+    }
+
+    return (
+      <Space orientation="vertical" size={2} style={{ width: '100%' }}>
+        <Typography.Text>
+          Available:{' '}
+          <Typography.Text strong>{selectedBalance.remaining}</Typography.Text>{' '}
+          days
+        </Typography.Text>
+        <Typography.Text type="secondary">
+          Used: {selectedBalance.used} days
+        </Typography.Text>
+        <Typography.Text type="secondary">
+          Entitled: {selectedBalance.entitled} days
+        </Typography.Text>
+        {selectedBalance.pending > 0 ? (
+          <Typography.Text type="secondary">
+            Pending: {selectedBalance.pending} days
+          </Typography.Text>
+        ) : null}
+      </Space>
+    );
   }
 
   return (
@@ -131,12 +189,29 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         <Form
           form={form}
           layout="vertical"
+          initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
           onFinish={(values) => void handleSubmit(values)}
         >
           <Form.Item
             name="leaveType"
             label="Leave Type"
             rules={[{ required: true, message: 'Select a leave type' }]}
+            extra={
+              <div
+                className="mt-2 rounded-md px-3 py-2"
+                style={{
+                  background: tokens.colorPrimaryLight,
+                  border: `1px solid ${tokens.colorBorder}`,
+                }}
+              >
+                <Typography.Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  {leaveType
+                    ? `${formatLeaveType(leaveType)} balance (${year})`
+                    : `${year} balance`}
+                </Typography.Text>
+                {renderBalancePanel()}
+              </div>
+            }
           >
             <Select
               options={LEAVE_TYPE_OPTIONS}
@@ -173,39 +248,6 @@ export default function LeaveRequestFormContent(): React.ReactNode {
             <Input.TextArea rows={4} maxLength={4000} showCount />
           </Form.Item>
         </Form>
-
-        <Divider />
-
-        <Typography.Text strong>{year} Balance</Typography.Text>
-        {balancesQuery.isLoading ? (
-          <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-            Loading balance…
-          </Typography.Paragraph>
-        ) : leaveType && selectedBalance ? (
-          <Space
-            orientation="vertical"
-            size={4}
-            style={{ width: '100%', marginTop: 8 }}
-          >
-            <Typography.Text>{formatLeaveType(leaveType)}</Typography.Text>
-            <Typography.Text type="secondary">
-              Entitled: {selectedBalance.entitled}
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              Used: {selectedBalance.used}
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              Pending: {selectedBalance.pending}
-            </Typography.Text>
-            <Typography.Text strong>
-              Remaining: {selectedBalance.remaining}
-            </Typography.Text>
-          </Space>
-        ) : (
-          <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-            Select a leave type to view your balance.
-          </Typography.Paragraph>
-        )}
       </div>
     </FormLayout>
   );

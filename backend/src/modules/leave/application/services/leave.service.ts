@@ -87,6 +87,7 @@ export class LeaveService
 
   /**
    * Creates a leave request, reserves balance, and opens an approval workflow.
+   * Heavy reads (org chain, balance) run before any transaction / approval write.
    */
   async submitRequest(
     dto: SubmitLeaveRequestDto,
@@ -100,22 +101,34 @@ export class LeaveService
     const year = startDate.getUTCFullYear();
     const days = dto.days;
 
-    await this.leaveBalanceService.assertSufficientBalance(
-      userId,
-      dto.leaveType,
-      year,
-      days,
-      companyId,
-    );
-
-    const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
-
+    // Step 1 — resolve chain BEFORE opening any transaction
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
       companyId,
       days > 3,
     );
 
+    // Step 2 — initialize balance if needed (outside transaction)
+    await this.leaveBalanceService.ensureBalance(userId, year, companyId);
+
+    // Step 3 — check balance (outside transaction; unpaid skips remaining)
+    if (dto.leaveType !== LeaveType.UNPAID) {
+      const balances = (await this.leaveBalanceService.getBalance(
+        userId,
+        year,
+        companyId,
+      )) as Array<{ leaveType: string; remaining: number }>;
+      const leaveBalance = balances.find((b) => b.leaveType === dto.leaveType);
+      if (!leaveBalance || leaveBalance.remaining < days) {
+        throw new BadRequestException(
+          `Insufficient ${dto.leaveType.toLowerCase()} leave balance. Remaining: ${leaveBalance?.remaining ?? 0}, requested: ${days}`,
+        );
+      }
+    }
+
+    const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
+
+    // Step 4 — approval write only (resolved chain passed in; no lookups in tx)
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'LEAVE_REQUEST',
@@ -142,26 +155,29 @@ export class LeaveService
     const leaveId = randomUUID();
 
     try {
-      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-        await tx.leaveRequest.create({
-          data: {
-            id: leaveId,
-            companyId,
-            requestNumber: approval.requestNumber,
-            employeeId: userId,
-            leaveType: dto.leaveType,
-            startDate,
-            endDate,
-            days: new Prisma.Decimal(days),
-            reason: dto.reason?.trim() || null,
-            status: LeaveRequestStatus.SUBMITTED,
-            approvalRequestId: approval.id,
-            submittedAt: now,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
-      });
+      await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          await tx.leaveRequest.create({
+            data: {
+              id: leaveId,
+              companyId,
+              requestNumber: approval.requestNumber,
+              employeeId: userId,
+              leaveType: dto.leaveType,
+              startDate,
+              endDate,
+              days: new Prisma.Decimal(days),
+              reason: dto.reason?.trim() || null,
+              status: LeaveRequestStatus.SUBMITTED,
+              approvalRequestId: approval.id,
+              submittedAt: now,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        },
+        { maxWait: 10_000, timeout: 30_000 },
+      );
 
       await this.leaveBalanceService.adjustBalance(
         userId,

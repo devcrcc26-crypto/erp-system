@@ -27,6 +27,25 @@ export class LeaveBalanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Ensures leave balance rows exist for the employee/year (idempotent).
+   * Call outside transactions — seeding can touch every leave type.
+   */
+  async ensureBalance(
+    employeeId: string,
+    year: number,
+    companyId: string,
+  ): Promise<void> {
+    await this.assertEmployeeInCompany(employeeId, companyId);
+    const existing = await this.prisma.leaveBalance.findFirst({
+      where: { employeeId, year, companyId },
+      select: { id: true },
+    });
+    if (!existing) {
+      await this.initializeBalance(employeeId, year, companyId);
+    }
+  }
+
+  /**
    * Returns all leave-type balances for an employee year, initializing defaults if missing.
    */
   async getBalance(
@@ -34,8 +53,7 @@ export class LeaveBalanceService {
     year: number,
     companyId: string,
   ): Promise<unknown[]> {
-    await this.assertEmployeeInCompany(employeeId, companyId);
-    await this.initializeBalance(employeeId, year, companyId);
+    await this.ensureBalance(employeeId, year, companyId);
 
     const rows = await this.prisma.leaveBalance.findMany({
       where: { companyId, employeeId, year },
