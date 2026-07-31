@@ -147,13 +147,6 @@ export function buildIconRailNav(
     defaultOpen: true,
     items: [
       {
-        key: '/',
-        labelKey: 'nav.dashboard',
-        href: '/',
-        iconKey: 'dashboard',
-        visible: true,
-      },
-      {
         key: '/projects',
         labelKey: 'nav.projects',
         href: '/projects',

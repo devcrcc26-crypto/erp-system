@@ -216,10 +216,7 @@ export function canViewProjectNavItem(
 }
 
 /** Global icon-rail keys gated by design-cycle persona (href/key in navConfig). */
-const GLOBAL_ALWAYS = new Set(['/']);
-
 const GLOBAL_DEPT_LEADER = new Set([
-  '/',
   '/projects',
   '/departments',
   '/positions',
@@ -235,7 +232,6 @@ const GLOBAL_DEPT_LEADER = new Set([
 ]);
 
 const GLOBAL_DISCIPLINE_LEADER = new Set([
-  '/',
   '/my-work',
   '/review-inbox',
   '/my-comments',
@@ -245,14 +241,12 @@ const GLOBAL_DISCIPLINE_LEADER = new Set([
 ]);
 
 const GLOBAL_REVIEWER = new Set([
-  '/',
   '/my-work',
   '/review-inbox',
   '/my-comments',
 ]);
 
 const GLOBAL_DESIGNER = new Set([
-  '/',
   '/my-work',
   '/my-comments',
   '/submittals',
@@ -260,7 +254,7 @@ const GLOBAL_DESIGNER = new Set([
   '/rfis',
 ]);
 
-const GLOBAL_SUPPORTING = new Set(['/', '/my-work']);
+const GLOBAL_SUPPORTING = new Set(['/my-work']);
 
 /**
  * Extra gate for global icon-rail items after existing capability `visible` flags.
@@ -385,7 +379,7 @@ export function canViewGlobalNavKey(
     return true;
   }
 
-  const keys = new Set<string>(GLOBAL_ALWAYS);
+  const keys = new Set<string>();
 
   if (epc.navDepartmentLeader) {
     for (const k of GLOBAL_DEPT_LEADER) {
