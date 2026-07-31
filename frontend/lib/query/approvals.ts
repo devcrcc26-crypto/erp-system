@@ -1,0 +1,210 @@
+'use client';
+
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  apiGet,
+  apiGetPaginated,
+  apiPatch,
+  apiPost,
+} from '@/lib/api/client';
+import type {
+  AddConditionPayload,
+  ApprovalCategorySummary,
+  ApprovalRequestDetail,
+  ApprovalRequestListItem,
+  ListApprovalRequestsParams,
+  SubmitApprovalRequestPayload,
+  TierActionPayload,
+} from '@/lib/api/approvals.types';
+import type { PaginationMeta } from '@/lib/api/types';
+import { toQueryString } from '@/lib/query/pm-query-utils';
+
+type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
+
+const APPROVAL_REQUESTS_PATH = '/approval-requests';
+const APPROVAL_CATEGORIES_PATH = '/approval-categories';
+
+export const approvalKeys = {
+  all: ['approvals'] as const,
+  lists: () => [...approvalKeys.all, 'list'] as const,
+  list: (params: ListApprovalRequestsParams) =>
+    [...approvalKeys.lists(), params] as const,
+  details: () => [...approvalKeys.all, 'detail'] as const,
+  detail: (id: string) => [...approvalKeys.details(), id] as const,
+  categories: () => [...approvalKeys.all, 'categories'] as const,
+};
+
+function buildListQuery(params: ListApprovalRequestsParams): string {
+  const { status, ...rest } = params;
+  const statusValue = Array.isArray(status)
+    ? status.length > 0
+      ? status.join(',')
+      : undefined
+    : status;
+  return toQueryString({
+    ...rest,
+    status: statusValue,
+  });
+}
+
+/**
+ * Paginated approval requests with optional filters.
+ */
+export function useApprovalRequests(
+  params: ListApprovalRequestsParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: approvalKeys.list(params),
+    queryFn: () =>
+      apiGetPaginated<ApprovalRequestListItem>(
+        `${APPROVAL_REQUESTS_PATH}${buildListQuery(params)}`,
+      ),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Single approval request with tiers and comments.
+ */
+export function useApprovalRequest(id: string, enabled = true) {
+  return useQuery({
+    queryKey: approvalKeys.detail(id),
+    queryFn: () =>
+      apiGet<ApprovalRequestDetail>(`${APPROVAL_REQUESTS_PATH}/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Active approval categories for filter dropdowns.
+ */
+export function useApprovalCategories(enabled = true) {
+  return useQuery({
+    queryKey: approvalKeys.categories(),
+    queryFn: () =>
+      apiGet<ApprovalCategorySummary[]>(APPROVAL_CATEGORIES_PATH),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Submits a new approval request.
+ */
+export function useSubmitApprovalRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SubmitApprovalRequestPayload) =>
+      apiPost<ApprovalRequestDetail>(APPROVAL_REQUESTS_PATH, payload),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.setQueryData(approvalKeys.detail(created.id), created);
+    },
+  });
+}
+
+function invalidateApprovalQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  requestId: string,
+): void {
+  void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+  void queryClient.invalidateQueries({
+    queryKey: approvalKeys.detail(requestId),
+  });
+}
+
+export function useApproveApprovalTier(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      payload,
+    }: {
+      tierId: string;
+      payload?: TierActionPayload;
+    }) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/approve`,
+        payload ?? {},
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+export function useRejectApprovalTier(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      payload,
+    }: {
+      tierId: string;
+      payload?: TierActionPayload;
+    }) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/reject`,
+        payload ?? {},
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+export function useReturnApprovalTier(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      payload,
+    }: {
+      tierId: string;
+      payload?: TierActionPayload;
+    }) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/return`,
+        payload ?? {},
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+export function useAddApprovalCondition(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      payload,
+    }: {
+      tierId: string;
+      payload: AddConditionPayload;
+    }) =>
+      apiPost<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/conditions`,
+        payload,
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+export function useResolveApprovalCondition(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tierId,
+      index,
+    }: {
+      tierId: string;
+      index: number;
+    }) =>
+      apiPatch<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/conditions/${index}/resolve`,
+      ),
+    onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}

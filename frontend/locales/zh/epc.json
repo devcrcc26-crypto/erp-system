@@ -25,11 +25,31 @@
     "meetings": "会议",
     "correspondence": "函件",
     "dailyLogs": "施工日志",
+    "approvals": "审批",
     "departments": "部门",
     "positions": "职位",
     "disciplinesCatalog": "专业",
     "menuApplication": "应用",
-    "menuProject": "项目"
+    "menuProject": "项目",
+    "groups": {
+      "projectManagement": "项目管理",
+      "humanResources": "人力资源"
+    },
+    "hr": {
+      "leaveRequests": "请假申请",
+      "overtime": "加班申请",
+      "expenseClaims": "费用报销",
+      "purchaseRequests": "采购申请",
+      "materialRequisition": "材料领用",
+      "consumables": "低值易耗品",
+      "flightApplications": "机票申请",
+      "vehicleApplications": "用车申请",
+      "officialSeal": "公章使用",
+      "projectSeal": "项目章使用",
+      "vehicleRefueling": "办公车辆加油",
+      "inspectionRepair": "检修申请",
+      "businessTrips": "第三国出差"
+    }
   },
   "workspace": {
     "groups": {
@@ -70,6 +90,14 @@
     }
   },
   "pages": {
+    "approvals": {
+      "detail": "审批详情",
+      "new": "新建审批"
+    },
+    "hr": {
+      "comingSoonTitle": "即将推出",
+      "comingSoonDescription": "{{module}} 将在后续版本中提供。"
+    },
     "disciplines": {
       "title": "子任务",
       "description": "各专业子任务及工作流状态与角色分配。",

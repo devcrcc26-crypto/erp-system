@@ -9,10 +9,13 @@ import {
   UserOutlined,
   LeftOutlined,
   RightOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import {
-  buildIconRailItems,
+  buildIconRailNav,
+  flattenIconRailNav,
   resolveIconRailKey,
+  type IconRailGroup,
   type IconRailItem,
 } from '@/config/navConfig';
 import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
@@ -41,6 +44,7 @@ import {
 } from '@/hooks/use-org-nav-access';
 import { canViewGlobalNavKey } from '@/lib/navigation/project-nav-visibility';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSidebarGroupOpen } from '@/hooks/useSidebarGroupOpen';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { tokens } from '@/lib/theme/tokens';
@@ -124,6 +128,100 @@ function RailNavButton({
         {label}
       </span>
     </Link>
+  );
+}
+
+function RailGroupHeader({
+  label,
+  open,
+  onToggle,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactNode {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className="mb-0.5 mt-2 flex w-full items-center gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--color-surface-secondary)] first:mt-0"
+      style={{ color: tokens.colorTextTertiary }}
+    >
+      <span className="min-w-0 flex-1 truncate text-[10px] font-medium uppercase tracking-[0.06em]">
+        {label}
+      </span>
+      <DownOutlined
+        className="shrink-0 text-[9px] transition-transform duration-150"
+        style={{
+          transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+        }}
+      />
+    </button>
+  );
+}
+
+function RailNavGroup({
+  group,
+  visibleItems,
+  selectedKey,
+  isExpanded,
+  onNavigate,
+  t,
+}: {
+  group: IconRailGroup;
+  visibleItems: IconRailItem[];
+  selectedKey: string;
+  isExpanded: boolean;
+  onNavigate?: () => void;
+  t: (key: string) => string;
+}): React.ReactNode {
+  const { open, toggle } = useSidebarGroupOpen(
+    group.storageKey,
+    group.defaultOpen,
+  );
+
+  if (visibleItems.length === 0) {
+    return null;
+  }
+
+  if (!isExpanded) {
+    return (
+      <>
+        {visibleItems.map((item) => (
+          <RailNavButton
+            key={item.key}
+            item={item}
+            label={t(item.labelKey)}
+            isActive={selectedKey === item.key}
+            isExpanded={false}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-0.5">
+      <RailGroupHeader
+        label={t(group.labelKey)}
+        open={open}
+        onToggle={toggle}
+      />
+      {open
+        ? visibleItems.map((item) => (
+            <RailNavButton
+              key={item.key}
+              item={item}
+              label={t(item.labelKey)}
+              isActive={selectedKey === item.key}
+              isExpanded={isExpanded}
+              onNavigate={onNavigate}
+            />
+          ))
+        : null}
+    </section>
   );
 }
 
@@ -213,7 +311,7 @@ export default function MainNavPanel({
   const canViewPositions = useCanViewDepartmentsNav();
   const canViewDisciplinesCatalog = useCanViewDisciplinesCatalogNav();
 
-  const navItems = buildIconRailItems({
+  const navStructure = buildIconRailNav({
     canViewReviewInbox: !permLoading && canViewReviewInbox,
     canViewMyComments: !permLoading && canViewMyComments,
     canViewMyWork: !permLoading && canViewMyWork,
@@ -227,6 +325,8 @@ export default function MainNavPanel({
     canViewMeetings: !permLoading && canViewMeetings,
     canViewCorrespondence: !permLoading && canViewCorrespondence,
     canViewDailyLogs: !permLoading && canViewDailyLogs,
+    canViewApprovals: !permLoading,
+    canViewHr: !permLoading,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,
@@ -235,9 +335,20 @@ export default function MainNavPanel({
     canViewPositions: !permLoading && canViewPositions,
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
-  const visibleNavItems = navItems.filter(
-    (item) => item.visible && canViewGlobalNavKey(item.key, epc, pm),
-  );
+
+  function isItemVisible(item: IconRailItem): boolean {
+    return item.visible && canViewGlobalNavKey(item.key, epc, pm);
+  }
+
+  const visibleGroups = navStructure.groups.map((group) => ({
+    group,
+    items: group.items.filter(isItemVisible),
+  }));
+  const visibleStandalone = navStructure.standalone.filter(isItemVisible);
+  const visibleNavItems = flattenIconRailNav({
+    groups: visibleGroups.map(({ group, items }) => ({ ...group, items })),
+    standalone: visibleStandalone,
+  });
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
   const profileActive = pathname === '/profile';
 
@@ -317,16 +428,44 @@ export default function MainNavPanel({
             />
           ))
         ) : (
-          visibleNavItems.map((item) => (
-            <RailNavButton
-              key={item.key}
-              item={item}
-              label={t(item.labelKey)}
-              isActive={selectedKey === item.key}
-              isExpanded={isExpanded}
-              onNavigate={onNavigate}
-            />
-          ))
+          <>
+            {visibleGroups.map(({ group, items }) => (
+              <RailNavGroup
+                key={group.key}
+                group={group}
+                visibleItems={items}
+                selectedKey={selectedKey}
+                isExpanded={isExpanded}
+                onNavigate={onNavigate}
+                t={t}
+              />
+            ))}
+
+            {visibleStandalone.length > 0 ? (
+              <section
+                className={[
+                  'flex flex-col gap-0.5',
+                  isExpanded ? 'mt-2 pt-2' : 'mt-1',
+                ].join(' ')}
+                style={
+                  isExpanded
+                    ? { borderTop: `0.5px solid ${tokens.colorBorder}` }
+                    : undefined
+                }
+              >
+                {visibleStandalone.map((item) => (
+                  <RailNavButton
+                    key={item.key}
+                    item={item}
+                    label={t(item.labelKey)}
+                    isActive={selectedKey === item.key}
+                    isExpanded={isExpanded}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </section>
+            ) : null}
+          </>
         )}
       </nav>
 

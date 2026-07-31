@@ -25,11 +25,31 @@
     "meetings": "Meetings",
     "correspondence": "Correspondence",
     "dailyLogs": "Daily Logs",
+    "approvals": "Approvals",
     "departments": "Departments",
     "positions": "Positions",
     "disciplinesCatalog": "Disciplines",
     "menuApplication": "Application",
-    "menuProject": "Project"
+    "menuProject": "Project",
+    "groups": {
+      "projectManagement": "Project Management",
+      "humanResources": "Human Resources"
+    },
+    "hr": {
+      "leaveRequests": "Leave Requests",
+      "overtime": "Overtime",
+      "expenseClaims": "Expense Claims",
+      "purchaseRequests": "Purchase Requests",
+      "materialRequisition": "Material Requisition",
+      "consumables": "Consumables",
+      "flightApplications": "Flight Applications",
+      "vehicleApplications": "Vehicle Applications",
+      "officialSeal": "Official Seal Usage",
+      "projectSeal": "Project Seal Usage",
+      "vehicleRefueling": "Vehicle Refueling",
+      "inspectionRepair": "Inspection & Repair",
+      "businessTrips": "Business Trips"
+    }
   },
   "workspace": {
     "groups": {
@@ -70,6 +90,14 @@
     }
   },
   "pages": {
+    "approvals": {
+      "detail": "Request detail",
+      "new": "New request"
+    },
+    "hr": {
+      "comingSoonTitle": "Coming soon",
+      "comingSoonDescription": "{{module}} will be available in a future update."
+    },
     "disciplines": {
       "title": "Subtasks",
       "description": "Subtasks across disciplines with workflow status and role assignments.",

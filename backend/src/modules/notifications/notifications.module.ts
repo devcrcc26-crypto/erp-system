@@ -60,6 +60,7 @@ export class NotificationsModule {
 
     return {
       module: NotificationsModule,
+      global: true,
       imports: [ScheduleModule.forRoot(), ...bullImports],
       controllers: [NotificationsController, NotificationAdminController],
       providers: [

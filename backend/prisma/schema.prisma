@@ -117,6 +117,7 @@ enum EmailVerificationPurpose {
 
 enum ApprovalRequestStatus {
   DRAFT
+  PENDING
   SUBMITTED
   IN_REVIEW
   APPROVED
@@ -128,8 +129,10 @@ enum ApprovalRequestStatus {
 enum ApprovalTierDecision {
   PENDING
   APPROVED
+  CONDITIONALLY_APPROVED
   REJECTED
   SKIPPED
+  RETURNED
 }
 
 // ─── Company & Settings ──────────────────────────────────────────────────────
@@ -3224,6 +3227,7 @@ model ApprovalRequest {
   companyId          String                @map("company_id")
   categoryId         String                @map("category_id")
   requestNumber      String                @map("request_number")
+  title              String
   formData           Json                  @default("{}") @map("form_data")
   requestedBy        String                @map("requested_by")
   status             ApprovalRequestStatus @default(DRAFT)
@@ -3263,6 +3267,7 @@ model ApprovalTier {
   resolver   String
   decision   ApprovalTierDecision @default(PENDING)
   comment    String?
+  conditions Json                 @default("[]")
   decidedAt  DateTime?            @map("decided_at")
   createdAt  DateTime             @default(now()) @map("created_at")
 

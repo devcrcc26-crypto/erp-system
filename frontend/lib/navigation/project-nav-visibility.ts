@@ -312,6 +312,14 @@ export function canViewGlobalNavKey(
     return epc.navFullAccess;
   }
 
+  if (key === '/approvals') {
+    return true;
+  }
+
+  if (key.startsWith('/hr/')) {
+    return true;
+  }
+
   if (epc.navFullAccess) {
     return true;
   }

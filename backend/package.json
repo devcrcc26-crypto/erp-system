@@ -16,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
+    "prisma:seed-approval-categories": "ts-node --transpile-only prisma/seed-approval-categories.ts",
     "prisma:seed-full-project": "ts-node --transpile-only prisma/seed-full-project.ts",
     "prisma:clear-pm": "ts-node --transpile-only prisma/clear-pm-data.ts",
     "prisma:studio": "prisma studio",

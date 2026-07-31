@@ -1,6 +1,141 @@
-/**
- * Approval workflow DTOs.
- * Chunk 1 shell — validators and response shapes added in later chunks.
- */
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApprovalRequestStatus } from '@prisma/client';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 
-export {};
+export class SubmitRequestDto {
+  @ApiProperty({ example: 'LEAVE_REQUEST' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  categoryCode!: string;
+
+  @ApiProperty({ example: 'Annual leave — 5 days' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  title!: string;
+
+  @ApiProperty({
+    description: 'Dynamic form payload matching the category formSchema',
+    type: 'object',
+    additionalProperties: true,
+  })
+  @IsObject()
+  formData!: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: 'Document folder for attachments' })
+  @IsOptional()
+  @IsEntityUuid()
+  documentFolderId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional document ids linked to the request',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEntityUuid({ each: true })
+  documentIds?: string[];
+}
+
+export class TierActionDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+}
+
+export class AddConditionDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  text!: string;
+}
+
+function toStatusArray(value: unknown): ApprovalRequestStatus[] | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return value as ApprovalRequestStatus[];
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean) as ApprovalRequestStatus[];
+  }
+  return undefined;
+}
+
+export class ListRequestsDto {
+  @ApiPropertyOptional({
+    enum: ApprovalRequestStatus,
+    isArray: true,
+    description: 'One or more statuses (repeat query param or comma-separated)',
+  })
+  @IsOptional()
+  @Transform(({ value }) => toStatusArray(value))
+  @IsArray()
+  @IsEnum(ApprovalRequestStatus, { each: true })
+  status?: ApprovalRequestStatus[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  categoryId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by requester user id' })
+  @IsOptional()
+  @IsEntityUuid()
+  submittedById?: string;
+
+  @ApiPropertyOptional({ description: 'ISO date — filter submittedAt >= dateFrom' })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'ISO date — filter submittedAt <= dateTo' })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search title or request number (case-insensitive contains)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+}

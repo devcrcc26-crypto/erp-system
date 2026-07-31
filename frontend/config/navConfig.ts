@@ -18,6 +18,20 @@ export interface IconRailItem {
   readonly visible: boolean;
 }
 
+export interface IconRailGroup {
+  readonly key: string;
+  readonly labelKey: string;
+  /** localStorage key for collapsed/expanded persistence */
+  readonly storageKey: string;
+  readonly defaultOpen: boolean;
+  readonly items: readonly IconRailItem[];
+}
+
+export interface IconRailNavStructure {
+  readonly groups: readonly IconRailGroup[];
+  readonly standalone: readonly IconRailItem[];
+}
+
 export interface BreadcrumbSegment {
   readonly label: string;
   readonly href?: string;
@@ -44,6 +58,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/punch-list': 'nav.punchList',
   '/correspondence': 'nav.correspondence',
   '/daily-logs': 'nav.dailyLogs',
+  '/approvals': 'nav.approvals',
   '/users': 'nav.users',
   '/teams': 'nav.teams',
   '/reports': 'nav.reports',
@@ -54,6 +69,19 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/departments': 'pages.departments.title',
   '/positions': 'pages.positions.title',
   '/disciplines': 'pages.disciplinesCatalog.title',
+  '/hr/leave-requests': 'nav.hr.leaveRequests',
+  '/hr/overtime': 'nav.hr.overtime',
+  '/hr/expense-claims': 'nav.hr.expenseClaims',
+  '/hr/purchase-requests': 'nav.hr.purchaseRequests',
+  '/hr/material-requisition': 'nav.hr.materialRequisition',
+  '/hr/consumables': 'nav.hr.consumables',
+  '/hr/flight-applications': 'nav.hr.flightApplications',
+  '/hr/vehicle-applications': 'nav.hr.vehicleApplications',
+  '/hr/official-seal': 'nav.hr.officialSeal',
+  '/hr/project-seal': 'nav.hr.projectSeal',
+  '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
+  '/hr/inspection-repair': 'nav.hr.inspectionRepair',
+  '/hr/business-trips': 'nav.hr.businessTrips',
 };
 
 export interface IconRailVisibility {
@@ -70,6 +98,8 @@ export interface IconRailVisibility {
   canViewMeetings: boolean;
   canViewCorrespondence: boolean;
   canViewDailyLogs: boolean;
+  canViewApprovals: boolean;
+  canViewHr: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -80,9 +110,11 @@ export interface IconRailVisibility {
 }
 
 /**
- * Top-level icon rail navigation items.
+ * Domain-grouped main navigation: PM + HR collapsible groups, plus standalone items.
  */
-export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem[] {
+export function buildIconRailNav(
+  visibility: IconRailVisibility,
+): IconRailNavStructure {
   const {
     canViewReviewInbox,
     canViewMyComments,
@@ -97,6 +129,8 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewMeetings,
     canViewCorrespondence,
     canViewDailyLogs,
+    canViewApprovals,
+    canViewHr,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -106,146 +140,269 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
     canViewDisciplinesCatalog,
   } = visibility;
 
-  return [
+  const projectManagement: IconRailGroup = {
+    key: 'pm',
+    labelKey: 'nav.groups.projectManagement',
+    storageKey: 'sidebar_pm_open',
+    defaultOpen: true,
+    items: [
+      {
+        key: '/',
+        labelKey: 'nav.dashboard',
+        href: '/',
+        iconKey: 'dashboard',
+        visible: true,
+      },
+      {
+        key: '/projects',
+        labelKey: 'nav.projects',
+        href: '/projects',
+        iconKey: 'projects',
+        visible: canViewProjects,
+      },
+      {
+        key: '/review-inbox',
+        labelKey: 'nav.reviewInbox',
+        href: '/review-inbox',
+        iconKey: 'review-inbox',
+        visible: canViewReviewInbox,
+      },
+      {
+        key: '/my-comments',
+        labelKey: 'nav.myComments',
+        href: '/my-comments',
+        iconKey: 'my-comments',
+        visible: canViewMyComments,
+      },
+      {
+        key: '/my-work',
+        labelKey: 'nav.myWork',
+        href: '/my-work',
+        iconKey: 'my-work',
+        visible: canViewMyWork,
+      },
+      {
+        key: '/submittals',
+        labelKey: 'nav.submittals',
+        href: '/submittals',
+        iconKey: 'submittals',
+        visible: canViewSubmittals,
+      },
+      {
+        key: '/external-releases',
+        labelKey: 'nav.externalReleases',
+        href: '/external-releases',
+        iconKey: 'external-release',
+        visible: canViewExternalReleases,
+      },
+      {
+        key: '/change-requests',
+        labelKey: 'nav.changeRequests',
+        href: '/change-requests',
+        iconKey: 'change-requests',
+        visible: canViewChangeRequests,
+      },
+      {
+        key: '/rfis',
+        labelKey: 'nav.rfis',
+        href: '/rfis',
+        iconKey: 'rfis',
+        visible: canViewRfis,
+      },
+      {
+        key: '/issues',
+        labelKey: 'nav.issues',
+        href: '/issues',
+        iconKey: 'issues',
+        visible: canViewIssues,
+      },
+      {
+        key: '/risks',
+        labelKey: 'nav.risks',
+        href: '/risks',
+        iconKey: 'risks',
+        visible: canViewRisks,
+      },
+      {
+        key: '/punch-list',
+        labelKey: 'nav.punchList',
+        href: '/punch-list',
+        iconKey: 'punch-list',
+        visible: canViewPunchList,
+      },
+      {
+        key: '/meetings',
+        labelKey: 'nav.meetings',
+        href: '/meetings',
+        iconKey: 'meetings',
+        visible: canViewMeetings,
+      },
+      {
+        key: '/correspondence',
+        labelKey: 'nav.correspondence',
+        href: '/correspondence',
+        iconKey: 'correspondence',
+        visible: canViewCorrespondence,
+      },
+      {
+        key: '/daily-logs',
+        labelKey: 'nav.dailyLogs',
+        href: '/daily-logs',
+        iconKey: 'daily-logs',
+        visible: canViewDailyLogs,
+      },
+      {
+        key: '/departments',
+        labelKey: 'nav.departments',
+        href: '/departments',
+        iconKey: 'departments',
+        visible: canViewDepartments,
+      },
+      {
+        key: '/positions',
+        labelKey: 'nav.positions',
+        href: '/positions',
+        iconKey: 'positions',
+        visible: canViewPositions,
+      },
+      {
+        key: '/disciplines',
+        labelKey: 'nav.disciplinesCatalog',
+        href: '/disciplines',
+        iconKey: 'disciplines-catalog',
+        visible: canViewDisciplinesCatalog,
+      },
+      {
+        key: '/kanban-board',
+        labelKey: 'nav.kanbanBoard',
+        href: '/kanban-board',
+        iconKey: 'kanban',
+        visible: canViewProjects,
+      },
+      {
+        key: '/users',
+        labelKey: 'nav.users',
+        href: '/users',
+        iconKey: 'users',
+        visible: canManageUsers,
+      },
+      {
+        key: '/reports',
+        labelKey: 'nav.reports',
+        href: '/reports',
+        iconKey: 'reports',
+        visible: canViewProjects,
+      },
+    ],
+  };
+
+  const humanResources: IconRailGroup = {
+    key: 'hr',
+    labelKey: 'nav.groups.humanResources',
+    storageKey: 'sidebar_hr_open',
+    defaultOpen: true,
+    items: [
+      {
+        key: '/hr/leave-requests',
+        labelKey: 'nav.hr.leaveRequests',
+        href: '/hr/leave-requests',
+        iconKey: 'hr-leave',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/overtime',
+        labelKey: 'nav.hr.overtime',
+        href: '/hr/overtime',
+        iconKey: 'hr-overtime',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/expense-claims',
+        labelKey: 'nav.hr.expenseClaims',
+        href: '/hr/expense-claims',
+        iconKey: 'hr-expense',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/purchase-requests',
+        labelKey: 'nav.hr.purchaseRequests',
+        href: '/hr/purchase-requests',
+        iconKey: 'hr-purchase',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/material-requisition',
+        labelKey: 'nav.hr.materialRequisition',
+        href: '/hr/material-requisition',
+        iconKey: 'hr-material',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/consumables',
+        labelKey: 'nav.hr.consumables',
+        href: '/hr/consumables',
+        iconKey: 'hr-consumables',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/flight-applications',
+        labelKey: 'nav.hr.flightApplications',
+        href: '/hr/flight-applications',
+        iconKey: 'hr-flight',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/vehicle-applications',
+        labelKey: 'nav.hr.vehicleApplications',
+        href: '/hr/vehicle-applications',
+        iconKey: 'hr-vehicle',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/official-seal',
+        labelKey: 'nav.hr.officialSeal',
+        href: '/hr/official-seal',
+        iconKey: 'hr-official-seal',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/project-seal',
+        labelKey: 'nav.hr.projectSeal',
+        href: '/hr/project-seal',
+        iconKey: 'hr-project-seal',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/vehicle-refueling',
+        labelKey: 'nav.hr.vehicleRefueling',
+        href: '/hr/vehicle-refueling',
+        iconKey: 'hr-refueling',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/inspection-repair',
+        labelKey: 'nav.hr.inspectionRepair',
+        href: '/hr/inspection-repair',
+        iconKey: 'hr-inspection',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/business-trips',
+        labelKey: 'nav.hr.businessTrips',
+        href: '/hr/business-trips',
+        iconKey: 'hr-business-trip',
+        visible: canViewHr,
+      },
+    ],
+  };
+
+  const standalone: IconRailItem[] = [
     {
-      key: '/',
-      labelKey: 'nav.dashboard',
-      href: '/',
-      iconKey: 'dashboard',
-      visible: true,
-    },
-    {
-      key: '/projects',
-      labelKey: 'nav.projects',
-      href: '/projects',
-      iconKey: 'projects',
-      visible: canViewProjects,
-    },
-    {
-      key: '/review-inbox',
-      labelKey: 'nav.reviewInbox',
-      href: '/review-inbox',
-      iconKey: 'review-inbox',
-      visible: canViewReviewInbox,
-    },
-    {
-      key: '/my-comments',
-      labelKey: 'nav.myComments',
-      href: '/my-comments',
-      iconKey: 'my-comments',
-      visible: canViewMyComments,
-    },
-    {
-      key: '/my-work',
-      labelKey: 'nav.myWork',
-      href: '/my-work',
-      iconKey: 'my-work',
-      visible: canViewMyWork,
-    },
-    {
-      key: '/submittals',
-      labelKey: 'nav.submittals',
-      href: '/submittals',
-      iconKey: 'submittals',
-      visible: canViewSubmittals,
-    },
-    {
-      key: '/external-releases',
-      labelKey: 'nav.externalReleases',
-      href: '/external-releases',
-      iconKey: 'external-release',
-      visible: canViewExternalReleases,
-    },
-    {
-      key: '/change-requests',
-      labelKey: 'nav.changeRequests',
-      href: '/change-requests',
-      iconKey: 'change-requests',
-      visible: canViewChangeRequests,
-    },
-    {
-      key: '/rfis',
-      labelKey: 'nav.rfis',
-      href: '/rfis',
-      iconKey: 'rfis',
-      visible: canViewRfis,
-    },
-    {
-      key: '/issues',
-      labelKey: 'nav.issues',
-      href: '/issues',
-      iconKey: 'issues',
-      visible: canViewIssues,
-    },
-    {
-      key: '/risks',
-      labelKey: 'nav.risks',
-      href: '/risks',
-      iconKey: 'risks',
-      visible: canViewRisks,
-    },
-    {
-      key: '/punch-list',
-      labelKey: 'nav.punchList',
-      href: '/punch-list',
-      iconKey: 'punch-list',
-      visible: canViewPunchList,
-    },
-    {
-      key: '/meetings',
-      labelKey: 'nav.meetings',
-      href: '/meetings',
-      iconKey: 'meetings',
-      visible: canViewMeetings,
-    },
-    {
-      key: '/correspondence',
-      labelKey: 'nav.correspondence',
-      href: '/correspondence',
-      iconKey: 'correspondence',
-      visible: canViewCorrespondence,
-    },
-    {
-      key: '/daily-logs',
-      labelKey: 'nav.dailyLogs',
-      href: '/daily-logs',
-      iconKey: 'daily-logs',
-      visible: canViewDailyLogs,
-    },
-    {
-      key: '/departments',
-      labelKey: 'nav.departments',
-      href: '/departments',
-      iconKey: 'departments',
-      visible: canViewDepartments,
-    },
-    {
-      key: '/positions',
-      labelKey: 'nav.positions',
-      href: '/positions',
-      iconKey: 'positions',
-      visible: canViewPositions,
-    },
-    {
-      key: '/disciplines',
-      labelKey: 'nav.disciplinesCatalog',
-      href: '/disciplines',
-      iconKey: 'disciplines-catalog',
-      visible: canViewDisciplinesCatalog,
-    },
-    {
-      key: '/kanban-board',
-      labelKey: 'nav.kanbanBoard',
-      href: '/kanban-board',
-      iconKey: 'kanban',
-      visible: canViewProjects,
-    },
-    {
-      key: '/users',
-      labelKey: 'nav.users',
-      href: '/users',
-      iconKey: 'users',
-      visible: canManageUsers,
+      key: '/approvals',
+      labelKey: 'nav.approvals',
+      href: '/approvals',
+      iconKey: 'approvals',
+      visible: canViewApprovals,
     },
     {
       key: '/audit-logs',
@@ -255,20 +412,6 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       visible: canViewAuditLogs,
     },
     {
-      key: '/reports',
-      labelKey: 'nav.reports',
-      href: '/reports',
-      iconKey: 'reports',
-      visible: canViewProjects,
-    },
-    {
-      key: '/messages',
-      labelKey: 'nav.messages',
-      href: '/messages',
-      iconKey: 'messages',
-      visible: false,
-    },
-    {
       key: '/settings',
       labelKey: 'nav.settings',
       href: '/settings',
@@ -276,6 +419,32 @@ export function buildIconRailItems(visibility: IconRailVisibility): IconRailItem
       visible: canManageRoles,
     },
   ];
+
+  return {
+    groups: [projectManagement, humanResources],
+    standalone,
+  };
+}
+
+/**
+ * Flat list of all rail items (groups then standalone) for active-key resolution.
+ */
+export function flattenIconRailNav(
+  structure: IconRailNavStructure,
+): IconRailItem[] {
+  return [
+    ...structure.groups.flatMap((group) => group.items),
+    ...structure.standalone,
+  ];
+}
+
+/**
+ * @deprecated Prefer `buildIconRailNav` + `flattenIconRailNav`.
+ */
+export function buildIconRailItems(
+  visibility: IconRailVisibility,
+): IconRailItem[] {
+  return flattenIconRailNav(buildIconRailNav(visibility));
 }
 
 /** Context sidebar section config - sourced from project workspace nav. */
@@ -301,6 +470,13 @@ export function shouldShowContextSidebar(pathname: string): boolean {
   return extractProjectId(pathname) !== null;
 }
 
+function pathMatchesHref(pathname: string, href: string): boolean {
+  if (href === '/') {
+    return pathname === '/';
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 /**
  * Resolves the active icon rail key from the current pathname.
  */
@@ -312,10 +488,17 @@ export function resolveIconRailKey(
     return '/profile';
   }
 
-  const match = visibleItems.find(
-    (item) => item.href !== '/' && pathname.startsWith(item.href),
-  );
-  return match?.key ?? '/';
+  let best: IconRailItem | undefined;
+  for (const item of visibleItems) {
+    if (!pathMatchesHref(pathname, item.href)) {
+      continue;
+    }
+    if (!best || item.href.length > best.href.length) {
+      best = item;
+    }
+  }
+
+  return best?.key ?? '/';
 }
 
 /**
@@ -360,6 +543,40 @@ export function resolveRouteMeta(
       breadcrumbs: [
         { label: t('nav.projects'), href: '/projects' },
         { label: t('pages.reviewMode.title') },
+      ],
+    };
+  }
+
+  if (pathname === '/approvals/new') {
+    return {
+      titleKey: 'pages.approvals.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.approvals'), href: '/approvals' },
+        { label: t('pages.approvals.new') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/approvals/')) {
+    return {
+      titleKey: 'nav.approvals',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.approvals'), href: '/approvals' },
+        { label: t('pages.approvals.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/')) {
+    const titleKey = PAGE_TITLE_KEYS[pathname] ?? 'nav.groups.humanResources';
+    return {
+      titleKey,
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t(titleKey) },
       ],
     };
   }

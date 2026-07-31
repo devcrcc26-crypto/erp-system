@@ -4,6 +4,7 @@ import { seedPmDemoData } from './seed-pm-demo';
 import { seedAllProjectTypes } from './seed-all-project-types';
 import { appendRichDemoProjects } from './seed-demo-projects';
 import { seedComment8Walkthrough } from './seed-comment8-walkthrough';
+import { seedApprovalCategories } from './seeds/approval-categories.seed';
 
 const prisma = new PrismaClient();
 
@@ -99,6 +100,11 @@ const PERMISSION_DEFINITIONS: Array<{
 
   { module: 'notifications', action: 'view', description: 'View notifications' },
   { module: 'notifications', action: 'edit', description: 'Manage notification templates' },
+
+  { module: 'approvals', action: 'view', description: 'View approval categories and requests' },
+  { module: 'approvals', action: 'create', description: 'Submit approval requests' },
+  { module: 'approvals', action: 'approve', description: 'Approve, reject, return, or condition approval tiers' },
+  { module: 'approvals', action: 'edit', description: 'Edit approval categories' },
   
   { module: 'documents', action: 'view', description: 'View documents' },
   { module: 'documents', action: 'create', description: 'Upload documents' },
@@ -859,6 +865,17 @@ function employeePermissionFlags(
     };
   }
 
+  if (module === 'approvals' && (action === 'view' || action === 'create')) {
+    return {
+      canView: action === 'view',
+      canCreate: action === 'create',
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+    };
+  }
+
   return null;
 }
 
@@ -1519,6 +1536,11 @@ async function main(): Promise<void> {
   console.log(`  Admin password: (from SEED_ADMIN_PASSWORD env or default)`);
   console.log(`  Roles seeded: ${CORE_ROLES.length}`);
   console.log(`  Permissions seeded: ${permissions.length}`);
+
+  await seedApprovalCategories(prisma, {
+    companyId: company.id,
+    actorUserId: adminUser.id,
+  });
 
   if (process.env.SEED_PM_DEMO === 'false') {
     console.log('  PM demo skipped (SEED_PM_DEMO=false)');
