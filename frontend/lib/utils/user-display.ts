@@ -74,6 +74,69 @@ export function formatUserRoleNames(user: User): string {
 }
 
 /**
+ * Display priority for header / avatar role label (lower index = higher rank).
+ */
+const ROLE_DISPLAY_PRIORITY: readonly string[] = [
+  'System Administrator',
+  'Managing Director',
+  'General Manager',
+  'Project Director',
+  'Project Administrator',
+  'Project Manager',
+  'Chief Engineer',
+  'Institute Chief',
+  'Deputy Chief',
+  'Department Chief',
+  'Finance Manager',
+  'HR Officer',
+  'Procurement Officer',
+  'Document Controller',
+  'Planning Engineer',
+  'Discipline Lead',
+  'Discipline Owner',
+  'Site Coordinator',
+  'Site Engineer',
+  'Designer',
+  'Reviewer',
+  'Dispatcher',
+  'Accountant',
+  'Storekeeper',
+  'Safety Officer',
+  'Client Consultant',
+  'Employee',
+];
+
+/**
+ * Picks the single highest-ranking role name for compact UI (e.g. header avatar).
+ */
+export function pickTopLevelRoleName(
+  roles: readonly { name: string }[] | null | undefined,
+  emptyLabel = 'No role assigned',
+): string {
+  if (!roles || roles.length === 0) {
+    return emptyLabel;
+  }
+
+  let bestName = roles[0]?.name ?? emptyLabel;
+  let bestRank = Number.POSITIVE_INFINITY;
+
+  for (const role of roles) {
+    const name = role.name?.trim();
+    if (!name) {
+      continue;
+    }
+    const index = ROLE_DISPLAY_PRIORITY.indexOf(name);
+    const rank = index === -1 ? ROLE_DISPLAY_PRIORITY.length : index;
+    if (rank < bestRank) {
+      bestRank = rank;
+      bestName = name;
+    }
+  }
+
+  return bestName;
+}
+
+/**
  * Label for user pickers — name, roles, and discipline.
  */
 export function formatUserPickerLabel(user: User): string {
