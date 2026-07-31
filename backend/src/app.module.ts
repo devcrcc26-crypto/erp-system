@@ -15,6 +15,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CompanySetupModule } from './modules/company-setup/company-setup.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
@@ -63,6 +64,7 @@ import { StorageModule } from './shared/storage/storage.module';
     ReportingModule,
     ProjectManagementModule,
     ApprovalsModule,
+    LeaveModule,
   ],
   controllers: [AppController],
   providers: [

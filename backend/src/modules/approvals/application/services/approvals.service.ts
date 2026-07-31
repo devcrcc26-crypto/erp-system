@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
@@ -23,6 +24,11 @@ import {
   ListRequestsDto,
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
+import {
+  APPROVAL_DECISION_LISTENER,
+  type ApprovalDecisionListener,
+  type ApprovalFinalDecision,
+} from '../ports/approval-decision.listener';
 import { ApprovalResolverService } from './approval-resolver.service';
 
 const APPROVAL_RETURNED_EVENT = 'approval.returned';
@@ -71,6 +77,7 @@ export class ApprovalsService {
     private readonly prisma: PrismaService,
     private readonly resolver: ApprovalResolverService,
     private readonly notificationService: NotificationService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   /**
@@ -355,6 +362,8 @@ export class ApprovalsService {
           requestNumber: request.requestNumber,
         },
       });
+    } else {
+      await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
     return this.getRequest(request.id, request.companyId);
@@ -396,6 +405,8 @@ export class ApprovalsService {
         },
       });
     });
+
+    await this.dispatchFinalDecision(request.id, 'REJECTED');
 
     return this.getRequest(request.id, request.companyId);
   }
@@ -448,6 +459,8 @@ export class ApprovalsService {
         requestNumber: request.requestNumber,
       },
     });
+
+    await this.dispatchFinalDecision(request.id, 'RETURNED');
 
     return this.getRequest(request.id, request.companyId);
   }
@@ -581,9 +594,34 @@ export class ApprovalsService {
         link: `/approval-requests/${request.id}`,
         variables: { requestId: request.id },
       });
+    } else if (shouldAdvance) {
+      await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
     return this.getRequest(request.id, request.companyId);
+  }
+
+  /**
+   * Notifies optional domain listeners (e.g. Leave) of a terminal approval outcome.
+   */
+  private async dispatchFinalDecision(
+    approvalRequestId: string,
+    decision: ApprovalFinalDecision,
+  ): Promise<void> {
+    try {
+      const listener = this.moduleRef.get<ApprovalDecisionListener>(
+        APPROVAL_DECISION_LISTENER,
+        { strict: false },
+      );
+      if (listener?.onApprovalDecision) {
+        await listener.onApprovalDecision(approvalRequestId, decision);
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Approval decision listener failed for ${approvalRequestId} (${decision})`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   private buildDateFilter(

@@ -105,6 +105,9 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'approvals', action: 'create', description: 'Submit approval requests' },
   { module: 'approvals', action: 'approve', description: 'Approve, reject, return, or condition approval tiers' },
   { module: 'approvals', action: 'edit', description: 'Edit approval categories' },
+
+  { module: 'leave', action: 'view', description: 'View leave requests and balances' },
+  { module: 'leave', action: 'create', description: 'Submit and cancel leave requests' },
   
   { module: 'documents', action: 'view', description: 'View documents' },
   { module: 'documents', action: 'create', description: 'Upload documents' },
@@ -866,6 +869,17 @@ function employeePermissionFlags(
   }
 
   if (module === 'approvals' && (action === 'view' || action === 'create')) {
+    return {
+      canView: action === 'view',
+      canCreate: action === 'create',
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+    };
+  }
+
+  if (module === 'leave' && (action === 'view' || action === 'create')) {
     return {
       canView: action === 'view',
       canCreate: action === 'create',

@@ -569,6 +569,28 @@ export function resolveRouteMeta(
     };
   }
 
+  if (pathname === '/hr/leave-requests/new') {
+    return {
+      titleKey: 'pages.hr.leave.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
+        { label: t('pages.hr.leave.new') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/leave-requests/')) {
+    return {
+      titleKey: 'pages.hr.leave.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
+        { label: t('pages.hr.leave.detail') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/')) {
     const titleKey = PAGE_TITLE_KEYS[pathname] ?? 'nav.groups.humanResources';
     return {

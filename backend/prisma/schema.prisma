@@ -135,6 +135,26 @@ enum ApprovalTierDecision {
   RETURNED
 }
 
+enum LeaveType {
+  ANNUAL
+  SICK
+  UNPAID
+  MATERNITY
+  PATERNITY
+  EMERGENCY
+  COMPASSIONATE
+}
+
+enum LeaveRequestStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
 // ─── Company & Settings ──────────────────────────────────────────────────────
 
 model Company {
@@ -201,6 +221,8 @@ model Company {
   reviewSessionAttachments ReviewSessionAttachment[]
   approvalCategories       ApprovalCategory[]
   approvalRequests         ApprovalRequest[]
+  leaveRequests            LeaveRequest[]
+  leaveBalances            LeaveBalance[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -580,6 +602,9 @@ model User {
   approvalRequests         ApprovalRequest[]      @relation("RequestRequester")
   approvalTiers            ApprovalTier[]         @relation("TierApprover")
   approvalComments         ApprovalComment[]      @relation("ApprovalCommenter")
+  leaveRequestsAsEmployee  LeaveRequest[]         @relation("LeaveEmployee")
+  leaveRequestsCreated     LeaveRequest[]         @relation("LeaveCreator")
+  leaveBalances            LeaveBalance[]         @relation("LeaveBalance")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -3250,6 +3275,7 @@ model ApprovalRequest {
   tiers            ApprovalTier[]
   comments         ApprovalComment[]
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
+  leaveRequest     LeaveRequest?
 
   @@index([companyId])
   @@index([categoryId])
@@ -3292,4 +3318,61 @@ model ApprovalComment {
   attachment Document?       @relation(fields: [attachmentId], references: [id])
 
   @@map("approval_comment")
+}
+
+// ─── Leave / HR ──────────────────────────────────────────────────────────────
+
+model LeaveRequest {
+  id                String             @id @default(uuid())
+  companyId         String             @map("company_id")
+  requestNumber     String             @map("request_number")
+  employeeId        String             @map("employee_id")
+  leaveType         LeaveType          @map("leave_type")
+  startDate         DateTime           @map("start_date") @db.Date
+  endDate           DateTime           @map("end_date") @db.Date
+  days              Decimal            @db.Decimal(4, 1)
+  reason            String?
+  status            LeaveRequestStatus @default(DRAFT)
+  approvalRequestId String?            @unique @map("approval_request_id")
+  submittedAt       DateTime?          @map("submitted_at")
+  completedAt       DateTime?          @map("completed_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  createdBy         String             @map("created_by")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  updatedBy         String             @map("updated_by")
+  deletedAt         DateTime?          @map("deleted_at")
+  deletedBy         String?            @map("deleted_by")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  employee        User             @relation("LeaveEmployee", fields: [employeeId], references: [id])
+  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  creator         User             @relation("LeaveCreator", fields: [createdBy], references: [id])
+
+  @@unique([companyId, requestNumber])
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("leave_request")
+}
+
+model LeaveBalance {
+  id         String    @id @default(uuid())
+  companyId  String    @map("company_id")
+  employeeId String    @map("employee_id")
+  year       Int
+  leaveType  LeaveType @map("leave_type")
+  entitled   Decimal   @db.Decimal(4, 1)
+  used       Decimal   @db.Decimal(4, 1)
+  pending    Decimal   @db.Decimal(4, 1)
+  remaining  Decimal   @default(dbgenerated("(entitled - used - pending)")) @db.Decimal(4, 1)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  employee User    @relation("LeaveBalance", fields: [employeeId], references: [id])
+
+  @@unique([companyId, employeeId, year, leaveType])
+  @@index([employeeId, year])
+  @@map("leave_balance")
 }

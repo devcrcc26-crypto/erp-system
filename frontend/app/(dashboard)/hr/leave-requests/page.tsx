@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import LeaveRequestsListPageContent from '@/components/modules/hr/leave/LeaveRequestsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.leaveRequests" />;
+export default function LeaveRequestsPage(): React.ReactNode {
+  return <LeaveRequestsListPageContent />;
 }

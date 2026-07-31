@@ -367,7 +367,7 @@ export default function ApprovalDetailPageContent({
                   ) : (
                     <Circle size={14} color={tokens.colorGray600} />
                   ),
-                children: (
+                content: (
                   <div style={{ paddingBottom: 8 }}>
                     <Space wrap size={6}>
                       <Typography.Text strong>{tier.label}</Typography.Text>

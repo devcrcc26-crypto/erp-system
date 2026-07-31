@@ -96,7 +96,11 @@
     },
     "hr": {
       "comingSoonTitle": "Coming soon",
-      "comingSoonDescription": "{{module}} will be available in a future update."
+      "comingSoonDescription": "{{module}} will be available in a future update.",
+      "leave": {
+        "new": "New leave request",
+        "detail": "Leave request"
+      }
     },
     "disciplines": {
       "title": "Subtasks",

@@ -1,0 +1,121 @@
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
+import type {
+  LeaveRequestStatus,
+  LeaveType,
+  LeaveUserSummary,
+} from '@/lib/api/leave.types';
+import { formatUserName } from '@/lib/utils/user-display';
+
+export const LEAVE_TYPE_OPTIONS: Array<{ value: LeaveType; label: string }> = [
+  { value: 'ANNUAL', label: 'Annual' },
+  { value: 'SICK', label: 'Sick' },
+  { value: 'UNPAID', label: 'Unpaid' },
+  { value: 'MATERNITY', label: 'Maternity' },
+  { value: 'PATERNITY', label: 'Paternity' },
+  { value: 'EMERGENCY', label: 'Emergency' },
+  { value: 'COMPASSIONATE', label: 'Compassionate' },
+];
+
+export const LEAVE_STATUS_OPTIONS: Array<{
+  value: LeaveRequestStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'RETURNED', label: 'Returned' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+export function formatLeaveType(leaveType: LeaveType | string): string {
+  const found = LEAVE_TYPE_OPTIONS.find((o) => o.value === leaveType);
+  if (found) {
+    return found.label;
+  }
+  return leaveType
+    .split('_')
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function formatLeaveStatus(status: string): string {
+  return status
+    .split('_')
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function leaveStatusVariant(
+  status: LeaveRequestStatus | string,
+): StatusBadgeVariant {
+  switch (status) {
+    case 'APPROVED':
+      return 'success';
+    case 'REJECTED':
+    case 'CANCELLED':
+      return 'error';
+    case 'RETURNED':
+      return 'orange';
+    case 'SUBMITTED':
+    case 'IN_REVIEW':
+      return 'warning';
+    case 'DRAFT':
+    default:
+      return 'default';
+  }
+}
+
+export function leaveTypeVariant(
+  leaveType: LeaveType | string,
+): StatusBadgeVariant {
+  switch (leaveType) {
+    case 'ANNUAL':
+      return 'info';
+    case 'SICK':
+      return 'orange';
+    case 'UNPAID':
+      return 'default';
+    case 'MATERNITY':
+    case 'PATERNITY':
+      return 'cyan';
+    case 'EMERGENCY':
+      return 'error';
+    case 'COMPASSIONATE':
+      return 'warning';
+    default:
+      return 'default';
+  }
+}
+
+export function formatLeaveEmployeeName(
+  user?: LeaveUserSummary | null,
+): string {
+  if (!user) {
+    return '—';
+  }
+  return formatUserName(user);
+}
+
+/**
+ * Inclusive calendar-day count between two YYYY-MM-DD dates.
+ */
+export function calculateLeaveDays(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+): number | undefined {
+  if (!startDate || !endDate) {
+    return undefined;
+  }
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return undefined;
+  }
+  if (end.getTime() < start.getTime()) {
+    return undefined;
+  }
+  const diffMs = end.getTime() - start.getTime();
+  return Math.floor(diffMs / 86_400_000) + 1;
+}
