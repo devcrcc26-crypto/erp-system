@@ -42,6 +42,37 @@ export class SubmitLeaveRequestDto {
   reason?: string;
 }
 
+export class UpdateLeaveRequestDto {
+  @ApiPropertyOptional({ enum: LeaveType })
+  @IsOptional()
+  @IsEnum(LeaveType)
+  leaveType?: LeaveType;
+
+  @ApiPropertyOptional({ example: '2026-08-01' })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-05' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0.5)
+  @Max(365)
+  days?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  reason?: string;
+}
+
 export class ListLeaveRequestsDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

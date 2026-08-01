@@ -119,7 +119,35 @@ export interface ApprovalRequestDetail extends ApprovalRequestListItem {
   sourceId?: string | null;
   tiers?: ApprovalTier[];
   comments?: ApprovalComment[];
+  responses?: ApprovalResponse[];
   attachmentFolder?: { id: string; name: string; path: string } | null;
+}
+
+export type ApprovalResponseType = 'RESUBMIT' | 'CONDITION_RESPONSE';
+
+export interface ApprovalResponseDocument {
+  id: string;
+  responseId: string;
+  documentId: string;
+  createdAt: string;
+  document?: {
+    id: string;
+    name: string;
+    fileType: string;
+    fileSizeBytes: number;
+  };
+}
+
+export interface ApprovalResponse {
+  id: string;
+  requestId: string;
+  responseType: ApprovalResponseType | string;
+  conditionIndex?: number | null;
+  note?: string | null;
+  respondedBy: string;
+  createdAt: string;
+  responder?: ApprovalUserSummary;
+  documents?: ApprovalResponseDocument[];
 }
 
 export interface ListApprovalRequestsParams {

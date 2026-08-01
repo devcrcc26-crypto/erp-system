@@ -67,6 +67,7 @@ enum FolderContextType {
   RISK
   PUNCH_ITEM
   CHANGE_REQUEST
+  APPROVAL
 }
 
 enum NotificationChannel {
@@ -606,7 +607,8 @@ model User {
   createdCategories        ApprovalCategory[]     @relation("CategoryCreator")
   approvalRequests         ApprovalRequest[]      @relation("RequestRequester")
   approvalTiers            ApprovalTier[]         @relation("TierApprover")
-  approvalComments         ApprovalComment[]      @relation("ApprovalCommenter")
+  approvalComments         ApprovalComment[]        @relation("ApprovalCommenter")
+  approvalResponses        ApprovalResponse[]       @relation("ApprovalResponder")
   leaveRequestsAsEmployee  LeaveRequest[]         @relation("LeaveEmployee")
   leaveRequestsCreated     LeaveRequest[]         @relation("LeaveCreator")
   leaveBalances            LeaveBalance[]         @relation("LeaveBalance")
@@ -959,6 +961,7 @@ model Document {
   rfiResponses             RfiResponse[]             @relation("RfiResponseDocument")
   issueResponses           IssueResponse[]           @relation("IssueResponseDocument")
   approvalComments         ApprovalComment[]
+  approvalResponseDocuments ApprovalResponseDocument[]
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3282,6 +3285,7 @@ model ApprovalRequest {
   requester        User              @relation("RequestRequester", fields: [requestedBy], references: [id])
   tiers            ApprovalTier[]
   comments         ApprovalComment[]
+  responses        ApprovalResponse[]
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
   leaveRequest     LeaveRequest?
   overtimeSheet    OvertimeSheet?
@@ -3327,6 +3331,37 @@ model ApprovalComment {
   attachment Document?       @relation(fields: [attachmentId], references: [id])
 
   @@map("approval_comment")
+}
+
+model ApprovalResponse {
+  id             String   @id @default(uuid())
+  requestId      String   @map("request_id")
+  responseType   String   @map("response_type")
+  conditionIndex Int?     @map("condition_index")
+  note           String?
+  respondedBy    String   @map("responded_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  request   ApprovalRequest            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  responder User                       @relation("ApprovalResponder", fields: [respondedBy], references: [id])
+  documents ApprovalResponseDocument[]
+
+  @@index([requestId], map: "idx_approval_response_request")
+  @@map("approval_response")
+}
+
+model ApprovalResponseDocument {
+  id         String   @id @default(uuid())
+  responseId String   @map("response_id")
+  documentId String   @map("document_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  response ApprovalResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  document Document         @relation(fields: [documentId], references: [id])
+
+  @@index([responseId], map: "idx_approval_response_document_response")
+  @@index([documentId], map: "idx_approval_response_document_document")
+  @@map("approval_response_document")
 }
 
 // ─── Leave / HR ──────────────────────────────────────────────────────────────

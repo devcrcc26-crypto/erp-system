@@ -14,6 +14,7 @@ import {
   ALLOWED_UPLOAD_MIME_TYPES,
   STORAGE_BUCKETS,
   STORAGE_SERVICE,
+  type StorageBucket,
 } from '../../../../shared/storage/storage.constants';
 import { IStorageService } from '../../../../shared/storage/storage.interface';
 import {
@@ -538,7 +539,11 @@ export class DocumentService {
       throw new NotFoundException('Document not found');
     }
 
-    return this.buildPresignedDownloadUrl(document.fileKey);
+    return this.buildPresignedDownloadUrl(
+      document.fileKey,
+      document.folderId,
+      ctx.companyId,
+    );
   }
 
   /**
@@ -564,10 +569,26 @@ export class DocumentService {
 
   private async buildPresignedDownloadUrl(
     fileKey: string,
+    folderId?: string,
+    companyId?: string,
   ): Promise<{ url: string; expiresIn: number }> {
     const expiresIn = 900;
+    let bucket: StorageBucket = STORAGE_BUCKETS.DOCUMENTS;
+
+    if (folderId && companyId) {
+      const folder = await this.prisma.documentFolder.findFirst({
+        where: activeOnly({ id: folderId, companyId }),
+        select: { contextType: true },
+      });
+      if (folder?.contextType === FolderContextType.APPROVAL) {
+        bucket = STORAGE_BUCKETS.HR;
+      }
+    } else if (fileKey.includes('/approvals/') && fileKey.includes('/responses/')) {
+      bucket = STORAGE_BUCKETS.HR;
+    }
+
     const url = await this.storage.getPresignedDownloadUrl(
-      STORAGE_BUCKETS.DOCUMENTS,
+      bucket,
       fileKey,
       expiresIn,
     );

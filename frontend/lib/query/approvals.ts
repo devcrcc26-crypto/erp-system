@@ -10,6 +10,7 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
 } from '@/lib/api/client';
 import type {
   AddConditionPayload,
@@ -206,5 +207,65 @@ export function useResolveApprovalCondition(requestId: string) {
         `${APPROVAL_REQUESTS_PATH}/${requestId}/tiers/${tierId}/conditions/${index}/resolve`,
       ),
     onSuccess: () => invalidateApprovalQueries(queryClient, requestId),
+  });
+}
+
+/**
+ * Requester resubmits a RETURNED approval (multipart note + files).
+ */
+export function useResubmitApprovalRequest(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ note, files }: { note?: string; files: File[] }) => {
+      const formData = new FormData();
+      if (note?.trim()) {
+        formData.append('note', note.trim());
+      }
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/resubmit`,
+        formData,
+      );
+    },
+    onSuccess: (updated) => {
+      invalidateApprovalQueries(queryClient, requestId);
+      void queryClient.setQueryData(approvalKeys.detail(requestId), updated);
+    },
+  });
+}
+
+/**
+ * Requester responds to a condition (multipart note + files).
+ */
+export function useRespondToApprovalCondition(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      conditionIndex,
+      note,
+      files,
+    }: {
+      conditionIndex: number;
+      note?: string;
+      files: File[];
+    }) => {
+      const formData = new FormData();
+      if (note?.trim()) {
+        formData.append('note', note.trim());
+      }
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<ApprovalRequestDetail>(
+        `${APPROVAL_REQUESTS_PATH}/${requestId}/conditions/${conditionIndex}/respond`,
+        formData,
+      );
+    },
+    onSuccess: (updated) => {
+      invalidateApprovalQueries(queryClient, requestId);
+      void queryClient.setQueryData(approvalKeys.detail(requestId), updated);
+    },
   });
 }

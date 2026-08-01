@@ -19,6 +19,7 @@ import {
   LeaveBalanceQueryDto,
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
+  UpdateLeaveRequestDto,
 } from '../../application/dtos/leave.dtos';
 import { LeaveBalanceService } from '../../application/services/leave-balance.service';
 import { LeaveService } from '../../application/services/leave.service';
@@ -120,6 +121,17 @@ export class LeaveController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.leaveService.getRequest(id, companyId, user.userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a draft or returned leave request' })
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateLeaveRequestDto,
+  ): Promise<unknown> {
+    return this.leaveService.updateRequest(id, dto, companyId, user.userId);
   }
 
   @Patch(':id/cancel')

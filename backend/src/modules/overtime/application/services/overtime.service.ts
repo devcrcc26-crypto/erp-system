@@ -454,6 +454,21 @@ export class OvertimeService
       );
     }
 
+    // RETURNED sheets reopen the existing approval chain instead of creating a new one
+    if (
+      sheet.status === OvertimeSheetStatus.RETURNED &&
+      sheet.approvalRequestId
+    ) {
+      await this.approvalsService.resubmitRequest(
+        sheet.approvalRequestId,
+        companyId,
+        userId,
+        undefined,
+        [],
+      );
+      return this.getSheet(sheetId, companyId, userId);
+    }
+
     const totalHours = sheet.entries.reduce(
       (sum, e) =>
         sum +

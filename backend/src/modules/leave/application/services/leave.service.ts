@@ -32,6 +32,7 @@ import { HrApprovalChainService } from '../../../hr-shared/application/services/
 import {
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
+  UpdateLeaveRequestDto,
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
 
@@ -266,6 +267,68 @@ export class LeaveService
         companyId,
       );
     }
+
+    return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Updates a DRAFT or RETURNED leave request owned by the actor (before resubmit).
+   */
+  async updateRequest(
+    id: string,
+    dto: UpdateLeaveRequestDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const leave = await this.prisma.leaveRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!leave) {
+      throw new NotFoundException('Leave request not found');
+    }
+    if (leave.employeeId !== userId) {
+      throw new ForbiddenException('Only the requester can edit this leave');
+    }
+    if (
+      leave.status !== LeaveRequestStatus.DRAFT &&
+      leave.status !== LeaveRequestStatus.RETURNED
+    ) {
+      throw new BadRequestException(
+        'Request cannot be edited in its current status',
+      );
+    }
+
+    const startDate = dto.startDate
+      ? this.parseDateOnly(dto.startDate)
+      : leave.startDate;
+    const endDate = dto.endDate
+      ? this.parseDateOnly(dto.endDate)
+      : leave.endDate;
+    const days = dto.days ?? Number(leave.days);
+    const leaveType = dto.leaveType ?? leave.leaveType;
+
+    if (dto.startDate || dto.endDate || dto.days != null) {
+      this.assertDateRange(
+        this.formatDateOnly(startDate),
+        this.formatDateOnly(endDate),
+        days,
+      );
+    }
+
+    await this.prisma.leaveRequest.update({
+      where: { id: leave.id },
+      data: {
+        leaveType,
+        startDate,
+        endDate,
+        days: new Prisma.Decimal(days),
+        reason:
+          dto.reason !== undefined
+            ? dto.reason.trim() || null
+            : leave.reason,
+        updatedBy: userId,
+      },
+    });
 
     return this.getRequest(id, companyId, userId);
   }
@@ -554,6 +617,13 @@ export class LeaveService
     const month = Number(match[2]);
     const day = Number(match[3]);
     return new Date(Date.UTC(year, month - 1, day));
+  }
+
+  private formatDateOnly(value: Date): string {
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(value.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   private formatLeaveType(leaveType: LeaveType): string {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,6 +9,10 @@ import {
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
+  FolderContextType,
+  LeaveRequestStatus,
+  LeaveType,
+  OvertimeSheetStatus,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -15,10 +20,17 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
+import {
   buildPaginatedResult,
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { LeaveBalanceService } from '../../../leave/application/services/leave-balance.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   ListRequestsDto,
@@ -33,6 +45,17 @@ import {
 
 const APPROVAL_RETURNED_EVENT = 'approval.returned';
 const APPROVAL_PENDING_EVENT = 'approval.pending';
+const APPROVAL_CONDITION_RESPONSE_EVENT = 'approval.condition_response';
+
+export const RESPONSE_TYPE_RESUBMIT = 'RESUBMIT';
+export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
+
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 const USER_SELECT = {
   id: true,
@@ -57,6 +80,24 @@ const REQUEST_DETAIL_INCLUDE = {
   },
   leaveRequest: { select: { id: true } },
   overtimeSheet: { select: { id: true } },
+  responses: {
+    include: {
+      responder: { select: USER_SELECT },
+      documents: {
+        include: {
+          document: {
+            select: {
+              id: true,
+              name: true,
+              fileType: true,
+              fileSizeBytes: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' as const },
+  },
 } as const;
 
 /** Interactive transaction options ? leave/overtime submit must not hit the 5s default. */
@@ -87,6 +128,9 @@ export class ApprovalsService {
     private readonly notificationService: NotificationService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    private readonly leaveBalanceService: LeaveBalanceService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: IStorageService,
   ) {}
 
   /**
@@ -702,6 +746,363 @@ export class ApprovalsService {
     }
 
     return this.getRequest(request.id, request.companyId, userId);
+  }
+
+  /**
+   * Requester resubmits a RETURNED request: records response, resets tiers, notifies tier 1.
+   */
+  async resubmitRequest(
+    requestId: string,
+    companyId: string,
+    userId: string,
+    note: string | undefined,
+    files: UploadedFile[],
+  ): Promise<unknown> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      include: {
+        tiers: { orderBy: { tierOrder: 'asc' } },
+        leaveRequest: true,
+        overtimeSheet: true,
+      },
+    });
+    if (!request) {
+      throw new NotFoundException('Approval request not found');
+    }
+    if (request.requestedBy !== userId) {
+      throw new ForbiddenException('Only the requester can resubmit');
+    }
+    if (request.status !== ApprovalRequestStatus.RETURNED) {
+      throw new BadRequestException(
+        'Only returned requests can be resubmitted',
+      );
+    }
+
+    const responseId = randomUUID();
+    const firstTier = request.tiers[0];
+    if (!firstTier) {
+      throw new BadRequestException('Approval chain has no tiers');
+    }
+
+    const folderId = await this.ensureApprovalAttachmentFolder(
+      request,
+      userId,
+    );
+    const documentIds = await this.uploadResponseFiles({
+      companyId,
+      requestId: request.id,
+      responseId,
+      folderId,
+      userId,
+      files,
+    });
+
+    await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.approvalResponse.create({
+          data: {
+            id: responseId,
+            requestId: request.id,
+            responseType: RESPONSE_TYPE_RESUBMIT,
+            note: note?.trim() || null,
+            respondedBy: userId,
+            documents: {
+              create: documentIds.map((documentId) => ({
+                id: randomUUID(),
+                documentId,
+              })),
+            },
+          },
+        });
+
+        for (const tier of request.tiers) {
+          await tx.approvalTier.update({
+            where: { id: tier.id },
+            data: {
+              decision: ApprovalTierDecision.PENDING,
+              comment: null,
+              decidedAt: null,
+              conditions: [],
+            },
+          });
+        }
+
+        await tx.approvalRequest.update({
+          where: { id: request.id },
+          data: {
+            status: ApprovalRequestStatus.SUBMITTED,
+            currentTier: firstTier.tierOrder,
+            completedAt: null,
+            updatedBy: userId,
+          },
+        });
+
+        if (request.leaveRequest) {
+          await tx.leaveRequest.update({
+            where: { id: request.leaveRequest.id },
+            data: {
+              status: LeaveRequestStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.overtimeSheet) {
+          await tx.overtimeSheet.update({
+            where: { id: request.overtimeSheet.id },
+            data: {
+              status: OvertimeSheetStatus.SUBMITTED,
+              completedAt: null,
+              submittedAt: new Date(),
+              updatedBy: userId,
+            },
+          });
+        }
+      },
+      PRISMA_TX_OPTIONS,
+    );
+
+    if (
+      request.leaveRequest &&
+      request.leaveRequest.leaveType !== LeaveType.UNPAID
+    ) {
+      const year = request.leaveRequest.startDate.getUTCFullYear();
+      await this.leaveBalanceService.adjustBalance(
+        request.leaveRequest.employeeId,
+        request.leaveRequest.leaveType,
+        year,
+        'pending',
+        Number(request.leaveRequest.days),
+        companyId,
+      );
+    }
+
+    await this.notifySafe(companyId, userId, {
+      recipientId: firstTier.approverId,
+      eventType: APPROVAL_PENDING_EVENT,
+      subject: `Resubmitted for approval — ${request.requestNumber}`,
+      body:
+        note?.trim() ||
+        `Request ${request.requestNumber} was resubmitted and awaits your review.`,
+      link: `/approvals/${request.id}`,
+      variables: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+      },
+    });
+
+    return this.getRequest(request.id, companyId, userId);
+  }
+
+  /**
+   * Requester responds to a condition on a CONDITIONALLY_APPROVED tier.
+   */
+  async respondToCondition(
+    requestId: string,
+    conditionIndex: number,
+    companyId: string,
+    userId: string,
+    note: string | undefined,
+    files: UploadedFile[],
+  ): Promise<unknown> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      include: {
+        tiers: { orderBy: { tierOrder: 'asc' } },
+      },
+    });
+    if (!request) {
+      throw new NotFoundException('Approval request not found');
+    }
+    if (request.requestedBy !== userId) {
+      throw new ForbiddenException(
+        'Only the requester can respond to conditions',
+      );
+    }
+
+    this.assertPendingWorkflow(request.status);
+
+    const activeTier = request.tiers.find(
+      (t) => t.tierOrder === request.currentTier,
+    );
+    if (!activeTier) {
+      throw new BadRequestException('No active approval tier');
+    }
+    if (activeTier.decision !== ApprovalTierDecision.CONDITIONALLY_APPROVED) {
+      throw new BadRequestException(
+        'Active tier is not conditionally approved',
+      );
+    }
+
+    const conditions = this.parseConditions(activeTier.conditions);
+    if (conditionIndex < 0 || conditionIndex >= conditions.length) {
+      throw new BadRequestException('Invalid condition index');
+    }
+    if (conditions[conditionIndex].resolved) {
+      throw new BadRequestException('Condition is already resolved');
+    }
+
+    const responseId = randomUUID();
+    const folderId = await this.ensureApprovalAttachmentFolder(
+      request,
+      userId,
+    );
+    const documentIds = await this.uploadResponseFiles({
+      companyId,
+      requestId: request.id,
+      responseId,
+      folderId,
+      userId,
+      files,
+    });
+
+    await this.prisma.approvalResponse.create({
+      data: {
+        id: responseId,
+        requestId: request.id,
+        responseType: RESPONSE_TYPE_CONDITION,
+        conditionIndex,
+        note: note?.trim() || null,
+        respondedBy: userId,
+        documents: {
+          create: documentIds.map((documentId) => ({
+            id: randomUUID(),
+            documentId,
+          })),
+        },
+      },
+    });
+
+    await this.notifySafe(companyId, userId, {
+      recipientId: activeTier.approverId,
+      eventType: APPROVAL_CONDITION_RESPONSE_EVENT,
+      subject: `Condition response — ${request.requestNumber}`,
+      body:
+        note?.trim() ||
+        `The requester responded to a condition on ${request.requestNumber}.`,
+      link: `/approvals/${request.id}`,
+      variables: {
+        requestId: request.id,
+        requestNumber: request.requestNumber,
+        conditionIndex: String(conditionIndex),
+      },
+    });
+
+    return this.getRequest(request.id, companyId, userId);
+  }
+
+  /**
+   * Ensures an attachment folder exists for the approval request.
+   */
+  private async ensureApprovalAttachmentFolder(
+    request: {
+      id: string;
+      companyId: string;
+      requestNumber: string;
+      attachmentFolderId: string | null;
+    },
+    userId: string,
+  ): Promise<string> {
+    if (request.attachmentFolderId) {
+      return request.attachmentFolderId;
+    }
+
+    const folderId = randomUUID();
+    const path = `/approvals/${request.requestNumber}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.documentFolder.create({
+        data: {
+          id: folderId,
+          companyId: request.companyId,
+          name: `Approval ${request.requestNumber}`,
+          path,
+          contextType: FolderContextType.APPROVAL,
+          contextId: request.id,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.approvalRequest.update({
+        where: { id: request.id },
+        data: {
+          attachmentFolderId: folderId,
+          updatedBy: userId,
+        },
+      });
+    });
+
+    return folderId;
+  }
+
+  /**
+   * Uploads response files to erp-hr and creates Document + DocumentVersion rows.
+   */
+  private async uploadResponseFiles(input: {
+    companyId: string;
+    requestId: string;
+    responseId: string;
+    folderId: string;
+    userId: string;
+    files: UploadedFile[];
+  }): Promise<string[]> {
+    const documentIds: string[] = [];
+
+    for (const file of input.files ?? []) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(
+          `File type not allowed: ${file.mimetype}`,
+        );
+      }
+
+      const documentId = randomUUID();
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${input.companyId}/approvals/${input.requestId}/responses/${input.responseId}/${safeName}`;
+
+      await this.storage.upload({
+        bucket: STORAGE_BUCKETS.HR,
+        key: fileKey,
+        body: file.buffer,
+        contentType: file.mimetype,
+        contentLength: file.size,
+      });
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.document.create({
+          data: {
+            id: documentId,
+            companyId: input.companyId,
+            folderId: input.folderId,
+            name: file.originalname,
+            fileKey,
+            fileType: file.mimetype,
+            fileSizeBytes: file.size,
+            version: 1,
+            isCurrent: true,
+            createdBy: input.userId,
+            updatedBy: input.userId,
+          },
+        });
+        await tx.documentVersion.create({
+          data: {
+            documentId,
+            uploadedBy: input.userId,
+            versionNumber: 1,
+            fileKey,
+            fileSizeBytes: file.size,
+          },
+        });
+      });
+
+      documentIds.push(documentId);
+    }
+
+    return documentIds;
   }
 
   /**

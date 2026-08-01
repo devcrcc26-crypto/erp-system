@@ -7,9 +7,19 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../../shared/guards/jwt-auth.guard';
@@ -65,6 +75,76 @@ export class ApprovalRequestsController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.approvalsService.getRequest(id, companyId, user.userId);
+  }
+
+  @Post(':id/resubmit')
+  @ApiOperation({ summary: 'Resubmit a returned approval request' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        note: { type: 'string' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
+  resubmit(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() body: { note?: string },
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<unknown> {
+    return this.approvalsService.resubmitRequest(
+      id,
+      companyId,
+      user.userId,
+      body?.note,
+      files ?? [],
+    );
+  }
+
+  @Post(':id/conditions/:index/respond')
+  @ApiOperation({ summary: 'Respond to a condition on the active tier' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        note: { type: 'string' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
+  respondToCondition(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('index', ParseIntPipe) index: number,
+    @Body() body: { note?: string },
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<unknown> {
+    return this.approvalsService.respondToCondition(
+      id,
+      index,
+      companyId,
+      user.userId,
+      body?.note,
+      files ?? [],
+    );
   }
 
   @Post(':id/tiers/:tierId/approve')

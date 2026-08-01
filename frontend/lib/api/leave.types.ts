@@ -105,3 +105,11 @@ export interface SubmitLeaveRequestPayload {
   days: number;
   reason?: string;
 }
+
+export interface UpdateLeaveRequestPayload {
+  leaveType?: LeaveType;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
+  reason?: string;
+}

@@ -17,6 +17,7 @@ import type {
   LeaveRequestListItem,
   ListLeaveRequestsParams,
   SubmitLeaveRequestPayload,
+  UpdateLeaveRequestPayload,
 } from '@/lib/api/leave.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
@@ -141,6 +142,22 @@ export function useCancelLeaveRequest(id: string) {
       void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+      void queryClient.setQueryData(leaveKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * Updates a draft or returned leave request.
+ */
+export function useUpdateLeaveRequest(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateLeaveRequestPayload) =>
+      apiPatch<LeaveRequestDetail>(`${LEAVE_PATH}/${id}`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
       void queryClient.setQueryData(leaveKeys.detail(id), updated);
     },
   });

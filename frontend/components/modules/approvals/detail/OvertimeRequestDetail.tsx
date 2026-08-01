@@ -1,11 +1,13 @@
 'use client';
 
-import { Alert, Descriptions, Skeleton, Table, Typography } from 'antd';
+import { Alert, Button, Descriptions, Skeleton, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useOvertimeSheet } from '@/lib/query/overtime';
+import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatOvertimeEmployeeName,
@@ -17,7 +19,8 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
- * Typed overtime sheet body for Approvals detail (left column).
+ * Typed overtime sheet body for Approvals detail.
+ * When RETURNED, links to the sheet page for entry editing.
  */
 export default function OvertimeRequestDetail({
   sourceId,
@@ -25,6 +28,7 @@ export default function OvertimeRequestDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sourceId);
   const sheet = detailQuery.data;
 
@@ -56,6 +60,11 @@ export default function OvertimeRequestDetail({
       />
     );
   }
+
+  const canEdit =
+    sheet.status === 'RETURNED' &&
+    Boolean(currentUser.data?.id) &&
+    sheet.employeeId === currentUser.data?.id;
 
   const columns: ColumnsType<OvertimeEntry> = [
     {
@@ -98,7 +107,23 @@ export default function OvertimeRequestDetail({
           label={formatOvertimeStatus(sheet.status)}
           variant={overtimeStatusVariant(sheet.status)}
         />
+        {canEdit ? (
+          <Link href={`/hr/overtime/${sheet.id}`}>
+            <Button type="primary" size="small">
+              Edit entries
+            </Button>
+          </Link>
+        ) : null}
       </div>
+
+      {canEdit ? (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="This sheet was returned. Edit entries on the overtime sheet, then resubmit from this page."
+        />
+      ) : null}
 
       <Descriptions bordered size="small" column={1} className="mb-4">
         <Descriptions.Item label="Sheet #">

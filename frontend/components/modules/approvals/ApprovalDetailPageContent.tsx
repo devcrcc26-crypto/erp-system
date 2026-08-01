@@ -15,6 +15,12 @@ import { useRouter } from 'next/navigation';
 import GenericApprovalDetail from '@/components/modules/approvals/detail/GenericApprovalDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
+import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
+import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
+import ResubmitPanel, {
+  ResponseHistory,
+} from '@/components/modules/approvals/ResubmitPanel';
+import ReturnedBanner from '@/components/modules/approvals/ReturnedBanner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -113,6 +119,8 @@ export default function ApprovalDetailPageContent({
     [request?.tiers],
   );
   const currentTier = findCurrentTier(tiers, request?.currentTier ?? 0);
+  const isRequester =
+    Boolean(currentUserId) && request?.requestedBy === currentUserId;
   const isActiveApprover =
     Boolean(currentUserId) &&
     Boolean(currentTier) &&
@@ -120,6 +128,33 @@ export default function ApprovalDetailPageContent({
     (request?.status === 'PENDING' ||
       request?.status === 'IN_REVIEW' ||
       request?.status === 'SUBMITTED');
+
+  const returnNote = useMemo(() => {
+    const returned = [...tiers].reverse().find((t) => t.decision === 'RETURNED');
+    return returned?.comment ?? null;
+  }, [tiers]);
+
+  const rejectNote = useMemo(() => {
+    const rejected = [...tiers].reverse().find((t) => t.decision === 'REJECTED');
+    return rejected?.comment ?? null;
+  }, [tiers]);
+
+  const responses = request?.responses ?? [];
+  const resubmitCount = responses.filter(
+    (r) => r.responseType === 'RESUBMIT',
+  ).length;
+
+  const unresolvedConditions = useMemo(() => {
+    if (
+      !currentTier ||
+      currentTier.decision !== 'CONDITIONALLY_APPROVED'
+    ) {
+      return [];
+    }
+    return parseTierConditions(currentTier.conditions)
+      .map((condition, index) => ({ condition, index }))
+      .filter(({ condition }) => !condition.resolved);
+  }, [currentTier]);
 
   const displayStatus = request
     ? resolveDisplayStatus(request.status, currentTier)
@@ -270,6 +305,11 @@ export default function ApprovalDetailPageContent({
                 variant={displayStatus.variant}
               />
             ) : null}
+            {resubmitCount > 0 ? (
+              <Typography.Text type="secondary">
+                Resubmitted {resubmitCount} time{resubmitCount === 1 ? '' : 's'}
+              </Typography.Text>
+            ) : null}
           </Space>
           <Typography.Text type="secondary">
             Submitted by {formatApprovalUserName(request.requester)}
@@ -281,8 +321,41 @@ export default function ApprovalDetailPageContent({
         </Space>
       </div>
 
+      {request.status === 'RETURNED' ? (
+        <ReturnedBanner note={returnNote} />
+      ) : null}
+      {request.status === 'REJECTED' ? (
+        <RejectedBanner note={rejectNote} />
+      ) : null}
+
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {renderTypedDetail(request)}
+        <div>
+          {renderTypedDetail(request)}
+
+          {isRequester && request.status === 'RETURNED' ? (
+            <ResubmitPanel requestId={request.id} returnNote={returnNote} />
+          ) : null}
+
+          {isRequester &&
+          unresolvedConditions.length > 0 &&
+          (request.status === 'PENDING' ||
+            request.status === 'IN_REVIEW' ||
+            request.status === 'SUBMITTED')
+            ? unresolvedConditions.map(({ condition, index }) => (
+                <ConditionResponsePanel
+                  key={`cond-resp-${index}`}
+                  requestId={request.id}
+                  conditionIndex={index}
+                  conditionText={condition.text}
+                  existingResponses={responses}
+                />
+              ))
+            : null}
+
+          {responses.length > 0 ? (
+            <ResponseHistory responses={responses} />
+          ) : null}
+        </div>
 
         <aside
           style={{
@@ -370,6 +443,11 @@ export default function ApprovalDetailPageContent({
                             !condition.resolved &&
                             (currentUserId === tier.approverId ||
                               currentUserId === request.requestedBy);
+                          const conditionResponses = responses.filter(
+                            (r) =>
+                              r.responseType === 'CONDITION_RESPONSE' &&
+                              r.conditionIndex === index,
+                          );
                           return (
                             <div
                               key={`${tier.id}-c-${index}`}
@@ -406,6 +484,23 @@ export default function ApprovalDetailPageContent({
                                   </Button>
                                 ) : null}
                               </Space>
+                              {conditionResponses.map((resp) => (
+                                <Typography.Paragraph
+                                  key={resp.id}
+                                  type="secondary"
+                                  style={{
+                                    marginTop: 6,
+                                    marginBottom: 0,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Response:{' '}
+                                  {resp.note?.trim() || '(attachments only)'}
+                                  {(resp.documents?.length ?? 0) > 0
+                                    ? ` · ${resp.documents?.length} file(s)`
+                                    : ''}
+                                </Typography.Paragraph>
+                              ))}
                             </div>
                           );
                         })}
