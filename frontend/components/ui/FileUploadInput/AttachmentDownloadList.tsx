@@ -2,7 +2,9 @@
 
 import { Button, Typography } from 'antd';
 import { Download } from 'lucide-react';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { apiGet } from '@/lib/api/client';
+import { ApiRequestError } from '@/lib/api/errors';
 import { tokens } from '@/lib/theme/tokens';
 
 export interface AttachmentDocumentSummary {
@@ -22,13 +24,22 @@ export default function AttachmentDownloadList({
   documents: AttachmentDocumentSummary[] | undefined;
   emptyLabel?: string;
 }): React.ReactNode {
+  const message = useAppMessage();
   const items = documents ?? [];
 
   async function handleDownload(documentId: string): Promise<void> {
-    const result = await apiGet<{ url: string; expiresIn: number }>(
-      `/documents/${documentId}/download-url`,
-    );
-    window.open(result.url, '_blank', 'noopener,noreferrer');
+    try {
+      const result = await apiGet<{ url: string; expiresIn: number }>(
+        `/documents/${documentId}/download-url`,
+      );
+      window.open(result.url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      const text =
+        error instanceof ApiRequestError
+          ? error.message
+          : 'Unable to download attachment';
+      message.error(text);
+    }
   }
 
   if (items.length === 0) {

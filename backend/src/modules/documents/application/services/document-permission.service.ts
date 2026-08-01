@@ -220,6 +220,17 @@ export class DocumentPermissionService {
       return;
     }
 
+    if (
+      await this.canAccessHrAttachmentFolder(
+        userId,
+        companyId,
+        folder.contextType,
+        folder.contextId,
+      )
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Missing permission: documents.view');
   }
 
@@ -302,6 +313,17 @@ export class DocumentPermissionService {
         document.folder,
         roleNames,
       ))
+    ) {
+      return;
+    }
+
+    if (
+      await this.canAccessHrAttachmentFolder(
+        userId,
+        companyId,
+        document.folder.contextType,
+        document.folder.contextId,
+      )
     ) {
       return;
     }
@@ -913,6 +935,105 @@ export class DocumentPermissionService {
     return (
       contextType === FolderContextType.PROJECT ||
       contextType === FolderContextType.TASK_DISCIPLINE
+    );
+  }
+
+  /**
+   * Leave / overtime / approval attachment folders: HR viewers, owner,
+   * or assigned approval-tier approver may download without documents.view.
+   */
+  private async canAccessHrAttachmentFolder(
+    userId: string,
+    companyId: string,
+    contextType: FolderContextType,
+    contextId: string | null,
+  ): Promise<boolean> {
+    if (
+      contextType !== FolderContextType.LEAVE &&
+      contextType !== FolderContextType.OVERTIME &&
+      contextType !== FolderContextType.APPROVAL
+    ) {
+      return false;
+    }
+    if (!contextId) {
+      return false;
+    }
+
+    const [hrView, approvalsAdmin] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+      this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'approvals',
+        'edit',
+      ),
+    ]);
+    if (hrView || approvalsAdmin) {
+      return true;
+    }
+
+    if (contextType === FolderContextType.LEAVE) {
+      const leave = await this.prisma.leaveRequest.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!leave) {
+        return false;
+      }
+      if (leave.employeeId === userId) {
+        return true;
+      }
+      return (
+        leave.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.OVERTIME) {
+      const sheet = await this.prisma.overtimeSheet.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!sheet) {
+        return false;
+      }
+      if (sheet.employeeId === userId) {
+        return true;
+      }
+      return (
+        sheet.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    // APPROVAL folder — requester or any tier approver
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: contextId, companyId }),
+      select: {
+        requestedBy: true,
+        tiers: { select: { approverId: true } },
+      },
+    });
+    if (!request) {
+      return false;
+    }
+    return (
+      request.requestedBy === userId ||
+      request.tiers.some((t) => t.approverId === userId)
     );
   }
 
