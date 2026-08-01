@@ -112,12 +112,12 @@
         "myListDescription": "查看并提交您自己的请假申请。"
       },
       "overtime": {
-        "new": "新建加班申请",
-        "detail": "加班详情",
-        "listTitle": "加班申请",
-        "myListTitle": "我的加班申请",
-        "listDescription": "通过审批流程提交并跟踪加班申请。",
-        "myListDescription": "查看并提交您自己的加班申请。"
+        "new": "本月加班表",
+        "detail": "加班表",
+        "listTitle": "加班表",
+        "myListTitle": "我的加班表",
+        "listDescription": "按月登记加班时长（平时/夜班/周末/节假日）并提交审批。",
+        "myListDescription": "按月登记加班时段并提交审批。"
       }
     },
     "dashboard": {

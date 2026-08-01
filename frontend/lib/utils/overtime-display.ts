@@ -1,13 +1,12 @@
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import type {
-  OvertimeCompensation,
-  OvertimeStatus,
+  OvertimeSheetStatus,
   OvertimeUserSummary,
 } from '@/lib/api/overtime.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
 export const OVERTIME_STATUS_OPTIONS: {
-  value: OvertimeStatus;
+  value: OvertimeSheetStatus;
   label: string;
 }[] = [
   { value: 'DRAFT', label: 'Draft' },
@@ -19,15 +18,16 @@ export const OVERTIME_STATUS_OPTIONS: {
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export const OVERTIME_COMPENSATION_OPTIONS: {
-  value: OvertimeCompensation;
-  label: string;
-}[] = [
-  { value: 'EXTRA_PAY', label: 'Extra Pay' },
-  { value: 'TIME_OFF_IN_LIEU', label: 'Time Off in Lieu' },
-];
+export const OVERTIME_MONTH_OPTIONS: { value: number; label: string }[] =
+  Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: new Date(Date.UTC(2000, i, 1)).toLocaleString('en', {
+      month: 'long',
+      timeZone: 'UTC',
+    }),
+  }));
 
-export function formatOvertimeStatus(status: OvertimeStatus): string {
+export function formatOvertimeStatus(status: OvertimeSheetStatus): string {
   return (
     OVERTIME_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     status
@@ -35,7 +35,7 @@ export function formatOvertimeStatus(status: OvertimeStatus): string {
 }
 
 export function overtimeStatusVariant(
-  status: OvertimeStatus,
+  status: OvertimeSheetStatus,
 ): StatusBadgeVariant {
   switch (status) {
     case 'APPROVED':
@@ -53,18 +53,6 @@ export function overtimeStatusVariant(
   }
 }
 
-export function formatOvertimeCompensation(
-  value: OvertimeCompensation | null | undefined,
-): string {
-  if (!value) {
-    return '—';
-  }
-  return (
-    OVERTIME_COMPENSATION_OPTIONS.find((option) => option.value === value)
-      ?.label ?? value
-  );
-}
-
 export function formatOvertimeEmployeeName(
   user?: OvertimeUserSummary | null,
 ): string {
@@ -74,23 +62,16 @@ export function formatOvertimeEmployeeName(
   return formatUserName(user);
 }
 
-/**
- * Hours between HH:mm times (overnight wraps to next day).
- */
-export function calculateOvertimeHours(
-  startTime: string,
-  endTime: string,
-): number | undefined {
-  const startMatch = /^(\d{2}):(\d{2})$/.exec(startTime);
-  const endMatch = /^(\d{2}):(\d{2})$/.exec(endTime);
-  if (!startMatch || !endMatch) {
-    return undefined;
+export function formatOvertimePeriod(month: number, year: number): string {
+  const label =
+    OVERTIME_MONTH_OPTIONS.find((m) => m.value === month)?.label ??
+    String(month);
+  return `${label} ${year}`;
+}
+
+export function formatOvertimeHours(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) {
+    return '0';
   }
-  const startMinutes =
-    Number(startMatch[1]) * 60 + Number(startMatch[2]);
-  let endMinutes = Number(endMatch[1]) * 60 + Number(endMatch[2]);
-  if (endMinutes <= startMinutes) {
-    endMinutes += 24 * 60;
-  }
-  return Math.round(((endMinutes - startMinutes) / 60) * 10) / 10;
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }

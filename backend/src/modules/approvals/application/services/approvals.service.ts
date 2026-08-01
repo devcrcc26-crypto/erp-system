@@ -56,7 +56,7 @@ const REQUEST_DETAIL_INCLUDE = {
     select: { id: true, name: true, path: true },
   },
   leaveRequest: { select: { id: true } },
-  overtimeRequest: { select: { id: true } },
+  overtimeSheet: { select: { id: true } },
 } as const;
 
 /** Interactive transaction options ? leave/overtime submit must not hit the 5s default. */
@@ -264,14 +264,14 @@ export class ApprovalsService {
     await this.assertCanViewRequest(request, companyId, userId);
 
     const sourceId =
-      request.leaveRequest?.id ?? request.overtimeRequest?.id ?? null;
+      request.leaveRequest?.id ?? request.overtimeSheet?.id ?? null;
 
     return {
       ...request,
       categoryCode: request.category?.code ?? null,
       sourceId,
       leaveRequest: undefined,
-      overtimeRequest: undefined,
+      overtimeSheet: undefined,
     };
   }
 

@@ -112,12 +112,12 @@
         "myListDescription": "View and submit your own leave requests."
       },
       "overtime": {
-        "new": "New overtime request",
-        "detail": "Overtime request",
-        "listTitle": "Overtime Requests",
-        "myListTitle": "My Overtime Requests",
-        "listDescription": "Submit and track overtime applications through the approval workflow.",
-        "myListDescription": "View and submit your own overtime requests."
+        "new": "This month's sheet",
+        "detail": "Overtime sheet",
+        "listTitle": "Overtime Sheets",
+        "myListTitle": "My Overtime Sheets",
+        "listDescription": "Monthly overtime sheets with hour categories and approval workflow.",
+        "myListDescription": "Log overtime sessions for each month and submit for approval."
       }
     },
     "dashboard": {
@@ -141,7 +141,7 @@
         },
         "links": {
           "leave": "Review and process employee leave",
-          "overtime": "Overtime requests and approvals",
+          "overtime": "Monthly overtime sheets and approvals",
           "expense": "Expense claims and reimbursements",
           "users": "User accounts and role assignments",
           "approvals": "Cross-module approval inbox"

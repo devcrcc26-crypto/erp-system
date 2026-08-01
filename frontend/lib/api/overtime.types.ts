@@ -1,4 +1,4 @@
-export type OvertimeStatus =
+export type OvertimeSheetStatus =
   | 'DRAFT'
   | 'SUBMITTED'
   | 'IN_REVIEW'
@@ -7,21 +7,12 @@ export type OvertimeStatus =
   | 'RETURNED'
   | 'CANCELLED';
 
-export type OvertimeCompensation = 'EXTRA_PAY' | 'TIME_OFF_IN_LIEU';
-
 export interface OvertimeUserSummary {
   id: string;
   firstName: string;
   lastName: string;
   email: string | null;
   chineseName?: string | null;
-}
-
-export interface OvertimeProjectSummary {
-  id: string;
-  projectCode: string;
-  name: string;
-  nameZh?: string | null;
 }
 
 export interface OvertimeApprovalTier {
@@ -45,54 +36,68 @@ export interface OvertimeApprovalSummary {
   tiers?: OvertimeApprovalTier[];
 }
 
-export interface OvertimeRequestListItem {
+export interface OvertimeEntry {
   id: string;
-  companyId: string;
-  requestNumber: string;
-  employeeId: string;
+  sheetId: string;
   date: string;
   startTime: string;
   endTime: string;
-  hours: number;
-  reason: string;
-  projectId?: string | null;
-  compensationType?: OvertimeCompensation | null;
-  status: OvertimeStatus;
+  isHoliday: boolean;
+  regularHours: number;
+  nightHours: number;
+  weekendHours: number;
+  holidayHours: number;
+  totalHours: number;
+  taskDescription: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OvertimeSheetListItem {
+  id: string;
+  companyId: string;
+  sheetNumber: string;
+  employeeId: string;
+  month: number;
+  year: number;
+  status: OvertimeSheetStatus;
+  totalRegularHours: number;
+  totalNightHours: number;
+  totalWeekendHours: number;
+  totalHolidayHours: number;
+  totalHours: number;
   approvalRequestId?: string | null;
   submittedAt?: string | null;
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   employee?: OvertimeUserSummary;
-  project?: OvertimeProjectSummary | null;
   approvalRequest?: Pick<
     OvertimeApprovalSummary,
     'id' | 'status' | 'currentTier'
   > | null;
 }
 
-export interface OvertimeRequestDetail extends OvertimeRequestListItem {
+export interface OvertimeSheetDetail extends OvertimeSheetListItem {
   creator?: OvertimeUserSummary;
+  entries: OvertimeEntry[];
   approvalRequest?: OvertimeApprovalSummary | null;
 }
 
-export interface ListOvertimeRequestsParams {
+export interface ListOvertimeSheetsParams {
   page?: number;
   limit?: number;
-  status?: OvertimeStatus | OvertimeStatus[];
+  status?: OvertimeSheetStatus | OvertimeSheetStatus[];
   employeeId?: string;
-  projectId?: string;
-  dateFrom?: string;
-  dateTo?: string;
+  month?: number;
+  year?: number;
   search?: string;
 }
 
-export interface SubmitOvertimeRequestPayload {
+export interface UpsertOvertimeEntryPayload {
   date: string;
   startTime: string;
   endTime: string;
-  hours: number;
-  reason: string;
-  projectId?: string;
-  compensationType?: OvertimeCompensation;
+  isHoliday?: boolean;
+  taskDescription: string;
 }

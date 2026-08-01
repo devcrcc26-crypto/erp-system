@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -15,8 +16,8 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
-  ListOvertimeRequestsDto,
-  SubmitOvertimeRequestDto,
+  ListOvertimeSheetsDto,
+  UpsertOvertimeEntryDto,
 } from '../../application/dtos/overtime.dtos';
 import { OvertimeService } from '../../application/services/overtime.service';
 
@@ -32,37 +33,28 @@ import { OvertimeService } from '../../application/services/overtime.service';
 export class OvertimeController {
   constructor(private readonly overtimeService: OvertimeService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Submit an overtime request' })
-  submit(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentCompany() companyId: string,
-    @Body() dto: SubmitOvertimeRequestDto,
-  ): Promise<unknown> {
-    return this.overtimeService.submitRequest(dto, companyId, user.userId);
-  }
-
   @Get()
   @ApiOperation({
     summary:
-      'List overtime requests (company-wide for hr.view; own records otherwise)',
+      'List overtime sheets (company-wide for hr.view; own otherwise)',
   })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
-    @Query() query: ListOvertimeRequestsDto,
+    @Query() query: ListOvertimeSheetsDto,
   ): Promise<unknown> {
-    return this.overtimeService.listRequests(query, companyId, user.userId);
+    return this.overtimeService.listSheets(query, companyId, user.userId);
   }
 
-  @Get('my')
-  @ApiOperation({ summary: 'List my overtime requests' })
-  listMine(
+  @Get('current')
+  @ApiOperation({
+    summary: 'Get or create the current month overtime sheet for the caller',
+  })
+  current(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
-    @Query() query: ListOvertimeRequestsDto,
   ): Promise<unknown> {
-    return this.overtimeService.getMyRequests(user.userId, companyId, query);
+    return this.overtimeService.getCurrentSheet(companyId, user.userId);
   }
 
   @Get(':id')
@@ -72,22 +64,77 @@ export class OvertimeController {
     { module: 'overtime', action: 'create' },
     { module: 'approvals', action: 'view' },
   )
-  @ApiOperation({ summary: 'Get an overtime request with approval tiers' })
+  @ApiOperation({ summary: 'Get an overtime sheet with entries and tiers' })
   getOne(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.overtimeService.getRequest(id, companyId, user.userId);
+    return this.overtimeService.getSheet(id, companyId, user.userId);
+  }
+
+  @Post(':id/entries')
+  @ApiOperation({ summary: 'Add an overtime entry to a draft/returned sheet' })
+  addEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpsertOvertimeEntryDto,
+  ): Promise<unknown> {
+    return this.overtimeService.addEntry(id, dto, companyId, user.userId);
+  }
+
+  @Patch(':id/entries/:entryId')
+  @ApiOperation({ summary: 'Update an overtime entry' })
+  updateEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @Body() dto: UpsertOvertimeEntryDto,
+  ): Promise<unknown> {
+    return this.overtimeService.updateEntry(
+      id,
+      entryId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Delete(':id/entries/:entryId')
+  @ApiOperation({ summary: 'Delete an overtime entry' })
+  deleteEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+  ): Promise<unknown> {
+    return this.overtimeService.deleteEntry(
+      id,
+      entryId,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post(':id/submit')
+  @ApiOperation({ summary: 'Submit an overtime sheet for approval' })
+  submit(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.overtimeService.submitSheet(id, companyId, user.userId);
   }
 
   @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Cancel a draft or submitted overtime request' })
+  @ApiOperation({ summary: 'Cancel a draft or submitted overtime sheet' })
   cancel(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.overtimeService.cancelRequest(id, companyId, user.userId);
+    return this.overtimeService.cancelSheet(id, companyId, user.userId);
   }
 }

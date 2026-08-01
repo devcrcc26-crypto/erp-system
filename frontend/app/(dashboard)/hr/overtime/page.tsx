@@ -1,5 +1,5 @@
-import OvertimeRequestsListPageContent from '@/components/modules/hr/overtime/OvertimeRequestsListPageContent';
+import OvertimeSheetsListPageContent from '@/components/modules/hr/overtime/OvertimeSheetsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <OvertimeRequestsListPageContent />;
+export default function OvertimeListPage(): React.ReactNode {
+  return <OvertimeSheetsListPageContent />;
 }

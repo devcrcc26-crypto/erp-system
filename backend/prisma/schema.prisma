@@ -223,7 +223,7 @@ model Company {
   approvalRequests         ApprovalRequest[]
   leaveRequests            LeaveRequest[]
   leaveBalances            LeaveBalance[]
-  overtimeRequests         OvertimeRequest[]
+  overtimeSheets           OvertimeSheet[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -610,8 +610,8 @@ model User {
   leaveRequestsAsEmployee  LeaveRequest[]         @relation("LeaveEmployee")
   leaveRequestsCreated     LeaveRequest[]         @relation("LeaveCreator")
   leaveBalances            LeaveBalance[]         @relation("LeaveBalance")
-  overtimeRequestsAsEmployee OvertimeRequest[]    @relation("OvertimeEmployee")
-  overtimeRequestsCreated  OvertimeRequest[]      @relation("OvertimeCreator")
+  overtimeSheetsAsEmployee OvertimeSheet[]        @relation("OvertimeEmployee")
+  overtimeSheetsCreated    OvertimeSheet[]        @relation("OvertimeCreator")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -1643,7 +1643,6 @@ model Project {
   issues         Issue[]
   punchItems     PunchItem[]
   closeout       Closeout?
-  overtimeRequests OvertimeRequest[]
 
   @@unique([companyId, projectCode], map: "uq_project_company_code")
   @@index([companyId], map: "idx_project_company_id")
@@ -3285,7 +3284,7 @@ model ApprovalRequest {
   comments         ApprovalComment[]
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
   leaveRequest     LeaveRequest?
-  overtimeRequest  OvertimeRequest?
+  overtimeSheet    OvertimeSheet?
 
   @@index([companyId])
   @@index([categoryId])
@@ -3387,7 +3386,7 @@ model LeaveBalance {
   @@map("leave_balance")
 }
 
-enum OvertimeStatus {
+enum OvertimeSheetStatus {
   DRAFT
   SUBMITTED
   IN_REVIEW
@@ -3397,45 +3396,64 @@ enum OvertimeStatus {
   CANCELLED
 }
 
-enum OvertimeCompensation {
-  EXTRA_PAY
-  TIME_OFF_IN_LIEU
-}
-
-model OvertimeRequest {
-  id               String                 @id @default(uuid())
-  companyId        String                 @map("company_id")
-  requestNumber    String                 @map("request_number")
-  employeeId       String                 @map("employee_id")
-  date             DateTime               @map("date") @db.Date
-  startTime        DateTime               @map("start_time") @db.Time(0)
-  endTime          DateTime               @map("end_time") @db.Time(0)
-  hours            Decimal                @db.Decimal(4, 1)
-  reason           String
-  projectId        String?                @map("project_id")
-  compensationType OvertimeCompensation?  @map("compensation_type")
-  status           OvertimeStatus         @default(DRAFT)
-  approvalRequestId String?               @unique @map("approval_request_id")
-  submittedAt      DateTime?              @map("submitted_at")
-  completedAt      DateTime?              @map("completed_at")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  createdBy        String                 @map("created_by")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
-  updatedBy        String                 @map("updated_by")
-  deletedAt        DateTime?              @map("deleted_at")
-  deletedBy        String?                @map("deleted_by")
+model OvertimeSheet {
+  id                String              @id @default(uuid())
+  companyId         String              @map("company_id")
+  sheetNumber       String              @map("sheet_number")
+  employeeId        String              @map("employee_id")
+  month             Int
+  year              Int
+  status            OvertimeSheetStatus @default(DRAFT)
+  totalRegularHours Decimal             @default(0) @map("total_regular_hours") @db.Decimal(6, 2)
+  totalNightHours   Decimal             @default(0) @map("total_night_hours") @db.Decimal(6, 2)
+  totalWeekendHours Decimal             @default(0) @map("total_weekend_hours") @db.Decimal(6, 2)
+  totalHolidayHours Decimal             @default(0) @map("total_holiday_hours") @db.Decimal(6, 2)
+  totalHours        Decimal             @default(dbgenerated("(total_regular_hours + total_night_hours + total_weekend_hours + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
+  approvalRequestId String?             @unique @map("approval_request_id")
+  submittedAt       DateTime?           @map("submitted_at")
+  completedAt       DateTime?           @map("completed_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  createdBy         String              @map("created_by")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  updatedBy         String              @map("updated_by")
+  deletedAt         DateTime?           @map("deleted_at")
+  deletedBy         String?             @map("deleted_by")
 
   company         Company          @relation(fields: [companyId], references: [id])
   employee        User             @relation("OvertimeEmployee", fields: [employeeId], references: [id])
-  project         Project?         @relation(fields: [projectId], references: [id])
   approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
   creator         User             @relation("OvertimeCreator", fields: [createdBy], references: [id])
+  entries         OvertimeEntry[]
 
-  @@unique([companyId, requestNumber])
-  @@index([companyId], map: "idx_overtime_request_company")
-  @@index([employeeId], map: "idx_overtime_request_employee")
-  @@index([status], map: "idx_overtime_request_status")
-  @@index([date], map: "idx_overtime_request_date")
-  @@index([projectId], map: "idx_overtime_request_project")
-  @@map("overtime_request")
+  @@unique([companyId, employeeId, month, year])
+  @@unique([companyId, sheetNumber])
+  @@index([companyId], map: "idx_overtime_sheet_company")
+  @@index([employeeId], map: "idx_overtime_sheet_employee")
+  @@index([status], map: "idx_overtime_sheet_status")
+  @@index([year, month], map: "idx_overtime_sheet_period")
+  @@map("overtime_sheet")
+}
+
+model OvertimeEntry {
+  id              String   @id @default(uuid())
+  sheetId         String   @map("sheet_id")
+  date            DateTime @db.Date
+  startTime       DateTime @map("start_time") @db.Time(0)
+  endTime         DateTime @map("end_time") @db.Time(0)
+  isHoliday       Boolean  @default(false) @map("is_holiday")
+  regularHours    Decimal  @default(0) @map("regular_hours") @db.Decimal(5, 2)
+  nightHours      Decimal  @default(0) @map("night_hours") @db.Decimal(5, 2)
+  weekendHours    Decimal  @default(0) @map("weekend_hours") @db.Decimal(5, 2)
+  holidayHours    Decimal  @default(0) @map("holiday_hours") @db.Decimal(5, 2)
+  totalHours      Decimal  @default(dbgenerated("(regular_hours + night_hours + weekend_hours + holiday_hours)")) @map("total_hours") @db.Decimal(5, 2)
+  taskDescription String   @map("task_description")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  sheet OvertimeSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+
+  @@unique([sheetId, date, startTime, endTime])
+  @@index([sheetId], map: "idx_overtime_entry_sheet")
+  @@index([date], map: "idx_overtime_entry_date")
+  @@map("overtime_entry")
 }

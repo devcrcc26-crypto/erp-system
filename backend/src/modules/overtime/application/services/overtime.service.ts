@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -9,7 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
-  OvertimeStatus,
+  OvertimeSheetStatus,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -29,9 +30,10 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import {
-  ListOvertimeRequestsDto,
-  SubmitOvertimeRequestDto,
+  ListOvertimeSheetsDto,
+  UpsertOvertimeEntryDto,
 } from '../dtos/overtime.dtos';
+import { calculateOvertimeHours } from '../utils/overtime-hours.util';
 
 const USER_SELECT = {
   id: true,
@@ -41,17 +43,12 @@ const USER_SELECT = {
   chineseName: true,
 } as const;
 
-const PROJECT_SELECT = {
-  id: true,
-  projectCode: true,
-  name: true,
-  nameZh: true,
-} as const;
-
-const OVERTIME_DETAIL_INCLUDE = {
+const SHEET_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
   creator: { select: USER_SELECT },
-  project: { select: PROJECT_SELECT },
+  entries: {
+    orderBy: [{ date: 'asc' as const }, { startTime: 'asc' as const }],
+  },
   approvalRequest: {
     include: {
       category: {
@@ -63,10 +60,15 @@ const OVERTIME_DETAIL_INCLUDE = {
       },
     },
   },
-} as const;
+};
+
+const EDITABLE_STATUSES: OvertimeSheetStatus[] = [
+  OvertimeSheetStatus.DRAFT,
+  OvertimeSheetStatus.RETURNED,
+];
 
 /**
- * Overtime request lifecycle — owns overtime data; delegates tiers to ApprovalsService.
+ * Monthly overtime sheet lifecycle — entries, totals, and approval submit.
  */
 @Injectable()
 export class OvertimeService
@@ -91,58 +93,399 @@ export class OvertimeService
   }
 
   /**
-   * Creates an overtime request and opens an approval workflow.
-   * Org chain resolution runs before ApprovalsService writes.
+   * Finds the sheet for employee/month/year or creates a DRAFT sheet.
    */
-  async submitRequest(
-    dto: SubmitOvertimeRequestDto,
+  async getOrCreateSheet(
+    employeeId: string,
+    month: number,
+    year: number,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const date = this.parseDateOnly(dto.date);
-    const startTime = this.parseTimeOfDay(dto.startTime);
-    const endTime = this.parseTimeOfDay(dto.endTime);
-    const calculatedHours = this.calculateHours(startTime, endTime);
-
-    if (Math.abs(calculatedHours - dto.hours) > 0.1) {
-      throw new BadRequestException(
-        `hours (${dto.hours}) does not match start/end time span (${calculatedHours})`,
-      );
+    if (month < 1 || month > 12) {
+      throw new BadRequestException('month must be between 1 and 12');
     }
-
-    const hours = calculatedHours;
-
-    if (dto.projectId) {
-      const project = await this.prisma.project.findFirst({
-        where: activeOnly({ id: dto.projectId, companyId }),
-        select: { id: true },
-      });
-      if (!project) {
-        throw new BadRequestException('Project not found');
+    if (employeeId !== userId) {
+      const isHrViewer = await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'hr',
+        'view',
+      );
+      if (!isHrViewer) {
+        throw new ForbiddenException(
+          'You can only open your own overtime sheet',
+        );
       }
     }
 
-    // Resolve chain BEFORE any approval write / transaction
+    const existing = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ companyId, employeeId, month, year }),
+      include: SHEET_DETAIL_INCLUDE,
+    });
+    if (existing) {
+      if (existing.status === OvertimeSheetStatus.CANCELLED) {
+        await this.prisma.overtimeSheet.update({
+          where: { id: existing.id },
+          data: {
+            status: OvertimeSheetStatus.DRAFT,
+            approvalRequestId: null,
+            submittedAt: null,
+            completedAt: null,
+            updatedBy: userId,
+          },
+        });
+        return this.getSheet(existing.id, companyId, userId);
+      }
+      await this.assertCanViewSheet(existing, companyId, userId);
+      return this.mapSheet(existing);
+    }
+
+    const sheetId = randomUUID();
+    const sheetNumber = this.buildProvisionalSheetNumber(year, month);
+
+    try {
+      await this.prisma.overtimeSheet.create({
+        data: {
+          id: sheetId,
+          companyId,
+          sheetNumber,
+          employeeId,
+          month,
+          year,
+          status: OvertimeSheetStatus.DRAFT,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const raced = await this.prisma.overtimeSheet.findFirst({
+          where: activeOnly({ companyId, employeeId, month, year }),
+          include: SHEET_DETAIL_INCLUDE,
+        });
+        if (raced) {
+          return this.mapSheet(raced);
+        }
+      }
+      throw error;
+    }
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Opens or creates the caller's sheet for the current calendar month.
+   */
+  async getCurrentSheet(
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const now = new Date();
+    return this.getOrCreateSheet(
+      userId,
+      now.getUTCMonth() + 1,
+      now.getUTCFullYear(),
+      companyId,
+      userId,
+    );
+  }
+
+  /**
+   * Fetches a sheet with entries and approval tiers.
+   */
+  async getSheet(
+    sheetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const row = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
+      include: SHEET_DETAIL_INCLUDE,
+    });
+    if (!row) {
+      throw new NotFoundException('Overtime sheet not found');
+    }
+    await this.assertCanViewSheet(row, companyId, userId);
+    return this.mapSheet(row);
+  }
+
+  /**
+   * Paginated sheets. hr.view → company-wide; others → own only.
+   */
+  async listSheets(
+    filters: ListOvertimeSheetsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const statuses = this.normalizeStatuses(filters.status);
+    const canViewAll = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+
+    const where = activeOnly({
+      companyId,
+      ...(canViewAll ? {} : { employeeId: userId }),
+      ...(statuses ? { status: { in: statuses } } : {}),
+      ...(canViewAll && filters.employeeId
+        ? { employeeId: filters.employeeId }
+        : {}),
+      ...(filters.month ? { month: filters.month } : {}),
+      ...(filters.year ? { year: filters.year } : {}),
+      ...(filters.search?.trim()
+        ? {
+            sheetNumber: {
+              contains: filters.search.trim(),
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+    });
+
+    const [rows, total] = await Promise.all([
+      this.prisma.overtimeSheet.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ year: 'desc' }, { month: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          employee: { select: USER_SELECT },
+          approvalRequest: {
+            select: { id: true, status: true, currentTier: true },
+          },
+        },
+      }),
+      this.prisma.overtimeSheet.count({ where }),
+    ]);
+
+    return buildPaginatedResult(
+      rows.map((row) => this.mapSheet(row)),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /**
+   * Adds an entry to a DRAFT/RETURNED sheet and recalculates totals.
+   */
+  async addEntry(
+    sheetId: string,
+    dto: UpsertOvertimeEntryDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
+    const date = this.parseDateOnly(dto.date);
+    this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+    const startTime = this.parseTimeOfDay(dto.startTime);
+    const endTime = this.parseTimeOfDay(dto.endTime);
+    const isHoliday = dto.isHoliday ?? false;
+    const hours = calculateOvertimeHours(
+      date,
+      dto.startTime,
+      dto.endTime,
+      isHoliday,
+    );
+
+    await this.assertNoOverlap(
+      sheetId,
+      date,
+      startTime,
+      endTime,
+      undefined,
+    );
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.overtimeEntry.create({
+          data: {
+            id: randomUUID(),
+            sheetId,
+            date,
+            startTime,
+            endTime,
+            isHoliday,
+            regularHours: new Prisma.Decimal(hours.regularHours),
+            nightHours: new Prisma.Decimal(hours.nightHours),
+            weekendHours: new Prisma.Decimal(hours.weekendHours),
+            holidayHours: new Prisma.Decimal(hours.holidayHours),
+            taskDescription: dto.taskDescription.trim(),
+          },
+        });
+        await this.recalculateSheetTotals(sheetId, tx);
+        await tx.overtimeSheet.update({
+          where: { id: sheetId },
+          data: { updatedBy: userId },
+        });
+      });
+    } catch (error: unknown) {
+      this.rethrowEntryConflict(error);
+    }
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Updates an entry on a DRAFT/RETURNED sheet and recalculates totals.
+   */
+  async updateEntry(
+    sheetId: string,
+    entryId: string,
+    dto: UpsertOvertimeEntryDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
+    const entry = await this.prisma.overtimeEntry.findFirst({
+      where: { id: entryId, sheetId },
+    });
+    if (!entry) {
+      throw new NotFoundException('Overtime entry not found');
+    }
+
+    const date = this.parseDateOnly(dto.date);
+    this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+    const startTime = this.parseTimeOfDay(dto.startTime);
+    const endTime = this.parseTimeOfDay(dto.endTime);
+    const isHoliday = dto.isHoliday ?? false;
+    const hours = calculateOvertimeHours(
+      date,
+      dto.startTime,
+      dto.endTime,
+      isHoliday,
+    );
+
+    await this.assertNoOverlap(sheetId, date, startTime, endTime, entryId);
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.overtimeEntry.update({
+          where: { id: entryId },
+          data: {
+            date,
+            startTime,
+            endTime,
+            isHoliday,
+            regularHours: new Prisma.Decimal(hours.regularHours),
+            nightHours: new Prisma.Decimal(hours.nightHours),
+            weekendHours: new Prisma.Decimal(hours.weekendHours),
+            holidayHours: new Prisma.Decimal(hours.holidayHours),
+            taskDescription: dto.taskDescription.trim(),
+          },
+        });
+        await this.recalculateSheetTotals(sheetId, tx);
+        await tx.overtimeSheet.update({
+          where: { id: sheetId },
+          data: { updatedBy: userId },
+        });
+      });
+    } catch (error: unknown) {
+      this.rethrowEntryConflict(error);
+    }
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Deletes an entry from a DRAFT/RETURNED sheet and recalculates totals.
+   */
+  async deleteEntry(
+    sheetId: string,
+    entryId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.requireEditableSheet(sheetId, companyId, userId);
+    const entry = await this.prisma.overtimeEntry.findFirst({
+      where: { id: entryId, sheetId },
+    });
+    if (!entry) {
+      throw new NotFoundException('Overtime entry not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.overtimeEntry.delete({ where: { id: entryId } });
+      await this.recalculateSheetTotals(sheetId, tx);
+      await tx.overtimeSheet.update({
+        where: { id: sheetId },
+        data: { updatedBy: userId },
+      });
+    });
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Submits a DRAFT/RETURNED sheet for approval (requires ≥1 entry).
+   */
+  async submitSheet(
+    sheetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const sheet = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
+      include: { entries: true },
+    });
+    if (!sheet) {
+      throw new NotFoundException('Overtime sheet not found');
+    }
+    if (sheet.employeeId !== userId) {
+      throw new ForbiddenException('Only the employee can submit this sheet');
+    }
+    if (!EDITABLE_STATUSES.includes(sheet.status)) {
+      throw new BadRequestException(
+        'Only draft or returned sheets can be submitted',
+      );
+    }
+    if (sheet.entries.length === 0) {
+      throw new BadRequestException(
+        'Add at least one overtime entry before submitting',
+      );
+    }
+
+    const totalHours = sheet.entries.reduce(
+      (sum, e) =>
+        sum +
+        Number(e.regularHours) +
+        Number(e.nightHours) +
+        Number(e.weekendHours) +
+        Number(e.holidayHours),
+      0,
+    );
+
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
       companyId,
-      hours > 4,
+      totalHours > 4,
     );
 
-    const title = `Overtime — ${dto.date} (${hours}h)`;
+    const monthLabel = `${sheet.year}-${String(sheet.month).padStart(2, '0')}`;
+    const title = `Overtime sheet — ${monthLabel} (${Math.round(totalHours * 100) / 100}h)`;
 
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'OVERTIME_APPLICATION',
         title,
         formData: {
-          date: dto.date,
-          startTime: dto.startTime,
-          endTime: dto.endTime,
-          hours,
-          reason: dto.reason.trim(),
-          projectId: dto.projectId ?? null,
-          compensationType: dto.compensationType ?? null,
+          sheetId: sheet.id,
+          month: sheet.month,
+          year: sheet.year,
+          totalHours: Math.round(totalHours * 100) / 100,
+          totalRegularHours: Number(sheet.totalRegularHours),
+          totalNightHours: Number(sheet.totalNightHours),
+          totalWeekendHours: Number(sheet.totalWeekendHours),
+          totalHolidayHours: Number(sheet.totalHolidayHours),
         },
       },
       companyId,
@@ -156,32 +499,22 @@ export class OvertimeService
     )) as { id: string; requestNumber: string };
 
     const now = new Date();
-    const overtimeId = randomUUID();
 
     try {
-      await this.prisma.overtimeRequest.create({
+      await this.prisma.overtimeSheet.update({
+        where: { id: sheet.id },
         data: {
-          id: overtimeId,
-          companyId,
-          requestNumber: approval.requestNumber,
-          employeeId: userId,
-          date,
-          startTime,
-          endTime,
-          hours: new Prisma.Decimal(hours),
-          reason: dto.reason.trim(),
-          projectId: dto.projectId ?? null,
-          compensationType: dto.compensationType ?? null,
-          status: OvertimeStatus.SUBMITTED,
+          status: OvertimeSheetStatus.SUBMITTED,
+          sheetNumber: approval.requestNumber,
           approvalRequestId: approval.id,
           submittedAt: now,
-          createdBy: userId,
+          completedAt: null,
           updatedBy: userId,
         },
       });
     } catch (error: unknown) {
       this.logger.error(
-        `Overtime create failed after approval ${approval.id}; cancelling approval`,
+        `Overtime sheet submit failed after approval ${approval.id}; cancelling approval`,
         error instanceof Error ? error.message : String(error),
       );
       await this.prisma.approvalRequest.update({
@@ -195,43 +528,41 @@ export class OvertimeService
       throw error;
     }
 
-    return this.getRequest(overtimeId, companyId, userId);
+    return this.getSheet(sheetId, companyId, userId);
   }
 
   /**
-   * Cancels a DRAFT or SUBMITTED overtime request owned by the actor.
+   * Cancels a DRAFT or SUBMITTED sheet owned by the actor.
    */
-  async cancelRequest(
-    id: string,
+  async cancelSheet(
+    sheetId: string,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const row = await this.prisma.overtimeRequest.findFirst({
-      where: activeOnly({ id, companyId }),
+    const row = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
     });
     if (!row) {
-      throw new NotFoundException('Overtime request not found');
+      throw new NotFoundException('Overtime sheet not found');
     }
     if (row.employeeId !== userId) {
-      throw new ForbiddenException(
-        'Only the requester can cancel this overtime request',
-      );
+      throw new ForbiddenException('Only the employee can cancel this sheet');
     }
     if (
-      row.status !== OvertimeStatus.DRAFT &&
-      row.status !== OvertimeStatus.SUBMITTED
+      row.status !== OvertimeSheetStatus.DRAFT &&
+      row.status !== OvertimeSheetStatus.SUBMITTED
     ) {
       throw new BadRequestException(
-        'Only draft or submitted overtime requests can be cancelled',
+        'Only draft or submitted sheets can be cancelled',
       );
     }
 
     const now = new Date();
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.overtimeRequest.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.overtimeSheet.update({
         where: { id: row.id },
         data: {
-          status: OvertimeStatus.CANCELLED,
+          status: OvertimeSheetStatus.CANCELLED,
           completedAt: now,
           updatedBy: userId,
         },
@@ -249,133 +580,97 @@ export class OvertimeService
       }
     });
 
-    return this.getRequest(id, companyId, userId);
+    return this.getSheet(sheetId, companyId, userId);
   }
 
   /**
-   * Fetches an overtime request with employee, project, and approval tiers.
-   * HR viewers see any company request; others must be the employee or a tier approver.
+   * Called when a linked approval request reaches a terminal decision.
    */
-  async getRequest(
-    id: string,
-    companyId: string,
-    userId: string,
-  ): Promise<unknown> {
-    const row = await this.prisma.overtimeRequest.findFirst({
-      where: activeOnly({ id, companyId }),
-      include: OVERTIME_DETAIL_INCLUDE,
+  async onApprovalDecision(
+    approvalRequestId: string,
+    decision: ApprovalFinalDecision,
+  ): Promise<void> {
+    const row = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ approvalRequestId }),
     });
     if (!row) {
-      throw new NotFoundException('Overtime request not found');
+      return;
     }
 
-    await this.assertCanViewOvertimeRequest(row, companyId, userId);
-    return this.mapOvertime(row);
-  }
+    if (
+      row.status === OvertimeSheetStatus.APPROVED ||
+      row.status === OvertimeSheetStatus.REJECTED ||
+      row.status === OvertimeSheetStatus.CANCELLED
+    ) {
+      return;
+    }
 
-  /**
-   * Paginated overtime requests. HR viewers see company-wide; others see own rows only.
-   */
-  async listRequests(
-    filters: ListOvertimeRequestsDto,
-    companyId: string,
-    userId: string,
-  ): Promise<PaginatedResult<unknown>> {
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 20;
-    const { skip, take } = buildPrismaPagination(page, limit);
-    const statuses = this.normalizeStatuses(filters.status);
-    const isHrViewer = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'hr',
-      'view',
-    );
+    const now = new Date();
+    let nextStatus: OvertimeSheetStatus;
+    if (decision === 'APPROVED') {
+      nextStatus = OvertimeSheetStatus.APPROVED;
+    } else if (decision === 'REJECTED') {
+      nextStatus = OvertimeSheetStatus.REJECTED;
+    } else {
+      nextStatus = OvertimeSheetStatus.RETURNED;
+    }
 
-    const where = activeOnly({
-      companyId,
-      ...(isHrViewer ? {} : { employeeId: userId }),
-      ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId
-        ? { employeeId: filters.employeeId }
-        : {}),
-      ...(filters.projectId ? { projectId: filters.projectId } : {}),
-      ...(filters.dateFrom || filters.dateTo
-        ? {
-            date: {
-              ...(filters.dateFrom
-                ? { gte: this.parseDateOnly(filters.dateFrom) }
-                : {}),
-              ...(filters.dateTo
-                ? { lte: this.parseDateOnly(filters.dateTo) }
-                : {}),
-            },
-          }
-        : {}),
-      ...(filters.search?.trim()
-        ? {
-            OR: [
-              {
-                requestNumber: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                reason: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
+    await this.prisma.overtimeSheet.update({
+      where: { id: row.id },
+      data: {
+        status: nextStatus,
+        completedAt: decision === 'RETURNED' ? null : now,
+        updatedBy: row.employeeId,
+      },
     });
-
-    const [rows, total] = await Promise.all([
-      this.prisma.overtimeRequest.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          employee: { select: USER_SELECT },
-          project: { select: PROJECT_SELECT },
-          approvalRequest: {
-            select: { id: true, status: true, currentTier: true },
-          },
-        },
-      }),
-      this.prisma.overtimeRequest.count({ where }),
-    ]);
-
-    return buildPaginatedResult(
-      rows.map((row) => this.mapOvertime(row)),
-      total,
-      page,
-      limit,
-    );
   }
 
   /**
-   * Overtime requests for the authenticated employee (always employee-scoped).
+   * Recalculates aggregate hour totals from entries (does not write generated totalHours).
    */
-  async getMyRequests(
-    userId: string,
-    companyId: string,
-    filters: ListOvertimeRequestsDto,
-  ): Promise<PaginatedResult<unknown>> {
-    return this.listRequests(
-      { ...filters, employeeId: userId },
-      companyId,
-      userId,
+  async recalculateSheetTotals(
+    sheetId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const entries = await tx.overtimeEntry.findMany({ where: { sheetId } });
+
+    const totalRegularHours = entries.reduce(
+      (s, e) => s + Number(e.regularHours),
+      0,
     );
+    const totalNightHours = entries.reduce(
+      (s, e) => s + Number(e.nightHours),
+      0,
+    );
+    const totalWeekendHours = entries.reduce(
+      (s, e) => s + Number(e.weekendHours),
+      0,
+    );
+    const totalHolidayHours = entries.reduce(
+      (s, e) => s + Number(e.holidayHours),
+      0,
+    );
+
+    await tx.overtimeSheet.update({
+      where: { id: sheetId },
+      data: {
+        totalRegularHours: new Prisma.Decimal(
+          Math.round(totalRegularHours * 100) / 100,
+        ),
+        totalNightHours: new Prisma.Decimal(
+          Math.round(totalNightHours * 100) / 100,
+        ),
+        totalWeekendHours: new Prisma.Decimal(
+          Math.round(totalWeekendHours * 100) / 100,
+        ),
+        totalHolidayHours: new Prisma.Decimal(
+          Math.round(totalHolidayHours * 100) / 100,
+        ),
+      },
+    });
   }
 
-  /**
-   * Ensures the caller may read this overtime request.
-   */
-  private async assertCanViewOvertimeRequest(
+  private async assertCanViewSheet(
     row: {
       employeeId: string;
       approvalRequest?: {
@@ -402,56 +697,96 @@ export class OvertimeService
 
     if (!isOwner && !isApprover) {
       throw new ForbiddenException(
-        'You do not have access to this overtime request',
+        'You do not have access to this overtime sheet',
       );
     }
   }
 
-  /**
-   * Called when a linked approval request reaches a terminal decision.
-   */
-  async onApprovalDecision(
-    approvalRequestId: string,
-    decision: ApprovalFinalDecision,
-  ): Promise<void> {
-    const row = await this.prisma.overtimeRequest.findFirst({
-      where: activeOnly({ approvalRequestId }),
+  private async requireEditableSheet(
+    sheetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ id: string; month: number; year: number; employeeId: string }> {
+    const sheet = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
     });
-    if (!row) {
-      return;
+    if (!sheet) {
+      throw new NotFoundException('Overtime sheet not found');
     }
-
-    if (
-      row.status === OvertimeStatus.APPROVED ||
-      row.status === OvertimeStatus.REJECTED ||
-      row.status === OvertimeStatus.CANCELLED
-    ) {
-      return;
+    if (sheet.employeeId !== userId) {
+      throw new ForbiddenException('Only the employee can edit this sheet');
     }
-
-    const now = new Date();
-    let nextStatus: OvertimeStatus;
-    if (decision === 'APPROVED') {
-      nextStatus = OvertimeStatus.APPROVED;
-    } else if (decision === 'REJECTED') {
-      nextStatus = OvertimeStatus.REJECTED;
-    } else {
-      nextStatus = OvertimeStatus.RETURNED;
+    if (!EDITABLE_STATUSES.includes(sheet.status)) {
+      throw new BadRequestException(
+        'Entries can only be changed on draft or returned sheets',
+      );
     }
+    return sheet;
+  }
 
-    await this.prisma.overtimeRequest.update({
-      where: { id: row.id },
-      data: {
-        status: nextStatus,
-        completedAt: decision === 'RETURNED' ? null : now,
-        updatedBy: row.employeeId,
+  private assertEntryInSheetMonth(
+    date: Date,
+    month: number,
+    year: number,
+  ): void {
+    if (date.getUTCMonth() + 1 !== month || date.getUTCFullYear() !== year) {
+      throw new BadRequestException(
+        `Entry date must fall in sheet period ${year}-${String(month).padStart(2, '0')}`,
+      );
+    }
+  }
+
+  private async assertNoOverlap(
+    sheetId: string,
+    date: Date,
+    startTime: Date,
+    endTime: Date,
+    excludeEntryId: string | undefined,
+  ): Promise<void> {
+    const existing = await this.prisma.overtimeEntry.findMany({
+      where: {
+        sheetId,
+        date,
+        ...(excludeEntryId ? { id: { not: excludeEntryId } } : {}),
       },
     });
+
+    const newStart = this.timeToMinutes(startTime);
+    let newEnd = this.timeToMinutes(endTime);
+    if (newEnd <= newStart) {
+      newEnd += 24 * 60;
+    }
+
+    for (const entry of existing) {
+      const existStart = this.timeToMinutes(entry.startTime);
+      let existEnd = this.timeToMinutes(entry.endTime);
+      if (existEnd <= existStart) {
+        existEnd += 24 * 60;
+      }
+      if (newStart < existEnd && newEnd > existStart) {
+        throw new ConflictException(
+          `Overlapping overtime entry on ${this.formatDateOnly(date)} ` +
+            `(${this.formatTimeOfDay(entry.startTime)}–${this.formatTimeOfDay(entry.endTime)})`,
+        );
+      }
+    }
+  }
+
+  private rethrowEntryConflict(error: unknown): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        'An entry with the same date and start/end times already exists on this sheet',
+      );
+    }
+    throw error;
   }
 
   private normalizeStatuses(
-    status: OvertimeStatus | OvertimeStatus[] | string | undefined,
-  ): OvertimeStatus[] | undefined {
+    status: OvertimeSheetStatus | OvertimeSheetStatus[] | string | undefined,
+  ): OvertimeSheetStatus[] | undefined {
     if (!status) {
       return undefined;
     }
@@ -462,9 +797,14 @@ export class OvertimeService
       return status
         .split(',')
         .map((s) => s.trim())
-        .filter(Boolean) as OvertimeStatus[];
+        .filter(Boolean) as OvertimeSheetStatus[];
     }
-    return [status as OvertimeStatus];
+    return [status as OvertimeSheetStatus];
+  }
+
+  private buildProvisionalSheetNumber(year: number, month: number): string {
+    const ym = `${year}${String(month).padStart(2, '0')}`;
+    return `OTS-${ym}-${randomUUID().slice(0, 8).toUpperCase()}`;
   }
 
   private parseDateOnly(value: string): Date {
@@ -472,10 +812,9 @@ export class OvertimeService
     if (!match) {
       throw new BadRequestException(`Invalid date: ${value}`);
     }
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-    return new Date(Date.UTC(year, month - 1, day));
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    );
   }
 
   private parseTimeOfDay(value: string): Date {
@@ -491,36 +830,71 @@ export class OvertimeService
     return new Date(Date.UTC(1970, 0, 1, hours, minutes, 0));
   }
 
-  private calculateHours(start: Date, end: Date): number {
-    let ms = end.getTime() - start.getTime();
-    if (ms <= 0) {
-      ms += 24 * 60 * 60 * 1000;
-    }
-    return Math.round((ms / 3_600_000) * 10) / 10;
+  private timeToMinutes(value: Date): number {
+    return value.getUTCHours() * 60 + value.getUTCMinutes();
   }
 
   private formatTimeOfDay(value: Date | string): string {
     const date = value instanceof Date ? value : new Date(value);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return `${date.getUTCHours().toString().padStart(2, '0')}:${date
+      .getUTCMinutes()
+      .toString()
+      .padStart(2, '0')}`;
   }
 
-  private mapOvertime(row: Record<string, unknown>): Record<string, unknown> {
-    const hours = row.hours;
-    const startTime = row.startTime;
-    const endTime = row.endTime;
+  private formatDateOnly(value: Date): string {
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(value.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private decimalToNumber(value: unknown): number {
+    if (value instanceof Prisma.Decimal) {
+      return Number(value);
+    }
+    return Number(value ?? 0);
+  }
+
+  private mapEntry(row: Record<string, unknown>): Record<string, unknown> {
+    const date = row.date;
     return {
       ...row,
-      hours: hours instanceof Prisma.Decimal ? Number(hours) : Number(hours),
+      date:
+        date instanceof Date
+          ? this.formatDateOnly(date)
+          : typeof date === 'string'
+            ? date.slice(0, 10)
+            : date,
       startTime:
-        startTime instanceof Date || typeof startTime === 'string'
-          ? this.formatTimeOfDay(startTime)
-          : startTime,
+        row.startTime instanceof Date || typeof row.startTime === 'string'
+          ? this.formatTimeOfDay(row.startTime as Date | string)
+          : row.startTime,
       endTime:
-        endTime instanceof Date || typeof endTime === 'string'
-          ? this.formatTimeOfDay(endTime)
-          : endTime,
+        row.endTime instanceof Date || typeof row.endTime === 'string'
+          ? this.formatTimeOfDay(row.endTime as Date | string)
+          : row.endTime,
+      regularHours: this.decimalToNumber(row.regularHours),
+      nightHours: this.decimalToNumber(row.nightHours),
+      weekendHours: this.decimalToNumber(row.weekendHours),
+      holidayHours: this.decimalToNumber(row.holidayHours),
+      totalHours: this.decimalToNumber(row.totalHours),
+    };
+  }
+
+  private mapSheet(row: Record<string, unknown>): Record<string, unknown> {
+    const entries = Array.isArray(row.entries)
+      ? (row.entries as Record<string, unknown>[]).map((e) => this.mapEntry(e))
+      : undefined;
+
+    return {
+      ...row,
+      totalRegularHours: this.decimalToNumber(row.totalRegularHours),
+      totalNightHours: this.decimalToNumber(row.totalNightHours),
+      totalWeekendHours: this.decimalToNumber(row.totalWeekendHours),
+      totalHolidayHours: this.decimalToNumber(row.totalHolidayHours),
+      totalHours: this.decimalToNumber(row.totalHours),
+      ...(entries ? { entries } : {}),
     };
   }
 }

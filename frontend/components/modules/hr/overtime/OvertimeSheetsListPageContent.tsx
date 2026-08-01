@@ -1,12 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Select } from 'antd';
+import { Alert, Button, Select } from 'antd';
 import { ClockCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import OvertimeRequestFormDrawer from '@/components/modules/hr/overtime/OvertimeRequestFormDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import FormLayout, {
   PageLoadingSkeleton,
@@ -24,29 +22,26 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
-  OvertimeRequestListItem,
-  OvertimeStatus,
+  OvertimeSheetListItem,
+  OvertimeSheetStatus,
 } from '@/lib/api/overtime.types';
-import {
-  useMyOvertimeRequests,
-  useOvertimeRequests,
-} from '@/lib/query/overtime';
-import { useProjects } from '@/lib/query/projects';
+import { useOvertimeSheets } from '@/lib/query/overtime';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
+  OVERTIME_MONTH_OPTIONS,
   OVERTIME_STATUS_OPTIONS,
-  formatOvertimeCompensation,
   formatOvertimeEmployeeName,
+  formatOvertimeHours,
+  formatOvertimePeriod,
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 /**
- * Company or personal overtime request list with filters.
+ * Company or personal overtime monthly sheet list.
  */
-export default function OvertimeRequestsListPageContent(): React.ReactNode {
+export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
   const canAccess = useCanAccessOvertime();
@@ -54,13 +49,10 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
   const canCreate = useCanCreateOvertime();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OvertimeStatus[]>([]);
+  const [statusFilter, setStatusFilter] = useState<OvertimeSheetStatus[]>([]);
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [projectId, setProjectId] = useState<string | undefined>();
-  const [dateRange, setDateRange] = useState<
-    [Dayjs | null, Dayjs | null] | null
-  >(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [month, setMonth] = useState<number | undefined>();
+  const [year, setYear] = useState<number | undefined>();
 
   const listParams = useMemo(
     () => ({
@@ -68,85 +60,104 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
       search: search.trim() || undefined,
       status: statusFilter.length > 0 ? statusFilter : undefined,
       employeeId: canViewHr ? employeeId : undefined,
-      projectId,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      month,
+      year,
     }),
-    [
-      params,
-      search,
-      statusFilter,
-      employeeId,
-      projectId,
-      dateRange,
-      canViewHr,
-    ],
+    [params, search, statusFilter, employeeId, month, year, canViewHr],
   );
 
-  const companyListQuery = useOvertimeRequests(listParams, canViewHr);
-  const myListQuery = useMyOvertimeRequests(listParams, !canViewHr && canAccess);
-  const listQuery = canViewHr ? companyListQuery : myListQuery;
+  const listQuery = useOvertimeSheets(listParams, canAccess);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
-  const projectsQuery = useProjects({ page: 1, limit: 100 }, canAccess);
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<OvertimeRequestListItem> = [
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, i) => current - i);
+  }, []);
+
+  const columns: ColumnsType<OvertimeSheetListItem> = [
     {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 120,
+      title: 'Sheet #',
+      dataIndex: 'sheetNumber',
+      key: 'sheetNumber',
+      width: 140,
+      render: (value: string) => (
+        <span className="font-medium text-[var(--color-text-primary)]">
+          {value}
+        </span>
+      ),
     },
     ...(canViewHr
       ? [
           {
             title: 'Employee',
             key: 'employee',
-            render: (_: unknown, row: OvertimeRequestListItem) =>
+            width: 180,
+            render: (_: unknown, row: OvertimeSheetListItem) =>
               formatOvertimeEmployeeName(row.employee),
-          } satisfies ColumnsType<OvertimeRequestListItem>[number],
+          } satisfies ColumnsType<OvertimeSheetListItem>[number],
         ]
       : []),
     {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
+      title: 'Period',
+      key: 'period',
+      width: 140,
+      render: (_, row) => formatOvertimePeriod(row.month, row.year),
     },
     {
-      title: 'Hours',
-      dataIndex: 'hours',
-      key: 'hours',
-      width: 80,
+      title: 'Regular',
+      dataIndex: 'totalRegularHours',
+      key: 'totalRegularHours',
+      width: 90,
       align: 'right',
+      render: (v: number) => formatOvertimeHours(v),
     },
     {
-      title: 'Project',
-      key: 'project',
-      render: (_, row) =>
-        row.project
-          ? `${row.project.projectCode} — ${row.project.name}`
-          : '—',
+      title: 'Night',
+      dataIndex: 'totalNightHours',
+      key: 'totalNightHours',
+      width: 90,
+      align: 'right',
+      render: (v: number) => formatOvertimeHours(v),
     },
     {
-      title: 'Compensation',
-      key: 'compensationType',
-      width: 150,
-      render: (_, row) => formatOvertimeCompensation(row.compensationType),
+      title: 'Weekend',
+      dataIndex: 'totalWeekendHours',
+      key: 'totalWeekendHours',
+      width: 90,
+      align: 'right',
+      render: (v: number) => formatOvertimeHours(v),
+    },
+    {
+      title: 'Holiday',
+      dataIndex: 'totalHolidayHours',
+      key: 'totalHolidayHours',
+      width: 90,
+      align: 'right',
+      render: (v: number) => formatOvertimeHours(v),
+    },
+    {
+      title: 'Total',
+      dataIndex: 'totalHours',
+      key: 'totalHours',
+      width: 90,
+      align: 'right',
+      render: (v: number) => (
+        <span className="font-medium">{formatOvertimeHours(v)}</span>
+      ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 130,
-      render: (value: OvertimeStatus) => (
+      width: 120,
+      render: (value: OvertimeSheetStatus) => (
         <StatusBadge
           label={formatOvertimeStatus(value)}
           variant={overtimeStatusVariant(value)}
@@ -154,11 +165,13 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
       ),
     },
     {
-      title: 'Current tier',
-      key: 'currentTier',
-      width: 110,
-      align: 'right',
-      render: (_, row) => row.approvalRequest?.currentTier ?? '—',
+      title: 'Tier',
+      key: 'tier',
+      width: 80,
+      render: (_, row) =>
+        row.approvalRequest?.currentTier != null
+          ? String(row.approvalRequest.currentTier)
+          : '—',
     },
   ];
 
@@ -167,13 +180,27 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
       <Alert
         type="warning"
         showIcon
-        title="You do not have access to overtime requests."
+        title="You do not have permission to view overtime sheets."
       />
     );
   }
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
+  }
+
+  if (listQuery.isError) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title={
+          listQuery.error instanceof ApiRequestError
+            ? listQuery.error.message
+            : 'Failed to load overtime sheets'
+        }
+      />
+    );
   }
 
   return (
@@ -193,34 +220,21 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setCreateOpen(true)}
+            onClick={() => router.push('/approvals/new/overtime')}
           >
-            New Request
+            {t('pages.hr.overtime.new')}
           </Button>
         ) : undefined
       }
     >
-      {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : 'Failed to load overtime requests'
-          }
-        />
-      ) : null}
-
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ListSearchInput
           committedValue={search}
-          onCommit={(value) => {
+          onCommit={(value: string) => {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or reason"
+          placeholder="Search sheet number"
         />
         <Select
           mode="multiple"
@@ -229,7 +243,7 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
           style={{ minWidth: 180 }}
           options={OVERTIME_STATUS_OPTIONS}
           value={statusFilter}
-          onChange={(value: OvertimeStatus[]) => {
+          onChange={(value: OvertimeSheetStatus[]) => {
             setStatusFilter(value);
             resetPage();
           }}
@@ -238,51 +252,52 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
           <Select
             allowClear
             showSearch
-            optionFilterProp="label"
             placeholder="Employee"
             style={{ minWidth: 200 }}
-            options={(usersQuery.data?.data ?? []).map((user) => ({
-              value: user.id,
-              label: formatUserName(user),
-            }))}
+            optionFilterProp="label"
             value={employeeId}
             onChange={(value: string | undefined) => {
               setEmployeeId(value);
               resetPage();
             }}
+            options={(usersQuery.data?.data ?? []).map((u) => ({
+              value: u.id,
+              label: formatUserName(u),
+            }))}
           />
         ) : null}
         <Select
           allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="Project"
-          style={{ minWidth: 220 }}
-          options={(projectsQuery.data?.data ?? []).map((project) => ({
-            value: project.id,
-            label: `${project.projectCode} — ${project.name}`,
-          }))}
-          value={projectId}
-          onChange={(value: string | undefined) => {
-            setProjectId(value);
+          placeholder="Month"
+          style={{ minWidth: 140 }}
+          options={OVERTIME_MONTH_OPTIONS}
+          value={month}
+          onChange={(value: number | undefined) => {
+            setMonth(value);
             resetPage();
           }}
         />
-        <DatePicker.RangePicker
-          value={dateRange}
-          onChange={(value) => {
-            setDateRange(value);
+        <Select
+          allowClear
+          placeholder="Year"
+          style={{ minWidth: 110 }}
+          options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
+          value={year}
+          onChange={(value: number | undefined) => {
+            setYear(value);
             resetPage();
           }}
         />
-        <TableUpdatingIndicator active={listQuery.isFetching} />
+        <TableUpdatingIndicator
+          active={listQuery.isFetching && Boolean(listQuery.data)}
+        />
       </div>
 
-      <DataTable<OvertimeRequestListItem>
+      <DataTable<OvertimeSheetListItem>
         rowKey="id"
         columns={columns}
         dataSource={rows}
-        loading={listQuery.isFetching}
+        loading={listQuery.isFetching && !listQuery.data}
         onRow={(record) => ({
           onClick: () => router.push(`/hr/overtime/${record.id}`),
           style: { cursor: 'pointer' },
@@ -291,18 +306,12 @@ export default function OvertimeRequestsListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<ClockCircleOutlined />}
-              title="No overtime requests"
-              description="Create an overtime request to start the approval flow."
+              title="No overtime sheets"
+              description="Open this month's sheet to start logging overtime."
             />
           ),
         }}
         pagination={bindMeta(meta)}
-      />
-
-      <OvertimeRequestFormDrawer
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSubmitted={() => void listQuery.refetch()}
       />
     </FormLayout>
   );
