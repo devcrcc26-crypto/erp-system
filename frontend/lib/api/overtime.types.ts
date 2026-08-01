@@ -36,6 +36,14 @@ export interface OvertimeApprovalSummary {
   tiers?: OvertimeApprovalTier[];
 }
 
+export interface OvertimeAttachmentDocument {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+  createdAt?: string;
+}
+
 export interface OvertimeEntry {
   id: string;
   sheetId: string;
@@ -51,6 +59,7 @@ export interface OvertimeEntry {
   taskDescription: string;
   createdAt: string;
   updatedAt: string;
+  documents?: OvertimeAttachmentDocument[];
 }
 
 export interface OvertimeSheetListItem {

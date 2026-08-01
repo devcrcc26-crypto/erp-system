@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
+  FolderContextType,
   LeaveRequestStatus,
   LeaveType,
   Prisma,
@@ -17,6 +19,12 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -36,6 +44,13 @@ import {
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
 
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 const USER_SELECT = {
   id: true,
   firstName: true,
@@ -44,9 +59,21 @@ const USER_SELECT = {
   chineseName: true,
 } as const;
 
+const DOCUMENT_SELECT = {
+  id: true,
+  name: true,
+  fileType: true,
+  fileSizeBytes: true,
+  createdAt: true,
+} as const;
+
 const LEAVE_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
   creator: { select: USER_SELECT },
+  documents: {
+    include: { document: { select: DOCUMENT_SELECT } },
+    orderBy: { createdAt: 'asc' as const },
+  },
   approvalRequest: {
     include: {
       category: {
@@ -76,6 +103,8 @@ export class LeaveService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: IStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -94,6 +123,7 @@ export class LeaveService
     dto: SubmitLeaveRequestDto,
     companyId: string,
     userId: string,
+    files: UploadedFile[] = [],
   ): Promise<unknown> {
     this.assertDateRange(dto.startDate, dto.endDate, dto.days);
 
@@ -179,6 +209,10 @@ export class LeaveService
         },
         { maxWait: 10_000, timeout: 30_000 },
       );
+
+      if (files.length > 0) {
+        await this.attachFiles(leaveId, companyId, userId, files);
+      }
 
       await this.leaveBalanceService.adjustBalance(
         userId,
@@ -635,9 +669,134 @@ export class LeaveService
 
   private mapLeave(row: Record<string, unknown>): Record<string, unknown> {
     const days = row.days;
+    const documents = Array.isArray(row.documents)
+      ? (row.documents as Array<{ document?: Record<string, unknown> }>)
+          .map((link) => link.document)
+          .filter((doc): doc is Record<string, unknown> => Boolean(doc))
+      : [];
     return {
       ...row,
       days: days instanceof Prisma.Decimal ? Number(days) : Number(days),
+      documents,
     };
+  }
+
+  /**
+   * Creates attachment folder (if needed) and uploads files to erp-hr.
+   */
+  private async attachFiles(
+    leaveRequestId: string,
+    companyId: string,
+    userId: string,
+    files: UploadedFile[],
+  ): Promise<void> {
+    const leave = await this.prisma.leaveRequest.findFirst({
+      where: activeOnly({ id: leaveRequestId, companyId }),
+      select: {
+        id: true,
+        requestNumber: true,
+        attachmentFolderId: true,
+      },
+    });
+    if (!leave) {
+      throw new NotFoundException('Leave request not found');
+    }
+
+    const folderId =
+      leave.attachmentFolderId ??
+      (await this.ensureLeaveAttachmentFolder(leave, companyId, userId));
+
+    for (const file of files) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(
+          `File type not allowed: ${file.mimetype}`,
+        );
+      }
+
+      const documentId = randomUUID();
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/leave/${leaveRequestId}/attachments/${safeName}`;
+
+      await this.storage.upload({
+        bucket: STORAGE_BUCKETS.HR,
+        key: fileKey,
+        body: file.buffer,
+        contentType: file.mimetype,
+        contentLength: file.size,
+      });
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.document.create({
+          data: {
+            id: documentId,
+            companyId,
+            folderId,
+            name: file.originalname,
+            fileKey,
+            fileType: file.mimetype,
+            fileSizeBytes: file.size,
+            version: 1,
+            isCurrent: true,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await tx.documentVersion.create({
+          data: {
+            documentId,
+            uploadedBy: userId,
+            versionNumber: 1,
+            fileKey,
+            fileSizeBytes: file.size,
+          },
+        });
+        await tx.leaveRequestDocument.create({
+          data: {
+            id: randomUUID(),
+            leaveRequestId,
+            documentId,
+          },
+        });
+      });
+    }
+  }
+
+  private async ensureLeaveAttachmentFolder(
+    leave: { id: string; requestNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+  ): Promise<string> {
+    if (leave.attachmentFolderId) {
+      return leave.attachmentFolderId;
+    }
+
+    const folderId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.documentFolder.create({
+        data: {
+          id: folderId,
+          companyId,
+          name: `Leave ${leave.requestNumber}`,
+          path: `/hr/leave/${leave.requestNumber}`,
+          contextType: FolderContextType.LEAVE,
+          contextId: leave.id,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.leaveRequest.update({
+        where: { id: leave.id },
+        data: {
+          attachmentFolderId: folderId,
+          updatedBy: userId,
+        },
+      });
+    });
+
+    return folderId;
   }
 }

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalRequestStatus,
+  FolderContextType,
   OvertimeSheetStatus,
   Prisma,
 } from '@prisma/client';
@@ -17,6 +19,12 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -35,6 +43,13 @@ import {
 } from '../dtos/overtime.dtos';
 import { calculateOvertimeHours } from '../utils/overtime-hours.util';
 
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 const USER_SELECT = {
   id: true,
   firstName: true,
@@ -43,11 +58,25 @@ const USER_SELECT = {
   chineseName: true,
 } as const;
 
+const DOCUMENT_SELECT = {
+  id: true,
+  name: true,
+  fileType: true,
+  fileSizeBytes: true,
+  createdAt: true,
+} as const;
+
 const SHEET_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
   creator: { select: USER_SELECT },
   entries: {
     orderBy: [{ date: 'asc' as const }, { startTime: 'asc' as const }],
+    include: {
+      documents: {
+        include: { document: { select: DOCUMENT_SELECT } },
+        orderBy: { createdAt: 'asc' as const },
+      },
+    },
   },
   approvalRequest: {
     include: {
@@ -82,6 +111,8 @@ export class OvertimeService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: IStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -391,6 +422,97 @@ export class OvertimeService
       });
     } catch (error: unknown) {
       this.rethrowEntryConflict(error);
+    }
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Uploads optional attachments for an overtime entry (erp-hr).
+   */
+  async addEntryAttachments(
+    sheetId: string,
+    entryId: string,
+    companyId: string,
+    userId: string,
+    files: UploadedFile[],
+  ): Promise<unknown> {
+    const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
+    const entry = await this.prisma.overtimeEntry.findFirst({
+      where: { id: entryId, sheetId },
+    });
+    if (!entry) {
+      throw new NotFoundException('Overtime entry not found');
+    }
+    if (!files?.length) {
+      throw new BadRequestException('At least one file is required');
+    }
+
+    const folderId = await this.ensureOvertimeAttachmentFolder(
+      {
+        id: sheet.id,
+        sheetNumber: sheet.sheetNumber,
+        attachmentFolderId: sheet.attachmentFolderId,
+      },
+      companyId,
+      userId,
+    );
+
+    for (const file of files) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(
+          `File type not allowed: ${file.mimetype}`,
+        );
+      }
+
+      const documentId = randomUUID();
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/overtime/${sheetId}/entries/${entryId}/${safeName}`;
+
+      await this.storage.upload({
+        bucket: STORAGE_BUCKETS.HR,
+        key: fileKey,
+        body: file.buffer,
+        contentType: file.mimetype,
+        contentLength: file.size,
+      });
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.document.create({
+          data: {
+            id: documentId,
+            companyId,
+            folderId,
+            name: file.originalname,
+            fileKey,
+            fileType: file.mimetype,
+            fileSizeBytes: file.size,
+            version: 1,
+            isCurrent: true,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await tx.documentVersion.create({
+          data: {
+            documentId,
+            uploadedBy: userId,
+            versionNumber: 1,
+            fileKey,
+            fileSizeBytes: file.size,
+          },
+        });
+        await tx.overtimeEntryDocument.create({
+          data: {
+            id: randomUUID(),
+            entryId,
+            documentId,
+          },
+        });
+      });
     }
 
     return this.getSheet(sheetId, companyId, userId);
@@ -721,7 +843,14 @@ export class OvertimeService
     sheetId: string,
     companyId: string,
     userId: string,
-  ): Promise<{ id: string; month: number; year: number; employeeId: string }> {
+  ): Promise<{
+    id: string;
+    month: number;
+    year: number;
+    employeeId: string;
+    sheetNumber: string;
+    attachmentFolderId: string | null;
+  }> {
     const sheet = await this.prisma.overtimeSheet.findFirst({
       where: activeOnly({ id: sheetId, companyId }),
     });
@@ -873,6 +1002,11 @@ export class OvertimeService
 
   private mapEntry(row: Record<string, unknown>): Record<string, unknown> {
     const date = row.date;
+    const documents = Array.isArray(row.documents)
+      ? (row.documents as Array<{ document?: Record<string, unknown> }>)
+          .map((link) => link.document)
+          .filter((doc): doc is Record<string, unknown> => Boolean(doc))
+      : [];
     return {
       ...row,
       date:
@@ -894,7 +1028,48 @@ export class OvertimeService
       weekendHours: this.decimalToNumber(row.weekendHours),
       holidayHours: this.decimalToNumber(row.holidayHours),
       totalHours: this.decimalToNumber(row.totalHours),
+      documents,
     };
+  }
+
+  private async ensureOvertimeAttachmentFolder(
+    sheet: {
+      id: string;
+      sheetNumber: string;
+      attachmentFolderId: string | null;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<string> {
+    if (sheet.attachmentFolderId) {
+      return sheet.attachmentFolderId;
+    }
+
+    const folderId = randomUUID();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.documentFolder.create({
+        data: {
+          id: folderId,
+          companyId,
+          name: `Overtime ${sheet.sheetNumber}`,
+          path: `/hr/overtime/${sheet.sheetNumber}`,
+          contextType: FolderContextType.OVERTIME,
+          contextId: sheet.id,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.overtimeSheet.update({
+        where: { id: sheet.id },
+        data: {
+          attachmentFolderId: folderId,
+          updatedBy: userId,
+        },
+      });
+    });
+
+    return folderId;
   }
 
   private mapSheet(row: Record<string, unknown>): Record<string, unknown> {

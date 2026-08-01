@@ -11,6 +11,7 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
 } from '@/lib/api/client';
 import type {
   ListOvertimeSheetsParams,
@@ -146,6 +147,35 @@ export function useDeleteOvertimeEntry(sheetId: string) {
       apiDelete<OvertimeSheetDetail>(
         `${OVERTIME_PATH}/${sheetId}/entries/${entryId}`,
       ),
+    onSuccess: (updated) => {
+      invalidateSheetLists(queryClient);
+      void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+    },
+  });
+}
+
+/**
+ * Uploads attachments for an overtime entry.
+ */
+export function useUploadOvertimeEntryAttachments(sheetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      entryId,
+      files,
+    }: {
+      entryId: string;
+      files: File[];
+    }) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<OvertimeSheetDetail>(
+        `${OVERTIME_PATH}/${sheetId}/entries/${entryId}/attachments`,
+        formData,
+      );
+    },
     onSuccess: (updated) => {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);

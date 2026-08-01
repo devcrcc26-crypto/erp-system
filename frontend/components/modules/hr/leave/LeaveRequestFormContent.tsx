@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -15,6 +15,7 @@ import {
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
@@ -47,6 +48,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const year = new Date().getFullYear();
   const balancesQuery = useMyLeaveBalances(year, true);
   const submitMutation = useSubmitLeaveRequest();
@@ -88,6 +90,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
         days: values.days,
         reason: values.reason?.trim() || undefined,
+        files: selectedFiles,
       });
       messageApi.success('Leave request submitted');
       if (created.approvalRequestId) {
@@ -246,6 +249,22 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
           <Form.Item name="reason" label="Reason">
             <Input.TextArea rows={4} maxLength={4000} showCount />
+          </Form.Item>
+
+          <Form.Item label="Attachments (optional)">
+            <Typography.Paragraph
+              type="secondary"
+              style={{ marginBottom: 8, fontSize: 13 }}
+            >
+              Upload supporting documents e.g. medical certificate for sick leave
+            </Typography.Paragraph>
+            <FileUploadInput
+              files={selectedFiles}
+              onChange={setSelectedFiles}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              multiple
+              disabled={submitMutation.isPending}
+            />
           </Form.Item>
         </Form>
       </div>

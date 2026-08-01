@@ -31,7 +31,10 @@ export type FolderContextType =
   | 'MEETING'
   | 'CORRESPONDENCE'
   | 'RISK'
-  | 'PUNCH_ITEM';
+  | 'PUNCH_ITEM'
+  | 'APPROVAL'
+  | 'LEAVE'
+  | 'OVERTIME';
 
 export type ProjectDocumentFolderContextType = Extract<
   FolderContextType,

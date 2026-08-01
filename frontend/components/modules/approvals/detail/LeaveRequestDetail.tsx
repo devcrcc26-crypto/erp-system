@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
@@ -191,6 +192,9 @@ export default function LeaveRequestDetail({
           <Descriptions.Item label="Days">{leave.days}</Descriptions.Item>
           <Descriptions.Item label="Reason">
             {leave.reason?.trim() || '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Attachments">
+            <AttachmentDownloadList documents={leave.documents} />
           </Descriptions.Item>
         </Descriptions>
       )}

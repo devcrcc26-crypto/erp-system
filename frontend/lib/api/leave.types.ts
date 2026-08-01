@@ -68,11 +68,20 @@ export interface LeaveRequestListItem {
   > | null;
 }
 
+export interface LeaveAttachmentDocument {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+  createdAt?: string;
+}
+
 export interface LeaveRequestDetail extends LeaveRequestListItem {
   creator?: LeaveUserSummary;
   approvalRequest?: LeaveApprovalSummary | null;
   /** Balance for this leave type / year when loaded from detail. */
   balance?: LeaveBalance | null;
+  documents?: LeaveAttachmentDocument[];
 }
 
 export interface LeaveBalance {
@@ -104,6 +113,7 @@ export interface SubmitLeaveRequestPayload {
   endDate: string;
   days: number;
   reason?: string;
+  files?: File[];
 }
 
 export interface UpdateLeaveRequestPayload {

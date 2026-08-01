@@ -22,6 +22,8 @@ import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -37,6 +39,7 @@ import {
   useOvertimeSheet,
   useSubmitOvertimeSheet,
   useUpdateOvertimeEntry,
+  useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
@@ -128,6 +131,7 @@ export default function OvertimeSheetDetailPageContent({
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
   const deleteMutation = useDeleteOvertimeEntry(sheetId);
+  const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
   const submitMutation = useSubmitOvertimeSheet(sheetId);
   const cancelMutation = useCancelOvertimeSheet(sheetId);
 
@@ -136,6 +140,7 @@ export default function OvertimeSheetDetailPageContent({
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
   const [form] = Form.useForm<EntryFormValues>();
 
   const sheet = detailQuery.data;
@@ -271,6 +276,21 @@ export default function OvertimeSheetDetailPageContent({
       setConfirmCancel(false);
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to cancel sheet', messageApi);
+    }
+  }
+
+  async function handleUploadEntryFiles(entryId: string): Promise<void> {
+    const files = entryFiles[entryId] ?? [];
+    if (files.length === 0) {
+      messageApi.warning('Select files to upload');
+      return;
+    }
+    try {
+      await uploadAttachmentsMutation.mutateAsync({ entryId, files });
+      messageApi.success('Attachments uploaded');
+      setEntryFiles((prev) => ({ ...prev, [entryId]: [] }));
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to upload attachments', messageApi);
     }
   }
 
@@ -490,6 +510,43 @@ export default function OvertimeSheetDetailPageContent({
             dataSource={sheet.entries ?? []}
             pagination={false}
             scroll={{ x: 1100 }}
+            expandable={{
+              expandedRowRender: (entry) => (
+                <div className="space-y-2 py-1">
+                  <Typography.Text strong style={{ fontSize: 13 }}>
+                    Attachments
+                  </Typography.Text>
+                  <AttachmentDownloadList documents={entry.documents} />
+                  {canEdit ? (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="min-w-[220px] flex-1">
+                        <FileUploadInput
+                          files={entryFiles[entry.id] ?? []}
+                          onChange={(files) =>
+                            setEntryFiles((prev) => ({
+                              ...prev,
+                              [entry.id]: files,
+                            }))
+                          }
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          multiple
+                          disabled={uploadAttachmentsMutation.isPending}
+                        />
+                      </div>
+                      <Button
+                        type="primary"
+                        size="small"
+                        loading={uploadAttachmentsMutation.isPending}
+                        disabled={(entryFiles[entry.id] ?? []).length === 0}
+                        onClick={() => void handleUploadEntryFiles(entry.id)}
+                      >
+                        Upload
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ),
+            }}
             locale={{
               emptyText: (
                 <Empty

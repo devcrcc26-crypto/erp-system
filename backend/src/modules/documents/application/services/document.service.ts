@@ -580,10 +580,18 @@ export class DocumentService {
         where: activeOnly({ id: folderId, companyId }),
         select: { contextType: true },
       });
-      if (folder?.contextType === FolderContextType.APPROVAL) {
+      if (
+        folder?.contextType === FolderContextType.APPROVAL ||
+        folder?.contextType === FolderContextType.LEAVE ||
+        folder?.contextType === FolderContextType.OVERTIME
+      ) {
         bucket = STORAGE_BUCKETS.HR;
       }
-    } else if (fileKey.includes('/approvals/') && fileKey.includes('/responses/')) {
+    } else if (
+      (fileKey.includes('/approvals/') && fileKey.includes('/responses/')) ||
+      fileKey.includes('/hr/leave/') ||
+      fileKey.includes('/hr/overtime/')
+    ) {
       bucket = STORAGE_BUCKETS.HR;
     }
 

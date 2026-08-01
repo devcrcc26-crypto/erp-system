@@ -9,7 +9,7 @@ import {
   apiGet,
   apiGetPaginated,
   apiPatch,
-  apiPost,
+  apiPostForm,
 } from '@/lib/api/client';
 import type {
   LeaveBalance,
@@ -115,13 +115,23 @@ export function useMyLeaveBalances(year: number, enabled = true) {
 }
 
 /**
- * Submits a leave request.
+ * Submits a leave request (multipart when files are attached).
  */
 export function useSubmitLeaveRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: SubmitLeaveRequestPayload) =>
-      apiPost<LeaveRequestDetail>(LEAVE_PATH, payload),
+    mutationFn: (payload: SubmitLeaveRequestPayload) => {
+      const formData = new FormData();
+      formData.append('leaveType', payload.leaveType);
+      formData.append('startDate', payload.startDate);
+      formData.append('endDate', payload.endDate);
+      formData.append('days', String(payload.days));
+      formData.append('reason', payload.reason ?? '');
+      for (const file of payload.files ?? []) {
+        formData.append('files', file);
+      }
+      return apiPostForm<LeaveRequestDetail>(LEAVE_PATH, formData);
+    },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });

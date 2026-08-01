@@ -68,6 +68,8 @@ enum FolderContextType {
   PUNCH_ITEM
   CHANGE_REQUEST
   APPROVAL
+  LEAVE
+  OVERTIME
 }
 
 enum NotificationChannel {
@@ -924,6 +926,8 @@ model DocumentFolder {
   submittalExternalApprovals SubmittalExternalApproval[]
   submittalExternalFeedback  SubmittalExternalFeedback[]
   approvalRequests           ApprovalRequest[]
+  leaveRequests              LeaveRequest[]
+  overtimeSheets             OvertimeSheet[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -962,6 +966,8 @@ model Document {
   issueResponses           IssueResponse[]           @relation("IssueResponseDocument")
   approvalComments         ApprovalComment[]
   approvalResponseDocuments ApprovalResponseDocument[]
+  leaveRequestDocuments     LeaveRequestDocument[]
+  overtimeEntryDocuments    OvertimeEntryDocument[]
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3367,37 +3373,55 @@ model ApprovalResponseDocument {
 // ─── Leave / HR ──────────────────────────────────────────────────────────────
 
 model LeaveRequest {
-  id                String             @id @default(uuid())
-  companyId         String             @map("company_id")
-  requestNumber     String             @map("request_number")
-  employeeId        String             @map("employee_id")
-  leaveType         LeaveType          @map("leave_type")
-  startDate         DateTime           @map("start_date") @db.Date
-  endDate           DateTime           @map("end_date") @db.Date
-  days              Decimal            @db.Decimal(4, 1)
-  reason            String?
-  status            LeaveRequestStatus @default(DRAFT)
-  approvalRequestId String?            @unique @map("approval_request_id")
-  submittedAt       DateTime?          @map("submitted_at")
-  completedAt       DateTime?          @map("completed_at")
-  createdAt         DateTime           @default(now()) @map("created_at")
-  createdBy         String             @map("created_by")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  updatedBy         String             @map("updated_by")
-  deletedAt         DateTime?          @map("deleted_at")
-  deletedBy         String?            @map("deleted_by")
+  id                 String             @id @default(uuid())
+  companyId          String             @map("company_id")
+  requestNumber      String             @map("request_number")
+  employeeId         String             @map("employee_id")
+  leaveType          LeaveType          @map("leave_type")
+  startDate          DateTime           @map("start_date") @db.Date
+  endDate            DateTime           @map("end_date") @db.Date
+  days               Decimal            @db.Decimal(4, 1)
+  reason             String?
+  status             LeaveRequestStatus @default(DRAFT)
+  approvalRequestId  String?            @unique @map("approval_request_id")
+  attachmentFolderId String?            @map("attachment_folder_id")
+  submittedAt        DateTime?          @map("submitted_at")
+  completedAt        DateTime?          @map("completed_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  createdBy          String             @map("created_by")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  updatedBy          String             @map("updated_by")
+  deletedAt          DateTime?          @map("deleted_at")
+  deletedBy          String?            @map("deleted_by")
 
-  company         Company          @relation(fields: [companyId], references: [id])
-  employee        User             @relation("LeaveEmployee", fields: [employeeId], references: [id])
-  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
-  creator         User             @relation("LeaveCreator", fields: [createdBy], references: [id])
+  company          Company               @relation(fields: [companyId], references: [id])
+  employee         User                  @relation("LeaveEmployee", fields: [employeeId], references: [id])
+  approvalRequest  ApprovalRequest?      @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id])
+  creator          User                  @relation("LeaveCreator", fields: [createdBy], references: [id])
+  documents        LeaveRequestDocument[]
 
   @@unique([companyId, requestNumber])
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
   @@index([startDate, endDate])
+  @@index([attachmentFolderId], map: "idx_leave_request_attachment_folder")
   @@map("leave_request")
+}
+
+model LeaveRequestDocument {
+  id             String   @id @default(uuid())
+  leaveRequestId String   @map("leave_request_id")
+  documentId     String   @map("document_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  document     Document     @relation(fields: [documentId], references: [id])
+
+  @@index([leaveRequestId], map: "idx_leave_request_document_leave")
+  @@index([documentId], map: "idx_leave_request_document_document")
+  @@map("leave_request_document")
 }
 
 model LeaveBalance {
@@ -3432,33 +3456,35 @@ enum OvertimeSheetStatus {
 }
 
 model OvertimeSheet {
-  id                String              @id @default(uuid())
-  companyId         String              @map("company_id")
-  sheetNumber       String              @map("sheet_number")
-  employeeId        String              @map("employee_id")
-  month             Int
-  year              Int
-  status            OvertimeSheetStatus @default(DRAFT)
-  totalRegularHours Decimal             @default(0) @map("total_regular_hours") @db.Decimal(6, 2)
-  totalNightHours   Decimal             @default(0) @map("total_night_hours") @db.Decimal(6, 2)
-  totalWeekendHours Decimal             @default(0) @map("total_weekend_hours") @db.Decimal(6, 2)
-  totalHolidayHours Decimal             @default(0) @map("total_holiday_hours") @db.Decimal(6, 2)
-  totalHours        Decimal             @default(dbgenerated("(total_regular_hours + total_night_hours + total_weekend_hours + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
-  approvalRequestId String?             @unique @map("approval_request_id")
-  submittedAt       DateTime?           @map("submitted_at")
-  completedAt       DateTime?           @map("completed_at")
-  createdAt         DateTime            @default(now()) @map("created_at")
-  createdBy         String              @map("created_by")
-  updatedAt         DateTime            @updatedAt @map("updated_at")
-  updatedBy         String              @map("updated_by")
-  deletedAt         DateTime?           @map("deleted_at")
-  deletedBy         String?             @map("deleted_by")
+  id                 String              @id @default(uuid())
+  companyId          String              @map("company_id")
+  sheetNumber        String              @map("sheet_number")
+  employeeId         String              @map("employee_id")
+  month              Int
+  year               Int
+  status             OvertimeSheetStatus @default(DRAFT)
+  totalRegularHours  Decimal             @default(0) @map("total_regular_hours") @db.Decimal(6, 2)
+  totalNightHours    Decimal             @default(0) @map("total_night_hours") @db.Decimal(6, 2)
+  totalWeekendHours  Decimal             @default(0) @map("total_weekend_hours") @db.Decimal(6, 2)
+  totalHolidayHours  Decimal             @default(0) @map("total_holiday_hours") @db.Decimal(6, 2)
+  totalHours         Decimal             @default(dbgenerated("(total_regular_hours + total_night_hours + total_weekend_hours + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
+  approvalRequestId  String?             @unique @map("approval_request_id")
+  attachmentFolderId String?             @map("attachment_folder_id")
+  submittedAt        DateTime?           @map("submitted_at")
+  completedAt        DateTime?           @map("completed_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  createdBy          String              @map("created_by")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  updatedBy          String              @map("updated_by")
+  deletedAt          DateTime?           @map("deleted_at")
+  deletedBy          String?             @map("deleted_by")
 
-  company         Company          @relation(fields: [companyId], references: [id])
-  employee        User             @relation("OvertimeEmployee", fields: [employeeId], references: [id])
-  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
-  creator         User             @relation("OvertimeCreator", fields: [createdBy], references: [id])
-  entries         OvertimeEntry[]
+  company          Company          @relation(fields: [companyId], references: [id])
+  employee         User             @relation("OvertimeEmployee", fields: [employeeId], references: [id])
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
+  creator          User             @relation("OvertimeCreator", fields: [createdBy], references: [id])
+  entries          OvertimeEntry[]
 
   @@unique([companyId, employeeId, month, year])
   @@unique([companyId, sheetNumber])
@@ -3466,6 +3492,7 @@ model OvertimeSheet {
   @@index([employeeId], map: "idx_overtime_sheet_employee")
   @@index([status], map: "idx_overtime_sheet_status")
   @@index([year, month], map: "idx_overtime_sheet_period")
+  @@index([attachmentFolderId], map: "idx_overtime_sheet_attachment_folder")
   @@map("overtime_sheet")
 }
 
@@ -3485,10 +3512,25 @@ model OvertimeEntry {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  sheet OvertimeSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  sheet     OvertimeSheet            @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  documents OvertimeEntryDocument[]
 
   @@unique([sheetId, date, startTime, endTime])
   @@index([sheetId], map: "idx_overtime_entry_sheet")
   @@index([date], map: "idx_overtime_entry_date")
   @@map("overtime_entry")
+}
+
+model OvertimeEntryDocument {
+  id         String   @id @default(uuid())
+  entryId    String   @map("entry_id")
+  documentId String   @map("document_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  entry    OvertimeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  document Document      @relation(fields: [documentId], references: [id])
+
+  @@index([entryId], map: "idx_overtime_entry_document_entry")
+  @@index([documentId], map: "idx_overtime_entry_document_document")
+  @@map("overtime_entry_document")
 }

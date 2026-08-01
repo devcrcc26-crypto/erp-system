@@ -7,9 +7,19 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -99,6 +109,39 @@ export class OvertimeController {
       dto,
       companyId,
       user.userId,
+    );
+  }
+
+  @Post(':id/entries/:entryId/attachments')
+  @ApiOperation({ summary: 'Upload attachments for an overtime entry' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
+  addEntryAttachments(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<unknown> {
+    return this.overtimeService.addEntryAttachments(
+      id,
+      entryId,
+      companyId,
+      user.userId,
+      files ?? [],
     );
   }
 

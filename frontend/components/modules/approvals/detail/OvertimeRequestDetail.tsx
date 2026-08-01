@@ -4,6 +4,7 @@ import { Alert, Button, Descriptions, Skeleton, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useOvertimeSheet } from '@/lib/query/overtime';
@@ -87,6 +88,17 @@ export default function OvertimeRequestDetail({
       dataIndex: 'taskDescription',
       key: 'taskDescription',
       ellipsis: true,
+    },
+    {
+      title: 'Attachments',
+      key: 'attachments',
+      width: 180,
+      render: (_: unknown, row: OvertimeEntry) => (
+        <AttachmentDownloadList
+          documents={row.documents}
+          emptyLabel="—"
+        />
+      ),
     },
   ];
 
