@@ -144,6 +144,17 @@ export default function ApprovalDetailPageContent({
     (r) => r.responseType === 'RESUBMIT',
   ).length;
 
+  const hasUnresolvedConditions = useMemo(() => {
+    if (!currentTier) {
+      return false;
+    }
+    return parseTierConditions(currentTier.conditions).some(
+      (c) => !c.resolved,
+    );
+  }, [currentTier]);
+
+  const actionsDisabled = hasUnresolvedConditions;
+
   const unresolvedConditions = useMemo(() => {
     if (
       !currentTier ||
@@ -439,10 +450,16 @@ export default function ApprovalDetailPageContent({
                           Conditions
                         </Typography.Text>
                         {conditions.map((condition, index) => {
+                          const conditionHasResponse = responses.some(
+                            (r) =>
+                              r.responseType === 'CONDITION_RESPONSE' &&
+                              r.conditionIndex === index,
+                          );
                           const canResolve =
                             !condition.resolved &&
                             (currentUserId === tier.approverId ||
                               currentUserId === request.requestedBy);
+                          const resolveDisabled = !conditionHasResponse;
                           const conditionResponses = responses.filter(
                             (r) =>
                               r.responseType === 'CONDITION_RESPONSE' &&
@@ -475,6 +492,12 @@ export default function ApprovalDetailPageContent({
                                   <Button
                                     type="link"
                                     size="small"
+                                    disabled={resolveDisabled}
+                                    title={
+                                      resolveDisabled
+                                        ? 'Waiting for employee response'
+                                        : undefined
+                                    }
                                     loading={resolveConditionMutation.isPending}
                                     onClick={() =>
                                       void handleResolveCondition(tier, index)
@@ -484,6 +507,22 @@ export default function ApprovalDetailPageContent({
                                   </Button>
                                 ) : null}
                               </Space>
+                              {!condition.resolved ? (
+                                <Typography.Paragraph
+                                  style={{
+                                    marginTop: 4,
+                                    marginBottom: 0,
+                                    fontSize: 12,
+                                    color: conditionHasResponse
+                                      ? tokens.colorGreen600
+                                      : tokens.colorAmber400,
+                                  }}
+                                >
+                                  {conditionHasResponse
+                                    ? '✓ Employee responded — ready to resolve'
+                                    : '⏳ Waiting for employee response'}
+                                </Typography.Paragraph>
+                              ) : null}
                               {conditionResponses.map((resp) => (
                                 <Typography.Paragraph
                                   key={resp.id}
@@ -520,19 +559,65 @@ export default function ApprovalDetailPageContent({
               <Button
                 type="primary"
                 block
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? 'Resolve all conditions before approving'
+                    : undefined
+                }
                 onClick={() => setActionModal('approve')}
               >
                 Approve
               </Button>
-              <Button block onClick={() => setActionModal('conditional')}>
+              <Button
+                block
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? 'Resolve all conditions before adding new ones'
+                    : undefined
+                }
+                onClick={() => setActionModal('conditional')}
+              >
                 Conditionally Approve
               </Button>
-              <Button block onClick={() => setActionModal('return')}>
+              <Button
+                block
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? 'Resolve all conditions before returning'
+                    : undefined
+                }
+                onClick={() => setActionModal('return')}
+              >
                 Return
               </Button>
-              <Button danger block onClick={() => setActionModal('reject')}>
+              <Button
+                danger
+                block
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? 'Resolve all conditions before rejecting'
+                    : undefined
+                }
+                onClick={() => setActionModal('reject')}
+              >
                 Reject
               </Button>
+              {actionsDisabled ? (
+                <Typography.Paragraph
+                  style={{
+                    marginBottom: 0,
+                    marginTop: 4,
+                    fontSize: 13,
+                    color: tokens.colorAmber400,
+                  }}
+                >
+                  All conditions must be resolved before taking action.
+                </Typography.Paragraph>
+              ) : null}
             </Space>
           ) : (
             <Alert

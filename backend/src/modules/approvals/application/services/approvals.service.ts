@@ -462,6 +462,16 @@ export class ApprovalsService {
     const conditions = this.parseConditions(tier.conditions);
     const unresolved = conditions.filter((c) => !c.resolved);
 
+    // Already conditionally approved: must resolve all conditions before approving
+    if (
+      unresolved.length > 0 &&
+      tier.decision === ApprovalTierDecision.CONDITIONALLY_APPROVED
+    ) {
+      throw new BadRequestException(
+        'All conditions must be resolved before taking action on this tier',
+      );
+    }
+
     if (unresolved.length > 0) {
       await this.prisma.approvalTier.update({
         where: { id: tier.id },
@@ -525,6 +535,15 @@ export class ApprovalsService {
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
 
+    const unresolvedReject = this.parseConditions(tier.conditions).filter(
+      (c) => !c.resolved,
+    );
+    if (unresolvedReject.length > 0) {
+      throw new BadRequestException(
+        'All conditions must be resolved before taking action on this tier',
+      );
+    }
+
     const now = new Date();
     await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -569,6 +588,15 @@ export class ApprovalsService {
     );
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
+
+    const unresolvedReturn = this.parseConditions(tier.conditions).filter(
+      (c) => !c.resolved,
+    );
+    if (unresolvedReturn.length > 0) {
+      throw new BadRequestException(
+        'All conditions must be resolved before taking action on this tier',
+      );
+    }
 
     await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -628,6 +656,13 @@ export class ApprovalsService {
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
 
     const conditions = this.parseConditions(tier.conditions);
+    const unresolved = conditions.filter((c) => !c.resolved);
+    if (unresolved.length > 0) {
+      throw new BadRequestException(
+        'Existing conditions must be resolved before adding new ones',
+      );
+    }
+
     conditions.push({
       text: text.trim(),
       resolved: false,
@@ -695,6 +730,19 @@ export class ApprovalsService {
     const conditions = this.parseConditions(tier.conditions);
     if (conditionIndex < 0 || conditionIndex >= conditions.length) {
       throw new BadRequestException('Invalid condition index');
+    }
+
+    const hasResponse = await this.prisma.approvalResponse.findFirst({
+      where: {
+        requestId,
+        responseType: RESPONSE_TYPE_CONDITION,
+        conditionIndex,
+      },
+    });
+    if (!hasResponse) {
+      throw new BadRequestException(
+        'Employee must respond to this condition before it can be resolved',
+      );
     }
 
     conditions[conditionIndex] = {
