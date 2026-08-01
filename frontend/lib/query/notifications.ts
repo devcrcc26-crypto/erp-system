@@ -12,13 +12,20 @@ import type {
   UnreadNotificationCount,
 } from '@/lib/api/documents.types';
 import type { PaginationParams } from '@/lib/api/types';
+import { useAuthStore } from '@/stores/auth.store';
+import { ApiRequestError } from '@/lib/api/errors';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
-  lists: () => [...notificationKeys.all, 'list'] as const,
-  list: (params: PaginationParams & { unreadOnly?: boolean }) =>
-    [...notificationKeys.lists(), params] as const,
-  unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  forUser: (userId: string) => [...notificationKeys.all, userId] as const,
+  lists: (userId: string) =>
+    [...notificationKeys.forUser(userId), 'list'] as const,
+  list: (
+    userId: string,
+    params: PaginationParams & { unreadOnly?: boolean },
+  ) => [...notificationKeys.lists(userId), params] as const,
+  unreadCount: (userId: string) =>
+    [...notificationKeys.forUser(userId), 'unread-count'] as const,
 };
 
 function toQueryString(
@@ -48,47 +55,80 @@ export function useNotifications(
     'queryKey' | 'queryFn'
   >,
 ) {
+  const userId = useAuthStore((state) => state.user?.id ?? '');
+
   return useQuery({
-    queryKey: notificationKeys.list(params),
-    queryFn: () =>
+    queryKey: notificationKeys.list(userId, params),
+    queryFn: ({ signal }) =>
       apiGetPaginated<InAppNotification>(
         `/notifications${toQueryString(params)}`,
+        { signal },
       ),
-    enabled,
+    enabled: enabled && Boolean(userId),
     retry: false,
     ...options,
   });
 }
 
 export function useUnreadNotificationCount(enabled = true) {
+  const userId = useAuthStore((state) => state.user?.id ?? '');
+
   return useQuery({
-    queryKey: notificationKeys.unreadCount(),
-    queryFn: () => apiGet<UnreadNotificationCount>('/notifications/unread-count'),
-    enabled,
+    queryKey: notificationKeys.unreadCount(userId),
+    queryFn: ({ signal }) =>
+      apiGet<UnreadNotificationCount>('/notifications/unread-count', {
+        signal,
+      }),
+    enabled: enabled && Boolean(userId),
     retry: false,
-    refetchInterval: enabled ? 60_000 : false,
+    refetchInterval: enabled && Boolean(userId) ? 60_000 : false,
   });
 }
 
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id ?? '');
 
   return useMutation({
-    mutationFn: (notificationId: string) =>
-      apiPatch<InAppNotification>(`/notifications/${notificationId}/read`),
+    mutationFn: async (notificationId: string) => {
+      try {
+        return await apiPatch<InAppNotification>(
+          `/notifications/${notificationId}/read`,
+        );
+      } catch (error) {
+        // Stale inbox rows (e.g. previous user cache) should not block navigation.
+        if (error instanceof ApiRequestError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      if (!userId) {
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: notificationKeys.forUser(userId),
+      });
     },
   });
 }
 
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.user?.id ?? '');
 
   return useMutation({
     mutationFn: () => apiPatch<{ updated: number }>('/notifications/read-all'),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      if (!userId) {
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: notificationKeys.forUser(userId),
+      });
     },
   });
 }

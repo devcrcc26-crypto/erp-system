@@ -345,7 +345,8 @@ export class ApprovalsService {
       submittedById = userId;
       pendingApproverId = undefined;
     } else if (filters.inbox === 'PENDING_MY_ACTION') {
-      pendingApproverId = userId;
+      // Handled below with a broader OR (approver pending / conditional + requester action)
+      pendingApproverId = undefined;
       submittedById = undefined;
     } else if (filters.inbox === 'ALL') {
       // Company-wide for full access only; non-full-access falls back to own requests
@@ -382,6 +383,38 @@ export class ApprovalsService {
       });
     }
 
+    if (filters.inbox === 'PENDING_MY_ACTION') {
+      andClauses.push({
+        OR: [
+          {
+            tiers: {
+              some: {
+                approverId: userId,
+                decision: {
+                  in: [
+                    ApprovalTierDecision.PENDING,
+                    ApprovalTierDecision.CONDITIONALLY_APPROVED,
+                  ],
+                },
+              },
+            },
+          },
+          {
+            requestedBy: userId,
+            status: ApprovalRequestStatus.RETURNED,
+          },
+          {
+            requestedBy: userId,
+            tiers: {
+              some: {
+                decision: ApprovalTierDecision.CONDITIONALLY_APPROVED,
+              },
+            },
+          },
+        ],
+      });
+    }
+
     const search = filters.search?.trim();
     if (search) {
       andClauses.push({
@@ -412,6 +445,47 @@ export class ApprovalsService {
       ...(andClauses.length > 0 ? { AND: andClauses } : {}),
     });
 
+    const listInclude = {
+      category: {
+        select: { id: true, code: true, name: true, icon: true },
+      },
+      requester: { select: USER_SELECT },
+      tiers: {
+        select: {
+          id: true,
+          tierOrder: true,
+          label: true,
+          decision: true,
+          approverId: true,
+          conditions: true,
+        },
+        orderBy: { tierOrder: 'asc' as const },
+      },
+      responses: {
+        select: {
+          id: true,
+          responseType: true,
+          conditionIndex: true,
+        },
+      },
+    } as const;
+
+    if (filters.inbox === 'PENDING_MY_ACTION') {
+      const candidates = await this.prisma.approvalRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: listInclude,
+      });
+
+      const filtered = candidates.filter((row) =>
+        this.requestNeedsUserAction(row, userId),
+      );
+      const total = filtered.length;
+      const pageRows = filtered.slice(skip, skip + take);
+
+      return buildPaginatedResult(pageRows, total, page, limit);
+    }
+
     const [rows, total] = await Promise.all([
       this.prisma.approvalRequest.findMany({
         where,
@@ -439,6 +513,70 @@ export class ApprovalsService {
     ]);
 
     return buildPaginatedResult(rows, total, page, limit);
+  }
+
+  /**
+   * True when the user must act: approve/resolve as approver, or resubmit/respond as requester.
+   */
+  private requestNeedsUserAction(
+    row: {
+      requestedBy: string;
+      status: ApprovalRequestStatus;
+      currentTier: number;
+      tiers: Array<{
+        tierOrder: number;
+        approverId: string;
+        decision: ApprovalTierDecision;
+        conditions: Prisma.JsonValue;
+      }>;
+      responses: Array<{
+        responseType: string;
+        conditionIndex: number | null;
+      }>;
+    },
+    userId: string,
+  ): boolean {
+    const current = row.tiers.find((t) => t.tierOrder === row.currentTier);
+
+    if (current && current.approverId === userId) {
+      if (current.decision === ApprovalTierDecision.PENDING) {
+        return true;
+      }
+      if (current.decision === ApprovalTierDecision.CONDITIONALLY_APPROVED) {
+        const conditions = this.parseConditions(current.conditions);
+        // Approver: show when at least one unresolved condition has an employee response
+        return conditions.some(
+          (condition, index) =>
+            !condition.resolved &&
+            row.responses.some(
+              (r) =>
+                r.responseType === RESPONSE_TYPE_CONDITION &&
+                r.conditionIndex === index,
+            ),
+        );
+      }
+    }
+
+    if (row.requestedBy === userId) {
+      if (row.status === ApprovalRequestStatus.RETURNED) {
+        return true;
+      }
+      if (current?.decision === ApprovalTierDecision.CONDITIONALLY_APPROVED) {
+        const conditions = this.parseConditions(current.conditions);
+        // Requester: show while any unresolved condition lacks a response
+        return conditions.some(
+          (condition, index) =>
+            !condition.resolved &&
+            !row.responses.some(
+              (r) =>
+                r.responseType === RESPONSE_TYPE_CONDITION &&
+                r.conditionIndex === index,
+            ),
+        );
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -716,11 +854,9 @@ export class ApprovalsService {
       throw new NotFoundException('Approval request not found');
     }
 
-    const canResolve =
-      userId === tier.approverId || userId === request.requestedBy;
-    if (!canResolve) {
+    if (userId !== tier.approverId) {
       throw new ForbiddenException(
-        'Only the approver or submitter may resolve conditions',
+        'Only the assigned approver may resolve conditions',
       );
     }
 

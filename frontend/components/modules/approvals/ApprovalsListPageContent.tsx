@@ -27,6 +27,7 @@ import {
   useApprovalCategories,
   useApprovalRequests,
 } from '@/lib/query/approvals';
+import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 import {
   findCurrentTier,
@@ -51,6 +52,25 @@ const STATUS_FILTER_OPTIONS: Array<{
 
 type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
 
+function getActionNeeded(
+  request: ApprovalRequestListItem,
+  currentUserId: string,
+): string {
+  if (request.requestedBy === currentUserId) {
+    if (request.status === 'RETURNED') {
+      return 'Resubmit Required';
+    }
+    const current = findCurrentTier(
+      request.tiers as ApprovalTier[] | undefined,
+      request.currentTier,
+    );
+    if (current?.decision === 'CONDITIONALLY_APPROVED') {
+      return 'Response Required';
+    }
+  }
+  return 'Approval Required';
+}
+
 /**
  * Approval inbox — Pending My Action, My Requests, and All Requests (hr.view).
  * Scoping is enforced server-side via the `inbox` query param (JWT user id).
@@ -59,6 +79,8 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
   const isFullAccess = useCanViewHr();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.data?.id ?? '';
   const { params, resetPage, bindMeta } = useTablePagination();
   const [inbox, setInbox] = useState<InboxTab>('PENDING_MY_ACTION');
   const [search, setSearch] = useState('');
@@ -151,6 +173,21 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         return <StatusBadge label={display.label} variant={display.variant} />;
       },
     },
+    ...(inbox === 'PENDING_MY_ACTION'
+      ? [
+          {
+            title: 'Action needed',
+            key: 'actionNeeded',
+            width: 160,
+            render: (_: unknown, row: ApprovalRequestListItem) => (
+              <StatusBadge
+                label={getActionNeeded(row, currentUserId)}
+                variant="warning"
+              />
+            ),
+          } satisfies ColumnsType<ApprovalRequestListItem>[number],
+        ]
+      : []),
     {
       title: 'Current tier',
       key: 'currentTier',

@@ -33,6 +33,8 @@ export function completeLocalSignIn(): void {
   if (queryClient) {
     void queryClient.removeQueries({ queryKey: profileKeys.all });
     void queryClient.removeQueries({ queryKey: ['auth', 'capabilities'] });
+    // Prevent previous-session inbox rows from briefly appearing for the new user.
+    void queryClient.removeQueries({ queryKey: ['notifications'] });
   }
 
   broadcastAuthSessionChange('signed-in');

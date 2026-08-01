@@ -93,6 +93,7 @@ export function AuthSessionSync(): React.ReactNode {
         syncSession();
         getQueryClient()?.removeQueries({ queryKey: ['profile'] });
         getQueryClient()?.removeQueries({ queryKey: ['auth', 'capabilities'] });
+        getQueryClient()?.removeQueries({ queryKey: ['notifications'] });
       }
     };
 

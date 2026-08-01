@@ -56,6 +56,35 @@ function resolveCategoryCode(request: ApprovalRequestDetail): string {
   return (request.categoryCode ?? request.category?.code ?? '').trim();
 }
 
+function resolveWaitingMessage(
+  status: ApprovalRequestDetail['status'],
+  currentTier: ApprovalTier | undefined,
+  isRequester: boolean,
+): string {
+  if (status === 'APPROVED') {
+    return 'Fully approved — no further action required';
+  }
+  if (status === 'REJECTED') {
+    return 'Request rejected — no further action required';
+  }
+  if (status === 'CANCELLED') {
+    return 'Request cancelled — no further action required';
+  }
+  if (status === 'RETURNED') {
+    return isRequester
+      ? 'Returned — update and resubmit to continue'
+      : 'Returned to requester — waiting for resubmit';
+  }
+  if (
+    currentTier &&
+    (currentTier.decision === 'PENDING' ||
+      currentTier.decision === 'CONDITIONALLY_APPROVED')
+  ) {
+    return `Waiting on ${currentTier.label} (${formatApprovalUserName(currentTier.approver)})`;
+  }
+  return 'No active approval actions';
+}
+
 function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
   const code = resolveCategoryCode(request);
   const sourceId = request.sourceId ?? null;
@@ -457,8 +486,7 @@ export default function ApprovalDetailPageContent({
                           );
                           const canResolve =
                             !condition.resolved &&
-                            (currentUserId === tier.approverId ||
-                              currentUserId === request.requestedBy);
+                            currentUserId === tier.approverId;
                           const resolveDisabled = !conditionHasResponse;
                           const conditionResponses = responses.filter(
                             (r) =>
@@ -621,14 +649,21 @@ export default function ApprovalDetailPageContent({
             </Space>
           ) : (
             <Alert
-              type="info"
+              type={
+                request.status === 'APPROVED'
+                  ? 'success'
+                  : request.status === 'REJECTED' ||
+                      request.status === 'CANCELLED'
+                    ? 'error'
+                    : 'info'
+              }
               showIcon
               style={{ marginTop: 8 }}
-              title={
-                currentTier
-                  ? `Waiting on ${currentTier.label} (${formatApprovalUserName(currentTier.approver)})`
-                  : 'No active approval actions'
-              }
+              title={resolveWaitingMessage(
+                request.status,
+                currentTier,
+                isRequester,
+              )}
             />
           )}
         </aside>

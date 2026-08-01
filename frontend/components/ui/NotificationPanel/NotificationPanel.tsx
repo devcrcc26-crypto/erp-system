@@ -105,7 +105,7 @@ export default function NotificationPanel(): React.ReactNode {
   function handleNavigate(notification: InAppNotification): void {
     if (!notification.link) return;
     if (!notification.readAt) {
-      void markRead.mutateAsync(notification.id);
+      void markRead.mutateAsync(notification.id).catch(() => undefined);
     }
     setOpen(false);
     router.push(notification.link);
@@ -163,7 +163,9 @@ export default function NotificationPanel(): React.ReactNode {
             <NotificationItem
               key={notification.id}
               notification={notification}
-              onRead={(id) => void markRead.mutateAsync(id)}
+              onRead={(id) =>
+                void markRead.mutateAsync(id).catch(() => undefined)
+              }
               onNavigate={handleNavigate}
             />
           ))}
