@@ -134,6 +134,37 @@ async function main(): Promise<void> {
     console.log(
       `hr.view seeded for ${roles.length} role(s): ${roles.map((r) => r.name).join(', ')}`,
     );
+
+    // Ensure Project Manager / Project Administrator never retain HR access.
+    const pmRoles = await prisma.role.findMany({
+      where: {
+        companyId: company.id,
+        deletedAt: null,
+        name: { in: ['Project Manager', 'Project Administrator'] },
+      },
+      select: { id: true },
+    });
+    const hrModules = await prisma.permission.findMany({
+      where: { module: { in: ['hr', 'leave', 'overtime'] } },
+      select: { id: true },
+    });
+    if (pmRoles.length > 0 && hrModules.length > 0) {
+      const revoked = await prisma.rolePermission.updateMany({
+        where: {
+          roleId: { in: pmRoles.map((r) => r.id) },
+          permissionId: { in: hrModules.map((p) => p.id) },
+          deletedAt: null,
+        },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+      console.log(
+        `Revoked ${revoked.count} HR module permission(s) from Project Manager / Project Administrator`,
+      );
+    }
   } finally {
     await prisma.$disconnect();
   }

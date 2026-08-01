@@ -37,7 +37,7 @@ import {
   usePermissionsLoading,
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
-import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers, useCanViewHr, useCanAccessLeave, useCanAccessOvertime } from '@/hooks/use-auth-capabilities';
+import { useCanViewAuditLogs, useCanManageRoles, useCanManageUsers, useCanViewHr } from '@/hooks/use-auth-capabilities';
 import {
   useCanViewDepartmentsNav,
   useCanViewDisciplinesCatalogNav,
@@ -306,8 +306,6 @@ export default function MainNavPanel({
   const canViewDailyLogs = useCanViewDailyLogs();
   const canViewAuditLogs = useCanViewAuditLogs();
   const canViewHr = useCanViewHr();
-  const canAccessLeave = useCanAccessLeave();
-  const canAccessOvertime = useCanAccessOvertime();
   const canManageUsers = useCanManageUsers();
   const canManageRoles = useCanManageRoles();
   const canViewDepartments = useCanViewDepartmentsNav();
@@ -330,8 +328,6 @@ export default function MainNavPanel({
     canViewDailyLogs: !permLoading && canViewDailyLogs,
     canViewApprovals: !permLoading,
     canViewHr: !permLoading && canViewHr,
-    canAccessLeave: !permLoading && canAccessLeave,
-    canAccessOvertime: !permLoading && canAccessOvertime,
     canViewAuditLogs: !permLoading && canViewAuditLogs,
     canManageUsers: !permLoading && canManageUsers,
     canManageRoles: !permLoading && canManageRoles,

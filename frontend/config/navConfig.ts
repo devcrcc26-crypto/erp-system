@@ -102,8 +102,6 @@ export interface IconRailVisibility {
   canViewDailyLogs: boolean;
   canViewApprovals: boolean;
   canViewHr: boolean;
-  canAccessLeave: boolean;
-  canAccessOvertime: boolean;
   canViewAuditLogs: boolean;
   canManageUsers: boolean;
   canManageRoles: boolean;
@@ -135,8 +133,6 @@ export function buildIconRailNav(
     canViewDailyLogs,
     canViewApprovals,
     canViewHr,
-    canAccessLeave,
-    canAccessOvertime,
     canViewAuditLogs,
     canManageUsers,
     canManageRoles,
@@ -316,14 +312,14 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.leaveRequests',
         href: '/hr/leave-requests',
         iconKey: 'hr-leave',
-        visible: canAccessLeave,
+        visible: canViewHr,
       },
       {
         key: '/hr/overtime',
         labelKey: 'nav.hr.overtime',
         href: '/hr/overtime',
         iconKey: 'hr-overtime',
-        visible: canAccessOvertime,
+        visible: canViewHr,
       },
       {
         key: '/hr/expense-claims',
@@ -431,7 +427,10 @@ export function buildIconRailNav(
 
   return {
     topItems,
-    groups: [projectManagement, humanResources],
+    groups: [
+      projectManagement,
+      ...(canViewHr ? [humanResources] : []),
+    ],
     standalone,
   };
 }

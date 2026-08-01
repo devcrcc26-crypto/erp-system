@@ -10,6 +10,8 @@ import {
 import {
   FULL_PERMISSION_FLAGS,
   isSystemAdministrator,
+  isTrueSystemAdministrator,
+  PROJECT_ADMIN_EXCLUDED_MODULES,
 } from './system-admin.util';
 
 @Injectable()
@@ -81,9 +83,19 @@ export class PermissionService {
 
     const roleNames = companyRoles.map((ur) => ur.role.name);
     if (isSystemAdministrator(roleNames)) {
+      const trueSysAdmin = isTrueSystemAdministrator(roleNames);
       const result: Record<string, PermissionFlags> = {};
       for (const module of uniqueModules) {
-        result[module] = { ...FULL_PERMISSION_FLAGS };
+        // Project Administrator: full PM/system access except HR modules.
+        // System Administrator: unrestricted including HR.
+        if (
+          !trueSysAdmin &&
+          PROJECT_ADMIN_EXCLUDED_MODULES.has(module)
+        ) {
+          result[module] = { ...EMPTY_PERMISSION_FLAGS };
+        } else {
+          result[module] = { ...FULL_PERMISSION_FLAGS };
+        }
       }
       return result;
     }

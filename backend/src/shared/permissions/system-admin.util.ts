@@ -9,6 +9,13 @@ const FULL_ACCESS_ROLES = new Set([
   PROJECT_ADMINISTRATOR_ROLE,
 ]);
 
+/** HR modules — Project Administrator does not receive these via full-access bypass. */
+export const PROJECT_ADMIN_EXCLUDED_MODULES = new Set([
+  'hr',
+  'leave',
+  'overtime',
+]);
+
 export const FULL_PERMISSION_FLAGS: PermissionFlags = {
   canView: true,
   canCreate: true,
@@ -24,4 +31,20 @@ export const FULL_PERMISSION_FLAGS: PermissionFlags = {
  */
 export function isSystemAdministrator(roleNames: readonly string[]): boolean {
   return roleNames.some((name) => FULL_ACCESS_ROLES.has(name));
+}
+
+/**
+ * Returns true when the user holds System Administrator (not merely Project Admin).
+ */
+export function isTrueSystemAdministrator(
+  roleNames: readonly string[],
+): boolean {
+  return roleNames.includes(SYSTEM_ADMINISTRATOR_ROLE);
+}
+
+/**
+ * Returns true when the user holds Project Administrator.
+ */
+export function isProjectAdministrator(roleNames: readonly string[]): boolean {
+  return roleNames.includes(PROJECT_ADMINISTRATOR_ROLE);
 }

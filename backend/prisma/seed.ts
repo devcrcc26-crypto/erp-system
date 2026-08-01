@@ -528,17 +528,20 @@ function extendedPmModulePermissionFlags(
 
 function projectAdministratorPermissionFlags(
   roleName: string,
-  _module: string,
-  _action: string,
+  module: string,
+  action: string,
 ): PermissionFlags | null {
   if (roleName !== 'Project Administrator') {
     return null;
   }
 
   // Project Administrators receive full system access at runtime via
-  // isSystemAdministrator() in PermissionService, so seed-time flags are
-  // only a fallback.  Grant everything so the seeded RolePermission rows
-  // don't artificially restrict anything if the bypass is ever disabled.
+  // isSystemAdministrator() in PermissionService, except HR modules.
+  // Seed-time flags mirror that: grant everything except hr / leave / overtime.
+  if (module === 'hr' || module === 'leave' || module === 'overtime') {
+    return null;
+  }
+
   return fullPermissionFlags();
 }
 
@@ -920,6 +923,41 @@ async function upsertRolePermission(
 }
 
 /**
+ * Soft-deletes any hr / leave / overtime permissions on the given roles.
+ * Ensures Project Manager and Project Administrator never retain HR access.
+ */
+async function revokeHrModulePermissionsForRoles(
+  roleIds: string[],
+): Promise<void> {
+  if (roleIds.length === 0) {
+    return;
+  }
+
+  const hrPermissions = await prisma.permission.findMany({
+    where: {
+      module: { in: ['hr', 'leave', 'overtime'] },
+    },
+    select: { id: true },
+  });
+  if (hrPermissions.length === 0) {
+    return;
+  }
+
+  await prisma.rolePermission.updateMany({
+    where: {
+      roleId: { in: roleIds },
+      permissionId: { in: hrPermissions.map((p) => p.id) },
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+      deletedBy: SYSTEM_USER_ID,
+      updatedBy: SYSTEM_USER_ID,
+    },
+  });
+}
+
+/**
  * Removes legacy duplicate role_permission rows before idempotent re-seeding.
  */
 async function deduplicateRolePermissions(): Promise<void> {
@@ -1156,6 +1194,7 @@ async function main(): Promise<void> {
   const pmRoleNames = [
     'Managing Director',
     'Project Manager',
+    'Project Administrator',
     'Site Engineer',
     'Document Controller',
     'Safety Officer',
@@ -1181,6 +1220,13 @@ async function main(): Promise<void> {
       await upsertRolePermission(roleId, permission.id, flags);
     }
   }
+
+  // Project Manager / Project Administrator must never hold HR module permissions.
+  await revokeHrModulePermissionsForRoles(
+    ['Project Manager', 'Project Administrator']
+      .map((name) => roleMap.get(name))
+      .filter((id): id is string => Boolean(id)),
+  );
 
   const reportsOnlyRoleNames = [
     'Finance Manager',
