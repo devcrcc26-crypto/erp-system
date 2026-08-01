@@ -26,10 +26,11 @@ import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { useAuditLogs } from '@/lib/query/audit-logs';
 import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { layout } from '@/lib/theme/layout';
 
 function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString();
+  return formatDisplayDateTime(value);
 }
 
 function formatLogUserName(log: AuditLog): string {

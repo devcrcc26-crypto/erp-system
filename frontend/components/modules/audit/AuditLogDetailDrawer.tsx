@@ -7,10 +7,11 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatUserName } from '@/lib/utils/user-display';
 
 function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString();
+  return formatDisplayDateTime(value);
 }
 
 function formatLogUserName(log: AuditLog): string {

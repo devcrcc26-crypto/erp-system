@@ -600,7 +600,7 @@ export default function DesignPackageDetailPageContent({
           <div>
             <p className="text-xs text-slate-500">Submitted</p>
             <p className="text-sm font-medium">
-              {pkg.submittedAt ? new Date(pkg.submittedAt).toLocaleDateString() : '-'}
+              {pkg.submittedAt ? formatProjectDate(pkg.submittedAt) : '-'}
             </p>
           </div>
         </div>

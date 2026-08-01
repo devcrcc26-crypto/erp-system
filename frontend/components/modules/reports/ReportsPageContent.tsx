@@ -37,6 +37,7 @@ import type { PortfolioSummary, SystemReportPdfLabels } from '@/lib/api/reportin
 import { usePortfolioSummary } from '@/lib/query/reports';
 import { useAllProjects } from '@/lib/query/projects';
 import { formatUserName } from '@/lib/utils/user-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { normalizePortfolioSummary } from '@/lib/utils/portfolio-summary';
 import { exportSystemReportPdf } from '@/lib/utils/system-report-pdf';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
@@ -752,7 +753,7 @@ export default function ReportsPageContent(): React.ReactNode {
               {t('pages.systemReports.generatedAt')}
             </p>
             <p className="mt-1 text-[13px]" style={{ color: tokens.colorTextPrimary }}>
-              {new Date(summary.generatedAt).toLocaleString()}
+              {formatDisplayDateTime(summary.generatedAt)}
             </p>
           </div>
           <div>

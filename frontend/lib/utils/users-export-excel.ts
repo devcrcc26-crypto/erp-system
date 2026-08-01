@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import type { User } from '@/lib/api/types';
 import { formatUserDisciplineLabel } from '@/lib/constants/user-discipline';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 
 export interface UsersExportLabels {
   sheetName: string;
@@ -46,7 +47,7 @@ function formatLastLogin(value: string | null): string {
   if (!value) {
     return '-';
   }
-  return new Date(value).toLocaleString();
+  return formatDisplayDateTime(value);
 }
 
 function sortUsers(users: User[]): User[] {

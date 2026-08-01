@@ -152,6 +152,7 @@ function renderFieldInput(
         <DatePicker
           id={id}
           className="w-full"
+          format="DD/MM/YYYY"
           disabled={disabled}
           value={toDayjs(value)}
           onChange={(next: Dayjs | null) =>

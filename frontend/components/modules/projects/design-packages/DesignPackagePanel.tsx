@@ -38,6 +38,7 @@ import { useProjectDiscipline } from '@/lib/query/disciplines';
 import { useRoleLens } from '@/components/modules/projects/workspaces/RoleLensProvider';
 import { useCanViewMyWork, useEpcCapabilities, usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import ProjectedStatusBadge from '@/components/ui/EdvStatusBadge/ProjectedStatusBadge';
+import { formatProjectDate } from '@/lib/utils/project-display';
 import PackageStatusBadge from '@/components/ui/EdvStatusBadge/PackageStatusBadge';
 import DesignPackageBuilder from '@/components/modules/projects/design-packages/DesignPackageBuilder';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -204,7 +205,7 @@ export default function DesignPackagePanel({
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       render: (value: string | null) =>
-        value ? new Date(value).toLocaleDateString() : '-',
+        value ? formatProjectDate(value) : '-',
     },
     {
       title: '',

@@ -232,7 +232,7 @@ export class ApprovalsService {
         eventType: APPROVAL_PENDING_EVENT,
         subject: `Approval required ? ${created.requestNumber}`,
         body: `${dto.title} (${created.requestNumber}) is awaiting your approval.`,
-        link: `/approval-requests/${created.id}`,
+        link: `/approvals/${created.id}`,
         variables: {
           requestId: created.id,
           requestNumber: created.requestNumber,
@@ -451,7 +451,7 @@ export class ApprovalsService {
         eventType: APPROVAL_PENDING_EVENT,
         subject: `Approval required ? ${request.requestNumber}`,
         body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
-        link: `/approval-requests/${request.id}`,
+        link: `/approvals/${request.id}`,
         variables: {
           requestId: request.id,
           requestNumber: request.requestNumber,
@@ -554,7 +554,7 @@ export class ApprovalsService {
       body:
         note?.trim() ||
         `Your approval request ${request.requestNumber} was returned for revision.`,
-      link: `/approval-requests/${request.id}`,
+      link: `/approvals/${request.id}`,
       variables: {
         requestId: request.id,
         requestNumber: request.requestNumber,
@@ -694,7 +694,7 @@ export class ApprovalsService {
         eventType: APPROVAL_PENDING_EVENT,
         subject: `Approval required`,
         body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
-        link: `/approval-requests/${request.id}`,
+        link: `/approvals/${request.id}`,
         variables: { requestId: request.id },
       });
     } else if (shouldAdvance) {

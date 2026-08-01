@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { formatDisplayDateTime } from './date-format';
 import { buildUsersExportRows } from './users-export-excel';
 
 describe('buildUsersExportRows', () => {
@@ -81,7 +82,7 @@ describe('buildUsersExportRows', () => {
       discipline: 'Architecture\n建筑',
       department: 'Architecture',
       role: 'Site Engineer',
-      lastLogin: new Date('2024-06-01T10:00:00.000Z').toLocaleString(),
+      lastLogin: formatDisplayDateTime('2024-06-01T10:00:00.000Z'),
     });
 
     const shimeles = rows.find((row) => row.name === 'Shimeles Ayele');

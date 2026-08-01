@@ -21,6 +21,7 @@ import {
   useSubmitApprovalRequest,
 } from '@/lib/query/approvals';
 import { tokens } from '@/lib/theme/tokens';
+import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const CATEGORY_ROUTES: Record<string, string> = {
@@ -53,7 +54,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
     if (!selectedCategory) {
       return '';
     }
-    const today = new Date().toLocaleDateString();
+    const today = formatDisplayDate(new Date());
     return `${selectedCategory.name} — ${today}`;
   }, [selectedCategory]);
 

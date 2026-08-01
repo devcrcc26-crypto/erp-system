@@ -11,6 +11,7 @@ import {
   formatProjectStatus,
   formatProjectType,
 } from '@/lib/utils/project-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 
 const TEAL: [number, number, number] = [16, 152, 138];
 const NAVY: [number, number, number] = [27, 43, 75];
@@ -79,7 +80,7 @@ export function exportSystemReportPdf(input: SystemReportPdfInput): void {
   doc.setTextColor(...MUTED);
   doc.setFontSize(8);
   doc.text(
-    `${labels.generatedAt}: ${new Date(summary.generatedAt).toLocaleString()}`,
+    `${labels.generatedAt}: ${formatDisplayDateTime(summary.generatedAt)}`,
     PAGE_MARGIN,
     y,
   );

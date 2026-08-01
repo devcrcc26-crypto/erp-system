@@ -10,6 +10,7 @@ import {
   formatProjectStatus,
   formatProjectType,
 } from '@/lib/utils/project-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 
 const TEAL: [number, number, number] = [16, 152, 138];
 const NAVY: [number, number, number] = [27, 43, 75];
@@ -98,7 +99,7 @@ export function exportProjectsPdf(input: ProjectsExportPdfInput): void {
   y = 40;
   doc.setTextColor(...MUTED);
   doc.setFontSize(8);
-  doc.text(`Generated: ${new Date(generatedAt).toLocaleString()}`, PAGE_MARGIN, y);
+  doc.text(`Generated: ${formatDisplayDateTime(generatedAt)}`, PAGE_MARGIN, y);
   doc.text(`Prepared by: ${preparedBy}`, pageWidth / 2, y);
   y += 8;
 

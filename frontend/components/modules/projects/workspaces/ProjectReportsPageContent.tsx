@@ -40,6 +40,7 @@ import {
   formatProjectStatus,
   projectStatusVariant,
 } from '@/lib/utils/project-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatProjectedStatus } from '@/lib/utils/epc-display';
 import { formatTaskStatus } from '@/lib/utils/pm-status-display';
 import {
@@ -772,7 +773,7 @@ export default function ProjectReportsPageContent({
                 {t('pages.projectReports.generatedAt')}
               </p>
               <p className="mt-1 text-[13px]" style={{ color: tokens.colorTextPrimary }}>
-                {new Date().toLocaleString()}
+                {formatDisplayDateTime(new Date())}
               </p>
             </div>
           </div>

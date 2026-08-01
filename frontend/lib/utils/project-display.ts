@@ -117,11 +117,10 @@ export function projectStatusVariant(status: ProjectStatus): StatusBadgeVariant 
   return projectStatusBadgeVariant(status);
 }
 
+import { formatDisplayDate } from '@/lib/utils/date-format';
+
 export function formatProjectDate(value: string | null): string {
-  if (!value) {
-    return '-';
-  }
-  return new Date(value).toLocaleDateString();
+  return formatDisplayDate(value);
 }
 
 export function formatProjectBudget(
