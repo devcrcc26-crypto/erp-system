@@ -20,6 +20,7 @@ import type {
   SubmitFlightApplicationPayload,
 } from '@/lib/api/flight.types';
 import type { PaginationMeta } from '@/lib/api/types';
+import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
@@ -236,6 +237,8 @@ export function useAcknowledgeTicket(id: string) {
       ),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });

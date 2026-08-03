@@ -2,6 +2,7 @@
 
 import {
   Alert,
+  Button,
   Descriptions,
   Skeleton,
   Space,
@@ -14,9 +15,14 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
 import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTicketAssignmentPanel';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FlightPassenger } from '@/lib/api/flight.types';
-import { useFlightApplication } from '@/lib/query/flight';
+import {
+  useAcknowledgeTicket,
+  useFlightApplication,
+} from '@/lib/query/flight';
+import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 import {
   flightStatusVariant,
@@ -27,11 +33,12 @@ import {
   formatVisaStatus,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 /**
- * Read-only flight application body for the Approvals detail inbox.
+ * Flight application body for the Approvals detail inbox (includes passenger ack).
  */
 export default function FlightApplicationDetail({
   sourceId,
@@ -39,8 +46,33 @@ export default function FlightApplicationDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const messageApi = useAppMessage();
+  const currentUser = useCurrentUser();
   const detailQuery = useFlightApplication(sourceId);
   const application = detailQuery.data;
+  const acknowledgeTicket = useAcknowledgeTicket(sourceId);
+
+  const currentUserPassenger = application?.passengers.find(
+    (p) => p.employeeId === currentUser.data?.id,
+  );
+
+  const canAcknowledge =
+    Boolean(currentUserPassenger) &&
+    currentUserPassenger?.acknowledgementStatus === 'PENDING' &&
+    (Boolean(currentUserPassenger?.ticketDocumentId) ||
+      Boolean(application?.combinedTicketDocumentId));
+
+  async function handleAcknowledge(): Promise<void> {
+    if (!currentUserPassenger) {
+      return;
+    }
+    try {
+      await acknowledgeTicket.mutateAsync(currentUserPassenger.id);
+      messageApi.success('Ticket acknowledged');
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to acknowledge ticket', messageApi);
+    }
+  }
 
   if (detailQuery.isLoading && !application) {
     return (
@@ -127,6 +159,61 @@ export default function FlightApplicationDetail({
       <div className="mb-4">
         <FlightCurrentStepBanner application={application} />
       </div>
+
+      {canAcknowledge && currentUserPassenger ? (
+        <div
+          className="mb-4 rounded-lg border px-4 py-3"
+          style={{
+            background: tokens.colorAmber50,
+            borderColor: tokens.colorAmber400,
+            color: tokens.colorAmber400,
+          }}
+        >
+          <Typography.Text
+            strong
+            style={{
+              display: 'block',
+              marginBottom: 8,
+              color: tokens.colorAmber400,
+            }}
+          >
+            Your ticket is ready — please acknowledge receipt
+          </Typography.Text>
+          {application.combinedTicket ? (
+            <div className="mb-3">
+              <Typography.Text
+                type="secondary"
+                style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
+              >
+                Combined Ticket:
+              </Typography.Text>
+              <AttachmentDownloadList
+                documents={[application.combinedTicket]}
+              />
+            </div>
+          ) : null}
+          {currentUserPassenger.ticket ? (
+            <div className="mb-3">
+              <Typography.Text
+                type="secondary"
+                style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
+              >
+                Your Ticket:
+              </Typography.Text>
+              <AttachmentDownloadList
+                documents={[currentUserPassenger.ticket]}
+              />
+            </div>
+          ) : null}
+          <Button
+            type="primary"
+            loading={acknowledgeTicket.isPending}
+            onClick={() => void handleAcknowledge()}
+          >
+            Acknowledge Receipt
+          </Button>
+        </div>
+      ) : null}
 
       <Descriptions bordered size="small" column={2}>
         <Descriptions.Item label="Submitted by">

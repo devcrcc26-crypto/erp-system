@@ -9,6 +9,7 @@ import {
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
+  FlightAcknowledgementStatus,
   FlightApplicationStatus,
   FolderContextType,
   LeaveRequestStatus,
@@ -365,7 +366,9 @@ export class ApprovalsService {
 
     const andClauses: Prisma.ApprovalRequestWhereInput[] = [];
 
-    if (!isFullAccess) {
+    // PENDING_MY_ACTION uses its own OR scope (includes flight ticket ack); skip the
+    // default "submitted or tier approver" gate so passengers can see ack items.
+    if (!isFullAccess && filters.inbox !== 'PENDING_MY_ACTION') {
       andClauses.push({
         OR: [
           { requestedBy: userId },
@@ -389,7 +392,47 @@ export class ApprovalsService {
       });
     }
 
+    let flightAckRequestIds = new Set<string>();
+
     if (filters.inbox === 'PENDING_MY_ACTION') {
+      const flightsPendingAck = await this.prisma.flightPassenger.findMany({
+        where: {
+          employeeId: userId,
+          acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+          AND: [
+            {
+              application: {
+                companyId,
+                deletedAt: null,
+                status: FlightApplicationStatus.APPROVED,
+                approvalRequestId: { not: null },
+              },
+            },
+            {
+              OR: [
+                { ticketDocumentId: { not: null } },
+                {
+                  application: {
+                    combinedTicketDocumentId: { not: null },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        select: {
+          application: {
+            select: { approvalRequestId: true },
+          },
+        },
+      });
+
+      flightAckRequestIds = new Set(
+        flightsPendingAck
+          .map((row) => row.application?.approvalRequestId)
+          .filter((id): id is string => Boolean(id)),
+      );
+
       andClauses.push({
         OR: [
           {
@@ -417,6 +460,9 @@ export class ApprovalsService {
               },
             },
           },
+          ...(flightAckRequestIds.size > 0
+            ? [{ id: { in: [...flightAckRequestIds] } }]
+            : []),
         ],
       });
     }
@@ -484,10 +530,14 @@ export class ApprovalsService {
       });
 
       const filtered = candidates.filter((row) =>
-        this.requestNeedsUserAction(row, userId),
+        this.requestNeedsUserAction(row, userId, flightAckRequestIds),
       );
       const total = filtered.length;
-      const pageRows = filtered.slice(skip, skip + take);
+      const pageRows = filtered.slice(skip, skip + take).map((row) => ({
+        ...row,
+        categoryCode: row.category?.code ?? null,
+        needsTicketAcknowledgement: flightAckRequestIds.has(row.id),
+      }));
 
       return buildPaginatedResult(pageRows, total, page, limit);
     }
@@ -538,10 +588,12 @@ export class ApprovalsService {
   }
 
   /**
-   * True when the user must act: approve/resolve as approver, or resubmit/respond as requester.
+   * True when the user must act: approve/resolve as approver, resubmit/respond as
+   * requester, or acknowledge a flight ticket as passenger.
    */
   private requestNeedsUserAction(
     row: {
+      id?: string;
       requestedBy: string;
       status: ApprovalRequestStatus;
       currentTier: number;
@@ -557,7 +609,12 @@ export class ApprovalsService {
       }>;
     },
     userId: string,
+    flightAckRequestIds: Set<string> = new Set(),
   ): boolean {
+    if (row.id && flightAckRequestIds.has(row.id)) {
+      return true;
+    }
+
     const current = row.tiers.find((t) => t.tierOrder === row.currentTier);
 
     if (current && current.approverId === userId) {
@@ -1372,8 +1429,10 @@ export class ApprovalsService {
    */
   private async assertCanViewRequest(
     request: {
+      id: string;
       requestedBy: string;
       tiers: Array<{ approverId: string }>;
+      flightApplication?: { id: string } | null;
     },
     companyId: string,
     userId: string,
@@ -1385,11 +1444,26 @@ export class ApprovalsService {
 
     const isRequester = request.requestedBy === userId;
     const isApprover = request.tiers.some((t) => t.approverId === userId);
-    if (!isRequester && !isApprover) {
-      throw new ForbiddenException(
-        'You do not have access to this approval request',
-      );
+    if (isRequester || isApprover) {
+      return;
     }
+
+    if (request.flightApplication?.id) {
+      const passenger = await this.prisma.flightPassenger.findFirst({
+        where: {
+          applicationId: request.flightApplication.id,
+          employeeId: userId,
+        },
+        select: { id: true },
+      });
+      if (passenger) {
+        return;
+      }
+    }
+
+    throw new ForbiddenException(
+      'You do not have access to this approval request',
+    );
   }
 
   private async nextRequestNumber(prefix: string): Promise<string> {

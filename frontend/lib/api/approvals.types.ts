@@ -99,6 +99,10 @@ export interface ApprovalRequestListItem {
   createdAt: string;
   updatedAt: string;
   category?: Pick<ApprovalCategorySummary, 'id' | 'code' | 'name' | 'icon'>;
+  /** Mirrored category code for list action badges (Pending My Action). */
+  categoryCode?: string | null;
+  /** True when the current user must acknowledge a flight ticket on this request. */
+  needsTicketAcknowledgement?: boolean;
   requester?: ApprovalUserSummary;
   tiers?: Array<
     Pick<

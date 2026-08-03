@@ -829,6 +829,21 @@ export class FlightService
       },
     });
 
+    const passengerName = await this.prisma.user.findFirst({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const displayName = passengerName
+      ? `${passengerName.firstName} ${passengerName.lastName}`.trim()
+      : 'A passenger';
+
+    await this.notifyHrPassengerAcknowledged(
+      companyId,
+      id,
+      app.applicationNumber,
+      displayName,
+    );
+
     // Check if all passengers have now acknowledged
     const allPassengers = await this.prisma.flightPassenger.findMany({
       where: { applicationId: id },
@@ -1248,6 +1263,42 @@ export class FlightService
     } catch (error: unknown) {
       this.logger.warn(
         `Failed to notify HR for ticket booking on ${applicationId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  /**
+   * Notifies HR Officers that a passenger acknowledged their ticket.
+   */
+  private async notifyHrPassengerAcknowledged(
+    companyId: string,
+    applicationId: string,
+    applicationNumber: string,
+    passengerName: string,
+  ): Promise<void> {
+    try {
+      const hrOfficers =
+        await this.hrApprovalChain.findActiveUsersByPrimaryRoleName(
+          companyId,
+          'HR Officer',
+        );
+      for (const officer of hrOfficers) {
+        await this.notifySafe(
+          companyId,
+          officer.id,
+          'flight.ticket_acknowledged',
+          {
+            subject: `Ticket acknowledged: ${applicationNumber}`,
+            body: `${passengerName} acknowledged their ticket for flight application ${applicationNumber}.`,
+            link: `/hr/flight-applications/${applicationId}`,
+          },
+        );
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Failed to notify HR of passenger ack on ${applicationId}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );

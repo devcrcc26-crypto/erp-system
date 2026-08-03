@@ -57,6 +57,10 @@ function getActionNeeded(
   request: ApprovalRequestListItem,
   currentUserId: string,
 ): string {
+  if (request.needsTicketAcknowledgement) {
+    return 'Acknowledge Ticket';
+  }
+
   if (request.requestedBy === currentUserId) {
     if (request.status === 'RETURNED') {
       return 'Resubmit Required';
