@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Select, Tag } from 'antd';
+import { Alert, Button, DatePicker, Select, Tabs, Tag } from 'antd';
 import { SendOutlined, PlusOutlined } from '@ant-design/icons';
 import { tokens } from '@/lib/theme/tokens';
 import type { ColumnsType } from 'antd/es/table';
@@ -30,6 +30,7 @@ import type {
 } from '@/lib/api/flight.types';
 import {
   useFlightApplications,
+  useFlightNeedsTicketCount,
 } from '@/lib/query/flight';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
@@ -38,10 +39,13 @@ import {
   formatFlightStatus,
   formatFlightSubmitterName,
   formatTripType,
+  getCurrentStepLabel,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+
+type ListTab = 'ALL' | 'NEEDS_TICKET';
 
 /**
  * Company or personal flight application list with filters.
@@ -55,6 +59,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const canManage = useCanManageFlight();
   const { params, resetPage, bindMeta } = useTablePagination();
 
+  const [listTab, setListTab] = useState<ListTab>('ALL');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<FlightApplicationStatus[]>([]);
   const [internationalFilter, setInternationalFilter] = useState<
@@ -65,11 +70,17 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     [Dayjs | null, Dayjs | null] | null
   >(null);
 
+  const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
+
   const listParams = useMemo(
     () => ({
       ...params,
       search: search.trim() || undefined,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
+      status:
+        needsTicketTab || statusFilter.length === 0
+          ? undefined
+          : statusFilter,
+      needsTicket: needsTicketTab ? true : undefined,
       isInternational:
         internationalFilter === 'true'
           ? true
@@ -88,6 +99,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       submittedById,
       dateRange,
       canViewHr,
+      needsTicketTab,
     ],
   );
 
@@ -95,6 +107,9 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     listParams,
     canViewHr || canAccess,
   );
+
+  const needsTicketCountQuery = useFlightNeedsTicketCount(canViewHr);
+  const needsTicketCount = needsTicketCountQuery.data ?? 0;
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
@@ -184,15 +199,25 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     },
     {
       title: 'Current Step',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 150,
-      render: (value: string | null | undefined) =>
-        value ? (
-          <Tag color="blue">{value}</Tag>
-        ) : (
-          <span style={{ color: tokens.colorTextSecondary }}>—</span>
-        ),
+      key: 'currentStep',
+      width: 180,
+      render: (_: unknown, row: FlightApplicationListItem) => {
+        const label = getCurrentStepLabel(row);
+        if (!label || label === '—') {
+          return (
+            <span style={{ color: tokens.colorTextSecondary }}>—</span>
+          );
+        }
+        const color =
+          row.status === 'APPROVED'
+            ? label === 'Buying Ticket'
+              ? 'orange'
+              : label === 'Completed'
+                ? 'green'
+                : 'blue'
+            : 'blue';
+        return <Tag color={color}>{label}</Tag>;
+      },
     },
     ...(canManage
       ? [
@@ -270,6 +295,36 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         />
       ) : null}
 
+      {canViewHr ? (
+        <Tabs
+          activeKey={listTab}
+          onChange={(key) => {
+            setListTab(key as ListTab);
+            resetPage();
+          }}
+          items={[
+            { key: 'ALL', label: 'All Applications' },
+            {
+              key: 'NEEDS_TICKET',
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  Needs Ticket
+                  {needsTicketCount > 0 ? (
+                    <span
+                      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                      style={{ background: tokens.colorAmber400 }}
+                    >
+                      {needsTicketCount > 99 ? '99+' : needsTicketCount}
+                    </span>
+                  ) : null}
+                </span>
+              ),
+            },
+          ]}
+          className="mb-2"
+        />
+      ) : null}
+
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ListSearchInput
           committedValue={search}
@@ -279,18 +334,20 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           }}
           placeholder="Search application # or route"
         />
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder="Status"
-          style={{ minWidth: 180 }}
-          options={FLIGHT_STATUS_OPTIONS}
-          value={statusFilter}
-          onChange={(value: FlightApplicationStatus[]) => {
-            setStatusFilter(value);
-            resetPage();
-          }}
-        />
+        {!needsTicketTab ? (
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Status"
+            style={{ minWidth: 180 }}
+            options={FLIGHT_STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(value: FlightApplicationStatus[]) => {
+              setStatusFilter(value);
+              resetPage();
+            }}
+          />
+        ) : null}
         <Select
           allowClear
           placeholder="International / Domestic"
@@ -347,8 +404,16 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<SendOutlined />}
-              title="No flight applications"
-              description="Submit a new flight application to start the approval process."
+              title={
+                needsTicketTab
+                  ? 'No applications need tickets'
+                  : 'No flight applications'
+              }
+              description={
+                needsTicketTab
+                  ? 'Approved applications awaiting ticket booking will appear here.'
+                  : 'Submit a new flight application to start the approval process.'
+              }
             />
           ),
         }}

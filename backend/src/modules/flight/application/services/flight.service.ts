@@ -200,10 +200,10 @@ export class FlightService
                 : null,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
-              accommodationRequired: dto.accommodationRequired,
+              accommodationRequired: dto.accommodationRequired ?? false,
               accommodationDetails:
                 dto.accommodationDetails?.trim() || null,
-              perDiemRequired: dto.perDiemRequired,
+              perDiemRequired: dto.perDiemRequired ?? false,
               notes: dto.notes?.trim() || null,
               status: FlightApplicationStatus.APPROVED,
               submittedAt: now,
@@ -240,6 +240,7 @@ export class FlightService
         dto.origin,
         dto.destination,
         passengerIds,
+        null,
       );
       await this.notifyHrBookTickets(
         companyId,
@@ -301,10 +302,10 @@ export class FlightService
                 : null,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
-              accommodationRequired: dto.accommodationRequired,
+              accommodationRequired: dto.accommodationRequired ?? false,
               accommodationDetails:
                 dto.accommodationDetails?.trim() || null,
-              perDiemRequired: dto.perDiemRequired,
+              perDiemRequired: dto.perDiemRequired ?? false,
               notes: dto.notes?.trim() || null,
               status: FlightApplicationStatus.SUBMITTED,
               approvalRequestId: approval.id,
@@ -414,7 +415,15 @@ export class FlightService
       companyId,
       deletedAt: null,
       AND: [...scopeClause, ...searchClause],
-      ...(statuses ? { status: { in: statuses } } : {}),
+      ...(filters.needsTicket
+        ? {
+            status: FlightApplicationStatus.APPROVED,
+            combinedTicketDocumentId: null,
+            passengers: { some: { ticketDocumentId: null } },
+          }
+        : {
+            ...(statuses ? { status: { in: statuses } } : {}),
+          }),
       ...(canViewAll && filters.submittedById
         ? { submittedBy: filters.submittedById }
         : {}),
@@ -461,7 +470,12 @@ export class FlightService
         include: {
           submitter: { select: USER_SELECT },
           _count: { select: { passengers: true } },
-          passengers: { select: { ticketDocumentId: true } },
+          passengers: {
+            select: {
+              ticketDocumentId: true,
+              acknowledgementStatus: true,
+            },
+          },
           approvalRequest: {
             select: {
               id: true,
@@ -485,6 +499,9 @@ export class FlightService
         const allHaveTickets = row.passengers.every(
           (p) => p.ticketDocumentId !== null,
         );
+        const allAcknowledged = row.passengers.every(
+          (p) => p.acknowledgementStatus === 'ACKNOWLEDGED',
+        );
         const needsTicketAttachment =
           row.status === FlightApplicationStatus.APPROVED &&
           row.combinedTicketDocumentId === null &&
@@ -493,6 +510,31 @@ export class FlightService
         const pendingTier = row.approvalRequest?.tiers?.[0] ?? null;
         const currentTierLabel = pendingTier?.label ?? null;
 
+        let currentStepLabel: string | null = currentTierLabel;
+        if (row.status === FlightApplicationStatus.APPROVED) {
+          if (allAcknowledged && row.passengers.length > 0) {
+            currentStepLabel = 'Completed';
+          } else if (
+            allHaveTickets ||
+            row.combinedTicketDocumentId !== null
+          ) {
+            currentStepLabel = 'Awaiting Acknowledgement';
+          } else {
+            currentStepLabel = 'Buying Ticket';
+          }
+        } else if (row.status === FlightApplicationStatus.SUBMITTED ||
+          row.status === FlightApplicationStatus.IN_REVIEW) {
+          currentStepLabel = currentTierLabel ?? 'Under Review';
+        } else if (row.status === FlightApplicationStatus.RETURNED) {
+          currentStepLabel = 'Returned';
+        } else if (row.status === FlightApplicationStatus.REJECTED) {
+          currentStepLabel = 'Rejected';
+        } else if (row.status === FlightApplicationStatus.DRAFT) {
+          currentStepLabel = 'Draft';
+        } else if (row.status === FlightApplicationStatus.CANCELLED) {
+          currentStepLabel = 'Cancelled';
+        }
+
         const { _count, passengers, ...rest } = row;
         void _count;
         void passengers;
@@ -500,6 +542,7 @@ export class FlightService
           ...rest,
           passengerCount,
           currentTierLabel,
+          currentStepLabel,
           needsTicketAttachment,
         };
       }),
@@ -507,6 +550,46 @@ export class FlightService
       page,
       limit,
     );
+  }
+
+  /**
+   * Counts APPROVED applications still needing ticket attachment (HR badge).
+   * Non-HR callers receive total 0.
+   */
+  async countNeedsTicket(
+    companyId: string,
+    userId: string,
+    needsTicket: boolean,
+  ): Promise<{ total: number }> {
+    if (!needsTicket) {
+      return { total: 0 };
+    }
+
+    const [hrView, flightManage] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+      this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'flight',
+        'manage',
+      ),
+    ]);
+    if (!hrView && !flightManage) {
+      return { total: 0 };
+    }
+
+    const total = await this.prisma.flightApplication.count({
+      where: activeOnly({
+        companyId,
+        status: FlightApplicationStatus.APPROVED,
+        combinedTicketDocumentId: null,
+        passengers: {
+          some: { ticketDocumentId: null },
+        },
+      }),
+    });
+
+    return { total };
   }
 
   /**
@@ -818,6 +901,7 @@ export class FlightService
         app.origin,
         app.destination,
         app.passengers.map((p) => p.employeeId),
+        app.approvalRequestId,
       );
       await this.notifyHrBookTickets(
         app.companyId,
@@ -1087,6 +1171,7 @@ export class FlightService
         {
           recipientId,
           eventType,
+          channel: 'IN_APP',
           subject: content.subject,
           body: content.body,
           link: content.link,
@@ -1111,23 +1196,22 @@ export class FlightService
     origin: string,
     destination: string,
     employeeIds: string[],
+    approvalRequestId: string | null,
   ): Promise<void> {
+    const link = approvalRequestId
+      ? `/approvals/${approvalRequestId}`
+      : `/hr/flight-applications/${applicationId}`;
     for (const employeeId of employeeIds) {
-      await this.notifySafe(
-        companyId,
-        employeeId,
-        'FLIGHT_APPLICATION_APPROVED',
-        {
-          subject: 'Flight application approved',
-          body: `Your flight application ${applicationNumber} (${origin} → ${destination}) has been approved.`,
-          link: `/hr/flight-applications/${applicationId}`,
-        },
-      );
+      await this.notifySafe(companyId, employeeId, 'flight.approved', {
+        subject: 'Flight Application Approved',
+        body: `Your flight application ${applicationNumber} (${origin} → ${destination}) has been approved.`,
+        link,
+      });
     }
   }
 
   /**
-   * Notifies the HR Officer to proceed with ticket booking.
+   * Notifies every primary-role HR Officer to book and attach tickets.
    */
   private async notifyHrBookTickets(
     companyId: string,
@@ -1137,17 +1221,30 @@ export class FlightService
     destination: string,
   ): Promise<void> {
     try {
-      const hrOfficer = await this.hrApprovalChain.getHROfficer(companyId);
-      await this.notifySafe(
-        companyId,
-        hrOfficer.id,
-        'FLIGHT_TICKET_BOOKING_REQUIRED',
-        {
-          subject: `Tickets to book: ${applicationNumber}`,
-          body: `Flight application ${applicationNumber} (${origin} → ${destination}) has been approved. Please book the tickets.`,
-          link: `/hr/flight-applications/${applicationId}`,
-        },
-      );
+      const hrOfficers =
+        await this.hrApprovalChain.findActiveUsersByPrimaryRoleName(
+          companyId,
+          'HR Officer',
+        );
+      if (hrOfficers.length === 0) {
+        this.logger.warn(
+          `No HR Officer found to notify for ticket booking on ${applicationId}`,
+        );
+        return;
+      }
+
+      for (const officer of hrOfficers) {
+        await this.notifySafe(
+          companyId,
+          officer.id,
+          'flight.booking_required',
+          {
+            subject: 'Flight Booking Required',
+            body: `Flight application ${applicationNumber} (${origin} → ${destination}) approved. Please book and attach tickets.`,
+            link: `/hr/flight-applications/${applicationId}`,
+          },
+        );
+      }
     } catch (error: unknown) {
       this.logger.warn(
         `Failed to notify HR for ticket booking on ${applicationId}: ${
@@ -1199,9 +1296,47 @@ export class FlightService
           .map((link) => link.document)
           .filter((doc): doc is Record<string, unknown> => Boolean(doc))
       : [];
+
+    const passengers = Array.isArray(row.passengers)
+      ? (row.passengers as Array<{
+          ticketDocumentId?: string | null;
+          acknowledgementStatus?: string | null;
+        }>)
+      : [];
+    const status = row.status as string | undefined;
+    const combinedTicketDocumentId =
+      (row.combinedTicketDocumentId as string | null | undefined) ?? null;
+    const allHaveTickets =
+      passengers.length > 0 &&
+      passengers.every((p) => p.ticketDocumentId != null);
+    const allAcknowledged =
+      passengers.length > 0 &&
+      passengers.every((p) => p.acknowledgementStatus === 'ACKNOWLEDGED');
+    const needsTicketAttachment =
+      status === FlightApplicationStatus.APPROVED &&
+      combinedTicketDocumentId === null &&
+      !allHaveTickets;
+
+    let currentStepLabel: string | null = null;
+    if (status === FlightApplicationStatus.APPROVED) {
+      if (allAcknowledged) {
+        currentStepLabel = 'Completed';
+      } else if (allHaveTickets || combinedTicketDocumentId !== null) {
+        currentStepLabel = 'Awaiting Acknowledgement';
+      } else {
+        currentStepLabel = 'Buying Ticket';
+      }
+    }
+
     return {
       ...row,
       documents,
+      passengerCount:
+        typeof row.passengerCount === 'number'
+          ? row.passengerCount
+          : passengers.length,
+      needsTicketAttachment,
+      currentStepLabel,
     };
   }
 

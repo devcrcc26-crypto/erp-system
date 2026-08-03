@@ -148,6 +148,32 @@ export class HrApprovalChainService {
   }
 
   /**
+   * All active users whose primary role matches the given name.
+   */
+  async findActiveUsersByPrimaryRoleName(
+    companyId: string,
+    roleName: string,
+  ): Promise<Array<{ id: string }>> {
+    return this.prisma.user.findMany({
+      where: activeOnly({
+        companyId,
+        isActive: true,
+        userRoles: {
+          some: activeOnly({
+            isPrimary: true,
+            role: activeOnly({
+              companyId,
+              name: roleName,
+            }),
+          }),
+        },
+      }),
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
    * Resolves the company General Manager (primary role).
    */
   async getGeneralManager(companyId: string): Promise<{ id: string }> {

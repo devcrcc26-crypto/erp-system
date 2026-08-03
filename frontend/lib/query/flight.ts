@@ -34,6 +34,7 @@ export const flightKeys = {
   details: () => [...flightKeys.all, 'detail'] as const,
   detail: (id: string) => [...flightKeys.details(), id] as const,
   selectable: () => [...flightKeys.all, 'selectable'] as const,
+  needsTicketCount: () => [...flightKeys.all, 'needs-ticket-count'] as const,
 };
 
 function buildListQuery(params: ListFlightApplicationsParams): string {
@@ -63,6 +64,24 @@ export function useFlightApplications(
         `${FLIGHT_PATH}${buildListQuery(params)}`,
       ),
     enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Count of APPROVED applications still needing ticket attachment (HR list badge).
+ */
+export function useFlightNeedsTicketCount(enabled = true) {
+  return useQuery({
+    queryKey: flightKeys.needsTicketCount(),
+    queryFn: async (): Promise<number> => {
+      const result = await apiGet<{ total: number }>(
+        `${FLIGHT_PATH}/count?needsTicket=true`,
+      );
+      return result.total ?? 0;
+    },
+    enabled,
+    refetchInterval: 30_000,
     retry: false,
   });
 }
@@ -167,6 +186,9 @@ export function useAttachCombinedTicket(id: string) {
     },
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: flightKeys.needsTicketCount(),
+      });
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
@@ -194,6 +216,9 @@ export function useAttachPassengerTicket(id: string) {
     },
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: flightKeys.needsTicketCount(),
+      });
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });

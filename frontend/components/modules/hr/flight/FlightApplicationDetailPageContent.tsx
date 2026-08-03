@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -306,6 +307,8 @@ export default function FlightApplicationDetailPageContent({
         </Space>
       </div>
 
+      <FlightCurrentStepBanner application={application} />
+
       {/* ── Alert: ticket upload CTA ────────────────────────────────── */}
       {application.status === 'APPROVED' &&
       canManage &&
@@ -353,7 +356,10 @@ export default function FlightApplicationDetailPageContent({
               <Descriptions.Item label="Trip Type">
                 {formatTripType(application.tripType)}
               </Descriptions.Item>
-              <Descriptions.Item label="Departure">
+              <Descriptions.Item
+                label="Departure"
+                span={application.returnDate ? 1 : 2}
+              >
                 {formatProjectDate(application.departureDate)}
               </Descriptions.Item>
               {application.returnDate ? (
@@ -384,7 +390,7 @@ export default function FlightApplicationDetailPageContent({
                   'Not required'
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="Per Diem">
+              <Descriptions.Item label="Per Diem" span={2}>
                 {application.perDiemRequired ? (
                   <Tag color="blue">Required</Tag>
                 ) : (

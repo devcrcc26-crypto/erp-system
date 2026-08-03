@@ -37,6 +37,8 @@ export const approvalKeys = {
   details: () => [...approvalKeys.all, 'detail'] as const,
   detail: (id: string) => [...approvalKeys.details(), id] as const,
   categories: () => [...approvalKeys.all, 'categories'] as const,
+  pendingActionCount: (userId: string) =>
+    [...approvalKeys.all, 'pending-action-count', userId] as const,
 };
 
 function buildListQuery(params: ListApprovalRequestsParams): string {
@@ -66,6 +68,24 @@ export function useApprovalRequests(
         `${APPROVAL_REQUESTS_PATH}${buildListQuery(params)}`,
       ),
     enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Badge total for Pending My Action (approval inbox only).
+ */
+export function usePendingMyActionCount(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: approvalKeys.pendingActionCount(userId),
+    queryFn: async (): Promise<number> => {
+      const approvals = await apiGet<{ total: number }>(
+        `${APPROVAL_REQUESTS_PATH}/count?inbox=PENDING_MY_ACTION`,
+      );
+      return approvals.total ?? 0;
+    },
+    enabled: Boolean(userId) && enabled,
+    refetchInterval: 30_000,
     retry: false,
   });
 }

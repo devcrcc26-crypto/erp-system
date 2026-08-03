@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -12,6 +13,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
 import {
   ApiBearerAuth,
@@ -31,6 +34,70 @@ import {
   SubmitFlightApplicationDto,
 } from '../../application/dtos/flight.dtos';
 import { FlightService } from '../../application/services/flight.service';
+
+/**
+ * Coerces multipart form fields (all strings) into typed submit payload shape.
+ */
+function normalizeFlightSubmitBody(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...body };
+
+  if (typeof next.passengers === 'string') {
+    try {
+      next.passengers = JSON.parse(next.passengers) as unknown;
+    } catch {
+      throw new BadRequestException('Invalid passengers JSON');
+    }
+  }
+
+  for (const key of [
+    'isInternational',
+    'accommodationRequired',
+    'perDiemRequired',
+  ] as const) {
+    const value = next[key];
+    if (typeof value === 'string') {
+      next[key] = value === 'true' || value === '1';
+    }
+  }
+
+  for (const key of ['returnDate', 'notes', 'accommodationDetails'] as const) {
+    if (next[key] === '') {
+      next[key] = undefined;
+    }
+  }
+
+  delete next.files;
+  return next;
+}
+
+/**
+ * Validates a normalized submit body against SubmitFlightApplicationDto.
+ */
+async function parseFlightSubmitDto(
+  body: Record<string, unknown>,
+): Promise<SubmitFlightApplicationDto> {
+  const dto = plainToInstance(
+    SubmitFlightApplicationDto,
+    normalizeFlightSubmitBody(body),
+  );
+  const errors = await validate(dto, {
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  });
+  if (errors.length > 0) {
+    throw new BadRequestException({
+      message: 'Validation failed',
+      details: errors.map((error) => ({
+        property: error.property,
+        constraints: error.constraints,
+        children: error.children,
+      })),
+    });
+  }
+  return dto;
+}
 
 @ApiTags('HR Flight Applications')
 @ApiBearerAuth()
@@ -59,6 +126,23 @@ export class FlightController {
     );
   }
 
+  @Get('count')
+  @ApiOperation({
+    summary:
+      'Count flight applications needing ticket booking (HR Pending My Action badge)',
+  })
+  countNeedsTicket(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query('needsTicket') needsTicket?: string,
+  ): Promise<{ total: number }> {
+    return this.flightService.countNeedsTicket(
+      companyId,
+      user.userId,
+      needsTicket === 'true',
+    );
+  }
+
   @Post()
   @DelegatePermissionCheck()
   @ApiOperation({
@@ -76,8 +160,6 @@ export class FlightController {
         'departureDate',
         'purpose',
         'ticketClass',
-        'accommodationRequired',
-        'perDiemRequired',
         'passengers',
       ],
       properties: {
@@ -95,7 +177,7 @@ export class FlightController {
         notes: { type: 'string' },
         passengers: {
           type: 'string',
-          description: 'JSON array of FlightPassengerInputDto',
+          description: 'JSON array of FlightPassengerDto',
         },
         files: {
           type: 'array',
@@ -107,12 +189,14 @@ export class FlightController {
   @UseInterceptors(
     FilesInterceptor('files', 10, { storage: memoryStorage() }),
   )
-  submit(
+  async submit(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
-    @Body() dto: SubmitFlightApplicationDto,
+    @Body() body: Record<string, unknown>,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
+    // Multipart nested passengers arrive as a JSON string — parse before validate.
+    const dto = await parseFlightSubmitDto(body ?? {});
     return this.flightService.submitApplication(
       dto,
       files ?? [],

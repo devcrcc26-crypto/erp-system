@@ -59,6 +59,7 @@ export interface FlightApplicationListItem {
   status: FlightApplicationStatus;
   passengerCount: number;
   currentTierLabel?: string | null;
+  currentStepLabel?: string | null;
   needsTicketAttachment?: boolean;
   combinedTicketDocumentId?: string | null;
   submitter?: FlightUserSummary;
@@ -122,6 +123,7 @@ export interface ListFlightApplicationsParams {
   search?: string;
   status?: FlightApplicationStatus | FlightApplicationStatus[];
   isInternational?: boolean;
+  needsTicket?: boolean;
   submittedById?: string;
   dateFrom?: string;
   dateTo?: string;

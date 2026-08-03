@@ -26,6 +26,7 @@ import type {
 import {
   useApprovalCategories,
   useApprovalRequests,
+  usePendingMyActionCount,
 } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
@@ -113,6 +114,12 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const listQuery = useApprovalRequests(listParams);
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+
+  const pendingCountQuery = usePendingMyActionCount(
+    currentUserId,
+    Boolean(currentUserId),
+  );
+  const pendingActionCount = pendingCountQuery.data ?? 0;
 
   const categoryOptions = useMemo(
     () =>
@@ -248,7 +255,19 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         items={[
           {
             key: 'PENDING_MY_ACTION',
-            label: t('pages.approvals.tabs.pendingMyAction'),
+            label: (
+              <span className="inline-flex items-center gap-1.5">
+                {t('pages.approvals.tabs.pendingMyAction')}
+                {pendingActionCount > 0 ? (
+                  <span
+                    className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                    style={{ background: tokens.colorRed400 }}
+                  >
+                    {pendingActionCount > 99 ? '99+' : pendingActionCount}
+                  </span>
+                ) : null}
+              </span>
+            ),
           },
           {
             key: 'MY_REQUESTS',

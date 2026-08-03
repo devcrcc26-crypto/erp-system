@@ -7,12 +7,12 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   Min,
-  MinLength,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -33,13 +33,22 @@ function toBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
-export class FlightPassengerInputDto {
+function emptyToUndefined(value: unknown): unknown {
+  return value === '' || value === null ? undefined : value;
+}
+
+/**
+ * One passenger row on a flight application submit payload.
+ */
+export class FlightPassengerDto {
   @ApiProperty()
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   employeeId!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
   @MaxLength(64)
   passportNumber?: string;
@@ -56,10 +65,17 @@ export class FlightPassengerInputDto {
 
   @ApiPropertyOptional({ enum: FlightVisaStatus })
   @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
   @IsEnum(FlightVisaStatus)
   visaStatus?: FlightVisaStatus;
 }
 
+/** @deprecated Use FlightPassengerDto */
+export type FlightPassengerInputDto = FlightPassengerDto;
+
+/**
+ * Multipart / JSON submit body for a new flight application.
+ */
 export class SubmitFlightApplicationDto {
   @ApiProperty({ enum: FlightTripType })
   @IsEnum(FlightTripType)
@@ -72,13 +88,13 @@ export class SubmitFlightApplicationDto {
 
   @ApiProperty()
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
   @MaxLength(200)
   origin!: string;
 
   @ApiProperty()
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
   @MaxLength(200)
   destination!: string;
 
@@ -87,13 +103,17 @@ export class SubmitFlightApplicationDto {
   departureDate!: string;
 
   @ApiPropertyOptional({ example: '2026-09-10' })
-  @ValidateIf((o: SubmitFlightApplicationDto) => o.tripType === FlightTripType.ROUND_TRIP)
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @ValidateIf(
+    (o: SubmitFlightApplicationDto) => o.tripType === FlightTripType.ROUND_TRIP,
+  )
   @IsDateString()
   returnDate?: string;
 
   @ApiProperty()
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
   @MaxLength(4000)
   purpose!: string;
 
@@ -101,33 +121,45 @@ export class SubmitFlightApplicationDto {
   @IsEnum(FlightTicketClass)
   ticketClass!: FlightTicketClass;
 
-  @ApiProperty()
-  @Transform(({ value }) => toBoolean(value))
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : toBoolean(value),
+  )
   @IsBoolean()
-  accommodationRequired!: boolean;
+  accommodationRequired?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
   @MaxLength(4000)
   accommodationDetails?: string;
 
-  @ApiProperty()
-  @Transform(({ value }) => toBoolean(value))
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : toBoolean(value),
+  )
   @IsBoolean()
-  perDiemRequired!: boolean;
+  perDiemRequired?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
   @MaxLength(4000)
   notes?: string;
 
-  @ApiProperty({ type: [FlightPassengerInputDto] })
+  @ApiProperty({ type: [FlightPassengerDto] })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
       try {
-        return JSON.parse(value) as FlightPassengerInputDto[];
+        return JSON.parse(value) as unknown[];
       } catch {
         return value;
       }
@@ -137,8 +169,8 @@ export class SubmitFlightApplicationDto {
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => FlightPassengerInputDto)
-  passengers!: FlightPassengerInputDto[];
+  @Type(() => FlightPassengerDto)
+  passengers!: FlightPassengerDto[];
 }
 
 export class ListFlightApplicationsDto {
@@ -178,6 +210,19 @@ export class ListFlightApplicationsDto {
   @IsBoolean()
   isInternational?: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      'When true, only APPROVED applications still needing ticket attachment',
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : toBoolean(value),
+  )
+  @IsBoolean()
+  needsTicket?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
@@ -193,7 +238,9 @@ export class ListFlightApplicationsDto {
   @IsDateString()
   dateTo?: string;
 
-  @ApiPropertyOptional({ enum: ['createdAt', 'departureDate', 'applicationNumber'] })
+  @ApiPropertyOptional({
+    enum: ['createdAt', 'departureDate', 'applicationNumber'],
+  })
   @IsOptional()
   @IsString()
   sortBy?: string;

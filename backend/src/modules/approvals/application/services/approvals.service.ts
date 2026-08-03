@@ -522,6 +522,22 @@ export class ApprovalsService {
   }
 
   /**
+   * Returns the total number of approval requests matching the same filters as list.
+   */
+  async countRequests(
+    filters: ListRequestsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<{ total: number }> {
+    const page = await this.listRequests(
+      { ...filters, page: 1, limit: 1 },
+      companyId,
+      userId,
+    );
+    return { total: page.meta.total };
+  }
+
+  /**
    * True when the user must act: approve/resolve as approver, or resubmit/respond as requester.
    */
   private requestNeedsUserAction(

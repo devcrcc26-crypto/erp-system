@@ -12,6 +12,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FlightPassenger } from '@/lib/api/flight.types';
 import { useFlightApplication } from '@/lib/query/flight';
@@ -120,6 +121,10 @@ export default function FlightApplicationDetail({
         {application.isInternational ? (
           <Tag color="volcano">International</Tag>
         ) : null}
+      </div>
+
+      <div className="mb-4">
+        <FlightCurrentStepBanner application={application} />
       </div>
 
       <Descriptions bordered size="small" column={2}>

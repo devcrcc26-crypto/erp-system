@@ -6,6 +6,7 @@ import type {
   FlightUserSummary,
   FlightVisaStatus,
 } from '@/lib/api/flight.types';
+import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
 
 export const FLIGHT_STATUS_OPTIONS: Array<{
@@ -105,4 +106,199 @@ export function formatFlightSubmitterName(
     return '—';
   }
   return formatUserName(user);
+}
+
+export type FlightCurrentStepColor =
+  | 'gray'
+  | 'blue'
+  | 'orange'
+  | 'red'
+  | 'amber'
+  | 'green';
+
+export interface FlightCurrentStep {
+  step: string;
+  description: string;
+  color: FlightCurrentStepColor;
+}
+
+type FlightStepSource = {
+  status: FlightApplicationStatus | string;
+  rejectionNote?: string | null;
+  combinedTicketDocumentId?: string | null;
+  passengers?: Array<{
+    ticketDocumentId?: string | null;
+    acknowledgementStatus?: string | null;
+  }>;
+  needsTicketAttachment?: boolean;
+  currentTierLabel?: string | null;
+  currentStepLabel?: string | null;
+};
+
+/**
+ * Resolves the post-status workflow step for banners and list columns.
+ */
+export function getCurrentStep(
+  application: FlightStepSource,
+): FlightCurrentStep | null {
+  switch (application.status) {
+    case 'DRAFT':
+      return {
+        step: 'Draft',
+        description: 'Not yet submitted',
+        color: 'gray',
+      };
+    case 'SUBMITTED':
+    case 'IN_REVIEW':
+      return {
+        step: 'Under Review',
+        description: 'Awaiting approval',
+        color: 'blue',
+      };
+    case 'RETURNED':
+      return {
+        step: 'Returned',
+        description: 'Changes requested — please resubmit',
+        color: 'orange',
+      };
+    case 'REJECTED':
+      return {
+        step: 'Rejected',
+        description: application.rejectionNote ?? '',
+        color: 'red',
+      };
+    case 'APPROVED': {
+      const passengers = application.passengers ?? [];
+      const allTicketsAttached =
+        application.combinedTicketDocumentId != null ||
+        (passengers.length > 0 &&
+          passengers.every((p) => p.ticketDocumentId != null));
+      const allAcknowledged =
+        passengers.length > 0 &&
+        passengers.every((p) => p.acknowledgementStatus === 'ACKNOWLEDGED');
+
+      if (allAcknowledged) {
+        return {
+          step: 'Completed',
+          description: 'All tickets acknowledged',
+          color: 'green',
+        };
+      }
+
+      if (allTicketsAttached) {
+        return {
+          step: 'Awaiting Acknowledgement',
+          description:
+            'Tickets attached — passengers must acknowledge receipt',
+          color: 'blue',
+        };
+      }
+
+      // List rows may only ship currentStepLabel / needsTicketAttachment
+      if (application.currentStepLabel === 'Completed') {
+        return {
+          step: 'Completed',
+          description: 'All tickets acknowledged',
+          color: 'green',
+        };
+      }
+      if (application.currentStepLabel === 'Awaiting Acknowledgement') {
+        return {
+          step: 'Awaiting Acknowledgement',
+          description:
+            'Tickets attached — passengers must acknowledge receipt',
+          color: 'blue',
+        };
+      }
+      if (
+        application.needsTicketAttachment === false &&
+        !application.currentStepLabel
+      ) {
+        return {
+          step: 'Awaiting Acknowledgement',
+          description:
+            'Tickets attached — passengers must acknowledge receipt',
+          color: 'blue',
+        };
+      }
+
+      return {
+        step: 'Buying Ticket',
+        description: 'Approved — HR is arranging ticket booking',
+        color: 'amber',
+      };
+    }
+    case 'CANCELLED':
+      return {
+        step: 'Cancelled',
+        description: 'Application cancelled',
+        color: 'gray',
+      };
+    default:
+      return null;
+  }
+}
+
+/**
+ * List-column label: APPROVED uses workflow step; otherwise current tier or step name.
+ */
+export function getCurrentStepLabel(application: FlightStepSource): string {
+  if (application.status === 'APPROVED') {
+    return (
+      application.currentStepLabel ??
+      getCurrentStep(application)?.step ??
+      'Buying Ticket'
+    );
+  }
+  if (application.currentTierLabel) {
+    return application.currentTierLabel;
+  }
+  return getCurrentStep(application)?.step ?? '—';
+}
+
+/**
+ * Inline styles for the current-step banner (theme tokens).
+ */
+export function flightCurrentStepBannerStyle(
+  color: FlightCurrentStepColor,
+): { background: string; borderColor: string; color: string } {
+  switch (color) {
+    case 'amber':
+      return {
+        background: tokens.colorAmber50,
+        borderColor: tokens.colorAmber400,
+        color: tokens.colorAmber400,
+      };
+    case 'blue':
+      return {
+        background: tokens.colorBlue50,
+        borderColor: tokens.colorBlue400,
+        color: tokens.colorBlue800,
+      };
+    case 'green':
+      return {
+        background: tokens.colorGreen50,
+        borderColor: tokens.colorGreen400,
+        color: tokens.colorGreen600,
+      };
+    case 'orange':
+      return {
+        background: tokens.colorCoral50,
+        borderColor: tokens.colorCoral400,
+        color: tokens.colorCoral400,
+      };
+    case 'red':
+      return {
+        background: tokens.colorRed50,
+        borderColor: tokens.colorRed400,
+        color: tokens.colorRed600,
+      };
+    case 'gray':
+    default:
+      return {
+        background: tokens.colorGray50,
+        borderColor: tokens.colorGray200,
+        color: tokens.colorGray600,
+      };
+  }
 }

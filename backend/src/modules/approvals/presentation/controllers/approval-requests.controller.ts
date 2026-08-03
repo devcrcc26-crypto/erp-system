@@ -67,6 +67,18 @@ export class ApprovalRequestsController {
     return this.approvalsService.listRequests(query, companyId, user.userId);
   }
 
+  @Get('count')
+  @ApiOperation({
+    summary: 'Count approval requests for the given inbox/filters (badge totals)',
+  })
+  count(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: ListRequestsDto,
+  ): Promise<{ total: number }> {
+    return this.approvalsService.countRequests(query, companyId, user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an approval request with tiers and comments' })
   getOne(
