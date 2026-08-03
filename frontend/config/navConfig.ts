@@ -322,6 +322,13 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/flight-applications',
+        labelKey: 'nav.hr.flightApplications',
+        href: '/hr/flight-applications',
+        iconKey: 'hr-flight',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/expense-claims',
         labelKey: 'nav.hr.expenseClaims',
         href: '/hr/expense-claims',
@@ -347,13 +354,6 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.consumables',
         href: '/hr/consumables',
         iconKey: 'hr-consumables',
-        visible: canViewHr,
-      },
-      {
-        key: '/hr/flight-applications',
-        labelKey: 'nav.hr.flightApplications',
-        href: '/hr/flight-applications',
-        iconKey: 'hr-flight',
         visible: canViewHr,
       },
       {

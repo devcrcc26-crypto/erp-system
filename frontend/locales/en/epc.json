@@ -38,11 +38,11 @@
     "hr": {
       "leaveRequests": "Leave Requests",
       "overtime": "Overtime",
+      "flightApplications": "Flight Applications",
       "expenseClaims": "Expense Claims",
       "purchaseRequests": "Purchase Requests",
       "materialRequisition": "Material Requisition",
       "consumables": "Consumables",
-      "flightApplications": "Flight Applications",
       "vehicleApplications": "Vehicle Applications",
       "officialSeal": "Official Seal Usage",
       "projectSeal": "Project Seal Usage",
