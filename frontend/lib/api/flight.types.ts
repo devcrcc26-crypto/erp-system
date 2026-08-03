@@ -21,8 +21,8 @@ export interface FlightUserSummary {
 export interface FlightDocumentSummary {
   id: string;
   name: string;
-  fileType?: string | null;
-  fileSizeBytes?: number | null;
+  fileType?: string;
+  fileSizeBytes?: number;
 }
 
 export interface FlightSelectablePassenger {
@@ -43,27 +43,7 @@ export interface FlightPassenger {
   acknowledgementStatus: FlightAcknowledgementStatus;
   acknowledgedAt?: string | null;
   employee?: FlightUserSummary;
-  ticket?: FlightDocumentSummary;
-}
-
-export interface FlightApprovalTier {
-  id: string;
-  tierOrder: number;
-  label: string;
-  approverId: string;
-  resolver: string;
-  decision: string;
-  comment?: string | null;
-  conditions?: unknown;
-  decidedAt?: string | null;
-  approver?: FlightUserSummary;
-}
-
-export interface FlightApprovalSummary {
-  id: string;
-  status: string;
-  currentTier?: number;
-  tiers: FlightApprovalTier[];
+  ticket?: FlightDocumentSummary | null;
 }
 
 export interface FlightApplicationListItem {
@@ -80,6 +60,7 @@ export interface FlightApplicationListItem {
   passengerCount: number;
   currentTierLabel?: string | null;
   needsTicketAttachment?: boolean;
+  combinedTicketDocumentId?: string | null;
   submitter?: FlightUserSummary;
   approvalRequestId?: string | null;
   createdAt: string;
@@ -92,11 +73,30 @@ export interface FlightApplicationDetail extends FlightApplicationListItem {
   accommodationDetails?: string | null;
   perDiemRequired: boolean;
   notes?: string | null;
-  combinedTicketDocumentId?: string | null;
-  combinedTicket?: FlightDocumentSummary;
+  combinedTicket?: FlightDocumentSummary | null;
   passengers: FlightPassenger[];
   documents: FlightDocumentSummary[];
-  approvalRequest?: FlightApprovalSummary | null;
+  approvalRequest?: {
+    id: string;
+    status: string;
+    currentTier: number;
+    tiers: Array<{
+      id: string;
+      tierOrder: number;
+      label: string;
+      decision: string;
+      approver?: FlightUserSummary;
+      comment?: string | null;
+      decidedAt?: string | null;
+    }>;
+  } | null;
+}
+
+export interface SubmitFlightPassengerPayload {
+  employeeId: string;
+  passportNumber?: string;
+  visaRequired?: boolean;
+  visaStatus?: FlightVisaStatus;
 }
 
 export interface SubmitFlightApplicationPayload {
@@ -112,12 +112,7 @@ export interface SubmitFlightApplicationPayload {
   accommodationDetails?: string;
   perDiemRequired: boolean;
   notes?: string;
-  passengers: Array<{
-    employeeId: string;
-    passportNumber?: string;
-    visaRequired?: boolean;
-    visaStatus?: FlightVisaStatus;
-  }>;
+  passengers: SubmitFlightPassengerPayload[];
   files?: File[];
 }
 
@@ -131,5 +126,5 @@ export interface ListFlightApplicationsParams {
   dateFrom?: string;
   dateTo?: string;
   sortBy?: string;
-  sortOrder?: string;
+  sortOrder?: 'asc' | 'desc';
 }

@@ -9,12 +9,12 @@ import {
   apiGet,
   apiGetPaginated,
   apiPatch,
+  apiPost,
   apiPostForm,
 } from '@/lib/api/client';
 import type {
   FlightApplicationDetail,
   FlightApplicationListItem,
-  FlightApplicationStatus,
   FlightSelectablePassenger,
   ListFlightApplicationsParams,
   SubmitFlightApplicationPayload,
@@ -31,16 +31,13 @@ export const flightKeys = {
   lists: () => [...flightKeys.all, 'list'] as const,
   list: (params: ListFlightApplicationsParams) =>
     [...flightKeys.lists(), params] as const,
-  myLists: () => [...flightKeys.all, 'my'] as const,
-  myList: (params: ListFlightApplicationsParams) =>
-    [...flightKeys.myLists(), params] as const,
   details: () => [...flightKeys.all, 'detail'] as const,
   detail: (id: string) => [...flightKeys.details(), id] as const,
-  passengers: () => [...flightKeys.all, 'passengers'] as const,
+  selectable: () => [...flightKeys.all, 'selectable'] as const,
 };
 
 function buildListQuery(params: ListFlightApplicationsParams): string {
-  const { status, isInternational, ...rest } = params;
+  const { status, ...rest } = params;
   const statusValue = Array.isArray(status)
     ? status.length > 0
       ? status.join(',')
@@ -49,45 +46,21 @@ function buildListQuery(params: ListFlightApplicationsParams): string {
   return toQueryString({
     ...rest,
     status: statusValue,
-    isInternational:
-      isInternational !== undefined ? String(isInternational) : undefined,
   });
 }
 
 /**
- * Paginated flight applications (company-wide).
+ * Paginated flight applications.
  */
 export function useFlightApplications(
   params: ListFlightApplicationsParams = { page: 1, limit: 20 },
   enabled = true,
-): ReturnType<
-  typeof useQuery<PaginatedResult<FlightApplicationListItem>>
-> {
+) {
   return useQuery({
     queryKey: flightKeys.list(params),
     queryFn: () =>
       apiGetPaginated<FlightApplicationListItem>(
         `${FLIGHT_PATH}${buildListQuery(params)}`,
-      ),
-    enabled,
-    retry: false,
-  });
-}
-
-/**
- * Current user's flight applications.
- */
-export function useMyFlightApplications(
-  params: ListFlightApplicationsParams = { page: 1, limit: 20 },
-  enabled = true,
-): ReturnType<
-  typeof useQuery<PaginatedResult<FlightApplicationListItem>>
-> {
-  return useQuery({
-    queryKey: flightKeys.myList(params),
-    queryFn: () =>
-      apiGetPaginated<FlightApplicationListItem>(
-        `${FLIGHT_PATH}/my${buildListQuery(params)}`,
       ),
     enabled,
     retry: false,
@@ -107,22 +80,22 @@ export function useFlightApplication(id: string, enabled = true) {
 }
 
 /**
- * Employees selectable as passengers.
+ * Passengers the current user may select.
  */
 export function useSelectablePassengers(enabled = true) {
   return useQuery({
-    queryKey: flightKeys.passengers(),
+    queryKey: flightKeys.selectable(),
     queryFn: () =>
-      apiGet<FlightSelectablePassenger[]>(`${FLIGHT_PATH}/passengers`),
+      apiGet<FlightSelectablePassenger[]>(
+        `${FLIGHT_PATH}/selectable-passengers`,
+      ),
     enabled,
     retry: false,
-    staleTime: 5 * 60 * 1000,
   });
 }
 
 /**
- * Submits a new flight application (multipart/form-data).
- * Passengers are serialised as JSON in the `passengers` field.
+ * Submits a flight application (multipart when files attached).
  */
 export function useSubmitFlightApplication() {
   const queryClient = useQueryClient();
@@ -139,7 +112,10 @@ export function useSubmitFlightApplication() {
       }
       formData.append('purpose', payload.purpose);
       formData.append('ticketClass', payload.ticketClass);
-      formData.append('accommodationRequired', String(payload.accommodationRequired));
+      formData.append(
+        'accommodationRequired',
+        String(payload.accommodationRequired),
+      );
       if (payload.accommodationDetails) {
         formData.append('accommodationDetails', payload.accommodationDetails);
       }
@@ -155,14 +131,13 @@ export function useSubmitFlightApplication() {
     },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: flightKeys.myLists() });
       void queryClient.setQueryData(flightKeys.detail(created.id), created);
     },
   });
 }
 
 /**
- * Cancels a draft or submitted flight application.
+ * Cancels a draft/submitted flight application.
  */
 export function useCancelFlightApplication(id: string) {
   const queryClient = useQueryClient();
@@ -171,14 +146,13 @@ export function useCancelFlightApplication(id: string) {
       apiPatch<FlightApplicationDetail>(`${FLIGHT_PATH}/${id}/cancel`),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: flightKeys.myLists() });
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
 }
 
 /**
- * Attaches a single combined ticket document to an approved application.
+ * HR attaches a combined ticket file.
  */
 export function useAttachCombinedTicket(id: string) {
   const queryClient = useQueryClient();
@@ -187,52 +161,57 @@ export function useAttachCombinedTicket(id: string) {
       const formData = new FormData();
       formData.append('file', file);
       return apiPostForm<FlightApplicationDetail>(
-        `${FLIGHT_PATH}/${id}/combined-ticket`,
+        `${FLIGHT_PATH}/${id}/tickets/combined`,
         formData,
       );
     },
     onSuccess: (updated) => {
-      void queryClient.setQueryData(flightKeys.detail(id), updated);
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
 }
 
 /**
- * Attaches an individual ticket to a specific passenger.
+ * HR attaches an individual passenger ticket.
  */
-export function useAttachPassengerTicket(applicationId: string) {
+export function useAttachPassengerTicket(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ passengerId, file }: { passengerId: string; file: File }) => {
+    mutationFn: ({
+      passengerId,
+      file,
+    }: {
+      passengerId: string;
+      file: File;
+    }) => {
       const formData = new FormData();
       formData.append('file', file);
       return apiPostForm<FlightApplicationDetail>(
-        `${FLIGHT_PATH}/${applicationId}/passengers/${passengerId}/ticket`,
+        `${FLIGHT_PATH}/${id}/passengers/${passengerId}/ticket`,
         formData,
       );
     },
     onSuccess: (updated) => {
-      void queryClient.setQueryData(flightKeys.detail(applicationId), updated);
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
 }
 
 /**
- * Employee acknowledges receipt of their ticket.
+ * Passenger acknowledges ticket receipt.
  */
-export function useAcknowledgeTicket(applicationId: string) {
+export function useAcknowledgeTicket(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (passengerId: string) =>
-      apiPatch<FlightApplicationDetail>(
-        `${FLIGHT_PATH}/${applicationId}/passengers/${passengerId}/acknowledge`,
+      apiPost<FlightApplicationDetail>(
+        `${FLIGHT_PATH}/${id}/passengers/${passengerId}/acknowledge`,
       ),
     onSuccess: (updated) => {
-      void queryClient.setQueryData(flightKeys.detail(applicationId), updated);
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
 }
-
-export type FlightApplicationsResult = PaginatedResult<FlightApplicationListItem>;

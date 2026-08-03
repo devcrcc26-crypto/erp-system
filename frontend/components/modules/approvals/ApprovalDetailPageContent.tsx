@@ -13,6 +13,7 @@ import {
 import { ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import GenericApprovalDetail from '@/components/modules/approvals/detail/GenericApprovalDetail';
+import FlightApplicationDetail from '@/components/modules/approvals/detail/FlightApplicationDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
@@ -106,6 +107,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <OvertimeRequestDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'FLIGHT_APPLICATION':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <FlightApplicationDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />

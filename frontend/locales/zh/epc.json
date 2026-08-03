@@ -118,6 +118,14 @@
         "myListTitle": "我的加班表",
         "listDescription": "按月登记加班时长（平时/夜班/周末/节假日）并提交审批。",
         "myListDescription": "按月登记加班时段并提交审批。"
+      },
+      "flight": {
+        "new": "新建机票申请",
+        "detail": "机票申请",
+        "listTitle": "机票申请",
+        "myListTitle": "我的机票申请",
+        "listDescription": "提交并跟踪机票申请审批流程。",
+        "myListDescription": "查看并提交您的机票申请。"
       }
     },
     "dashboard": {

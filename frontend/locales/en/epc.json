@@ -118,6 +118,14 @@
         "myListTitle": "My Overtime Sheets",
         "listDescription": "Monthly overtime sheets with hour categories and approval workflow.",
         "myListDescription": "Log overtime sessions for each month and submit for approval."
+      },
+      "flight": {
+        "new": "New Flight Application",
+        "detail": "Flight Application",
+        "listTitle": "Flight Applications",
+        "myListTitle": "My Flight Applications",
+        "listDescription": "Submit and track flight applications through the approval workflow.",
+        "myListDescription": "View and submit your own flight applications."
       }
     },
     "dashboard": {

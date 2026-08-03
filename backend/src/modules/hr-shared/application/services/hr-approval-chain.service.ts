@@ -332,7 +332,7 @@ export class HrApprovalChainService {
         id: true,
         firstName: true,
         lastName: true,
-        position: { select: { name: true } },
+        position: { select: { title: true } },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
@@ -342,7 +342,7 @@ export class HrApprovalChainService {
       firstName: user.firstName,
       lastName: user.lastName,
       name: `${user.firstName} ${user.lastName}`.trim(),
-      position: user.position?.name ?? null,
+      position: user.position?.title ?? null,
     }));
   }
 
