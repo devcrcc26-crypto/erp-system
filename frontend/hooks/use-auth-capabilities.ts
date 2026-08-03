@@ -68,6 +68,38 @@ export function useCanCreateOvertime(): boolean {
   );
 }
 
+/**
+ * True when the session can open HR flight pages (view, create, or full HR).
+ */
+export function useCanAccessFlight(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr ||
+      state.capabilities.canViewFlight ||
+      state.capabilities.canCreateFlight,
+  );
+}
+
+/**
+ * True when the session can submit flight applications.
+ */
+export function useCanCreateFlight(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canCreateFlight || state.capabilities.canViewHr,
+  );
+}
+
+/**
+ * True when the session can attach flight tickets (HR / flight.manage).
+ */
+export function useCanManageFlight(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr || state.capabilities.canManageFlight,
+  );
+}
+
 /** True when the session can list and manage users. */
 export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);

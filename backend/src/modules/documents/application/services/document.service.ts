@@ -583,7 +583,8 @@ export class DocumentService {
       if (
         folder?.contextType === FolderContextType.APPROVAL ||
         folder?.contextType === FolderContextType.LEAVE ||
-        folder?.contextType === FolderContextType.OVERTIME
+        folder?.contextType === FolderContextType.OVERTIME ||
+        folder?.contextType === FolderContextType.FLIGHT
       ) {
         bucket = STORAGE_BUCKETS.HR;
       }

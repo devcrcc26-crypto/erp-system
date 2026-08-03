@@ -70,6 +70,7 @@ enum FolderContextType {
   APPROVAL
   LEAVE
   OVERTIME
+  FLIGHT
 }
 
 enum NotificationChannel {
@@ -227,6 +228,7 @@ model Company {
   leaveRequests            LeaveRequest[]
   leaveBalances            LeaveBalance[]
   overtimeSheets           OvertimeSheet[]
+  flightApplications       FlightApplication[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -616,6 +618,9 @@ model User {
   leaveBalances            LeaveBalance[]         @relation("LeaveBalance")
   overtimeSheetsAsEmployee OvertimeSheet[]        @relation("OvertimeEmployee")
   overtimeSheetsCreated    OvertimeSheet[]        @relation("OvertimeCreator")
+  flightApplicationsSubmitted FlightApplication[] @relation("FlightSubmitter")
+  flightApplicationsCreated   FlightApplication[] @relation("FlightCreator")
+  flightPassengers            FlightPassenger[]   @relation("FlightPassenger")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -928,6 +933,7 @@ model DocumentFolder {
   approvalRequests           ApprovalRequest[]
   leaveRequests              LeaveRequest[]
   overtimeSheets             OvertimeSheet[]
+  flightApplications         FlightApplication[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -968,6 +974,9 @@ model Document {
   approvalResponseDocuments ApprovalResponseDocument[]
   leaveRequestDocuments     LeaveRequestDocument[]
   overtimeEntryDocuments    OvertimeEntryDocument[]
+  flightApplicationDocuments FlightApplicationDocument[]
+  flightCombinedTickets      FlightApplication[]         @relation("FlightCombinedTicket")
+  flightPassengerTickets     FlightPassenger[]           @relation("PassengerTicket")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3293,8 +3302,9 @@ model ApprovalRequest {
   comments         ApprovalComment[]
   responses        ApprovalResponse[]
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
-  leaveRequest     LeaveRequest?
-  overtimeSheet    OvertimeSheet?
+  leaveRequest       LeaveRequest?
+  overtimeSheet      OvertimeSheet?
+  flightApplication  FlightApplication?
 
   @@index([companyId])
   @@index([categoryId])
@@ -3533,4 +3543,121 @@ model OvertimeEntryDocument {
   @@index([entryId], map: "idx_overtime_entry_document_entry")
   @@index([documentId], map: "idx_overtime_entry_document_document")
   @@map("overtime_entry_document")
+}
+
+// ─── Flight Applications ─────────────────────────────────────────────────────
+
+enum FlightTripType {
+  ONE_WAY
+  ROUND_TRIP
+}
+
+enum FlightTicketClass {
+  ECONOMY
+  BUSINESS
+}
+
+enum FlightVisaStatus {
+  NOT_APPLIED
+  APPLIED
+  APPROVED
+}
+
+enum FlightApplicationStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+enum FlightAcknowledgementStatus {
+  PENDING
+  ACKNOWLEDGED
+}
+
+model FlightApplication {
+  id                       String                  @id @default(uuid())
+  companyId                String                  @map("company_id")
+  applicationNumber        String                  @map("application_number")
+  submittedBy              String                  @map("submitted_by")
+  tripType                 FlightTripType          @map("trip_type")
+  isInternational          Boolean                 @default(false) @map("is_international")
+  origin                   String
+  destination              String
+  departureDate            DateTime                @map("departure_date") @db.Date
+  returnDate               DateTime?               @map("return_date") @db.Date
+  purpose                  String
+  ticketClass              FlightTicketClass       @default(ECONOMY) @map("ticket_class")
+  accommodationRequired    Boolean                 @default(false) @map("accommodation_required")
+  accommodationDetails     String?                 @map("accommodation_details")
+  perDiemRequired          Boolean                 @default(false) @map("per_diem_required")
+  notes                    String?
+  status                   FlightApplicationStatus @default(DRAFT)
+  approvalRequestId        String?                 @unique @map("approval_request_id")
+  attachmentFolderId       String?                 @map("attachment_folder_id")
+  combinedTicketDocumentId String?                 @map("combined_ticket_document_id")
+  submittedAt              DateTime?               @map("submitted_at")
+  completedAt              DateTime?               @map("completed_at")
+  createdAt                DateTime                @default(now()) @map("created_at")
+  createdBy                String                  @map("created_by")
+  updatedAt                DateTime                @updatedAt @map("updated_at")
+  updatedBy                String                  @map("updated_by")
+  deletedAt                DateTime?               @map("deleted_at")
+  deletedBy                String?                 @map("deleted_by")
+
+  company        Company          @relation(fields: [companyId], references: [id])
+  submitter      User             @relation("FlightSubmitter", fields: [submittedBy], references: [id])
+  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder? @relation(fields: [attachmentFolderId], references: [id])
+  combinedTicket Document?        @relation("FlightCombinedTicket", fields: [combinedTicketDocumentId], references: [id])
+  creator        User             @relation("FlightCreator", fields: [createdBy], references: [id])
+  passengers     FlightPassenger[]
+  documents      FlightApplicationDocument[]
+
+  @@unique([companyId, applicationNumber], map: "uq_flight_application_company_number")
+  @@index([companyId], map: "idx_flight_application_company")
+  @@index([submittedBy], map: "idx_flight_application_submitted_by")
+  @@index([status], map: "idx_flight_application_status")
+  @@index([companyId, deletedAt], map: "idx_flight_application_company_deleted")
+  @@index([attachmentFolderId], map: "idx_flight_application_attachment_folder")
+  @@map("flight_application")
+}
+
+model FlightPassenger {
+  id                    String                      @id @default(uuid())
+  applicationId         String                      @map("application_id")
+  employeeId            String                      @map("employee_id")
+  passportNumber        String?                     @map("passport_number")
+  visaRequired          Boolean                     @default(false) @map("visa_required")
+  visaStatus            FlightVisaStatus?           @default(NOT_APPLIED) @map("visa_status")
+  ticketDocumentId      String?                     @map("ticket_document_id")
+  acknowledgementStatus FlightAcknowledgementStatus @default(PENDING) @map("acknowledgement_status")
+  acknowledgedAt        DateTime?                   @map("acknowledged_at")
+  createdAt             DateTime                    @default(now()) @map("created_at")
+
+  application FlightApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  employee    User              @relation("FlightPassenger", fields: [employeeId], references: [id])
+  ticket      Document?         @relation("PassengerTicket", fields: [ticketDocumentId], references: [id])
+
+  @@unique([applicationId, employeeId], map: "uq_flight_passenger_application_employee")
+  @@index([applicationId], map: "idx_flight_passenger_application")
+  @@index([employeeId], map: "idx_flight_passenger_employee")
+  @@map("flight_passenger")
+}
+
+model FlightApplicationDocument {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  documentId    String   @map("document_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  application FlightApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  document    Document          @relation(fields: [documentId], references: [id])
+
+  @@index([applicationId], map: "idx_flight_application_document_application")
+  @@index([documentId], map: "idx_flight_application_document_document")
+  @@map("flight_application_document")
 }

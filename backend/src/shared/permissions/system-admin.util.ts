@@ -14,6 +14,7 @@ export const PROJECT_ADMIN_EXCLUDED_MODULES = new Set([
   'hr',
   'leave',
   'overtime',
+  'flight',
 ]);
 
 export const FULL_PERMISSION_FLAGS: PermissionFlags = {

@@ -113,6 +113,10 @@ const PERMISSION_DEFINITIONS: Array<{
 
   { module: 'overtime', action: 'view', description: 'View overtime requests' },
   { module: 'overtime', action: 'create', description: 'Submit and cancel overtime requests' },
+
+  { module: 'flight', action: 'view', description: 'View flight applications' },
+  { module: 'flight', action: 'create', description: 'Submit and cancel flight applications' },
+  { module: 'flight', action: 'manage', description: 'Attach flight tickets after approval' },
   
   { module: 'documents', action: 'view', description: 'View documents' },
   { module: 'documents', action: 'create', description: 'Upload documents' },
@@ -1184,6 +1188,53 @@ async function main(): Promise<void> {
         canView: true,
         canCreate: true,
         canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  // Flight: view+create for all core roles; manage (tickets) for HR / SysAdmin.
+  const flightView = permissions.find(
+    (permission) =>
+      permission.module === 'flight' && permission.action === 'view',
+  );
+  const flightCreate = permissions.find(
+    (permission) =>
+      permission.module === 'flight' && permission.action === 'create',
+  );
+  const flightManage = permissions.find(
+    (permission) =>
+      permission.module === 'flight' && permission.action === 'manage',
+  );
+  if (flightView && flightCreate) {
+    for (const roleName of CORE_ROLES) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, flightView.id, viewOnlyFlags());
+      await upsertRolePermission(roleId, flightCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (flightManage) {
+    for (const roleName of ['System Administrator', 'HR Officer'] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, flightManage.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
         canDelete: false,
         canApprove: false,
         canExport: false,

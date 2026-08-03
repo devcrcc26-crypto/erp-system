@@ -30,6 +30,70 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     const tiers: ChainTierDraft[] = [];
 
+    const disciplineLead = await this.getDisciplineLead(employeeId, companyId);
+    tiers.push({
+      order: 1,
+      label: 'Discipline Lead',
+      approverId: disciplineLead.id,
+      resolver: 'DISCIPLINE_LEAD',
+    });
+
+    const hrOfficer = await this.getHROfficer(companyId);
+    tiers.push({
+      order: 2,
+      label: 'HR Officer',
+      approverId: hrOfficer.id,
+      resolver: 'ROLE:HR Officer',
+    });
+
+    if (includeGeneralManager) {
+      const gm = await this.getGeneralManager(companyId);
+      tiers.push({
+        order: 3,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
+      });
+    }
+
+    const uniqueTiers = tiers.filter(
+      (tier, index, self) =>
+        index === self.findIndex((t) => t.approverId === tier.approverId),
+    );
+
+    return uniqueTiers.map((tier, index) => ({
+      tierOrder: index + 1,
+      label: tier.label,
+      approverId: tier.approverId,
+      resolver: tier.resolver,
+    }));
+  }
+
+  /**
+   * Returns the employee's primary role name, or null if unset.
+   */
+  async getPrimaryRoleName(
+    userId: string,
+    companyId: string,
+  ): Promise<string | null> {
+    const assignment = await this.prisma.userRole.findFirst({
+      where: activeOnly({
+        userId,
+        isPrimary: true,
+        role: activeOnly({ companyId }),
+      }),
+      include: { role: { select: { name: true } } },
+    });
+    return assignment?.role.name ?? null;
+  }
+
+  /**
+   * Resolves the discipline lead for an employee's engineering discipline.
+   */
+  async getDisciplineLead(
+    employeeId: string,
+    companyId: string,
+  ): Promise<{ id: string }> {
     const employee = await this.prisma.user.findFirst({
       where: activeOnly({ id: employeeId, companyId }),
       include: {
@@ -49,7 +113,7 @@ export class HrApprovalChainService {
 
     if (!employee.engineeringDiscipline) {
       throw new BadRequestException(
-        "Employee is not assigned to an engineering discipline.",
+        'Employee is not assigned to an engineering discipline.',
       );
     }
 
@@ -64,13 +128,13 @@ export class HrApprovalChainService {
       );
     }
 
-    tiers.push({
-      order: 1,
-      label: 'Discipline Lead',
-      approverId: disciplineLeader.id,
-      resolver: 'DISCIPLINE_LEAD',
-    });
+    return { id: disciplineLeader.id };
+  }
 
+  /**
+   * Resolves the company HR Officer (primary role).
+   */
+  async getHROfficer(companyId: string): Promise<{ id: string }> {
     const hrOfficer = await this.findActiveUserByPrimaryRoleName(
       companyId,
       'HR Officer',
@@ -80,27 +144,112 @@ export class HrApprovalChainService {
         'No user with primary role HR Officer found.',
       );
     }
+    return hrOfficer;
+  }
 
-    tiers.push({
-      order: 2,
-      label: 'HR Officer',
-      approverId: hrOfficer.id,
-      resolver: 'ROLE:HR Officer',
+  /**
+   * Resolves the company General Manager (primary role).
+   */
+  async getGeneralManager(companyId: string): Promise<{ id: string }> {
+    const gm = await this.findActiveUserByPrimaryRoleName(
+      companyId,
+      'General Manager',
+    );
+    if (!gm) {
+      throw new BadRequestException(
+        'No user with primary role General Manager found.',
+      );
+    }
+    return gm;
+  }
+
+  /**
+   * Flight approval chain with role-based tier skipping.
+   * Empty array = GM / MD / SysAdmin — direct APPROVED record (no approval request).
+   */
+  async buildFlightApprovalChain(
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const submitter = await this.prisma.user.findFirst({
+      where: activeOnly({ id: submitterId, companyId }),
+      include: {
+        userRoles: {
+          where: activeOnly({ isPrimary: true }),
+          include: { role: true },
+        },
+        engineeringDiscipline: {
+          include: {
+            leader: {
+              select: { id: true, deletedAt: true, isActive: true },
+            },
+          },
+        },
+        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
+      },
     });
 
-    if (includeGeneralManager) {
-      const gm = await this.findActiveUserByPrimaryRoleName(
-        companyId,
+    if (!submitter) {
+      throw new BadRequestException('Submitter not found');
+    }
+
+    const primaryRole = submitter.userRoles[0]?.role?.name ?? '';
+
+    const isHrOrAbove = [
+      'HR Officer',
+      'HR Manager',
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+
+    const isGmOrAbove = [
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+
+    const isDisciplineLeadOrAbove =
+      [
+        'Discipline Lead',
+        'HR Officer',
+        'HR Manager',
         'General Manager',
-      );
-      if (!gm) {
+        'Managing Director',
+        'System Administrator',
+      ].includes(primaryRole) || submitter.ledDisciplines.length > 0;
+
+    const tiers: ChainTierDraft[] = [];
+
+    if (!isDisciplineLeadOrAbove) {
+      const lead = submitter.engineeringDiscipline?.leader;
+      if (!lead || lead.deletedAt || !lead.isActive) {
         throw new BadRequestException(
-          'No user with primary role General Manager found.',
+          'No discipline leader assigned for your discipline.',
         );
       }
-
       tiers.push({
-        order: 3,
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: lead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
+    }
+
+    if (!isHrOrAbove) {
+      const hr = await this.getHROfficer(companyId);
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Officer',
+        approverId: hr.id,
+        resolver: 'ROLE:HR Officer',
+      });
+    }
+
+    if (!isGmOrAbove) {
+      const gm = await this.getGeneralManager(companyId);
+      tiers.push({
+        order: tiers.length + 1,
         label: 'General Manager',
         approverId: gm.id,
         resolver: 'ROLE:General Manager',
@@ -117,6 +266,83 @@ export class HrApprovalChainService {
       label: tier.label,
       approverId: tier.approverId,
       resolver: tier.resolver,
+    }));
+  }
+
+  /**
+   * Passengers the submitter may include on a flight application.
+   */
+  async getSelectablePassengers(
+    submitterId: string,
+    companyId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      name: string;
+      position: string | null;
+    }>
+  > {
+    const submitter = await this.prisma.user.findFirst({
+      where: activeOnly({ id: submitterId, companyId }),
+      include: {
+        userRoles: {
+          where: activeOnly({ isPrimary: true }),
+          include: { role: true },
+        },
+        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
+      },
+    });
+
+    if (!submitter) {
+      throw new BadRequestException('Submitter not found');
+    }
+
+    const primaryRole = submitter.userRoles[0]?.role?.name ?? '';
+    const canSelectAll = [
+      'HR Officer',
+      'HR Manager',
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+    const isDisciplineLead = submitter.ledDisciplines.length > 0;
+
+    const where = canSelectAll
+      ? activeOnly({ companyId, isActive: true })
+      : isDisciplineLead
+        ? activeOnly({
+            companyId,
+            isActive: true,
+            OR: [
+              { id: submitterId },
+              {
+                engineeringDisciplineId: {
+                  in: submitter.ledDisciplines.map((d) => d.id),
+                },
+              },
+            ],
+          })
+        : activeOnly({ id: submitterId, companyId });
+
+    const users = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        position: { select: { name: true } },
+      },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      position: user.position?.name ?? null,
     }));
   }
 

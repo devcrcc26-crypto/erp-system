@@ -164,6 +164,17 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can submit overtime requests (overtime.create)' })
   canCreateOvertime!: boolean;
 
+  @ApiProperty({ description: 'Can view flight applications (flight.view)' })
+  canViewFlight!: boolean;
+
+  @ApiProperty({ description: 'Can submit flight applications (flight.create)' })
+  canCreateFlight!: boolean;
+
+  @ApiProperty({
+    description: 'Can attach flight tickets after approval (flight.manage)',
+  })
+  canManageFlight!: boolean;
+
   @ApiProperty({
     description:
       'System Administrator — bypasses project team module gates and receives full RBAC.',

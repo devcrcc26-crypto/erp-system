@@ -9,6 +9,7 @@ import {
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
+  FlightApplicationStatus,
   FolderContextType,
   LeaveRequestStatus,
   LeaveType,
@@ -80,6 +81,7 @@ const REQUEST_DETAIL_INCLUDE = {
   },
   leaveRequest: { select: { id: true } },
   overtimeSheet: { select: { id: true } },
+  flightApplication: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -308,7 +310,10 @@ export class ApprovalsService {
     await this.assertCanViewRequest(request, companyId, userId);
 
     const sourceId =
-      request.leaveRequest?.id ?? request.overtimeSheet?.id ?? null;
+      request.flightApplication?.id ??
+      request.leaveRequest?.id ??
+      request.overtimeSheet?.id ??
+      null;
 
     return {
       ...request,
@@ -316,6 +321,7 @@ export class ApprovalsService {
       sourceId,
       leaveRequest: undefined,
       overtimeSheet: undefined,
+      flightApplication: undefined,
     };
   }
 
@@ -948,6 +954,7 @@ export class ApprovalsService {
         tiers: { orderBy: { tierOrder: 'asc' } },
         leaveRequest: true,
         overtimeSheet: true,
+        flightApplication: true,
       },
     });
     if (!request) {
@@ -1039,6 +1046,17 @@ export class ApprovalsService {
               status: OvertimeSheetStatus.SUBMITTED,
               completedAt: null,
               submittedAt: new Date(),
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.flightApplication) {
+          await tx.flightApplication.update({
+            where: { id: request.flightApplication.id },
+            data: {
+              status: FlightApplicationStatus.SUBMITTED,
+              completedAt: null,
               updatedBy: userId,
             },
           });

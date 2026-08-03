@@ -4,7 +4,8 @@ export type PermissionAction =
   | 'edit'
   | 'delete'
   | 'approve'
-  | 'export';
+  | 'export'
+  | 'manage';
 
 export interface PermissionFlags {
   canView: boolean;
@@ -31,4 +32,5 @@ export const ACTION_TO_FLAG: Record<PermissionAction, keyof PermissionFlags> = {
   delete: 'canDelete',
   approve: 'canApprove',
   export: 'canExport',
+  manage: 'canEdit',
 };

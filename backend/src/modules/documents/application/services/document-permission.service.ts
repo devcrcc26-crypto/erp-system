@@ -951,7 +951,8 @@ export class DocumentPermissionService {
     if (
       contextType !== FolderContextType.LEAVE &&
       contextType !== FolderContextType.OVERTIME &&
-      contextType !== FolderContextType.APPROVAL
+      contextType !== FolderContextType.APPROVAL &&
+      contextType !== FolderContextType.FLIGHT
     ) {
       return false;
     }
@@ -1016,6 +1017,34 @@ export class DocumentPermissionService {
       }
       return (
         sheet.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.FLIGHT) {
+      const flight = await this.prisma.flightApplication.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          submittedBy: true,
+          passengers: { select: { employeeId: true } },
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!flight) {
+        return false;
+      }
+      if (flight.submittedBy === userId) {
+        return true;
+      }
+      if (flight.passengers.some((p) => p.employeeId === userId)) {
+        return true;
+      }
+      return (
+        flight.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
         false
       );
     }

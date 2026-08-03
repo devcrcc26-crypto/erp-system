@@ -23,7 +23,7 @@ function resolveDatabaseUrl(): string | undefined {
       url.searchParams.set('connection_limit', limit);
     }
     if (!url.searchParams.has('pool_timeout')) {
-      url.searchParams.set('pool_timeout', '20');
+      url.searchParams.set('pool_timeout', '30');
     }
     if (!url.searchParams.has('connect_timeout')) {
       url.searchParams.set('connect_timeout', '30');
@@ -56,8 +56,38 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
-    this.logger.log('Database connection established');
+    const maxAttempts = 5;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.$connect();
+        this.logger.log('Database connection established');
+        return;
+      } catch (error) {
+        lastError = error;
+        const message = error instanceof Error ? error.message : String(error);
+        const isPoolTimeout =
+          message.includes('connection pool') ||
+          message.includes('P2024') ||
+          (typeof error === 'object' &&
+            error !== null &&
+            'errorCode' in error &&
+            (error as { errorCode?: string }).errorCode === 'P2024');
+
+        if (!isPoolTimeout || attempt === maxAttempts) {
+          throw error;
+        }
+
+        const delayMs = attempt * 2000;
+        this.logger.warn(
+          `Database pool busy (attempt ${attempt}/${maxAttempts}); retrying in ${delayMs}ms`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError;
   }
 
   async onModuleDestroy(): Promise<void> {

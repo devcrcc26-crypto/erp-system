@@ -399,6 +399,9 @@ export interface AuthCapabilities {
   canCreateLeave: boolean;
   canViewOvertime: boolean;
   canCreateOvertime: boolean;
+  canViewFlight: boolean;
+  canCreateFlight: boolean;
+  canManageFlight: boolean;
   isSystemAdministrator: boolean;
 }
 
@@ -450,6 +453,9 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateLeave: false,
   canViewOvertime: false,
   canCreateOvertime: false,
+  canViewFlight: false,
+  canCreateFlight: false,
+  canManageFlight: false,
   isSystemAdministrator: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },
