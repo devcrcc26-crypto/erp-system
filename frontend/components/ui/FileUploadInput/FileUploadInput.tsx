@@ -5,6 +5,17 @@ import { Paperclip, X } from 'lucide-react';
 import { useRef } from 'react';
 import { tokens } from '@/lib/theme/tokens';
 
+export interface FileUploadInputProps {
+  files: File[];
+  onChange: (files: File[]) => void;
+  accept?: string;
+  multiple?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  /** Smaller button; hides the inline selected-file list (parent shows Upload). */
+  compact?: boolean;
+}
+
 /**
  * Lightweight multi-file picker — selection only; parent owns upload.
  */
@@ -14,13 +25,9 @@ export default function FileUploadInput({
   accept,
   multiple = true,
   disabled = false,
-}: {
-  files: File[];
-  onChange: (files: File[]) => void;
-  accept?: string;
-  multiple?: boolean;
-  disabled?: boolean;
-}): React.ReactNode {
+  placeholder,
+  compact = false,
+}: FileUploadInputProps): React.ReactNode {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handlePick(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -37,6 +44,9 @@ export default function FileUploadInput({
     onChange(files.filter((_, i) => i !== index));
   }
 
+  const buttonLabel =
+    placeholder ?? (multiple ? 'Choose files' : 'Choose file');
+
   return (
     <div className="flex flex-col gap-2">
       <input
@@ -50,14 +60,15 @@ export default function FileUploadInput({
       />
       <Button
         type="default"
-        icon={<Paperclip size={14} />}
+        size={compact ? 'small' : 'middle'}
+        icon={<Paperclip size={compact ? 12 : 14} />}
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
         style={{ alignSelf: 'flex-start' }}
       >
-        Choose files
+        {buttonLabel}
       </Button>
-      {files.length > 0 ? (
+      {!compact && files.length > 0 ? (
         <ul className="m-0 list-none space-y-1 p-0">
           {files.map((file, index) => (
             <li
@@ -83,6 +94,15 @@ export default function FileUploadInput({
             </li>
           ))}
         </ul>
+      ) : null}
+      {compact && files.length > 0 ? (
+        <Typography.Text
+          type="secondary"
+          ellipsis
+          style={{ fontSize: 12, maxWidth: 160 }}
+        >
+          {files[0]?.name}
+        </Typography.Text>
       ) : null}
     </div>
   );

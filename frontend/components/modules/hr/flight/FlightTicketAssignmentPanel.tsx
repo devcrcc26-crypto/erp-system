@@ -1,0 +1,331 @@
+'use client';
+
+import { useState } from 'react';
+import { Button, Table, Tag, Typography } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import type { FlightApplicationDetail, FlightPassenger } from '@/lib/api/flight.types';
+import {
+  useAcknowledgeTicket,
+  useAttachCombinedTicket,
+  useAttachPassengerTicket,
+} from '@/lib/query/flight';
+import { useCurrentUser } from '@/lib/query/profile';
+import { tokens } from '@/lib/theme/tokens';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
+
+const TICKET_ACCEPT = '.pdf,.jpg,.jpeg,.png';
+
+/**
+ * Combined + per-passenger ticket upload, download, and acknowledge UI.
+ */
+export default function FlightTicketAssignmentPanel({
+  application,
+}: {
+  application: FlightApplicationDetail;
+}): React.ReactNode {
+  const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.data?.id ?? '';
+
+  const attachCombined = useAttachCombinedTicket(application.id);
+  const attachPassenger = useAttachPassengerTicket(application.id);
+  const acknowledgeTicket = useAcknowledgeTicket(application.id);
+
+  const [combinedTicketFiles, setCombinedTicketFiles] = useState<File[]>([]);
+  const [passengerFiles, setPassengerFiles] = useState<Record<string, File[]>>(
+    {},
+  );
+  const [replacingCombined, setReplacingCombined] = useState(false);
+  const [uploadingPassengerId, setUploadingPassengerId] = useState<
+    string | null
+  >(null);
+
+  const isApproved = application.status === 'APPROVED';
+  const canUpload = canViewHr && isApproved;
+  const showCombinedUploader =
+    canUpload && (!application.combinedTicket || replacingCombined);
+
+  async function handleUploadCombined(): Promise<void> {
+    const file = combinedTicketFiles[0];
+    if (!file) {
+      return;
+    }
+    try {
+      await attachCombined.mutateAsync(file);
+      messageApi.success(
+        replacingCombined
+          ? 'Combined ticket replaced'
+          : 'Combined ticket uploaded',
+      );
+      setCombinedTicketFiles([]);
+      setReplacingCombined(false);
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to upload combined ticket', messageApi);
+    }
+  }
+
+  async function handleUploadPassenger(passengerId: string): Promise<void> {
+    const file = passengerFiles[passengerId]?.[0];
+    if (!file) {
+      return;
+    }
+    setUploadingPassengerId(passengerId);
+    try {
+      await attachPassenger.mutateAsync({ passengerId, file });
+      messageApi.success('Passenger ticket uploaded');
+      setPassengerFiles((prev) => {
+        const next = { ...prev };
+        delete next[passengerId];
+        return next;
+      });
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to upload passenger ticket', messageApi);
+    } finally {
+      setUploadingPassengerId(null);
+    }
+  }
+
+  async function handleAcknowledge(passengerId: string): Promise<void> {
+    try {
+      await acknowledgeTicket.mutateAsync(passengerId);
+      messageApi.success('Ticket acknowledged');
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to acknowledge ticket', messageApi);
+    }
+  }
+
+  const passengerColumns: ColumnsType<FlightPassenger> = [
+    {
+      title: 'Passenger',
+      key: 'passenger',
+      render: (_: unknown, row: FlightPassenger) =>
+        row.employee ? formatUserName(row.employee) : row.employeeId,
+    },
+    {
+      title: 'Ticket',
+      key: 'ticket',
+      render: (_: unknown, row: FlightPassenger) => {
+        if (row.ticket) {
+          return (
+            <AttachmentDownloadList
+              documents={[row.ticket]}
+              emptyLabel="No ticket"
+            />
+          );
+        }
+        if (application.combinedTicket) {
+          return (
+            <Tag color="blue">Covered by combined ticket</Tag>
+          );
+        }
+        return (
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            No ticket
+          </Typography.Text>
+        );
+      },
+    },
+    {
+      title: 'Acknowledged',
+      key: 'acknowledged',
+      width: 180,
+      render: (_: unknown, row: FlightPassenger) => {
+        const hasTicket =
+          Boolean(row.ticketDocumentId) ||
+          Boolean(application.combinedTicketDocumentId);
+
+        if (row.acknowledgementStatus === 'ACKNOWLEDGED') {
+          return (
+            <span className="flex flex-col gap-0.5">
+              <Tag color="success">Acknowledged</Tag>
+              {row.acknowledgedAt ? (
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {formatProjectDate(row.acknowledgedAt)}
+                </Typography.Text>
+              ) : null}
+            </span>
+          );
+        }
+
+        if (!hasTicket) {
+          return <Tag>Awaiting Ticket</Tag>;
+        }
+
+        if (currentUserId === row.employeeId) {
+          return (
+            <Button
+              size="small"
+              type="primary"
+              loading={
+                acknowledgeTicket.isPending &&
+                acknowledgeTicket.variables === row.id
+              }
+              onClick={() => void handleAcknowledge(row.id)}
+            >
+              Acknowledge Receipt
+            </Button>
+          );
+        }
+
+        return <Tag color="orange">Pending</Tag>;
+      },
+    },
+    ...(canUpload
+      ? [
+          {
+            title: 'Action',
+            key: 'action',
+            width: 200,
+            render: (_: unknown, row: FlightPassenger) => {
+              const pending = passengerFiles[row.id] ?? [];
+              return (
+                <div className="flex flex-col gap-1">
+                  <FileUploadInput
+                    files={pending}
+                    onChange={(files) =>
+                      setPassengerFiles((prev) => ({
+                        ...prev,
+                        [row.id]: files,
+                      }))
+                    }
+                    accept={TICKET_ACCEPT}
+                    multiple={false}
+                    placeholder="Upload ticket"
+                    compact
+                    disabled={
+                      attachPassenger.isPending &&
+                      uploadingPassengerId === row.id
+                    }
+                  />
+                  {pending.length > 0 ? (
+                    <Button
+                      size="small"
+                      type="primary"
+                      loading={
+                        attachPassenger.isPending &&
+                        uploadingPassengerId === row.id
+                      }
+                      onClick={() => void handleUploadPassenger(row.id)}
+                    >
+                      {row.ticketDocumentId ? 'Replace' : 'Upload'}
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            },
+          } satisfies ColumnsType<FlightPassenger>[number],
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Combined ticket */}
+      <div
+        className="rounded-lg border p-4"
+        style={{
+          borderColor: tokens.colorBorder,
+          background: tokens.colorCardBg,
+        }}
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <Typography.Text strong>Combined Ticket</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            One file covers all passengers
+          </Typography.Text>
+        </div>
+
+        {application.combinedTicket && !replacingCombined ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <AttachmentDownloadList
+                documents={[application.combinedTicket]}
+              />
+            </div>
+            {canUpload ? (
+              <Button
+                size="small"
+                onClick={() => {
+                  setReplacingCombined(true);
+                  setCombinedTicketFiles([]);
+                }}
+              >
+                Replace
+              </Button>
+            ) : null}
+          </div>
+        ) : showCombinedUploader ? (
+          <>
+            <FileUploadInput
+              files={combinedTicketFiles}
+              onChange={setCombinedTicketFiles}
+              accept={TICKET_ACCEPT}
+              multiple={false}
+              placeholder="Upload combined ticket (PDF or image)"
+              disabled={attachCombined.isPending}
+            />
+            {combinedTicketFiles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="primary"
+                  loading={attachCombined.isPending}
+                  onClick={() => void handleUploadCombined()}
+                >
+                  {replacingCombined
+                    ? 'Upload Replacement'
+                    : 'Upload Combined Ticket'}
+                </Button>
+                {replacingCombined ? (
+                  <Button
+                    disabled={attachCombined.isPending}
+                    onClick={() => {
+                      setReplacingCombined(false);
+                      setCombinedTicketFiles([]);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            No combined ticket attached yet
+          </Typography.Text>
+        )}
+      </div>
+
+      {/* Individual tickets */}
+      <div
+        className="rounded-lg border p-4"
+        style={{
+          borderColor: tokens.colorBorder,
+          background: tokens.colorCardBg,
+        }}
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <Typography.Text strong>Individual Tickets</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            Assign ticket per passenger
+          </Typography.Text>
+        </div>
+        <Table<FlightPassenger>
+          rowKey="id"
+          size="small"
+          pagination={false}
+          columns={passengerColumns}
+          dataSource={application.passengers}
+          scroll={{ x: true }}
+        />
+      </div>
+    </div>
+  );
+}

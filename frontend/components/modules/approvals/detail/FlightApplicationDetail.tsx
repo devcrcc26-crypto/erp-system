@@ -13,6 +13,7 @@ import type { ColumnsType } from 'antd/es/table';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
+import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTicketAssignmentPanel';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { FlightPassenger } from '@/lib/api/flight.types';
 import { useFlightApplication } from '@/lib/query/flight';
@@ -193,6 +194,14 @@ export default function FlightApplicationDetail({
         pagination={false}
         size="small"
       />
+
+      {application.status === 'APPROVED' ||
+      application.combinedTicketDocumentId ||
+      application.passengers.some((p) => p.ticketDocumentId) ? (
+        <div style={{ marginTop: 24 }}>
+          <FlightTicketAssignmentPanel application={application} />
+        </div>
+      ) : null}
 
       {(application.documents?.length ?? 0) > 0 ? (
         <>

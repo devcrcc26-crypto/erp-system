@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -13,27 +13,23 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Upload,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
+import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTicketAssignmentPanel';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanManageFlight,
+  useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { FlightPassenger } from '@/lib/api/flight.types';
 import {
-  useAcknowledgeTicket,
-  useAttachCombinedTicket,
   useCancelFlightApplication,
   useFlightApplication,
 } from '@/lib/query/flight';
@@ -64,15 +60,12 @@ export default function FlightApplicationDetailPageContent({
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const canManage = useCanManageFlight();
+  const canViewHr = useCanViewHr();
 
   const detailQuery = useFlightApplication(applicationId);
   const cancelMutation = useCancelFlightApplication(applicationId);
-  const attachTicketMutation = useAttachCombinedTicket(applicationId);
-  const acknowledgeTicket = useAcknowledgeTicket(applicationId);
 
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [uploadingTicket, setUploadingTicket] = useState(false);
-  const ticketInputRef = useRef<HTMLInputElement>(null);
 
   const application = detailQuery.data;
 
@@ -87,22 +80,10 @@ export default function FlightApplicationDetailPageContent({
     application?.submittedBy === currentUser.data?.id &&
     (application?.status === 'DRAFT' || application?.status === 'SUBMITTED');
 
-  const currentUserPassenger = useMemo(() => {
-    if (!currentUser.data?.id || !application?.passengers) {
-      return null;
-    }
-    return (
-      application.passengers.find(
-        (p) => p.employeeId === currentUser.data?.id,
-      ) ?? null
-    );
-  }, [application?.passengers, currentUser.data?.id]);
-
-  const canAcknowledge =
-    currentUserPassenger !== null &&
-    currentUserPassenger.acknowledgementStatus === 'PENDING' &&
-    (currentUserPassenger.ticketDocumentId !== null ||
-      application?.combinedTicketDocumentId !== null);
+  const showTicketPanel =
+    application?.status === 'APPROVED' ||
+    Boolean(application?.combinedTicketDocumentId) ||
+    (application?.passengers.some((p) => p.ticketDocumentId) ?? false);
 
   async function handleCancel(): Promise<void> {
     try {
@@ -111,39 +92,6 @@ export default function FlightApplicationDetailPageContent({
       setConfirmCancel(false);
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to cancel flight application', messageApi);
-    }
-  }
-
-  async function handleAcknowledge(): Promise<void> {
-    if (!currentUserPassenger) {
-      return;
-    }
-    try {
-      await acknowledgeTicket.mutateAsync(currentUserPassenger.id);
-      messageApi.success('Ticket acknowledged');
-    } catch (error: unknown) {
-      notifyApiError(error, 'Failed to acknowledge ticket', messageApi);
-    }
-  }
-
-  async function handleCombinedTicketUpload(
-    e: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    setUploadingTicket(true);
-    try {
-      await attachTicketMutation.mutateAsync(file);
-      messageApi.success('Combined ticket uploaded');
-    } catch (error: unknown) {
-      notifyApiError(error, 'Failed to upload ticket', messageApi);
-    } finally {
-      setUploadingTicket(false);
-      if (ticketInputRef.current) {
-        ticketInputRef.current.value = '';
-      }
     }
   }
 
@@ -195,64 +143,10 @@ export default function FlightApplicationDetailPageContent({
           <Tag>Not Required</Tag>
         ),
     },
-    {
-      title: 'Ticket',
-      key: 'ticket',
-      render: (_: unknown, row: FlightPassenger) => {
-        if (row.ticket) {
-          return (
-            <AttachmentDownloadList
-              documents={[row.ticket]}
-              emptyLabel="No ticket"
-            />
-          );
-        }
-        if (application.combinedTicket) {
-          return (
-            <Tag color="green" icon={<CheckCircle2 size={12} />}>
-              Combined ticket
-            </Tag>
-          );
-        }
-        return <Tag>Pending</Tag>;
-      },
-    },
-    {
-      title: 'Acknowledgement',
-      dataIndex: 'acknowledgementStatus',
-      key: 'acknowledgementStatus',
-      render: (v: string, row: FlightPassenger) => {
-        const isMe = row.employeeId === currentUser.data?.id;
-        if (v === 'ACKNOWLEDGED') {
-          return (
-            <Space size={4}>
-              <Tag color="success">Acknowledged</Tag>
-              {row.acknowledgedAt
-                ? formatProjectDate(row.acknowledgedAt)
-                : null}
-            </Space>
-          );
-        }
-        if (isMe && canAcknowledge) {
-          return (
-            <Button
-              size="small"
-              type="primary"
-              loading={acknowledgeTicket.isPending}
-              onClick={() => void handleAcknowledge()}
-            >
-              Acknowledge
-            </Button>
-          );
-        }
-        return <Tag>Pending</Tag>;
-      },
-    },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Button
@@ -309,19 +203,17 @@ export default function FlightApplicationDetailPageContent({
 
       <FlightCurrentStepBanner application={application} />
 
-      {/* ── Alert: ticket upload CTA ────────────────────────────────── */}
       {application.status === 'APPROVED' &&
-      canManage &&
+      (canViewHr || canManage) &&
       application.needsTicketAttachment ? (
         <Alert
           type="info"
           showIcon
           message="Tickets required"
-          description="The application is approved. Please upload the combined ticket or individual passenger tickets below."
+          description="The application is approved. Upload a combined ticket and/or individual passenger tickets below."
         />
       ) : null}
 
-      {/* ── Main grid ──────────────────────────────────────────────── */}
       <div
         style={{
           display: 'grid',
@@ -331,9 +223,7 @@ export default function FlightApplicationDetailPageContent({
         }}
         className="max-lg:!grid-cols-1"
       >
-        {/* Left column */}
         <div className="flex flex-col gap-4">
-          {/* Trip details */}
           <div
             style={{
               background: tokens.colorCardBg,
@@ -348,7 +238,9 @@ export default function FlightApplicationDetailPageContent({
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Route">
                 {application.origin}
-                <span style={{ margin: '0 6px', color: tokens.colorTextSecondary }}>
+                <span
+                  style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
+                >
                   →
                 </span>
                 {application.destination}
@@ -408,7 +300,6 @@ export default function FlightApplicationDetailPageContent({
             </Descriptions>
           </div>
 
-          {/* Passengers table */}
           <div
             style={{
               background: tokens.colorCardBg,
@@ -429,51 +320,10 @@ export default function FlightApplicationDetailPageContent({
             />
           </div>
 
-          {/* Combined ticket section */}
-          {application.status === 'APPROVED' && canManage ? (
-            <div
-              style={{
-                background: tokens.colorCardBg,
-                border: `1px solid ${tokens.colorBorder}`,
-                borderRadius: 8,
-                padding: 20,
-              }}
-            >
-              <Typography.Title level={5} style={{ marginTop: 0 }}>
-                Combined Ticket
-              </Typography.Title>
-              {application.combinedTicket ? (
-                <AttachmentDownloadList
-                  documents={[application.combinedTicket]}
-                />
-              ) : (
-                <>
-                  <Typography.Text
-                    type="secondary"
-                    style={{ display: 'block', marginBottom: 12 }}
-                  >
-                    No combined ticket uploaded yet.
-                  </Typography.Text>
-                  <input
-                    ref={ticketInputRef}
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => void handleCombinedTicketUpload(e)}
-                  />
-                  <Button
-                    icon={<Upload size={14} />}
-                    loading={uploadingTicket || attachTicketMutation.isPending}
-                    onClick={() => ticketInputRef.current?.click()}
-                  >
-                    Upload combined ticket
-                  </Button>
-                </>
-              )}
-            </div>
+          {showTicketPanel ? (
+            <FlightTicketAssignmentPanel application={application} />
           ) : null}
 
-          {/* Supporting attachments */}
           <div
             style={{
               background: tokens.colorCardBg,
@@ -489,7 +339,6 @@ export default function FlightApplicationDetailPageContent({
           </div>
         </div>
 
-        {/* Right column: approval timeline */}
         {application.approvalRequest ? (
           <ApprovalTierTimeline
             tiers={tiers}
