@@ -740,7 +740,7 @@ export function BusinessTripForm({
         </Button>
       }
     >
-      <div className="mx-auto w-full max-w-3xl">{formContent}</div>
+      <div className="w-full">{formContent}</div>
     </FormLayout>
   );
 }
