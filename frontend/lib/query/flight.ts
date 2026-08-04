@@ -178,9 +178,11 @@ export function useCancelFlightApplication(id: string) {
 export function useAttachCombinedTicket(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: (files: File[]) => {
       const formData = new FormData();
-      formData.append('file', file);
+      for (const file of files) {
+        formData.append('files', file);
+      }
       return apiPostForm<FlightApplicationDetail>(
         `${FLIGHT_PATH}/${id}/tickets/combined`,
         formData,
@@ -204,13 +206,15 @@ export function useAttachPassengerTicket(id: string) {
   return useMutation({
     mutationFn: ({
       passengerId,
-      file,
+      files,
     }: {
       passengerId: string;
-      file: File;
+      files: File[];
     }) => {
       const formData = new FormData();
-      formData.append('file', file);
+      for (const file of files) {
+        formData.append('files', file);
+      }
       return apiPostForm<FlightApplicationDetail>(
         `${FLIGHT_PATH}/${id}/passengers/${passengerId}/ticket`,
         formData,

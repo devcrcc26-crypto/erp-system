@@ -44,6 +44,7 @@ export interface FlightPassenger {
   acknowledgedAt?: string | null;
   employee?: FlightUserSummary;
   ticket?: FlightDocumentSummary | null;
+  tickets?: FlightDocumentSummary[];
 }
 
 export interface FlightApplicationListItem {
@@ -76,6 +77,7 @@ export interface FlightApplicationDetail extends FlightApplicationListItem {
   perDiemRequired: boolean;
   notes?: string | null;
   combinedTicket?: FlightDocumentSummary | null;
+  combinedTickets?: FlightDocumentSummary[];
   passengers: FlightPassenger[];
   documents: FlightDocumentSummary[];
   approvalRequest?: {

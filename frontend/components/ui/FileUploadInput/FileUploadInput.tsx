@@ -101,7 +101,9 @@ export default function FileUploadInput({
           ellipsis
           style={{ fontSize: 12, maxWidth: 160 }}
         >
-          {files[0]?.name}
+          {files.length === 1
+            ? files[0]?.name
+            : `${files.length} files selected`}
         </Typography.Text>
       ) : null}
     </div>

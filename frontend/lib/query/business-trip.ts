@@ -220,9 +220,11 @@ export function useCancelBusinessTrip(id: string) {
 export function useAttachBusinessTripCombinedTicket(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: (files: File[]) => {
       const formData = new FormData();
-      formData.append('file', file);
+      for (const file of files) {
+        formData.append('files', file);
+      }
       return apiPostForm<BusinessTripDetail>(
         `${BUSINESS_TRIP_PATH}/${id}/tickets/combined`,
         formData,
@@ -248,13 +250,15 @@ export function useAttachBusinessTripPassengerTicket(id: string) {
   return useMutation({
     mutationFn: ({
       passengerId,
-      file,
+      files,
     }: {
       passengerId: string;
-      file: File;
+      files: File[];
     }) => {
       const formData = new FormData();
-      formData.append('file', file);
+      for (const file of files) {
+        formData.append('files', file);
+      }
       return apiPostForm<BusinessTripDetail>(
         `${BUSINESS_TRIP_PATH}/${id}/passengers/${passengerId}/ticket`,
         formData,

@@ -91,7 +91,7 @@ const TRIP_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Business trip lifecycle ÔøΩ owns trip data; delegates tier workflow to ApprovalsService.
+ * Business trip lifecycle ù owns trip data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class BusinessTripService
@@ -651,7 +651,13 @@ export class BusinessTripService
 
     await this.assertCanView(app, companyId, userId);
 
-    return this.mapTrip(app as Record<string, unknown>);
+    const mapped = this.mapTrip(app as Record<string, unknown>);
+    return this.enrichTicketDocuments(
+      mapped,
+      app.attachmentFolderId,
+      companyId,
+      id,
+    );
   }
 
   /**
@@ -709,16 +715,20 @@ export class BusinessTripService
   }
 
   /**
-   * Attaches a combined ticket document (one file covers all passengers).
+   * Attaches combined ticket document(s) (files cover all passengers).
    * Only HR viewers may call this; application must be APPROVED.
    */
   async attachCombinedTicket(
     id: string,
-    file: UploadedFile,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertHrManager(companyId, userId);
+
+    if (!files.length) {
+      throw new BadRequestException('At least one ticket file is required');
+    }
 
     const app = await this.prisma.businessTrip.findFirst({
       where: activeOnly({ id, companyId }),
@@ -732,23 +742,25 @@ export class BusinessTripService
         'Tickets can only be attached to approved applications',
       );
     }
-    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
-    }
 
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileKey = `${companyId}/hr/business-trips/${id}/tickets/combined/${safeName}`;
-    const documentId = await this.uploadTicketDocument(
-      id,
-      companyId,
-      userId,
-      file,
-      fileKey,
-    );
+    const documentIds: string[] = [];
+    for (const file of files) {
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+      }
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/business-trips/${id}/tickets/combined/${randomUUID()}_${safeName}`;
+      documentIds.push(
+        await this.uploadTicketDocument(id, companyId, userId, file, fileKey),
+      );
+    }
 
     await this.prisma.businessTrip.update({
       where: { id },
-      data: { combinedTicketDocumentId: documentId, updatedBy: userId },
+      data: {
+        combinedTicketDocumentId: documentIds[0],
+        updatedBy: userId,
+      },
     });
 
     for (const passenger of app.passengers) {
@@ -768,17 +780,21 @@ export class BusinessTripService
   }
 
   /**
-   * Attaches an individual ticket document for a specific passenger.
+   * Attaches individual ticket document(s) for a specific passenger.
    * Only HR viewers may call this; application must be APPROVED.
    */
   async attachPassengerTicket(
     id: string,
     passengerId: string,
-    file: UploadedFile,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertHrManager(companyId, userId);
+
+    if (!files.length) {
+      throw new BadRequestException('At least one ticket file is required');
+    }
 
     const app = await this.prisma.businessTrip.findFirst({
       where: activeOnly({ id, companyId }),
@@ -797,23 +813,22 @@ export class BusinessTripService
     if (!passenger) {
       throw new NotFoundException('Passenger not found on this application');
     }
-    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
-    }
 
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileKey = `${companyId}/hr/business-trips/${id}/tickets/${passengerId}/${safeName}`;
-    const documentId = await this.uploadTicketDocument(
-      id,
-      companyId,
-      userId,
-      file,
-      fileKey,
-    );
+    const documentIds: string[] = [];
+    for (const file of files) {
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+      }
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/business-trips/${id}/tickets/${passengerId}/${randomUUID()}_${safeName}`;
+      documentIds.push(
+        await this.uploadTicketDocument(id, companyId, userId, file, fileKey),
+      );
+    }
 
     await this.prisma.businessTripPassenger.update({
       where: { id: passengerId },
-      data: { ticketDocumentId: documentId },
+      data: { ticketDocumentId: documentIds[0] },
     });
 
     await this.notifySafe(
@@ -1373,6 +1388,81 @@ export class BusinessTripService
         }`,
       );
     }
+  }
+
+  /**
+   * Loads all ticket files from the trip folder and attaches them to the
+   * mapped detail payload (combined + per-passenger).
+   */
+  private async enrichTicketDocuments(
+    mapped: Record<string, unknown>,
+    folderId: string | null,
+    companyId: string,
+    tripId: string,
+  ): Promise<Record<string, unknown>> {
+    if (!folderId) {
+      return {
+        ...mapped,
+        combinedTickets: mapped.combinedTicket
+          ? [mapped.combinedTicket]
+          : [],
+      };
+    }
+
+    const ticketDocs = await this.prisma.document.findMany({
+      where: {
+        companyId,
+        folderId,
+        deletedAt: null,
+        fileKey: {
+          contains: `/hr/business-trips/${tripId}/tickets/`,
+        },
+      },
+      select: {
+        ...DOCUMENT_SELECT,
+        fileKey: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const combinedPrefix = `/hr/business-trips/${tripId}/tickets/combined/`;
+    const combinedTickets = ticketDocs
+      .filter((doc) => doc.fileKey.includes(combinedPrefix))
+      .map(({ fileKey: _fileKey, ...doc }) => doc);
+
+    const passengers = Array.isArray(mapped.passengers)
+      ? (mapped.passengers as Array<Record<string, unknown>>)
+      : [];
+
+    const enrichedPassengers = passengers.map((passenger) => {
+      const passengerId = String(passenger.id ?? '');
+      const passengerPrefix = `/hr/business-trips/${tripId}/tickets/${passengerId}/`;
+      const tickets = ticketDocs
+        .filter((doc) => doc.fileKey.includes(passengerPrefix))
+        .map(({ fileKey: _fileKey, ...doc }) => doc);
+      const fallback =
+        tickets.length === 0 && passenger.ticket
+          ? [passenger.ticket]
+          : tickets;
+      return {
+        ...passenger,
+        tickets: fallback,
+        ticket: fallback[0] ?? passenger.ticket ?? null,
+      };
+    });
+
+    return {
+      ...mapped,
+      combinedTickets:
+        combinedTickets.length > 0
+          ? combinedTickets
+          : mapped.combinedTicket
+            ? [mapped.combinedTicket]
+            : [],
+      combinedTicket:
+        combinedTickets[0] ?? mapped.combinedTicket ?? null,
+      passengers: enrichedPassengers,
+    };
   }
 
   /**

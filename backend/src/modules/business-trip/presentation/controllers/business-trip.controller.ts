@@ -7,12 +7,11 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -272,28 +271,33 @@ export class BusinessTripController {
   @Post(':id/tickets/combined')
   @ApiOperation({
     summary:
-      'Attach a combined ticket covering all passengers (HR viewers only)',
+      'Attach combined ticket file(s) covering all passengers (HR viewers only)',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['file'],
+      required: ['files'],
       properties: {
-        file: { type: 'string', format: 'binary' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
   attachCombinedTicket(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<unknown> {
     return this.businessTripService.attachCombinedTicket(
       id,
-      file,
+      files ?? [],
       companyId,
       user.userId,
     );
@@ -302,30 +306,35 @@ export class BusinessTripController {
   @Post(':id/passengers/:passengerId/ticket')
   @ApiOperation({
     summary:
-      'Attach an individual ticket for a specific passenger (HR viewers only)',
+      'Attach individual ticket file(s) for a specific passenger (HR viewers only)',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['file'],
+      required: ['files'],
       properties: {
-        file: { type: 'string', format: 'binary' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { storage: memoryStorage() }),
+  )
   attachPassengerTicket(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Param('passengerId') passengerId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<unknown> {
     return this.businessTripService.attachPassengerTicket(
       id,
       passengerId,
-      file,
+      files ?? [],
       companyId,
       user.userId,
     );

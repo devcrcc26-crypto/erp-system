@@ -619,7 +619,13 @@ export class FlightService
 
     await this.assertCanView(app, companyId, userId);
 
-    return this.mapApplication(app as Record<string, unknown>);
+    const mapped = this.mapApplication(app as Record<string, unknown>);
+    return this.enrichTicketDocuments(
+      mapped,
+      app.attachmentFolderId,
+      companyId,
+      id,
+    );
   }
 
   /**
@@ -677,16 +683,20 @@ export class FlightService
   }
 
   /**
-   * Attaches a combined ticket document (one file covers all passengers).
+   * Attaches combined ticket document(s) (files cover all passengers).
    * Only HR viewers may call this; application must be APPROVED.
    */
   async attachCombinedTicket(
     id: string,
-    file: UploadedFile,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertHrManager(companyId, userId);
+
+    if (!files.length) {
+      throw new BadRequestException('At least one ticket file is required');
+    }
 
     const app = await this.prisma.flightApplication.findFirst({
       where: activeOnly({ id, companyId }),
@@ -700,23 +710,25 @@ export class FlightService
         'Tickets can only be attached to approved applications',
       );
     }
-    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
-    }
 
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileKey = `${companyId}/hr/flight/${id}/tickets/combined/${safeName}`;
-    const documentId = await this.uploadTicketDocument(
-      id,
-      companyId,
-      userId,
-      file,
-      fileKey,
-    );
+    const documentIds: string[] = [];
+    for (const file of files) {
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+      }
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/flight/${id}/tickets/combined/${randomUUID()}_${safeName}`;
+      documentIds.push(
+        await this.uploadTicketDocument(id, companyId, userId, file, fileKey),
+      );
+    }
 
     await this.prisma.flightApplication.update({
       where: { id },
-      data: { combinedTicketDocumentId: documentId, updatedBy: userId },
+      data: {
+        combinedTicketDocumentId: documentIds[0],
+        updatedBy: userId,
+      },
     });
 
     for (const passenger of app.passengers) {
@@ -736,17 +748,21 @@ export class FlightService
   }
 
   /**
-   * Attaches an individual ticket document for a specific passenger.
+   * Attaches individual ticket document(s) for a specific passenger.
    * Only HR viewers may call this; application must be APPROVED.
    */
   async attachPassengerTicket(
     id: string,
     passengerId: string,
-    file: UploadedFile,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertHrManager(companyId, userId);
+
+    if (!files.length) {
+      throw new BadRequestException('At least one ticket file is required');
+    }
 
     const app = await this.prisma.flightApplication.findFirst({
       where: activeOnly({ id, companyId }),
@@ -765,23 +781,22 @@ export class FlightService
     if (!passenger) {
       throw new NotFoundException('Passenger not found on this application');
     }
-    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
-      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
-    }
 
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileKey = `${companyId}/hr/flight/${id}/tickets/${passengerId}/${safeName}`;
-    const documentId = await this.uploadTicketDocument(
-      id,
-      companyId,
-      userId,
-      file,
-      fileKey,
-    );
+    const documentIds: string[] = [];
+    for (const file of files) {
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+      }
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/flight/${id}/tickets/${passengerId}/${randomUUID()}_${safeName}`;
+      documentIds.push(
+        await this.uploadTicketDocument(id, companyId, userId, file, fileKey),
+      );
+    }
 
     await this.prisma.flightPassenger.update({
       where: { id: passengerId },
-      data: { ticketDocumentId: documentId },
+      data: { ticketDocumentId: documentIds[0] },
     });
 
     await this.notifySafe(
@@ -1341,6 +1356,81 @@ export class FlightService
         }`,
       );
     }
+  }
+
+  /**
+   * Loads all ticket files from the application folder and attaches them to the
+   * mapped detail payload (combined + per-passenger).
+   */
+  private async enrichTicketDocuments(
+    mapped: Record<string, unknown>,
+    folderId: string | null,
+    companyId: string,
+    applicationId: string,
+  ): Promise<Record<string, unknown>> {
+    if (!folderId) {
+      return {
+        ...mapped,
+        combinedTickets: mapped.combinedTicket
+          ? [mapped.combinedTicket]
+          : [],
+      };
+    }
+
+    const ticketDocs = await this.prisma.document.findMany({
+      where: {
+        companyId,
+        folderId,
+        deletedAt: null,
+        fileKey: {
+          contains: `/hr/flight/${applicationId}/tickets/`,
+        },
+      },
+      select: {
+        ...DOCUMENT_SELECT,
+        fileKey: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const combinedPrefix = `/hr/flight/${applicationId}/tickets/combined/`;
+    const combinedTickets = ticketDocs
+      .filter((doc) => doc.fileKey.includes(combinedPrefix))
+      .map(({ fileKey: _fileKey, ...doc }) => doc);
+
+    const passengers = Array.isArray(mapped.passengers)
+      ? (mapped.passengers as Array<Record<string, unknown>>)
+      : [];
+
+    const enrichedPassengers = passengers.map((passenger) => {
+      const passengerId = String(passenger.id ?? '');
+      const passengerPrefix = `/hr/flight/${applicationId}/tickets/${passengerId}/`;
+      const tickets = ticketDocs
+        .filter((doc) => doc.fileKey.includes(passengerPrefix))
+        .map(({ fileKey: _fileKey, ...doc }) => doc);
+      const fallback =
+        tickets.length === 0 && passenger.ticket
+          ? [passenger.ticket]
+          : tickets;
+      return {
+        ...passenger,
+        tickets: fallback,
+        ticket: fallback[0] ?? passenger.ticket ?? null,
+      };
+    });
+
+    return {
+      ...mapped,
+      combinedTickets:
+        combinedTickets.length > 0
+          ? combinedTickets
+          : mapped.combinedTicket
+            ? [mapped.combinedTicket]
+            : [],
+      combinedTicket:
+        combinedTickets[0] ?? mapped.combinedTicket ?? null,
+      passengers: enrichedPassengers,
+    };
   }
 
   /**

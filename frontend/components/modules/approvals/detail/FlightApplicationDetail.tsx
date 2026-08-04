@@ -179,7 +179,20 @@ export default function FlightApplicationDetail({
           >
             Your ticket is ready — please acknowledge receipt
           </Typography.Text>
-          {application.combinedTicket ? (
+          {application.combinedTickets &&
+          application.combinedTickets.length > 0 ? (
+            <div className="mb-3">
+              <Typography.Text
+                type="secondary"
+                style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
+              >
+                Combined Ticket:
+              </Typography.Text>
+              <AttachmentDownloadList
+                documents={application.combinedTickets}
+              />
+            </div>
+          ) : application.combinedTicket ? (
             <div className="mb-3">
               <Typography.Text
                 type="secondary"
@@ -192,7 +205,20 @@ export default function FlightApplicationDetail({
               />
             </div>
           ) : null}
-          {currentUserPassenger.ticket ? (
+          {currentUserPassenger.tickets &&
+          currentUserPassenger.tickets.length > 0 ? (
+            <div className="mb-3">
+              <Typography.Text
+                type="secondary"
+                style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
+              >
+                Your Ticket:
+              </Typography.Text>
+              <AttachmentDownloadList
+                documents={currentUserPassenger.tickets}
+              />
+            </div>
+          ) : currentUserPassenger.ticket ? (
             <div className="mb-3">
               <Typography.Text
                 type="secondary"

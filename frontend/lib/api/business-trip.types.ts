@@ -44,6 +44,7 @@ export interface BusinessTripPassenger {
   acknowledgedAt?: string | null;
   employee?: BusinessTripUserSummary;
   ticket?: BusinessTripDocumentSummary | null;
+  tickets?: BusinessTripDocumentSummary[];
 }
 
 export interface BusinessTripListItem {
@@ -86,6 +87,7 @@ export interface BusinessTripDetail extends BusinessTripListItem {
   perDiemRequired: boolean;
   notes?: string | null;
   combinedTicket?: BusinessTripDocumentSummary | null;
+  combinedTickets?: BusinessTripDocumentSummary[];
   passengers: BusinessTripPassenger[];
   documents: BusinessTripDocumentSummary[];
   approvalRequest?: {

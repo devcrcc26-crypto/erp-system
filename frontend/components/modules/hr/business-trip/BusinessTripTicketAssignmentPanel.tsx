@@ -52,20 +52,27 @@ export default function BusinessTripTicketAssignmentPanel({
 
   const isApproved = trip.status === 'APPROVED';
   const canUpload = canViewHr && isApproved;
+  const combinedTickets =
+    trip.combinedTickets && trip.combinedTickets.length > 0
+      ? trip.combinedTickets
+      : trip.combinedTicket
+        ? [trip.combinedTicket]
+        : [];
   const showCombinedUploader =
-    canUpload && (!trip.combinedTicket || replacingCombined);
+    canUpload && (combinedTickets.length === 0 || replacingCombined);
 
   async function handleUploadCombined(): Promise<void> {
-    const file = combinedTicketFiles[0];
-    if (!file) {
+    if (combinedTicketFiles.length === 0) {
       return;
     }
     try {
-      await attachCombined.mutateAsync(file);
+      await attachCombined.mutateAsync(combinedTicketFiles);
       messageApi.success(
         replacingCombined
           ? 'Combined ticket replaced'
-          : 'Combined ticket uploaded',
+          : combinedTicketFiles.length > 1
+            ? 'Combined tickets uploaded'
+            : 'Combined ticket uploaded',
       );
       setCombinedTicketFiles([]);
       setReplacingCombined(false);
@@ -75,14 +82,18 @@ export default function BusinessTripTicketAssignmentPanel({
   }
 
   async function handleUploadPassenger(passengerId: string): Promise<void> {
-    const file = passengerFiles[passengerId]?.[0];
-    if (!file) {
+    const files = passengerFiles[passengerId] ?? [];
+    if (files.length === 0) {
       return;
     }
     setUploadingPassengerId(passengerId);
     try {
-      await attachPassenger.mutateAsync({ passengerId, file });
-      messageApi.success('Passenger ticket uploaded');
+      await attachPassenger.mutateAsync({ passengerId, files });
+      messageApi.success(
+        files.length > 1
+          ? 'Passenger tickets uploaded'
+          : 'Passenger ticket uploaded',
+      );
       setPassengerFiles((prev) => {
         const next = { ...prev };
         delete next[passengerId];
@@ -115,15 +126,21 @@ export default function BusinessTripTicketAssignmentPanel({
       title: 'Ticket',
       key: 'ticket',
       render: (_: unknown, row: BusinessTripPassenger) => {
-        if (row.ticket) {
+        const tickets =
+          row.tickets && row.tickets.length > 0
+            ? row.tickets
+            : row.ticket
+              ? [row.ticket]
+              : [];
+        if (tickets.length > 0) {
           return (
             <AttachmentDownloadList
-              documents={[row.ticket]}
+              documents={tickets}
               emptyLabel="No ticket"
             />
           );
         }
-        if (trip.combinedTicket) {
+        if (combinedTickets.length > 0) {
           return <Tag color="blue">Covered by combined ticket</Tag>;
         }
         return (
@@ -183,7 +200,7 @@ export default function BusinessTripTicketAssignmentPanel({
           {
             title: 'Action',
             key: 'action',
-            width: 200,
+            width: 220,
             render: (_: unknown, row: BusinessTripPassenger) => {
               const pending = passengerFiles[row.id] ?? [];
               return (
@@ -197,8 +214,8 @@ export default function BusinessTripTicketAssignmentPanel({
                       }))
                     }
                     accept={TICKET_ACCEPT}
-                    multiple={false}
-                    placeholder="Upload ticket"
+                    multiple
+                    placeholder="Upload tickets"
                     compact
                     disabled={
                       attachPassenger.isPending &&
@@ -238,14 +255,14 @@ export default function BusinessTripTicketAssignmentPanel({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Typography.Text strong>Combined Ticket</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            One file covers all passengers
+            One or more files covering all passengers
           </Typography.Text>
         </div>
 
-        {trip.combinedTicket && !replacingCombined ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        {combinedTickets.length > 0 && !replacingCombined ? (
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <AttachmentDownloadList documents={[trip.combinedTicket]} />
+              <AttachmentDownloadList documents={combinedTickets} />
             </div>
             {canUpload ? (
               <Button
@@ -265,8 +282,8 @@ export default function BusinessTripTicketAssignmentPanel({
               files={combinedTicketFiles}
               onChange={setCombinedTicketFiles}
               accept={TICKET_ACCEPT}
-              multiple={false}
-              placeholder="Upload combined ticket (PDF or image)"
+              multiple
+              placeholder="Upload combined ticket files (PDF or image)"
               disabled={attachCombined.isPending}
             />
             {combinedTicketFiles.length > 0 ? (
@@ -311,7 +328,7 @@ export default function BusinessTripTicketAssignmentPanel({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Typography.Text strong>Individual Tickets</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Assign ticket per passenger
+            Assign ticket files per passenger
           </Typography.Text>
         </div>
         <Table<BusinessTripPassenger>
