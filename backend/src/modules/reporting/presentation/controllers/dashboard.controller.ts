@@ -20,6 +20,7 @@ import {
 } from '../../application/dtos/reporting.dtos';
 import {
   DashboardService,
+  HrDashboardStats,
   MyDashboardStats,
   PortfolioDashboardStats,
 } from '../../application/services/dashboard.service';
@@ -55,6 +56,15 @@ export class DashboardController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<MyDashboardStats> {
     return this.dashboardService.getMyDashboard(this.ctx(user));
+  }
+
+  @Get('hr')
+  @RequirePermission('hr', 'view')
+  @ApiOperation({ summary: 'HR dashboard aggregates' })
+  hrDashboard(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<HrDashboardStats> {
+    return this.dashboardService.getHrDashboard(this.ctx(user));
   }
 
   @Get('widgets')

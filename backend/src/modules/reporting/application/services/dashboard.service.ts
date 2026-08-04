@@ -68,6 +68,46 @@ export interface MyDashboardStats {
   recentActivity: MyDashboardActivityItem[];
 }
 
+export interface HrDashboardRecentLeaveRequest {
+  id: string;
+  requestNumber: string;
+  employeeName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  status: string;
+}
+
+export interface HrDashboardUpcomingTravel {
+  id: string;
+  type: 'FLIGHT' | 'BUSINESS_TRIP';
+  number: string;
+  destination: string;
+  departureDate: string;
+  passengerCount: number;
+}
+
+export interface HrDashboardOvertimeRow {
+  employeeName: string;
+  totalHours: number;
+}
+
+export interface HrDashboardStats {
+  totalEmployees: number;
+  onLeaveThisWeek: number;
+  pendingLeaveRequests: number;
+  pendingOvertimeSheets: number;
+  pendingFlightBookings: number;
+  pendingBusinessTripBookings: number;
+  approvedFlightsThisMonth: number;
+  overtimeSubmissionsThisMonth: number;
+  leaveByType: Record<string, number>;
+  recentLeaveRequests: HrDashboardRecentLeaveRequest[];
+  upcomingTravel: HrDashboardUpcomingTravel[];
+  overtimeThisMonth: HrDashboardOvertimeRow[];
+}
+
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -401,6 +441,236 @@ export class DashboardService {
         CLOSED: closedPunch,
       },
       projectsByStatus,
+    };
+  }
+
+  /**
+   * HR aggregates: leave, overtime, and travel bookings for the HR home dashboard.
+   */
+  async getHrDashboard(ctx: RequestContext): Promise<HrDashboardStats> {
+    const { companyId } = ctx;
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const next30Days = new Date(now);
+    next30Days.setDate(now.getDate() + 30);
+
+    const [
+      totalEmployees,
+      onLeaveThisWeek,
+      pendingLeaveRequests,
+      pendingOvertimeSheets,
+      pendingFlightBookings,
+      pendingBusinessTripBookings,
+      approvedFlightsThisMonth,
+      overtimeSubmissionsThisMonth,
+      leaveByTypeGroups,
+      recentLeaveRequests,
+      upcomingFlights,
+      upcomingBusinessTrips,
+      overtimeThisMonth,
+    ] = await Promise.all([
+      this.prisma.user.count({
+        where: { companyId, deletedAt: null, isActive: true },
+      }),
+      this.prisma.leaveRequest.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          startDate: { lte: endOfWeek },
+          endDate: { gte: startOfWeek },
+        },
+      }),
+      this.prisma.leaveRequest.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: ['SUBMITTED', 'IN_REVIEW'] },
+        },
+      }),
+      this.prisma.overtimeSheet.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: ['SUBMITTED', 'IN_REVIEW'] },
+        },
+      }),
+      this.prisma.flightApplication.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          combinedTicketDocumentId: null,
+        },
+      }),
+      this.prisma.businessTrip.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          combinedTicketDocumentId: null,
+        },
+      }),
+      this.prisma.flightApplication.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          departureDate: { gte: startOfMonth, lte: endOfMonth },
+        },
+      }),
+      this.prisma.overtimeSheet.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: ['SUBMITTED', 'IN_REVIEW', 'APPROVED'] },
+          month: now.getMonth() + 1,
+          year: now.getFullYear(),
+        },
+      }),
+      this.prisma.leaveRequest.groupBy({
+        by: ['leaveType'],
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: ['SUBMITTED', 'IN_REVIEW', 'APPROVED'] },
+          startDate: { gte: startOfMonth },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.leaveRequest.findMany({
+        where: { companyId, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          requestNumber: true,
+          leaveType: true,
+          startDate: true,
+          endDate: true,
+          days: true,
+          status: true,
+          employee: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
+      }),
+      this.prisma.flightApplication.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          departureDate: { gte: now, lte: next30Days },
+        },
+        orderBy: { departureDate: 'asc' },
+        take: 5,
+        select: {
+          id: true,
+          applicationNumber: true,
+          destination: true,
+          departureDate: true,
+          _count: { select: { passengers: true } },
+        },
+      }),
+      this.prisma.businessTrip.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          departureDate: { gte: now, lte: next30Days },
+        },
+        orderBy: { departureDate: 'asc' },
+        take: 5,
+        select: {
+          id: true,
+          tripNumber: true,
+          destinationCity: true,
+          destinationCountry: true,
+          departureDate: true,
+          _count: { select: { passengers: true } },
+        },
+      }),
+      this.prisma.overtimeSheet.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'APPROVED',
+          month: now.getMonth() + 1,
+          year: now.getFullYear(),
+        },
+        orderBy: { totalHours: 'desc' },
+        take: 10,
+        select: {
+          totalHours: true,
+          employee: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
+      }),
+    ]);
+
+    const leaveByType: Record<string, number> = {};
+    for (const group of leaveByTypeGroups) {
+      leaveByType[group.leaveType] = group._count._all;
+    }
+
+    const upcomingTravel: HrDashboardUpcomingTravel[] = [
+      ...upcomingFlights.map((flight) => ({
+        id: flight.id,
+        type: 'FLIGHT' as const,
+        number: flight.applicationNumber,
+        destination: flight.destination,
+        departureDate: flight.departureDate.toISOString(),
+        passengerCount: flight._count.passengers,
+      })),
+      ...upcomingBusinessTrips.map((trip) => ({
+        id: trip.id,
+        type: 'BUSINESS_TRIP' as const,
+        number: trip.tripNumber,
+        destination: `${trip.destinationCity}, ${trip.destinationCountry}`,
+        departureDate: trip.departureDate.toISOString(),
+        passengerCount: trip._count.passengers,
+      })),
+    ].sort(
+      (a, b) =>
+        new Date(a.departureDate).getTime() -
+        new Date(b.departureDate).getTime(),
+    );
+
+    return {
+      totalEmployees,
+      onLeaveThisWeek,
+      pendingLeaveRequests,
+      pendingOvertimeSheets,
+      pendingFlightBookings: pendingFlightBookings + pendingBusinessTripBookings,
+      pendingBusinessTripBookings,
+      approvedFlightsThisMonth,
+      overtimeSubmissionsThisMonth,
+      leaveByType,
+      recentLeaveRequests: recentLeaveRequests.map((request) => ({
+        id: request.id,
+        requestNumber: request.requestNumber,
+        employeeName: formatPersonName(request.employee),
+        leaveType: request.leaveType,
+        startDate: request.startDate.toISOString(),
+        endDate: request.endDate.toISOString(),
+        days: Number(request.days),
+        status: request.status,
+      })),
+      upcomingTravel,
+      overtimeThisMonth: overtimeThisMonth.map((sheet) => ({
+        employeeName: formatPersonName(sheet.employee),
+        totalHours: Number(sheet.totalHours),
+      })),
     };
   }
 

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client';
 import type { Project, Task } from '@/lib/api/project-management.types';
 import type {
+  HrDashboardStats,
   MyDashboardStats,
   PortfolioDashboardStats,
 } from '@/lib/api/reporting.types';
@@ -85,6 +86,7 @@ export const dashboardKeys = {
     [...dashboardKeys.all, 'data', projectId ?? 'all'] as const,
   portfolioStats: ['dashboard', 'portfolio'] as const,
   myStats: ['dashboard', 'my'] as const,
+  hrStats: ['dashboard', 'hr'] as const,
 };
 
 /** Company-wide PM aggregates from GET /dashboard/portfolio. */
@@ -103,6 +105,17 @@ export function useMyDashboard(enabled = true) {
   return useQuery({
     queryKey: dashboardKeys.myStats,
     queryFn: () => apiGet<MyDashboardStats>('/dashboard/my'),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/** HR aggregates from GET /dashboard/hr. */
+export function useHrDashboard(enabled = true) {
+  return useQuery({
+    queryKey: dashboardKeys.hrStats,
+    queryFn: () => apiGet<HrDashboardStats>('/dashboard/hr'),
     enabled,
     staleTime: 60_000,
     retry: false,

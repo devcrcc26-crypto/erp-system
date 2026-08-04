@@ -1,88 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import { Spin } from 'antd';
-import {
-  AuditOutlined,
-  CheckSquareOutlined,
-  ExclamationCircleOutlined,
-  QuestionCircleOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
-import type { ComponentType, ReactNode } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import type { MyDashboardActivityItem } from '@/lib/api/reporting.types';
+import {
+  SectionCard,
+  StatCard,
+} from '@/components/modules/dashboard/DashboardStats';
 import { useMyDashboard } from '@/lib/query/dashboard';
 import { layout } from '@/lib/theme/layout';
 
 dayjs.extend(relativeTime);
-
-type IconComponent = ComponentType<{ className?: string }>;
-
-type KpiCardConfig = {
-  key: string;
-  label: string;
-  value: string;
-  subtext: string;
-  link: string;
-  icon: IconComponent;
-};
-
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}): React.ReactNode {
-  return (
-    <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-      <h3 className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function ActivityFeed({
-  items,
-}: {
-  items: MyDashboardActivityItem[];
-}): React.ReactNode {
-  if (items.length === 0) {
-    return (
-      <p className="text-sm text-[var(--color-text-tertiary)]">
-        No recent activity.
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col">
-      {items.map((item) => (
-        <Link
-          key={`${item.type}-${item.date}-${item.title}`}
-          href={item.link}
-          className="flex gap-3 border-b border-[var(--color-border-tertiary)] py-2 last:border-b-0 hover:bg-[var(--color-surface-secondary)]"
-        >
-          <div className="w-[80px] shrink-0 text-xs text-[var(--color-text-tertiary)]">
-            {dayjs(item.date).fromNow()}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm text-[var(--color-text-primary)]">
-              {item.title}
-            </p>
-            <p className="text-xs text-[var(--color-text-tertiary)]">
-              {item.type}
-            </p>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Personal dashboard for FK-scoped roles (Designer, Discipline Lead, Reviewer).
@@ -93,10 +21,10 @@ export default function PersonalDashboard({
   enabled?: boolean;
 }): React.ReactNode {
   const myQuery = useMyDashboard(enabled);
-  const stats = myQuery.data;
+  const my = myQuery.data;
   const loading = myQuery.isLoading || myQuery.isFetching;
 
-  if (loading && !stats) {
+  if (loading && !my) {
     return (
       <div className={layout.loadingCard}>
         <Spin />
@@ -104,133 +32,73 @@ export default function PersonalDashboard({
     );
   }
 
-  if (!stats) {
+  if (!my) {
     return (
       <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-        <p className="text-sm text-[var(--color-text-tertiary)]">
+        <p className="text-sm text-[var(--color-text-tertiary)] m-0">
           Unable to load personal dashboard.
         </p>
       </div>
     );
   }
 
-  const cards: KpiCardConfig[] = [
-    {
-      key: 'subtasks',
-      label: 'My Subtasks',
-      value: stats.mySubtasks.toLocaleString(),
-      subtext: 'assigned to me',
-      link: '/my-work',
-      icon: CheckSquareOutlined,
-    },
-    {
-      key: 'reviews',
-      label: 'Pending Reviews',
-      value: stats.myActiveReviews.toLocaleString(),
-      subtext: 'awaiting my action',
-      link: '/review-inbox',
-      icon: AuditOutlined,
-    },
-    {
-      key: 'issues',
-      label: 'My Issues',
-      value: stats.myOpenIssues.toLocaleString(),
-      subtext: 'open assignments',
-      link: '/issues',
-      icon: ExclamationCircleOutlined,
-    },
-    {
-      key: 'rfis',
-      label: 'My RFIs',
-      value: stats.myOpenRfis.toLocaleString(),
-      subtext: 'open assignments',
-      link: '/rfis',
-      icon: QuestionCircleOutlined,
-    },
-  ];
-
   return (
-    <div className={layout.sectionStack}>
+    <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.key} href={card.link} className="block group">
-              <div className="h-full bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3 transition-colors group-hover:border-[rgba(0,0,0,0.14)]">
-                <div className="mb-2 flex items-center gap-2">
-                  <Icon className="text-[var(--color-text-tertiary)]" />
-                  <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                    {card.label}
-                  </span>
-                </div>
-                <p className="m-0 text-2xl font-semibold text-[var(--color-text-primary)] leading-tight">
-                  {card.value}
-                </p>
-                <p className="m-0 mt-1 text-xs text-[var(--color-text-tertiary)]">
-                  {card.subtext}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="My Action Items">
-          <Link
-            href="/meetings"
-            className="flex items-center justify-between rounded-lg border border-[var(--color-border-tertiary)] px-3 py-3 hover:bg-[var(--color-surface-secondary)]"
-          >
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                {stats.myOpenActionItems.toLocaleString()}
-              </p>
-              <p className="text-xs text-[var(--color-text-tertiary)]">
-                open action items assigned to me
-              </p>
-            </div>
-            <span className="text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">
-              View meetings
-            </span>
-          </Link>
-          {stats.myPendingDailyLogs > 0 ? (
-            <Link
-              href="/daily-logs"
-              className="mt-2 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-            >
-              <span>
-                {stats.myPendingDailyLogs.toLocaleString()} pending daily logs
-              </span>
-              <span className="text-xs uppercase tracking-wide">View</span>
-            </Link>
-          ) : null}
-        </SectionCard>
-
-        <SectionCard title="My Risks">
-          <Link
-            href="/risks"
-            className="flex items-center justify-between rounded-lg border border-[var(--color-border-tertiary)] px-3 py-3 hover:bg-[var(--color-surface-secondary)]"
-          >
-            <div className="flex items-center gap-3">
-              <WarningOutlined className="text-[var(--color-text-secondary)]" />
-              <div>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                  {stats.myRisks.toLocaleString()}
-                </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
-                  risks I own
-                </p>
-              </div>
-            </div>
-            <span className="text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">
-              View risks
-            </span>
-          </Link>
-        </SectionCard>
+        <StatCard
+          label="My Tasks"
+          value={my.mySubtasks}
+          color="teal"
+          href="/my-work"
+        />
+        <StatCard
+          label="Active Reviews"
+          value={my.myActiveReviews}
+          color="blue"
+          href="/review-inbox"
+        />
+        <StatCard
+          label="Open Issues"
+          value={my.myOpenIssues}
+          color={my.myOpenIssues > 0 ? 'red' : 'default'}
+          href="/issues"
+        />
+        <StatCard
+          label="Open RFIs"
+          value={my.myOpenRfis}
+          color={my.myOpenRfis > 0 ? 'amber' : 'default'}
+          href="/rfis"
+        />
       </div>
 
       <SectionCard title="Recent Activity">
-        <ActivityFeed items={stats.recentActivity} />
+        {my.recentActivity.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-tertiary)] m-0">
+            No recent activity.
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {my.recentActivity.map((item, index) => (
+              <a
+                key={`${item.type}-${item.date}-${index}`}
+                href={item.link}
+                className="flex items-start gap-3 py-2.5 border-b border-[rgba(0,0,0,0.06)] last:border-0 no-underline"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-[var(--color-text-primary)] m-0">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5 m-0">
+                    {dayjs(item.date).fromNow()}
+                  </p>
+                </div>
+                <span className="text-xs text-[#1D9E75] font-medium flex-shrink-0">
+                  View →
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
       </SectionCard>
     </div>
   );

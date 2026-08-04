@@ -34,7 +34,8 @@
     "menuProject": "Project",
     "groups": {
       "projectManagement": "Project Management",
-      "humanResources": "Human Resources"
+      "humanResources": "Human Resources",
+      "organization": "Organization"
     },
     "hr": {
       "leaveRequests": "Leave Requests",
@@ -49,7 +50,8 @@
       "projectSeal": "Project Seal Usage",
       "vehicleRefueling": "Vehicle Refueling",
       "inspectionRepair": "Inspection & Repair",
-      "businessTrips": "Business Trips"
+      "businessTrips": "Business Trips",
+      "reports": "HR Reports"
     }
   },
   "workspace": {

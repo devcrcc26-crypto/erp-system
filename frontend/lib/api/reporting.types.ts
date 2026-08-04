@@ -45,6 +45,47 @@ export interface MyDashboardStats {
   recentActivity: MyDashboardActivityItem[];
 }
 
+export interface HrDashboardRecentLeaveRequest {
+  id: string;
+  requestNumber: string;
+  employeeName: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  status: string;
+}
+
+export interface HrDashboardUpcomingTravel {
+  id: string;
+  type: 'FLIGHT' | 'BUSINESS_TRIP';
+  number: string;
+  destination: string;
+  departureDate: string;
+  passengerCount: number;
+}
+
+export interface HrDashboardOvertimeRow {
+  employeeName: string;
+  totalHours: number;
+}
+
+/** HR aggregates from GET /dashboard/hr. */
+export interface HrDashboardStats {
+  totalEmployees: number;
+  onLeaveThisWeek: number;
+  pendingLeaveRequests: number;
+  pendingOvertimeSheets: number;
+  pendingFlightBookings: number;
+  pendingBusinessTripBookings: number;
+  approvedFlightsThisMonth: number;
+  overtimeSubmissionsThisMonth: number;
+  leaveByType: Record<string, number>;
+  recentLeaveRequests: HrDashboardRecentLeaveRequest[];
+  upcomingTravel: HrDashboardUpcomingTravel[];
+  overtimeThisMonth: HrDashboardOvertimeRow[];
+}
+
 /** Company-wide portfolio summary from GET /reports/portfolio-summary. */
 export interface PortfolioSummary {
   generatedAt: string;

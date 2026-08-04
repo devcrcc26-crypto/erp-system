@@ -34,7 +34,8 @@
     "menuProject": "项目",
     "groups": {
       "projectManagement": "项目管理",
-      "humanResources": "人力资源"
+      "humanResources": "人力资源",
+      "organization": "组织架构"
     },
     "hr": {
       "leaveRequests": "请假申请",
@@ -49,7 +50,8 @@
       "projectSeal": "项目章使用",
       "vehicleRefueling": "办公车辆加油",
       "inspectionRepair": "检修申请",
-      "businessTrips": "第三国出差"
+      "businessTrips": "第三国出差",
+      "reports": "人力资源报表"
     }
   },
   "workspace": {

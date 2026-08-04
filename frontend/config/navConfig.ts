@@ -85,6 +85,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
   '/hr/business-trips': 'nav.hr.businessTrips',
+  '/hr/reports': 'nav.hr.reports',
 };
 
 export interface IconRailVisibility {
@@ -281,34 +282,6 @@ export function buildIconRailNav(
     defaultOpen: true,
     items: [
       {
-        key: '/users',
-        labelKey: 'nav.users',
-        href: '/users',
-        iconKey: 'users',
-        visible: canManageUsers,
-      },
-      {
-        key: '/departments',
-        labelKey: 'nav.departments',
-        href: '/departments',
-        iconKey: 'departments',
-        visible: canViewDepartments,
-      },
-      {
-        key: '/positions',
-        labelKey: 'nav.positions',
-        href: '/positions',
-        iconKey: 'positions',
-        visible: canViewPositions,
-      },
-      {
-        key: '/disciplines',
-        labelKey: 'nav.disciplinesCatalog',
-        href: '/disciplines',
-        iconKey: 'disciplines-catalog',
-        visible: canViewDisciplinesCatalog,
-      },
-      {
         key: '/hr/leave-requests',
         labelKey: 'nav.hr.leaveRequests',
         href: '/hr/leave-requests',
@@ -399,6 +372,50 @@ export function buildIconRailNav(
         iconKey: 'hr-inspection',
         visible: canViewHr,
       },
+      {
+        key: '/hr/reports',
+        labelKey: 'nav.hr.reports',
+        href: '/hr/reports',
+        iconKey: 'reports',
+        visible: canViewHr,
+      },
+    ],
+  };
+
+  const organization: IconRailGroup = {
+    key: 'organization',
+    labelKey: 'nav.groups.organization',
+    storageKey: 'sidebar_organization_open',
+    defaultOpen: true,
+    items: [
+      {
+        key: '/users',
+        labelKey: 'nav.users',
+        href: '/users',
+        iconKey: 'users',
+        visible: canManageUsers,
+      },
+      {
+        key: '/departments',
+        labelKey: 'nav.departments',
+        href: '/departments',
+        iconKey: 'departments',
+        visible: canViewDepartments,
+      },
+      {
+        key: '/positions',
+        labelKey: 'nav.positions',
+        href: '/positions',
+        iconKey: 'positions',
+        visible: canViewPositions,
+      },
+      {
+        key: '/disciplines',
+        labelKey: 'nav.disciplinesCatalog',
+        href: '/disciplines',
+        iconKey: 'disciplines-catalog',
+        visible: canViewDisciplinesCatalog,
+      },
     ],
   };
 
@@ -426,11 +443,18 @@ export function buildIconRailNav(
     },
   ];
 
+  const showOrganization =
+    canManageUsers ||
+    canViewDepartments ||
+    canViewPositions ||
+    canViewDisciplinesCatalog;
+
   return {
     topItems,
     groups: [
       projectManagement,
       ...(canViewHr ? [humanResources] : []),
+      ...(showOrganization ? [organization] : []),
     ],
     standalone,
   };

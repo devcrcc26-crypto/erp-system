@@ -1,198 +1,57 @@
 'use client';
 
-import Link from 'next/link';
 import { Spin } from 'antd';
 import {
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
-import { ArrowRight } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import { useCanManageUsers } from '@/hooks/use-auth-capabilities';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { LeaveRequestListItem } from '@/lib/api/leave.types';
-import { useLeaveRequests } from '@/lib/query/leave';
-import { layout } from '@/lib/theme/layout';
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import {
-  formatLeaveEmployeeName,
+  ChartCard,
+  SectionCard,
+  StatCard,
+} from '@/components/modules/dashboard/DashboardStats';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useHrDashboard } from '@/lib/query/dashboard';
+import { layout } from '@/lib/theme/layout';
+import { tokens } from '@/lib/theme/tokens';
+import {
   formatLeaveStatus,
   formatLeaveType,
   leaveStatusVariant,
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-dayjs.extend(relativeTime);
-
-type IconComponent = ComponentType<{ className?: string }>;
-
-type KpiCardConfig = {
-  key: string;
-  label: string;
-  value: string;
-  subtext: string;
-  link: string;
-  icon: IconComponent;
+const LEAVE_TYPE_COLORS: Record<string, string> = {
+  ANNUAL: tokens.colorBlue400,
+  SICK: tokens.colorCoral400,
+  UNPAID: tokens.colorGray200,
+  MATERNITY: tokens.colorCyan400,
+  PATERNITY: tokens.colorCyan400,
+  EMERGENCY: tokens.colorRed400,
+  COMPASSIONATE: tokens.colorAmber400,
 };
-
-type QuickLink = {
-  key: string;
-  labelKey: string;
-  href: string;
-  descriptionKey: string;
-};
-
-const HR_QUICK_LINKS: readonly QuickLink[] = [
-  {
-    key: 'leave',
-    labelKey: 'nav.hr.leaveRequests',
-    href: '/hr/leave-requests',
-    descriptionKey: 'pages.dashboard.hr.links.leave',
-  },
-  {
-    key: 'overtime',
-    labelKey: 'nav.hr.overtime',
-    href: '/hr/overtime',
-    descriptionKey: 'pages.dashboard.hr.links.overtime',
-  },
-  {
-    key: 'expense',
-    labelKey: 'nav.hr.expenseClaims',
-    href: '/hr/expense-claims',
-    descriptionKey: 'pages.dashboard.hr.links.expense',
-  },
-  {
-    key: 'users',
-    labelKey: 'nav.users',
-    href: '/users',
-    descriptionKey: 'pages.dashboard.hr.links.users',
-  },
-  {
-    key: 'approvals',
-    labelKey: 'nav.approvals',
-    href: '/approvals',
-    descriptionKey: 'pages.dashboard.hr.links.approvals',
-  },
-] as const;
-
-function SectionCard({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-}): React.ReactNode {
-  return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
-          {title}
-        </h3>
-        {action}
-      </div>
-      <div className="px-5 py-4">{children}</div>
-    </div>
-  );
-}
-
-function RecentLeaveList({
-  items,
-}: {
-  items: LeaveRequestListItem[];
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-
-  if (items.length === 0) {
-    return (
-      <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-        {t('pages.dashboard.hr.noRecentLeave')}
-      </p>
-    );
-  }
-
-  return (
-    <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
-      {items.map((item) => (
-        <li key={item.id}>
-          <Link
-            href={`/hr/leave-requests/${item.id}`}
-            className="flex gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-90"
-          >
-            <div className="w-[72px] shrink-0 text-xs text-[var(--color-text-tertiary)] pt-0.5">
-              {item.submittedAt
-                ? dayjs(item.submittedAt).fromNow()
-                : dayjs(item.createdAt).fromNow()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-[var(--color-text-primary)] m-0">
-                {formatLeaveEmployeeName(item.employee)} ·{' '}
-                {formatLeaveType(item.leaveType)}
-              </p>
-              <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
-                {item.requestNumber} · {formatProjectDate(item.startDate)} –{' '}
-                {formatProjectDate(item.endDate)} ({item.days}d)
-              </p>
-            </div>
-            <StatusBadge
-              label={formatLeaveStatus(item.status)}
-              variant={leaveStatusVariant(item.status)}
-            />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 /**
- * HR home dashboard — leave KPIs, recent requests, and HR module shortcuts.
+ * HR home dashboard — leave/overtime/travel KPIs, charts, and recent activity.
  */
 export default function HrDashboard({
   enabled = true,
 }: {
   enabled?: boolean;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const canManageUsers = useCanManageUsers();
+  const hrQuery = useHrDashboard(enabled);
+  const hr = hrQuery.data;
+  const loading = hrQuery.isLoading || hrQuery.isFetching;
 
-  const pendingQuery = useLeaveRequests(
-    {
-      page: 1,
-      limit: 1,
-      status: ['SUBMITTED', 'IN_REVIEW'],
-    },
-    enabled,
-  );
-  const approvedQuery = useLeaveRequests(
-    {
-      page: 1,
-      limit: 1,
-      status: ['APPROVED'],
-    },
-    enabled,
-  );
-  const recentQuery = useLeaveRequests(
-    {
-      page: 1,
-      limit: 8,
-    },
-    enabled,
-  );
-
-  const loading =
-    (pendingQuery.isLoading ||
-      approvedQuery.isLoading ||
-      recentQuery.isLoading) &&
-    !pendingQuery.data &&
-    !approvedQuery.data;
-
-  if (loading) {
+  if (loading && !hr) {
     return (
       <div className={layout.loadingCard}>
         <Spin />
@@ -200,118 +59,176 @@ export default function HrDashboard({
     );
   }
 
-  const pendingCount = pendingQuery.data?.meta.total ?? 0;
-  const approvedCount = approvedQuery.data?.meta.total ?? 0;
-  const recentItems = recentQuery.data?.data ?? [];
-
-  const cards: KpiCardConfig[] = [
-    {
-      key: 'pending',
-      label: t('pages.dashboard.hr.kpi.pendingLeave'),
-      value: pendingCount.toLocaleString(),
-      subtext: t('pages.dashboard.hr.kpi.pendingLeaveHint'),
-      link: '/hr/leave-requests',
-      icon: ClockCircleOutlined,
-    },
-    {
-      key: 'approved',
-      label: t('pages.dashboard.hr.kpi.approvedLeave'),
-      value: approvedCount.toLocaleString(),
-      subtext: t('pages.dashboard.hr.kpi.approvedLeaveHint'),
-      link: '/hr/leave-requests',
-      icon: CheckCircleOutlined,
-    },
-    {
-      key: 'leave',
-      label: t('pages.dashboard.hr.kpi.leaveModule'),
-      value: t('pages.dashboard.hr.kpi.open'),
-      subtext: t('pages.dashboard.hr.kpi.leaveModuleHint'),
-      link: '/hr/leave-requests',
-      icon: CalendarOutlined,
-    },
-  ];
-
-  if (canManageUsers) {
-    cards.push({
-      key: 'users',
-      label: t('pages.dashboard.hr.kpi.users'),
-      value: t('pages.dashboard.hr.kpi.open'),
-      subtext: t('pages.dashboard.hr.kpi.usersHint'),
-      link: '/users',
-      icon: TeamOutlined,
-    });
+  if (!hr) {
+    return (
+      <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
+        <p className="text-sm text-[var(--color-text-tertiary)] m-0">
+          Unable to load HR dashboard.
+        </p>
+      </div>
+    );
   }
 
-  const quickLinks = HR_QUICK_LINKS.filter(
-    (link) => link.key !== 'users' || canManageUsers,
-  );
+  const leaveByTypeData = Object.entries(hr.leaveByType)
+    .filter(([, count]) => count > 0)
+    .map(([type, count]) => ({
+      name: formatLeaveType(type),
+      value: count,
+      fill: LEAVE_TYPE_COLORS[type] ?? tokens.colorGray200,
+    }));
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.key} href={card.link} className="block group">
-              <div className="h-full bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3 transition-colors group-hover:border-[rgba(0,0,0,0.14)]">
-                <div className="mb-2 flex items-center gap-2">
-                  <Icon className="text-[var(--color-text-tertiary)]" />
-                  <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                    {card.label}
-                  </span>
-                </div>
-                <p className="m-0 text-2xl font-semibold text-[var(--color-text-primary)] leading-tight">
-                  {card.value}
-                </p>
-                <p className="m-0 mt-1 text-xs text-[var(--color-text-tertiary)]">
-                  {card.subtext}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Total Employees"
+          value={hr.totalEmployees}
+          color="teal"
+          href="/users"
+        />
+        <StatCard
+          label="On Leave This Week"
+          value={hr.onLeaveThisWeek}
+          color="amber"
+          href="/hr/leave-requests"
+        />
+        <StatCard
+          label="Pending Leave"
+          value={hr.pendingLeaveRequests}
+          color={hr.pendingLeaveRequests > 0 ? 'blue' : 'default'}
+          href="/hr/leave-requests"
+        />
+        <StatCard
+          label="Pending Overtime"
+          value={hr.pendingOvertimeSheets}
+          color={hr.pendingOvertimeSheets > 0 ? 'blue' : 'default'}
+          href="/hr/overtime"
+        />
+        <StatCard
+          label="Flights Needing Ticket"
+          value={hr.pendingFlightBookings}
+          color={hr.pendingFlightBookings > 0 ? 'amber' : 'default'}
+          href="/hr/flight-applications"
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard
-          title={t('pages.dashboard.hr.recentLeave')}
-          action={
-            <Link
-              href="/hr/leave-requests"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-teal-600)] no-underline hover:underline"
-            >
-              {t('pages.dashboard.hr.viewAllLeave')}
-              <ArrowRight size={12} />
-            </Link>
-          }
-        >
-          <RecentLeaveList items={recentItems} />
-        </SectionCard>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="Leave Requests This Month by Type">
+          {leaveByTypeData.length === 0 ? (
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+              No data
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={leaveByTypeData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                >
+                  {leaveByTypeData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
 
-        <SectionCard title={t('pages.dashboard.hr.quickLinks')}>
-          <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
-            {quickLinks.map((link) => (
-              <li key={link.key}>
-                <Link
-                  href={link.href}
-                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0 no-underline group"
+        <ChartCard title="Overtime Hours This Month (Top 10)">
+          {hr.overtimeThisMonth.length === 0 ? (
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+              No data
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={hr.overtimeThisMonth} layout="vertical">
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis
+                  type="category"
+                  dataKey="employeeName"
+                  width={120}
+                  tick={{ fontSize: 11 }}
+                />
+                <Tooltip />
+                <Bar dataKey="totalHours" fill={tokens.colorTeal400} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SectionCard
+          title="Recent Leave Requests"
+          action={{ label: 'View all', href: '/hr/leave-requests' }}
+        >
+          {hr.recentLeaveRequests.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-tertiary)] m-0">
+              No leave requests yet.
+            </p>
+          ) : (
+            <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+              {hr.recentLeaveRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">
-                    <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
-                      {t(link.labelKey)}
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate m-0">
+                      {req.employeeName}
                     </p>
-                    <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
-                      {t(link.descriptionKey)}
+                    <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
+                      {formatLeaveType(req.leaveType)} · {req.days}d ·{' '}
+                      {formatProjectDate(req.startDate)}
                     </p>
                   </div>
-                  <ArrowRight
-                    size={14}
-                    className="shrink-0 text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-primary)]"
+                  <StatusBadge
+                    label={formatLeaveStatus(req.status)}
+                    variant={leaveStatusVariant(req.status)}
                   />
-                </Link>
-              </li>
-            ))}
-          </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Upcoming Travel (Next 30 Days)">
+          {hr.upcomingTravel.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-tertiary)] py-4 text-center m-0">
+              No upcoming travel
+            </p>
+          ) : (
+            <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+              {hr.upcomingTravel.map((trip) => (
+                <div
+                  key={trip.id}
+                  className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate m-0">
+                      {trip.destination}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
+                      {trip.number} · {trip.passengerCount} passenger
+                      {trip.passengerCount !== 1 ? 's' : ''} ·{' '}
+                      {formatProjectDate(trip.departureDate)}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    label={trip.type === 'FLIGHT' ? 'Flight' : 'Business Trip'}
+                    variant={trip.type === 'FLIGHT' ? 'info' : 'default'}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       </div>
     </div>
