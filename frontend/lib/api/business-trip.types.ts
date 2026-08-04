@@ -1,0 +1,150 @@
+export type FlightTripType = 'ONE_WAY' | 'ROUND_TRIP';
+export type FlightTicketClass = 'ECONOMY' | 'BUSINESS';
+export type FlightVisaStatus = 'NOT_APPLIED' | 'APPLIED' | 'APPROVED';
+export type BusinessTripStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'IN_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED'
+  | 'CANCELLED';
+export type FlightAcknowledgementStatus = 'PENDING' | 'ACKNOWLEDGED';
+
+export interface BusinessTripUserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+}
+
+export interface BusinessTripDocumentSummary {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+}
+
+export interface BusinessTripSelectablePassenger {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  position: string | null;
+}
+
+export interface BusinessTripPassenger {
+  id: string;
+  employeeId: string;
+  passportNumber?: string | null;
+  visaRequired: boolean;
+  visaStatus?: FlightVisaStatus | null;
+  ticketDocumentId?: string | null;
+  acknowledgementStatus: FlightAcknowledgementStatus;
+  acknowledgedAt?: string | null;
+  employee?: BusinessTripUserSummary;
+  ticket?: BusinessTripDocumentSummary | null;
+}
+
+export interface BusinessTripListItem {
+  id: string;
+  tripNumber: string;
+  submittedBy: string;
+  tripType: FlightTripType;
+  origin: string;
+  destinationCountry: string;
+  destinationCity: string;
+  departureDate: string;
+  returnDate?: string | null;
+  status: BusinessTripStatus;
+  passengerCount: number;
+  estimatedTotalCost?: number | null;
+  currentTierLabel?: string | null;
+  currentStepLabel?: string | null;
+  needsTicketAttachment?: boolean;
+  combinedTicketDocumentId?: string | null;
+  submitter?: BusinessTripUserSummary;
+  approvalRequestId?: string | null;
+  createdAt: string;
+}
+
+export interface BusinessTripDetail extends BusinessTripListItem {
+  purpose: string;
+  hostOrganization?: string | null;
+  hostContact?: string | null;
+  expectedOutcomes?: string | null;
+  itinerary?: string | null;
+  ticketClass: FlightTicketClass;
+  estimatedFlightCost?: number | null;
+  estimatedAccommodationCost?: number | null;
+  estimatedPerDiem?: number | null;
+  estimatedOtherCost?: number | null;
+  estimatedTotalCost?: number | null;
+  accommodationRequired: boolean;
+  accommodationDetails?: string | null;
+  perDiemRequired: boolean;
+  notes?: string | null;
+  combinedTicket?: BusinessTripDocumentSummary | null;
+  passengers: BusinessTripPassenger[];
+  documents: BusinessTripDocumentSummary[];
+  approvalRequest?: {
+    id: string;
+    status: string;
+    currentTier: number;
+    tiers: Array<{
+      id: string;
+      tierOrder: number;
+      label: string;
+      decision: string;
+      approver?: BusinessTripUserSummary;
+      comment?: string | null;
+      decidedAt?: string | null;
+    }>;
+  } | null;
+}
+
+export interface SubmitBusinessTripPassengerPayload {
+  employeeId: string;
+  passportNumber?: string;
+  visaRequired?: boolean;
+  visaStatus?: FlightVisaStatus;
+}
+
+export interface SubmitBusinessTripPayload {
+  tripType: FlightTripType;
+  origin: string;
+  destinationCountry: string;
+  destinationCity: string;
+  departureDate: string;
+  returnDate?: string;
+  purpose: string;
+  hostOrganization?: string;
+  hostContact?: string;
+  expectedOutcomes?: string;
+  itinerary?: string;
+  ticketClass: FlightTicketClass;
+  estimatedFlightCost?: number;
+  estimatedAccommodationCost?: number;
+  estimatedPerDiem?: number;
+  estimatedOtherCost?: number;
+  accommodationRequired: boolean;
+  accommodationDetails?: string;
+  perDiemRequired: boolean;
+  notes?: string;
+  passengers: SubmitBusinessTripPassengerPayload[];
+  files?: File[];
+}
+
+export interface ListBusinessTripsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: BusinessTripStatus | BusinessTripStatus[];
+  needsTicket?: boolean;
+  submittedById?: string;
+  destinationCountry?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}

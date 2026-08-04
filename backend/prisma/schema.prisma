@@ -71,6 +71,7 @@ enum FolderContextType {
   LEAVE
   OVERTIME
   FLIGHT
+  BUSINESS_TRIP
 }
 
 enum NotificationChannel {
@@ -229,6 +230,7 @@ model Company {
   leaveBalances            LeaveBalance[]
   overtimeSheets           OvertimeSheet[]
   flightApplications       FlightApplication[]
+  businessTrips            BusinessTrip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -621,6 +623,9 @@ model User {
   flightApplicationsSubmitted FlightApplication[] @relation("FlightSubmitter")
   flightApplicationsCreated   FlightApplication[] @relation("FlightCreator")
   flightPassengers            FlightPassenger[]   @relation("FlightPassenger")
+  businessTripsSubmitted      BusinessTrip[]      @relation("BusinessTripSubmitter")
+  businessTripsCreated        BusinessTrip[]      @relation("BusinessTripCreator")
+  businessTripPassengers      BusinessTripPassenger[] @relation("BusinessTripPassenger")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -934,6 +939,7 @@ model DocumentFolder {
   leaveRequests              LeaveRequest[]
   overtimeSheets             OvertimeSheet[]
   flightApplications         FlightApplication[]
+  businessTrips              BusinessTrip[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -977,6 +983,9 @@ model Document {
   flightApplicationDocuments FlightApplicationDocument[]
   flightCombinedTickets      FlightApplication[]         @relation("FlightCombinedTicket")
   flightPassengerTickets     FlightPassenger[]           @relation("PassengerTicket")
+  businessTripDocuments      BusinessTripDocument[]
+  businessTripCombinedTickets BusinessTrip[]             @relation("BusinessTripCombinedTicket")
+  businessTripPassengerTickets BusinessTripPassenger[]   @relation("BusinessTripPassengerTicket")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3305,6 +3314,7 @@ model ApprovalRequest {
   leaveRequest       LeaveRequest?
   overtimeSheet      OvertimeSheet?
   flightApplication  FlightApplication?
+  businessTrip       BusinessTrip?
 
   @@index([companyId])
   @@index([categoryId])
@@ -3660,4 +3670,109 @@ model FlightApplicationDocument {
   @@index([applicationId], map: "idx_flight_application_document_application")
   @@index([documentId], map: "idx_flight_application_document_document")
   @@map("flight_application_document")
+}
+
+// ─── Business Trips (Third-Country) ──────────────────────────────────────────
+
+enum BusinessTripStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+model BusinessTrip {
+  id                         String             @id @default(uuid())
+  companyId                  String             @map("company_id")
+  tripNumber                 String             @map("trip_number")
+  submittedBy                String             @map("submitted_by")
+  tripType                   FlightTripType     @map("trip_type")
+  origin                     String
+  destinationCountry         String             @map("destination_country")
+  destinationCity            String             @map("destination_city")
+  departureDate              DateTime           @map("departure_date") @db.Date
+  returnDate                 DateTime?          @map("return_date") @db.Date
+  purpose                    String
+  hostOrganization           String?            @map("host_organization")
+  hostContact                String?            @map("host_contact")
+  expectedOutcomes           String?            @map("expected_outcomes")
+  itinerary                  String?
+  ticketClass                FlightTicketClass  @default(ECONOMY) @map("ticket_class")
+  estimatedFlightCost        Decimal?           @map("estimated_flight_cost") @db.Decimal(12, 2)
+  estimatedAccommodationCost Decimal?           @map("estimated_accommodation_cost") @db.Decimal(12, 2)
+  estimatedPerDiem           Decimal?           @map("estimated_per_diem") @db.Decimal(12, 2)
+  estimatedOtherCost         Decimal?           @map("estimated_other_cost") @db.Decimal(12, 2)
+  estimatedTotalCost         Decimal?           @map("estimated_total_cost") @db.Decimal(12, 2) @default(dbgenerated("((COALESCE(estimated_flight_cost, (0)::numeric) + COALESCE(estimated_accommodation_cost, (0)::numeric) + COALESCE(estimated_per_diem, (0)::numeric) + COALESCE(estimated_other_cost, (0)::numeric)))"))
+  accommodationRequired      Boolean            @default(true) @map("accommodation_required")
+  accommodationDetails       String?            @map("accommodation_details")
+  perDiemRequired            Boolean            @default(true) @map("per_diem_required")
+  notes                      String?
+  status                     BusinessTripStatus @default(DRAFT)
+  approvalRequestId          String?            @unique @map("approval_request_id")
+  attachmentFolderId         String?            @map("attachment_folder_id")
+  combinedTicketDocumentId   String?            @map("combined_ticket_document_id")
+  submittedAt                DateTime?          @map("submitted_at")
+  completedAt                DateTime?          @map("completed_at")
+  createdAt                  DateTime           @default(now()) @map("created_at")
+  createdBy                  String             @map("created_by")
+  updatedAt                  DateTime           @updatedAt @map("updated_at")
+  updatedBy                  String             @map("updated_by")
+  deletedAt                  DateTime?          @map("deleted_at")
+  deletedBy                  String?            @map("deleted_by")
+
+  company          Company                 @relation(fields: [companyId], references: [id])
+  submitter        User                    @relation("BusinessTripSubmitter", fields: [submittedBy], references: [id])
+  approvalRequest  ApprovalRequest?        @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?         @relation(fields: [attachmentFolderId], references: [id])
+  combinedTicket   Document?               @relation("BusinessTripCombinedTicket", fields: [combinedTicketDocumentId], references: [id])
+  creator          User                    @relation("BusinessTripCreator", fields: [createdBy], references: [id])
+  passengers       BusinessTripPassenger[]
+  documents        BusinessTripDocument[]
+
+  @@unique([companyId, tripNumber], map: "uq_business_trip_company_number")
+  @@index([companyId], map: "idx_business_trip_company")
+  @@index([submittedBy], map: "idx_business_trip_submitted_by")
+  @@index([status], map: "idx_business_trip_status")
+  @@index([companyId, deletedAt], map: "idx_business_trip_company_deleted")
+  @@index([attachmentFolderId], map: "idx_business_trip_attachment_folder")
+  @@map("business_trip")
+}
+
+model BusinessTripPassenger {
+  id                    String                      @id @default(uuid())
+  tripId                String                      @map("trip_id")
+  employeeId            String                      @map("employee_id")
+  passportNumber        String?                     @map("passport_number")
+  visaRequired          Boolean                     @default(true) @map("visa_required")
+  visaStatus            FlightVisaStatus?           @default(NOT_APPLIED) @map("visa_status")
+  ticketDocumentId      String?                     @map("ticket_document_id")
+  acknowledgementStatus FlightAcknowledgementStatus @default(PENDING) @map("acknowledgement_status")
+  acknowledgedAt        DateTime?                   @map("acknowledged_at")
+  createdAt             DateTime                    @default(now()) @map("created_at")
+
+  trip     BusinessTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  employee User         @relation("BusinessTripPassenger", fields: [employeeId], references: [id])
+  ticket   Document?    @relation("BusinessTripPassengerTicket", fields: [ticketDocumentId], references: [id])
+
+  @@unique([tripId, employeeId], map: "uq_business_trip_passenger_trip_employee")
+  @@index([tripId], map: "idx_business_trip_passenger_trip")
+  @@index([employeeId], map: "idx_business_trip_passenger_employee")
+  @@map("business_trip_passenger")
+}
+
+model BusinessTripDocument {
+  id         String   @id @default(uuid())
+  tripId     String   @map("trip_id")
+  documentId String   @map("document_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  trip     BusinessTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  document Document     @relation(fields: [documentId], references: [id])
+
+  @@index([tripId], map: "idx_business_trip_document_trip")
+  @@index([documentId], map: "idx_business_trip_document_document")
+  @@map("business_trip_document")
 }
