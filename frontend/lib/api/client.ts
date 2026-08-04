@@ -178,6 +178,21 @@ export async function apiPostForm<T>(
   return unwrapEnvelope(response.data);
 }
 
+export async function apiPatchForm<T>(
+  url: string,
+  formData: FormData,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const response = await apiClient.patch<ApiEnvelope<T>>(url, formData, {
+    ...config,
+    headers: {
+      ...config?.headers,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return unwrapEnvelope(response.data);
+}
+
 export async function downloadApiFile(
   url: string,
   filename: string,
