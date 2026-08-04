@@ -11,6 +11,7 @@ import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
  */
 export default function BusinessTripCurrentStepBanner({
   trip,
+  embedded = false,
 }: {
   trip: Pick<
     BusinessTripDetail,
@@ -20,6 +21,8 @@ export default function BusinessTripCurrentStepBanner({
     | 'needsTicketAttachment'
     | 'currentStepLabel'
   > & { rejectionNote?: string | null };
+  /** When true, renders as a flat footer strip (no outer card chrome). */
+  embedded?: boolean;
 }): React.ReactNode {
   const currentStep = getCurrentStep(trip);
   if (!currentStep) {
@@ -30,18 +33,36 @@ export default function BusinessTripCurrentStepBanner({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-lg border px-4 py-3"
+      className={
+        embedded
+          ? 'flex items-start gap-3 px-5 py-3'
+          : 'flex items-start gap-3 px-5 py-3 rounded-lg border'
+      }
       style={{
         background: style.background,
-        borderColor: style.borderColor,
+        borderColor: embedded ? undefined : style.borderColor,
         color: style.color,
       }}
     >
-      <span className="font-semibold">Current Step:</span>
-      <span>{currentStep.step}</span>
-      {currentStep.description ? (
-        <span className="text-sm opacity-75">— {currentStep.description}</span>
-      ) : null}
+      <div
+        className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
+        style={{ background: style.color }}
+      />
+      <div className="min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+          Current Step
+        </span>
+        <span className="hidden sm:inline text-xs opacity-40">·</span>
+        <span className="text-sm font-semibold">{currentStep.step}</span>
+        {currentStep.description ? (
+          <>
+            <span className="hidden sm:inline text-xs opacity-40">—</span>
+            <span className="text-xs sm:text-sm opacity-80">
+              {currentStep.description}
+            </span>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

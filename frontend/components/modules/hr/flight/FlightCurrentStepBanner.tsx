@@ -30,18 +30,28 @@ export default function FlightCurrentStepBanner({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-lg border px-4 py-3"
+      className="flex items-center gap-3 px-5 py-3 rounded-lg border mb-1"
       style={{
         background: style.background,
         borderColor: style.borderColor,
         color: style.color,
       }}
     >
-      <span className="font-semibold">Current Step:</span>
-      <span>{currentStep.step}</span>
-      {currentStep.description ? (
-        <span className="text-sm opacity-75">— {currentStep.description}</span>
-      ) : null}
+      <div
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        style={{ background: style.color }}
+      />
+      <div className="min-w-0">
+        <span className="text-xs font-semibold uppercase tracking-wide mr-2">
+          Current Step:
+        </span>
+        <span className="text-sm font-medium">{currentStep.step}</span>
+        {currentStep.description ? (
+          <span className="text-xs opacity-75 ml-2">
+            — {currentStep.description}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

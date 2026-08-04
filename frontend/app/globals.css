@@ -4,7 +4,7 @@
   --color-sidebar-bg: #ffffff;
   --color-sidebar-active: #e1f5ee;
   --color-sidebar-accent: #1d9e75;
-  --color-page-bg: #f1efe8;
+  --color-page-bg: #FAFAFA;
   --color-fill-quaternary: #f8f7f4;
   --color-border-secondary: rgba(0, 0, 0, 0.18);
   --color-border-tertiary: rgba(0, 0, 0, 0.12);
@@ -17,6 +17,11 @@
   --color-surface-secondary: #f8f7f4;
   --color-red-400: #e24b4a;
   --color-red-600: #c43d3c;
+  --color-blue-400: #378add;
+  --color-blue-50: #e6f1fb;
+  --color-blue-800: #1a4a7a;
+  --color-amber-400: #ba7517;
+  --color-amber-50: #faeeda;
   --erp-font-scale: 1;
   --erp-font-base: 13px;
   --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;

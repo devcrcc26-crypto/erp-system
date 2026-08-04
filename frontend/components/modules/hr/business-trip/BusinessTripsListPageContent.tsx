@@ -8,9 +8,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout, {
-  PageLoadingSkeleton,
-} from '@/components/ui/FormLayout/FormLayout';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -263,11 +261,18 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const newLabel = t('pages.hr.businessTrip.new');
 
   return (
-    <FormLayout
-      title={listTitle}
-      description={listDescription}
-      extra={
-        canCreate ? (
+    <div>
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            {listTitle}
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
+            {listDescription}
+          </p>
+        </div>
+        {canCreate ? (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -275,9 +280,9 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           >
             {newLabel}
           </Button>
-        ) : undefined
-      }
-    >
+        ) : null}
+      </div>
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -321,7 +326,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
         <ListSearchInput
           committedValue={search}
           onCommit={(value) => {
@@ -383,34 +389,37 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         <TableUpdatingIndicator active={listQuery.isFetching} />
       </div>
 
-      <DataTable<BusinessTripListItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isFetching}
-        onRow={(record) => ({
-          onClick: () => router.push(`/hr/business-trips/${record.id}`),
-          style: { cursor: 'pointer' },
-        })}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<SendOutlined />}
-              title={
-                needsTicketTab
-                  ? 'No trips need tickets'
-                  : 'No business trips'
-              }
-              description={
-                needsTicketTab
-                  ? 'Approved trips awaiting ticket booking will appear here.'
-                  : 'Submit a new business trip to start the approval process.'
-              }
-            />
-          ),
-        }}
-        pagination={bindMeta(meta)}
-      />
-    </FormLayout>
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+        <DataTable<BusinessTripListItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={rows}
+          loading={listQuery.isFetching}
+          onRow={(record) => ({
+            onClick: () => router.push(`/hr/business-trips/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<SendOutlined />}
+                title={
+                  needsTicketTab
+                    ? 'No trips need tickets'
+                    : 'No business trips'
+                }
+                description={
+                  needsTicketTab
+                    ? 'Approved trips awaiting ticket booking will appear here.'
+                    : 'Submit a new business trip to start the approval process.'
+                }
+              />
+            ),
+          }}
+          pagination={bindMeta(meta)}
+        />
+      </div>
+    </div>
   );
 }

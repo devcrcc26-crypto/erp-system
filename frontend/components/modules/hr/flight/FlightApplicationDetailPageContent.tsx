@@ -1,17 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Empty,
-  Skeleton,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
+import { Alert, Button, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -34,7 +24,6 @@ import {
   useFlightApplication,
 } from '@/lib/query/flight';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
   flightStatusVariant,
   formatFlightStatus,
@@ -147,20 +136,32 @@ export default function FlightApplicationDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} />}
-            onClick={() => router.push('/hr/flight-applications')}
-            style={{ paddingInline: 0, marginBottom: 8 }}
-          >
-            Flight Applications
-          </Button>
-          <Space wrap align="center" size={12}>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {application.applicationNumber}
-            </Typography.Title>
+      {/* Page header */}
+      <div className="mb-2">
+        <button
+          onClick={() => router.push('/hr/flight-applications')}
+          className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] mb-3 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          <span>Flight Applications</span>
+        </button>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+              Flight Applications · {application.applicationNumber}
+            </p>
+            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
+              {formatTripType(application.tripType)}
+              {application.isInternational ? ' · International' : ''}
+            </h1>
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+              {formatFlightSubmitterName(application.submitter)}
+              {' · '}
+              {formatProjectDate(application.createdAt)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <StatusBadge
               label={formatFlightStatus(application.status)}
               variant={flightStatusVariant(application.status)}
@@ -169,36 +170,23 @@ export default function FlightApplicationDetailPageContent({
               label={formatTripType(application.tripType)}
               variant={tripTypeVariant(application.tripType)}
             />
-            {application.isInternational ? (
-              <Tag color="volcano">International</Tag>
+            {application.approvalRequestId ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  router.push(`/approvals/${application.approvalRequestId}`)
+                }
+              >
+                View in Approvals
+              </Button>
             ) : null}
-          </Space>
-          <Typography.Paragraph
-            type="secondary"
-            style={{ marginTop: 8, marginBottom: 0 }}
-          >
-            {formatFlightSubmitterName(application.submitter)}
-            {' · '}
-            {formatProjectDate(application.createdAt)}
-          </Typography.Paragraph>
+            {canCancel ? (
+              <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
-
-        <Space>
-          {application.approvalRequestId ? (
-            <Button
-              onClick={() =>
-                router.push(`/approvals/${application.approvalRequestId}`)
-              }
-            >
-              View in Approvals
-            </Button>
-          ) : null}
-          {canCancel ? (
-            <Button danger onClick={() => setConfirmCancel(true)}>
-              Cancel Application
-            </Button>
-          ) : null}
-        </Space>
       </div>
 
       <FlightCurrentStepBanner application={application} />
@@ -214,148 +202,177 @@ export default function FlightApplicationDetailPageContent({
         />
       ) : null}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 320px',
-          gap: 20,
-          alignItems: 'start',
-        }}
-        className="max-lg:!grid-cols-1"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
         <div className="flex flex-col gap-4">
-          <div
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            <Typography.Title level={5} style={{ marginTop: 0 }}>
-              Trip Details
-            </Typography.Title>
-            <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="Route">
-                {application.originCity}, {application.originCountry}
-                <span
-                  style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
-                >
-                  to
-                </span>
-                {application.destination}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trip Type">
-                {formatTripType(application.tripType)}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Departure"
-                span={application.returnDate ? 1 : 2}
-              >
-                {formatProjectDate(application.departureDate)}
-              </Descriptions.Item>
-              {application.returnDate ? (
-                <Descriptions.Item label="Return">
-                  {formatProjectDate(application.returnDate)}
-                </Descriptions.Item>
-              ) : null}
-              <Descriptions.Item label="Ticket Class">
-                {formatTicketClass(application.ticketClass)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Passengers">
-                {application.passengerCount}
-              </Descriptions.Item>
-              <Descriptions.Item label="Accommodation" span={2}>
-                {application.accommodationRequired ? (
-                  <>
-                    <Tag color="blue">Required</Tag>
-                    {application.accommodationDetails ? (
-                      <Typography.Text
-                        type="secondary"
-                        style={{ marginLeft: 8 }}
-                      >
-                        {application.accommodationDetails}
-                      </Typography.Text>
-                    ) : null}
-                  </>
-                ) : (
-                  'Not required'
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Per Diem" span={2}>
-                {application.perDiemRequired ? (
-                  <Tag color="blue">Required</Tag>
-                ) : (
-                  'Not required'
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label="Purpose" span={2}>
-                {application.purpose}
-              </Descriptions.Item>
-              {application.notes ? (
-                <Descriptions.Item label="Notes" span={2}>
-                  {application.notes}
-                </Descriptions.Item>
-              ) : null}
-            </Descriptions>
+          <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+            <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                Trip Details
+              </h3>
+            </div>
+            <div className="px-5 py-4">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div className="col-span-2">
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Route
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {application.originCity}, {application.originCountry}
+                    <span className="mx-1.5 text-[var(--color-text-tertiary)]">
+                      to
+                    </span>
+                    {application.destination}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Trip Type
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatTripType(application.tripType)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Ticket Class
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatTicketClass(application.ticketClass)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Departure
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatProjectDate(application.departureDate)}
+                  </dd>
+                </div>
+                {application.returnDate ? (
+                  <div>
+                    <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                      Return
+                    </dt>
+                    <dd className="text-sm text-[var(--color-text-primary)]">
+                      {formatProjectDate(application.returnDate)}
+                    </dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Passengers
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {application.passengerCount}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Accommodation
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {application.accommodationRequired ? (
+                      <>
+                        <Tag color="blue">Required</Tag>
+                        {application.accommodationDetails ? (
+                          <span className="ml-2 text-[var(--color-text-secondary)]">
+                            {application.accommodationDetails}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      'Not required'
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Per Diem
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {application.perDiemRequired ? (
+                      <Tag color="blue">Required</Tag>
+                    ) : (
+                      'Not required'
+                    )}
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Purpose
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {application.purpose}
+                  </dd>
+                </div>
+                {application.notes ? (
+                  <div className="col-span-2">
+                    <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                      Notes
+                    </dt>
+                    <dd className="text-sm text-[var(--color-text-primary)]">
+                      {application.notes}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
           </div>
 
-          <div
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            <Typography.Title level={5} style={{ marginTop: 0 }}>
-              Passengers
-            </Typography.Title>
-            <Table<FlightPassenger>
-              rowKey="id"
-              columns={passengerColumns}
-              dataSource={application.passengers}
-              pagination={false}
-              size="small"
-            />
+          <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+            <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                Passengers
+              </h3>
+            </div>
+            <div className="px-5 py-4">
+              <Table<FlightPassenger>
+                rowKey="id"
+                columns={passengerColumns}
+                dataSource={application.passengers}
+                pagination={false}
+                size="small"
+              />
+            </div>
           </div>
 
           {showTicketPanel ? (
             <FlightTicketAssignmentPanel application={application} />
           ) : null}
 
-          <div
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            <Typography.Title level={5} style={{ marginTop: 0 }}>
-              Supporting Attachments
-            </Typography.Title>
-            <AttachmentDownloadList documents={application.documents} />
+          <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+            <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                Supporting Attachments
+              </h3>
+            </div>
+            <div className="px-5 py-4">
+              <AttachmentDownloadList documents={application.documents} />
+            </div>
           </div>
         </div>
 
-        {application.approvalRequest ? (
-          <ApprovalTierTimeline
-            tiers={tiers}
-            currentTier={application.approvalRequest.currentTier ?? 0}
-          />
-        ) : (
-          <aside
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            <Empty description="No approval workflow linked" />
-          </aside>
-        )}
+        <div className="flex flex-col gap-4">
+          {application.approvalRequest ? (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={application.approvalRequest.currentTier ?? 0}
+            />
+          ) : (
+            <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+              <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                  Approval Chain
+                </h3>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-sm text-[var(--color-text-tertiary)]">
+                  No approval workflow linked.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <ConfirmDialog

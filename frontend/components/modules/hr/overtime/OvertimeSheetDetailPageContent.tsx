@@ -44,7 +44,6 @@ import {
 } from '@/lib/query/overtime';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatOvertimeEmployeeName,
   formatOvertimeHours,
@@ -81,37 +80,34 @@ function HoursSummaryCards({
   total: number;
 }): React.ReactNode {
   const items = [
-    { label: 'Regular', value: regular },
-    { label: 'Night', value: night },
-    { label: 'Weekend', value: weekend },
-    { label: 'Holiday', value: holiday },
-    { label: 'Total', value: total, emphasize: true },
+    { label: 'Regular', value: regular, color: 'text-[var(--color-text-primary)]' },
+    { label: 'Night', value: night, color: 'text-[var(--color-blue-400)]' },
+    { label: 'Weekend', value: weekend, color: 'text-[var(--color-teal-400)]' },
+    { label: 'Holiday', value: holiday, color: 'text-[var(--color-amber-400)]' },
+    {
+      label: 'Total',
+      value: total,
+      color: 'text-[var(--color-text-primary)]',
+      bold: true,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-      {items.map((item) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-5">
+      {items.map(({ label, value, color, bold }) => (
         <div
-          key={item.label}
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-            padding: '12px 14px',
-          }}
+          key={label}
+          className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3"
         >
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {item.label}
-          </Typography.Text>
-          <div
-            style={{
-              fontSize: item.emphasize ? 20 : 18,
-              fontWeight: item.emphasize ? 600 : 500,
-              marginTop: 4,
-            }}
-          >
-            {formatOvertimeHours(item.value)} hrs
-          </div>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
+            {label}
+          </p>
+          <p className={`text-xl ${bold ? 'font-bold' : 'font-semibold'} ${color}`}>
+            {formatOvertimeHours(value)}
+            <span className="text-xs font-normal text-[var(--color-text-tertiary)] ml-1">
+              hrs
+            </span>
+          </p>
         </div>
       ))}
     </div>
@@ -484,49 +480,50 @@ export default function OvertimeSheetDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} />}
-            onClick={() => router.push('/hr/overtime')}
-            style={{ paddingInline: 0, marginBottom: 8 }}
-          >
-            Overtime
-          </Button>
-          <Space wrap align="center" size={12}>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {sheet.sheetNumber}
-            </Typography.Title>
+      {/* Page header */}
+      <div className="mb-2">
+        <button
+          onClick={() => router.push('/hr/overtime')}
+          className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] mb-3 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          <span>Overtime</span>
+        </button>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+              Overtime · {sheet.sheetNumber}
+            </p>
+            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
+              {formatOvertimePeriod(sheet.month, sheet.year)}
+            </h1>
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+              {formatOvertimeEmployeeName(sheet.employee)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <StatusBadge
               label={formatOvertimeStatus(sheet.status)}
               variant={overtimeStatusVariant(sheet.status)}
             />
-          </Space>
-          <Typography.Paragraph
-            type="secondary"
-            style={{ marginTop: 8, marginBottom: 0 }}
-          >
-            {formatOvertimeEmployeeName(sheet.employee)} ·{' '}
-            {formatOvertimePeriod(sheet.month, sheet.year)}
-          </Typography.Paragraph>
+            {canCancel ? (
+              <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+                Cancel
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button
+                type="primary"
+                size="small"
+                disabled={!canSubmit}
+                onClick={() => setConfirmSubmit(true)}
+              >
+                Submit for approval
+              </Button>
+            ) : null}
+          </div>
         </div>
-        <Space wrap>
-          {canCancel ? (
-            <Button danger onClick={() => setConfirmCancel(true)}>
-              Cancel sheet
-            </Button>
-          ) : null}
-          {canEdit ? (
-            <Button
-              type="primary"
-              disabled={!canSubmit}
-              onClick={() => setConfirmSubmit(true)}
-            >
-              Submit for approval
-            </Button>
-          ) : null}
-        </Space>
       </div>
 
       <HoursSummaryCards
@@ -537,22 +534,16 @@ export default function OvertimeSheetDetailPageContent({
         total={sheet.totalHours}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-            padding: 16,
-          }}
-        >
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <Typography.Title level={5} style={{ margin: 0 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+        <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+          <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
               Entries
-            </Typography.Title>
+            </h3>
             {canEdit ? (
               <Button
                 type="primary"
+                size="small"
                 icon={<Plus size={16} />}
                 onClick={openAddEntry}
               >
@@ -561,7 +552,8 @@ export default function OvertimeSheetDetailPageContent({
             ) : null}
           </div>
 
-          <Table<OvertimeEntry>
+          <div className="px-5 py-4">
+            <Table<OvertimeEntry>
             rowKey="id"
             size="small"
             columns={columns}
@@ -616,25 +608,24 @@ export default function OvertimeSheetDetailPageContent({
                 />
               ),
             }}
-          />
+            />
+          </div>
         </div>
 
-        <div
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-            padding: 16,
-            alignSelf: 'start',
-          }}
-        >
-          <Typography.Title level={5} style={{ marginTop: 0 }}>
-            Approval
-          </Typography.Title>
+        <div className="flex flex-col gap-4">
           {!sheet.approvalRequestId ? (
-            <Typography.Text type="secondary">
-              Approval chain appears after submit.
-            </Typography.Text>
+            <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+              <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                  Approval Chain
+                </h3>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-sm text-[var(--color-text-tertiary)]">
+                  Approval chain appears after submit.
+                </p>
+              </div>
+            </div>
           ) : (
             <ApprovalTierTimeline
               tiers={tiers}

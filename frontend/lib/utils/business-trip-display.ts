@@ -63,13 +63,14 @@ export function businessTripStatusVariant(
     case 'APPROVED':
       return 'success';
     case 'REJECTED':
-    case 'CANCELLED':
       return 'error';
     case 'RETURNED':
-      return 'orange';
+      return 'warning';
     case 'SUBMITTED':
+      return 'info';
     case 'IN_REVIEW':
       return 'warning';
+    case 'CANCELLED':
     case 'DRAFT':
     default:
       return 'default';

@@ -6,9 +6,7 @@ import { ClockCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout, {
-  PageLoadingSkeleton,
-} from '@/components/ui/FormLayout/FormLayout';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -204,19 +202,22 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
-      title={
-        canViewHr
-          ? t('pages.hr.overtime.listTitle')
-          : t('pages.hr.overtime.myListTitle')
-      }
-      description={
-        canViewHr
-          ? t('pages.hr.overtime.listDescription')
-          : t('pages.hr.overtime.myListDescription')
-      }
-      extra={
-        canCreate ? (
+    <div>
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            {canViewHr
+              ? t('pages.hr.overtime.listTitle')
+              : t('pages.hr.overtime.myListTitle')}
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
+            {canViewHr
+              ? t('pages.hr.overtime.listDescription')
+              : t('pages.hr.overtime.myListDescription')}
+          </p>
+        </div>
+        {canCreate ? (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -224,10 +225,11 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           >
             {t('pages.hr.overtime.new')}
           </Button>
-        ) : undefined
-      }
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+        ) : null}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
         <ListSearchInput
           committedValue={search}
           onCommit={(value: string) => {
@@ -293,26 +295,29 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         />
       </div>
 
-      <DataTable<OvertimeSheetListItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isFetching && !listQuery.data}
-        onRow={(record) => ({
-          onClick: () => router.push(`/hr/overtime/${record.id}`),
-          style: { cursor: 'pointer' },
-        })}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<ClockCircleOutlined />}
-              title="No overtime sheets"
-              description="Open this month's sheet to start logging overtime."
-            />
-          ),
-        }}
-        pagination={bindMeta(meta)}
-      />
-    </FormLayout>
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+        <DataTable<OvertimeSheetListItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={rows}
+          loading={listQuery.isFetching && !listQuery.data}
+          onRow={(record) => ({
+            onClick: () => router.push(`/hr/overtime/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<ClockCircleOutlined />}
+                title="No overtime sheets"
+                description="Open this month's sheet to start logging overtime."
+              />
+            ),
+          }}
+          pagination={bindMeta(meta)}
+        />
+      </div>
+    </div>
   );
 }

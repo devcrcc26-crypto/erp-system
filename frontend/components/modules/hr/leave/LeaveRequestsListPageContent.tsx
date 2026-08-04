@@ -8,9 +8,7 @@ import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import LeaveRequestFormDrawer from '@/components/modules/hr/leave/LeaveRequestFormDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import FormLayout, {
-  PageLoadingSkeleton,
-} from '@/components/ui/FormLayout/FormLayout';
+import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -176,19 +174,22 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
-      title={
-        canViewHr
-          ? t('pages.hr.leave.listTitle')
-          : t('pages.hr.leave.myListTitle')
-      }
-      description={
-        canViewHr
-          ? t('pages.hr.leave.listDescription')
-          : t('pages.hr.leave.myListDescription')
-      }
-      extra={
-        canCreate ? (
+    <div>
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            {canViewHr
+              ? t('pages.hr.leave.listTitle')
+              : t('pages.hr.leave.myListTitle')}
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
+            {canViewHr
+              ? t('pages.hr.leave.listDescription')
+              : t('pages.hr.leave.myListDescription')}
+          </p>
+        </div>
+        {canCreate ? (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -196,9 +197,9 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           >
             {t('pages.hr.leave.new')}
           </Button>
-        ) : undefined
-      }
-    >
+        ) : null}
+      </div>
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -212,7 +213,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
         <ListSearchInput
           committedValue={search}
           onCommit={(value) => {
@@ -272,32 +274,35 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         <TableUpdatingIndicator active={listQuery.isFetching} />
       </div>
 
-      <DataTable<LeaveRequestListItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isFetching}
-        onRow={(record) => ({
-          onClick: () => router.push(`/hr/leave-requests/${record.id}`),
-          style: { cursor: 'pointer' },
-        })}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<CalendarOutlined />}
-              title="No leave requests"
-              description="Create a leave request to start the approval flow."
-            />
-          ),
-        }}
-        pagination={bindMeta(meta)}
-      />
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+        <DataTable<LeaveRequestListItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={rows}
+          loading={listQuery.isFetching}
+          onRow={(record) => ({
+            onClick: () => router.push(`/hr/leave-requests/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<CalendarOutlined />}
+                title="No leave requests"
+                description="Create a leave request to start the approval flow."
+              />
+            ),
+          }}
+          pagination={bindMeta(meta)}
+        />
+      </div>
 
       <LeaveRequestFormDrawer
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onSubmitted={() => void listQuery.refetch()}
       />
-    </FormLayout>
+    </div>
   );
 }

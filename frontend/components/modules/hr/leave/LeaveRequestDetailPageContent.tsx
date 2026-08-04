@@ -1,14 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Skeleton,
-  Space,
-  Typography,
-} from 'antd';
+import { Alert, Button, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
@@ -24,7 +17,6 @@ import {
 } from '@/lib/query/leave';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatLeaveEmployeeName,
   formatLeaveStatus,
@@ -154,122 +146,165 @@ export default function LeaveRequestDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} />}
-            onClick={() => router.push('/hr/leave-requests')}
-            style={{ paddingInline: 0, marginBottom: 8 }}
-          >
-            Leave Requests
-          </Button>
-          <Space wrap align="center" size={12}>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {request.requestNumber}
-            </Typography.Title>
+      {/* Page header */}
+      <div className="mb-2">
+        <button
+          onClick={() => router.push('/hr/leave-requests')}
+          className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] mb-3 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          <span>Leave Requests</span>
+        </button>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+              Leave Requests · {request.requestNumber}
+            </p>
+            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
+              {formatLeaveType(request.leaveType)} Leave
+            </h1>
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+              {formatLeaveEmployeeName(request.employee)}
+              {request.submittedAt
+                ? ` · Submitted ${formatProjectDate(request.submittedAt)}`
+                : null}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <StatusBadge
               label={formatLeaveStatus(request.status)}
               variant={leaveStatusVariant(request.status)}
             />
-            <StatusBadge
-              label={formatLeaveType(request.leaveType)}
-              variant={leaveTypeVariant(request.leaveType)}
-            />
-          </Space>
-          <Typography.Paragraph
-            type="secondary"
-            style={{ marginTop: 8, marginBottom: 0 }}
-          >
-            {formatLeaveEmployeeName(request.employee)}
-            {request.submittedAt
-              ? ` · Submitted ${formatProjectDate(request.submittedAt)}`
-              : null}
-          </Typography.Paragraph>
+            {canCancel ? (
+              <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         </div>
-
-        {canCancel ? (
-          <Button danger onClick={() => setConfirmCancel(true)}>
-            Cancel Request
-          </Button>
-        ) : null}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 320px',
-          gap: 20,
-          alignItems: 'start',
-        }}
-        className="max-lg:!grid-cols-1"
-      >
-        <div
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-            padding: 20,
-          }}
-        >
-          <Typography.Title level={5} style={{ marginTop: 0 }}>
-            Request details
-          </Typography.Title>
-          <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="Employee">
-              {formatLeaveEmployeeName(request.employee)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Leave type">
-              {formatLeaveType(request.leaveType)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Start date">
-              {formatProjectDate(request.startDate)}
-            </Descriptions.Item>
-            <Descriptions.Item label="End date">
-              {formatProjectDate(request.endDate)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Days">{request.days}</Descriptions.Item>
-            <Descriptions.Item label="Reason">
-              {request.reason?.trim() || '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              {formatLeaveStatus(request.status)}
-            </Descriptions.Item>
-            {request.approvalRequestId ? (
-              <Descriptions.Item label="Approval request">
-                <Button
-                  type="link"
-                  style={{ padding: 0, height: 'auto' }}
-                  onClick={() =>
-                    router.push(`/approvals/${request.approvalRequestId}`)
-                  }
-                >
-                  Open in Approvals
-                </Button>
-              </Descriptions.Item>
-            ) : null}
-          </Descriptions>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+        {/* Main content */}
+        <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+            <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                Request Details
+              </h3>
+            </div>
+            <div className="px-5 py-4">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Employee
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatLeaveEmployeeName(request.employee)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Leave Type
+                  </dt>
+                  <dd>
+                    <StatusBadge
+                      label={formatLeaveType(request.leaveType)}
+                      variant={leaveTypeVariant(request.leaveType)}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Start Date
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatProjectDate(request.startDate)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    End Date
+                  </dt>
+                  <dd className="text-sm text-[var(--color-text-primary)]">
+                    {formatProjectDate(request.endDate)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Days
+                  </dt>
+                  <dd className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    {request.days}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                    Status
+                  </dt>
+                  <dd>
+                    <StatusBadge
+                      label={formatLeaveStatus(request.status)}
+                      variant={leaveStatusVariant(request.status)}
+                    />
+                  </dd>
+                </div>
+                {request.reason?.trim() ? (
+                  <div className="col-span-2">
+                    <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                      Reason
+                    </dt>
+                    <dd className="text-sm text-[var(--color-text-primary)]">
+                      {request.reason}
+                    </dd>
+                  </div>
+                ) : null}
+                {request.approvalRequestId ? (
+                  <div className="col-span-2">
+                    <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
+                      Approval Request
+                    </dt>
+                    <dd>
+                      <Button
+                        type="link"
+                        style={{ padding: 0, height: 'auto' }}
+                        onClick={() =>
+                          router.push(`/approvals/${request.approvalRequestId}`)
+                        }
+                      >
+                        Open in Approvals
+                      </Button>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          </div>
         </div>
 
-        {approvalRequest ? (
-          <ApprovalTierTimeline
-            tiers={tiers}
-            currentTier={approvalRequest.currentTier ?? 0}
-          />
-        ) : (
-          <aside
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-              borderRadius: 8,
-              padding: 20,
-            }}
-          >
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              No approval workflow linked.
-            </Typography.Text>
-          </aside>
-        )}
+        {/* Right sidebar */}
+        <div className="flex flex-col gap-4">
+          {approvalRequest ? (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={approvalRequest.currentTier ?? 0}
+            />
+          ) : (
+            <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+              <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                  Approval Chain
+                </h3>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-sm text-[var(--color-text-tertiary)]">
+                  No approval workflow linked.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <ConfirmDialog

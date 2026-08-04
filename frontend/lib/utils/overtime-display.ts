@@ -41,13 +41,14 @@ export function overtimeStatusVariant(
     case 'APPROVED':
       return 'success';
     case 'REJECTED':
-    case 'CANCELLED':
       return 'error';
     case 'RETURNED':
       return 'warning';
-    case 'IN_REVIEW':
     case 'SUBMITTED':
       return 'info';
+    case 'IN_REVIEW':
+      return 'warning';
+    case 'CANCELLED':
     default:
       return 'default';
   }

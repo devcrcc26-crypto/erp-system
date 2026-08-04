@@ -46,7 +46,7 @@ export const tokens = {
   colorSidebarTextActive: '#0F6E56',
   colorSidebarAccent: '#1D9E75',
 
-  colorPageBg: '#F1EFE8',
+  colorPageBg: '#FAFAFA',
   colorCardBg: '#FFFFFF',
   colorSurfaceSecondary: '#F8F7F4',
   colorBorder: 'rgba(0, 0, 0, 0.12)',
