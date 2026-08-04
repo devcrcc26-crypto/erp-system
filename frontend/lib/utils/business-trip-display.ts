@@ -2,9 +2,7 @@ import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge
 import type {
   BusinessTripStatus,
   BusinessTripUserSummary,
-  FlightTicketClass,
   FlightTripType,
-  FlightVisaStatus,
 } from '@/lib/api/business-trip.types';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -299,6 +297,3 @@ export function businessTripCurrentStepBannerStyle(
       };
   }
 }
-
-/** Re-export ticket-class type helpers for forms that import from this module. */
-export type { FlightTicketClass, FlightVisaStatus };

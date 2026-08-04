@@ -252,30 +252,15 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
-  const listTitleKey = 'pages.hr.businessTrip.listTitle';
-  const myListTitleKey = 'pages.hr.businessTrip.myListTitle';
-  const listDescKey = 'pages.hr.businessTrip.listDescription';
-  const myListDescKey = 'pages.hr.businessTrip.myListDescription';
-  const newKey = 'pages.hr.businessTrip.new';
-
   const listTitle = canViewHr
-    ? t(listTitleKey) === listTitleKey
-      ? 'Business Trips'
-      : t(listTitleKey)
-    : t(myListTitleKey) === myListTitleKey
-      ? 'My Business Trips'
-      : t(myListTitleKey);
+    ? t('pages.hr.businessTrip.listTitle')
+    : t('pages.hr.businessTrip.myListTitle');
 
   const listDescription = canViewHr
-    ? t(listDescKey) === listDescKey
-      ? 'Submit and track international business trips through the approval workflow.'
-      : t(listDescKey)
-    : t(myListDescKey) === myListDescKey
-      ? 'View and submit your own business trip requests.'
-      : t(myListDescKey);
+    ? t('pages.hr.businessTrip.listDescription')
+    : t('pages.hr.businessTrip.myListDescription');
 
-  const newLabel =
-    t(newKey) === newKey ? 'New Business Trip' : t(newKey);
+  const newLabel = t('pages.hr.businessTrip.new');
 
   return (
     <FormLayout

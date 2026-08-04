@@ -91,7 +91,7 @@ const TRIP_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Business trip lifecycle ù owns flight data; delegates tier workflow to ApprovalsService.
+ * Business trip lifecycle ó owns trip data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class BusinessTripService

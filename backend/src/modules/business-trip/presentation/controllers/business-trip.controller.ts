@@ -125,7 +125,7 @@ export class BusinessTripController {
   @Get('selectable-passengers')
   @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'Get employees the caller may include as flight passengers',
+    summary: 'Get employees the caller may include as business trip passengers',
   })
   getSelectablePassengers(
     @CurrentUser() user: AuthenticatedUser,

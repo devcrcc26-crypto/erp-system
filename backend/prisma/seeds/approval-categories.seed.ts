@@ -350,7 +350,7 @@ const CATEGORIES: CategorySeedDef[] = [
     module: 'ADMIN',
     numberPrefix: 'VA',
     icon: 'CarOutlined',
-    sortOrder: 80,
+    sortOrder: 75,
     formSchema: {
       fields: [
         {
