@@ -231,7 +231,7 @@ export default function BusinessTripDetail({
         <Descriptions.Item label="Trip #">{trip.tripNumber}</Descriptions.Item>
         <Descriptions.Item label="Route">
           <Space size={4}>
-            {trip.origin}
+            {trip.originCity}, {trip.originCountry}
             <span style={{ color: tokens.colorTextSecondary }}>→</span>
             {trip.destinationCountry}
             {trip.destinationCity ? ` / ${trip.destinationCity}` : ''}

@@ -154,8 +154,8 @@ export class FlightController {
       type: 'object',
       required: [
         'tripType',
-        'isInternational',
-        'origin',
+        'originCountry',
+        'originCity',
         'destination',
         'departureDate',
         'purpose',
@@ -165,7 +165,8 @@ export class FlightController {
       properties: {
         tripType: { type: 'string', enum: ['ONE_WAY', 'ROUND_TRIP'] },
         isInternational: { type: 'boolean' },
-        origin: { type: 'string' },
+        originCountry: { type: 'string' },
+        originCity: { type: 'string' },
         destination: { type: 'string' },
         departureDate: { type: 'string', format: 'date' },
         returnDate: { type: 'string', format: 'date' },

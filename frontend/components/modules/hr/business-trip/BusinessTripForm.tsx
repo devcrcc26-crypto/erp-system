@@ -31,7 +31,8 @@ export interface BusinessTripFormProps {
 
 const INITIAL_TRIP: BusinessTripDetailsValues = {
   tripType: 'ONE_WAY',
-  origin: '',
+  originCountry: '',
+  originCity: '',
   destinationCountry: '',
   destinationCity: '',
   departureDate: null,
@@ -113,8 +114,11 @@ export function BusinessTripForm({
         ),
         validate: (): boolean => {
           const errors: string[] = [];
-          if (!tripDetails.origin.trim()) {
-            errors.push('Origin is required');
+          if (!tripDetails.originCountry.trim()) {
+            errors.push('Origin country is required');
+          }
+          if (!tripDetails.originCity.trim()) {
+            errors.push('Origin city is required');
           }
           if (!tripDetails.destinationCountry.trim()) {
             errors.push('Destination country is required');
@@ -222,7 +226,8 @@ export function BusinessTripForm({
     try {
       const created = await submitMutation.mutateAsync({
         tripType: tripDetails.tripType,
-        origin: tripDetails.origin.trim(),
+        originCountry: tripDetails.originCountry.trim(),
+        originCity: tripDetails.originCity.trim(),
         destinationCountry: tripDetails.destinationCountry.trim(),
         destinationCity: tripDetails.destinationCity.trim(),
         departureDate: tripDetails.departureDate.format('YYYY-MM-DD'),

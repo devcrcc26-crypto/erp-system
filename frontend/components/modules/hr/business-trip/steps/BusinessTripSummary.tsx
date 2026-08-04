@@ -48,7 +48,9 @@ export default function BusinessTripSummary({
           {formatTripType(tripDetails.tripType)}
         </Descriptions.Item>
         <Descriptions.Item label="Origin">
-          {tripDetails.origin || '—'}
+          {[tripDetails.originCity, tripDetails.originCountry]
+            .filter(Boolean)
+            .join(', ') || '—'}
         </Descriptions.Item>
         <Descriptions.Item label="Destination">
           {[tripDetails.destinationCity, tripDetails.destinationCountry]

@@ -91,7 +91,7 @@ const TRIP_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Business trip lifecycle — owns trip data; delegates tier workflow to ApprovalsService.
+ * Business trip lifecycle  owns trip data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class BusinessTripService
@@ -191,7 +191,8 @@ export class BusinessTripService
               tripNumber,
               submittedBy: userId,
               tripType: dto.tripType,
-              origin: dto.origin.trim(),
+              originCountry: dto.originCountry.trim(),
+              originCity: dto.originCity.trim(),
               destinationCountry: dto.destinationCountry.trim(),
               destinationCity: dto.destinationCity.trim(),
               departureDate,
@@ -245,7 +246,7 @@ export class BusinessTripService
         companyId,
         appId,
         tripNumber,
-        dto.origin,
+        `${dto.originCity}, ${dto.originCountry}`,
         `${dto.destinationCity}, ${dto.destinationCountry}`,
         passengerIds,
         null,
@@ -254,7 +255,7 @@ export class BusinessTripService
         companyId,
         appId,
         tripNumber,
-        dto.origin,
+        `${dto.originCity}, ${dto.originCountry}`,
         `${dto.destinationCity}, ${dto.destinationCountry}`,
       );
 
@@ -265,10 +266,11 @@ export class BusinessTripService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'BUSINESS_TRIP',
-        title: `Business trip ${dto.origin} ? ${dto.destinationCity}, ${dto.destinationCountry}  ${dto.departureDate}`,
+        title: `Business trip ${dto.originCity}, ${dto.originCountry} ? ${dto.destinationCity}, ${dto.destinationCountry}  ${dto.departureDate}`,
         formData: {
           tripType: dto.tripType,
-          origin: dto.origin,
+          originCountry: dto.originCountry,
+          originCity: dto.originCity,
           destinationCountry: dto.destinationCountry,
           destinationCity: dto.destinationCity,
           departureDate: dto.departureDate,
@@ -306,7 +308,8 @@ export class BusinessTripService
               tripNumber: approval.requestNumber,
               submittedBy: userId,
               tripType: dto.tripType,
-              origin: dto.origin.trim(),
+              originCountry: dto.originCountry.trim(),
+              originCity: dto.originCity.trim(),
               destinationCountry: dto.destinationCountry.trim(),
               destinationCity: dto.destinationCity.trim(),
               departureDate,
@@ -416,7 +419,13 @@ export class BusinessTripService
                   },
                 },
                 {
-                  origin: {
+                  originCountry: {
+                    contains: filters.search.trim(),
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
+                  originCity: {
                     contains: filters.search.trim(),
                     mode: 'insensitive' as const,
                   },
@@ -749,7 +758,7 @@ export class BusinessTripService
         'BUSINESS_TRIP_TICKET_READY',
         {
           subject: 'Your flight ticket is ready',
-          body: `The combined ticket for business trip ${app.tripNumber} (${app.origin} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+          body: `The combined ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
           link: `/hr/business-trips/${id}`,
         },
       );
@@ -813,7 +822,7 @@ export class BusinessTripService
       'BUSINESS_TRIP_TICKET_READY',
       {
         subject: 'Your flight ticket is ready',
-        body: `Your individual ticket for business trip ${app.tripNumber} (${app.origin} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+        body: `Your individual ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
         link: `/hr/business-trips/${id}`,
       },
     );
@@ -945,7 +954,7 @@ export class BusinessTripService
         app.companyId,
         app.id,
         app.tripNumber,
-        app.origin,
+        `${app.originCity}, ${app.originCountry}`,
         `${app.destinationCity}, ${app.destinationCountry}`,
         app.passengers.map((p) => p.employeeId),
         app.approvalRequestId,
@@ -954,7 +963,7 @@ export class BusinessTripService
         app.companyId,
         app.id,
         app.tripNumber,
-        app.origin,
+        `${app.originCity}, ${app.originCountry}`,
         `${app.destinationCity}, ${app.destinationCountry}`,
       );
     }

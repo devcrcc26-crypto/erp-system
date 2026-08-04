@@ -52,7 +52,8 @@ export interface FlightApplicationListItem {
   submittedBy: string;
   tripType: FlightTripType;
   isInternational: boolean;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destination: string;
   departureDate: string;
   returnDate?: string | null;
@@ -103,7 +104,8 @@ export interface SubmitFlightPassengerPayload {
 export interface SubmitFlightApplicationPayload {
   tripType: FlightTripType;
   isInternational: boolean;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destination: string;
   departureDate: string;
   returnDate?: string;

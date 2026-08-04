@@ -192,7 +192,8 @@ export class FlightService
               submittedBy: userId,
               tripType: dto.tripType,
               isInternational: dto.isInternational,
-              origin: dto.origin.trim(),
+              originCountry: dto.originCountry.trim(),
+              originCity: dto.originCity.trim(),
               destination: dto.destination.trim(),
               departureDate,
               returnDate: dto.returnDate
@@ -237,7 +238,7 @@ export class FlightService
         companyId,
         appId,
         applicationNumber,
-        dto.origin,
+        `${dto.originCity}, ${dto.originCountry}`,
         dto.destination,
         passengerIds,
         null,
@@ -246,7 +247,7 @@ export class FlightService
         companyId,
         appId,
         applicationNumber,
-        dto.origin,
+        `${dto.originCity}, ${dto.originCountry}`,
         dto.destination,
       );
 
@@ -257,11 +258,12 @@ export class FlightService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'FLIGHT_APPLICATION',
-        title: `Flight ${dto.origin} → ${dto.destination} — ${dto.departureDate}`,
+        title: `Flight ${dto.originCity}, ${dto.originCountry} → ${dto.destination} — ${dto.departureDate}`,
         formData: {
           tripType: dto.tripType,
           isInternational: dto.isInternational,
-          origin: dto.origin,
+          originCountry: dto.originCountry,
+          originCity: dto.originCity,
           destination: dto.destination,
           departureDate: dto.departureDate,
           returnDate: dto.returnDate ?? null,
@@ -294,7 +296,8 @@ export class FlightService
               submittedBy: userId,
               tripType: dto.tripType,
               isInternational: dto.isInternational,
-              origin: dto.origin.trim(),
+              originCountry: dto.originCountry.trim(),
+              originCity: dto.originCity.trim(),
               destination: dto.destination.trim(),
               departureDate,
               returnDate: dto.returnDate
@@ -395,7 +398,13 @@ export class FlightService
                   },
                 },
                 {
-                  origin: {
+                  originCountry: {
+                    contains: filters.search.trim(),
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
+                  originCity: {
                     contains: filters.search.trim(),
                     mode: 'insensitive' as const,
                   },
@@ -717,7 +726,7 @@ export class FlightService
         'FLIGHT_TICKET_READY',
         {
           subject: 'Your flight ticket is ready',
-          body: `The combined ticket for flight application ${app.applicationNumber} (${app.origin} → ${app.destination}) has been uploaded. Please acknowledge it.`,
+          body: `The combined ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} → ${app.destination}) has been uploaded. Please acknowledge it.`,
           link: `/hr/flight-applications/${id}`,
         },
       );
@@ -781,7 +790,7 @@ export class FlightService
       'FLIGHT_TICKET_READY',
       {
         subject: 'Your flight ticket is ready',
-        body: `Your individual ticket for flight application ${app.applicationNumber} (${app.origin} → ${app.destination}) has been uploaded. Please acknowledge it.`,
+        body: `Your individual ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} → ${app.destination}) has been uploaded. Please acknowledge it.`,
         link: `/hr/flight-applications/${id}`,
       },
     );
@@ -913,7 +922,7 @@ export class FlightService
         app.companyId,
         app.id,
         app.applicationNumber,
-        app.origin,
+        `${app.originCity}, ${app.originCountry}`,
         app.destination,
         app.passengers.map((p) => p.employeeId),
         app.approvalRequestId,
@@ -922,7 +931,7 @@ export class FlightService
         app.companyId,
         app.id,
         app.applicationNumber,
-        app.origin,
+        `${app.originCity}, ${app.originCountry}`,
         app.destination,
       );
     }

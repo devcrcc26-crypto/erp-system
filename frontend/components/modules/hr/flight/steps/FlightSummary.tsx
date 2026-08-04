@@ -41,7 +41,9 @@ export default function FlightSummary({
           {tripDetails.isInternational ? 'Yes' : 'No'}
         </Descriptions.Item>
         <Descriptions.Item label="Origin">
-          {tripDetails.origin || '—'}
+          {[tripDetails.originCity, tripDetails.originCountry]
+            .filter(Boolean)
+            .join(', ') || '—'}
         </Descriptions.Item>
         <Descriptions.Item label="Destination">
           {tripDetails.destination || '—'}

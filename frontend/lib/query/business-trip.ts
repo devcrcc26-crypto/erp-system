@@ -125,7 +125,8 @@ export function useSubmitBusinessTrip() {
     mutationFn: (payload: SubmitBusinessTripPayload) => {
       const formData = new FormData();
       formData.append('tripType', payload.tripType);
-      formData.append('origin', payload.origin);
+      formData.append('originCountry', payload.originCountry);
+      formData.append('originCity', payload.originCity);
       formData.append('destinationCountry', payload.destinationCountry);
       formData.append('destinationCity', payload.destinationCity);
       formData.append('departureDate', payload.departureDate);

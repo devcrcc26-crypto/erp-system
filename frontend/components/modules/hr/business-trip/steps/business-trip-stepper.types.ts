@@ -9,7 +9,8 @@ import type {
 
 export interface BusinessTripDetailsValues {
   tripType: FlightTripType;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destinationCountry: string;
   destinationCity: string;
   departureDate: Dayjs | null;

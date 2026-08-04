@@ -141,7 +141,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       key: 'route',
       render: (_: unknown, row: FlightApplicationListItem) => (
         <span>
-          {row.origin}
+          {row.originCity}, {row.originCountry}
           <span style={{ margin: '0 4px', color: tokens.colorTextSecondary }}>→</span>
           {row.destination}
         </span>

@@ -248,7 +248,7 @@ export default function BusinessTripDetailPageContent({
             </Typography.Title>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Route">
-                {trip.origin}
+                {trip.originCity}, {trip.originCountry}
                 <span
                   style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
                 >

@@ -92,7 +92,13 @@ export class SubmitBusinessTripDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
-  origin!: string;
+  originCountry!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  originCity!: string;
 
   @ApiProperty()
   @IsString()

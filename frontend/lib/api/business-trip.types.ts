@@ -51,7 +51,8 @@ export interface BusinessTripListItem {
   tripNumber: string;
   submittedBy: string;
   tripType: FlightTripType;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destinationCountry: string;
   destinationCity: string;
   departureDate: string;
@@ -112,7 +113,8 @@ export interface SubmitBusinessTripPassengerPayload {
 
 export interface SubmitBusinessTripPayload {
   tripType: FlightTripType;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destinationCountry: string;
   destinationCity: string;
   departureDate: string;

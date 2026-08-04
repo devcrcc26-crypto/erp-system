@@ -237,7 +237,7 @@ export default function FlightApplicationDetailPageContent({
             </Typography.Title>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Route">
-                {application.origin}
+                {application.originCity}, {application.originCountry}
                 <span
                   style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
                 >

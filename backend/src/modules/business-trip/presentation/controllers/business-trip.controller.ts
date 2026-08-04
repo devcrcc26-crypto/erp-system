@@ -165,7 +165,8 @@ export class BusinessTripController {
       type: 'object',
       required: [
         'tripType',
-        'origin',
+        'originCountry',
+        'originCity',
         'destinationCountry',
         'destinationCity',
         'departureDate',
@@ -175,7 +176,8 @@ export class BusinessTripController {
       ],
       properties: {
         tripType: { type: 'string', enum: ['ONE_WAY', 'ROUND_TRIP'] },
-        origin: { type: 'string' },
+        originCountry: { type: 'string' },
+        originCity: { type: 'string' },
         destinationCountry: { type: 'string' },
         destinationCity: { type: 'string' },
         departureDate: { type: 'string', format: 'date' },

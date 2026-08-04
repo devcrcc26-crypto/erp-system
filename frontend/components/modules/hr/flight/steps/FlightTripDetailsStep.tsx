@@ -81,17 +81,36 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Origin <span style={{ color: tokens.colorRed600 }}>*</span>
+              Origin Country{' '}
+              <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <Input
-              value={values.origin}
-              onChange={(e) => patch({ origin: e.target.value })}
-              placeholder="e.g. Dubai (DXB)"
+              value={values.originCountry}
+              onChange={(e) => patch({ originCountry: e.target.value })}
+              placeholder="e.g. Ethiopia"
               maxLength={100}
             />
           </div>
         </Col>
         <Col xs={24} sm={12}>
+          <div className="mb-4">
+            <Typography.Text
+              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+            >
+              Origin City <span style={{ color: tokens.colorRed600 }}>*</span>
+            </Typography.Text>
+            <Input
+              value={values.originCity}
+              onChange={(e) => patch({ originCity: e.target.value })}
+              placeholder="e.g. Addis Ababa"
+              maxLength={100}
+            />
+          </div>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24}>
           <div className="mb-4">
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}

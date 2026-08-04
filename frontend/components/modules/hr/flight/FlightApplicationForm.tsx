@@ -30,7 +30,8 @@ export interface FlightApplicationFormProps {
 const INITIAL_TRIP: FlightTripDetailsValues = {
   tripType: 'ONE_WAY',
   isInternational: false,
-  origin: '',
+  originCountry: '',
+  originCity: '',
   destination: '',
   departureDate: null,
   returnDate: null,
@@ -96,8 +97,11 @@ export function FlightApplicationForm({
         ),
         validate: (): boolean => {
           const errors: string[] = [];
-          if (!tripDetails.origin.trim()) {
-            errors.push('Origin is required');
+          if (!tripDetails.originCountry.trim()) {
+            errors.push('Origin country is required');
+          }
+          if (!tripDetails.originCity.trim()) {
+            errors.push('Origin city is required');
           }
           if (!tripDetails.destination.trim()) {
             errors.push('Destination is required');
@@ -193,7 +197,8 @@ export function FlightApplicationForm({
       const created = await submitMutation.mutateAsync({
         tripType: tripDetails.tripType,
         isInternational: tripDetails.isInternational,
-        origin: tripDetails.origin.trim(),
+        originCountry: tripDetails.originCountry.trim(),
+        originCity: tripDetails.originCity.trim(),
         destination: tripDetails.destination.trim(),
         departureDate: tripDetails.departureDate.format('YYYY-MM-DD'),
         returnDate:

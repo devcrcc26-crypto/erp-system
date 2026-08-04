@@ -124,7 +124,8 @@ export function useSubmitFlightApplication() {
       const formData = new FormData();
       formData.append('tripType', payload.tripType);
       formData.append('isInternational', String(payload.isInternational));
-      formData.append('origin', payload.origin);
+      formData.append('originCountry', payload.originCountry);
+      formData.append('originCity', payload.originCity);
       formData.append('destination', payload.destination);
       formData.append('departureDate', payload.departureDate);
       if (payload.returnDate) {

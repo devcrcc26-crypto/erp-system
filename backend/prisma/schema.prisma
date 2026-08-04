@@ -3595,7 +3595,8 @@ model FlightApplication {
   submittedBy              String                  @map("submitted_by")
   tripType                 FlightTripType          @map("trip_type")
   isInternational          Boolean                 @default(false) @map("is_international")
-  origin                   String
+  originCountry            String                  @map("origin_country")
+  originCity               String                  @map("origin_city")
   destination              String
   departureDate            DateTime                @map("departure_date") @db.Date
   returnDate               DateTime?               @map("return_date") @db.Date
@@ -3690,7 +3691,8 @@ model BusinessTrip {
   tripNumber                 String             @map("trip_number")
   submittedBy                String             @map("submitted_by")
   tripType                   FlightTripType     @map("trip_type")
-  origin                     String
+  originCountry              String             @map("origin_country")
+  originCity                 String             @map("origin_city")
   destinationCountry         String             @map("destination_country")
   destinationCity            String             @map("destination_city")
   departureDate              DateTime           @map("departure_date") @db.Date

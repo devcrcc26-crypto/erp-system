@@ -10,7 +10,8 @@ import type {
 export interface FlightTripDetailsValues {
   tripType: FlightTripType;
   isInternational: boolean;
-  origin: string;
+  originCountry: string;
+  originCity: string;
   destination: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
