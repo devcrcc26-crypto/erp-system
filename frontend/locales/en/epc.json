@@ -51,7 +51,9 @@
       "vehicleRefueling": "Vehicle Refueling",
       "inspectionRepair": "Inspection & Repair",
       "businessTrips": "Business Trips",
-      "reports": "HR Reports"
+      "reports": "HR Reports",
+      "perDiem": "Per Diem",
+      "perDiemRates": "Per Diem Rates"
     }
   },
   "workspace": {
@@ -137,6 +139,22 @@
         "myListTitle": "My Business Trips",
         "listDescription": "Submit and track international business trips through the approval workflow.",
         "myListDescription": "View and submit your own business trip requests."
+      },
+      "expenseClaim": {
+        "new": "New Expense Claim",
+        "detail": "Expense Claim",
+        "listTitle": "Expense Claims",
+        "myListTitle": "My Expense Claims",
+        "listDescription": "Review and process employee reimbursement claims.",
+        "myListDescription": "Submit and track your expense claims through the approval workflow."
+      },
+      "perDiem": {
+        "new": "New Per Diem Request",
+        "detail": "Per Diem Request",
+        "listTitle": "Per Diem Requests",
+        "myListTitle": "My Per Diem Requests",
+        "listDescription": "Review and process employee per diem requests.",
+        "myListDescription": "Submit and track your per diem requests through the approval workflow."
       }
     },
     "dashboard": {

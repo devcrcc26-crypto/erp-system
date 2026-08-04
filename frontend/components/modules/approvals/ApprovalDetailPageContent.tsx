@@ -14,9 +14,11 @@ import { ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import GenericApprovalDetail from '@/components/modules/approvals/detail/GenericApprovalDetail';
 import BusinessTripDetail from '@/components/modules/approvals/detail/BusinessTripDetail';
+import ExpenseClaimDetail from '@/components/modules/approvals/detail/ExpenseClaimDetail';
 import FlightApplicationDetail from '@/components/modules/approvals/detail/FlightApplicationDetail';
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
+import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -131,6 +133,20 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
           approvalRequestId={request.id}
           sourceId={sourceId}
         />
+      );
+    case 'EXPENSE_CLAIM':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <ExpenseClaimDetail approvalRequestId={request.id} sourceId={sourceId} />
+      );
+    case 'PER_DIEM':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <PerDiemDetail approvalRequestId={request.id} sourceId={sourceId} />
       );
     default:
       return <GenericApprovalDetail request={request} />;

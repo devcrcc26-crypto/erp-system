@@ -51,7 +51,9 @@
       "vehicleRefueling": "办公车辆加油",
       "inspectionRepair": "检修申请",
       "businessTrips": "第三国出差",
-      "reports": "人力资源报表"
+      "reports": "人力资源报表",
+      "perDiem": "差旅补贴",
+      "perDiemRates": "差旅补贴标准"
     }
   },
   "workspace": {
@@ -137,6 +139,22 @@
         "myListTitle": "我的出差申请",
         "listDescription": "提交并跟踪国际出差审批流程。",
         "myListDescription": "查看并提交您的出差申请。"
+      },
+      "expenseClaim": {
+        "new": "新建费用报销",
+        "detail": "费用报销",
+        "listTitle": "费用报销",
+        "myListTitle": "我的费用报销",
+        "listDescription": "审核并处理员工报销申请。",
+        "myListDescription": "提交并跟踪您的费用报销审批流程。"
+      },
+      "perDiem": {
+        "new": "新建差旅补贴申请",
+        "detail": "差旅补贴申请",
+        "listTitle": "差旅补贴申请",
+        "myListTitle": "我的差旅补贴申请",
+        "listDescription": "审核并处理员工差旅补贴申请。",
+        "myListDescription": "提交并跟踪您的差旅补贴审批流程。"
       }
     },
     "dashboard": {

@@ -29,6 +29,8 @@ const CATEGORY_ROUTES: Record<string, string> = {
   OVERTIME_APPLICATION: '/approvals/new/overtime',
   FLIGHT_APPLICATION: '/approvals/new/flight-application',
   BUSINESS_TRIP: '/approvals/new/business-trip',
+  EXPENSE_CLAIM: '/approvals/new/expense-claim',
+  PER_DIEM: '/approvals/new/per-diem',
 };
 
 /**

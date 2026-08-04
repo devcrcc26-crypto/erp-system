@@ -86,6 +86,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
+  '/hr/per-diem': 'nav.hr.perDiem',
+  '/hr/per-diem-rates': 'nav.hr.perDiemRates',
 };
 
 export interface IconRailVisibility {
@@ -111,6 +113,7 @@ export interface IconRailVisibility {
   canViewDepartments: boolean;
   canViewPositions: boolean;
   canViewDisciplinesCatalog: boolean;
+  canManagePerDiemRates: boolean;
 }
 
 /**
@@ -142,6 +145,7 @@ export function buildIconRailNav(
     canViewDepartments,
     canViewPositions,
     canViewDisciplinesCatalog,
+    canManagePerDiemRates,
   } = visibility;
 
   const topItems: IconRailItem[] = [
@@ -317,6 +321,13 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/per-diem',
+        labelKey: 'nav.hr.perDiem',
+        href: '/hr/per-diem',
+        iconKey: 'hr-per-diem',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/purchase-requests',
         labelKey: 'nav.hr.purchaseRequests',
         href: '/hr/purchase-requests',
@@ -371,6 +382,13 @@ export function buildIconRailNav(
         href: '/hr/inspection-repair',
         iconKey: 'hr-inspection',
         visible: canViewHr,
+      },
+      {
+        key: '/hr/per-diem-rates',
+        labelKey: 'nav.hr.perDiemRates',
+        href: '/hr/per-diem-rates',
+        iconKey: 'hr-per-diem-rates',
+        visible: canManagePerDiemRates,
       },
       {
         key: '/hr/reports',
@@ -586,7 +604,9 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/leave-request' ||
     pathname === '/approvals/new/overtime' ||
     pathname === '/approvals/new/flight-application' ||
-    pathname === '/approvals/new/business-trip'
+    pathname === '/approvals/new/business-trip' ||
+    pathname === '/approvals/new/expense-claim' ||
+    pathname === '/approvals/new/per-diem'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -666,6 +686,28 @@ export function resolveRouteMeta(
           href: '/hr/business-trips',
         },
         { label: t('pages.hr.businessTrip.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/expense-claims/')) {
+    return {
+      titleKey: 'pages.hr.expenseClaim.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.expenseClaims'), href: '/hr/expense-claims' },
+        { label: t('pages.hr.expenseClaim.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/per-diem/')) {
+    return {
+      titleKey: 'pages.hr.perDiem.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.perDiem'), href: '/hr/per-diem' },
+        { label: t('pages.hr.perDiem.detail') },
       ],
     };
   }

@@ -5,6 +5,7 @@ import {
   ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
+  BankOutlined,
   BarChartOutlined,
   BookOutlined,
   CalendarOutlined,
@@ -41,6 +42,7 @@ import {
   ThunderboltOutlined,
   ToolOutlined,
   UserOutlined,
+  WalletOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 
@@ -99,6 +101,8 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-refueling': ThunderboltOutlined,
   'hr-inspection': ToolOutlined,
   'hr-business-trip': GlobalOutlined,
+  'hr-per-diem': WalletOutlined,
+  'hr-per-diem-rates': BankOutlined,
 };
 
 /** Shared icon sizing for main rail and context sidebar links. */
