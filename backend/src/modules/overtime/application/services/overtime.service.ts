@@ -173,7 +173,7 @@ export class OvertimeService
     }
 
     const sheetId = randomUUID();
-    const sheetNumber = this.buildProvisionalSheetNumber(year, month);
+    const sheetNumber = await this.nextSheetNumber();
 
     try {
       await this.prisma.overtimeSheet.create({
@@ -642,7 +642,6 @@ export class OvertimeService
         where: { id: sheet.id },
         data: {
           status: OvertimeSheetStatus.SUBMITTED,
-          sheetNumber: approval.requestNumber,
           approvalRequestId: approval.id,
           submittedAt: now,
           completedAt: null,
@@ -928,6 +927,17 @@ export class OvertimeService
     throw error;
   }
 
+  /**
+   * Returns the next sequential sheet number using the PostgreSQL sequence.
+   */
+  private async nextSheetNumber(): Promise<string> {
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('overtime_sheet_number_seq')
+    `;
+    const seq = Number(result[0].nextval);
+    return `OT-${String(seq).padStart(4, '0')}`;
+  }
+
   private normalizeStatuses(
     status: OvertimeSheetStatus | OvertimeSheetStatus[] | string | undefined,
   ): OvertimeSheetStatus[] | undefined {
@@ -944,11 +954,6 @@ export class OvertimeService
         .filter(Boolean) as OvertimeSheetStatus[];
     }
     return [status as OvertimeSheetStatus];
-  }
-
-  private buildProvisionalSheetNumber(year: number, month: number): string {
-    const ym = `${year}${String(month).padStart(2, '0')}`;
-    return `OTS-${ym}-${randomUUID().slice(0, 8).toUpperCase()}`;
   }
 
   private parseDateOnly(value: string): Date {

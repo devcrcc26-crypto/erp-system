@@ -5,7 +5,6 @@ import {
   Alert,
   Button,
   Descriptions,
-  Empty,
   Skeleton,
   Space,
   Typography,
@@ -23,6 +22,7 @@ import {
   useCancelLeaveRequest,
   useLeaveRequest,
 } from '@/lib/query/leave';
+import { useApprovalRequest } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -52,9 +52,22 @@ export default function LeaveRequestDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const request = detailQuery.data;
+  const approvalRequestId = request?.approvalRequestId ?? null;
+  const approvalQuery = useApprovalRequest(
+    approvalRequestId ?? '',
+    Boolean(approvalRequestId) &&
+      !(request?.approvalRequest?.tiers && request.approvalRequest.tiers.length > 0),
+  );
+
+  const approvalRequest =
+    request?.approvalRequest?.tiers &&
+    request.approvalRequest.tiers.length > 0
+      ? request.approvalRequest
+      : (approvalQuery.data ?? request?.approvalRequest ?? null);
+
   const tiers = useMemo(
-    () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
-    [request?.approvalRequest?.tiers],
+    () => (approvalRequest?.tiers ?? []) as ApprovalTier[],
+    [approvalRequest?.tiers],
   );
 
   useEffect(() => {
@@ -238,10 +251,10 @@ export default function LeaveRequestDetailPageContent({
           </Descriptions>
         </div>
 
-        {request.approvalRequest ? (
+        {approvalRequest ? (
           <ApprovalTierTimeline
             tiers={tiers}
-            currentTier={request.approvalRequest.currentTier ?? 0}
+            currentTier={approvalRequest.currentTier ?? 0}
           />
         ) : (
           <aside
@@ -252,7 +265,9 @@ export default function LeaveRequestDetailPageContent({
               padding: 20,
             }}
           >
-            <Empty description="No approval workflow linked" />
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              No approval workflow linked.
+            </Typography.Text>
           </aside>
         )}
       </div>

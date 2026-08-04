@@ -42,6 +42,7 @@ import {
   useUpdateOvertimeEntry,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
+import { useApprovalRequest } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -148,9 +149,19 @@ export default function OvertimeSheetDetailPageContent({
   const [form] = Form.useForm<EntryFormValues>();
 
   const sheet = detailQuery.data;
+  const approvalRequestId = sheet?.approvalRequestId ?? null;
+  const approvalQuery = useApprovalRequest(
+    approvalRequestId ?? '',
+    Boolean(approvalRequestId) &&
+      !(sheet?.approvalRequest?.tiers && sheet.approvalRequest.tiers.length > 0),
+  );
+  const approvalRequest =
+    sheet?.approvalRequest?.tiers && sheet.approvalRequest.tiers.length > 0
+      ? sheet.approvalRequest
+      : (approvalQuery.data ?? sheet?.approvalRequest ?? null);
   const tiers = useMemo(
-    () => (sheet?.approvalRequest?.tiers ?? []) as ApprovalTier[],
-    [sheet?.approvalRequest?.tiers],
+    () => (approvalRequest?.tiers ?? []) as ApprovalTier[],
+    [approvalRequest?.tiers],
   );
 
   const isOwner =
@@ -620,15 +631,15 @@ export default function OvertimeSheetDetailPageContent({
           <Typography.Title level={5} style={{ marginTop: 0 }}>
             Approval
           </Typography.Title>
-          {tiers.length > 0 ? (
-            <ApprovalTierTimeline
-              tiers={tiers}
-              currentTier={sheet.approvalRequest?.currentTier ?? 0}
-            />
-          ) : (
+          {!sheet.approvalRequestId ? (
             <Typography.Text type="secondary">
               Approval chain appears after submit.
             </Typography.Text>
+          ) : (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={approvalRequest?.currentTier ?? 0}
+            />
           )}
         </div>
       </div>
