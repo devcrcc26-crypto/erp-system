@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/ui/shell/Breadcrumbs';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
+import { useHeaderExtraStore } from '@/stores/header-extra.store';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
@@ -22,6 +23,7 @@ export default function MainContentHeader({
   onOpenMobileNav?: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const headerExtra = useHeaderExtraStore((state) => state.extra);
   const showBreadcrumbBar = breadcrumbs.length > 0;
 
   function handleMobileNavKeyDown(
@@ -79,6 +81,10 @@ export default function MainContentHeader({
               {pageTitle}
             </h1>
           </div>
+
+          {headerExtra ? (
+            <div className="flex shrink-0 items-center">{headerExtra}</div>
+          ) : null}
 
           <HeaderActions />
         </div>

@@ -3,11 +3,14 @@
 import { Segmented } from 'antd';
 import HrDashboard from '@/components/modules/dashboard/HrDashboard';
 import PmDashboard from '@/components/modules/dashboard/PmDashboard';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 export type GmDashboardTab = 'pm' | 'hr';
 
 /**
  * Company-wide home for GM / MD / System Administrator — PM and HR overviews behind a toggle.
+ * The "Dashboard" title comes from the sticky shell header (route-driven); the PM/HR
+ * toggle is injected into that same header's right-hand slot.
  */
 export default function GmDashboard({
   tab,
@@ -18,32 +21,20 @@ export default function GmDashboard({
   onTabChange: (tab: GmDashboardTab) => void;
   enabled?: boolean;
 }): React.ReactNode {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text-primary)] m-0">
-            Dashboard
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5 m-0">
-            Company-wide overview
-          </p>
-        </div>
-        <Segmented
-          value={tab}
-          onChange={(value) => onTabChange(value as GmDashboardTab)}
-          options={[
-            { label: 'PM Overview', value: 'pm' },
-            { label: 'HR Overview', value: 'hr' },
-          ]}
-        />
-      </div>
+  useSetHeaderExtra(
+    <Segmented
+      value={tab}
+      onChange={(value) => onTabChange(value as GmDashboardTab)}
+      options={[
+        { label: 'PM Overview', value: 'pm' },
+        { label: 'HR Overview', value: 'hr' },
+      ]}
+    />,
+  );
 
-      {tab === 'pm' ? (
-        <PmDashboard enabled={enabled} />
-      ) : (
-        <HrDashboard enabled={enabled} />
-      )}
-    </div>
+  return tab === 'pm' ? (
+    <PmDashboard enabled={enabled} />
+  ) : (
+    <HrDashboard enabled={enabled} />
   );
 }

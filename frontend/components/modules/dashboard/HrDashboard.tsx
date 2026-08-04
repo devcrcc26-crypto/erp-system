@@ -1,9 +1,18 @@
 'use client';
 
+import Link from 'next/link';
 import { Spin } from 'antd';
+import {
+  CalendarOutlined,
+  ClockCircleOutlined,
+  FieldTimeOutlined,
+  SendOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import {
   Bar,
   BarChart,
+  CartesianGrid,
   Cell,
   Legend,
   Pie,
@@ -14,8 +23,11 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  CHART_AXIS_STYLE,
+  CHART_GRID_COLOR,
+  CHART_TOOLTIP_CURSOR,
+  CHART_TOOLTIP_STYLE,
   ChartCard,
-  SectionCard,
   StatCard,
 } from '@/components/modules/dashboard/DashboardStats';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -30,14 +42,23 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 const LEAVE_TYPE_COLORS: Record<string, string> = {
-  ANNUAL: tokens.colorBlue400,
-  SICK: tokens.colorCoral400,
-  UNPAID: tokens.colorGray200,
-  MATERNITY: tokens.colorCyan400,
-  PATERNITY: tokens.colorCyan400,
-  EMERGENCY: tokens.colorRed400,
-  COMPASSIONATE: tokens.colorAmber400,
+  ANNUAL: '#378ADD',
+  SICK: '#D85A30',
+  UNPAID: '#D3D1C7',
+  MATERNITY: '#0891B2',
+  PATERNITY: '#0891B2',
+  EMERGENCY: '#E24B4A',
+  COMPASSIONATE: '#BA7517',
 };
+
+const ViewAllLink = ({ href }: { href: string }): React.ReactNode => (
+  <Link
+    href={href}
+    className="text-xs text-[#1D9E75] hover:text-[#0F6E56] font-medium no-underline"
+  >
+    View all →
+  </Link>
+);
 
 /**
  * HR home dashboard — leave/overtime/travel KPIs, charts, and recent activity.
@@ -84,42 +105,54 @@ export default function HrDashboard({
           label="Total Employees"
           value={hr.totalEmployees}
           color="teal"
+          icon={<TeamOutlined />}
           href="/users"
         />
         <StatCard
           label="On Leave This Week"
           value={hr.onLeaveThisWeek}
           color="amber"
+          icon={<CalendarOutlined />}
           href="/hr/leave-requests"
         />
         <StatCard
           label="Pending Leave"
           value={hr.pendingLeaveRequests}
+          sub={hr.pendingLeaveRequests > 0 ? 'awaiting approval' : 'All caught up'}
           color={hr.pendingLeaveRequests > 0 ? 'blue' : 'default'}
+          icon={<ClockCircleOutlined />}
           href="/hr/leave-requests"
         />
         <StatCard
           label="Pending Overtime"
           value={hr.pendingOvertimeSheets}
+          sub={hr.pendingOvertimeSheets > 0 ? 'awaiting approval' : 'All caught up'}
           color={hr.pendingOvertimeSheets > 0 ? 'blue' : 'default'}
+          icon={<FieldTimeOutlined />}
           href="/hr/overtime"
         />
         <StatCard
           label="Flights Needing Ticket"
           value={hr.pendingFlightBookings}
+          sub={hr.pendingFlightBookings > 0 ? 'booking required' : 'None pending'}
           color={hr.pendingFlightBookings > 0 ? 'amber' : 'default'}
+          icon={<SendOutlined />}
           href="/hr/flight-applications"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Leave Requests This Month by Type">
+        <ChartCard
+          title="Leave Requests This Month by Type"
+          subtitle="Submitted, in review, or approved"
+          icon={<CalendarOutlined />}
+        >
           {leaveByTypeData.length === 0 ? (
-            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+            <p className="flex h-[200px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
               No data
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
                   data={leaveByTypeData}
@@ -127,37 +160,55 @@ export default function HrDashboard({
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
+                  innerRadius={65}
                   outerRadius={90}
+                  paddingAngle={2}
                 >
                   {leaveByTypeData.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value) => (
+                    <span style={{ fontSize: 11, color: '#5F5E5A' }}>{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
 
-        <ChartCard title="Overtime Hours This Month (Top 10)">
+        <ChartCard
+          title="Overtime Hours This Month"
+          subtitle="Top 10 employees"
+          icon={<FieldTimeOutlined />}
+        >
           {hr.overtimeThisMonth.length === 0 ? (
-            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+            <p className="flex h-[200px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
               No data
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={hr.overtimeThisMonth} layout="vertical">
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart
+                data={hr.overtimeThisMonth}
+                layout="vertical"
+                margin={{ left: 8, right: 20, top: 8, bottom: 8 }}
+              >
+                <CartesianGrid stroke={CHART_GRID_COLOR} strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
                 <YAxis
                   type="category"
                   dataKey="employeeName"
                   width={120}
-                  tick={{ fontSize: 11 }}
+                  tick={CHART_AXIS_STYLE}
+                  axisLine={false}
+                  tickLine={false}
                 />
-                <Tooltip />
-                <Bar dataKey="totalHours" fill={tokens.colorTeal400} radius={[0, 4, 4, 0]} />
+                <Tooltip cursor={CHART_TOOLTIP_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
+                <Bar dataKey="totalHours" fill="#1D9E75" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -165,9 +216,10 @@ export default function HrDashboard({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionCard
+        <ChartCard
           title="Recent Leave Requests"
-          action={{ label: 'View all', href: '/hr/leave-requests' }}
+          icon={<CalendarOutlined />}
+          action={<ViewAllLink href="/hr/leave-requests" />}
         >
           {hr.recentLeaveRequests.length === 0 ? (
             <p className="text-sm text-[var(--color-text-tertiary)] m-0">
@@ -197,9 +249,9 @@ export default function HrDashboard({
               ))}
             </div>
           )}
-        </SectionCard>
+        </ChartCard>
 
-        <SectionCard title="Upcoming Travel (Next 30 Days)">
+        <ChartCard title="Upcoming Travel" subtitle="Next 30 days" icon={<SendOutlined />}>
           {hr.upcomingTravel.length === 0 ? (
             <p className="text-sm text-[var(--color-text-tertiary)] py-4 text-center m-0">
               No upcoming travel
@@ -229,7 +281,7 @@ export default function HrDashboard({
               ))}
             </div>
           )}
-        </SectionCard>
+        </ChartCard>
       </div>
     </div>
   );
