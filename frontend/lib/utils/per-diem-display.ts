@@ -45,7 +45,7 @@ export function formatPerDiemEmployeeName(
   user?: PerDiemUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }

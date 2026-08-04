@@ -328,6 +328,13 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/per-diem-rates',
+        labelKey: 'nav.hr.perDiemRates',
+        href: '/hr/per-diem-rates',
+        iconKey: 'hr-per-diem-rates',
+        visible: canManagePerDiemRates,
+      },
+      {
         key: '/hr/purchase-requests',
         labelKey: 'nav.hr.purchaseRequests',
         href: '/hr/purchase-requests',
@@ -382,13 +389,6 @@ export function buildIconRailNav(
         href: '/hr/inspection-repair',
         iconKey: 'hr-inspection',
         visible: canViewHr,
-      },
-      {
-        key: '/hr/per-diem-rates',
-        labelKey: 'nav.hr.perDiemRates',
-        href: '/hr/per-diem-rates',
-        iconKey: 'hr-per-diem-rates',
-        visible: canManagePerDiemRates,
       },
       {
         key: '/hr/reports',

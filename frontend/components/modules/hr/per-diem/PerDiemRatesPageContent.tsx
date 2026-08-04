@@ -84,7 +84,7 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (value: string | null) => value || '—',
+      render: (value: string | null) => value || '-',
     },
     {
       title: 'Active',

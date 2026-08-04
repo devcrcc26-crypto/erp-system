@@ -86,7 +86,7 @@ export default function ExpenseClaimDetail({
       key: 'receipt',
       width: 100,
       render: (_: unknown, row: ExpenseClaimItem) =>
-        row.receipt ? <AttachmentDownloadList documents={[row.receipt]} /> : '—',
+        row.receipt ? <AttachmentDownloadList documents={[row.receipt]} /> : '-',
     },
   ];
 

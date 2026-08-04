@@ -48,7 +48,7 @@ export function formatExpenseClaimEmployeeName(
   user?: ExpenseClaimUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }
@@ -56,11 +56,11 @@ export function formatExpenseClaimEmployeeName(
 /** Formats an amount as Ethiopian Birr for display. */
 export function formatEtbAmount(amount: number | string | null | undefined): string {
   if (amount == null || amount === '') {
-    return '—';
+    return '-';
   }
   const num = typeof amount === 'string' ? Number(amount) : amount;
   if (Number.isNaN(num)) {
-    return '—';
+    return '-';
   }
   return `ETB ${num.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -79,11 +79,11 @@ export function formatCurrencyAmount(
   currency: string,
 ): string {
   if (amount == null || amount === '') {
-    return '—';
+    return '-';
   }
   const num = typeof amount === 'string' ? Number(amount) : amount;
   if (Number.isNaN(num)) {
-    return '—';
+    return '-';
   }
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   return `${symbol}${num.toLocaleString(undefined, {

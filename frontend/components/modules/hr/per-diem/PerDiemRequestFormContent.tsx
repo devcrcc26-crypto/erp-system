@@ -72,11 +72,11 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
   const travelOptions = [
     ...(flightsQuery.data?.data ?? []).map((f) => ({
       value: `flight:${f.id}`,
-      label: `Flight ${f.applicationNumber} — ${f.destination}`,
+      label: `Flight ${f.applicationNumber} - ${f.destination}`,
     })),
     ...(tripsQuery.data?.data ?? []).map((t) => ({
       value: `trip:${t.id}`,
-      label: `Business Trip ${t.tripNumber} — ${t.destinationCountry}`,
+      label: `Business Trip ${t.tripNumber} - ${t.destinationCountry}`,
     })),
   ];
 
@@ -154,7 +154,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
                 placeholder="Select destination category"
                 options={(ratesQuery.data ?? []).map((rate) => ({
                   value: rate.destinationCategory,
-                  label: `${rate.destinationCategory} — ${formatCurrencyAmount(rate.dailyRate, rate.currency)}/day`,
+                  label: `${rate.destinationCategory} - ${formatCurrencyAmount(rate.dailyRate, rate.currency)}/day`,
                 }))}
               />
             </Form.Item>

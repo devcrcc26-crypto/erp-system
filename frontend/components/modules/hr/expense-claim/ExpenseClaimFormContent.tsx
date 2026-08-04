@@ -31,7 +31,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
       });
-      messageApi.success('Draft claim created — add your expense items next');
+      messageApi.success('Draft claim created. Add your expense items next');
       router.push(`/hr/expense-claims/${created.id}`);
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to create expense claim', messageApi);
@@ -80,7 +80,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
               label="Title"
               rules={[{ required: true, message: 'Enter a title for this claim' }]}
             >
-              <Input placeholder="e.g. Site visit expenses — August 2026" maxLength={200} />
+              <Input placeholder="e.g. Site visit expenses - August 2026" maxLength={200} />
             </Form.Item>
             <Form.Item name="description" label="Description">
               <Input.TextArea rows={4} maxLength={4000} showCount />

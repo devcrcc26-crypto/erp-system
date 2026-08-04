@@ -23,9 +23,9 @@ interface ItemFormValues {
 }
 
 const CURRENCY_OPTIONS = [
-  { value: 'ETB', label: 'ETB — Ethiopian Birr' },
-  { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'CNY', label: 'CNY — Chinese Yuan' },
+  { value: 'ETB', label: 'ETB - Ethiopian Birr' },
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'CNY', label: 'CNY - Chinese Yuan' },
 ];
 
 /**
@@ -181,7 +181,7 @@ export default function ExpenseClaimItemModal({
           required={!editingItem}
           extra={
             editingItem?.receipt
-              ? `Current receipt: ${editingItem.receipt.name} — upload a new file to replace it`
+              ? `Current receipt: ${editingItem.receipt.name}. Upload a new file to replace it`
               : undefined
           }
         >

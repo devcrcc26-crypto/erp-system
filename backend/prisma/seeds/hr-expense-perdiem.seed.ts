@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Wipes and reseeds expense claims + per diem requests with 10 realistic
  * records each, including full approval chains and ETB totals.
  *
@@ -216,7 +216,7 @@ async function createApprovalChain(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Exchange rate helper (standalone — no Nest DI)
+// Exchange rate helper (standalone - no Nest DI)
 // ────────────────────────────────────────────────────────────────────────────
 
 function todayDateOnly(): Date {
@@ -326,16 +326,17 @@ async function wipeExpenseAndPerDiem(companyId: string): Promise<void> {
     },
   };
 
-  await prisma.approvalResponse.deleteMany({ where: { request: categoryScope } });
-  await prisma.approvalComment.deleteMany({ where: { request: categoryScope } });
-  await prisma.approvalTier.deleteMany({ where: { request: categoryScope } });
-  await prisma.approvalRequest.deleteMany({ where: categoryScope });
-
+  // Child records first (they FK to approval requests).
   await prisma.expenseClaimItem.deleteMany({
     where: { claim: { companyId } },
   });
   await prisma.expenseClaim.deleteMany({ where: { companyId } });
   await prisma.perDiemRequest.deleteMany({ where: { companyId } });
+
+  await prisma.approvalResponse.deleteMany({ where: { request: categoryScope } });
+  await prisma.approvalComment.deleteMany({ where: { request: categoryScope } });
+  await prisma.approvalTier.deleteMany({ where: { request: categoryScope } });
+  await prisma.approvalRequest.deleteMany({ where: categoryScope });
 
   console.log('Wipe complete.');
 }
@@ -364,19 +365,19 @@ async function seedExpenseClaims(
   }> = [
     {
       employee: weiChen,
-      title: 'Site visit expenses — Hawassa July 2026',
+      title: 'Site visit expenses - Hawassa July 2026',
       description: 'Travel and meal expenses during structural inspection',
       status: 'APPROVED',
       items: [
         { category: 'Transport', description: 'Taxi from airport to site', amount: 450, currency: SupportedCurrency.ETB, date: '2026-07-15' },
         { category: 'Meals', description: 'Lunch with site team', amount: 380, currency: SupportedCurrency.ETB, date: '2026-07-15' },
-        { category: 'Accommodation', description: 'Hotel — 1 night', amount: 1200, currency: SupportedCurrency.ETB, date: '2026-07-15' },
+        { category: 'Accommodation', description: 'Hotel - 1 night', amount: 1200, currency: SupportedCurrency.ETB, date: '2026-07-15' },
         { category: 'Materials', description: 'Survey equipment rental', amount: 25, currency: SupportedCurrency.USD, date: '2026-07-16' },
       ],
     },
     {
       employee: weiChen,
-      title: 'Client meeting expenses — Nairobi August 2026',
+      title: 'Client meeting expenses - Nairobi August 2026',
       description: 'Business expenses during Kenya client visit',
       status: 'IN_REVIEW',
       items: [
@@ -388,7 +389,7 @@ async function seedExpenseClaims(
     },
     {
       employee: weiChen,
-      title: 'Office supplies — July 2026',
+      title: 'Office supplies - July 2026',
       description: 'Stationery and drawing supplies',
       status: 'SUBMITTED',
       items: [
@@ -398,7 +399,7 @@ async function seedExpenseClaims(
     },
     {
       employee: xiaomingLi,
-      title: 'Dubai expo expenses — September 2026',
+      title: 'Dubai expo expenses - September 2026',
       description: 'Construction expo attendance costs',
       status: 'APPROVED',
       items: [
@@ -410,7 +411,7 @@ async function seedExpenseClaims(
     },
     {
       employee: xiaomingLi,
-      title: 'Team training materials — August 2026',
+      title: 'Team training materials - August 2026',
       description: 'Technical training resources for discipline team',
       status: 'APPROVED',
       items: [
@@ -420,7 +421,7 @@ async function seedExpenseClaims(
     },
     {
       employee: otherEmployees[0],
-      title: 'Site inspection travel — July 2026',
+      title: 'Site inspection travel - July 2026',
       description: 'Expenses during Gondar site visit',
       status: 'APPROVED',
       items: [
@@ -432,7 +433,7 @@ async function seedExpenseClaims(
     },
     {
       employee: otherEmployees[0],
-      title: 'Software and tools — August 2026',
+      title: 'Software and tools - August 2026',
       description: 'Design software subscription renewal',
       status: 'RETURNED',
       items: [
@@ -441,17 +442,17 @@ async function seedExpenseClaims(
     },
     {
       employee: otherEmployees[1],
-      title: 'Client entertainment — August 2026',
+      title: 'Client entertainment - August 2026',
       description: 'Client dinner for project kickoff',
       status: 'SUBMITTED',
       items: [
-        { category: 'Entertainment', description: 'Client dinner — 6 persons', amount: 4500, currency: SupportedCurrency.ETB, date: '2026-08-10' },
+        { category: 'Entertainment', description: 'Client dinner - 6 persons', amount: 4500, currency: SupportedCurrency.ETB, date: '2026-08-10' },
         { category: 'Transport', description: 'Taxi to restaurant and back', amount: 320, currency: SupportedCurrency.ETB, date: '2026-08-10' },
       ],
     },
     {
       employee: otherEmployees[2],
-      title: 'Medical expenses — July 2026',
+      title: 'Medical expenses - July 2026',
       description: 'Work-related injury treatment',
       status: 'APPROVED',
       items: [
@@ -462,7 +463,7 @@ async function seedExpenseClaims(
     },
     {
       employee: otherEmployees[3],
-      title: 'Conference attendance — September 2026',
+      title: 'Conference attendance - September 2026',
       description: 'Engineering conference registration and travel',
       status: 'REJECTED',
       items: [
@@ -532,7 +533,7 @@ async function seedExpenseClaims(
     });
 
     console.log(
-      `✓ Expense claim ${claimNumber} created — ${claim.items.length} items — ETB ${totalEtb.toFixed(2)}`,
+      `✓ Expense claim ${claimNumber} created - ${claim.items.length} items - ETB ${totalEtb.toFixed(2)}`,
     );
   }
 
@@ -683,7 +684,7 @@ async function seedPerDiemRequests(
   for (const pd of perDiemRequests) {
     const rate = rateByCategory[pd.destinationCategory];
     if (!rate) {
-      console.warn(`⚠ No rate found for ${pd.destinationCategory} — skipping`);
+      console.warn(`⚠ No rate found for ${pd.destinationCategory} - skipping`);
       continue;
     }
 
@@ -704,7 +705,7 @@ async function seedPerDiemRequests(
     const approvalRequest = await createApprovalChain(ctx, {
       employeeId: pd.employee.id,
       categoryCode: 'PER_DIEM',
-      title: `Per diem — ${pd.destination} (${pd.startDate} to ${pd.endDate})`,
+      title: `Per diem - ${pd.destination} (${pd.startDate} to ${pd.endDate})`,
       status: pd.status,
       companyId,
     });
@@ -746,7 +747,7 @@ async function seedPerDiemRequests(
     });
 
     console.log(
-      `✓ Per diem ${requestNumber} — ${pd.destination} — ${days} days — ETB ${totalAmountEtb.toFixed(2)}`,
+      `✓ Per diem ${requestNumber} - ${pd.destination} - ${days} days - ETB ${totalAmountEtb.toFixed(2)}`,
     );
   }
 
@@ -827,7 +828,7 @@ async function main(): Promise<void> {
 
   const usdRate = await getExchangeRate(SupportedCurrency.USD, companyId);
   const cnyRate = await getExchangeRate(SupportedCurrency.CNY, companyId);
-  console.log(`Exchange rates — USD/ETB: ${usdRate}, CNY/ETB: ${cnyRate}`);
+  console.log(`Exchange rates - USD/ETB: ${usdRate}, CNY/ETB: ${cnyRate}`);
 
   const ctx: ChainContext = { xiaomingLi, jinxia, davidWu };
 

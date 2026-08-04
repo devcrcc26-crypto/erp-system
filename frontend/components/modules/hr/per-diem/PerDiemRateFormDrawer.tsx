@@ -16,9 +16,9 @@ interface RateFormValues {
 }
 
 const CURRENCY_OPTIONS = [
-  { value: 'ETB', label: 'ETB — Ethiopian Birr' },
-  { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'CNY', label: 'CNY — Chinese Yuan' },
+  { value: 'ETB', label: 'ETB - Ethiopian Birr' },
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'CNY', label: 'CNY - Chinese Yuan' },
 ];
 
 /**

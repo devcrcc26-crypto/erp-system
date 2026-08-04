@@ -84,9 +84,9 @@ export default function PerDiemRequestDetailPageContent({
   }
 
   const linkedTravel = request.linkedFlight
-    ? `Flight ${request.linkedFlight.applicationNumber} — ${request.linkedFlight.destination}`
+    ? `Flight ${request.linkedFlight.applicationNumber} - ${request.linkedFlight.destination}`
     : request.linkedTrip
-      ? `Business Trip ${request.linkedTrip.tripNumber} — ${request.linkedTrip.destinationCity}, ${request.linkedTrip.destinationCountry}`
+      ? `Business Trip ${request.linkedTrip.tripNumber} - ${request.linkedTrip.destinationCity}, ${request.linkedTrip.destinationCountry}`
       : null;
 
   return (
