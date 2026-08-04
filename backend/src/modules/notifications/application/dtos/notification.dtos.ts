@@ -1,11 +1,32 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
+
+export class ListNotificationsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description: 'When true, return only unread in-app notifications',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === true || value === 'true' || value === '1') {
+      return true;
+    }
+    if (value === false || value === 'false' || value === '0') {
+      return false;
+    }
+    return undefined;
+  })
+  @IsBoolean()
+  unreadOnly?: boolean;
+}
 
 export class CreateNotificationTemplateDto {
   @ApiProperty()

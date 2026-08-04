@@ -14,6 +14,7 @@ import {
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -188,85 +189,89 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mx-auto w-full max-w-xl">
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
-          onFinish={(values) => void handleSubmit(values)}
-        >
-          <Form.Item
-            name="leaveType"
-            label="Leave Type"
-            rules={[{ required: true, message: 'Select a leave type' }]}
-            extra={
-              <div
-                className="mt-2 rounded-md px-3 py-2"
-                style={{
-                  background: tokens.colorPrimaryLight,
-                  border: `1px solid ${tokens.colorBorder}`,
-                }}
-              >
-                <Typography.Text strong style={{ display: 'block', marginBottom: 4 }}>
-                  {leaveType
-                    ? `${formatLeaveType(leaveType)} balance (${year})`
-                    : `${year} balance`}
-                </Typography.Text>
-                {renderBalancePanel()}
-              </div>
-            }
+      <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
+        <SectionCard title="Leave details" bodyClassName="px-5 py-4">
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
+            onFinish={(values) => void handleSubmit(values)}
           >
-            <Select
-              options={LEAVE_TYPE_OPTIONS}
-              placeholder="Select leave type"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="dateRange"
-            label="Leave Dates"
-            rules={[{ required: true, message: 'Select start and end dates' }]}
-          >
-            <DatePicker.RangePicker className="w-full" />
-          </Form.Item>
-
-          <Form.Item
-            name="days"
-            label="Days"
-            extra="Auto-calculated from dates; edit for half-days."
-            rules={[
-              { required: true, message: 'Enter days' },
-              { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
-            ]}
-          >
-            <InputNumber
-              className="w-full"
-              min={0.5}
-              step={0.5}
-              precision={1}
-            />
-          </Form.Item>
-
-          <Form.Item name="reason" label="Reason">
-            <Input.TextArea rows={4} maxLength={4000} showCount />
-          </Form.Item>
-
-          <Form.Item label="Attachments (optional)">
-            <Typography.Paragraph
-              type="secondary"
-              style={{ marginBottom: 8, fontSize: 13 }}
+            <Form.Item
+              name="leaveType"
+              label="Leave Type"
+              rules={[{ required: true, message: 'Select a leave type' }]}
             >
-              Upload supporting documents e.g. medical certificate for sick leave
-            </Typography.Paragraph>
-            <FileUploadInput
-              files={selectedFiles}
-              onChange={setSelectedFiles}
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              multiple
-              disabled={submitMutation.isPending}
-            />
-          </Form.Item>
-        </Form>
+              <Select
+                options={LEAVE_TYPE_OPTIONS}
+                placeholder="Select leave type"
+              />
+            </Form.Item>
+
+            <div
+              className="mb-6 rounded-md px-3 py-2"
+              style={{
+                background: tokens.colorPrimaryLight,
+                border: `1px solid ${tokens.colorBorder}`,
+              }}
+            >
+              <Typography.Text
+                strong
+                style={{ display: 'block', marginBottom: 4 }}
+              >
+                {leaveType
+                  ? `${formatLeaveType(leaveType)} balance (${year})`
+                  : `${year} balance`}
+              </Typography.Text>
+              {renderBalancePanel()}
+            </div>
+
+            <Form.Item
+              name="dateRange"
+              label="Leave Dates"
+              rules={[{ required: true, message: 'Select start and end dates' }]}
+            >
+              <DatePicker.RangePicker className="w-full" />
+            </Form.Item>
+
+            <Form.Item
+              name="days"
+              label="Days"
+              extra="Auto-calculated from dates; edit for half-days."
+              rules={[
+                { required: true, message: 'Enter days' },
+                { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
+              ]}
+            >
+              <InputNumber
+                className="w-full"
+                min={0.5}
+                step={0.5}
+                precision={1}
+              />
+            </Form.Item>
+
+            <Form.Item name="reason" label="Reason">
+              <Input.TextArea rows={4} maxLength={4000} showCount />
+            </Form.Item>
+          </Form>
+        </SectionCard>
+
+        <SectionCard title="Supporting documents" bodyClassName="px-5 py-4">
+          <Typography.Paragraph
+            type="secondary"
+            style={{ marginBottom: 12, fontSize: 13 }}
+          >
+            Upload supporting documents e.g. medical certificate for sick leave
+          </Typography.Paragraph>
+          <FileUploadInput
+            files={selectedFiles}
+            onChange={setSelectedFiles}
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            multiple
+            disabled={submitMutation.isPending}
+          />
+        </SectionCard>
       </div>
     </FormLayout>
   );

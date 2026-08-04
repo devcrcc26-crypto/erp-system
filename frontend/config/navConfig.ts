@@ -67,6 +67,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/messages': 'nav.messages',
   '/settings': 'nav.settings',
   '/profile': 'nav.profile',
+  '/notifications': 'nav.notifications',
   '/audit-logs': 'nav.auditLogs',
   '/departments': 'pages.departments.title',
   '/positions': 'pages.positions.title',
@@ -662,7 +663,7 @@ export function resolveRouteMeta(
   if (pathname === '/') {
     return {
       titleKey,
-      breadcrumbs: [{ label: t(titleKey) }],
+      breadcrumbs: [],
     };
   }
 

@@ -8,6 +8,7 @@
     "teams": "Teams",
     "reports": "Reports",
     "messages": "Messages",
+    "notifications": "Notifications",
     "settings": "Settings",
     "profile": "Profile",
     "logout": "Logout",
@@ -162,6 +163,26 @@
           "users": "User accounts and role assignments",
           "approvals": "Cross-module approval inbox"
         }
+      }
+    },
+    "notifications": {
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "markAllRead": "Mark all read",
+      "markRead": "Mark read",
+      "markedAllRead": "All notifications marked as read",
+      "markReadFailed": "Failed to mark notification as read",
+      "markAllFailed": "Failed to mark all notifications as read",
+      "loadFailed": "Failed to load notifications",
+      "signInRequired": "Sign in to view notifications.",
+      "empty": "No notifications yet",
+      "emptyUnread": "You're all caught up",
+      "read": "Read",
+      "unread": "Unread",
+      "columns": {
+        "notification": "Notification",
+        "when": "When",
+        "status": "Status"
       }
     },
     "disciplines": {

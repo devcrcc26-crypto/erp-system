@@ -258,31 +258,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {canViewHr
-              ? t('pages.hr.flight.listTitle')
-              : t('pages.hr.flight.myListTitle')}
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {canViewHr
-              ? t('pages.hr.flight.listDescription')
-              : t('pages.hr.flight.myListDescription')}
-          </p>
-        </div>
-        {canCreate ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/flight-application')}
-          >
-            {t('pages.hr.flight.new')}
-          </Button>
-        ) : null}
-      </div>
-
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -391,6 +366,16 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           }}
         />
         <TableUpdatingIndicator active={listQuery.isFetching} />
+        {canCreate ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            className="ml-auto"
+            onClick={() => router.push('/approvals/new/flight-application')}
+          >
+            {t('pages.hr.flight.new')}
+          </Button>
+        ) : null}
       </div>
 
       {/* Table */}

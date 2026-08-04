@@ -8,6 +8,7 @@
     "teams": "团队",
     "reports": "报表",
     "messages": "消息",
+    "notifications": "通知",
     "settings": "设置",
     "profile": "个人资料",
     "logout": "退出登录",
@@ -162,6 +163,26 @@
           "users": "用户账户与角色分配",
           "approvals": "跨模块审批收件箱"
         }
+      }
+    },
+    "notifications": {
+      "filterAll": "全部",
+      "filterUnread": "未读",
+      "markAllRead": "全部标为已读",
+      "markRead": "标为已读",
+      "markedAllRead": "已将全部通知标为已读",
+      "markReadFailed": "标为已读失败",
+      "markAllFailed": "全部标为已读失败",
+      "loadFailed": "加载通知失败",
+      "signInRequired": "请登录后查看通知。",
+      "empty": "暂无通知",
+      "emptyUnread": "没有未读通知",
+      "read": "已读",
+      "unread": "未读",
+      "columns": {
+        "notification": "通知",
+        "when": "时间",
+        "status": "状态"
       }
     },
     "disciplines": {

@@ -8,6 +8,7 @@ import {
   ClockCircleOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
+import { ArrowRight } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -80,17 +81,22 @@ const HR_QUICK_LINKS: readonly QuickLink[] = [
 
 function SectionCard({
   title,
+  action,
   children,
 }: {
   title: string;
+  action?: ReactNode;
   children: ReactNode;
 }): React.ReactNode {
   return (
-    <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-      <h3 className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">
-        {title}
-      </h3>
-      {children}
+    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
+          {title}
+        </h3>
+        {action}
+      </div>
+      <div className="px-5 py-4">{children}</div>
     </div>
   );
 }
@@ -104,42 +110,43 @@ function RecentLeaveList({
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-[var(--color-text-tertiary)]">
+      <p className="text-sm text-[var(--color-text-tertiary)] m-0">
         {t('pages.dashboard.hr.noRecentLeave')}
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col">
+    <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
       {items.map((item) => (
-        <Link
-          key={item.id}
-          href={`/hr/leave-requests/${item.id}`}
-          className="flex gap-3 border-b border-[var(--color-border-tertiary)] py-2.5 last:border-b-0 hover:bg-[var(--color-surface-secondary)]"
-        >
-          <div className="w-[72px] shrink-0 text-xs text-[var(--color-text-tertiary)]">
-            {item.submittedAt
-              ? dayjs(item.submittedAt).fromNow()
-              : dayjs(item.createdAt).fromNow()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-[var(--color-text-primary)]">
-              {formatLeaveEmployeeName(item.employee)} ·{' '}
-              {formatLeaveType(item.leaveType)}
-            </p>
-            <p className="text-xs text-[var(--color-text-tertiary)]">
-              {item.requestNumber} · {formatProjectDate(item.startDate)} –{' '}
-              {formatProjectDate(item.endDate)} ({item.days}d)
-            </p>
-          </div>
-          <StatusBadge
-            label={formatLeaveStatus(item.status)}
-            variant={leaveStatusVariant(item.status)}
-          />
-        </Link>
+        <li key={item.id}>
+          <Link
+            href={`/hr/leave-requests/${item.id}`}
+            className="flex gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-90"
+          >
+            <div className="w-[72px] shrink-0 text-xs text-[var(--color-text-tertiary)] pt-0.5">
+              {item.submittedAt
+                ? dayjs(item.submittedAt).fromNow()
+                : dayjs(item.createdAt).fromNow()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-[var(--color-text-primary)] m-0">
+                {formatLeaveEmployeeName(item.employee)} ·{' '}
+                {formatLeaveType(item.leaveType)}
+              </p>
+              <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
+                {item.requestNumber} · {formatProjectDate(item.startDate)} –{' '}
+                {formatProjectDate(item.endDate)} ({item.days}d)
+              </p>
+            </div>
+            <StatusBadge
+              label={formatLeaveStatus(item.status)}
+              variant={leaveStatusVariant(item.status)}
+            />
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -240,32 +247,23 @@ export default function HrDashboard({
   );
 
   return (
-    <div className={layout.sectionStack}>
-      <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-        <h2 className="m-0 text-[17px] font-semibold tracking-[-0.01em] text-[var(--color-text-primary)]">
-          {t('pages.dashboard.hr.title')}
-        </h2>
-        <p className="mt-1 mb-0 text-sm text-[var(--color-text-secondary)]">
-          {t('pages.dashboard.hr.subtitle')}
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <Link key={card.key} href={card.link} className="block">
-              <div className="cursor-pointer rounded-lg border border-[var(--color-border-tertiary)] p-4 transition-shadow hover:shadow-sm">
+            <Link key={card.key} href={card.link} className="block group">
+              <div className="h-full bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3 transition-colors group-hover:border-[rgba(0,0,0,0.14)]">
                 <div className="mb-2 flex items-center gap-2">
-                  <Icon className="text-[var(--color-text-secondary)]" />
-                  <span className="text-xs uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                  <Icon className="text-[var(--color-text-tertiary)]" />
+                  <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
                     {card.label}
                   </span>
                 </div>
-                <p className="m-0 text-2xl font-semibold text-[var(--color-text-primary)]">
+                <p className="m-0 text-2xl font-semibold text-[var(--color-text-primary)] leading-tight">
                   {card.value}
                 </p>
-                <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
+                <p className="m-0 mt-1 text-xs text-[var(--color-text-tertiary)]">
                   {card.subtext}
                 </p>
               </div>
@@ -275,35 +273,45 @@ export default function HrDashboard({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard title={t('pages.dashboard.hr.recentLeave')}>
-          <RecentLeaveList items={recentItems} />
-          <div className="mt-3">
+        <SectionCard
+          title={t('pages.dashboard.hr.recentLeave')}
+          action={
             <Link
               href="/hr/leave-requests"
-              className="text-sm font-medium text-[var(--color-primary)]"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-teal-600)] no-underline hover:underline"
             >
               {t('pages.dashboard.hr.viewAllLeave')}
+              <ArrowRight size={12} />
             </Link>
-          </div>
+          }
+        >
+          <RecentLeaveList items={recentItems} />
         </SectionCard>
 
         <SectionCard title={t('pages.dashboard.hr.quickLinks')}>
-          <div className="flex flex-col gap-1">
+          <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
             {quickLinks.map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                className="rounded-lg px-3 py-2.5 transition-colors hover:bg-[var(--color-surface-secondary)]"
-              >
-                <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
-                  {t(link.labelKey)}
-                </p>
-                <p className="m-0 text-xs text-[var(--color-text-tertiary)]">
-                  {t(link.descriptionKey)}
-                </p>
-              </Link>
+              <li key={link.key}>
+                <Link
+                  href={link.href}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0 no-underline group"
+                >
+                  <div className="min-w-0">
+                    <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
+                      {t(link.labelKey)}
+                    </p>
+                    <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
+                      {t(link.descriptionKey)}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    size={14}
+                    className="shrink-0 text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-primary)]"
+                  />
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </SectionCard>
       </div>
     </div>

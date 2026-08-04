@@ -160,6 +160,23 @@ export default function NotificationPanel(): React.ReactNode {
           ))}
         </div>
       )}
+
+      <div
+        className="px-4 py-2.5"
+        style={{ borderTop: `0.5px solid ${tokens.colorBorder}` }}
+      >
+        <Button
+          type="link"
+          block
+          className="!px-0"
+          onClick={() => {
+            setOpen(false);
+            router.push('/notifications');
+          }}
+        >
+          Show all
+        </Button>
+      </div>
     </div>
   );
 

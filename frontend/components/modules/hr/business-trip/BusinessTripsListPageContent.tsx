@@ -250,39 +250,10 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
-  const listTitle = canViewHr
-    ? t('pages.hr.businessTrip.listTitle')
-    : t('pages.hr.businessTrip.myListTitle');
-
-  const listDescription = canViewHr
-    ? t('pages.hr.businessTrip.listDescription')
-    : t('pages.hr.businessTrip.myListDescription');
-
   const newLabel = t('pages.hr.businessTrip.new');
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {listTitle}
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {listDescription}
-          </p>
-        </div>
-        {canCreate ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/business-trip')}
-          >
-            {newLabel}
-          </Button>
-        ) : null}
-      </div>
-
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -387,6 +358,16 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           }}
         />
         <TableUpdatingIndicator active={listQuery.isFetching} />
+        {canCreate ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            className="ml-auto"
+            onClick={() => router.push('/approvals/new/business-trip')}
+          >
+            {newLabel}
+          </Button>
+        ) : null}
       </div>
 
       {/* Table */}

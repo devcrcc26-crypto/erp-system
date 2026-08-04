@@ -5,7 +5,6 @@ import {
   Alert,
   Button,
   DatePicker,
-  Divider,
   Drawer,
   Form,
   Input,
@@ -35,6 +34,25 @@ interface LeaveFormValues {
   dateRange: [Dayjs, Dayjs];
   days: number;
   reason?: string;
+}
+
+function DrawerSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-[rgba(0,0,0,0.06)]">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
+          {title}
+        </h3>
+      </div>
+      <div className="px-4 py-4">{children}</div>
+    </div>
+  );
 }
 
 /**
@@ -129,7 +147,10 @@ export default function LeaveRequestFormDrawer({
         </Button>
       }
     >
-      <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+      <Typography.Paragraph
+        type="secondary"
+        style={{ marginTop: 0, marginBottom: 16 }}
+      >
         Short absences (≤ 3 days) need Discipline Lead and HR; longer leave
         escalates to General Manager.
       </Typography.Paragraph>
@@ -147,72 +168,87 @@ export default function LeaveRequestFormDrawer({
         />
       ) : null}
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={(values) => void handleSubmit(values)}
-      >
-        <Form.Item
-          name="leaveType"
-          label="Leave Type"
-          rules={[{ required: true, message: 'Select a leave type' }]}
-        >
-          <Select options={LEAVE_TYPE_OPTIONS} placeholder="Select leave type" />
-        </Form.Item>
+      <div className="flex flex-col gap-4">
+        <DrawerSection title="Leave details">
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={(values) => void handleSubmit(values)}
+          >
+            <Form.Item
+              name="leaveType"
+              label="Leave Type"
+              rules={[{ required: true, message: 'Select a leave type' }]}
+            >
+              <Select
+                options={LEAVE_TYPE_OPTIONS}
+                placeholder="Select leave type"
+              />
+            </Form.Item>
 
-        <Form.Item
-          name="dateRange"
-          label="Leave Dates"
-          rules={[{ required: true, message: 'Select start and end dates' }]}
-        >
-          <DatePicker.RangePicker className="w-full" />
-        </Form.Item>
+            <Form.Item
+              name="dateRange"
+              label="Leave Dates"
+              rules={[{ required: true, message: 'Select start and end dates' }]}
+            >
+              <DatePicker.RangePicker className="w-full" />
+            </Form.Item>
 
-        <Form.Item
-          name="days"
-          label="Days"
-          extra="Auto-calculated from dates; edit for half-days."
-          rules={[
-            { required: true, message: 'Enter days' },
-            { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
-          ]}
-        >
-          <InputNumber className="w-full" min={0.5} step={0.5} precision={1} />
-        </Form.Item>
+            <Form.Item
+              name="days"
+              label="Days"
+              extra="Auto-calculated from dates; edit for half-days."
+              rules={[
+                { required: true, message: 'Enter days' },
+                { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
+              ]}
+            >
+              <InputNumber
+                className="w-full"
+                min={0.5}
+                step={0.5}
+                precision={1}
+              />
+            </Form.Item>
 
-        <Form.Item name="reason" label="Reason">
-          <Input.TextArea rows={4} maxLength={4000} showCount />
-        </Form.Item>
-      </Form>
+            <Form.Item name="reason" label="Reason" style={{ marginBottom: 0 }}>
+              <Input.TextArea rows={4} maxLength={4000} showCount />
+            </Form.Item>
+          </Form>
+        </DrawerSection>
 
-      <Divider />
-
-      <Typography.Text strong>{year} Balance</Typography.Text>
-      {balancesQuery.isLoading ? (
-        <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-          Loading balance…
-        </Typography.Paragraph>
-      ) : leaveType && selectedBalance ? (
-        <Space orientation="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
-          <Typography.Text>{formatLeaveType(leaveType)}</Typography.Text>
-          <Typography.Text type="secondary">
-            Entitled: {selectedBalance.entitled}
-          </Typography.Text>
-          <Typography.Text type="secondary">
-            Used: {selectedBalance.used}
-          </Typography.Text>
-          <Typography.Text type="secondary">
-            Pending: {selectedBalance.pending}
-          </Typography.Text>
-          <Typography.Text strong>
-            Remaining: {selectedBalance.remaining}
-          </Typography.Text>
-        </Space>
-      ) : (
-        <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-          Select a leave type to view your balance.
-        </Typography.Paragraph>
-      )}
+        <DrawerSection title={`${year} balance`}>
+          {balancesQuery.isLoading ? (
+            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+              Loading balance…
+            </Typography.Paragraph>
+          ) : leaveType && selectedBalance ? (
+            <Space
+              orientation="vertical"
+              size={4}
+              style={{ width: '100%' }}
+            >
+              <Typography.Text>{formatLeaveType(leaveType)}</Typography.Text>
+              <Typography.Text type="secondary">
+                Entitled: {selectedBalance.entitled}
+              </Typography.Text>
+              <Typography.Text type="secondary">
+                Used: {selectedBalance.used}
+              </Typography.Text>
+              <Typography.Text type="secondary">
+                Pending: {selectedBalance.pending}
+              </Typography.Text>
+              <Typography.Text strong>
+                Remaining: {selectedBalance.remaining}
+              </Typography.Text>
+            </Space>
+          ) : (
+            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+              Select a leave type to view your balance.
+            </Typography.Paragraph>
+          )}
+        </DrawerSection>
+      </div>
     </Drawer>
   );
 }

@@ -21,6 +21,10 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import {
+  SectionCard,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -79,38 +83,20 @@ function HoursSummaryCards({
   holiday: number;
   total: number;
 }): React.ReactNode {
-  const items = [
-    { label: 'Regular', value: regular, color: 'text-[var(--color-text-primary)]' },
-    { label: 'Night', value: night, color: 'text-[var(--color-blue-400)]' },
-    { label: 'Weekend', value: weekend, color: 'text-[var(--color-teal-400)]' },
-    { label: 'Holiday', value: holiday, color: 'text-[var(--color-amber-400)]' },
-    {
-      label: 'Total',
-      value: total,
-      color: 'text-[var(--color-text-primary)]',
-      bold: true,
-    },
-  ];
-
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-5">
-      {items.map(({ label, value, color, bold }) => (
-        <div
-          key={label}
-          className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3"
-        >
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-            {label}
-          </p>
-          <p className={`text-xl ${bold ? 'font-bold' : 'font-semibold'} ${color}`}>
-            {formatOvertimeHours(value)}
-            <span className="text-xs font-normal text-[var(--color-text-tertiary)] ml-1">
-              hrs
-            </span>
-          </p>
-        </div>
-      ))}
-    </div>
+    <SummaryStrip
+      items={[
+        { label: 'Regular', value: `${formatOvertimeHours(regular)} hrs` },
+        { label: 'Night', value: `${formatOvertimeHours(night)} hrs` },
+        { label: 'Weekend', value: `${formatOvertimeHours(weekend)} hrs` },
+        { label: 'Holiday', value: `${formatOvertimeHours(holiday)} hrs` },
+        {
+          label: 'Total',
+          value: `${formatOvertimeHours(total)} hrs`,
+          emphasize: true,
+        },
+      ]}
+    />
   );
 }
 
@@ -480,49 +466,55 @@ export default function OvertimeSheetDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Page header */}
-      <div className="mb-2">
-        <button
-          onClick={() => router.push('/hr/overtime')}
-          className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] mb-3 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          <span>Overtime</span>
-        </button>
+      <button
+        type="button"
+        onClick={() => router.push('/hr/overtime')}
+        className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] self-start transition-colors"
+      >
+        <ArrowLeft size={14} />
+        <span>Overtime</span>
+      </button>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-              Overtime · {sheet.sheetNumber}
-            </p>
-            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
-              {formatOvertimePeriod(sheet.month, sheet.year)}
-            </h1>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+        <div className="px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                {sheet.sheetNumber}
+              </span>
+              <StatusBadge
+                label={formatOvertimeStatus(sheet.status)}
+                variant={overtimeStatusVariant(sheet.status)}
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+              {canCancel ? (
+                <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+                  Cancel
+                </Button>
+              ) : null}
+              {canEdit ? (
+                <Button
+                  type="primary"
+                  size="small"
+                  disabled={!canSubmit}
+                  onClick={() => setConfirmSubmit(true)}
+                >
+                  Submit for approval
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
+            {formatOvertimePeriod(sheet.month, sheet.year)}
+          </h1>
+
+          <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">
+            <span className="font-medium text-[var(--color-text-primary)]">
               {formatOvertimeEmployeeName(sheet.employee)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <StatusBadge
-              label={formatOvertimeStatus(sheet.status)}
-              variant={overtimeStatusVariant(sheet.status)}
-            />
-            {canCancel ? (
-              <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-                Cancel
-              </Button>
-            ) : null}
-            {canEdit ? (
-              <Button
-                type="primary"
-                size="small"
-                disabled={!canSubmit}
-                onClick={() => setConfirmSubmit(true)}
-              >
-                Submit for approval
-              </Button>
-            ) : null}
-          </div>
+            </span>
+          </p>
         </div>
       </div>
 
@@ -534,13 +526,12 @@ export default function OvertimeSheetDetailPageContent({
         total={sheet.totalHours}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
-        <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-          <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              Entries
-            </h3>
-            {canEdit ? (
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
+        <SectionCard
+          title="Entries"
+          bodyClassName="px-5 py-4"
+          action={
+            canEdit ? (
               <Button
                 type="primary"
                 size="small"
@@ -549,11 +540,10 @@ export default function OvertimeSheetDetailPageContent({
               >
                 Add entry
               </Button>
-            ) : null}
-          </div>
-
-          <div className="px-5 py-4">
-            <Table<OvertimeEntry>
+            ) : undefined
+          }
+        >
+          <Table<OvertimeEntry>
             rowKey="id"
             size="small"
             columns={columns}
@@ -608,31 +598,23 @@ export default function OvertimeSheetDetailPageContent({
                 />
               ),
             }}
-            />
-          </div>
-        </div>
+          />
+        </SectionCard>
 
-        <div className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
           {!sheet.approvalRequestId ? (
-            <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-              <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                  Approval Chain
-                </h3>
-              </div>
-              <div className="px-5 py-4">
-                <p className="text-sm text-[var(--color-text-tertiary)]">
-                  Approval chain appears after submit.
-                </p>
-              </div>
-            </div>
+            <SectionCard title="Approval Chain" bodyClassName="px-5 py-4">
+              <p className="text-sm text-[var(--color-text-tertiary)] m-0">
+                Approval chain appears after submit.
+              </p>
+            </SectionCard>
           ) : (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={approvalRequest?.currentTier ?? 0}
             />
           )}
-        </div>
+        </aside>
       </div>
 
       <Modal

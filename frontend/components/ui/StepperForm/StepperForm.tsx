@@ -64,13 +64,7 @@ export function StepperForm({
       className="flex w-full min-h-0 flex-col"
       style={{ minHeight: 'calc(100dvh - 9rem)' }}
     >
-      <div
-        className="sticky top-0 z-10 px-6 pb-4 pt-6 sm:px-8"
-        style={{
-          background: tokens.colorCardBg,
-          borderBottom: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
+      <div className="sticky top-0 z-10 border-b border-[rgba(0,0,0,0.08)] bg-white px-6 pb-4 pt-6 sm:px-8">
         <Steps
           current={current}
           size="small"
@@ -81,17 +75,16 @@ export function StepperForm({
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-        {active.content}
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8"
+        style={{ background: tokens.colorPageBg }}
+      >
+        <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+          {active.content}
+        </div>
       </div>
 
-      <div
-        className="sticky bottom-0 z-10 flex items-center justify-between gap-3 px-6 py-4 sm:px-8"
-        style={{
-          background: tokens.colorCardBg,
-          borderTop: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
+      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[rgba(0,0,0,0.08)] bg-white px-6 py-4 sm:px-8">
         <Button
           onClick={handleBack}
           disabled={current === 0 || isSubmitting || validating}

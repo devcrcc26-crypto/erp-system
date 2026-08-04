@@ -21,7 +21,7 @@ export default function NewOvertimePage(): React.ReactNode {
 
   if (currentQuery.isError) {
     return (
-      <div className="flex min-h-[240px] items-center justify-center p-6">
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-8">
         <Alert
           type="error"
           showIcon
@@ -36,9 +36,9 @@ export default function NewOvertimePage(): React.ReactNode {
   }
 
   return (
-    <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 p-6">
+    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-8 flex min-h-[240px] flex-col items-center justify-center gap-3">
       <Spin size="large" />
-      <span className="text-[var(--color-text-secondary)]">
+      <span className="text-sm text-[var(--color-text-secondary)]">
         Opening this month&apos;s overtime sheet…
       </span>
     </div>

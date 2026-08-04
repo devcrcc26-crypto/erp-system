@@ -38,12 +38,13 @@ function ScheduleOverviewSection({
 
   return (
     <Collapse
-      className="dashboard-schedule-collapse"
+      className="dashboard-schedule-collapse overflow-hidden rounded-lg border border-[rgba(0,0,0,0.08)] bg-white [&_.ant-collapse-header]:!items-center [&_.ant-collapse-content-box]:!px-5 [&_.ant-collapse-content-box]:!pb-5"
+      bordered={false}
       items={[
         {
           key: 'schedule-overview',
           label: (
-            <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--color-text-primary)]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
               Schedule Overview
             </span>
           ),

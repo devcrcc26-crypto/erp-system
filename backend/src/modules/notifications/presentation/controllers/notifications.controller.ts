@@ -10,12 +10,14 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
-import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { JwtAuthGuard } from '../../../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
-import { SendNotificationDto } from '../../application/dtos/notification.dtos';
+import {
+  ListNotificationsQueryDto,
+  SendNotificationDto,
+} from '../../application/dtos/notification.dtos';
 import { NotificationService } from '../../application/services/notification.service';
 
 @ApiTags('Notifications')
@@ -33,13 +35,12 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List in-app notifications for current user' })
   list(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: PaginationQueryDto,
-    @Query('unreadOnly') unreadOnly?: string,
+    @Query() query: ListNotificationsQueryDto,
   ): Promise<unknown> {
     return this.notificationService.listInbox(
       this.ctx(user),
       query,
-      unreadOnly === 'true',
+      query.unreadOnly === true,
     );
   }
 

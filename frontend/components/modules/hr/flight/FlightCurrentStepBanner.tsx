@@ -11,6 +11,7 @@ import type { FlightApplicationDetail } from '@/lib/api/flight.types';
  */
 export default function FlightCurrentStepBanner({
   application,
+  embedded = false,
 }: {
   application: Pick<
     FlightApplicationDetail,
@@ -20,6 +21,8 @@ export default function FlightCurrentStepBanner({
     | 'needsTicketAttachment'
     | 'currentStepLabel'
   > & { rejectionNote?: string | null };
+  /** When true, renders as a flat footer strip (no outer card chrome). */
+  embedded?: boolean;
 }): React.ReactNode {
   const currentStep = getCurrentStep(application);
   if (!currentStep) {
@@ -30,26 +33,34 @@ export default function FlightCurrentStepBanner({
 
   return (
     <div
-      className="flex items-center gap-3 px-5 py-3 rounded-lg border mb-1"
+      className={
+        embedded
+          ? 'flex items-start gap-3 px-5 py-3'
+          : 'flex items-start gap-3 px-5 py-3 rounded-lg border'
+      }
       style={{
         background: style.background,
-        borderColor: style.borderColor,
+        borderColor: embedded ? undefined : style.borderColor,
         color: style.color,
       }}
     >
       <div
-        className="w-2 h-2 rounded-full flex-shrink-0"
+        className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
         style={{ background: style.color }}
       />
-      <div className="min-w-0">
-        <span className="text-xs font-semibold uppercase tracking-wide mr-2">
-          Current Step:
+      <div className="min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+          Current Step
         </span>
-        <span className="text-sm font-medium">{currentStep.step}</span>
+        <span className="hidden sm:inline text-xs opacity-40">·</span>
+        <span className="text-sm font-semibold">{currentStep.step}</span>
         {currentStep.description ? (
-          <span className="text-xs opacity-75 ml-2">
-            — {currentStep.description}
-          </span>
+          <>
+            <span className="hidden sm:inline text-xs opacity-40">—</span>
+            <span className="text-xs sm:text-sm opacity-80">
+              {currentStep.description}
+            </span>
+          </>
         ) : null}
       </div>
     </div>

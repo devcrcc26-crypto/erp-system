@@ -155,18 +155,18 @@ export default function PersonalDashboard({
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <Link key={card.key} href={card.link} className="block">
-              <div className="cursor-pointer rounded-lg border border-[var(--color-border-tertiary)] p-4 transition-shadow hover:shadow-sm">
+            <Link key={card.key} href={card.link} className="block group">
+              <div className="h-full bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3 transition-colors group-hover:border-[rgba(0,0,0,0.14)]">
                 <div className="mb-2 flex items-center gap-2">
-                  <Icon className="text-[var(--color-text-secondary)]" />
-                  <span className="text-xs uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                  <Icon className="text-[var(--color-text-tertiary)]" />
+                  <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
                     {card.label}
                   </span>
                 </div>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                <p className="m-0 text-2xl font-semibold text-[var(--color-text-primary)] leading-tight">
                   {card.value}
                 </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
+                <p className="m-0 mt-1 text-xs text-[var(--color-text-tertiary)]">
                   {card.subtext}
                 </p>
               </div>

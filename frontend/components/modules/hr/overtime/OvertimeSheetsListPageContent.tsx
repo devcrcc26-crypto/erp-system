@@ -203,31 +203,6 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {canViewHr
-              ? t('pages.hr.overtime.listTitle')
-              : t('pages.hr.overtime.myListTitle')}
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {canViewHr
-              ? t('pages.hr.overtime.listDescription')
-              : t('pages.hr.overtime.myListDescription')}
-          </p>
-        </div>
-        {canCreate ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/overtime')}
-          >
-            {t('pages.hr.overtime.new')}
-          </Button>
-        ) : null}
-      </div>
-
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
         <ListSearchInput
@@ -293,6 +268,16 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         <TableUpdatingIndicator
           active={listQuery.isFetching && Boolean(listQuery.data)}
         />
+        {canCreate ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            className="ml-auto"
+            onClick={() => router.push('/approvals/new/overtime')}
+          >
+            {t('pages.hr.overtime.new')}
+          </Button>
+        ) : null}
       </div>
 
       {/* Table */}

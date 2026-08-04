@@ -5,16 +5,21 @@ import {
   Alert,
   Button,
   DatePicker,
-  Descriptions,
   Form,
   Input,
   InputNumber,
   Select,
   Skeleton,
   Space,
+  Tag,
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
+import {
+  MetaItem,
+  SectionCard,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -22,7 +27,6 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import { useLeaveRequest, useUpdateLeaveRequest } from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
   LEAVE_TYPE_OPTIONS,
   formatLeaveEmployeeName,
@@ -53,14 +57,7 @@ export default function LeaveRequestDetail({
 
   if (detailQuery.isLoading && !leave) {
     return (
-      <div
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-          borderRadius: 8,
-          padding: 24,
-        }}
-      >
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
     );
@@ -107,119 +104,149 @@ export default function LeaveRequestDetail({
   }
 
   return (
-    <div
-      style={{
-        background: tokens.colorCardBg,
-        border: `1px solid ${tokens.colorBorder}`,
-        borderRadius: 8,
-        padding: 24,
-      }}
-    >
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Typography.Title level={5} style={{ margin: 0 }}>
-          Leave request
-        </Typography.Title>
-        <StatusBadge
-          label={formatLeaveStatus(leave.status)}
-          variant={leaveStatusVariant(leave.status)}
-        />
-        <StatusBadge
-          label={formatLeaveType(leave.leaveType)}
-          variant={leaveTypeVariant(leave.leaveType)}
-        />
-        {canEdit && !editing ? (
-          <Button size="small" onClick={() => {
-            form.setFieldsValue({
-              leaveType: leave.leaveType,
-              range: [dayjs(leave.startDate), dayjs(leave.endDate)],
-              days: leave.days,
-              reason: leave.reason ?? '',
-            });
-            setEditing(true);
-          }}>
-            Edit
-          </Button>
-        ) : null}
+    <div className="flex flex-col gap-4">
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+        <div className="px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                {leave.requestNumber}
+              </span>
+              <span className="text-[var(--color-border-secondary)]">·</span>
+              <Tag className="m-0">{formatLeaveType(leave.leaveType)}</Tag>
+              <StatusBadge
+                label={formatLeaveStatus(leave.status)}
+                variant={leaveStatusVariant(leave.status)}
+              />
+            </div>
+            {canEdit && !editing ? (
+              <Button
+                size="small"
+                onClick={() => {
+                  form.setFieldsValue({
+                    leaveType: leave.leaveType,
+                    range: [dayjs(leave.startDate), dayjs(leave.endDate)],
+                    days: leave.days,
+                    reason: leave.reason ?? '',
+                  });
+                  setEditing(true);
+                }}
+              >
+                Edit
+              </Button>
+            ) : null}
+          </div>
+
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug mt-4 mb-0">
+            {formatLeaveType(leave.leaveType)} Leave
+          </h2>
+        </div>
       </div>
 
+      {!editing ? (
+        <SummaryStrip
+          items={[
+            { label: 'Start', value: formatProjectDate(leave.startDate) },
+            { label: 'End', value: formatProjectDate(leave.endDate) },
+            { label: 'Days', value: String(leave.days), emphasize: true },
+            { label: 'Type', value: formatLeaveType(leave.leaveType) },
+          ]}
+        />
+      ) : null}
+
       {editing ? (
-        <Form form={form} layout="vertical" requiredMark={false}>
-          <Form.Item
-            name="leaveType"
-            label="Leave type"
-            rules={[{ required: true }]}
-          >
-            <Select options={LEAVE_TYPE_OPTIONS} />
-          </Form.Item>
-          <Form.Item
-            name="range"
-            label="Dates"
-            rules={[{ required: true, message: 'Select date range' }]}
-          >
-            <DatePicker.RangePicker className="w-full" format="DD/MM/YYYY" />
-          </Form.Item>
-          <Form.Item name="days" label="Days" rules={[{ required: true }]}>
-            <InputNumber min={0.5} max={365} step={0.5} className="w-full" />
-          </Form.Item>
-          <Form.Item name="reason" label="Reason">
-            <Input.TextArea rows={3} maxLength={4000} />
-          </Form.Item>
-          <Space>
-            <Button
-              type="primary"
-              loading={updateMutation.isPending}
-              onClick={() => void handleSave()}
+        <SectionCard title="Edit request" bodyClassName="px-5 py-4">
+          <Form form={form} layout="vertical" requiredMark={false}>
+            <Form.Item
+              name="leaveType"
+              label="Leave type"
+              rules={[{ required: true }]}
             >
-              Save changes
-            </Button>
-            <Button onClick={() => setEditing(false)}>Cancel</Button>
-          </Space>
-        </Form>
+              <Select options={LEAVE_TYPE_OPTIONS} />
+            </Form.Item>
+            <Form.Item
+              name="range"
+              label="Dates"
+              rules={[{ required: true, message: 'Select date range' }]}
+            >
+              <DatePicker.RangePicker className="w-full" format="DD/MM/YYYY" />
+            </Form.Item>
+            <Form.Item name="days" label="Days" rules={[{ required: true }]}>
+              <InputNumber min={0.5} max={365} step={0.5} className="w-full" />
+            </Form.Item>
+            <Form.Item name="reason" label="Reason">
+              <Input.TextArea rows={3} maxLength={4000} />
+            </Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                loading={updateMutation.isPending}
+                onClick={() => void handleSave()}
+              >
+                Save changes
+              </Button>
+              <Button onClick={() => setEditing(false)}>Cancel</Button>
+            </Space>
+          </Form>
+        </SectionCard>
       ) : (
-        <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="Employee">
-            {formatLeaveEmployeeName(leave.employee)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Leave type">
-            {formatLeaveType(leave.leaveType)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Start date">
-            {formatProjectDate(leave.startDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="End date">
-            {formatProjectDate(leave.endDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Days">{leave.days}</Descriptions.Item>
-          <Descriptions.Item label="Reason">
-            {leave.reason?.trim() || '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Attachments">
-            <AttachmentDownloadList documents={leave.documents} />
-          </Descriptions.Item>
-        </Descriptions>
+        <>
+          <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              <MetaItem label="Employee">
+                {formatLeaveEmployeeName(leave.employee)}
+              </MetaItem>
+              <MetaItem label="Leave type">
+                <StatusBadge
+                  label={formatLeaveType(leave.leaveType)}
+                  variant={leaveTypeVariant(leave.leaveType)}
+                />
+              </MetaItem>
+              <MetaItem label="Start date">
+                {formatProjectDate(leave.startDate)}
+              </MetaItem>
+              <MetaItem label="End date">
+                {formatProjectDate(leave.endDate)}
+              </MetaItem>
+              <MetaItem label="Days">
+                <span className="font-semibold">{leave.days}</span>
+              </MetaItem>
+              <MetaItem label="Reason">
+                {leave.reason?.trim() || (
+                  <span className="text-[var(--color-text-tertiary)]">—</span>
+                )}
+              </MetaItem>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+            {(leave.documents?.length ?? 0) > 0 ? (
+              <AttachmentDownloadList documents={leave.documents} />
+            ) : (
+              <Typography.Text type="secondary">
+                No attachments uploaded.
+              </Typography.Text>
+            )}
+          </SectionCard>
+        </>
       )}
 
-      <Typography.Title level={5} style={{ marginTop: 24 }}>
-        Leave balance
-      </Typography.Title>
-      {balance ? (
-        <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="Entitled">
-            {balance.entitled}
-          </Descriptions.Item>
-          <Descriptions.Item label="Used">{balance.used}</Descriptions.Item>
-          <Descriptions.Item label="Pending">
-            {balance.pending}
-          </Descriptions.Item>
-          <Descriptions.Item label="Remaining">
-            <Typography.Text strong>{balance.remaining}</Typography.Text>
-          </Descriptions.Item>
-        </Descriptions>
-      ) : (
-        <Typography.Text type="secondary">
-          Balance unavailable for this leave type.
-        </Typography.Text>
-      )}
+      <SectionCard title="Leave balance" bodyClassName="px-5 py-4">
+        {balance ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-4">
+            <MetaItem label="Entitled">{balance.entitled}</MetaItem>
+            <MetaItem label="Used">{balance.used}</MetaItem>
+            <MetaItem label="Pending">{balance.pending}</MetaItem>
+            <MetaItem label="Remaining">
+              <Typography.Text strong>{balance.remaining}</Typography.Text>
+            </MetaItem>
+          </div>
+        ) : (
+          <Typography.Text type="secondary">
+            Balance unavailable for this leave type.
+          </Typography.Text>
+        )}
+      </SectionCard>
     </div>
   );
 }

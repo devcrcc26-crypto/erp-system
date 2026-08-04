@@ -28,7 +28,7 @@ export function splitBreadcrumbTrail(segments: readonly BreadcrumbSegment[]): {
 }
 
 /**
- * Route-driven breadcrumb trail - parent segments only (current page is the title).
+ * Full route breadcrumb trail, including the current page as the last item.
  */
 export default function Breadcrumbs({
   segments,
@@ -36,32 +36,51 @@ export default function Breadcrumbs({
   segments: readonly BreadcrumbSegment[];
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const { parents } = splitBreadcrumbTrail(segments);
 
-  if (parents.length === 0) {
+  if (segments.length === 0) {
     return null;
   }
 
-  const items = parents.map((segment, index) => {
+  const items = segments.map((segment, index) => {
+    const isLast = index === segments.length - 1;
     const isHome = segment.href === '/';
-    const title = segment.href ? (
-      <Link href={segment.href} className="shell-breadcrumb-link">
-        {isHome ? (
-          <span className="inline-flex items-center gap-1.5">
-            <HomeOutlined className="text-xs" aria-hidden />
-            <span>{segment.label}</span>
+
+    if (isLast) {
+      return {
+        key: `${segment.label}-${index}`,
+        title: (
+          <span className="text-[var(--color-text-primary)] font-medium">
+            {segment.label}
           </span>
-        ) : (
-          segment.label
-        )}
-      </Link>
-    ) : (
-      <span className="text-slate-500">{segment.label}</span>
-    );
+        ),
+      };
+    }
+
+    if (!segment.href) {
+      return {
+        key: `${segment.label}-${index}`,
+        title: (
+          <span className="text-[var(--color-text-secondary)]">
+            {segment.label}
+          </span>
+        ),
+      };
+    }
 
     return {
       key: `${segment.label}-${index}`,
-      title,
+      title: (
+        <Link href={segment.href} className="shell-breadcrumb-link">
+          {isHome ? (
+            <span className="inline-flex items-center gap-1.5">
+              <HomeOutlined className="text-xs" aria-hidden />
+              <span>{segment.label}</span>
+            </span>
+          ) : (
+            segment.label
+          )}
+        </Link>
+      ),
     };
   });
 
