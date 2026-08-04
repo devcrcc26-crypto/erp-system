@@ -2,14 +2,16 @@
 
 import { useEffect } from 'react';
 import { Alert, Spin } from 'antd';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Gates /hr/* routes — requires hr.view (Human Resources module access).
- * Employees submit leave/overtime via Approvals, not this section.
+ * Gates /hr/* routes.
+ * Full HR (hr.view) can access everything.
+ * Employees may open overtime and leave-request routes for their own records;
+ * page-level ownership checks enforce that.
  */
 export default function HrSectionLayout({
   children,
@@ -17,10 +19,16 @@ export default function HrSectionLayout({
   children: React.ReactNode;
 }): React.ReactNode {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useEpcTranslation();
   const permLoading = usePermissionsLoading();
   const canViewHr = useCanViewHr();
-  const allowed = canViewHr;
+
+  const isEmployeeSelfServiceRoute =
+    pathname.startsWith('/hr/overtime') ||
+    pathname.startsWith('/hr/leave-requests');
+
+  const allowed = canViewHr || isEmployeeSelfServiceRoute;
 
   useEffect(() => {
     if (!permLoading && !allowed) {

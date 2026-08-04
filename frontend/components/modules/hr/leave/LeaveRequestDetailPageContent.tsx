@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -16,6 +16,7 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
@@ -44,6 +45,7 @@ export default function LeaveRequestDetailPageContent({
 }): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const cancelMutation = useCancelLeaveRequest(requestId);
@@ -54,6 +56,37 @@ export default function LeaveRequestDetailPageContent({
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
     [request?.approvalRequest?.tiers],
   );
+
+  useEffect(() => {
+    if (canViewHr || detailQuery.isLoading) {
+      return;
+    }
+
+    if (
+      detailQuery.isError &&
+      detailQuery.error instanceof ApiRequestError &&
+      (detailQuery.error.status === 403 || detailQuery.error.status === 404)
+    ) {
+      router.replace('/approvals');
+      return;
+    }
+
+    if (
+      request &&
+      currentUser.data?.id &&
+      request.employeeId !== currentUser.data.id
+    ) {
+      router.replace('/approvals');
+    }
+  }, [
+    canViewHr,
+    currentUser.data?.id,
+    detailQuery.error,
+    detailQuery.isError,
+    detailQuery.isLoading,
+    request,
+    router,
+  ]);
 
   const canCancel =
     Boolean(request) &&
@@ -91,6 +124,18 @@ export default function LeaveRequestDetailPageContent({
           </Button>
         }
       />
+    );
+  }
+
+  if (
+    !canViewHr &&
+    currentUser.data?.id &&
+    request.employeeId !== currentUser.data.id
+  ) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Skeleton active paragraph={{ rows: 4 }} />
+      </div>
     );
   }
 

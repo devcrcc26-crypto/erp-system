@@ -26,6 +26,7 @@ import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDo
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type {
@@ -126,6 +127,7 @@ export default function OvertimeSheetDetailPageContent({
 }): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sheetId);
   const addMutation = useAddOvertimeEntry(sheetId);
@@ -140,7 +142,9 @@ export default function OvertimeSheetDetailPageContent({
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
-  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
+  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>(
+    {},
+  );
   const [form] = Form.useForm<EntryFormValues>();
 
   const sheet = detailQuery.data;
@@ -153,6 +157,37 @@ export default function OvertimeSheetDetailPageContent({
     Boolean(sheet) &&
     Boolean(currentUser.data?.id) &&
     sheet?.employeeId === currentUser.data?.id;
+
+  useEffect(() => {
+    if (canViewHr || detailQuery.isLoading) {
+      return;
+    }
+
+    if (
+      detailQuery.isError &&
+      detailQuery.error instanceof ApiRequestError &&
+      (detailQuery.error.status === 403 || detailQuery.error.status === 404)
+    ) {
+      router.replace('/approvals');
+      return;
+    }
+
+    if (
+      sheet &&
+      currentUser.data?.id &&
+      sheet.employeeId !== currentUser.data.id
+    ) {
+      router.replace('/approvals');
+    }
+  }, [
+    canViewHr,
+    currentUser.data?.id,
+    detailQuery.error,
+    detailQuery.isError,
+    detailQuery.isLoading,
+    router,
+    sheet,
+  ]);
 
   const canEdit =
     isOwner && (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
@@ -412,6 +447,18 @@ export default function OvertimeSheetDetailPageContent({
           </Button>
         }
       />
+    );
+  }
+
+  if (
+    !canViewHr &&
+    currentUser.data?.id &&
+    sheet.employeeId !== currentUser.data.id
+  ) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Skeleton active paragraph={{ rows: 4 }} />
+      </div>
     );
   }
 
