@@ -10,12 +10,14 @@ import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
   BusinessTripStatus,
+  ExpenseClaimStatus,
   FlightAcknowledgementStatus,
   FlightApplicationStatus,
   FolderContextType,
   LeaveRequestStatus,
   LeaveType,
   OvertimeSheetStatus,
+  PerDiemStatus,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -85,6 +87,8 @@ const REQUEST_DETAIL_INCLUDE = {
   overtimeSheet: { select: { id: true } },
   flightApplication: { select: { id: true } },
   businessTrip: { select: { id: true } },
+  expenseClaim: { select: { id: true } },
+  perDiemRequest: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -317,6 +321,8 @@ export class ApprovalsService {
       request.flightApplication?.id ??
       request.leaveRequest?.id ??
       request.overtimeSheet?.id ??
+      request.expenseClaim?.id ??
+      request.perDiemRequest?.id ??
       null;
 
     return {
@@ -327,6 +333,8 @@ export class ApprovalsService {
       overtimeSheet: undefined,
       flightApplication: undefined,
       businessTrip: undefined,
+      expenseClaim: undefined,
+      perDiemRequest: undefined,
     };
   }
 
@@ -1088,6 +1096,8 @@ export class ApprovalsService {
         overtimeSheet: true,
         flightApplication: true,
         businessTrip: true,
+        expenseClaim: true,
+        perDiemRequest: true,
       },
     });
     if (!request) {
@@ -1200,6 +1210,28 @@ export class ApprovalsService {
             where: { id: request.businessTrip.id },
             data: {
               status: BusinessTripStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.expenseClaim) {
+          await tx.expenseClaim.update({
+            where: { id: request.expenseClaim.id },
+            data: {
+              status: ExpenseClaimStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.perDiemRequest) {
+          await tx.perDiemRequest.update({
+            where: { id: request.perDiemRequest.id },
+            data: {
+              status: PerDiemStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },

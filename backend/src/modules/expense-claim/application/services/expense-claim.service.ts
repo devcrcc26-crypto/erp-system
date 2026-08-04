@@ -1,0 +1,720 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import {
+  ApprovalRequestStatus,
+  ExpenseClaimStatus,
+  FolderContextType,
+  Prisma,
+} from '@prisma/client';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
+import {
+  buildPaginatedResult,
+  buildPrismaPagination,
+  PaginatedResult,
+} from '../../../../shared/utils/pagination.util';
+import { CurrencyService } from '../../../../shared/currency/currency.service';
+import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
+import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
+import type {
+  ApprovalDecisionListener,
+  ApprovalFinalDecision,
+} from '../../../approvals/application/ports/approval-decision.listener';
+import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import {
+  AddExpenseClaimItemDto,
+  CreateExpenseClaimDto,
+  ListExpenseClaimsDto,
+  UpdateExpenseClaimItemDto,
+} from '../dtos/expense-claim.dtos';
+
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
+const USER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+} as const;
+
+const DOCUMENT_SELECT = {
+  id: true,
+  name: true,
+  fileType: true,
+  fileSizeBytes: true,
+} as const;
+
+const CLAIM_DETAIL_INCLUDE = {
+  employee: { select: USER_SELECT },
+  items: {
+    include: { receipt: { select: DOCUMENT_SELECT } },
+    orderBy: { expenseDate: 'asc' as const },
+  },
+  approvalRequest: {
+    include: {
+      tiers: {
+        include: { approver: { select: USER_SELECT } },
+        orderBy: { tierOrder: 'asc' as const },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Expense claim lifecycle — owns claim/item data; delegates tier workflow to ApprovalsService.
+ */
+@Injectable()
+export class ExpenseClaimService
+  implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
+{
+  private readonly logger = new Logger(ExpenseClaimService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly approvalsService: ApprovalsService,
+    private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly decisionRegistry: ApprovalDecisionRegistry,
+    private readonly permissionService: PermissionService,
+    private readonly currencyService: CurrencyService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: IStorageService,
+  ) {}
+
+  onModuleInit(): void {
+    this.decisionRegistry.register(this);
+  }
+
+  onModuleDestroy(): void {
+    this.decisionRegistry.unregister(this);
+  }
+
+  /**
+   * Creates a new DRAFT claim with no line items yet.
+   */
+  async createDraft(
+    dto: CreateExpenseClaimDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claimNumber = await this.nextClaimNumber();
+    const claim = await this.prisma.expenseClaim.create({
+      data: {
+        id: randomUUID(),
+        companyId,
+        claimNumber,
+        employeeId: userId,
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+        status: ExpenseClaimStatus.DRAFT,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+    });
+    return this.getClaim(claim.id, companyId, userId);
+  }
+
+  /**
+   * Adds a line item (with optional receipt file) to a DRAFT claim owned by the caller.
+   */
+  async addItem(
+    claimId: string,
+    dto: AddExpenseClaimItemDto,
+    file: UploadedFile | undefined,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.assertDraftOwner(claimId, companyId, userId);
+
+    const rate =
+      dto.currency === 'ETB'
+        ? 1
+        : await this.currencyService.getRate(dto.currency, 'ETB', companyId);
+    const amountEtb = dto.amount * rate;
+
+    let documentId: string | null = null;
+    if (file?.buffer?.length) {
+      documentId = await this.uploadReceipt(claim, companyId, userId, file);
+    }
+
+    await this.prisma.expenseClaimItem.create({
+      data: {
+        id: randomUUID(),
+        claimId,
+        category: dto.category.trim(),
+        description: dto.description.trim(),
+        amount: new Prisma.Decimal(dto.amount),
+        currency: dto.currency,
+        amountEtb: new Prisma.Decimal(amountEtb),
+        exchangeRate: new Prisma.Decimal(rate),
+        expenseDate: this.parseDateOnly(dto.expenseDate),
+        documentId,
+      },
+    });
+
+    await this.recomputeTotal(claimId, userId);
+    return this.getClaim(claimId, companyId, userId);
+  }
+
+  /**
+   * Updates a line item's fields and/or replaces its receipt.
+   */
+  async updateItem(
+    claimId: string,
+    itemId: string,
+    dto: UpdateExpenseClaimItemDto,
+    file: UploadedFile | undefined,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.assertDraftOwner(claimId, companyId, userId);
+
+    const existing = await this.prisma.expenseClaimItem.findFirst({
+      where: { id: itemId, claimId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Expense claim item not found');
+    }
+
+    const nextCurrency = dto.currency ?? existing.currency;
+    const nextAmount = dto.amount ?? Number(existing.amount);
+    const rate =
+      nextCurrency === 'ETB'
+        ? 1
+        : await this.currencyService.getRate(nextCurrency, 'ETB', companyId);
+    const amountEtb = nextAmount * rate;
+
+    let documentId = existing.documentId;
+    if (file?.buffer?.length) {
+      documentId = await this.uploadReceipt(claim, companyId, userId, file);
+    }
+
+    await this.prisma.expenseClaimItem.update({
+      where: { id: itemId },
+      data: {
+        category: dto.category?.trim() ?? existing.category,
+        description: dto.description?.trim() ?? existing.description,
+        amount: new Prisma.Decimal(nextAmount),
+        currency: nextCurrency,
+        amountEtb: new Prisma.Decimal(amountEtb),
+        exchangeRate: new Prisma.Decimal(rate),
+        expenseDate: dto.expenseDate
+          ? this.parseDateOnly(dto.expenseDate)
+          : existing.expenseDate,
+        documentId,
+      },
+    });
+
+    await this.recomputeTotal(claimId, userId);
+    return this.getClaim(claimId, companyId, userId);
+  }
+
+  /**
+   * Removes a line item from a DRAFT claim.
+   */
+  async deleteItem(
+    claimId: string,
+    itemId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.assertDraftOwner(claimId, companyId, userId);
+
+    const existing = await this.prisma.expenseClaimItem.findFirst({
+      where: { id: itemId, claimId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Expense claim item not found');
+    }
+
+    await this.prisma.expenseClaimItem.delete({ where: { id: itemId } });
+    await this.recomputeTotal(claimId, userId);
+    return this.getClaim(claimId, companyId, userId);
+  }
+
+  /**
+   * Submits a DRAFT claim for approval. Requires at least one item, all with a receipt.
+   */
+  async submitClaim(
+    claimId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id: claimId, companyId }),
+      include: { items: true },
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+    if (claim.employeeId !== userId) {
+      throw new ForbiddenException('Only the claim owner can submit it');
+    }
+    if (claim.status !== ExpenseClaimStatus.DRAFT) {
+      throw new BadRequestException('Only draft claims can be submitted');
+    }
+    if (claim.items.length === 0) {
+      throw new BadRequestException(
+        'Add at least one expense item before submitting',
+      );
+    }
+    const missingReceipt = claim.items.some((item) => !item.documentId);
+    if (missingReceipt) {
+      throw new BadRequestException(
+        'Every expense item requires a receipt before submitting',
+      );
+    }
+
+    const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
+      userId,
+      companyId,
+      true,
+    );
+
+    const approval = (await this.approvalsService.submitRequest(
+      {
+        categoryCode: 'EXPENSE_CLAIM',
+        title: claim.title,
+        formData: {
+          description: claim.description,
+          itemCount: claim.items.length,
+          totalAmountEtb: Number(claim.totalAmountEtb),
+        },
+      },
+      companyId,
+      userId,
+      {
+        resolvedTiers: {
+          ruleName: 'Expense claim org chain',
+          tiers: resolvedTiers,
+        },
+      },
+    )) as { id: string; requestNumber: string };
+
+    await this.prisma.expenseClaim.update({
+      where: { id: claimId },
+      data: {
+        status: ExpenseClaimStatus.SUBMITTED,
+        approvalRequestId: approval.id,
+        submittedAt: new Date(),
+        updatedBy: userId,
+      },
+    });
+
+    return this.getClaim(claimId, companyId, userId);
+  }
+
+  /**
+   * Fetches a single claim with items and approval tiers.
+   */
+  async getClaim(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id, companyId }),
+      include: CLAIM_DETAIL_INCLUDE,
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+
+    await this.assertCanView(claim, companyId, userId);
+
+    return {
+      ...claim,
+      itemCount: claim.items.length,
+    };
+  }
+
+  /**
+   * Paginated claims. HR viewers see company-wide; others see their own.
+   */
+  async listClaims(
+    filters: ListExpenseClaimsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const statuses = this.normalizeStatuses(filters.status);
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+
+    const where: Prisma.ExpenseClaimWhereInput = {
+      companyId,
+      deletedAt: null,
+      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(statuses ? { status: { in: statuses } } : {}),
+      ...(isHrViewer && filters.employeeId
+        ? { employeeId: filters.employeeId }
+        : {}),
+      ...(filters.search?.trim()
+        ? {
+            OR: [
+              {
+                claimNumber: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive' as const,
+                },
+              },
+              {
+                title: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive' as const,
+                },
+              },
+            ],
+          }
+        : {}),
+      ...(filters.dateFrom || filters.dateTo
+        ? {
+            createdAt: {
+              ...(filters.dateFrom
+                ? { gte: this.parseDateOnly(filters.dateFrom) }
+                : {}),
+              ...(filters.dateTo
+                ? { lte: this.parseDateOnly(filters.dateTo) }
+                : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.expenseClaim.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          employee: { select: USER_SELECT },
+          _count: { select: { items: true } },
+          approvalRequest: {
+            select: {
+              id: true,
+              status: true,
+              currentTier: true,
+              tiers: {
+                where: { decision: 'PENDING' },
+                take: 1,
+                select: { tierOrder: true, label: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.expenseClaim.count({ where }),
+    ]);
+
+    return buildPaginatedResult(
+      rows.map((row) => {
+        const { _count, ...rest } = row;
+        return { ...rest, itemCount: _count.items };
+      }),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /**
+   * Cancels a DRAFT or SUBMITTED claim. Only the owner may cancel.
+   */
+  async cancelClaim(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+    if (claim.employeeId !== userId) {
+      throw new ForbiddenException('Only the claim owner can cancel it');
+    }
+    if (
+      claim.status !== ExpenseClaimStatus.DRAFT &&
+      claim.status !== ExpenseClaimStatus.SUBMITTED
+    ) {
+      throw new BadRequestException(
+        'Only draft or submitted claims can be cancelled',
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.expenseClaim.update({
+        where: { id },
+        data: {
+          status: ExpenseClaimStatus.CANCELLED,
+          completedAt: now,
+          updatedBy: userId,
+        },
+      });
+      if (claim.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: claim.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+
+    return this.getClaim(id, companyId, userId);
+  }
+
+  /**
+   * Called by the approval engine when a linked request reaches a terminal decision.
+   */
+  async onApprovalDecision(
+    approvalRequestId: string,
+    decision: ApprovalFinalDecision,
+  ): Promise<void> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ approvalRequestId }),
+    });
+    if (!claim) {
+      return;
+    }
+    if (
+      claim.status === ExpenseClaimStatus.APPROVED ||
+      claim.status === ExpenseClaimStatus.REJECTED ||
+      claim.status === ExpenseClaimStatus.CANCELLED
+    ) {
+      return;
+    }
+
+    const now = new Date();
+    const nextStatus =
+      decision === 'APPROVED'
+        ? ExpenseClaimStatus.APPROVED
+        : decision === 'REJECTED'
+          ? ExpenseClaimStatus.REJECTED
+          : ExpenseClaimStatus.RETURNED;
+
+    await this.prisma.expenseClaim.update({
+      where: { id: claim.id },
+      data: {
+        status: nextStatus,
+        completedAt: decision === 'RETURNED' ? null : now,
+        updatedBy: claim.employeeId,
+      },
+    });
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async assertDraftOwner(
+    claimId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ id: string; claimNumber: string; attachmentFolderId: string | null }> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id: claimId, companyId }),
+      select: { id: true, claimNumber: true, employeeId: true, status: true, attachmentFolderId: true },
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+    if (claim.employeeId !== userId) {
+      throw new ForbiddenException('Only the claim owner can edit this claim');
+    }
+    if (claim.status !== ExpenseClaimStatus.DRAFT) {
+      throw new BadRequestException('Only draft claims can be edited');
+    }
+    return claim;
+  }
+
+  private async assertCanView(
+    claim: {
+      employeeId: string;
+      approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (isHrViewer) return;
+
+    const isOwner = claim.employeeId === userId;
+    const isTierApprover =
+      claim.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
+      false;
+
+    if (!isOwner && !isTierApprover) {
+      throw new ForbiddenException(
+        'You do not have access to this expense claim',
+      );
+    }
+  }
+
+  private async recomputeTotal(claimId: string, userId: string): Promise<void> {
+    const items = await this.prisma.expenseClaimItem.findMany({
+      where: { claimId },
+      select: { amountEtb: true },
+    });
+    const total = items.reduce((sum, item) => sum + Number(item.amountEtb), 0);
+    await this.prisma.expenseClaim.update({
+      where: { id: claimId },
+      data: { totalAmountEtb: new Prisma.Decimal(total), updatedBy: userId },
+    });
+  }
+
+  private async uploadReceipt(
+    claim: { id: string; claimNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+    file: UploadedFile,
+  ): Promise<string> {
+    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+    }
+
+    const folderId =
+      claim.attachmentFolderId ??
+      (await this.ensureAttachmentFolder(claim, companyId, userId));
+
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileKey = `${companyId}/hr/expense-claim/${claim.id}/${randomUUID()}_${safeName}`;
+
+    await this.storage.upload({
+      bucket: STORAGE_BUCKETS.HR,
+      key: fileKey,
+      body: file.buffer,
+      contentType: file.mimetype,
+      contentLength: file.size,
+    });
+
+    const documentId = randomUUID();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.document.create({
+        data: {
+          id: documentId,
+          companyId,
+          folderId,
+          name: file.originalname,
+          fileKey,
+          fileType: file.mimetype,
+          fileSizeBytes: file.size,
+          version: 1,
+          isCurrent: true,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.documentVersion.create({
+        data: {
+          documentId,
+          uploadedBy: userId,
+          versionNumber: 1,
+          fileKey,
+          fileSizeBytes: file.size,
+        },
+      });
+    });
+
+    return documentId;
+  }
+
+  private async ensureAttachmentFolder(
+    claim: { id: string; claimNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+  ): Promise<string> {
+    if (claim.attachmentFolderId) {
+      return claim.attachmentFolderId;
+    }
+
+    const folderId = randomUUID();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.documentFolder.create({
+        data: {
+          id: folderId,
+          companyId,
+          name: `Expense Claim ${claim.claimNumber}`,
+          path: `/hr/expense-claim/${claim.claimNumber}`,
+          contextType: FolderContextType.EXPENSE_CLAIM,
+          contextId: claim.id,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.expenseClaim.update({
+        where: { id: claim.id },
+        data: { attachmentFolderId: folderId, updatedBy: userId },
+      });
+    });
+
+    return folderId;
+  }
+
+  private normalizeStatuses(
+    status: string | undefined,
+  ): ExpenseClaimStatus[] | undefined {
+    if (!status) return undefined;
+    if (status.includes(',')) {
+      return status
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean) as ExpenseClaimStatus[];
+    }
+    return [status as ExpenseClaimStatus];
+  }
+
+  private parseDateOnly(value: string): Date {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (!match) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    );
+  }
+
+  private async nextClaimNumber(): Promise<string> {
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('expense_claim_number_seq')
+    `;
+    const seq = Number(result[0].nextval);
+    return `EC-${String(seq).padStart(4, '0')}`;
+  }
+}

@@ -20,6 +20,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OvertimeModule } from './modules/overtime/overtime.module';
 import { FlightModule } from './modules/flight/flight.module';
 import { BusinessTripModule } from './modules/business-trip/business-trip.module';
+import { ExpenseClaimModule } from './modules/expense-claim/expense-claim.module';
+import { PerDiemModule } from './modules/per-diem/per-diem.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
@@ -29,6 +31,7 @@ import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './shared/interceptors/response-envelope.interceptor';
+import { CurrencyModule } from './shared/currency/currency.module';
 import { MailModule } from './shared/mail/mail.module';
 import { PermissionsModule } from './shared/permissions/permissions.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
@@ -57,6 +60,7 @@ import { StorageModule } from './shared/storage/storage.module';
     PrismaModule,
     MailModule,
     StorageModule,
+    CurrencyModule,
     PermissionsModule,
     AuthModule,
     CompanySetupModule,
@@ -71,6 +75,8 @@ import { StorageModule } from './shared/storage/storage.module';
     OvertimeModule,
     FlightModule,
     BusinessTripModule,
+    ExpenseClaimModule,
+    PerDiemModule,
   ],
   controllers: [AppController],
   providers: [
