@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { JwtAuthGuard } from '../../../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -19,7 +20,7 @@ import { NotificationService } from '../../application/services/notification.ser
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
-@UseGuards(PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationService: NotificationService) {}
@@ -29,7 +30,6 @@ export class NotificationsController {
   }
 
   @Get()
-  @RequirePermission('notifications', 'view')
   @ApiOperation({ summary: 'List in-app notifications for current user' })
   list(
     @CurrentUser() user: AuthenticatedUser,
@@ -44,7 +44,6 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
-  @RequirePermission('notifications', 'view')
   @ApiOperation({ summary: 'Get unread notification count' })
   unreadCount(
     @CurrentUser() user: AuthenticatedUser,
@@ -53,7 +52,6 @@ export class NotificationsController {
   }
 
   @Patch('read-all')
-  @RequirePermission('notifications', 'view')
   @ApiOperation({ summary: 'Mark all in-app notifications as read' })
   markAllRead(
     @CurrentUser() user: AuthenticatedUser,
@@ -62,7 +60,6 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  @RequirePermission('notifications', 'view')
   @ApiOperation({ summary: 'Mark a notification as read' })
   markRead(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,6 +69,7 @@ export class NotificationsController {
   }
 
   @Post('send')
+  @UseGuards(PermissionsGuard)
   @RequirePermission('notifications', 'edit')
   @ApiOperation({ summary: 'Send a notification to a user (admin/system)' })
   send(

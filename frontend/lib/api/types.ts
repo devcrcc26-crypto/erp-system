@@ -449,7 +449,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateUsers: false,
   canManageRoles: false,
   canEditRoles: false,
-  canViewNotifications: false,
+  canViewNotifications: true,
   canViewAuditLogs: false,
   canViewHr: false,
   canViewLeave: false,

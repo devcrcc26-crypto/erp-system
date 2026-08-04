@@ -138,7 +138,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
               <span
                 style={{ margin: '0 4px', color: tokens.colorTextSecondary }}
               >
-                ·
+                -
               </span>
               {row.destinationCity}
             </>

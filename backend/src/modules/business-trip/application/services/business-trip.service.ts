@@ -91,7 +91,7 @@ const TRIP_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Business trip lifecycle ù owns trip data; delegates tier workflow to ApprovalsService.
+ * Business trip lifecycle ÔøΩ owns trip data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class BusinessTripService
@@ -266,7 +266,7 @@ export class BusinessTripService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'BUSINESS_TRIP',
-        title: `Business trip ${dto.originCity}, ${dto.originCountry} ? ${dto.destinationCity}, ${dto.destinationCountry} ù ${dto.departureDate}`,
+        title: `Business trip ${dto.originCity}, ${dto.originCountry} to ${dto.destinationCity}, ${dto.destinationCountry} - ${dto.departureDate}`,
         formData: {
           tripType: dto.tripType,
           originCountry: dto.originCountry,
@@ -758,7 +758,7 @@ export class BusinessTripService
         'BUSINESS_TRIP_TICKET_READY',
         {
           subject: 'Your flight ticket is ready',
-          body: `The combined ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+          body: `The combined ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
           link: `/hr/business-trips/${id}`,
         },
       );
@@ -822,7 +822,7 @@ export class BusinessTripService
       'BUSINESS_TRIP_TICKET_READY',
       {
         subject: 'Your flight ticket is ready',
-        body: `Your individual ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} ? ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+        body: `Your individual ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
         link: `/hr/business-trips/${id}`,
       },
     );
@@ -1260,7 +1260,7 @@ export class BusinessTripService
     for (const employeeId of employeeIds) {
       await this.notifySafe(companyId, employeeId, 'business_trip.approved', {
         subject: 'Business Trip Approved',
-        body: `Your business trip ${tripNumber} (${origin} ? ${destination}) has been approved.`,
+        body: `Your business trip ${tripNumber} (${origin} to ${destination}) has been approved.`,
         link,
       });
     }
@@ -1296,7 +1296,7 @@ export class BusinessTripService
           'business_trip.booking_required',
           {
             subject: 'Business Trip Booking Required',
-            body: `Business trip ${tripNumber} (${origin} ? ${destination}) approved. Please book and attach tickets.`,
+            body: `Business trip ${tripNumber} (${origin} to ${destination}) approved. Please book and attach tickets.`,
             link: `/hr/business-trips/${tripId}`,
           },
         );

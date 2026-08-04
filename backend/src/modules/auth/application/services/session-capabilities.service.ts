@@ -103,7 +103,6 @@ export class SessionCapabilitiesService {
     const systemAdministrator = isSystemAdministrator(roleNames);
     const users = permissionMap.users;
     const roles = permissionMap.roles;
-    const notifications = permissionMap.notifications;
     const audit = permissionMap.audit;
     const hr = permissionMap.hr;
     const leave = permissionMap.leave;
@@ -120,7 +119,7 @@ export class SessionCapabilitiesService {
       canCreateUsers: users.canCreate,
       canManageRoles: roles.canView,
       canEditRoles: roles.canEdit,
-      canViewNotifications: notifications.canView,
+      canViewNotifications: true,
       canViewAuditLogs: audit.canView,
       canViewHr: hr.canView,
       canViewLeave: leave.canView,

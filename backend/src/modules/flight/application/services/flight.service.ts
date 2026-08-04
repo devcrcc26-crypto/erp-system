@@ -258,7 +258,7 @@ export class FlightService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'FLIGHT_APPLICATION',
-        title: `Flight ${dto.originCity}, ${dto.originCountry} → ${dto.destination} — ${dto.departureDate}`,
+        title: `Flight ${dto.originCity}, ${dto.originCountry} to ${dto.destination} - ${dto.departureDate}`,
         formData: {
           tripType: dto.tripType,
           isInternational: dto.isInternational,
@@ -726,7 +726,7 @@ export class FlightService
         'FLIGHT_TICKET_READY',
         {
           subject: 'Your flight ticket is ready',
-          body: `The combined ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} → ${app.destination}) has been uploaded. Please acknowledge it.`,
+          body: `The combined ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} to ${app.destination}) has been uploaded. Please acknowledge it.`,
           link: `/hr/flight-applications/${id}`,
         },
       );
@@ -790,7 +790,7 @@ export class FlightService
       'FLIGHT_TICKET_READY',
       {
         subject: 'Your flight ticket is ready',
-        body: `Your individual ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} → ${app.destination}) has been uploaded. Please acknowledge it.`,
+        body: `Your individual ticket for flight application ${app.applicationNumber} (${app.originCity}, ${app.originCountry} to ${app.destination}) has been uploaded. Please acknowledge it.`,
         link: `/hr/flight-applications/${id}`,
       },
     );
@@ -1228,7 +1228,7 @@ export class FlightService
     for (const employeeId of employeeIds) {
       await this.notifySafe(companyId, employeeId, 'flight.approved', {
         subject: 'Flight Application Approved',
-        body: `Your flight application ${applicationNumber} (${origin} → ${destination}) has been approved.`,
+        body: `Your flight application ${applicationNumber} (${origin} to ${destination}) has been approved.`,
         link,
       });
     }
@@ -1264,7 +1264,7 @@ export class FlightService
           'flight.booking_required',
           {
             subject: 'Flight Booking Required',
-            body: `Flight application ${applicationNumber} (${origin} → ${destination}) approved. Please book and attach tickets.`,
+            body: `Flight application ${applicationNumber} (${origin} to ${destination}) approved. Please book and attach tickets.`,
             link: `/hr/flight-applications/${applicationId}`,
           },
         );

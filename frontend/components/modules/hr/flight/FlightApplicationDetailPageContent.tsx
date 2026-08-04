@@ -241,7 +241,7 @@ export default function FlightApplicationDetailPageContent({
                 <span
                   style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
                 >
-                  →
+                  to
                 </span>
                 {application.destination}
               </Descriptions.Item>

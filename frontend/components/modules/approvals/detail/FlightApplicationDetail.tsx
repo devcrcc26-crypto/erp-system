@@ -225,7 +225,7 @@ export default function FlightApplicationDetail({
         <Descriptions.Item label="Route">
           <Space size={4}>
             {application.originCity}, {application.originCountry}
-            <span style={{ color: tokens.colorTextSecondary }}>→</span>
+            <span style={{ color: tokens.colorTextSecondary }}> to </span>
             {application.destination}
           </Space>
         </Descriptions.Item>

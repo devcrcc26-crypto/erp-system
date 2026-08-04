@@ -74,7 +74,7 @@ export default function BusinessTripSummary({
           {purposeBudget.purpose || '—'}
         </Descriptions.Item>
         {purposeBudget.hostOrganization.trim() ? (
-          <Descriptions.Item label="Host Organization">
+          <Descriptions.Item label="Host Organization" span={2}>
             {purposeBudget.hostOrganization}
           </Descriptions.Item>
         ) : null}

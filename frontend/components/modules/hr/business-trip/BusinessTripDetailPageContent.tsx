@@ -189,7 +189,7 @@ export default function BusinessTripDetailPageContent({
             style={{ marginTop: 8, marginBottom: 0 }}
           >
             {formatBusinessTripSubmitterName(trip.submitter)}
-            {' · '}
+            {' - '}
             {formatProjectDate(trip.createdAt)}
           </Typography.Paragraph>
         </div>
@@ -220,7 +220,7 @@ export default function BusinessTripDetailPageContent({
         <Alert
           type="info"
           showIcon
-          message="Tickets required"
+          title="Tickets required"
           description="The trip is approved. Upload a combined ticket and/or individual passenger tickets below."
         />
       ) : null}
@@ -252,7 +252,7 @@ export default function BusinessTripDetailPageContent({
                 <span
                   style={{ margin: '0 6px', color: tokens.colorTextSecondary }}
                 >
-                  →
+                  to
                 </span>
                 {trip.destinationCountry}
                 {trip.destinationCity ? ` / ${trip.destinationCity}` : ''}

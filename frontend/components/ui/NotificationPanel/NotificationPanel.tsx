@@ -16,7 +16,6 @@ import {
 } from '@/lib/query/notifications';
 import type { InAppNotification } from '@/lib/api/documents.types';
 import { useAuthStore } from '@/stores/auth.store';
-import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { tokens } from '@/lib/theme/tokens';
 
 dayjs.extend(relativeTime);
@@ -85,11 +84,7 @@ function NotificationItem({
 export default function NotificationPanel(): React.ReactNode {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const permLoading = usePermissionsLoading();
-  const canViewNotifications = useAuthStore(
-    (state) => state.capabilities.canViewNotifications,
-  );
-  const allowed = !permLoading && canViewNotifications;
+  const allowed = useAuthStore((state) => state.isAuthenticated());
 
   const unreadQuery = useUnreadNotificationCount(allowed);
   const notificationsQuery = useNotifications(
@@ -141,13 +136,7 @@ export default function NotificationPanel(): React.ReactNode {
         )}
       </div>
 
-      {!permLoading && !allowed ? (
-        <Empty
-          className="py-8"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Notifications are not available for your account"
-        />
-      ) : permLoading || (open && notificationsQuery.isLoading) ? (
+      {open && notificationsQuery.isLoading ? (
         <div className="flex justify-center py-8">
           <Spin />
         </div>

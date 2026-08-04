@@ -355,7 +355,7 @@ export default function ApprovalDetailPageContent({
         <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <Typography.Text type="secondary">
             {request.requestNumber}
-            {request.category?.name ? ` · ${request.category.name}` : ''}
+            {request.category?.name ? ` - ${request.category.name}` : ''}
           </Typography.Text>
           <Space wrap align="center">
             <Typography.Title level={3} style={{ margin: 0 }}>
@@ -375,7 +375,7 @@ export default function ApprovalDetailPageContent({
           </Space>
           <Typography.Text type="secondary">
             Submitted by {formatApprovalUserName(request.requester)}
-            {' · '}
+            {' - '}
             {formatProjectDate(
               request.submittedAt ?? request.createdAt ?? null,
             )}

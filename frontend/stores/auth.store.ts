@@ -60,7 +60,10 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
       setCapabilities: (capabilities: Capabilities) => {
-        set({ capabilities, capabilitiesReady: true });
+        set({
+          capabilities: { ...capabilities, canViewNotifications: true },
+          capabilitiesReady: true,
+        });
       },
       clearAuth: () => {
         set({
