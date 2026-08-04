@@ -126,27 +126,6 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {canViewHr ? 'Expense Claims' : 'My Expense Claims'}
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {canViewHr
-              ? 'Review and process employee reimbursement claims.'
-              : 'Submit and track your expense claims through the approval workflow.'}
-          </p>
-        </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => router.push('/approvals/new/expense-claim')}
-        >
-          New Claim
-        </Button>
-      </div>
-
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -201,6 +180,14 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           />
         ) : null}
         <TableUpdatingIndicator active={listQuery.isFetching} />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          className="ml-auto"
+          onClick={() => router.push('/approvals/new/expense-claim')}
+        >
+          New Claim
+        </Button>
       </div>
 
       {/* Table */}

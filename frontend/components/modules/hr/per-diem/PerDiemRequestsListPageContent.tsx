@@ -116,34 +116,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            {canViewHr ? 'Per Diem Requests' : 'My Per Diem Requests'}
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            {canViewHr
-              ? 'Review and process employee per diem requests.'
-              : 'Submit and track your per diem requests through the approval workflow.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {canManageRates ? (
-            <Button onClick={() => router.push('/hr/per-diem-rates')}>
-              Manage Rates
-            </Button>
-          ) : null}
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/per-diem')}
-          >
-            New Request
-          </Button>
-        </div>
-      </div>
-
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -198,6 +170,20 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           />
         ) : null}
         <TableUpdatingIndicator active={listQuery.isFetching} />
+        <div className="flex items-center gap-2 ml-auto">
+          {canManageRates ? (
+            <Button onClick={() => router.push('/hr/per-diem-rates')}>
+              Manage Rates
+            </Button>
+          ) : null}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/approvals/new/per-diem')}
+          >
+            New Request
+          </Button>
+        </div>
       </div>
 
       {/* Table */}

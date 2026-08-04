@@ -119,21 +119,6 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
-            Per Diem Rates
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            Configure daily allowance rates by destination category.
-          </p>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Add Rate
-        </Button>
-      </div>
-
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -146,6 +131,12 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
           }
         />
       ) : null}
+
+      <div className="flex items-center justify-end mb-4">
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+          Add Rate
+        </Button>
+      </div>
 
       <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <DataTable<PerDiemRate>
