@@ -126,6 +126,14 @@
         "myListTitle": "我的机票申请",
         "listDescription": "提交并跟踪机票申请审批流程。",
         "myListDescription": "查看并提交您的机票申请。"
+      },
+      "businessTrip": {
+        "new": "新建出差申请",
+        "detail": "出差申请",
+        "listTitle": "第三国出差",
+        "myListTitle": "我的出差申请",
+        "listDescription": "提交并跟踪国际出差审批流程。",
+        "myListDescription": "查看并提交您的出差申请。"
       }
     },
     "dashboard": {

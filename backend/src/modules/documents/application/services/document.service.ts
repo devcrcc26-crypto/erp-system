@@ -584,14 +584,17 @@ export class DocumentService {
         folder?.contextType === FolderContextType.APPROVAL ||
         folder?.contextType === FolderContextType.LEAVE ||
         folder?.contextType === FolderContextType.OVERTIME ||
-        folder?.contextType === FolderContextType.FLIGHT
+        folder?.contextType === FolderContextType.FLIGHT ||
+        folder?.contextType === FolderContextType.BUSINESS_TRIP
       ) {
         bucket = STORAGE_BUCKETS.HR;
       }
     } else if (
       (fileKey.includes('/approvals/') && fileKey.includes('/responses/')) ||
       fileKey.includes('/hr/leave/') ||
-      fileKey.includes('/hr/overtime/')
+      fileKey.includes('/hr/overtime/') ||
+      fileKey.includes('/hr/flight/') ||
+      fileKey.includes('/hr/business-trips/')
     ) {
       bucket = STORAGE_BUCKETS.HR;
     }

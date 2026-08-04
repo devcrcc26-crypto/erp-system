@@ -492,7 +492,7 @@ export function BusinessTripForm({
           <div
             className="rounded-md px-4 py-3"
             style={{
-              background: tokens.colorOrangeLight,
+              background: tokens.colorPrimaryLight,
               border: `1px solid ${tokens.colorBorder}`,
             }}
           >

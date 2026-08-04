@@ -560,7 +560,8 @@ export function resolveRouteMeta(
   if (
     pathname === '/approvals/new/leave-request' ||
     pathname === '/approvals/new/overtime' ||
-    pathname === '/approvals/new/flight-application'
+    pathname === '/approvals/new/flight-application' ||
+    pathname === '/approvals/new/business-trip'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -626,6 +627,20 @@ export function resolveRouteMeta(
           href: '/hr/flight-applications',
         },
         { label: t('pages.hr.flight.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/business-trips/')) {
+    return {
+      titleKey: 'pages.hr.businessTrip.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.businessTrips'),
+          href: '/hr/business-trips',
+        },
+        { label: t('pages.hr.businessTrip.detail') },
       ],
     };
   }

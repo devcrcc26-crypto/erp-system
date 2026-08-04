@@ -1,0 +1,431 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { Alert, Button, DatePicker, Input, Select, Tabs, Tag } from 'antd';
+import { SendOutlined, PlusOutlined } from '@ant-design/icons';
+import { tokens } from '@/lib/theme/tokens';
+import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import FormLayout, {
+  PageLoadingSkeleton,
+} from '@/components/ui/FormLayout/FormLayout';
+import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
+import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
+import {
+  useCanAccessBusinessTrip,
+  useCanCreateBusinessTrip,
+  useCanManageBusinessTrip,
+  useCanViewHr,
+} from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
+import { ApiRequestError } from '@/lib/api/errors';
+import type {
+  BusinessTripListItem,
+  BusinessTripStatus,
+} from '@/lib/api/business-trip.types';
+import {
+  useBusinessTripNeedsTicketCount,
+  useBusinessTrips,
+} from '@/lib/query/business-trip';
+import { useUsersDirectory } from '@/lib/query/users';
+import {
+  BUSINESS_TRIP_STATUS_OPTIONS,
+  businessTripStatusVariant,
+  formatBusinessTripStatus,
+  formatBusinessTripSubmitterName,
+  formatEtb,
+  formatTripType,
+  getCurrentStepLabel,
+  tripTypeVariant,
+} from '@/lib/utils/business-trip-display';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
+
+type ListTab = 'ALL' | 'NEEDS_TICKET';
+
+/**
+ * Company or personal business trip list with filters.
+ */
+export default function BusinessTripsListPageContent(): React.ReactNode {
+  const router = useRouter();
+  const { t } = useEpcTranslation();
+  const canAccess = useCanAccessBusinessTrip();
+  const canViewHr = useCanViewHr();
+  const canCreate = useCanCreateBusinessTrip();
+  const canManage = useCanManageBusinessTrip();
+  const { params, resetPage, bindMeta } = useTablePagination();
+
+  const [listTab, setListTab] = useState<ListTab>('ALL');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<BusinessTripStatus[]>([]);
+  const [destinationCountry, setDestinationCountry] = useState('');
+  const [submittedById, setSubmittedById] = useState<string | undefined>();
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+
+  const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
+
+  const listParams = useMemo(
+    () => ({
+      ...params,
+      search: search.trim() || undefined,
+      status:
+        needsTicketTab || statusFilter.length === 0
+          ? undefined
+          : statusFilter,
+      needsTicket: needsTicketTab ? true : undefined,
+      destinationCountry: destinationCountry.trim() || undefined,
+      submittedById: canViewHr ? submittedById : undefined,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    }),
+    [
+      params,
+      search,
+      statusFilter,
+      destinationCountry,
+      submittedById,
+      dateRange,
+      canViewHr,
+      needsTicketTab,
+    ],
+  );
+
+  const listQuery = useBusinessTrips(listParams, canViewHr || canAccess);
+
+  const needsTicketCountQuery = useBusinessTripNeedsTicketCount(canViewHr);
+  const needsTicketCount = needsTicketCountQuery.data ?? 0;
+
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: canViewHr },
+  );
+
+  const rows = listQuery.data?.data ?? [];
+  const meta = listQuery.data?.meta;
+
+  const columns: ColumnsType<BusinessTripListItem> = [
+    {
+      title: 'Trip #',
+      dataIndex: 'tripNumber',
+      key: 'tripNumber',
+      width: 140,
+    },
+    ...(canViewHr
+      ? [
+          {
+            title: 'Submitted by',
+            key: 'submitter',
+            render: (_: unknown, row: BusinessTripListItem) =>
+              formatBusinessTripSubmitterName(row.submitter),
+          } satisfies ColumnsType<BusinessTripListItem>[number],
+        ]
+      : []),
+    {
+      title: 'Destination',
+      key: 'destination',
+      render: (_: unknown, row: BusinessTripListItem) => (
+        <span>
+          {row.destinationCountry}
+          {row.destinationCity ? (
+            <>
+              <span
+                style={{ margin: '0 4px', color: tokens.colorTextSecondary }}
+              >
+                ·
+              </span>
+              {row.destinationCity}
+            </>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      title: 'Departure',
+      dataIndex: 'departureDate',
+      key: 'departureDate',
+      width: 120,
+      render: (value: string) => formatProjectDate(value),
+    },
+    {
+      title: 'Trip Type',
+      dataIndex: 'tripType',
+      key: 'tripType',
+      width: 120,
+      render: (value: string) => (
+        <StatusBadge
+          label={formatTripType(value)}
+          variant={tripTypeVariant(value)}
+        />
+      ),
+    },
+    {
+      title: 'Passengers',
+      dataIndex: 'passengerCount',
+      key: 'passengerCount',
+      width: 100,
+      align: 'center' as const,
+    },
+    {
+      title: 'Estimated Total',
+      dataIndex: 'estimatedTotalCost',
+      key: 'estimatedTotalCost',
+      width: 140,
+      render: (value: number | null | undefined) => formatEtb(value),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 130,
+      render: (value: BusinessTripStatus) => (
+        <StatusBadge
+          label={formatBusinessTripStatus(value)}
+          variant={businessTripStatusVariant(value)}
+        />
+      ),
+    },
+    {
+      title: 'Current Step',
+      key: 'currentStep',
+      width: 180,
+      render: (_: unknown, row: BusinessTripListItem) => {
+        const label = getCurrentStepLabel(row);
+        if (!label || label === '—') {
+          return (
+            <span style={{ color: tokens.colorTextSecondary }}>—</span>
+          );
+        }
+        const color =
+          row.status === 'APPROVED'
+            ? label === 'Buying Ticket'
+              ? 'orange'
+              : label === 'Completed'
+                ? 'green'
+                : 'blue'
+            : 'blue';
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+    ...(canManage
+      ? [
+          {
+            title: '',
+            key: 'ticketAction',
+            width: 110,
+            render: (_: unknown, row: BusinessTripListItem) =>
+              row.needsTicketAttachment ? (
+                <Tag
+                  color="orange"
+                  icon={<SendOutlined />}
+                  style={{ cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/hr/business-trips/${row.id}`);
+                  }}
+                >
+                  Attach Ticket
+                </Tag>
+              ) : null,
+          } satisfies ColumnsType<BusinessTripListItem>[number],
+        ]
+      : []),
+  ];
+
+  if (!canAccess) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        message={t('pages.hr.accessDenied')}
+      />
+    );
+  }
+
+  if (listQuery.isLoading && !listQuery.data) {
+    return <PageLoadingSkeleton />;
+  }
+
+  const listTitleKey = 'pages.hr.businessTrip.listTitle';
+  const myListTitleKey = 'pages.hr.businessTrip.myListTitle';
+  const listDescKey = 'pages.hr.businessTrip.listDescription';
+  const myListDescKey = 'pages.hr.businessTrip.myListDescription';
+  const newKey = 'pages.hr.businessTrip.new';
+
+  const listTitle = canViewHr
+    ? t(listTitleKey) === listTitleKey
+      ? 'Business Trips'
+      : t(listTitleKey)
+    : t(myListTitleKey) === myListTitleKey
+      ? 'My Business Trips'
+      : t(myListTitleKey);
+
+  const listDescription = canViewHr
+    ? t(listDescKey) === listDescKey
+      ? 'Submit and track international business trips through the approval workflow.'
+      : t(listDescKey)
+    : t(myListDescKey) === myListDescKey
+      ? 'View and submit your own business trip requests.'
+      : t(myListDescKey);
+
+  const newLabel =
+    t(newKey) === newKey ? 'New Business Trip' : t(newKey);
+
+  return (
+    <FormLayout
+      title={listTitle}
+      description={listDescription}
+      extra={
+        canCreate ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/approvals/new/business-trip')}
+          >
+            {newLabel}
+          </Button>
+        ) : undefined
+      }
+    >
+      {listQuery.isError ? (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={
+            listQuery.error instanceof ApiRequestError
+              ? listQuery.error.message
+              : 'Failed to load business trips'
+          }
+        />
+      ) : null}
+
+      {canViewHr ? (
+        <Tabs
+          activeKey={listTab}
+          onChange={(key) => {
+            setListTab(key as ListTab);
+            resetPage();
+          }}
+          items={[
+            { key: 'ALL', label: 'All Trips' },
+            {
+              key: 'NEEDS_TICKET',
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  Needs Ticket
+                  {needsTicketCount > 0 ? (
+                    <span
+                      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                      style={{ background: tokens.colorAmber400 }}
+                    >
+                      {needsTicketCount > 99 ? '99+' : needsTicketCount}
+                    </span>
+                  ) : null}
+                </span>
+              ),
+            },
+          ]}
+          className="mb-2"
+        />
+      ) : null}
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <ListSearchInput
+          committedValue={search}
+          onCommit={(value) => {
+            setSearch(value);
+            resetPage();
+          }}
+          placeholder="Search trip # or destination"
+        />
+        {!needsTicketTab ? (
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Status"
+            style={{ minWidth: 180 }}
+            options={BUSINESS_TRIP_STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(value: BusinessTripStatus[]) => {
+              setStatusFilter(value);
+              resetPage();
+            }}
+          />
+        ) : null}
+        <Input
+          allowClear
+          placeholder="Destination country"
+          style={{ width: 180 }}
+          value={destinationCountry}
+          onChange={(e) => {
+            setDestinationCountry(e.target.value);
+            resetPage();
+          }}
+        />
+        {canViewHr ? (
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Submitted by"
+            style={{ minWidth: 200 }}
+            options={(usersQuery.data?.data ?? []).map((user) => ({
+              value: user.id,
+              label: formatUserName(user),
+            }))}
+            value={submittedById}
+            onChange={(value: string | undefined) => {
+              setSubmittedById(value);
+              resetPage();
+            }}
+          />
+        ) : null}
+        <DatePicker.RangePicker
+          placeholder={['Departure from', 'Departure to']}
+          value={dateRange}
+          onChange={(value) => {
+            setDateRange(value);
+            resetPage();
+          }}
+        />
+        <TableUpdatingIndicator active={listQuery.isFetching} />
+      </div>
+
+      <DataTable<BusinessTripListItem>
+        rowKey="id"
+        columns={columns}
+        dataSource={rows}
+        loading={listQuery.isFetching}
+        onRow={(record) => ({
+          onClick: () => router.push(`/hr/business-trips/${record.id}`),
+          style: { cursor: 'pointer' },
+        })}
+        locale={{
+          emptyText: (
+            <TableEmptyState
+              icon={<SendOutlined />}
+              title={
+                needsTicketTab
+                  ? 'No trips need tickets'
+                  : 'No business trips'
+              }
+              description={
+                needsTicketTab
+                  ? 'Approved trips awaiting ticket booking will appear here.'
+                  : 'Submit a new business trip to start the approval process.'
+              }
+            />
+          ),
+        }}
+        pagination={bindMeta(meta)}
+      />
+    </FormLayout>
+  );
+}

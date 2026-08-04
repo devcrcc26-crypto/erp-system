@@ -332,13 +332,25 @@ const CATEGORIES: CategorySeedDef[] = [
     ],
   },
   {
+    code: 'BUSINESS_TRIP',
+    name: 'Third-Country Business Trip',
+    description:
+      'Application for international business travel requiring GM approval.',
+    module: 'HR',
+    numberPrefix: 'BT',
+    icon: 'GlobalOutlined',
+    sortOrder: 70,
+    formSchema: { fields: [] },
+    approvalRules: [],
+  },
+  {
     code: 'VEHICLE_APPLICATION',
     name: 'Vehicle Application',
     description: 'Request to use a company vehicle for official travel.',
     module: 'ADMIN',
     numberPrefix: 'VA',
     icon: 'CarOutlined',
-    sortOrder: 70,
+    sortOrder: 80,
     formSchema: {
       fields: [
         {

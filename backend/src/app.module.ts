@@ -19,6 +19,7 @@ import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OvertimeModule } from './modules/overtime/overtime.module';
 import { FlightModule } from './modules/flight/flight.module';
+import { BusinessTripModule } from './modules/business-trip/business-trip.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
@@ -69,6 +70,7 @@ import { StorageModule } from './shared/storage/storage.module';
     LeaveModule,
     OvertimeModule,
     FlightModule,
+    BusinessTripModule,
   ],
   controllers: [AppController],
   providers: [

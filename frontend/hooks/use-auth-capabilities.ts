@@ -100,6 +100,40 @@ export function useCanManageFlight(): boolean {
   );
 }
 
+/**
+ * True when the session can open HR business trip pages (view, create, or full HR).
+ */
+export function useCanAccessBusinessTrip(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr ||
+      state.capabilities.canViewBusinessTrip ||
+      state.capabilities.canCreateBusinessTrip,
+  );
+}
+
+/**
+ * True when the session can submit business trips.
+ */
+export function useCanCreateBusinessTrip(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canCreateBusinessTrip ||
+      state.capabilities.canViewHr,
+  );
+}
+
+/**
+ * True when the session can attach business trip tickets (HR / business-trip.manage).
+ */
+export function useCanManageBusinessTrip(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr ||
+      state.capabilities.canManageBusinessTrip,
+  );
+}
+
 /** True when the session can list and manage users. */
 export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);

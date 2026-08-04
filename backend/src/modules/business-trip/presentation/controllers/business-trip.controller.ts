@@ -30,15 +30,15 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
-  ListFlightApplicationsDto,
-  SubmitFlightApplicationDto,
-} from '../../application/dtos/flight.dtos';
-import { FlightService } from '../../application/services/flight.service';
+  ListBusinessTripsDto,
+  SubmitBusinessTripDto,
+} from '../../application/dtos/business-trip.dtos';
+import { BusinessTripService } from '../../application/services/business-trip.service';
 
 /**
  * Coerces multipart form fields (all strings) into typed submit payload shape.
  */
-function normalizeFlightSubmitBody(
+function normalizeBusinessTripSubmitBody(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...body };
@@ -52,7 +52,6 @@ function normalizeFlightSubmitBody(
   }
 
   for (const key of [
-    'isInternational',
     'accommodationRequired',
     'perDiemRequired',
   ] as const) {
@@ -62,7 +61,19 @@ function normalizeFlightSubmitBody(
     }
   }
 
-  for (const key of ['returnDate', 'notes', 'accommodationDetails'] as const) {
+  for (const key of [
+    'returnDate',
+    'notes',
+    'accommodationDetails',
+    'hostOrganization',
+    'hostContact',
+    'expectedOutcomes',
+    'itinerary',
+    'estimatedFlightCost',
+    'estimatedAccommodationCost',
+    'estimatedPerDiem',
+    'estimatedOtherCost',
+  ] as const) {
     if (next[key] === '') {
       next[key] = undefined;
     }
@@ -73,14 +84,14 @@ function normalizeFlightSubmitBody(
 }
 
 /**
- * Validates a normalized submit body against SubmitFlightApplicationDto.
+ * Validates a normalized submit body against SubmitBusinessTripDto.
  */
-async function parseFlightSubmitDto(
+async function parseBusinessTripSubmitDto(
   body: Record<string, unknown>,
-): Promise<SubmitFlightApplicationDto> {
+): Promise<SubmitBusinessTripDto> {
   const dto = plainToInstance(
-    SubmitFlightApplicationDto,
-    normalizeFlightSubmitBody(body),
+    SubmitBusinessTripDto,
+    normalizeBusinessTripSubmitBody(body),
   );
   const errors = await validate(dto, {
     whitelist: true,
@@ -99,17 +110,17 @@ async function parseFlightSubmitDto(
   return dto;
 }
 
-@ApiTags('HR Flight Applications')
+@ApiTags('HR Business Trips')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @RequireAnyPermission(
   { module: 'hr', action: 'view' },
-  { module: 'flight', action: 'view' },
-  { module: 'flight', action: 'create' },
+  { module: 'business-trip', action: 'view' },
+  { module: 'business-trip', action: 'create' },
 )
-@Controller('hr/flight-applications')
-export class FlightController {
-  constructor(private readonly flightService: FlightService) {}
+@Controller('hr/business-trips')
+export class BusinessTripController {
+  constructor(private readonly businessTripService: BusinessTripService) {}
 
   @Get('selectable-passengers')
   @DelegatePermissionCheck()
@@ -120,7 +131,7 @@ export class FlightController {
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
-    return this.flightService.getSelectablePassengers(
+    return this.businessTripService.getSelectablePassengers(
       companyId,
       user.userId,
     );
@@ -129,14 +140,14 @@ export class FlightController {
   @Get('count')
   @ApiOperation({
     summary:
-      'Count flight applications needing ticket booking (HR Pending My Action badge)',
+      'Count business trips needing ticket booking (HR Pending My Action badge)',
   })
   countNeedsTicket(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query('needsTicket') needsTicket?: string,
   ): Promise<{ total: number }> {
-    return this.flightService.countNeedsTicket(
+    return this.businessTripService.countNeedsTicket(
       companyId,
       user.userId,
       needsTicket === 'true',
@@ -146,7 +157,7 @@ export class FlightController {
   @Post()
   @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'Submit a flight application (authenticated user, own record)',
+    summary: 'Submit a business trip (authenticated user, own record)',
   })
   @ApiConsumes('multipart/form-data', 'application/json')
   @ApiBody({
@@ -154,9 +165,9 @@ export class FlightController {
       type: 'object',
       required: [
         'tripType',
-        'isInternational',
         'origin',
-        'destination',
+        'destinationCountry',
+        'destinationCity',
         'departureDate',
         'purpose',
         'ticketClass',
@@ -164,20 +175,28 @@ export class FlightController {
       ],
       properties: {
         tripType: { type: 'string', enum: ['ONE_WAY', 'ROUND_TRIP'] },
-        isInternational: { type: 'boolean' },
         origin: { type: 'string' },
-        destination: { type: 'string' },
+        destinationCountry: { type: 'string' },
+        destinationCity: { type: 'string' },
         departureDate: { type: 'string', format: 'date' },
         returnDate: { type: 'string', format: 'date' },
         purpose: { type: 'string' },
+        hostOrganization: { type: 'string' },
+        hostContact: { type: 'string' },
+        expectedOutcomes: { type: 'string' },
+        itinerary: { type: 'string' },
         ticketClass: { type: 'string', enum: ['ECONOMY', 'BUSINESS'] },
+        estimatedFlightCost: { type: 'number' },
+        estimatedAccommodationCost: { type: 'number' },
+        estimatedPerDiem: { type: 'number' },
+        estimatedOtherCost: { type: 'number' },
         accommodationRequired: { type: 'boolean' },
         accommodationDetails: { type: 'string' },
         perDiemRequired: { type: 'boolean' },
         notes: { type: 'string' },
         passengers: {
           type: 'string',
-          description: 'JSON array of FlightPassengerDto',
+          description: 'JSON array of BusinessTripPassengerDto',
         },
         files: {
           type: 'array',
@@ -196,8 +215,8 @@ export class FlightController {
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
     // Multipart nested passengers arrive as a JSON string — parse before validate.
-    const dto = await parseFlightSubmitDto(body ?? {});
-    return this.flightService.submitApplication(
+    const dto = await parseBusinessTripSubmitDto(body ?? {});
+    return this.businessTripService.submitTrip(
       dto,
       files ?? [],
       companyId,
@@ -208,44 +227,44 @@ export class FlightController {
   @Get()
   @ApiOperation({
     summary:
-      'List flight applications (company-wide for hr.view/flight.manage; own otherwise)',
+      'List business trips (company-wide for hr.view/flight.manage; own otherwise)',
   })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
-    @Query() query: ListFlightApplicationsDto,
+    @Query() query: ListBusinessTripsDto,
   ): Promise<unknown> {
-    return this.flightService.listApplications(query, companyId, user.userId);
+    return this.businessTripService.listTrips(query, companyId, user.userId);
   }
 
   @Get(':id')
   @RequireAnyPermission(
     { module: 'hr', action: 'view' },
-    { module: 'flight', action: 'view' },
-    { module: 'flight', action: 'create' },
+    { module: 'business-trip', action: 'view' },
+    { module: 'business-trip', action: 'create' },
     { module: 'approvals', action: 'view' },
   )
   @ApiOperation({
-    summary: 'Get a flight application with full passenger and approval details',
+    summary: 'Get a business trip with full passenger and approval details',
   })
   getOne(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.flightService.getApplication(id, companyId, user.userId);
+    return this.businessTripService.getTrip(id, companyId, user.userId);
   }
 
   @Patch(':id/cancel')
   @ApiOperation({
-    summary: 'Cancel a draft or submitted flight application (submitter only)',
+    summary: 'Cancel a draft or submitted business trip (submitter only)',
   })
   cancel(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
-    return this.flightService.cancelApplication(id, companyId, user.userId);
+    return this.businessTripService.cancelTrip(id, companyId, user.userId);
   }
 
   @Post(':id/tickets/combined')
@@ -270,7 +289,7 @@ export class FlightController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<unknown> {
-    return this.flightService.attachCombinedTicket(
+    return this.businessTripService.attachCombinedTicket(
       id,
       file,
       companyId,
@@ -301,7 +320,7 @@ export class FlightController {
     @Param('passengerId') passengerId: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<unknown> {
-    return this.flightService.attachPassengerTicket(
+    return this.businessTripService.attachPassengerTicket(
       id,
       passengerId,
       file,
@@ -321,7 +340,7 @@ export class FlightController {
     @Param('id') id: string,
     @Param('passengerId') passengerId: string,
   ): Promise<unknown> {
-    return this.flightService.acknowledgeTicket(
+    return this.businessTripService.acknowledgeTicket(
       id,
       passengerId,
       companyId,

@@ -126,6 +126,14 @@
         "myListTitle": "My Flight Applications",
         "listDescription": "Submit and track flight applications through the approval workflow.",
         "myListDescription": "View and submit your own flight applications."
+      },
+      "businessTrip": {
+        "new": "New Business Trip",
+        "detail": "Business Trip",
+        "listTitle": "Business Trips",
+        "myListTitle": "My Business Trips",
+        "listDescription": "Submit and track international business trips through the approval workflow.",
+        "myListDescription": "View and submit your own business trip requests."
       }
     },
     "dashboard": {

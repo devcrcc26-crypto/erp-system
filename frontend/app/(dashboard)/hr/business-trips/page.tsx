@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import BusinessTripsListPageContent from '@/components/modules/hr/business-trip/BusinessTripsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.businessTrips" />;
+export default function BusinessTripsPage(): React.ReactNode {
+  return <BusinessTripsListPageContent />;
 }

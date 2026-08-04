@@ -117,6 +117,9 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'flight', action: 'view', description: 'View flight applications' },
   { module: 'flight', action: 'create', description: 'Submit and cancel flight applications' },
   { module: 'flight', action: 'manage', description: 'Attach flight tickets after approval' },
+  { module: 'business-trip', action: 'view', description: 'View business trip applications' },
+  { module: 'business-trip', action: 'create', description: 'Submit and cancel business trip applications' },
+  { module: 'business-trip', action: 'manage', description: 'Attach business trip tickets after approval' },
   
   { module: 'documents', action: 'view', description: 'View documents' },
   { module: 'documents', action: 'create', description: 'Upload documents' },
@@ -1232,6 +1235,52 @@ async function main(): Promise<void> {
         continue;
       }
       await upsertRolePermission(roleId, flightManage.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+
+  const businessTripView = permissions.find(
+    (permission) =>
+      permission.module === 'business-trip' && permission.action === 'view',
+  );
+  const businessTripCreate = permissions.find(
+    (permission) =>
+      permission.module === 'business-trip' && permission.action === 'create',
+  );
+  const businessTripManage = permissions.find(
+    (permission) =>
+      permission.module === 'business-trip' && permission.action === 'manage',
+  );
+  if (businessTripView && businessTripCreate) {
+    for (const roleName of CORE_ROLES) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, businessTripView.id, viewOnlyFlags());
+      await upsertRolePermission(roleId, businessTripCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+  }
+  if (businessTripManage) {
+    for (const roleName of ['System Administrator', 'HR Officer'] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, businessTripManage.id, {
         canView: true,
         canCreate: true,
         canEdit: true,

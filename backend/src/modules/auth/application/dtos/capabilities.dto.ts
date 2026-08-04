@@ -175,6 +175,20 @@ export class CapabilitiesDto {
   })
   canManageFlight!: boolean;
 
+  @ApiProperty({ description: 'Can view business trips (business-trip.view)' })
+  canViewBusinessTrip!: boolean;
+
+  @ApiProperty({
+    description: 'Can submit business trips (business-trip.create)',
+  })
+  canCreateBusinessTrip!: boolean;
+
+  @ApiProperty({
+    description:
+      'Can attach business trip tickets after approval (business-trip.manage)',
+  })
+  canManageBusinessTrip!: boolean;
+
   @ApiProperty({
     description:
       'System Administrator — bypasses project team module gates and receives full RBAC.',

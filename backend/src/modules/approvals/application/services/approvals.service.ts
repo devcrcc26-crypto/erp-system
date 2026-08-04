@@ -9,6 +9,7 @@ import {
 import {
   ApprovalRequestStatus,
   ApprovalTierDecision,
+  BusinessTripStatus,
   FlightAcknowledgementStatus,
   FlightApplicationStatus,
   FolderContextType,
@@ -83,6 +84,7 @@ const REQUEST_DETAIL_INCLUDE = {
   leaveRequest: { select: { id: true } },
   overtimeSheet: { select: { id: true } },
   flightApplication: { select: { id: true } },
+  businessTrip: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -311,6 +313,7 @@ export class ApprovalsService {
     await this.assertCanViewRequest(request, companyId, userId);
 
     const sourceId =
+      request.businessTrip?.id ??
       request.flightApplication?.id ??
       request.leaveRequest?.id ??
       request.overtimeSheet?.id ??
@@ -323,6 +326,7 @@ export class ApprovalsService {
       leaveRequest: undefined,
       overtimeSheet: undefined,
       flightApplication: undefined,
+      businessTrip: undefined,
     };
   }
 
@@ -393,6 +397,7 @@ export class ApprovalsService {
     }
 
     let flightAckRequestIds = new Set<string>();
+    let businessTripAckRequestIds = new Set<string>();
 
     if (filters.inbox === 'PENDING_MY_ACTION') {
       const flightsPendingAck = await this.prisma.flightPassenger.findMany({
@@ -433,6 +438,49 @@ export class ApprovalsService {
           .filter((id): id is string => Boolean(id)),
       );
 
+      const tripsPendingAck = await this.prisma.businessTripPassenger.findMany({
+        where: {
+          employeeId: userId,
+          acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+          AND: [
+            {
+              trip: {
+                companyId,
+                deletedAt: null,
+                status: BusinessTripStatus.APPROVED,
+                approvalRequestId: { not: null },
+              },
+            },
+            {
+              OR: [
+                { ticketDocumentId: { not: null } },
+                {
+                  trip: {
+                    combinedTicketDocumentId: { not: null },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        select: {
+          trip: {
+            select: { approvalRequestId: true },
+          },
+        },
+      });
+
+      businessTripAckRequestIds = new Set(
+        tripsPendingAck
+          .map((row) => row.trip?.approvalRequestId)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      const ticketAckIds = [
+        ...flightAckRequestIds,
+        ...businessTripAckRequestIds,
+      ];
+
       andClauses.push({
         OR: [
           {
@@ -460,8 +508,8 @@ export class ApprovalsService {
               },
             },
           },
-          ...(flightAckRequestIds.size > 0
-            ? [{ id: { in: [...flightAckRequestIds] } }]
+          ...(ticketAckIds.length > 0
+            ? [{ id: { in: ticketAckIds } }]
             : []),
         ],
       });
@@ -530,13 +578,20 @@ export class ApprovalsService {
       });
 
       const filtered = candidates.filter((row) =>
-        this.requestNeedsUserAction(row, userId, flightAckRequestIds),
+        this.requestNeedsUserAction(
+          row,
+          userId,
+          flightAckRequestIds,
+          businessTripAckRequestIds,
+        ),
       );
       const total = filtered.length;
       const pageRows = filtered.slice(skip, skip + take).map((row) => ({
         ...row,
         categoryCode: row.category?.code ?? null,
-        needsTicketAcknowledgement: flightAckRequestIds.has(row.id),
+        needsTicketAcknowledgement:
+          flightAckRequestIds.has(row.id) ||
+          businessTripAckRequestIds.has(row.id),
       }));
 
       return buildPaginatedResult(pageRows, total, page, limit);
@@ -610,8 +665,12 @@ export class ApprovalsService {
     },
     userId: string,
     flightAckRequestIds: Set<string> = new Set(),
+    businessTripAckRequestIds: Set<string> = new Set(),
   ): boolean {
     if (row.id && flightAckRequestIds.has(row.id)) {
+      return true;
+    }
+    if (row.id && businessTripAckRequestIds.has(row.id)) {
       return true;
     }
 
@@ -1028,6 +1087,7 @@ export class ApprovalsService {
         leaveRequest: true,
         overtimeSheet: true,
         flightApplication: true,
+        businessTrip: true,
       },
     });
     if (!request) {
@@ -1129,6 +1189,17 @@ export class ApprovalsService {
             where: { id: request.flightApplication.id },
             data: {
               status: FlightApplicationStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.businessTrip) {
+          await tx.businessTrip.update({
+            where: { id: request.businessTrip.id },
+            data: {
+              status: BusinessTripStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },
@@ -1433,6 +1504,7 @@ export class ApprovalsService {
       requestedBy: string;
       tiers: Array<{ approverId: string }>;
       flightApplication?: { id: string } | null;
+      businessTrip?: { id: string } | null;
     },
     companyId: string,
     userId: string,
@@ -1452,6 +1524,19 @@ export class ApprovalsService {
       const passenger = await this.prisma.flightPassenger.findFirst({
         where: {
           applicationId: request.flightApplication.id,
+          employeeId: userId,
+        },
+        select: { id: true },
+      });
+      if (passenger) {
+        return;
+      }
+    }
+
+    if (request.businessTrip?.id) {
+      const passenger = await this.prisma.businessTripPassenger.findFirst({
+        where: {
+          tripId: request.businessTrip.id,
           employeeId: userId,
         },
         select: { id: true },
