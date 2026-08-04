@@ -329,6 +329,13 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/business-trips',
+        labelKey: 'nav.hr.businessTrips',
+        href: '/hr/business-trips',
+        iconKey: 'hr-business-trip',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/expense-claims',
         labelKey: 'nav.hr.expenseClaims',
         href: '/hr/expense-claims',
@@ -389,13 +396,6 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.inspectionRepair',
         href: '/hr/inspection-repair',
         iconKey: 'hr-inspection',
-        visible: canViewHr,
-      },
-      {
-        key: '/hr/business-trips',
-        labelKey: 'nav.hr.businessTrips',
-        href: '/hr/business-trips',
-        iconKey: 'hr-business-trip',
         visible: canViewHr,
       },
     ],
