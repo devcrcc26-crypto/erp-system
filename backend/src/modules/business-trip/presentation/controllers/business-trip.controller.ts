@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -335,6 +336,41 @@ export class BusinessTripController {
       id,
       passengerId,
       files ?? [],
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Delete(':id/tickets/combined')
+  @ApiOperation({
+    summary: 'Remove combined ticket and reset passenger acknowledgements (HR)',
+  })
+  removeCombinedTicket(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.businessTripService.removeCombinedTicket(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Delete(':id/passengers/:passengerId/ticket')
+  @ApiOperation({
+    summary:
+      'Remove an individual passenger ticket and reset acknowledgement (HR)',
+  })
+  removePassengerTicket(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Param('passengerId') passengerId: string,
+  ): Promise<unknown> {
+    return this.businessTripService.removePassengerTicket(
+      id,
+      passengerId,
       companyId,
       user.userId,
     );

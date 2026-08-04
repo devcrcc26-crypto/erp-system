@@ -717,6 +717,7 @@ export class BusinessTripService
   /**
    * Attaches combined ticket document(s) (files cover all passengers).
    * Only HR viewers may call this; application must be APPROVED.
+   * Replacing an existing ticket resets all passenger acknowledgements.
    */
   async attachCombinedTicket(
     id: string,
@@ -743,6 +744,16 @@ export class BusinessTripService
       );
     }
 
+    const isReplace = app.combinedTicketDocumentId != null;
+    if (app.attachmentFolderId) {
+      await this.softDeleteTicketDocuments(
+        companyId,
+        app.attachmentFolderId,
+        `/hr/business-trips/${id}/tickets/combined/`,
+        userId,
+      );
+    }
+
     const documentIds: string[] = [];
     for (const file of files) {
       if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
@@ -755,23 +766,39 @@ export class BusinessTripService
       );
     }
 
-    await this.prisma.businessTrip.update({
-      where: { id },
-      data: {
-        combinedTicketDocumentId: documentIds[0],
-        updatedBy: userId,
-      },
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.businessTripPassenger.updateMany({
+        where: { tripId: id },
+        data: {
+          acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+          acknowledgedAt: null,
+        },
+      });
+      await tx.businessTrip.update({
+        where: { id },
+        data: {
+          combinedTicketDocumentId: documentIds[0],
+          updatedBy: userId,
+        },
+      });
     });
 
+    const link = app.approvalRequestId
+      ? `/approvals/${app.approvalRequestId}`
+      : `/hr/business-trips/${id}`;
     for (const passenger of app.passengers) {
       await this.notifySafe(
         companyId,
         passenger.employeeId,
-        'BUSINESS_TRIP_TICKET_READY',
+        isReplace ? 'business_trip.ticket_updated' : 'BUSINESS_TRIP_TICKET_READY',
         {
-          subject: 'Your flight ticket is ready',
-          body: `The combined ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
-          link: `/hr/business-trips/${id}`,
+          subject: isReplace
+            ? 'Your ticket has been updated'
+            : 'Your flight ticket is ready',
+          body: isReplace
+            ? `The ticket for business trip ${app.tripNumber} has been updated. Please re-acknowledge.`
+            : `The combined ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+          link,
         },
       );
     }
@@ -782,6 +809,7 @@ export class BusinessTripService
   /**
    * Attaches individual ticket document(s) for a specific passenger.
    * Only HR viewers may call this; application must be APPROVED.
+   * Replacing an existing ticket resets that passenger's acknowledgement.
    */
   async attachPassengerTicket(
     id: string,
@@ -814,6 +842,16 @@ export class BusinessTripService
       throw new NotFoundException('Passenger not found on this application');
     }
 
+    const isReplace = passenger.ticketDocumentId != null;
+    if (app.attachmentFolderId) {
+      await this.softDeleteTicketDocuments(
+        companyId,
+        app.attachmentFolderId,
+        `/hr/business-trips/${id}/tickets/${passengerId}/`,
+        userId,
+      );
+    }
+
     const documentIds: string[] = [];
     for (const file of files) {
       if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
@@ -828,21 +866,194 @@ export class BusinessTripService
 
     await this.prisma.businessTripPassenger.update({
       where: { id: passengerId },
-      data: { ticketDocumentId: documentIds[0] },
+      data: {
+        ticketDocumentId: documentIds[0],
+        acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+        acknowledgedAt: null,
+      },
     });
 
+    const link = app.approvalRequestId
+      ? `/approvals/${app.approvalRequestId}`
+      : `/hr/business-trips/${id}`;
     await this.notifySafe(
       companyId,
       passenger.employeeId,
-      'BUSINESS_TRIP_TICKET_READY',
+      isReplace ? 'business_trip.ticket_updated' : 'BUSINESS_TRIP_TICKET_READY',
       {
-        subject: 'Your flight ticket is ready',
-        body: `Your individual ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
-        link: `/hr/business-trips/${id}`,
+        subject: isReplace
+          ? 'Your ticket has been updated'
+          : 'Your flight ticket is ready',
+        body: isReplace
+          ? `The ticket for business trip ${app.tripNumber} has been updated. Please re-acknowledge.`
+          : `Your individual ticket for business trip ${app.tripNumber} (${app.originCity}, ${app.originCountry} to ${app.destinationCity}, ${app.destinationCountry}) has been uploaded. Please acknowledge it.`,
+        link,
       },
     );
 
     return this.getTrip(id, companyId, userId);
+  }
+
+  /**
+   * Removes the combined ticket and resets all passenger acknowledgements.
+   */
+  async removeCombinedTicket(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.assertHrManager(companyId, userId);
+
+    const app = await this.prisma.businessTrip.findFirst({
+      where: activeOnly({ id, companyId }),
+      include: { passengers: { select: { employeeId: true } } },
+    });
+    if (!app) {
+      throw new NotFoundException('Business trip not found');
+    }
+    if (app.status !== BusinessTripStatus.APPROVED) {
+      throw new BadRequestException(
+        'Tickets can only be managed on approved applications',
+      );
+    }
+    if (!app.combinedTicketDocumentId) {
+      throw new BadRequestException('No combined ticket is attached');
+    }
+
+    if (app.attachmentFolderId) {
+      await this.softDeleteTicketDocuments(
+        companyId,
+        app.attachmentFolderId,
+        `/hr/business-trips/${id}/tickets/combined/`,
+        userId,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.businessTripPassenger.updateMany({
+        where: { tripId: id },
+        data: {
+          acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+          acknowledgedAt: null,
+        },
+      });
+      await tx.businessTrip.update({
+        where: { id },
+        data: {
+          combinedTicketDocumentId: null,
+          updatedBy: userId,
+        },
+      });
+    });
+
+    const link = app.approvalRequestId
+      ? `/approvals/${app.approvalRequestId}`
+      : `/hr/business-trips/${id}`;
+    for (const passenger of app.passengers) {
+      await this.notifySafe(
+        companyId,
+        passenger.employeeId,
+        'business_trip.ticket_updated',
+        {
+          subject: 'Your ticket has been updated',
+          body: `The ticket for business trip ${app.tripNumber} has been updated. Please re-acknowledge.`,
+          link,
+        },
+      );
+    }
+
+    return this.getTrip(id, companyId, userId);
+  }
+
+  /**
+   * Removes an individual passenger ticket and resets that passenger's acknowledgement.
+   */
+  async removePassengerTicket(
+    id: string,
+    passengerId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.assertHrManager(companyId, userId);
+
+    const app = await this.prisma.businessTrip.findFirst({
+      where: activeOnly({ id, companyId }),
+      include: { passengers: { where: { id: passengerId } } },
+    });
+    if (!app) {
+      throw new NotFoundException('Business trip not found');
+    }
+    if (app.status !== BusinessTripStatus.APPROVED) {
+      throw new BadRequestException(
+        'Tickets can only be managed on approved applications',
+      );
+    }
+
+    const passenger = app.passengers[0];
+    if (!passenger) {
+      throw new NotFoundException('Passenger not found on this application');
+    }
+    if (!passenger.ticketDocumentId) {
+      throw new BadRequestException('No passenger ticket is attached');
+    }
+
+    if (app.attachmentFolderId) {
+      await this.softDeleteTicketDocuments(
+        companyId,
+        app.attachmentFolderId,
+        `/hr/business-trips/${id}/tickets/${passengerId}/`,
+        userId,
+      );
+    }
+
+    await this.prisma.businessTripPassenger.update({
+      where: { id: passengerId },
+      data: {
+        ticketDocumentId: null,
+        acknowledgementStatus: FlightAcknowledgementStatus.PENDING,
+        acknowledgedAt: null,
+      },
+    });
+
+    const link = app.approvalRequestId
+      ? `/approvals/${app.approvalRequestId}`
+      : `/hr/business-trips/${id}`;
+    await this.notifySafe(
+      companyId,
+      passenger.employeeId,
+      'business_trip.ticket_updated',
+      {
+        subject: 'Your ticket has been updated',
+        body: `The ticket for business trip ${app.tripNumber} has been updated. Please re-acknowledge.`,
+        link,
+      },
+    );
+
+    return this.getTrip(id, companyId, userId);
+  }
+
+  /**
+   * Soft-deletes ticket documents under a file-key prefix so they no longer appear.
+   */
+  private async softDeleteTicketDocuments(
+    companyId: string,
+    folderId: string,
+    fileKeyContains: string,
+    userId: string,
+  ): Promise<void> {
+    await this.prisma.document.updateMany({
+      where: {
+        companyId,
+        folderId,
+        deletedAt: null,
+        fileKey: { contains: fileKeyContains },
+      },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: userId,
+        updatedBy: userId,
+      },
+    });
   }
 
   /**

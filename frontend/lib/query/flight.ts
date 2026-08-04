@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  apiDelete,
   apiGet,
   apiGetPaginated,
   apiPatch,
@@ -244,6 +245,46 @@ export function useAcknowledgeTicket(id: string) {
       void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+      void queryClient.setQueryData(flightKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * HR removes the combined ticket.
+ */
+export function useRemoveFlightCombinedTicket(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiDelete<FlightApplicationDetail>(
+        `${FLIGHT_PATH}/${id}/tickets/combined`,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: flightKeys.needsTicketCount(),
+      });
+      void queryClient.setQueryData(flightKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * HR removes an individual passenger ticket.
+ */
+export function useRemoveFlightPassengerTicket(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (passengerId: string) =>
+      apiDelete<FlightApplicationDetail>(
+        `${FLIGHT_PATH}/${id}/passengers/${passengerId}/ticket`,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: flightKeys.needsTicketCount(),
+      });
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });

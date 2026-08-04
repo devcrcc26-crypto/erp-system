@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  apiDelete,
   apiGet,
   apiGetPaginated,
   apiPatch,
@@ -292,6 +293,50 @@ export function useAcknowledgeBusinessTripTicket(id: string) {
       });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.all });
+      void queryClient.setQueryData(businessTripKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * HR removes the combined ticket.
+ */
+export function useRemoveBusinessTripCombinedTicket(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiDelete<BusinessTripDetail>(
+        `${BUSINESS_TRIP_PATH}/${id}/tickets/combined`,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.needsTicketCount(),
+      });
+      void queryClient.setQueryData(businessTripKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * HR removes an individual passenger ticket.
+ */
+export function useRemoveBusinessTripPassengerTicket(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (passengerId: string) =>
+      apiDelete<BusinessTripDetail>(
+        `${BUSINESS_TRIP_PATH}/${id}/passengers/${passengerId}/ticket`,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.needsTicketCount(),
+      });
       void queryClient.setQueryData(businessTripKeys.detail(id), updated);
     },
   });

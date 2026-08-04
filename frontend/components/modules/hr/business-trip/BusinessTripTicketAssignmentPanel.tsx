@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Table, Tag, Typography } from 'antd';
+import { Button, Popconfirm, Table, Tag, Typography } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -15,6 +16,8 @@ import {
   useAcknowledgeBusinessTripTicket,
   useAttachBusinessTripCombinedTicket,
   useAttachBusinessTripPassengerTicket,
+  useRemoveBusinessTripCombinedTicket,
+  useRemoveBusinessTripPassengerTicket,
 } from '@/lib/query/business-trip';
 import { useCurrentUser } from '@/lib/query/profile';
 import { tokens } from '@/lib/theme/tokens';
@@ -25,7 +28,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 const TICKET_ACCEPT = '.pdf,.jpg,.jpeg,.png';
 
 /**
- * Combined + per-passenger ticket upload, download, and acknowledge UI.
+ * Combined + per-passenger ticket upload, download, remove/replace, and acknowledge UI.
  */
 export default function BusinessTripTicketAssignmentPanel({
   trip,
@@ -39,6 +42,8 @@ export default function BusinessTripTicketAssignmentPanel({
 
   const attachCombined = useAttachBusinessTripCombinedTicket(trip.id);
   const attachPassenger = useAttachBusinessTripPassengerTicket(trip.id);
+  const removeCombined = useRemoveBusinessTripCombinedTicket(trip.id);
+  const removePassenger = useRemoveBusinessTripPassengerTicket(trip.id);
   const acknowledgeTicket = useAcknowledgeBusinessTripTicket(trip.id);
 
   const [combinedTicketFiles, setCombinedTicketFiles] = useState<File[]>([]);
@@ -46,6 +51,9 @@ export default function BusinessTripTicketAssignmentPanel({
     {},
   );
   const [replacingCombined, setReplacingCombined] = useState(false);
+  const [replacingPassengerId, setReplacingPassengerId] = useState<
+    string | null
+  >(null);
   const [uploadingPassengerId, setUploadingPassengerId] = useState<
     string | null
   >(null);
@@ -81,6 +89,17 @@ export default function BusinessTripTicketAssignmentPanel({
     }
   }
 
+  async function handleRemoveCombined(): Promise<void> {
+    try {
+      await removeCombined.mutateAsync();
+      messageApi.success('Combined ticket removed');
+      setReplacingCombined(false);
+      setCombinedTicketFiles([]);
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to remove combined ticket', messageApi);
+    }
+  }
+
   async function handleUploadPassenger(passengerId: string): Promise<void> {
     const files = passengerFiles[passengerId] ?? [];
     if (files.length === 0) {
@@ -90,19 +109,37 @@ export default function BusinessTripTicketAssignmentPanel({
     try {
       await attachPassenger.mutateAsync({ passengerId, files });
       messageApi.success(
-        files.length > 1
-          ? 'Passenger tickets uploaded'
-          : 'Passenger ticket uploaded',
+        replacingPassengerId === passengerId
+          ? 'Passenger ticket replaced'
+          : files.length > 1
+            ? 'Passenger tickets uploaded'
+            : 'Passenger ticket uploaded',
       );
       setPassengerFiles((prev) => {
         const next = { ...prev };
         delete next[passengerId];
         return next;
       });
+      setReplacingPassengerId(null);
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to upload passenger ticket', messageApi);
     } finally {
       setUploadingPassengerId(null);
+    }
+  }
+
+  async function handleRemovePassenger(passengerId: string): Promise<void> {
+    try {
+      await removePassenger.mutateAsync(passengerId);
+      messageApi.success('Passenger ticket removed');
+      setReplacingPassengerId(null);
+      setPassengerFiles((prev) => {
+        const next = { ...prev };
+        delete next[passengerId];
+        return next;
+      });
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to remove passenger ticket', messageApi);
     }
   }
 
@@ -200,9 +237,50 @@ export default function BusinessTripTicketAssignmentPanel({
           {
             title: 'Action',
             key: 'action',
-            width: 220,
+            width: 260,
             render: (_: unknown, row: BusinessTripPassenger) => {
               const pending = passengerFiles[row.id] ?? [];
+              const hasTicket = Boolean(row.ticketDocumentId);
+              const isReplacing = replacingPassengerId === row.id;
+
+              if (hasTicket && !isReplacing) {
+                return (
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setReplacingPassengerId(row.id);
+                        setPassengerFiles((prev) => ({
+                          ...prev,
+                          [row.id]: [],
+                        }));
+                      }}
+                    >
+                      Replace
+                    </Button>
+                    <Popconfirm
+                      title="Remove ticket?"
+                      description="Passenger acknowledgement will be reset."
+                      okText="Remove"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => void handleRemovePassenger(row.id)}
+                    >
+                      <Button
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        loading={
+                          removePassenger.isPending &&
+                          removePassenger.variables === row.id
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                );
+              }
+
               return (
                 <div className="flex flex-col gap-1">
                   <FileUploadInput
@@ -222,19 +300,37 @@ export default function BusinessTripTicketAssignmentPanel({
                       uploadingPassengerId === row.id
                     }
                   />
-                  {pending.length > 0 ? (
-                    <Button
-                      size="small"
-                      type="primary"
-                      loading={
-                        attachPassenger.isPending &&
-                        uploadingPassengerId === row.id
-                      }
-                      onClick={() => void handleUploadPassenger(row.id)}
-                    >
-                      {row.ticketDocumentId ? 'Replace' : 'Upload'}
-                    </Button>
-                  ) : null}
+                  <div className="flex flex-wrap gap-1">
+                    {pending.length > 0 ? (
+                      <Button
+                        size="small"
+                        type="primary"
+                        loading={
+                          attachPassenger.isPending &&
+                          uploadingPassengerId === row.id
+                        }
+                        onClick={() => void handleUploadPassenger(row.id)}
+                      >
+                        {isReplacing ? 'Upload Replacement' : 'Upload'}
+                      </Button>
+                    ) : null}
+                    {isReplacing ? (
+                      <Button
+                        size="small"
+                        disabled={attachPassenger.isPending}
+                        onClick={() => {
+                          setReplacingPassengerId(null);
+                          setPassengerFiles((prev) => {
+                            const next = { ...prev };
+                            delete next[row.id];
+                            return next;
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               );
             },
@@ -265,15 +361,33 @@ export default function BusinessTripTicketAssignmentPanel({
               <AttachmentDownloadList documents={combinedTickets} />
             </div>
             {canUpload ? (
-              <Button
-                size="small"
-                onClick={() => {
-                  setReplacingCombined(true);
-                  setCombinedTicketFiles([]);
-                }}
-              >
-                Replace
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setReplacingCombined(true);
+                    setCombinedTicketFiles([]);
+                  }}
+                >
+                  Replace
+                </Button>
+                <Popconfirm
+                  title="Remove combined ticket?"
+                  description="All passenger acknowledgements will be reset."
+                  okText="Remove"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => void handleRemoveCombined()}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={removeCombined.isPending}
+                  >
+                    Remove
+                  </Button>
+                </Popconfirm>
+              </div>
             ) : null}
           </div>
         ) : showCombinedUploader ? (
@@ -286,17 +400,19 @@ export default function BusinessTripTicketAssignmentPanel({
               placeholder="Upload combined ticket files (PDF or image)"
               disabled={attachCombined.isPending}
             />
-            {combinedTicketFiles.length > 0 ? (
+            {combinedTicketFiles.length > 0 || replacingCombined ? (
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  type="primary"
-                  loading={attachCombined.isPending}
-                  onClick={() => void handleUploadCombined()}
-                >
-                  {replacingCombined
-                    ? 'Upload Replacement'
-                    : 'Upload Combined Ticket'}
-                </Button>
+                {combinedTicketFiles.length > 0 ? (
+                  <Button
+                    type="primary"
+                    loading={attachCombined.isPending}
+                    onClick={() => void handleUploadCombined()}
+                  >
+                    {replacingCombined
+                      ? 'Upload Replacement'
+                      : 'Upload Combined Ticket'}
+                  </Button>
+                ) : null}
                 {replacingCombined ? (
                   <Button
                     disabled={attachCombined.isPending}
