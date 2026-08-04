@@ -5,7 +5,7 @@ import BusinessTripForm from '@/components/modules/hr/business-trip/BusinessTrip
 import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
 
 /**
- * Page wrapper for the new business trip form.
+ * Page wrapper for the new business trip stepper form.
  * On success navigates to the approval request or the trip detail.
  */
 export default function BusinessTripFormContent(): React.ReactNode {
@@ -19,5 +19,9 @@ export default function BusinessTripFormContent(): React.ReactNode {
     }
   }
 
-  return <BusinessTripForm onSuccess={handleSuccess} />;
+  return (
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <BusinessTripForm onSuccess={handleSuccess} />
+    </div>
+  );
 }

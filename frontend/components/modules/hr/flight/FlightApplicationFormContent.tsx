@@ -5,7 +5,7 @@ import FlightApplicationForm from '@/components/modules/hr/flight/FlightApplicat
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 
 /**
- * Page wrapper for the new flight application form.
+ * Page wrapper for the new flight application stepper form.
  * On success navigates to the approval request or the application detail.
  */
 export default function FlightApplicationFormContent(): React.ReactNode {
@@ -19,5 +19,9 @@ export default function FlightApplicationFormContent(): React.ReactNode {
     }
   }
 
-  return <FlightApplicationForm onSuccess={handleSuccess} />;
+  return (
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <FlightApplicationForm onSuccess={handleSuccess} />
+    </div>
+  );
 }
