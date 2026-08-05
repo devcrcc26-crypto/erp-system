@@ -13,12 +13,14 @@ import {
 /**
  * True when the session may open the company Departments page.
  * Uses session EPC nav probes — does not list /departments (avoids 403 noise for design roles).
+ * HR Officers also see Organization (departments / positions) via hr.view.
  */
 export function useCanViewDepartmentsNav(): boolean {
   const capabilitiesReady = useCapabilitiesReady();
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
+  const canViewHr = useAuthStore((state) => state.capabilities.canViewHr);
   const epc = useEpcCapabilities();
 
   return useMemo(() => {
@@ -27,10 +29,12 @@ export function useCanViewDepartmentsNav(): boolean {
     }
     return (
       isSystemAdministrator ||
+      canViewHr ||
       epc.navFullAccess ||
       epc.navDepartmentLeader
     );
   }, [
+    canViewHr,
     capabilitiesReady,
     epc.navDepartmentLeader,
     epc.navFullAccess,

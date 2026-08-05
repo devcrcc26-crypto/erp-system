@@ -1110,6 +1110,24 @@ async function main(): Promise<void> {
     }
   }
 
+  // Organization sidebar (Users / Departments / Positions) — HR Officer view access.
+  const departmentsView = permissions.find(
+    (permission) =>
+      permission.module === 'departments' && permission.action === 'view',
+  );
+  const usersView = permissions.find(
+    (permission) => permission.module === 'users' && permission.action === 'view',
+  );
+  const hrOrgRoleId = roleMap.get('HR Officer');
+  if (hrOrgRoleId) {
+    if (departmentsView) {
+      await upsertRolePermission(hrOrgRoleId, departmentsView.id, viewOnlyFlags());
+    }
+    if (usersView) {
+      await upsertRolePermission(hrOrgRoleId, usersView.id, viewOnlyFlags());
+    }
+  }
+
   // Leave: create for Employee (own requests); HR Officer / leadership via hr.view.
   const leaveView = permissions.find(
     (permission) =>
