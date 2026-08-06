@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import PurchaseRequestsListPageContent from '@/components/modules/hr/purchase-request/PurchaseRequestsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.purchaseRequests" />;
+export default function PurchaseRequestsPage(): React.ReactNode {
+  return <PurchaseRequestsListPageContent />;
 }

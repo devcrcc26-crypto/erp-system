@@ -22,6 +22,7 @@ import { FlightModule } from './modules/flight/flight.module';
 import { BusinessTripModule } from './modules/business-trip/business-trip.module';
 import { ExpenseClaimModule } from './modules/expense-claim/expense-claim.module';
 import { PerDiemModule } from './modules/per-diem/per-diem.module';
+import { PurchaseRequestModule } from './modules/purchase-request/purchase-request.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
@@ -77,6 +78,7 @@ import { StorageModule } from './shared/storage/storage.module';
     BusinessTripModule,
     ExpenseClaimModule,
     PerDiemModule,
+    PurchaseRequestModule,
   ],
   controllers: [AppController],
   providers: [

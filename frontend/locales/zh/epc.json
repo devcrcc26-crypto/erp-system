@@ -148,6 +148,14 @@
         "listDescription": "审核并处理员工报销申请。",
         "myListDescription": "提交并跟踪您的费用报销审批流程。"
       },
+      "purchaseRequest": {
+        "new": "新建采购申请",
+        "detail": "采购申请",
+        "listTitle": "采购申请",
+        "myListTitle": "我的采购申请",
+        "listDescription": "审核并处理员工采购申请。",
+        "myListDescription": "提交并跟踪您的采购申请审批流程。"
+      },
       "perDiem": {
         "new": "新建差旅补贴申请",
         "detail": "差旅补贴申请",

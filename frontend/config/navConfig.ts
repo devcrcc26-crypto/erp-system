@@ -606,7 +606,8 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/flight-application' ||
     pathname === '/approvals/new/business-trip' ||
     pathname === '/approvals/new/expense-claim' ||
-    pathname === '/approvals/new/per-diem'
+    pathname === '/approvals/new/per-diem' ||
+    pathname === '/approvals/new/purchase-request'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -697,6 +698,20 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.expenseClaims'), href: '/hr/expense-claims' },
         { label: t('pages.hr.expenseClaim.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/purchase-requests/')) {
+    return {
+      titleKey: 'pages.hr.purchaseRequest.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.purchaseRequests'),
+          href: '/hr/purchase-requests',
+        },
+        { label: t('pages.hr.purchaseRequest.detail') },
       ],
     };
   }

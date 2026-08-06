@@ -19,6 +19,7 @@ import FlightApplicationDetail from '@/components/modules/approvals/detail/Fligh
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
+import PurchaseRequestDetail from '@/components/modules/approvals/detail/PurchaseRequestDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -147,6 +148,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <PerDiemDetail approvalRequestId={request.id} sourceId={sourceId} />
+      );
+    case 'PURCHASE_REQUEST':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <PurchaseRequestDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
       );
     default:
       return <GenericApprovalDetail request={request} />;

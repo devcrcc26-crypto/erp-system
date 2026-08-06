@@ -20,6 +20,18 @@ export class HrApprovalChainService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Approval chain for purchase requests.
+   * Includes General Manager when the total ETB value exceeds 10,000.
+   */
+  async buildPurchaseApprovalChain(
+    submitterId: string,
+    totalEtb: number,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    return this.buildOrgApprovalChain(submitterId, companyId, totalEtb > 10000);
+  }
+
+  /**
    * Org-structure approval chain with duplicate approver collapse.
    * @param includeGeneralManager When true, appends General Manager as tier 3.
    */

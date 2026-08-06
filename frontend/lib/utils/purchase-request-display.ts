@@ -1,0 +1,65 @@
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
+import type {
+  PurchaseRequestStatus,
+  PurchaseRequestUserSummary,
+} from '@/lib/api/purchase-request.types';
+import { formatEtbAmount, formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import { formatUserName } from '@/lib/utils/user-display';
+
+export { formatEtbAmount, formatCurrencyAmount };
+
+export const PURCHASE_REQUEST_STATUS_OPTIONS: Array<{
+  value: PurchaseRequestStatus;
+  label: string;
+}> = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'RETURNED', label: 'Returned' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+export function formatPurchaseRequestStatus(status: string): string {
+  const found = PURCHASE_REQUEST_STATUS_OPTIONS.find((o) => o.value === status);
+  return found?.label ?? status;
+}
+
+export function purchaseRequestStatusVariant(
+  status: PurchaseRequestStatus | string,
+): StatusBadgeVariant {
+  switch (status) {
+    case 'APPROVED':
+      return 'success';
+    case 'REJECTED':
+      return 'error';
+    case 'RETURNED':
+      return 'warning';
+    case 'SUBMITTED':
+      return 'info';
+    case 'IN_REVIEW':
+      return 'warning';
+    case 'CANCELLED':
+    case 'DRAFT':
+    default:
+      return 'default';
+  }
+}
+
+export function formatPurchaseRequestEmployeeName(
+  user?: PurchaseRequestUserSummary | null,
+): string {
+  if (!user) return '-';
+  return formatUserName(user);
+}
+
+/** Returns the total ETB threshold for PR approval tier routing. */
+export const PR_GM_THRESHOLD_ETB = 10_000;
+
+/** Determines if a PR amount requires GM-level approval. */
+export function requiresGmApproval(totalEtb: number | string | null | undefined): boolean {
+  if (totalEtb == null || totalEtb === '') return false;
+  const num = typeof totalEtb === 'string' ? Number(totalEtb) : totalEtb;
+  return !Number.isNaN(num) && num > PR_GM_THRESHOLD_ETB;
+}

@@ -74,6 +74,7 @@ enum FolderContextType {
   BUSINESS_TRIP
   EXPENSE_CLAIM
   PER_DIEM
+  PURCHASE_REQUEST
 }
 
 enum NotificationChannel {
@@ -237,6 +238,7 @@ model Company {
   perDiemRates             PerDiemRate[]
   expenseClaims            ExpenseClaim[]
   perDiemRequests          PerDiemRequest[]
+  purchaseRequests         PurchaseRequest[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -637,6 +639,8 @@ model User {
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRatesCreated         PerDiemRate[]       @relation("PerDiemRateCreator")
+  purchaseRequestsAsEmployee  PurchaseRequest[]   @relation("PurchaseRequestEmployee")
+  purchaseRequestsCreated     PurchaseRequest[]   @relation("PurchaseRequestCreator")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -953,6 +957,7 @@ model DocumentFolder {
   businessTrips              BusinessTrip[]
   expenseClaims              ExpenseClaim[]
   perDiemRequests            PerDiemRequest[]
+  purchaseRequests           PurchaseRequest[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1684,6 +1689,7 @@ model Project {
   issues         Issue[]
   punchItems     PunchItem[]
   closeout       Closeout?
+  purchaseRequests PurchaseRequest[]
 
   @@unique([companyId, projectCode], map: "uq_project_company_code")
   @@index([companyId], map: "idx_project_company_id")
@@ -3331,6 +3337,7 @@ model ApprovalRequest {
   businessTrip       BusinessTrip?
   expenseClaim       ExpenseClaim?
   perDiemRequest     PerDiemRequest?
+  purchaseRequest    PurchaseRequest?
 
   @@index([companyId])
   @@index([categoryId])
@@ -3969,3 +3976,79 @@ model BusinessTripDocument {
   @@index([documentId], map: "idx_business_trip_document_document")
   @@map("business_trip_document")
 }
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+model PurchaseRequest {
+  id                 String                @id @default(uuid())
+  companyId          String                @map("company_id")
+  requestNumber      String                @map("request_number")
+  employeeId         String                @map("employee_id")
+  title              String
+  justification      String
+  vendorName         String?               @map("vendor_name")
+  vendorContact      String?               @map("vendor_contact")
+  requiredByDate     DateTime?             @map("required_by_date") @db.Date
+  projectId          String?               @map("project_id")
+  totalEstimatedCost Decimal               @default(0) @map("total_estimated_cost") @db.Decimal(14, 2)
+  currency           SupportedCurrency     @default(ETB)
+  totalEstimatedEtb  Decimal               @default(0) @map("total_estimated_etb") @db.Decimal(14, 2)
+  status             PurchaseRequestStatus @default(DRAFT)
+  approvalRequestId  String?               @unique @map("approval_request_id")
+  attachmentFolderId String?               @map("attachment_folder_id")
+  submittedAt        DateTime?             @map("submitted_at")
+  completedAt        DateTime?             @map("completed_at")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  createdBy          String                @map("created_by")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  updatedBy          String                @map("updated_by")
+  deletedAt          DateTime?             @map("deleted_at")
+  deletedBy          String?               @map("deleted_by")
+
+  company          Company               @relation(fields: [companyId], references: [id])
+  employee         User                  @relation("PurchaseRequestEmployee", fields: [employeeId], references: [id])
+  project          Project?              @relation(fields: [projectId], references: [id])
+  approvalRequest  ApprovalRequest?      @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id])
+  creator          User                  @relation("PurchaseRequestCreator", fields: [createdBy], references: [id])
+  items            PurchaseRequestItem[]
+
+  @@unique([companyId, requestNumber], map: "uq_purchase_request_company_number")
+  @@index([companyId], map: "idx_purchase_request_company")
+  @@index([employeeId], map: "idx_purchase_request_employee")
+  @@index([status], map: "idx_purchase_request_status")
+  @@index([companyId, deletedAt], map: "idx_purchase_request_company_deleted")
+  @@index([projectId], map: "idx_purchase_request_project")
+  @@index([attachmentFolderId], map: "idx_purchase_request_attachment_folder")
+  @@map("purchase_request")
+}
+
+model PurchaseRequestItem {
+  id            String            @id @default(uuid())
+  requestId     String            @map("request_id")
+  itemName      String            @map("item_name")
+  description   String?
+  quantity      Decimal           @db.Decimal(10, 2)
+  unit          String
+  unitPrice     Decimal           @map("unit_price") @db.Decimal(14, 2)
+  currency      SupportedCurrency @default(ETB)
+  totalPrice    Decimal           @map("total_price") @db.Decimal(14, 2)
+  totalPriceEtb Decimal           @map("total_price_etb") @db.Decimal(14, 2)
+  exchangeRate  Decimal           @default(1) @map("exchange_rate") @db.Decimal(18, 6)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  request PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId], map: "idx_purchase_request_item_request")
+  @@map("purchase_request_item")
+}
+

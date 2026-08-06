@@ -148,6 +148,14 @@
         "listDescription": "Review and process employee reimbursement claims.",
         "myListDescription": "Submit and track your expense claims through the approval workflow."
       },
+      "purchaseRequest": {
+        "new": "New Purchase Request",
+        "detail": "Purchase Request",
+        "listTitle": "Purchase Requests",
+        "myListTitle": "My Purchase Requests",
+        "listDescription": "Review and process employee purchase requests.",
+        "myListDescription": "Submit and track your purchase requests through the approval workflow."
+      },
       "perDiem": {
         "new": "New Per Diem Request",
         "detail": "Per Diem Request",

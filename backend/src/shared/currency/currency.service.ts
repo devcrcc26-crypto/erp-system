@@ -3,20 +3,22 @@ import { SupportedCurrency } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
-interface FrankfurterResponse {
-  amount: number;
-  base: string;
+interface FrankfurterV2RateResponse {
   date: string;
-  rates: Record<string, number>;
+  base: string;
+  quote: string;
+  rate: number;
 }
 
 /**
- * Daily-cached exchange rates against ETB, sourced from the Frankfurter API.
+ * Daily-cached exchange rates against ETB, sourced from the Frankfurter v2 API.
+ * ETB pairs are covered via NBE (and other) providers on api.frankfurter.dev —
+ * the legacy api.frankfurter.app ECB feed does not include ETB.
  */
 @Injectable()
 export class CurrencyService {
   private readonly logger = new Logger(CurrencyService.name);
-  private readonly FRANKFURTER_URL = 'https://api.frankfurter.app';
+  private readonly FRANKFURTER_URL = 'https://api.frankfurter.dev/v2';
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -77,7 +79,11 @@ export class CurrencyService {
     if (fromCurrency === SupportedCurrency.ETB) {
       return amount;
     }
-    const rate = await this.getRate(fromCurrency, SupportedCurrency.ETB, companyId);
+    const rate = await this.getRate(
+      fromCurrency,
+      SupportedCurrency.ETB,
+      companyId,
+    );
     return amount * rate;
   }
 
@@ -97,18 +103,15 @@ export class CurrencyService {
     to: SupportedCurrency,
   ): Promise<number> {
     try {
-      const res = await fetch(
-        `${this.FRANKFURTER_URL}/latest?from=${from}&to=${to}`,
-      );
+      const res = await fetch(`${this.FRANKFURTER_URL}/rate/${from}/${to}`);
       if (!res.ok) {
         throw new Error(`Frankfurter responded with status ${res.status}`);
       }
-      const data = (await res.json()) as FrankfurterResponse;
-      const rate = data.rates[to];
-      if (typeof rate !== 'number') {
+      const data = (await res.json()) as FrankfurterV2RateResponse;
+      if (typeof data.rate !== 'number' || !Number.isFinite(data.rate)) {
         throw new Error(`No rate returned for ${from}->${to}`);
       }
-      return rate;
+      return data.rate;
     } catch (error: unknown) {
       this.logger.error(
         `Failed to fetch exchange rate ${from}->${to}: ${
@@ -123,6 +126,8 @@ export class CurrencyService {
 
   private todayDateOnly(): Date {
     const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    return new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
   }
 }

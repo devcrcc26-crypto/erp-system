@@ -19,6 +19,7 @@ import {
   OvertimeSheetStatus,
   PerDiemStatus,
   Prisma,
+  PurchaseRequestStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -89,6 +90,7 @@ const REQUEST_DETAIL_INCLUDE = {
   businessTrip: { select: { id: true } },
   expenseClaim: { select: { id: true } },
   perDiemRequest: { select: { id: true } },
+  purchaseRequest: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -323,6 +325,7 @@ export class ApprovalsService {
       request.overtimeSheet?.id ??
       request.expenseClaim?.id ??
       request.perDiemRequest?.id ??
+      request.purchaseRequest?.id ??
       null;
 
     return {
@@ -335,6 +338,7 @@ export class ApprovalsService {
       businessTrip: undefined,
       expenseClaim: undefined,
       perDiemRequest: undefined,
+      purchaseRequest: undefined,
     };
   }
 
@@ -1098,6 +1102,7 @@ export class ApprovalsService {
         businessTrip: true,
         expenseClaim: true,
         perDiemRequest: true,
+        purchaseRequest: true,
       },
     });
     if (!request) {
@@ -1232,6 +1237,17 @@ export class ApprovalsService {
             where: { id: request.perDiemRequest.id },
             data: {
               status: PerDiemStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.purchaseRequest) {
+          await tx.purchaseRequest.update({
+            where: { id: request.purchaseRequest.id },
+            data: {
+              status: PurchaseRequestStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },
