@@ -20,6 +20,7 @@ import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveReque
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import PurchaseRequestDetail from '@/components/modules/approvals/detail/PurchaseRequestDetail';
+import MaterialRequisitionDetail from '@/components/modules/approvals/detail/MaterialRequisitionDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -155,6 +156,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <PurchaseRequestDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'MATERIAL_REQUISITION':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <MaterialRequisitionDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />

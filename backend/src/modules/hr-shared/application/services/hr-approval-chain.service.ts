@@ -32,6 +32,17 @@ export class HrApprovalChainService {
   }
 
   /**
+   * Approval chain for material requisitions.
+   * Always Discipline Lead → HR Officer → General Manager (duplicates collapsed).
+   */
+  async buildMaterialRequisitionApprovalChain(
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    return this.buildOrgApprovalChain(submitterId, companyId, true);
+  }
+
+  /**
    * Org-structure approval chain with duplicate approver collapse.
    * @param includeGeneralManager When true, appends General Manager as tier 3.
    */

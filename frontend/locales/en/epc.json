@@ -156,6 +156,14 @@
         "listDescription": "Review and process employee purchase requests.",
         "myListDescription": "Submit and track your purchase requests through the approval workflow."
       },
+      "materialRequisition": {
+        "new": "New Material Requisition",
+        "detail": "Material Requisition",
+        "listTitle": "Material Requisitions",
+        "myListTitle": "My Material Requisitions",
+        "listDescription": "Review and process warehouse material requisitions.",
+        "myListDescription": "Submit and track your material requisitions through the approval workflow."
+      },
       "perDiem": {
         "new": "New Per Diem Request",
         "detail": "Per Diem Request",

@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import MaterialRequisitionsListPageContent from '@/components/modules/hr/material-requisition/MaterialRequisitionsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.materialRequisition" />;
+export default function MaterialRequisitionListPage(): React.ReactNode {
+  return <MaterialRequisitionsListPageContent />;
 }

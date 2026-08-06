@@ -1,0 +1,427 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Skeleton,
+  Space,
+  Table,
+  Typography,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import {
+  MetaItem,
+  SectionCard,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useAppMessage } from '@/hooks/use-app-message';
+import type { ApprovalTier } from '@/lib/api/approvals.types';
+import { ApiRequestError } from '@/lib/api/errors';
+import type {
+  MaterialRequisitionItem,
+  UpdateMaterialRequisitionItemPayload,
+} from '@/lib/api/material-requisition.types';
+import {
+  useCancelMaterialRequisition,
+  useDeleteMaterialRequisitionItem,
+  useMaterialRequisition,
+  useUpdateMaterialRequisitionItem,
+} from '@/lib/query/material-requisition';
+import { useCurrentUser } from '@/lib/query/profile';
+import {
+  formatMaterialRequisitionEmployeeName,
+  formatMaterialRequisitionStatus,
+  materialRequisitionStatusVariant,
+} from '@/lib/utils/material-requisition-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import { tokens } from '@/lib/theme/tokens';
+
+/**
+ * Material requisition detail — item editing, cancellation, and approval chain.
+ */
+export default function MaterialRequisitionDetailPageContent({
+  requisitionId,
+}: {
+  requisitionId: string;
+}): React.ReactNode {
+  const router = useRouter();
+  const messageApi = useAppMessage();
+  const currentUser = useCurrentUser();
+  const detailQuery = useMaterialRequisition(requisitionId);
+  const cancelMutation = useCancelMaterialRequisition(requisitionId);
+  const deleteItemMutation = useDeleteMaterialRequisitionItem(requisitionId);
+  const updateItemMutation = useUpdateMaterialRequisitionItem(requisitionId);
+
+  const [editingItem, setEditingItem] =
+    useState<MaterialRequisitionItem | null>(null);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [itemForm] = Form.useForm<UpdateMaterialRequisitionItemPayload>();
+
+  const requisition = detailQuery.data;
+  const isOwner =
+    Boolean(requisition) && requisition?.employeeId === currentUser.data?.id;
+  const isDraftOrReturned =
+    requisition?.status === 'DRAFT' || requisition?.status === 'RETURNED';
+  const canEdit = isOwner && isDraftOrReturned;
+  const canCancel =
+    isOwner &&
+    (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
+
+  const tiers = useMemo(
+    () => (requisition?.approvalRequest?.tiers ?? []) as ApprovalTier[],
+    [requisition?.approvalRequest?.tiers],
+  );
+
+  function openEditItem(item: MaterialRequisitionItem): void {
+    setEditingItem(item);
+    itemForm.setFieldsValue({
+      itemName: item.itemName,
+      itemCode: item.itemCode ?? '',
+      description: item.description ?? '',
+      quantity: Number(item.quantity),
+      unit: item.unit,
+    });
+  }
+
+  async function handleUpdateItem(): Promise<void> {
+    if (!editingItem) return;
+    try {
+      const values = await itemForm.validateFields();
+      await updateItemMutation.mutateAsync({
+        itemId: editingItem.id,
+        payload: {
+          itemName: values.itemName,
+          itemCode: (values.itemCode as string | undefined) || undefined,
+          description: (values.description as string | undefined) || undefined,
+          quantity: Number(values.quantity),
+          unit: values.unit,
+        },
+      });
+      messageApi.success('Item updated');
+      setEditingItem(null);
+      itemForm.resetFields();
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to update item', messageApi);
+    }
+  }
+
+  async function handleDeleteItem(): Promise<void> {
+    if (!deleteItemId) return;
+    try {
+      await deleteItemMutation.mutateAsync(deleteItemId);
+      messageApi.success('Item removed');
+      setDeleteItemId(null);
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to remove item', messageApi);
+    }
+  }
+
+  async function handleCancel(): Promise<void> {
+    try {
+      await cancelMutation.mutateAsync();
+      messageApi.success('Material requisition cancelled');
+      setConfirmCancel(false);
+    } catch (error: unknown) {
+      notifyApiError(error, 'Failed to cancel requisition', messageApi);
+    }
+  }
+
+  if (detailQuery.isLoading) {
+    return <Skeleton active paragraph={{ rows: 8 }} />;
+  }
+
+  if (detailQuery.isError || !requisition) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message={
+          detailQuery.error instanceof ApiRequestError
+            ? detailQuery.error.message
+            : 'Material requisition not found'
+        }
+        action={
+          <Button onClick={() => router.push('/hr/material-requisition')}>
+            Back to list
+          </Button>
+        }
+      />
+    );
+  }
+
+  const itemColumns: ColumnsType<MaterialRequisitionItem> = [
+    {
+      title: 'Item Name',
+      dataIndex: 'itemName',
+      key: 'itemName',
+      ellipsis: true,
+    },
+    {
+      title: 'Item Code',
+      dataIndex: 'itemCode',
+      key: 'itemCode',
+      width: 120,
+      render: (v: string | null | undefined) => v || '-',
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      ellipsis: true,
+      render: (v: string | null | undefined) => v || '-',
+    },
+    {
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 90,
+      align: 'right',
+    },
+    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    ...(canEdit
+      ? [
+          {
+            title: '',
+            key: 'actions',
+            width: 90,
+            render: (_: unknown, row: MaterialRequisitionItem) => (
+              <Space size={4}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<Pencil size={14} />}
+                  onClick={() => openEditItem(row)}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setDeleteItemId(row.id)}
+                />
+              </Space>
+            ),
+          } satisfies ColumnsType<MaterialRequisitionItem>[number],
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/material-requisition')}
+        >
+          Back
+        </Button>
+        {canCancel ? (
+          <Button danger className="ml-auto" onClick={() => setConfirmCancel(true)}>
+            Cancel Requisition
+          </Button>
+        ) : null}
+        {requisition.status === 'RETURNED' && isOwner ? (
+          <Button
+            type="primary"
+            className={canCancel ? '' : 'ml-auto'}
+            onClick={() =>
+              router.push(`/approvals/${requisition.approvalRequestId}`)
+            }
+          >
+            Resubmit in Approvals
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
+        <div className="flex flex-col gap-4 min-w-0">
+          <div
+            className="rounded-lg overflow-hidden"
+            style={{
+              background: tokens.colorCardBg,
+              border: `1px solid ${tokens.colorBorder}`,
+            }}
+          >
+            <div className="px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: tokens.colorTextTertiary }}
+                >
+                  {requisition.requestNumber}
+                </span>
+                <span style={{ color: tokens.colorBorder }}>·</span>
+                <StatusBadge
+                  label={formatMaterialRequisitionStatus(requisition.status)}
+                  variant={materialRequisitionStatusVariant(requisition.status)}
+                />
+              </div>
+              <h2
+                className="text-lg font-semibold leading-snug m-0"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {requisition.title}
+              </h2>
+              <p
+                className="mt-1 text-sm m-0"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {formatMaterialRequisitionEmployeeName(requisition.employee)}
+                {requisition.submittedAt
+                  ? ` · Submitted ${formatProjectDate(requisition.submittedAt)}`
+                  : null}
+              </p>
+            </div>
+          </div>
+
+          <SummaryStrip
+            items={[
+              { label: 'Items', value: String(requisition.items.length) },
+              {
+                label: 'Required By',
+                value: requisition.requiredByDate
+                  ? formatProjectDate(requisition.requiredByDate)
+                  : '-',
+              },
+              { label: 'Project', value: requisition.project?.name ?? '-' },
+              {
+                label: 'Warehouse',
+                value: requisition.warehouseLocation ?? '-',
+              },
+            ]}
+          />
+
+          {canEdit && requisition.status === 'RETURNED' ? (
+            <Alert
+              type="warning"
+              showIcon
+              message="This requisition was returned. Edit items below, then resubmit from Approvals."
+            />
+          ) : null}
+
+          <SectionCard title="Purpose" bodyClassName="px-5 py-4">
+            <MetaItem label="What are the materials needed for?">
+              <p className="whitespace-pre-wrap leading-relaxed m-0">
+                {requisition.purpose}
+              </p>
+            </MetaItem>
+          </SectionCard>
+
+          <SectionCard title="Items" bodyClassName="px-5 py-4">
+            {requisition.items.length === 0 ? (
+              <Empty description="No items" />
+            ) : (
+              <Table<MaterialRequisitionItem>
+                rowKey="id"
+                size="small"
+                columns={itemColumns}
+                dataSource={requisition.items}
+                pagination={false}
+              />
+            )}
+          </SectionCard>
+
+          {(requisition.documents?.length ?? 0) > 0 ? (
+            <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+              <AttachmentDownloadList documents={requisition.documents} />
+            </SectionCard>
+          ) : null}
+        </div>
+
+        <div className="min-w-0">
+          <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
+            {tiers.length > 0 ? (
+              <ApprovalTierTimeline
+                tiers={tiers}
+                currentTier={requisition.approvalRequest?.currentTier ?? 1}
+              />
+            ) : (
+              <Typography.Text type="secondary">
+                No approval chain yet
+              </Typography.Text>
+            )}
+          </SectionCard>
+        </div>
+      </div>
+
+      <Modal
+        title="Edit Item"
+        open={Boolean(editingItem)}
+        onCancel={() => {
+          setEditingItem(null);
+          itemForm.resetFields();
+        }}
+        onOk={() => void handleUpdateItem()}
+        confirmLoading={updateItemMutation.isPending}
+        destroyOnHidden
+      >
+        <Form form={itemForm} layout="vertical" className="mt-2">
+          <Form.Item
+            name="itemName"
+            label="Item Name"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item name="itemCode" label="Item Code">
+            <Input maxLength={100} />
+          </Form.Item>
+          <Form.Item name="description" label="Description">
+            <Input maxLength={1000} />
+          </Form.Item>
+          <Form.Item
+            name="quantity"
+            label="Quantity"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <InputNumber min={0.01} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            name="unit"
+            label="Unit"
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            <Input maxLength={50} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleteItemId)}
+        title="Remove item?"
+        description="This line item will be permanently removed."
+        confirmLabel="Remove"
+        danger
+        confirmLoading={deleteItemMutation.isPending}
+        onConfirm={() => void handleDeleteItem()}
+        onCancel={() => setDeleteItemId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Cancel requisition?"
+        description="This will cancel the material requisition and any open approval request."
+        confirmLabel="Cancel Requisition"
+        danger
+        confirmLoading={cancelMutation.isPending}
+        onConfirm={() => void handleCancel()}
+        onCancel={() => setConfirmCancel(false)}
+      />
+    </div>
+  );
+}

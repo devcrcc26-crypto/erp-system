@@ -75,6 +75,7 @@ enum FolderContextType {
   EXPENSE_CLAIM
   PER_DIEM
   PURCHASE_REQUEST
+  MATERIAL_REQUISITION
 }
 
 enum NotificationChannel {
@@ -239,6 +240,7 @@ model Company {
   expenseClaims            ExpenseClaim[]
   perDiemRequests          PerDiemRequest[]
   purchaseRequests         PurchaseRequest[]
+  materialRequisitions     MaterialRequisition[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -641,6 +643,8 @@ model User {
   perDiemRatesCreated         PerDiemRate[]       @relation("PerDiemRateCreator")
   purchaseRequestsAsEmployee  PurchaseRequest[]   @relation("PurchaseRequestEmployee")
   purchaseRequestsCreated     PurchaseRequest[]   @relation("PurchaseRequestCreator")
+  materialRequisitionsAsEmployee MaterialRequisition[] @relation("MaterialRequisitionEmployee")
+  materialRequisitionsCreated    MaterialRequisition[] @relation("MaterialRequisitionCreator")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -958,6 +962,7 @@ model DocumentFolder {
   expenseClaims              ExpenseClaim[]
   perDiemRequests            PerDiemRequest[]
   purchaseRequests           PurchaseRequest[]
+  materialRequisitions       MaterialRequisition[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1690,6 +1695,7 @@ model Project {
   punchItems     PunchItem[]
   closeout       Closeout?
   purchaseRequests PurchaseRequest[]
+  materialRequisitions MaterialRequisition[]
 
   @@unique([companyId, projectCode], map: "uq_project_company_code")
   @@index([companyId], map: "idx_project_company_id")
@@ -3337,7 +3343,8 @@ model ApprovalRequest {
   businessTrip       BusinessTrip?
   expenseClaim       ExpenseClaim?
   perDiemRequest     PerDiemRequest?
-  purchaseRequest    PurchaseRequest?
+  purchaseRequest      PurchaseRequest?
+  materialRequisition  MaterialRequisition?
 
   @@index([companyId])
   @@index([categoryId])
@@ -4050,5 +4057,72 @@ model PurchaseRequestItem {
 
   @@index([requestId], map: "idx_purchase_request_item_request")
   @@map("purchase_request_item")
+}
+
+enum MaterialRequisitionStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+model MaterialRequisition {
+  id                 String                     @id @default(uuid())
+  companyId          String                     @map("company_id")
+  requestNumber      String                     @map("request_number")
+  employeeId         String                     @map("employee_id")
+  title              String
+  purpose            String
+  requiredByDate     DateTime?                  @map("required_by_date") @db.Date
+  projectId          String?                    @map("project_id")
+  warehouseLocation  String?                    @map("warehouse_location")
+  status             MaterialRequisitionStatus  @default(DRAFT)
+  approvalRequestId  String?                    @unique @map("approval_request_id")
+  attachmentFolderId String?                    @map("attachment_folder_id")
+  submittedAt        DateTime?                  @map("submitted_at")
+  completedAt        DateTime?                  @map("completed_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  createdBy          String                     @map("created_by")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  updatedBy          String                     @map("updated_by")
+  deletedAt          DateTime?                  @map("deleted_at")
+  deletedBy          String?                    @map("deleted_by")
+
+  company          Company                     @relation(fields: [companyId], references: [id])
+  employee         User                        @relation("MaterialRequisitionEmployee", fields: [employeeId], references: [id])
+  project          Project?                    @relation(fields: [projectId], references: [id])
+  approvalRequest  ApprovalRequest?            @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?             @relation(fields: [attachmentFolderId], references: [id])
+  creator          User                        @relation("MaterialRequisitionCreator", fields: [createdBy], references: [id])
+  items            MaterialRequisitionItem[]
+
+  @@unique([companyId, requestNumber], map: "uq_material_requisition_company_number")
+  @@index([companyId], map: "idx_material_requisition_company")
+  @@index([employeeId], map: "idx_material_requisition_employee")
+  @@index([status], map: "idx_material_requisition_status")
+  @@index([companyId, deletedAt], map: "idx_material_requisition_company_deleted")
+  @@index([projectId], map: "idx_material_requisition_project")
+  @@index([attachmentFolderId], map: "idx_material_requisition_attachment_folder")
+  @@map("material_requisition")
+}
+
+model MaterialRequisitionItem {
+  id            String   @id @default(uuid())
+  requisitionId String   @map("requisition_id")
+  itemName      String   @map("item_name")
+  itemCode      String?  @map("item_code")
+  description   String?
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit          String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  requisition MaterialRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  @@index([requisitionId], map: "idx_material_requisition_item")
+  @@map("material_requisition_item")
 }
 

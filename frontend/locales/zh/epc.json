@@ -156,6 +156,14 @@
         "listDescription": "审核并处理员工采购申请。",
         "myListDescription": "提交并跟踪您的采购申请审批流程。"
       },
+      "materialRequisition": {
+        "new": "新建材料领用",
+        "detail": "材料领用",
+        "listTitle": "材料领用",
+        "myListTitle": "我的材料领用",
+        "listDescription": "审核并处理仓库材料领用申请。",
+        "myListDescription": "提交并跟踪您的材料领用审批流程。"
+      },
       "perDiem": {
         "new": "新建差旅补贴申请",
         "detail": "差旅补贴申请",

@@ -607,7 +607,8 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/business-trip' ||
     pathname === '/approvals/new/expense-claim' ||
     pathname === '/approvals/new/per-diem' ||
-    pathname === '/approvals/new/purchase-request'
+    pathname === '/approvals/new/purchase-request' ||
+    pathname === '/approvals/new/material-requisition'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -712,6 +713,20 @@ export function resolveRouteMeta(
           href: '/hr/purchase-requests',
         },
         { label: t('pages.hr.purchaseRequest.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/material-requisition/')) {
+    return {
+      titleKey: 'pages.hr.materialRequisition.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.materialRequisition'),
+          href: '/hr/material-requisition',
+        },
+        { label: t('pages.hr.materialRequisition.detail') },
       ],
     };
   }
