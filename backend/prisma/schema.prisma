@@ -77,6 +77,8 @@ enum FolderContextType {
   PURCHASE_REQUEST
   MATERIAL_REQUISITION
   CONSUMABLES_REQUISITION
+  VEHICLE_APPLICATION
+  VEHICLE_REFUELING
 }
 
 enum NotificationChannel {
@@ -243,6 +245,9 @@ model Company {
   purchaseRequests         PurchaseRequest[]
   materialRequisitions     MaterialRequisition[]
   consumablesRequisitions  ConsumablesRequisition[]
+  companyVehicles          CompanyVehicle[]
+  vehicleApplications      VehicleApplication[]
+  vehicleRefuelings        VehicleRefueling[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -649,6 +654,15 @@ model User {
   materialRequisitionsCreated    MaterialRequisition[] @relation("MaterialRequisitionCreator")
   consumablesRequisitionsAsEmployee ConsumablesRequisition[] @relation("ConsumablesRequisitionEmployee")
   consumablesRequisitionsCreated    ConsumablesRequisition[] @relation("ConsumablesRequisitionCreator")
+  vehiclesAsDiver                  CompanyVehicle[]          @relation("VehicleDriver")
+  vehiclesCreated                  CompanyVehicle[]          @relation("VehicleCreator")
+  vehicleApplicationsAsEmployee    VehicleApplication[]     @relation("VehicleAppEmployee")
+  vehicleApplicationsAsDriver      VehicleApplication[]     @relation("VehicleAppDriver")
+  vehicleApplicationsCreated       VehicleApplication[]     @relation("VehicleAppCreator")
+  vehicleApplicationsReleased      VehicleApplication[]     @relation("VehicleAppReleaser")
+  vehicleRefuelingsAsEmployee      VehicleRefueling[]       @relation("RefuelingEmployee")
+  vehicleRefuelingsAsDriver        VehicleRefueling[]       @relation("RefuelingDriver")
+  vehicleRefuelingsCreated         VehicleRefueling[]       @relation("RefuelingCreator")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -968,6 +982,8 @@ model DocumentFolder {
   purchaseRequests           PurchaseRequest[]
   materialRequisitions       MaterialRequisition[]
   consumablesRequisitions    ConsumablesRequisition[]
+  vehicleApplications        VehicleApplication[]
+  vehicleRefuelings          VehicleRefueling[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1015,6 +1031,7 @@ model Document {
   businessTripCombinedTickets BusinessTrip[]             @relation("BusinessTripCombinedTicket")
   businessTripPassengerTickets BusinessTripPassenger[]   @relation("BusinessTripPassengerTicket")
   expenseClaimItemReceipts    ExpenseClaimItem[]         @relation("ExpenseItemReceipt")
+  vehicleRefuelingReceipts    VehicleRefueling[]         @relation("RefuelingReceipt")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -1701,6 +1718,7 @@ model Project {
   closeout       Closeout?
   purchaseRequests PurchaseRequest[]
   materialRequisitions MaterialRequisition[]
+  vehicleApplications  VehicleApplication[]
 
   @@unique([companyId, projectCode], map: "uq_project_company_code")
   @@index([companyId], map: "idx_project_company_id")
@@ -3351,6 +3369,8 @@ model ApprovalRequest {
   purchaseRequest      PurchaseRequest?
   materialRequisition  MaterialRequisition?
   consumablesRequisition ConsumablesRequisition?
+  vehicleApplication     VehicleApplication?
+  vehicleRefueling       VehicleRefueling?
 
   @@index([companyId])
   @@index([categoryId])
@@ -4195,5 +4215,197 @@ model ConsumablesRequisitionItem {
 
   @@index([requisitionId], map: "idx_consumables_req_item")
   @@map("consumables_requisition_item")
+}
+
+// ─── Vehicle Fleet ────────────────────────────────────────────────────────────
+
+enum VehicleType {
+  CAR
+  TRUCK
+  VAN
+  BUS
+  PICKUP
+  MOTORCYCLE
+  OTHER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  APPROVED
+  IN_USE
+  MAINTENANCE
+  RETIRED
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
+model CompanyVehicle {
+  id              String        @id @default(uuid())
+  companyId       String        @map("company_id")
+  plateNumber     String        @map("plate_number")
+  vehicleType     VehicleType   @map("vehicle_type")
+  make            String
+  model           String
+  year            Int
+  fuelType        FuelType      @default(DIESEL) @map("fuel_type")
+  color           String?
+  assignedDriverId String?      @map("assigned_driver_id")
+  status          VehicleStatus @default(AVAILABLE)
+  notes           String?
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  createdBy       String        @map("created_by")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  updatedBy       String        @map("updated_by")
+  deletedAt       DateTime?     @map("deleted_at")
+  deletedBy       String?       @map("deleted_by")
+
+  company              Company              @relation(fields: [companyId], references: [id])
+  assignedDriver       User?                @relation("VehicleDriver", fields: [assignedDriverId], references: [id])
+  creator              User                 @relation("VehicleCreator", fields: [createdBy], references: [id])
+  vehicleApplications  VehicleApplication[]
+  vehicleRefuelings    VehicleRefueling[]
+
+  @@unique([companyId, plateNumber], map: "uq_company_vehicle_plate")
+  @@index([companyId], map: "idx_company_vehicle_company")
+  @@index([companyId, deletedAt], map: "idx_company_vehicle_company_deleted")
+  @@index([status], map: "idx_company_vehicle_status")
+  @@index([assignedDriverId], map: "idx_company_vehicle_assigned_driver")
+  @@map("company_vehicle")
+}
+
+// ─── Vehicle Application ──────────────────────────────────────────────────────
+
+enum VehicleApplicationStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+enum DriveType {
+  COMPANY_DRIVER
+  SELF_DRIVE
+}
+
+model VehicleApplication {
+  id                 String                   @id @default(uuid())
+  companyId          String                   @map("company_id")
+  applicationNumber  String                   @map("application_number")
+  employeeId         String                   @map("employee_id")
+  vehicleId          String                   @map("vehicle_id")
+  driveType          DriveType                @map("drive_type")
+  driverId           String?                  @map("driver_id")
+  departureDatetime  DateTime                 @map("departure_datetime")
+  returnDatetime     DateTime                 @map("return_datetime")
+  destination        String
+  purpose            String
+  passengerCount     Int                      @default(1) @map("passenger_count")
+  passengerNames     String?                  @map("passenger_names")
+  projectId          String?                  @map("project_id")
+  notes              String?
+  status             VehicleApplicationStatus @default(DRAFT)
+  approvalRequestId  String?                  @unique @map("approval_request_id")
+  attachmentFolderId String?                  @map("attachment_folder_id")
+  releasedAt         DateTime?                @map("released_at")
+  releasedBy         String?                  @map("released_by")
+  submittedAt        DateTime?                @map("submitted_at")
+  completedAt        DateTime?                @map("completed_at")
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  createdBy          String                   @map("created_by")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  updatedBy          String                   @map("updated_by")
+  deletedAt          DateTime?                @map("deleted_at")
+  deletedBy          String?                  @map("deleted_by")
+
+  company          Company          @relation(fields: [companyId], references: [id])
+  employee         User             @relation("VehicleAppEmployee", fields: [employeeId], references: [id])
+  driver           User?            @relation("VehicleAppDriver", fields: [driverId], references: [id])
+  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id])
+  project          Project?         @relation(fields: [projectId], references: [id])
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
+  creator          User             @relation("VehicleAppCreator", fields: [createdBy], references: [id])
+  releasedByUser   User?            @relation("VehicleAppReleaser", fields: [releasedBy], references: [id])
+
+  @@unique([companyId, applicationNumber], map: "uq_vehicle_application_company_number")
+  @@index([companyId], map: "idx_vehicle_application_company")
+  @@index([employeeId], map: "idx_vehicle_application_employee")
+  @@index([vehicleId], map: "idx_vehicle_application_vehicle")
+  @@index([driverId], map: "idx_vehicle_application_driver")
+  @@index([status], map: "idx_vehicle_application_status")
+  @@index([companyId, deletedAt], map: "idx_vehicle_application_company_deleted")
+  @@index([attachmentFolderId], map: "idx_vehicle_application_attachment_folder")
+  @@index([projectId], map: "idx_vehicle_application_project")
+  @@index([departureDatetime, returnDatetime], map: "idx_vehicle_application_departure_return")
+  @@map("vehicle_application")
+}
+
+// ─── Vehicle Refueling ────────────────────────────────────────────────────────
+
+enum VehicleRefuelingStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+model VehicleRefueling {
+  id                 String                 @id @default(uuid())
+  companyId          String                 @map("company_id")
+  requestNumber      String                 @map("request_number")
+  employeeId         String                 @map("employee_id")
+  vehicleId          String                 @map("vehicle_id")
+  driverId           String?                @map("driver_id")
+  fuelDate           DateTime               @map("fuel_date") @db.Date
+  fuelType           FuelType               @map("fuel_type")
+  fuelStation        String                 @map("fuel_station")
+  currentMileage     Decimal?               @map("current_mileage") @db.Decimal(10, 1)
+  requestedLitres    Decimal?               @map("requested_litres") @db.Decimal(8, 2)
+  estimatedCostEtb   Decimal?               @map("estimated_cost_etb") @db.Decimal(12, 2)
+  receiptDocumentId  String?                @map("receipt_document_id")
+  notes              String?
+  status             VehicleRefuelingStatus @default(DRAFT)
+  approvalRequestId  String?                @unique @map("approval_request_id")
+  attachmentFolderId String?                @map("attachment_folder_id")
+  submittedAt        DateTime?              @map("submitted_at")
+  completedAt        DateTime?              @map("completed_at")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  createdBy          String                 @map("created_by")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+  updatedBy          String                 @map("updated_by")
+  deletedAt          DateTime?              @map("deleted_at")
+  deletedBy          String?                @map("deleted_by")
+
+  company          Company          @relation(fields: [companyId], references: [id])
+  employee         User             @relation("RefuelingEmployee", fields: [employeeId], references: [id])
+  driver           User?            @relation("RefuelingDriver", fields: [driverId], references: [id])
+  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id])
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
+  receiptDocument  Document?        @relation("RefuelingReceipt", fields: [receiptDocumentId], references: [id])
+  creator          User             @relation("RefuelingCreator", fields: [createdBy], references: [id])
+
+  @@unique([companyId, requestNumber], map: "uq_vehicle_refueling_company_number")
+  @@index([companyId], map: "idx_vehicle_refueling_company")
+  @@index([employeeId], map: "idx_vehicle_refueling_employee")
+  @@index([vehicleId], map: "idx_vehicle_refueling_vehicle")
+  @@index([driverId], map: "idx_vehicle_refueling_driver")
+  @@index([status], map: "idx_vehicle_refueling_status")
+  @@index([companyId, deletedAt], map: "idx_vehicle_refueling_company_deleted")
+  @@index([attachmentFolderId], map: "idx_vehicle_refueling_attachment_folder")
+  @@index([receiptDocumentId], map: "idx_vehicle_refueling_receipt")
+  @@map("vehicle_refueling")
 }
 

@@ -25,6 +25,9 @@ import { PerDiemModule } from './modules/per-diem/per-diem.module';
 import { PurchaseRequestModule } from './modules/purchase-request/purchase-request.module';
 import { MaterialRequisitionModule } from './modules/material-requisition/material-requisition.module';
 import { ConsumablesRequisitionModule } from './modules/consumables-requisition/consumables-requisition.module';
+import { CompanyVehicleModule } from './modules/company-vehicle/company-vehicle.module';
+import { VehicleApplicationModule } from './modules/vehicle-application/vehicle-application.module';
+import { VehicleRefuelingModule } from './modules/vehicle-refueling/vehicle-refueling.module';
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
@@ -83,6 +86,9 @@ import { StorageModule } from './shared/storage/storage.module';
     PurchaseRequestModule,
     MaterialRequisitionModule,
     ConsumablesRequisitionModule,
+    CompanyVehicleModule,
+    VehicleApplicationModule,
+    VehicleRefuelingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -22,6 +22,8 @@ import {
   PurchaseRequestStatus,
   MaterialRequisitionStatus,
   ConsumablesRequisitionStatus,
+  VehicleApplicationStatus,
+  VehicleRefuelingStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -95,6 +97,8 @@ const REQUEST_DETAIL_INCLUDE = {
   purchaseRequest: { select: { id: true } },
   materialRequisition: { select: { id: true } },
   consumablesRequisition: { select: { id: true } },
+  vehicleApplication: { select: { id: true } },
+  vehicleRefueling: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -332,6 +336,8 @@ export class ApprovalsService {
       request.purchaseRequest?.id ??
       request.materialRequisition?.id ??
       request.consumablesRequisition?.id ??
+      request.vehicleApplication?.id ??
+      request.vehicleRefueling?.id ??
       null;
 
     return {
@@ -347,6 +353,8 @@ export class ApprovalsService {
       purchaseRequest: undefined,
       materialRequisition: undefined,
       consumablesRequisition: undefined,
+      vehicleApplication: undefined,
+      vehicleRefueling: undefined,
     };
   }
 
@@ -1113,6 +1121,8 @@ export class ApprovalsService {
         purchaseRequest: true,
         materialRequisition: true,
         consumablesRequisition: true,
+        vehicleApplication: true,
+        vehicleRefueling: true,
       },
     });
     if (!request) {
@@ -1280,6 +1290,28 @@ export class ApprovalsService {
             where: { id: request.consumablesRequisition.id },
             data: {
               status: ConsumablesRequisitionStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.vehicleApplication) {
+          await tx.vehicleApplication.update({
+            where: { id: request.vehicleApplication.id },
+            data: {
+              status: VehicleApplicationStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.vehicleRefueling) {
+          await tx.vehicleRefueling.update({
+            where: { id: request.vehicleRefueling.id },
+            data: {
+              status: VehicleRefuelingStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },
