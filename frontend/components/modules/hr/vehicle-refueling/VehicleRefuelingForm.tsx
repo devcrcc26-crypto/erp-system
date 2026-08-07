@@ -22,6 +22,7 @@ import {
   toDriverSelectOptions,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface FormValues {
   vehicleId: string;
@@ -42,6 +43,7 @@ interface VehicleRefuelingFormProps {
 export default function VehicleRefuelingForm({
   onSuccess,
 }: VehicleRefuelingFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -91,17 +93,17 @@ export default function VehicleRefuelingForm({
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
-      <SectionCard title="Refueling Details" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
         <Form form={form} layout="vertical" initialValues={{ fuelType: 'DIESEL' }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <Form.Item
               name="vehicleId"
-              label="Vehicle"
+              label={t('hr.form.vehicle')}
               rules={[{ required: true, message: 'Select a vehicle' }]}
             >
               <Select
                 showSearch
-                placeholder="Select vehicle"
+                placeholder={t('hr.placeholder.selectVehicle')}
                 loading={vehiclesQuery.isLoading}
                 filterOption={(input, option) =>
                   String(option?.label ?? '')
@@ -116,11 +118,11 @@ export default function VehicleRefuelingForm({
                 }
               />
             </Form.Item>
-            <Form.Item name="driverId" label="Driver (optional)">
+            <Form.Item name="driverId" label={t('hr.form.driver')}>
               <Select
                 showSearch
                 allowClear
-                placeholder="Select driver"
+                placeholder={t('hr.placeholder.selectDriver')}
                 loading={usersQuery.isLoading}
                 notFoundContent={
                   usersQuery.isLoading
@@ -140,7 +142,7 @@ export default function VehicleRefuelingForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <Form.Item
               name="fuelDate"
-              label="Fuel Date"
+              label={t('hr.form.fuelDate')}
               rules={[{ required: true, message: 'Select date' }]}
             >
               <DatePicker
@@ -150,7 +152,7 @@ export default function VehicleRefuelingForm({
             </Form.Item>
             <Form.Item
               name="fuelType"
-              label="Fuel Type"
+              label={t('hr.form.fuelType')}
               rules={[{ required: true, message: 'Required' }]}
             >
               <Select options={FUEL_TYPE_OPTIONS} />
@@ -159,25 +161,25 @@ export default function VehicleRefuelingForm({
 
           <Form.Item
             name="fuelStation"
-            label="Fuel Station"
+            label={t('hr.form.fuelStation')}
             rules={[{ required: true, message: 'Enter station name' }]}
           >
-            <Input maxLength={200} placeholder="e.g. NOC Bole" />
+            <Input maxLength={200} placeholder={t('hr.placeholder.enterFuelStation')} />
           </Form.Item>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
-            <Form.Item name="currentMileage" label="Current Mileage (km)">
+            <Form.Item name="currentMileage" label={t('hr.form.currentMileage')}>
               <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 45200" />
             </Form.Item>
-            <Form.Item name="requestedLitres" label="Requested Litres">
+            <Form.Item name="requestedLitres" label={t('hr.form.requestedLitres')}>
               <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 50" />
             </Form.Item>
-            <Form.Item name="estimatedCostEtb" label="Estimated Cost (ETB)">
+            <Form.Item name="estimatedCostEtb" label={t('hr.form.estimatedCost')}>
               <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 3500" />
             </Form.Item>
           </div>
 
-          <Form.Item name="notes" label="Notes (optional)">
+          <Form.Item name="notes" label={t('hr.form.notes')}>
             <Input.TextArea rows={3} maxLength={2000} showCount />
           </Form.Item>
         </Form>
@@ -189,7 +191,7 @@ export default function VehicleRefuelingForm({
           loading={submitting}
           onClick={() => void handleSubmit()}
         >
-          Submit Request
+          {t('hr.buttons.submitRequest')}
         </Button>
       </div>
     </div>

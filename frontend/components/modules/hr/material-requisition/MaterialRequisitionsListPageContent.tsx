@@ -95,73 +95,76 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<MaterialRequisitionListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 130,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: MaterialRequisitionListItem) =>
-              formatMaterialRequisitionEmployeeName(row.employee),
-          } satisfies ColumnsType<MaterialRequisitionListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: 'Items',
-      dataIndex: 'itemCount',
-      key: 'itemCount',
-      width: 70,
-      align: 'right',
-    },
-    {
-      title: 'Required By',
-      dataIndex: 'requiredByDate',
-      key: 'requiredByDate',
-      width: 120,
-      render: (value: string | null | undefined) =>
-        value ? formatProjectDate(value) : '-',
-    },
-    {
-      title: 'Project',
-      key: 'project',
-      width: 150,
-      ellipsis: true,
-      render: (_: unknown, row: MaterialRequisitionListItem) =>
-        row.project?.name ?? '-',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: MaterialRequisitionStatus) => (
-        <StatusBadge
-          label={formatMaterialRequisitionStatus(value, t)}
-          variant={materialRequisitionStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Tier',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 140,
-      ellipsis: true,
-      render: (value: string | null | undefined) => value ?? '-',
-    },
-  ];
+  const columns: ColumnsType<MaterialRequisitionListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 130,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: MaterialRequisitionListItem) =>
+                formatMaterialRequisitionEmployeeName(row.employee),
+            } satisfies ColumnsType<MaterialRequisitionListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.title'),
+        dataIndex: 'title',
+        key: 'title',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.items'),
+        dataIndex: 'itemCount',
+        key: 'itemCount',
+        width: 70,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.requiredBy'),
+        dataIndex: 'requiredByDate',
+        key: 'requiredByDate',
+        width: 120,
+        render: (value: string | null | undefined) =>
+          value ? formatProjectDate(value) : '-',
+      },
+      {
+        title: t('hr.table.project'),
+        key: 'project',
+        width: 150,
+        ellipsis: true,
+        render: (_: unknown, row: MaterialRequisitionListItem) =>
+          row.project?.name ?? '-',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: MaterialRequisitionStatus) => (
+          <StatusBadge
+            label={formatMaterialRequisitionStatus(value, t)}
+            variant={materialRequisitionStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        dataIndex: 'currentTierLabel',
+        key: 'currentTierLabel',
+        width: 140,
+        ellipsis: true,
+        render: (value: string | null | undefined) => value ?? '-',
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -189,14 +192,14 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or title"
+          placeholder={t('hr.placeholder.searchMaterial')}
           style={{ width: 220 }}
         />
 
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
@@ -211,7 +214,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             loading={usersQuery.isLoading}
             value={employeeId}
             onChange={(v) => {
@@ -237,7 +240,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Project"
+            placeholder={t('hr.placeholder.project')}
             loading={projectsQuery.isLoading}
             value={projectFilter}
             onChange={(v) => {
@@ -268,7 +271,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
             );
             resetPage();
           }}
-          placeholder={['From date', 'To date']}
+          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
         />
 
         <div className="ml-auto">
@@ -279,7 +282,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
               router.push('/approvals/new/material-requisition')
             }
           >
-            New Requisition
+            {t('hr.buttons.newMaterialRequisition')}
           </Button>
         </div>
       </div>
@@ -302,8 +305,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<InboxOutlined />}
-              title="No material requisitions found"
-              description="Submit a new material requisition to get started."
+              title={t('hr.empty.noMaterialRequisitions')}
             />
           ),
         }}

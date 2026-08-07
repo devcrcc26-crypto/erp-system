@@ -1,12 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, Checkbox, Col, Input, Row, Select, Space, Tag, Typography } from 'antd';
 import type {
   BusinessTripSelectablePassenger,
   FlightVisaStatus,
 } from '@/lib/api/business-trip.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
-import { BUSINESS_TRIP_VISA_STATUS_OPTIONS } from '@/lib/utils/business-trip-display';
 import type { BusinessTripPassengerValues } from './business-trip-stepper.types';
 
 /**
@@ -23,6 +24,17 @@ export default function BusinessTripPassengersStep({
   selectablePassengers: BusinessTripSelectablePassenger[];
   loading?: boolean;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const visaStatusOptions = useMemo(
+    () => [
+      { value: 'NOT_APPLIED' as const, label: t('hr.visaStatus.NOT_APPLIED') },
+      { value: 'APPLIED' as const, label: t('hr.visaStatus.APPLIED') },
+      { value: 'APPROVED' as const, label: t('hr.visaStatus.APPROVED') },
+    ],
+    [t],
+  );
+
   const options = selectablePassengers.map((p) => ({
     value: p.id,
     label: p.name + (p.position ? ` — ${p.position}` : ''),
@@ -67,14 +79,14 @@ export default function BusinessTripPassengersStep({
       }}
     >
       <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-        Passengers
+        {t('hr.form.passengers')}
       </Typography.Title>
 
       <div className="mb-4">
         <Typography.Text
           style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
         >
-          Select Passengers{' '}
+          {t('hr.form.selectPassengers')}{' '}
           <span style={{ color: tokens.colorRed600 }}>*</span>
         </Typography.Text>
         <Select
@@ -86,7 +98,7 @@ export default function BusinessTripPassengersStep({
           options={options}
           value={values.map((p) => p.employeeId)}
           onChange={handleSelect}
-          placeholder="Search and select passengers"
+          placeholder={t('hr.placeholder.selectPassengers')}
           className="w-full"
         />
       </div>
@@ -94,8 +106,7 @@ export default function BusinessTripPassengersStep({
       {values.length > 0 ? (
         <div className="mt-4 flex flex-col gap-3">
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            International travel — passport number is required for each
-            passenger.
+            {t('hr.form.passportNumber')}
           </Typography.Text>
           {values.map((passenger) => (
             <Card
@@ -113,12 +124,12 @@ export default function BusinessTripPassengersStep({
                     <Typography.Text
                       style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
                     >
-                      Passport Number{' '}
+                      {t('hr.form.passportNumber')}{' '}
                       <span style={{ color: tokens.colorRed600 }}>*</span>
                     </Typography.Text>
                     <Input
                       size="small"
-                      placeholder="e.g. A12345678"
+                      placeholder={t('hr.form.passportNumber')}
                       maxLength={20}
                       value={passenger.passportNumber ?? ''}
                       onChange={(e) =>
@@ -142,7 +153,7 @@ export default function BusinessTripPassengersStep({
                         })
                       }
                     >
-                      Visa Required
+                      {t('hr.form.visaRequired')}
                     </Checkbox>
                   </div>
                 </Col>
@@ -156,12 +167,12 @@ export default function BusinessTripPassengersStep({
                           fontSize: 13,
                         }}
                       >
-                        Visa Status
+                        {t('hr.form.visaStatus')}
                       </Typography.Text>
                       <Select
                         size="small"
                         className="w-full"
-                        options={BUSINESS_TRIP_VISA_STATUS_OPTIONS}
+                        options={visaStatusOptions}
                         value={passenger.visaStatus ?? 'NOT_APPLIED'}
                         onChange={(visaStatus: FlightVisaStatus) =>
                           updatePassenger(passenger.employeeId, { visaStatus })

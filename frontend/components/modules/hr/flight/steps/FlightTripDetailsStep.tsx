@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   Checkbox,
   Col,
@@ -10,8 +11,8 @@ import {
   Select,
   Typography,
 } from 'antd';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
-import { FLIGHT_TICKET_CLASS_OPTIONS } from '@/lib/utils/flight-display';
 import type { FlightTripDetailsValues } from './flight-stepper.types';
 
 /**
@@ -24,6 +25,16 @@ export default function FlightTripDetailsStep({
   values: FlightTripDetailsValues;
   onChange: (next: FlightTripDetailsValues) => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const ticketClassOptions = useMemo(
+    () => [
+      { value: 'ECONOMY' as const, label: t('hr.ticketClass.ECONOMY') },
+      { value: 'BUSINESS' as const, label: t('hr.ticketClass.BUSINESS') },
+    ],
+    [t],
+  );
+
   function patch(partial: Partial<FlightTripDetailsValues>): void {
     onChange({ ...values, ...partial });
   }
@@ -37,7 +48,7 @@ export default function FlightTripDetailsStep({
       }}
     >
       <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-        Trip Details
+        {t('hr.form.tripDetails')}
       </Typography.Title>
 
       <Row gutter={16}>
@@ -46,7 +57,8 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Trip Type <span style={{ color: tokens.colorRed600 }}>*</span>
+              {t('hr.form.tripType')}{' '}
+              <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <Radio.Group
               value={values.tripType}
@@ -58,8 +70,8 @@ export default function FlightTripDetailsStep({
                 })
               }
             >
-              <Radio value="ONE_WAY">One Way</Radio>
-              <Radio value="ROUND_TRIP">Round Trip</Radio>
+              <Radio value="ONE_WAY">{t('hr.tripType.ONE_WAY')}</Radio>
+              <Radio value="ROUND_TRIP">{t('hr.tripType.ROUND_TRIP')}</Radio>
             </Radio.Group>
           </div>
         </Col>
@@ -69,7 +81,7 @@ export default function FlightTripDetailsStep({
               checked={values.isInternational}
               onChange={(e) => patch({ isInternational: e.target.checked })}
             >
-              International flight
+              {t('hr.form.isInternational')}
             </Checkbox>
           </div>
         </Col>
@@ -81,13 +93,13 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Origin Country{' '}
+              {t('hr.form.originCountry')}{' '}
               <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <Input
               value={values.originCountry}
               onChange={(e) => patch({ originCountry: e.target.value })}
-              placeholder="e.g. Ethiopia"
+              placeholder={t('hr.placeholder.enterDestination')}
               maxLength={100}
             />
           </div>
@@ -97,12 +109,13 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Origin City <span style={{ color: tokens.colorRed600 }}>*</span>
+              {t('hr.form.originCity')}{' '}
+              <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <Input
               value={values.originCity}
               onChange={(e) => patch({ originCity: e.target.value })}
-              placeholder="e.g. Addis Ababa"
+              placeholder={t('hr.placeholder.enterDestination')}
               maxLength={100}
             />
           </div>
@@ -115,12 +128,13 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Destination <span style={{ color: tokens.colorRed600 }}>*</span>
+              {t('hr.form.destination')}{' '}
+              <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <Input
               value={values.destination}
               onChange={(e) => patch({ destination: e.target.value })}
-              placeholder="e.g. Riyadh (RUH)"
+              placeholder={t('hr.placeholder.enterDestination')}
               maxLength={100}
             />
           </div>
@@ -133,7 +147,7 @@ export default function FlightTripDetailsStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Departure Date{' '}
+              {t('hr.form.departureDate')}{' '}
               <span style={{ color: tokens.colorRed600 }}>*</span>
             </Typography.Text>
             <DatePicker
@@ -149,7 +163,7 @@ export default function FlightTripDetailsStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Return Date{' '}
+                {t('hr.form.returnDate')}{' '}
                 <span style={{ color: tokens.colorRed600 }}>*</span>
               </Typography.Text>
               <DatePicker
@@ -166,7 +180,7 @@ export default function FlightTripDetailsStep({
         <Typography.Text
           style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
         >
-          Purpose of Travel{' '}
+          {t('hr.form.purpose')}{' '}
           <span style={{ color: tokens.colorRed600 }}>*</span>
         </Typography.Text>
         <Input.TextArea
@@ -175,7 +189,7 @@ export default function FlightTripDetailsStep({
           showCount
           value={values.purpose}
           onChange={(e) => patch({ purpose: e.target.value })}
-          placeholder="Describe the business reason for travel"
+          placeholder={t('hr.placeholder.enterPurpose')}
         />
       </div>
 
@@ -183,14 +197,15 @@ export default function FlightTripDetailsStep({
         <Typography.Text
           style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
         >
-          Ticket Class <span style={{ color: tokens.colorRed600 }}>*</span>
+          {t('hr.form.ticketClass')}{' '}
+          <span style={{ color: tokens.colorRed600 }}>*</span>
         </Typography.Text>
         <Select
           className="w-full"
-          options={FLIGHT_TICKET_CLASS_OPTIONS}
+          options={ticketClassOptions}
           value={values.ticketClass}
           onChange={(ticketClass) => patch({ ticketClass })}
-          placeholder="Select class"
+          placeholder={t('hr.form.ticketClass')}
         />
       </div>
     </div>

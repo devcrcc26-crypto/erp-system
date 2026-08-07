@@ -75,64 +75,67 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<ExpenseClaimListItem> = [
-    {
-      title: 'Claim #',
-      dataIndex: 'claimNumber',
-      key: 'claimNumber',
-      width: 120,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: ExpenseClaimListItem) =>
-              formatExpenseClaimEmployeeName(row.employee),
-          } satisfies ColumnsType<ExpenseClaimListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: 'Items',
-      dataIndex: 'itemCount',
-      key: 'itemCount',
-      width: 80,
-      align: 'right',
-    },
-    {
-      title: 'Total',
-      dataIndex: 'totalAmountEtb',
-      key: 'totalAmountEtb',
-      width: 140,
-      align: 'right',
-      render: (value: number) => formatEtbAmount(value),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: ExpenseClaimStatus) => (
-        <StatusBadge
-          label={formatExpenseClaimStatus(value, t)}
-          variant={expenseClaimStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-  ];
+  const columns: ColumnsType<ExpenseClaimListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.claimNumber'),
+        dataIndex: 'claimNumber',
+        key: 'claimNumber',
+        width: 120,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: ExpenseClaimListItem) =>
+                formatExpenseClaimEmployeeName(row.employee),
+            } satisfies ColumnsType<ExpenseClaimListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.title'),
+        dataIndex: 'title',
+        key: 'title',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.items'),
+        dataIndex: 'itemCount',
+        key: 'itemCount',
+        width: 80,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.total'),
+        dataIndex: 'totalAmountEtb',
+        key: 'totalAmountEtb',
+        width: 140,
+        align: 'right',
+        render: (value: number) => formatEtbAmount(value),
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: ExpenseClaimStatus) => (
+          <StatusBadge
+            label={formatExpenseClaimStatus(value, t)}
+            variant={expenseClaimStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.createdDate'),
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        width: 120,
+        render: (value: string) => formatProjectDate(value),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -161,12 +164,12 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search claim # or title"
+          placeholder={t('hr.placeholder.searchClaim')}
         />
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           style={{ minWidth: 180 }}
           options={statusOptions}
           value={statusFilter}
@@ -180,7 +183,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
             allowClear
             showSearch
             optionFilterProp="label"
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             options={(usersQuery.data?.data ?? []).map((user) => ({
               value: user.id,
@@ -200,7 +203,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           className="ml-auto"
           onClick={() => router.push('/approvals/new/expense-claim')}
         >
-          New Claim
+          {t('hr.buttons.newExpenseClaim')}
         </Button>
       </div>
 
@@ -219,8 +222,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<DollarOutlined />}
-                title="No expense claims"
-                description="Create a claim to start the reimbursement workflow."
+                title={t('hr.empty.noExpenseClaims')}
               />
             ),
           }}

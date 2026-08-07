@@ -129,131 +129,135 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<FlightApplicationListItem> = [
-    {
-      title: 'Application #',
-      dataIndex: 'applicationNumber',
-      key: 'applicationNumber',
-      width: 140,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Submitted by',
-            key: 'submitter',
-            render: (_: unknown, row: FlightApplicationListItem) =>
-              formatFlightSubmitterName(row.submitter),
-          } satisfies ColumnsType<FlightApplicationListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Route',
-      key: 'route',
-      render: (_: unknown, row: FlightApplicationListItem) => (
-        <span>
-          {row.originCity}, {row.originCountry}
-          <span style={{ margin: '0 4px', color: tokens.colorTextSecondary }}>to</span>
-          {row.destination}
-        </span>
-      ),
-    },
-    {
-      title: 'Departure',
-      dataIndex: 'departureDate',
-      key: 'departureDate',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-    {
-      title: 'Trip Type',
-      dataIndex: 'tripType',
-      key: 'tripType',
-      width: 120,
-      render: (value: string) => (
-        <StatusBadge
-          label={formatTripType(value, t)}
-          variant={tripTypeVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'International',
-      dataIndex: 'isInternational',
-      key: 'isInternational',
-      width: 110,
-      render: (value: boolean) =>
-        value ? (
-          <Tag color="volcano">International</Tag>
-        ) : (
-          <Tag>Domestic</Tag>
-        ),
-    },
-    {
-      title: 'Passengers',
-      dataIndex: 'passengerCount',
-      key: 'passengerCount',
-      width: 100,
-      align: 'center' as const,
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: FlightApplicationStatus) => (
-        <StatusBadge
-          label={formatFlightStatus(value, t)}
-          variant={flightStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Step',
-      key: 'currentStep',
-      width: 180,
-      render: (_: unknown, row: FlightApplicationListItem) => {
-        const label = getCurrentStepLabel(row, t);
-        if (!label || label === '—') {
-          return (
-            <span style={{ color: tokens.colorTextSecondary }}>—</span>
-          );
-        }
-        const color =
-          row.status === 'APPROVED'
-            ? label === 'Buying Ticket'
-              ? 'orange'
-              : label === 'Completed'
-                ? 'green'
-                : 'blue'
-            : 'blue';
-        return <Tag color={color}>{label}</Tag>;
+  const columns: ColumnsType<FlightApplicationListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.applicationNumber'),
+        dataIndex: 'applicationNumber',
+        key: 'applicationNumber',
+        width: 140,
       },
-    },
-    ...(canManage
-      ? [
-          {
-            title: '',
-            key: 'ticketAction',
-            width: 110,
-            render: (_: unknown, row: FlightApplicationListItem) =>
-              row.needsTicketAttachment ? (
-                <Tag
-                  color="orange"
-                  icon={<SendOutlined />}
-                  style={{ cursor: 'pointer' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/hr/flight-applications/${row.id}`);
-                  }}
-                >
-                  Attach Ticket
-                </Tag>
-              ) : null,
-          } satisfies ColumnsType<FlightApplicationListItem>[number],
-        ]
-      : []),
-  ];
-
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.submittedBy'),
+              key: 'submitter',
+              render: (_: unknown, row: FlightApplicationListItem) =>
+                formatFlightSubmitterName(row.submitter),
+            } satisfies ColumnsType<FlightApplicationListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.route'),
+        key: 'route',
+        render: (_: unknown, row: FlightApplicationListItem) => (
+          <span>
+            {row.originCity}, {row.originCountry}
+            <span style={{ margin: '0 4px', color: tokens.colorTextSecondary }}>
+              to
+            </span>
+            {row.destination}
+          </span>
+        ),
+      },
+      {
+        title: t('hr.table.departure'),
+        dataIndex: 'departureDate',
+        key: 'departureDate',
+        width: 120,
+        render: (value: string) => formatProjectDate(value),
+      },
+      {
+        title: t('hr.table.tripType'),
+        dataIndex: 'tripType',
+        key: 'tripType',
+        width: 120,
+        render: (value: string) => (
+          <StatusBadge
+            label={formatTripType(value, t)}
+            variant={tripTypeVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.international'),
+        dataIndex: 'isInternational',
+        key: 'isInternational',
+        width: 110,
+        render: (value: boolean) =>
+          value ? (
+            <Tag color="volcano">{t('hr.labels.international')}</Tag>
+          ) : (
+            <Tag>{t('hr.labels.domestic')}</Tag>
+          ),
+      },
+      {
+        title: t('hr.table.passengers'),
+        dataIndex: 'passengerCount',
+        key: 'passengerCount',
+        width: 100,
+        align: 'center' as const,
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: FlightApplicationStatus) => (
+          <StatusBadge
+            label={formatFlightStatus(value, t)}
+            variant={flightStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentStep'),
+        key: 'currentStep',
+        width: 180,
+        render: (_: unknown, row: FlightApplicationListItem) => {
+          const label = getCurrentStepLabel(row, t);
+          if (!label || label === '—') {
+            return (
+              <span style={{ color: tokens.colorTextSecondary }}>—</span>
+            );
+          }
+          const color =
+            row.status === 'APPROVED'
+              ? label === t('hr.labels.buyingTicket')
+                ? 'orange'
+                : label === t('hr.labels.completed')
+                  ? 'green'
+                  : 'blue'
+              : 'blue';
+          return <Tag color={color}>{label}</Tag>;
+        },
+      },
+      ...(canManage
+        ? [
+            {
+              title: '',
+              key: 'ticketAction',
+              width: 110,
+              render: (_: unknown, row: FlightApplicationListItem) =>
+                row.needsTicketAttachment ? (
+                  <Tag
+                    color="orange"
+                    icon={<SendOutlined />}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/hr/flight-applications/${row.id}`);
+                    }}
+                  >
+                    {t('hr.labels.attachTicket')}
+                  </Tag>
+                ) : null,
+            } satisfies ColumnsType<FlightApplicationListItem>[number],
+          ]
+        : []),
+    ],
+    [canManage, canViewHr, router, t],
+  );
   if (!canAccess) {
     return (
       <Alert
@@ -291,12 +295,12 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             resetPage();
           }}
           items={[
-            { key: 'ALL', label: 'All Applications' },
+            { key: 'ALL', label: t('hr.tabs.allApplications') },
             {
               key: 'NEEDS_TICKET',
               label: (
                 <span className="inline-flex items-center gap-1.5">
-                  Needs Ticket
+                  {t('hr.tabs.needsTicket')}
                   {needsTicketCount > 0 ? (
                     <span
                       className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
@@ -321,13 +325,13 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search application # or route"
+          placeholder={t('hr.placeholder.searchFlight')}
         />
         {!needsTicketTab ? (
           <Select
             mode="multiple"
             allowClear
-            placeholder="Status"
+            placeholder={t('hr.placeholder.status')}
             style={{ minWidth: 180 }}
             options={statusOptions}
             value={statusFilter}
@@ -339,7 +343,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         ) : null}
         <Select
           allowClear
-          placeholder="International / Domestic"
+          placeholder={`${t('hr.labels.international')} / ${t('hr.labels.domestic')}`}
           style={{ minWidth: 180 }}
           options={[
             { value: 'true', label: t('hr.labels.international') },
@@ -356,7 +360,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             allowClear
             showSearch
             optionFilterProp="label"
-            placeholder="Submitted by"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             options={(usersQuery.data?.data ?? []).map((user) => ({
               value: user.id,
@@ -370,7 +374,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           />
         ) : null}
         <DatePicker.RangePicker
-          placeholder={['Departure from', 'Departure to']}
           value={dateRange}
           onChange={(value) => {
             setDateRange(value);
@@ -385,7 +388,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             className="ml-auto"
             onClick={() => router.push('/approvals/new/flight-application')}
           >
-            {t('pages.hr.flight.new')}
+            {t('hr.buttons.newFlightApplication')}
           </Button>
         ) : null}
       </div>
@@ -405,16 +408,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<SendOutlined />}
-                title={
-                  needsTicketTab
-                    ? 'No applications need tickets'
-                    : 'No flight applications'
-                }
-                description={
-                  needsTicketTab
-                    ? 'Approved applications awaiting ticket booking will appear here.'
-                    : 'Submit a new flight application to start the approval process.'
-                }
+                title={t('hr.empty.noFlightApplications')}
               />
             ),
           }}

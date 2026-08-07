@@ -8,6 +8,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useCreateExpenseClaim } from '@/lib/query/expense-claim';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface ClaimFormValues {
   title: string;
@@ -20,6 +21,7 @@ interface ClaimFormValues {
  * items (with live currency conversion) and submit for approval.
  */
 export default function ExpenseClaimFormContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<ClaimFormValues>();
@@ -44,13 +46,15 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
       description="Start with claim details, then add line items with receipts on the next page."
       extra={
         <Space>
-          <Button onClick={() => router.push('/approvals/new')}>Cancel</Button>
+          <Button onClick={() => router.push('/approvals/new')}>
+            {t('hr.buttons.cancel')}
+          </Button>
           <Button
             type="primary"
             loading={createMutation.isPending}
             onClick={() => form.submit()}
           >
-            Continue
+            {t('hr.buttons.next')}
           </Button>
         </Space>
       }
@@ -69,7 +73,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
       ) : null}
 
       <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-        <SectionCard title="Claim Details" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
           <Form
             form={form}
             layout="vertical"
@@ -77,12 +81,12 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
           >
             <Form.Item
               name="title"
-              label="Title"
+              label={t('hr.form.title')}
               rules={[{ required: true, message: 'Enter a title for this claim' }]}
             >
-              <Input placeholder="e.g. Site visit expenses - August 2026" maxLength={200} />
+              <Input placeholder={t('hr.placeholder.enterTitle')} maxLength={200} />
             </Form.Item>
-            <Form.Item name="description" label="Description">
+            <Form.Item name="description" label={t('hr.form.description')}>
               <Input.TextArea rows={4} maxLength={4000} showCount />
             </Form.Item>
           </Form>

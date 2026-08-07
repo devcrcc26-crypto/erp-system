@@ -110,6 +110,84 @@ export default function ExpenseClaimDetailPageContent({
     }
   }
 
+  const columns: ColumnsType<ExpenseClaimItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.date'),
+        dataIndex: 'expenseDate',
+        key: 'expenseDate',
+        width: 110,
+        render: (v: string) => formatProjectDate(v),
+      },
+      {
+        title: t('hr.table.category'),
+        dataIndex: 'category',
+        key: 'category',
+        width: 140,
+      },
+      {
+        title: t('hr.table.description'),
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.amount'),
+        key: 'amount',
+        width: 130,
+        align: 'right',
+        render: (_: unknown, row: ExpenseClaimItem) =>
+          formatCurrencyAmount(row.amount, row.currency),
+      },
+      {
+        title: t('hr.table.etbEquivalent'),
+        dataIndex: 'amountEtb',
+        key: 'amountEtb',
+        width: 140,
+        align: 'right',
+        render: (v: number) => formatEtbAmount(v),
+      },
+      {
+        title: t('hr.table.receipt'),
+        key: 'receipt',
+        width: 100,
+        render: (_: unknown, row: ExpenseClaimItem) =>
+          row.receipt ? (
+            <AttachmentDownloadList documents={[row.receipt]} />
+          ) : (
+            <span className="text-[var(--color-red-400)] text-xs">Missing</span>
+          ),
+      },
+      ...(canEdit
+        ? [
+            {
+              title: t('hr.table.actions'),
+              key: 'actions',
+              width: 90,
+              render: (_: unknown, row: ExpenseClaimItem) => (
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<Pencil size={14} />}
+                    onClick={() => openEditItem(row)}
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<Trash2 size={14} />}
+                    onClick={() => setDeleteItemId(row.id)}
+                  />
+                </div>
+              ),
+            } satisfies ColumnsType<ExpenseClaimItem>[number],
+          ]
+        : []),
+    ],
+    [canEdit, t],
+  );
+
   if (detailQuery.isLoading) {
     return <Skeleton active paragraph={{ rows: 8 }} />;
   }
@@ -132,71 +210,6 @@ export default function ExpenseClaimDetailPageContent({
       />
     );
   }
-
-  const columns: ColumnsType<ExpenseClaimItem> = [
-    {
-      title: 'Date',
-      dataIndex: 'expenseDate',
-      key: 'expenseDate',
-      width: 110,
-      render: (v: string) => formatProjectDate(v),
-    },
-    { title: 'Category', dataIndex: 'category', key: 'category', width: 140 },
-    { title: 'Description', dataIndex: 'description', key: 'description', ellipsis: true },
-    {
-      title: 'Amount',
-      key: 'amount',
-      width: 130,
-      align: 'right',
-      render: (_: unknown, row: ExpenseClaimItem) =>
-        formatCurrencyAmount(row.amount, row.currency),
-    },
-    {
-      title: 'ETB Equivalent',
-      dataIndex: 'amountEtb',
-      key: 'amountEtb',
-      width: 140,
-      align: 'right',
-      render: (v: number) => formatEtbAmount(v),
-    },
-    {
-      title: 'Receipt',
-      key: 'receipt',
-      width: 100,
-      render: (_: unknown, row: ExpenseClaimItem) =>
-        row.receipt ? (
-          <AttachmentDownloadList documents={[row.receipt]} />
-        ) : (
-          <span className="text-[var(--color-red-400)] text-xs">Missing</span>
-        ),
-    },
-    ...(canEdit
-      ? [
-          {
-            title: 'Actions',
-            key: 'actions',
-            width: 90,
-            render: (_: unknown, row: ExpenseClaimItem) => (
-              <div className="flex items-center gap-1">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Pencil size={14} />}
-                  onClick={() => openEditItem(row)}
-                />
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setDeleteItemId(row.id)}
-                />
-              </div>
-            ),
-          } satisfies ColumnsType<ExpenseClaimItem>[number],
-        ]
-      : []),
-  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -232,7 +245,7 @@ export default function ExpenseClaimDetailPageContent({
             />
             {canCancel ? (
               <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-                Cancel
+                {t('hr.buttons.cancel')}
               </Button>
             ) : null}
             {canEdit ? (
@@ -242,7 +255,7 @@ export default function ExpenseClaimDetailPageContent({
                 disabled={!canSubmit}
                 onClick={() => setConfirmSubmit(true)}
               >
-                Submit for approval
+                {t('hr.buttons.submitClaim')}
               </Button>
             ) : null}
           </div>
@@ -252,7 +265,7 @@ export default function ExpenseClaimDetailPageContent({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
         <div className="flex flex-col gap-4">
           {claim.description ? (
-            <SectionCard title="Description" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.form.description')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap m-0">
                 {claim.description}
               </p>
@@ -260,11 +273,11 @@ export default function ExpenseClaimDetailPageContent({
           ) : null}
 
           <SectionCard
-            title="Expense Items"
+            title={t('hr.section.items')}
             action={
               canEdit ? (
                 <Button type="primary" size="small" onClick={openAddItem}>
-                  Add Item
+                  {t('hr.buttons.addItem')}
                 </Button>
               ) : undefined
             }
@@ -278,17 +291,13 @@ export default function ExpenseClaimDetailPageContent({
                 pagination={false}
                 locale={{
                   emptyText: (
-                    <Empty
-                      description={
-                        canEdit ? 'Add expense items to this claim' : 'No items'
-                      }
-                    />
+                    <Empty description={t('hr.empty.noItems')} />
                   ),
                 }}
               />
               <div className="flex justify-end items-center gap-2 mt-3 pt-3 border-t border-[rgba(0,0,0,0.06)]">
                 <span className="text-sm text-[var(--color-text-secondary)]">
-                  Total ({claim.items.length} item{claim.items.length === 1 ? '' : 's'})
+                  {t('hr.table.total')} ({claim.items.length})
                 </span>
                 <span className="text-base font-bold text-[var(--color-text-primary)]">
                   {formatEtbAmount(claim.totalAmountEtb)}
@@ -308,12 +317,12 @@ export default function ExpenseClaimDetailPageContent({
             <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
               <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                  Approval Chain
+                  {t('hr.section.approvalChain')}
                 </h3>
               </div>
               <div className="px-5 py-4">
                 <p className="text-sm text-[var(--color-text-tertiary)]">
-                  Approval chain appears after submission.
+                  {t('hr.empty.noApprovalChain')}
                 </p>
               </div>
             </div>

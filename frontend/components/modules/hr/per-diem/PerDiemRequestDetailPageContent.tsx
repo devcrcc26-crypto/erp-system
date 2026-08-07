@@ -125,7 +125,7 @@ export default function PerDiemRequestDetailPageContent({
             />
             {canCancel ? (
               <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-                Cancel
+                {t('hr.buttons.cancel')}
               </Button>
             ) : null}
           </div>
@@ -134,7 +134,7 @@ export default function PerDiemRequestDetailPageContent({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
         <div className="flex flex-col gap-4">
-          <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">

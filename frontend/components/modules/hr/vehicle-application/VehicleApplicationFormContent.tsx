@@ -5,8 +5,10 @@ import { Button } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import VehicleApplicationForm from '@/components/modules/hr/vehicle-application/VehicleApplicationForm';
 import type { VehicleApplicationDetail } from '@/lib/api/vehicle-application.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function VehicleApplicationFormContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
 
   function handleSuccess(created: VehicleApplicationDetail): void {
@@ -19,10 +21,12 @@ export default function VehicleApplicationFormContent(): React.ReactNode {
 
   return (
     <FormLayout
-      title="New Vehicle Application"
+      title={t('hr.buttons.newVehicleApplication')}
       description="Request a company vehicle for business travel. Select dates first to check availability."
       extra={
-        <Button onClick={() => router.push('/approvals/new')}>Cancel</Button>
+        <Button onClick={() => router.push('/approvals/new')}>
+          {t('hr.buttons.cancel')}
+        </Button>
       }
     >
       <VehicleApplicationForm onSuccess={handleSuccess} />

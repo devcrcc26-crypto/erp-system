@@ -1,6 +1,7 @@
 'use client';
 
 import { Col, Input, InputNumber, Row, Typography } from 'antd';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
 import { formatEtb } from '@/lib/utils/business-trip-display';
 import type { BusinessTripPurposeBudgetValues } from './business-trip-stepper.types';
@@ -15,6 +16,8 @@ export default function BusinessTripPurposeBudgetStep({
   values: BusinessTripPurposeBudgetValues;
   onChange: (next: BusinessTripPurposeBudgetValues) => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
   function patch(partial: Partial<BusinessTripPurposeBudgetValues>): void {
     onChange({ ...values, ...partial });
   }
@@ -35,14 +38,14 @@ export default function BusinessTripPurposeBudgetStep({
         }}
       >
         <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          Trip Purpose
+          {t('hr.labels.purpose')}
         </Typography.Title>
 
         <div className="mb-4">
           <Typography.Text
             style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
           >
-            Purpose of Travel{' '}
+            {t('hr.form.purpose')}{' '}
             <span style={{ color: tokens.colorRed600 }}>*</span>
           </Typography.Text>
           <Input.TextArea
@@ -51,7 +54,7 @@ export default function BusinessTripPurposeBudgetStep({
             showCount
             value={values.purpose}
             onChange={(e) => patch({ purpose: e.target.value })}
-            placeholder="Describe the business reason for travel"
+            placeholder={t('hr.placeholder.enterPurpose')}
           />
         </div>
 
@@ -61,12 +64,12 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Host Organization
+                {t('hr.form.hostOrganization')}
               </Typography.Text>
               <Input
                 value={values.hostOrganization}
                 onChange={(e) => patch({ hostOrganization: e.target.value })}
-                placeholder="Organization hosting the visit"
+                placeholder={t('hr.form.hostOrganization')}
                 maxLength={200}
               />
             </div>
@@ -76,12 +79,12 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Host Contact
+                {t('hr.form.hostContact')}
               </Typography.Text>
               <Input
                 value={values.hostContact}
                 onChange={(e) => patch({ hostContact: e.target.value })}
-                placeholder="Contact name / phone / email"
+                placeholder={t('hr.form.hostContact')}
                 maxLength={200}
               />
             </div>
@@ -92,7 +95,7 @@ export default function BusinessTripPurposeBudgetStep({
           <Typography.Text
             style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
           >
-            Expected Outcomes
+            {t('hr.form.expectedOutcomes')}
           </Typography.Text>
           <Input.TextArea
             rows={3}
@@ -100,7 +103,7 @@ export default function BusinessTripPurposeBudgetStep({
             showCount
             value={values.expectedOutcomes}
             onChange={(e) => patch({ expectedOutcomes: e.target.value })}
-            placeholder="What outcomes are expected from this trip?"
+            placeholder={t('hr.form.expectedOutcomes')}
           />
         </div>
 
@@ -108,7 +111,7 @@ export default function BusinessTripPurposeBudgetStep({
           <Typography.Text
             style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
           >
-            Itinerary
+            {t('hr.form.itinerary')}
           </Typography.Text>
           <Input.TextArea
             rows={3}
@@ -116,7 +119,7 @@ export default function BusinessTripPurposeBudgetStep({
             showCount
             value={values.itinerary}
             onChange={(e) => patch({ itinerary: e.target.value })}
-            placeholder="Outline the planned itinerary"
+            placeholder={t('hr.form.itinerary')}
           />
         </div>
       </div>
@@ -129,7 +132,7 @@ export default function BusinessTripPurposeBudgetStep({
         }}
       >
         <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          Budget Estimate
+          {t('hr.section.budgetEstimate')}
         </Typography.Title>
 
         <Row gutter={16}>
@@ -138,7 +141,7 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Estimated Flight Cost
+                {t('hr.form.estimatedFlightCost')}
               </Typography.Text>
               <InputNumber
                 className="w-full"
@@ -157,7 +160,7 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Estimated Accommodation Cost
+                {t('hr.form.estimatedAccommodationCost')}
               </Typography.Text>
               <InputNumber
                 className="w-full"
@@ -179,7 +182,7 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Estimated Per Diem
+                {t('hr.form.estimatedPerDiem')}
               </Typography.Text>
               <InputNumber
                 className="w-full"
@@ -198,7 +201,7 @@ export default function BusinessTripPurposeBudgetStep({
               <Typography.Text
                 style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
               >
-                Estimated Other Cost
+                {t('hr.form.estimatedOtherCost')}
               </Typography.Text>
               <InputNumber
                 className="w-full"
@@ -222,7 +225,7 @@ export default function BusinessTripPurposeBudgetStep({
           }}
         >
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Estimated Total
+            {t('hr.form.estimatedTotal')}
           </Typography.Text>
           <Typography.Title level={4} style={{ margin: '4px 0 0' }}>
             {formatEtb(estimatedTotal)}

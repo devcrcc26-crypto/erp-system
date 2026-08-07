@@ -78,79 +78,82 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<VehicleApplicationListItem> = [
-    {
-      title: 'App #',
-      dataIndex: 'applicationNumber',
-      key: 'applicationNumber',
-      width: 110,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: VehicleApplicationListItem) =>
-              formatVehicleApplicationEmployeeName(row.employee),
-          } satisfies ColumnsType<VehicleApplicationListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Vehicle',
-      key: 'vehicle',
-      width: 130,
-      render: (_: unknown, row: VehicleApplicationListItem) =>
-        row.vehicle?.plateNumber ?? '-',
-    },
-    {
-      title: 'Destination',
-      dataIndex: 'destination',
-      key: 'destination',
-      ellipsis: true,
-    },
-    {
-      title: 'Departure',
-      dataIndex: 'departureDatetime',
-      key: 'departureDatetime',
-      width: 140,
-      render: (v: string) => formatProjectDate(v),
-    },
-    {
-      title: 'Return',
-      dataIndex: 'returnDatetime',
-      key: 'returnDatetime',
-      width: 140,
-      render: (v: string) => formatProjectDate(v),
-    },
-    {
-      title: 'Passengers',
-      dataIndex: 'passengerCount',
-      key: 'passengerCount',
-      width: 100,
-      align: 'right',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: VehicleApplicationStatus) => (
-        <StatusBadge
-          label={formatVehicleApplicationStatus(value, t)}
-          variant={vehicleApplicationStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Tier',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 140,
-      ellipsis: true,
-      render: (_: string | null | undefined, row: VehicleApplicationListItem) =>
-        row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '-'),
-    },
-  ];
+  const columns: ColumnsType<VehicleApplicationListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.applicationNumber'),
+        dataIndex: 'applicationNumber',
+        key: 'applicationNumber',
+        width: 110,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: VehicleApplicationListItem) =>
+                formatVehicleApplicationEmployeeName(row.employee),
+            } satisfies ColumnsType<VehicleApplicationListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.vehicle'),
+        key: 'vehicle',
+        width: 130,
+        render: (_: unknown, row: VehicleApplicationListItem) =>
+          row.vehicle?.plateNumber ?? '-',
+      },
+      {
+        title: t('hr.table.destination'),
+        dataIndex: 'destination',
+        key: 'destination',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.departure'),
+        dataIndex: 'departureDatetime',
+        key: 'departureDatetime',
+        width: 140,
+        render: (v: string) => formatProjectDate(v),
+      },
+      {
+        title: t('hr.labels.return'),
+        dataIndex: 'returnDatetime',
+        key: 'returnDatetime',
+        width: 140,
+        render: (v: string) => formatProjectDate(v),
+      },
+      {
+        title: t('hr.table.passengers'),
+        dataIndex: 'passengerCount',
+        key: 'passengerCount',
+        width: 100,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: VehicleApplicationStatus) => (
+          <StatusBadge
+            label={formatVehicleApplicationStatus(value, t)}
+            variant={vehicleApplicationStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        dataIndex: 'currentTierLabel',
+        key: 'currentTierLabel',
+        width: 140,
+        ellipsis: true,
+        render: (_: string | null | undefined, row: VehicleApplicationListItem) =>
+          row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '-'),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -178,14 +181,14 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search app #, destination, or purpose"
+          placeholder={t('hr.placeholder.searchVehicle')}
           style={{ width: 260 }}
         />
 
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
@@ -200,7 +203,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             loading={usersQuery.isLoading}
             value={employeeId}
             onChange={(v) => {
@@ -229,7 +232,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
             setDateRange(v as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null);
             resetPage();
           }}
-          placeholder={['From date', 'To date']}
+          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
         />
 
         <div className="ml-auto">
@@ -238,7 +241,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
             icon={<PlusOutlined />}
             onClick={() => router.push('/approvals/new/vehicle-application')}
           >
-            New Application
+            {t('hr.buttons.newVehicleApplication')}
           </Button>
         </div>
       </div>
@@ -261,8 +264,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<CarOutlined />}
-              title="No vehicle applications found"
-              description="Submit a new vehicle application to get started."
+              title={t('hr.empty.noVehicleApplications')}
             />
           ),
         }}

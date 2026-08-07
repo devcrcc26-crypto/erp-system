@@ -39,8 +39,8 @@ export default function FlightSummary({
         <Descriptions.Item label={t('hr.labels.tripType')}>
           {formatTripType(tripDetails.tripType, t)}
         </Descriptions.Item>
-        <Descriptions.Item label="International">
-          {tripDetails.isInternational ? 'Yes' : 'No'}
+        <Descriptions.Item label={t('hr.labels.international')}>
+          {tripDetails.isInternational ? t('hr.labels.yes') : t('hr.labels.no')}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.origin')}>
           {[tripDetails.originCity, tripDetails.originCountry]
@@ -58,7 +58,7 @@ export default function FlightSummary({
         <Descriptions.Item label={t('hr.labels.return')}>
           {tripDetails.returnDate
             ? formatProjectDate(tripDetails.returnDate.format('YYYY-MM-DD'))
-            : 'One Way'}
+            : t('hr.tripType.ONE_WAY')}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.purpose')} span={2}>
           {tripDetails.purpose || '—'}
@@ -78,7 +78,7 @@ export default function FlightSummary({
           {additional.perDiemRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
         </Descriptions.Item>
         {additional.files.length > 0 ? (
-          <Descriptions.Item label="Attachments" span={2}>
+          <Descriptions.Item label={t('hr.section.attachments')} span={2}>
             {additional.files.map((f) => f.name).join(', ')}
           </Descriptions.Item>
         ) : null}

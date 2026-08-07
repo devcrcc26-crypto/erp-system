@@ -13,6 +13,7 @@ import {
 } from '@/lib/query/expense-claim';
 import { formatCurrencyAmount, formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface ItemFormValues {
   category: string;
@@ -42,6 +43,7 @@ export default function ExpenseClaimItemModal({
   editingItem: ExpenseClaimItem | null;
   onClose: () => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<ItemFormValues>();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -124,23 +126,28 @@ export default function ExpenseClaimItemModal({
       >
         <Form.Item
           name="category"
-          label="Category"
+          label={t('hr.form.category')}
           rules={[{ required: true, message: 'Category is required' }]}
         >
-          <Input placeholder="e.g. Travel, Meals, Accommodation" maxLength={100} />
+          <Input placeholder={t('hr.placeholder.enterCategory')} maxLength={100} />
         </Form.Item>
 
         <Form.Item
           name="description"
-          label="Description"
+          label={t('hr.form.description')}
           rules={[{ required: true, message: 'Description is required' }]}
         >
-          <Input.TextArea rows={2} maxLength={500} showCount />
+          <Input.TextArea
+            rows={2}
+            maxLength={500}
+            showCount
+            placeholder={t('hr.placeholder.enterDescription')}
+          />
         </Form.Item>
 
         <Form.Item
           name="expenseDate"
-          label="Expense Date"
+          label={t('hr.form.expenseDate')}
           rules={[{ required: true, message: 'Expense date is required' }]}
         >
           <DatePicker className="w-full" format="DD/MM/YYYY" />
@@ -149,14 +156,14 @@ export default function ExpenseClaimItemModal({
         <div className="grid grid-cols-2 gap-3">
           <Form.Item
             name="amount"
-            label="Amount"
+            label={t('hr.form.amount')}
             rules={[{ required: true, message: 'Amount is required' }]}
           >
             <InputNumber className="w-full" min={0.01} precision={2} />
           </Form.Item>
           <Form.Item
             name="currency"
-            label="Currency"
+            label={t('hr.form.currency')}
             rules={[{ required: true, message: 'Currency is required' }]}
           >
             <Select options={CURRENCY_OPTIONS} />
@@ -168,7 +175,7 @@ export default function ExpenseClaimItemModal({
             type="info"
             showIcon
             className="mb-4"
-            title={`ETB Equivalent: ${formatEtbAmount(etbPreview)}${
+            title={`${t('hr.form.etbEquivalent')}: ${formatEtbAmount(etbPreview)}${
               currency && currency !== 'ETB' && amount
                 ? ` (${formatCurrencyAmount(amount, currency)})`
                 : ''
@@ -177,7 +184,7 @@ export default function ExpenseClaimItemModal({
         ) : null}
 
         <Form.Item
-          label="Receipt"
+          label={t('hr.form.receipt')}
           required={!editingItem}
           extra={
             editingItem?.receipt

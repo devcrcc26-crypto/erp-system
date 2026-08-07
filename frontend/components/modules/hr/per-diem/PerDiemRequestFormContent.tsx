@@ -14,6 +14,7 @@ import { useCurrencyRates } from '@/lib/query/currency';
 import { useActivePerDiemRates, useSubmitPerDiemRequest } from '@/lib/query/per-diem';
 import { formatCurrencyAmount, formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface PerDiemFormValues {
   destinationCategory: string;
@@ -29,6 +30,7 @@ interface PerDiemFormValues {
  * destination category, dates, and optionally links an approved trip.
  */
 export default function PerDiemRequestFormContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<PerDiemFormValues>();
@@ -109,17 +111,17 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
 
   return (
     <FormLayout
-      title="New Per Diem Request"
+      title={t('hr.buttons.newPerDiem')}
       description="Daily allowance based on your destination category. Amount auto-calculates from days × rate."
       extra={
         <Space>
-          <Button onClick={() => router.push('/approvals/new')}>Cancel</Button>
+          <Button onClick={() => router.push('/approvals/new')}>{t('hr.buttons.cancel')}</Button>
           <Button
             type="primary"
             loading={submitMutation.isPending}
             onClick={() => form.submit()}
           >
-            Submit
+            {t('hr.buttons.submitRequest')}
           </Button>
         </Space>
       }
@@ -138,7 +140,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
       ) : null}
 
       <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-        <SectionCard title="Per Diem Details" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
           <Form
             form={form}
             layout="vertical"
@@ -146,12 +148,12 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
           >
             <Form.Item
               name="destinationCategory"
-              label="Destination Category"
+              label={t('hr.form.destinationCategory')}
               rules={[{ required: true, message: 'Select a destination category' }]}
             >
               <Select
                 loading={ratesQuery.isLoading}
-                placeholder="Select destination category"
+                placeholder={t('hr.placeholder.selectDestinationCategory')}
                 options={(ratesQuery.data ?? []).map((rate) => ({
                   value: rate.destinationCategory,
                   label: `${rate.destinationCategory} - ${formatCurrencyAmount(rate.dailyRate, rate.currency)}/day`,
@@ -161,40 +163,40 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
 
             <Form.Item
               name="destination"
-              label="Destination"
+              label={t('hr.form.specificDestination')}
               rules={[{ required: true, message: 'Enter the specific destination' }]}
             >
-              <Input placeholder="e.g. Nairobi, Kenya" maxLength={200} />
+              <Input placeholder={t('hr.placeholder.enterDestination')} maxLength={200} />
             </Form.Item>
 
             <Form.Item
               name="dateRange"
-              label="Travel Dates"
+              label={`${t('hr.form.startDate')} / ${t('hr.form.endDate')}`}
               rules={[{ required: true, message: 'Select start and end dates' }]}
             >
               <DatePicker.RangePicker className="w-full" />
             </Form.Item>
 
-            <Form.Item name="linkedTravel" label="Linked Travel (optional)">
+            <Form.Item name="linkedTravel" label={t('hr.form.linkedTravel')}>
               <Select
                 allowClear
-                placeholder="Link to an approved flight or business trip"
+                placeholder={t('hr.placeholder.selectLinkedTravel')}
                 options={travelOptions}
               />
             </Form.Item>
 
-            <Form.Item name="notes" label="Notes">
-              <Input.TextArea rows={3} maxLength={2000} showCount />
+            <Form.Item name="notes" label={t('hr.form.notes')}>
+              <Input.TextArea rows={3} maxLength={2000} showCount placeholder={t('hr.placeholder.enterNotes')} />
             </Form.Item>
           </Form>
         </SectionCard>
 
         {selectedRate && days > 0 ? (
-          <SectionCard title="Estimated Amount" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.form.estimatedTotal')} bodyClassName="px-5 py-4">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Days
+                  {t('hr.table.days')}
                 </dt>
                 <dd className="text-sm font-semibold text-[var(--color-text-primary)]">
                   {days}
@@ -202,7 +204,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Daily Rate
+                  {t('hr.form.dailyRate')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {formatCurrencyAmount(selectedRate.dailyRate, selectedRate.currency)}
@@ -210,7 +212,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Total Amount
+                  {t('hr.form.totalAmount')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {formatCurrencyAmount(totalAmount, selectedRate.currency)}
@@ -218,7 +220,7 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  ETB Equivalent
+                  {t('hr.form.etbEquivalent')}
                 </dt>
                 <dd className="text-base font-bold text-[var(--color-text-primary)]">
                   {formatEtbAmount(totalAmountEtb)}

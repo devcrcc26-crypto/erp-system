@@ -59,7 +59,7 @@ function AckStatus({
     return (
       <div className="flex flex-col items-end gap-0.5">
         <Tag color="success" className="m-0">
-          Acknowledged
+          {t('hr.acknowledgement.ACKNOWLEDGED')}
         </Tag>
         {passenger.acknowledgedAt ? (
           <span className="text-xs text-[var(--color-text-tertiary)]">
@@ -71,7 +71,7 @@ function AckStatus({
   }
 
   if (!hasTicket) {
-    return <Tag className="m-0">Awaiting Ticket</Tag>;
+    return <Tag className="m-0">{t('hr.labels.pending')}</Tag>;
   }
 
   if (currentUserId === passenger.employeeId) {
@@ -82,14 +82,14 @@ function AckStatus({
         loading={acknowledgePending && acknowledgeVariables === passenger.id}
         onClick={() => onAcknowledge(passenger.id)}
       >
-        {t('hr.labels.acknowledgeReceipt')}
+        {t('hr.buttons.acknowledgeReceipt')}
       </Button>
     );
   }
 
   return (
     <Tag color="orange" className="m-0">
-      Pending Ack
+      {t('hr.acknowledgement.PENDING')}
     </Tag>
   );
 }
@@ -249,7 +249,7 @@ export default function BusinessTripTicketAssignmentPanel({
               }));
             }}
           >
-            Replace
+            {t('hr.buttons.replaceTicket')}
           </Button>
           <Popconfirm
             title={t('hr.labels.removeTicket')}
@@ -267,7 +267,7 @@ export default function BusinessTripTicketAssignmentPanel({
                 removePassenger.variables === row.id
               }
             >
-              {t('hr.labels.remove')}
+              {t('hr.buttons.removeTicket')}
             </Button>
           </Popconfirm>
         </div>
@@ -287,7 +287,7 @@ export default function BusinessTripTicketAssignmentPanel({
             }
             accept={TICKET_ACCEPT}
             multiple
-            placeholder="Choose ticket files"
+            placeholder={t('hr.labels.attachTicket')}
             compact
             disabled={
               attachPassenger.isPending && uploadingPassengerId === row.id
@@ -304,7 +304,9 @@ export default function BusinessTripTicketAssignmentPanel({
               }
               onClick={() => void handleUploadPassenger(row.id)}
             >
-              {isReplacing ? 'Upload Replacement' : 'Upload'}
+              {isReplacing
+                ? t('hr.buttons.replaceTicket')
+                : t('hr.buttons.uploadTicket')}
             </Button>
           ) : null}
           {isReplacing ? (
@@ -320,7 +322,7 @@ export default function BusinessTripTicketAssignmentPanel({
                 });
               }}
             >
-              Cancel
+              {t('hr.buttons.cancel')}
             </Button>
           ) : null}
         </div>
@@ -332,24 +334,26 @@ export default function BusinessTripTicketAssignmentPanel({
     <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
       <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-          Tickets
+          {t('hr.table.ticket')}
         </h3>
         <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
           <span className="inline-flex items-center gap-1">
             <Ticket size={12} />
             {combinedTickets.length > 0
-              ? `${combinedTickets.length} combined`
-              : 'No combined'}
+              ? t('hr.section.combinedTicket')
+              : t('hr.empty.noTicket')}
           </span>
           <span className="text-[var(--color-border-secondary)]">·</span>
           <span className="inline-flex items-center gap-1">
             <Users size={12} />
-            {passengersWithOwnTicket}/{trip.passengers.length} individual
+            {passengersWithOwnTicket}/{trip.passengers.length}{' '}
+            {t('hr.section.individualTickets')}
           </span>
           <span className="text-[var(--color-border-secondary)]">·</span>
           <span className="inline-flex items-center gap-1">
             <CheckCircle2 size={12} />
-            {acknowledgedCount}/{trip.passengers.length} acknowledged
+            {acknowledgedCount}/{trip.passengers.length}{' '}
+            {t('hr.table.acknowledged')}
           </span>
         </div>
       </div>
@@ -364,18 +368,18 @@ export default function BusinessTripTicketAssignmentPanel({
                 className="text-[var(--color-text-tertiary)] flex-shrink-0"
               />
               <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                Combined Ticket
+                {t('hr.section.combinedTicket')}
               </h4>
               {combinedTickets.length > 0 && !replacingCombined ? (
                 <Tag color="green" className="m-0">
-                  Attached
+                  {t('hr.labels.combinedTicket')}
                 </Tag>
               ) : (
-                <Tag className="m-0">Not attached</Tag>
+                <Tag className="m-0">{t('hr.empty.noTicket')}</Tag>
               )}
             </div>
             <p className="text-xs text-[var(--color-text-tertiary)] ml-[23px]">
-              One or more files covering all passengers
+              {t('hr.labels.uploadTickets')}
             </p>
           </div>
           {canUpload && combinedTickets.length > 0 && !replacingCombined ? (
@@ -387,7 +391,7 @@ export default function BusinessTripTicketAssignmentPanel({
                   setCombinedTicketFiles([]);
                 }}
               >
-                Replace
+                {t('hr.buttons.replaceTicket')}
               </Button>
               <Popconfirm
                 title={t('hr.labels.removeCombinedTicket')}
@@ -402,7 +406,7 @@ export default function BusinessTripTicketAssignmentPanel({
                   icon={<DeleteOutlined />}
                   loading={removeCombined.isPending}
                 >
-                  {t('hr.labels.remove')}
+                  {t('hr.buttons.removeTicket')}
                 </Button>
               </Popconfirm>
             </div>
@@ -420,7 +424,7 @@ export default function BusinessTripTicketAssignmentPanel({
               onChange={setCombinedTicketFiles}
               accept={TICKET_ACCEPT}
               multiple
-              placeholder="Upload combined ticket files (PDF or image)"
+              placeholder={t('hr.buttons.uploadCombinedTicket')}
               disabled={attachCombined.isPending}
             />
             {combinedTicketFiles.length > 0 || replacingCombined ? (
@@ -433,8 +437,8 @@ export default function BusinessTripTicketAssignmentPanel({
                     onClick={() => void handleUploadCombined()}
                   >
                     {replacingCombined
-                      ? 'Upload Replacement'
-                      : 'Upload Combined Ticket'}
+                      ? t('hr.buttons.replaceTicket')
+                      : t('hr.buttons.uploadCombinedTicket')}
                   </Button>
                 ) : null}
                 {replacingCombined ? (
@@ -446,7 +450,7 @@ export default function BusinessTripTicketAssignmentPanel({
                       setCombinedTicketFiles([]);
                     }}
                   >
-                    Cancel
+                    {t('hr.buttons.cancel')}
                   </Button>
                 ) : null}
               </div>
@@ -454,7 +458,7 @@ export default function BusinessTripTicketAssignmentPanel({
           </div>
         ) : (
           <p className="text-sm text-[var(--color-text-tertiary)] ml-0 sm:ml-[23px]">
-            No combined ticket attached yet.
+            {t('hr.empty.noTicket')}
           </p>
         )}
       </div>
@@ -468,12 +472,11 @@ export default function BusinessTripTicketAssignmentPanel({
               className="text-[var(--color-text-tertiary)] flex-shrink-0"
             />
             <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-              Individual Tickets
+              {t('hr.section.individualTickets')}
             </h4>
           </div>
           <p className="text-xs text-[var(--color-text-tertiary)] ml-[23px]">
-            Assign ticket files per passenger when not covered by the combined
-            ticket
+            {t('hr.labels.uploadTickets')}
           </p>
         </div>
 
@@ -497,11 +500,11 @@ export default function BusinessTripTicketAssignmentPanel({
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {hasOwnTicket ? (
                           <Tag color="green" className="m-0">
-                            Own ticket
+                            {t('hr.table.ticket')}
                           </Tag>
                         ) : combinedTickets.length > 0 ? (
                           <Tag color="blue" className="m-0">
-                            Covered by combined
+                            {t('hr.labels.coveredByCombined')}
                           </Tag>
                         ) : (
                           <Tag className="m-0">{t('hr.labels.noTicket')}</Tag>
@@ -522,7 +525,7 @@ export default function BusinessTripTicketAssignmentPanel({
                     <div className="rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] p-2.5">
                       <AttachmentDownloadList
                         documents={tickets}
-                        emptyLabel={t('hr.labels.noTicket')}
+                        emptyLabel={t('hr.empty.noTicket')}
                       />
                     </div>
                   ) : null}

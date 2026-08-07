@@ -119,69 +119,72 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<LeaveRequestListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 120,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: LeaveRequestListItem) =>
-              formatLeaveEmployeeName(row.employee),
-          } satisfies ColumnsType<LeaveRequestListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Leave type',
-      dataIndex: 'leaveType',
-      key: 'leaveType',
-      width: 140,
-      render: (value: LeaveType) => (
-        <StatusBadge
-          label={formatLeaveType(value, t)}
-          variant={leaveTypeVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Start',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-    {
-      title: 'End',
-      dataIndex: 'endDate',
-      key: 'endDate',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-    {
-      title: 'Days',
-      dataIndex: 'days',
-      key: 'days',
-      width: 80,
-      align: 'right',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: LeaveRequestStatus) => (
-        <StatusBadge
-          label={formatLeaveStatus(value, t)}
-          variant={leaveStatusVariant(value)}
-        />
-      ),
-    },
-  ];
+  const columns: ColumnsType<LeaveRequestListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 120,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: LeaveRequestListItem) =>
+                formatLeaveEmployeeName(row.employee),
+            } satisfies ColumnsType<LeaveRequestListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.leaveType'),
+        dataIndex: 'leaveType',
+        key: 'leaveType',
+        width: 140,
+        render: (value: LeaveType) => (
+          <StatusBadge
+            label={formatLeaveType(value, t)}
+            variant={leaveTypeVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.startDate'),
+        dataIndex: 'startDate',
+        key: 'startDate',
+        width: 120,
+        render: (value: string) => formatProjectDate(value),
+      },
+      {
+        title: t('hr.table.endDate'),
+        dataIndex: 'endDate',
+        key: 'endDate',
+        width: 120,
+        render: (value: string) => formatProjectDate(value),
+      },
+      {
+        title: t('hr.table.days'),
+        dataIndex: 'days',
+        key: 'days',
+        width: 80,
+        align: 'right' as const,
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: LeaveRequestStatus) => (
+          <StatusBadge
+            label={formatLeaveStatus(value, t)}
+            variant={leaveStatusVariant(value)}
+          />
+        ),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (!canAccess) {
     return (
@@ -220,12 +223,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or reason"
+          placeholder={t('hr.placeholder.searchRequest')}
         />
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           style={{ minWidth: 180 }}
           options={statusOptions}
           value={statusFilter}
@@ -236,7 +239,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         />
         <Select
           allowClear
-          placeholder="Leave type"
+          placeholder={t('hr.placeholder.leaveType')}
           style={{ minWidth: 160 }}
           options={leaveTypeOptions}
           value={leaveType}
@@ -250,7 +253,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             allowClear
             showSearch
             optionFilterProp="label"
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             options={(usersQuery.data?.data ?? []).map((user) => ({
               value: user.id,
@@ -278,7 +281,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             className="ml-auto"
             onClick={() => setCreateOpen(true)}
           >
-            {t('pages.hr.leave.new')}
+            {t('hr.buttons.newLeaveRequest')}
           </Button>
         ) : null}
       </div>
@@ -298,8 +301,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<CalendarOutlined />}
-                title="No leave requests"
-                description="Create a leave request to start the approval flow."
+                title={t('hr.empty.noLeaveRequests')}
               />
             ),
           }}

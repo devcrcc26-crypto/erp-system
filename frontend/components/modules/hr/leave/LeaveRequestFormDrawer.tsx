@@ -146,7 +146,7 @@ export default function LeaveRequestFormDrawer({
   return (
     <Drawer
       open={open}
-      title="New Leave Request"
+      title={t('hr.buttons.newLeaveRequest')}
       size={520}
       className="erp-responsive-drawer"
       onClose={onClose}
@@ -157,7 +157,7 @@ export default function LeaveRequestFormDrawer({
           loading={submitMutation.isPending}
           onClick={() => form.submit()}
         >
-          Submit
+          {t('hr.buttons.submitRequest')}
         </Button>
       }
     >
@@ -183,7 +183,7 @@ export default function LeaveRequestFormDrawer({
       ) : null}
 
       <div className="flex flex-col gap-4">
-        <DrawerSection title="Leave details">
+        <DrawerSection title={t('hr.form.leaveDetails')}>
           <Form
             form={form}
             layout="vertical"
@@ -191,18 +191,18 @@ export default function LeaveRequestFormDrawer({
           >
             <Form.Item
               name="leaveType"
-              label="Leave Type"
+              label={t('hr.form.leaveType')}
               rules={[{ required: true, message: 'Select a leave type' }]}
             >
               <Select
                 options={leaveTypeOptions}
-                placeholder="Select leave type"
+                placeholder={t('hr.placeholder.selectLeaveType')}
               />
             </Form.Item>
 
             <Form.Item
               name="dateRange"
-              label="Leave Dates"
+              label={t('hr.form.leaveDates')}
               rules={[{ required: true, message: 'Select start and end dates' }]}
             >
               <DatePicker.RangePicker className="w-full" />
@@ -210,7 +210,7 @@ export default function LeaveRequestFormDrawer({
 
             <Form.Item
               name="days"
-              label="Days"
+              label={t('hr.form.days')}
               extra="Auto-calculated from dates; edit for half-days."
               rules={[
                 { required: true, message: 'Enter days' },
@@ -225,13 +225,22 @@ export default function LeaveRequestFormDrawer({
               />
             </Form.Item>
 
-            <Form.Item name="reason" label="Reason" style={{ marginBottom: 0 }}>
-              <Input.TextArea rows={4} maxLength={4000} showCount />
+            <Form.Item
+              name="reason"
+              label={t('hr.form.reason')}
+              style={{ marginBottom: 0 }}
+            >
+              <Input.TextArea
+                rows={4}
+                maxLength={4000}
+                showCount
+                placeholder={t('hr.placeholder.enterReason')}
+              />
             </Form.Item>
           </Form>
         </DrawerSection>
 
-        <DrawerSection title={`${year} balance`}>
+        <DrawerSection title={t('hr.section.leaveBalance')}>
           {balancesQuery.isLoading ? (
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
               Loading balance…
@@ -244,16 +253,16 @@ export default function LeaveRequestFormDrawer({
             >
               <Typography.Text>{formatLeaveType(leaveType, t)}</Typography.Text>
               <Typography.Text type="secondary">
-                Entitled: {selectedBalance.entitled}
+                {t('hr.labels.entitled')}: {selectedBalance.entitled}
               </Typography.Text>
               <Typography.Text type="secondary">
-                Used: {selectedBalance.used}
+                {t('hr.labels.used')}: {selectedBalance.used}
               </Typography.Text>
               <Typography.Text type="secondary">
-                Pending: {selectedBalance.pending}
+                {t('hr.labels.pending')}: {selectedBalance.pending}
               </Typography.Text>
               <Typography.Text strong>
-                Remaining: {selectedBalance.remaining}
+                {t('hr.labels.remaining')}: {selectedBalance.remaining}
               </Typography.Text>
             </Space>
           ) : (

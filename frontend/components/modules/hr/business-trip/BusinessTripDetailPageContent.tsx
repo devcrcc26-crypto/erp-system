@@ -138,7 +138,7 @@ function TripSummaryStrip({
     },
     {
       label: t('hr.labels.return'),
-      value: returnDate ? formatProjectDate(returnDate) : 'One way',
+      value: returnDate ? formatProjectDate(returnDate) : t('hr.tripType.ONE_WAY'),
     },
     {
       label: t('hr.labels.passengers'),
@@ -274,10 +274,13 @@ export default function BusinessTripDetailPageContent({
   ).length;
 
   const budgetRows = [
-    { label: 'Flight', value: trip.estimatedFlightCost },
-    { label: 'Accommodation', value: trip.estimatedAccommodationCost },
-    { label: 'Per Diem', value: trip.estimatedPerDiem },
-    { label: 'Other', value: trip.estimatedOtherCost },
+    { label: t('hr.labels.estimatedFlight'), value: trip.estimatedFlightCost },
+    {
+      label: t('hr.labels.estimatedAccommodation'),
+      value: trip.estimatedAccommodationCost,
+    },
+    { label: t('hr.labels.estimatedPerDiem'), value: trip.estimatedPerDiem },
+    { label: t('hr.labels.estimatedOther'), value: trip.estimatedOtherCost },
   ];
 
   const hasPurposeContent =
@@ -323,7 +326,7 @@ export default function BusinessTripDetailPageContent({
                     router.push(`/approvals/${trip.approvalRequestId}`)
                   }
                 >
-                  View in Approvals
+                  {t('hr.buttons.viewInApprovals')}
                 </Button>
               ) : null}
               {canCancel ? (
@@ -332,7 +335,7 @@ export default function BusinessTripDetailPageContent({
                   size="small"
                   onClick={() => setConfirmCancel(true)}
                 >
-                  Cancel
+                  {t('hr.buttons.cancel')}
                 </Button>
               ) : null}
             </div>
@@ -365,7 +368,7 @@ export default function BusinessTripDetailPageContent({
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
             <span>
-              Submitted by{' '}
+              {t('hr.table.submittedBy')}{' '}
               <span className="font-medium text-[var(--color-text-primary)]">
                 {formatBusinessTripSubmitterName(trip.submitter)}
               </span>
@@ -634,21 +637,21 @@ export default function BusinessTripDetailPageContent({
                           <Tag color="volcano" className="m-0">
                             {row.visaStatus
                               ? formatVisaStatus(row.visaStatus, t)
-                              : 'Visa Required'}
+                              : t('hr.form.visaRequired')}
                           </Tag>
                         ) : (
-                          <Tag className="m-0">No Visa</Tag>
+                          <Tag className="m-0">{t('hr.labels.notRequired')}</Tag>
                         )}
                         {hasOwnTicket ? (
                           <Tag color="green" className="m-0">
-                            Own Ticket
+                            {t('hr.table.ticket')}
                           </Tag>
                         ) : hasTicket ? (
                           <Tag color="blue" className="m-0">
-                            Combined Ticket
+                            {t('hr.labels.combinedTicket')}
                           </Tag>
                         ) : (
-                          <Tag className="m-0">No Ticket</Tag>
+                          <Tag className="m-0">{t('hr.labels.noTicket')}</Tag>
                         )}
                       </div>
                     </div>
@@ -656,7 +659,7 @@ export default function BusinessTripDetailPageContent({
                       <MetaItem label={t('hr.labels.passport')}>
                         {row.passportNumber ?? (
                           <span className="text-[var(--color-text-tertiary)]">
-                            Not provided
+                            —
                           </span>
                         )}
                       </MetaItem>
@@ -665,7 +668,7 @@ export default function BusinessTripDetailPageContent({
                           ? row.visaStatus
                             ? formatVisaStatus(row.visaStatus, t)
                             : t('hr.labels.required')
-                          : 'Not required'}
+                          : t('hr.labels.notRequired')}
                       </MetaItem>
                     </div>
                   </li>
@@ -686,7 +689,7 @@ export default function BusinessTripDetailPageContent({
               <AttachmentDownloadList documents={trip.documents} />
             ) : (
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                No supporting documents attached.
+                {t('hr.empty.noAttachments')}
               </p>
             )}
           </SectionCard>
@@ -710,7 +713,7 @@ export default function BusinessTripDetailPageContent({
               ))}
               <div className="flex justify-between items-center px-5 py-3 bg-[var(--color-surface-secondary)] gap-3">
                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  Total
+                  {t('hr.labels.estimatedTotal')}
                 </span>
                 <span className="text-base font-bold tabular-nums text-[var(--color-text-primary)]">
                   {formatEtb(trip.estimatedTotalCost)}
@@ -727,7 +730,7 @@ export default function BusinessTripDetailPageContent({
           ) : (
             <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                No approval workflow linked.
+                {t('hr.empty.noApprovalChain')}
               </p>
             </SectionCard>
           )}

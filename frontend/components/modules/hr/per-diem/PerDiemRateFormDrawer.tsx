@@ -90,14 +90,14 @@ export default function PerDiemRateFormDrawer({
   return (
     <Drawer
       open={open}
-      title={editingRate ? t('hr.labels.editRate') : t('hr.labels.addRate')}
+      title={editingRate ? t('hr.buttons.editRate') : t('hr.buttons.addRate')}
       size={480}
       className="erp-responsive-drawer"
       onClose={onClose}
       destroyOnHidden
       extra={
         <Button type="primary" loading={saving} onClick={() => form.submit()}>
-          {editingRate ? 'Save' : 'Create'}
+          {editingRate ? t('hr.buttons.save') : t('hr.buttons.addRate')}
         </Button>
       }
     >
@@ -108,7 +108,7 @@ export default function PerDiemRateFormDrawer({
       >
         <Form.Item
           name="destinationCategory"
-          label={t('hr.labels.destinationCategory')}
+          label={t('hr.form.destinationCategory')}
           rules={[{ required: true, message: 'Enter a destination category' }]}
         >
           <Input placeholder="e.g. Domestic, East Africa, Middle East" maxLength={100} />
@@ -117,21 +117,21 @@ export default function PerDiemRateFormDrawer({
         <div className="grid grid-cols-2 gap-3">
           <Form.Item
             name="dailyRate"
-            label={t('hr.labels.dailyRate')}
+            label={t('hr.form.dailyRate')}
             rules={[{ required: true, message: 'Enter the daily rate' }]}
           >
             <InputNumber className="w-full" min={0.01} precision={2} />
           </Form.Item>
           <Form.Item
             name="currency"
-            label="Currency"
+            label={t('hr.form.currency')}
             rules={[{ required: true, message: 'Select a currency' }]}
           >
             <Select options={CURRENCY_OPTIONS} />
           </Form.Item>
         </div>
 
-        <Form.Item name="description" label="Description">
+        <Form.Item name="description" label={t('hr.form.description')}>
           <Input.TextArea rows={3} maxLength={1000} showCount />
         </Form.Item>
 

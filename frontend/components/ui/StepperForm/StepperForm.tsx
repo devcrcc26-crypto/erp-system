@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Steps } from 'antd';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface StepperFormStep {
   title: string;
@@ -24,9 +25,11 @@ export interface StepperFormProps {
 export function StepperForm({
   steps,
   onSubmit,
-  submitLabel = 'Submit',
+  submitLabel,
   isSubmitting = false,
 }: StepperFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const resolvedSubmitLabel = submitLabel ?? t('hr.buttons.submitRequest');
   const [current, setCurrent] = useState(0);
   const [validating, setValidating] = useState(false);
 
@@ -89,7 +92,7 @@ export function StepperForm({
           onClick={handleBack}
           disabled={current === 0 || isSubmitting || validating}
         >
-          Back
+          {t('hr.buttons.back')}
         </Button>
         <div className="flex gap-2">
           {current < steps.length - 1 ? (
@@ -99,7 +102,7 @@ export function StepperForm({
               loading={validating}
               disabled={isSubmitting}
             >
-              Next
+              {t('hr.buttons.next')}
             </Button>
           ) : (
             <Button
@@ -108,7 +111,7 @@ export function StepperForm({
               loading={isSubmitting}
               disabled={validating}
             >
-              {submitLabel}
+              {resolvedSubmitLabel}
             </Button>
           )}
         </div>

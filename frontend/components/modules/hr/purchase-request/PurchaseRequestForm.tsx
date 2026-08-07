@@ -37,6 +37,7 @@ import {
   requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface Step1Values {
   title: string;
@@ -80,6 +81,7 @@ function nextKey(): string {
 export default function PurchaseRequestForm({
   onSuccess,
 }: PurchaseRequestFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -257,21 +259,21 @@ export default function PurchaseRequestForm({
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
-      title: 'Item',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Qty',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 70,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     {
-      title: 'Unit Price',
+      title: t('hr.table.unitPrice'),
       key: 'unitPrice',
       width: 130,
       align: 'right',
@@ -279,7 +281,7 @@ export default function PurchaseRequestForm({
         formatCurrencyAmount(row.unitPrice, row.currency),
     },
     {
-      title: 'Total (ETB)',
+      title: t('hr.table.total'),
       key: 'totalEtb',
       width: 130,
       align: 'right',
@@ -315,8 +317,8 @@ export default function PurchaseRequestForm({
       <Steps
         current={currentStep}
         items={[
-          { title: 'Request Details' },
-          { title: 'Line Items' },
+          { title: t('hr.section.requestDetails') },
+          { title: t('hr.section.items') },
           { title: 'Attachments & Submit' },
         ]}
         style={{ maxWidth: 560, margin: '0 auto' }}
@@ -328,7 +330,7 @@ export default function PurchaseRequestForm({
         style={{ display: currentStep === 0 ? undefined : 'none' }}
         aria-hidden={currentStep !== 0}
       >
-          <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
             <Form
               form={step1Form}
               layout="vertical"
@@ -337,40 +339,40 @@ export default function PurchaseRequestForm({
             >
               <Form.Item
                 name="title"
-                label="Title"
+                label={t('hr.form.title')}
                 rules={[{ required: true, message: 'Enter a title' }]}
               >
                 <Input
-                  placeholder="e.g. Office supplies — Q3 2026"
+                  placeholder={t('hr.placeholder.enterTitle')}
                   maxLength={200}
                 />
               </Form.Item>
 
               <Form.Item
                 name="justification"
-                label="Justification"
+                label={t('hr.form.justification')}
                 rules={[{ required: true, message: 'Provide a justification' }]}
               >
                 <Input.TextArea
                   rows={4}
                   maxLength={2000}
                   showCount
-                  placeholder="Explain why these items are needed"
+                  placeholder={t('hr.placeholder.enterJustification')}
                 />
               </Form.Item>
 
-              <Form.Item name="requiredByDate" label="Required By Date">
+              <Form.Item name="requiredByDate" label={t('hr.form.requiredByDate')}>
                 <DatePicker
                   style={{ width: '100%' }}
                   disabledDate={(d) => d.isBefore(dayjs(), 'day')}
                 />
               </Form.Item>
 
-              <Form.Item name="projectId" label="Project (optional)">
+              <Form.Item name="projectId" label={t('hr.form.project')}>
                 <Select
                   showSearch
                   allowClear
-                  placeholder="Select a project"
+                  placeholder={t('hr.placeholder.selectProject')}
                   options={projectOptions}
                   loading={projectsQuery.isLoading}
                   filterOption={(input, option) =>
@@ -383,13 +385,13 @@ export default function PurchaseRequestForm({
 
               <Form.Item
                 name="vendorName"
-                label="Vendor / Supplier Name (optional)"
+                label={t('hr.form.vendor')}
               >
                 <Input placeholder="e.g. Acme Supplies Co." maxLength={200} />
               </Form.Item>
 
               {vendorName ? (
-                <Form.Item name="vendorContact" label="Vendor Contact">
+                <Form.Item name="vendorContact" label={t('hr.form.vendorContact')}>
                   <Input placeholder="Phone or email" maxLength={200} />
                 </Form.Item>
               ) : null}
@@ -407,7 +409,7 @@ export default function PurchaseRequestForm({
       {currentStep === 1 ? (
         <div className="mx-auto w-full max-w-4xl flex flex-col gap-4">
           <SectionCard
-            title="Line Items"
+            title={t('hr.section.items')}
             bodyClassName="px-5 py-4"
             action={
               !showItemForm ? (
@@ -417,7 +419,7 @@ export default function PurchaseRequestForm({
                   icon={<PlusOutlined />}
                   onClick={openAddItem}
                 >
-                  Add Item
+                  {t('hr.buttons.addItem')}
                 </Button>
               ) : undefined
             }
@@ -437,38 +439,38 @@ export default function PurchaseRequestForm({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                     <Form.Item
                       name="itemName"
-                      label="Item Name"
+                      label={t('hr.form.itemName')}
                       rules={[{ required: true, message: 'Enter item name' }]}
                     >
                       <Input maxLength={200} />
                     </Form.Item>
-                    <Form.Item name="description" label="Description">
+                    <Form.Item name="description" label={t('hr.form.description')}>
                       <Input maxLength={500} />
                     </Form.Item>
                     <Form.Item
                       name="quantity"
-                      label="Quantity"
+                      label={t('hr.form.quantity')}
                       rules={[{ required: true, message: 'Enter quantity' }]}
                     >
                       <InputNumber min={0.001} style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item
                       name="unit"
-                      label="Unit"
+                      label={t('hr.form.unit')}
                       rules={[{ required: true, message: 'Enter unit (e.g. pcs)' }]}
                     >
                       <Input placeholder="pcs, kg, m, box…" maxLength={50} />
                     </Form.Item>
                     <Form.Item
                       name="unitPrice"
-                      label="Unit Price"
+                      label={t('hr.form.unitPrice')}
                       rules={[{ required: true, message: 'Enter unit price' }]}
                     >
                       <InputNumber min={0} style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item
                       name="currency"
-                      label="Currency"
+                      label={t('hr.form.currency')}
                       initialValue="ETB"
                       rules={[{ required: true }]}
                     >
@@ -478,7 +480,7 @@ export default function PurchaseRequestForm({
                 </Form>
                 <div className="flex justify-end gap-2">
                   <Button size="small" onClick={cancelItemForm}>
-                    Cancel
+                    {t('hr.buttons.cancel')}
                   </Button>
                   <Button
                     size="small"
@@ -498,7 +500,7 @@ export default function PurchaseRequestForm({
               dataSource={items}
               pagination={false}
               locale={{
-                emptyText: 'No items yet — click Add Item to start',
+                emptyText: t('hr.empty.noItems'),
               }}
               footer={
                 items.length > 0
@@ -519,7 +521,7 @@ export default function PurchaseRequestForm({
           </SectionCard>
 
           <div className="flex justify-between">
-            <Button onClick={() => setCurrentStep(0)}>Back</Button>
+            <Button onClick={() => setCurrentStep(0)}>{t('hr.buttons.back')}</Button>
             <Button type="primary" onClick={goToStep3}>
               Continue to Attachments
             </Button>
@@ -586,7 +588,7 @@ export default function PurchaseRequestForm({
           </SectionCard>
 
           <SectionCard
-            title="Supporting Documents (optional)"
+            title={t('hr.form.supportingDocuments')}
             bodyClassName="px-5 py-4"
           >
             <Typography.Text
@@ -606,14 +608,14 @@ export default function PurchaseRequestForm({
 
           <div className="flex justify-between">
             <Button disabled={submitting} onClick={() => setCurrentStep(1)}>
-              Back
+              {t('hr.buttons.back')}
             </Button>
             <Button
               type="primary"
               loading={submitting}
               onClick={() => void handleFinalSubmit()}
             >
-              Submit for Approval
+              {t('hr.buttons.submitRequest')}
             </Button>
           </div>
         </div>

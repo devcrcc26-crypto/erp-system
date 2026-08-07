@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Button, Switch } from 'antd';
 import { PlusOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -54,6 +54,60 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
     }
   }
 
+  const columns: ColumnsType<PerDiemRate> = useMemo(
+    () => [
+      {
+        title: t('hr.table.destinationCategory'),
+        dataIndex: 'destinationCategory',
+        key: 'destinationCategory',
+      },
+      {
+        title: t('hr.table.dailyRate'),
+        key: 'dailyRate',
+        width: 160,
+        render: (_: unknown, row: PerDiemRate) =>
+          formatCurrencyAmount(row.dailyRate, row.currency),
+      },
+      {
+        title: t('hr.table.description'),
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+        render: (value: string | null) => value || '-',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'isActive',
+        key: 'isActive',
+        width: 90,
+        render: (value: boolean) => <Switch checked={value} disabled size="small" />,
+      },
+      {
+        title: t('hr.table.actions'),
+        key: 'actions',
+        width: 90,
+        render: (_: unknown, row: PerDiemRate) => (
+          <div className="flex items-center gap-1">
+            <Button
+              type="text"
+              size="small"
+              icon={<Pencil size={14} />}
+              onClick={() => openEdit(row)}
+            />
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<Trash2 size={14} />}
+              onClick={() => setDeleteId(row.id)}
+            />
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
+
   if (!canManage) {
     return (
       <Alert
@@ -67,57 +121,6 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
   }
-
-  const columns: ColumnsType<PerDiemRate> = [
-    {
-      title: t('hr.labels.destinationCategory'),
-      dataIndex: 'destinationCategory',
-      key: 'destinationCategory',
-    },
-    {
-      title: t('hr.labels.dailyRate'),
-      key: 'dailyRate',
-      width: 160,
-      render: (_: unknown, row: PerDiemRate) =>
-        formatCurrencyAmount(row.dailyRate, row.currency),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      render: (value: string | null) => value || '-',
-    },
-    {
-      title: 'Active',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 90,
-      render: (value: boolean) => <Switch checked={value} disabled size="small" />,
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 90,
-      render: (_: unknown, row: PerDiemRate) => (
-        <div className="flex items-center gap-1">
-          <Button
-            type="text"
-            size="small"
-            icon={<Pencil size={14} />}
-            onClick={() => openEdit(row)}
-          />
-          <Button
-            type="text"
-            size="small"
-            danger
-            icon={<Trash2 size={14} />}
-            onClick={() => setDeleteId(row.id)}
-          />
-        </div>
-      ),
-    },
-  ];
 
   return (
     <div>
@@ -136,7 +139,7 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
 
       <div className="flex items-center justify-end mb-4">
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          {t('hr.labels.addRate')}
+          {t('hr.buttons.addRate')}
         </Button>
       </div>
 
@@ -150,8 +153,7 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<WalletOutlined />}
-                title="No per diem rates configured"
-                description="Add a rate to enable per diem submissions for that destination category."
+                title={t('hr.empty.noPerDiemRates')}
               />
             ),
           }}

@@ -112,17 +112,17 @@ export default function VehicleApplicationDetailPageContent({
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/vehicle-applications')}
         >
-          Back
+          {t('hr.buttons.back')}
         </Button>
         {canRelease ? (
           <Popconfirm
-            title="Release vehicle?"
-            description="The vehicle will be marked as available for other bookings."
+            title={t('hr.labels.releaseVehicle')}
+            description={t('hr.labels.releaseVehicleDesc')}
             onConfirm={() => void handleRelease()}
             okButtonProps={{ loading: releaseMutation.isPending }}
           >
             <Button type="primary" className="ml-auto">
-              Release Vehicle
+              {t('hr.buttons.releaseVehicle')}
             </Button>
           </Popconfirm>
         ) : null}
@@ -132,7 +132,7 @@ export default function VehicleApplicationDetailPageContent({
             className={canRelease ? '' : 'ml-auto'}
             onClick={() => setConfirmCancel(true)}
           >
-            Cancel Application
+            {t('hr.buttons.cancel')}
           </Button>
         ) : null}
       </div>
@@ -188,7 +188,7 @@ export default function VehicleApplicationDetailPageContent({
             items={[
               { label: t('hr.labels.destination'), value: application.destination },
               {
-                label: 'Drive Type',
+                label: t('hr.form.driveType'),
                 value: formatDriveType(application.driveType, t),
               },
               {
@@ -204,7 +204,7 @@ export default function VehicleApplicationDetailPageContent({
             ]}
           />
 
-          <SectionCard title="Trip Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.tripDetails')} bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MetaItem label={t('hr.labels.departure')}>
                 {formatProjectDate(application.departureDatetime)}
@@ -246,7 +246,7 @@ export default function VehicleApplicationDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
+          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
             {isDirectApproved ? (
               <Typography.Text type="secondary">
                 Approved directly - no approval required

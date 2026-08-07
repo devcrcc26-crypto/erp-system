@@ -172,7 +172,7 @@ export default function PurchaseRequestDetailPageContent({
         }
         action={
           <Button onClick={() => router.push('/hr/purchase-requests')}>
-            Back to list
+            {t('hr.buttons.back')}
           </Button>
         }
       />
@@ -183,28 +183,28 @@ export default function PurchaseRequestDetailPageContent({
 
   const itemColumns: ColumnsType<PurchaseRequestItem> = [
     {
-      title: 'Item',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       render: (v: string | null | undefined) => v || '-',
     },
     {
-      title: 'Qty',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 70,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     {
-      title: 'Unit Price',
+      title: t('hr.table.unitPrice'),
       key: 'unitPrice',
       width: 130,
       align: 'right',
@@ -212,7 +212,7 @@ export default function PurchaseRequestDetailPageContent({
         formatCurrencyAmount(row.unitPrice, row.currency),
     },
     {
-      title: 'Total (ETB)',
+      title: t('hr.table.total'),
       dataIndex: 'totalPriceEtb',
       key: 'totalPriceEtb',
       width: 130,
@@ -256,7 +256,7 @@ export default function PurchaseRequestDetailPageContent({
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/purchase-requests')}
         >
-          Back
+          {t('hr.buttons.back')}
         </Button>
       </div>
 
@@ -321,7 +321,7 @@ export default function PurchaseRequestDetailPageContent({
                       router.push(`/approvals/${request.approvalRequestId}`)
                     }
                   >
-                    View in Approvals
+                    {t('hr.buttons.viewInApprovals')}
                   </Button>
                 ) : null}
               </div>
@@ -331,35 +331,35 @@ export default function PurchaseRequestDetailPageContent({
           {/* Summary strip */}
           <SummaryStrip
             items={[
-              { label: 'Items', value: String(request.items.length) },
+              { label: t('hr.table.items'), value: String(request.items.length) },
               {
-                label: 'Total (ETB)',
+                label: t('hr.table.total'),
                 value: formatEtbAmount(request.totalEstimatedEtb),
                 emphasize: true,
               },
               {
-                label: 'Required By',
+                label: t('hr.table.requiredBy'),
                 value: request.requiredByDate
                   ? formatProjectDate(request.requiredByDate)
                   : '-',
               },
               {
-                label: 'Project',
+                label: t('hr.table.project'),
                 value: request.project?.name ?? '-',
               },
             ]}
           />
 
           {/* Details */}
-          <SectionCard title="Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <MetaItem label="Justification">
+              <MetaItem label={t('hr.form.justification')}>
                 <p className="whitespace-pre-wrap leading-relaxed m-0">
                   {request.justification}
                 </p>
               </MetaItem>
               {request.vendorName ? (
-                <MetaItem label="Vendor">
+                <MetaItem label={t('hr.form.vendor')}>
                   <p className="m-0">{request.vendorName}</p>
                   {request.vendorContact ? (
                     <p
@@ -375,14 +375,14 @@ export default function PurchaseRequestDetailPageContent({
           </SectionCard>
 
           {/* Line Items */}
-          <SectionCard title="Line Items" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
             <Table<PurchaseRequestItem>
               rowKey="id"
               size="small"
               columns={itemColumns}
               dataSource={request.items}
               pagination={false}
-              locale={{ emptyText: <Empty description="No items" /> }}
+              locale={{ emptyText: <Empty description={t('hr.empty.noItems')} /> }}
               footer={
                 request.items.length > 0
                   ? () => (
@@ -406,7 +406,7 @@ export default function PurchaseRequestDetailPageContent({
 
           {/* Attachments */}
           {(request.documents?.length ?? 0) > 0 ? (
-            <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.attachments')} bodyClassName="px-5 py-4">
               <AttachmentDownloadList documents={request.documents} />
             </SectionCard>
           ) : null}
@@ -419,7 +419,7 @@ export default function PurchaseRequestDetailPageContent({
                 onClick={() => setConfirmCancel(true)}
                 loading={cancelMutation.isPending}
               >
-                Cancel Request
+                {t('hr.buttons.cancelRequest')}
               </Button>
             </div>
           ) : null}
@@ -441,7 +441,7 @@ export default function PurchaseRequestDetailPageContent({
               }}
             >
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                Approval chain will appear after submission.
+                {t('hr.empty.noApprovalChain')}
               </Typography.Text>
             </div>
           )}
@@ -457,7 +457,7 @@ export default function PurchaseRequestDetailPageContent({
           itemForm.resetFields();
         }}
         onOk={() => void handleUpdateItem()}
-        okText="Save"
+        okText={t('hr.buttons.save')}
         confirmLoading={updateItemMutation.isPending}
         width={560}
         destroyOnClose
@@ -466,38 +466,38 @@ export default function PurchaseRequestDetailPageContent({
           <div className="grid grid-cols-2 gap-x-4">
             <Form.Item
               name="itemName"
-              label="Item Name"
+              label={t('hr.form.itemName')}
               rules={[{ required: true, message: 'Required' }]}
             >
               <Input maxLength={200} />
             </Form.Item>
-            <Form.Item name="description" label="Description">
+            <Form.Item name="description" label={t('hr.form.description')}>
               <Input maxLength={500} />
             </Form.Item>
             <Form.Item
               name="quantity"
-              label="Quantity"
+              label={t('hr.form.quantity')}
               rules={[{ required: true, message: 'Required' }]}
             >
               <InputNumber min={0.001} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item
               name="unit"
-              label="Unit"
+              label={t('hr.form.unit')}
               rules={[{ required: true, message: 'Required' }]}
             >
               <Input maxLength={50} />
             </Form.Item>
             <Form.Item
               name="unitPrice"
-              label="Unit Price"
+              label={t('hr.form.unitPrice')}
               rules={[{ required: true, message: 'Required' }]}
             >
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item
               name="currency"
-              label="Currency"
+              label={t('hr.form.currency')}
               rules={[{ required: true }]}
             >
               <Select options={CURRENCY_OPTIONS} />
@@ -523,7 +523,7 @@ export default function PurchaseRequestDetailPageContent({
         open={confirmCancel}
         title="Cancel purchase request"
         description="Are you sure you want to cancel this request? This action cannot be undone."
-        confirmLabel="Cancel Request"
+        confirmLabel="{t('hr.buttons.cancelRequest')}"
         danger
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => { void handleCancel(); }}

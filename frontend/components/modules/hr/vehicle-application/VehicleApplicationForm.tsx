@@ -155,12 +155,12 @@ export default function VehicleApplicationForm({
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
-      <SectionCard title="Trip Dates" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.form.tripDetails')} bodyClassName="px-5 py-4">
         <Form form={tripForm} layout="vertical">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <Form.Item
               name="departureDatetime"
-              label="Departure Date & Time"
+              label={t('hr.form.departureDateTime')}
               rules={[{ required: true, message: 'Select departure' }]}
             >
               <DatePicker
@@ -173,7 +173,7 @@ export default function VehicleApplicationForm({
             </Form.Item>
             <Form.Item
               name="returnDatetime"
-              label="Return Date & Time"
+              label={t('hr.form.returnDateTime')}
               rules={[{ required: true, message: 'Select return' }]}
             >
               <DatePicker
@@ -190,7 +190,7 @@ export default function VehicleApplicationForm({
         </Form>
       </SectionCard>
 
-      <SectionCard title="Select Vehicle" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.form.vehicle')} bodyClassName="px-5 py-4">
         {!datesReady ? (
           <Alert
             type="info"
@@ -200,7 +200,7 @@ export default function VehicleApplicationForm({
         ) : availableQuery.isLoading ? (
           <Typography.Text type="secondary">Loading vehicles...</Typography.Text>
         ) : vehicles.length === 0 ? (
-          <Alert type="warning" showIcon title="No vehicles found in the fleet." />
+          <Alert type="warning" showIcon title={t('hr.empty.noVehicles')} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {vehicles.map((v) => (
@@ -255,13 +255,13 @@ export default function VehicleApplicationForm({
         )}
       </SectionCard>
 
-      <SectionCard title="Trip Details" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.section.tripDetails')} bodyClassName="px-5 py-4">
         <Form form={mainForm} layout="vertical" initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}>
           <Form.Item name="vehicleId" hidden rules={[{ required: true, message: 'Select a vehicle above' }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item name="driveType" label="Drive Type" rules={[{ required: true }]}>
+          <Form.Item name="driveType" label={t('hr.form.driveType')} rules={[{ required: true }]}>
             <Radio.Group onChange={(e) => handleDriveTypeChange(e.target.value as DriveType)}>
               <Radio value="COMPANY_DRIVER">{t('hr.driveType.COMPANY_DRIVER')}</Radio>
               <Radio value="SELF_DRIVE">{t('hr.driveType.SELF_DRIVE')}</Radio>
@@ -288,29 +288,29 @@ export default function VehicleApplicationForm({
 
           <Form.Item
             name="destination"
-            label="Destination"
+            label={t('hr.form.destination')}
             rules={[{ required: true, message: 'Enter destination' }]}
           >
-            <Input maxLength={200} placeholder="Where are you going?" />
+            <Input maxLength={200} placeholder={t('hr.placeholder.enterDestination')} />
           </Form.Item>
 
           <Form.Item
             name="purpose"
-            label="Purpose"
+            label={t('hr.form.purpose')}
             rules={[{ required: true, message: 'Enter purpose' }]}
           >
-            <Input.TextArea rows={3} maxLength={4000} showCount placeholder="Why do you need the vehicle?" />
+            <Input.TextArea rows={3} maxLength={4000} showCount placeholder={t('hr.placeholder.enterPurpose')} />
           </Form.Item>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Form.Item name="passengerCount" label="Passenger Count">
+            <Form.Item name="passengerCount" label={t('hr.form.passengerCount')}>
               <InputNumber min={1} max={50} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="projectId" label="Project (optional)">
+            <Form.Item name="projectId" label={t('hr.form.project')}>
               <Select
                 showSearch
                 allowClear
-                placeholder="Link to project"
+                placeholder={t('hr.placeholder.selectProject')}
                 loading={projectsQuery.isLoading}
                 filterOption={(input, option) =>
                   String(option?.label ?? '')
@@ -327,12 +327,17 @@ export default function VehicleApplicationForm({
             </Form.Item>
           </div>
 
-          <Form.Item name="passengerNames" label="Passenger Names (optional)">
-            <Input.TextArea rows={2} maxLength={2000} placeholder="List passenger names" />
+          <Form.Item name="passengerNames" label={t('hr.form.passengerNames')}>
+            <Input.TextArea rows={2} maxLength={2000} placeholder={t('hr.placeholder.enterPassengerNames')} />
           </Form.Item>
 
-          <Form.Item name="notes" label="Notes (optional)">
-            <Input.TextArea rows={2} maxLength={2000} showCount />
+          <Form.Item name="notes" label={t('hr.form.notes')}>
+            <Input.TextArea
+              rows={2}
+              maxLength={2000}
+              showCount
+              placeholder={t('hr.placeholder.enterNotes')}
+            />
           </Form.Item>
         </Form>
       </SectionCard>
@@ -344,7 +349,7 @@ export default function VehicleApplicationForm({
           disabled={!selectedVehicle}
           onClick={() => void handleSubmit()}
         >
-          Submit Application
+          {t('hr.buttons.submitApplication')}
         </Button>
       </div>
     </div>

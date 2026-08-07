@@ -154,19 +154,18 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     return (
       <Space orientation="vertical" size={2} style={{ width: '100%' }}>
         <Typography.Text>
-          Available:{' '}
-          <Typography.Text strong>{selectedBalance.remaining}</Typography.Text>{' '}
-          days
+          {t('hr.labels.remaining')}:{' '}
+          <Typography.Text strong>{selectedBalance.remaining}</Typography.Text>
         </Typography.Text>
         <Typography.Text type="secondary">
-          Used: {selectedBalance.used} days
+          {t('hr.labels.used')}: {selectedBalance.used}
         </Typography.Text>
         <Typography.Text type="secondary">
-          Entitled: {selectedBalance.entitled} days
+          {t('hr.labels.entitled')}: {selectedBalance.entitled}
         </Typography.Text>
         {selectedBalance.pending > 0 ? (
           <Typography.Text type="secondary">
-            Pending: {selectedBalance.pending} days
+            {t('hr.labels.pending')}: {selectedBalance.pending}
           </Typography.Text>
         ) : null}
       </Space>
@@ -175,17 +174,19 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <FormLayout
-      title="New Leave Request"
+      title={t('hr.buttons.newLeaveRequest')}
       description="Short absences (≤ 3 days) need Discipline Lead and HR; longer leave escalates to General Manager."
       extra={
         <Space>
-          <Button onClick={() => router.push('/approvals/new')}>Cancel</Button>
+          <Button onClick={() => router.push('/approvals/new')}>
+            {t('hr.buttons.cancel')}
+          </Button>
           <Button
             type="primary"
             loading={submitMutation.isPending}
             onClick={() => form.submit()}
           >
-            Submit
+            {t('hr.buttons.submitRequest')}
           </Button>
         </Space>
       }
@@ -204,7 +205,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       ) : null}
 
       <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-        <SectionCard title="Leave details" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.form.leaveDetails')} bodyClassName="px-5 py-4">
           <Form
             form={form}
             layout="vertical"
@@ -213,12 +214,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
           >
             <Form.Item
               name="leaveType"
-              label="Leave Type"
+              label={t('hr.form.leaveType')}
               rules={[{ required: true, message: 'Select a leave type' }]}
             >
               <Select
                 options={leaveTypeOptions}
-                placeholder="Select leave type"
+                placeholder={t('hr.placeholder.selectLeaveType')}
               />
             </Form.Item>
 
@@ -234,15 +235,15 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 style={{ display: 'block', marginBottom: 4 }}
               >
                 {leaveType
-                  ? `${formatLeaveType(leaveType, t)} balance (${year})`
-                  : `${year} balance`}
+                  ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')} (${year})`
+                  : `${t('hr.section.leaveBalance')} (${year})`}
               </Typography.Text>
               {renderBalancePanel()}
             </div>
 
             <Form.Item
               name="dateRange"
-              label="Leave Dates"
+              label={t('hr.form.leaveDates')}
               rules={[{ required: true, message: 'Select start and end dates' }]}
             >
               <DatePicker.RangePicker className="w-full" />
@@ -250,7 +251,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
             <Form.Item
               name="days"
-              label="Days"
+              label={t('hr.form.days')}
               extra="Auto-calculated from dates; edit for half-days."
               rules={[
                 { required: true, message: 'Enter days' },
@@ -265,13 +266,21 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               />
             </Form.Item>
 
-            <Form.Item name="reason" label="Reason">
-              <Input.TextArea rows={4} maxLength={4000} showCount />
+            <Form.Item
+              name="reason"
+              label={t('hr.form.reason')}
+            >
+              <Input.TextArea
+                rows={4}
+                maxLength={4000}
+                showCount
+                placeholder={t('hr.placeholder.enterReason')}
+              />
             </Form.Item>
           </Form>
         </SectionCard>
 
-        <SectionCard title="Supporting documents" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.supportingDocuments')} bodyClassName="px-5 py-4">
           <Typography.Paragraph
             type="secondary"
             style={{ marginBottom: 12, fontSize: 13 }}

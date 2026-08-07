@@ -28,6 +28,7 @@ import { useCreateMaterialRequisition } from '@/lib/query/material-requisition';
 import { useAllProjects } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface Step1Values {
   title: string;
@@ -65,6 +66,7 @@ function nextKey(): string {
 export default function MaterialRequisitionForm({
   onSuccess,
 }: MaterialRequisitionFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -215,33 +217,33 @@ export default function MaterialRequisitionForm({
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
-      title: 'Item',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Code',
+      title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 110,
       render: (v: string | undefined) => v || '-',
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       render: (v: string | undefined) => v || '-',
     },
     {
-      title: 'Qty',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 70,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     {
       title: '',
       key: 'actions',
@@ -271,8 +273,8 @@ export default function MaterialRequisitionForm({
       <Steps
         current={currentStep}
         items={[
-          { title: 'Requisition Details' },
-          { title: 'Items' },
+          { title: t('hr.section.requestDetails') },
+          { title: t('hr.section.items') },
           { title: 'Attachments & Submit' },
         ]}
         style={{ maxWidth: 560, margin: '0 auto' }}
@@ -283,7 +285,7 @@ export default function MaterialRequisitionForm({
         style={{ display: currentStep === 0 ? undefined : 'none' }}
         aria-hidden={currentStep !== 0}
       >
-        <SectionCard title="Requisition Details" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
           <Form
             form={step1Form}
             layout="vertical"
@@ -292,40 +294,40 @@ export default function MaterialRequisitionForm({
           >
             <Form.Item
               name="title"
-              label="Title"
+              label={t('hr.form.title')}
               rules={[{ required: true, message: 'Enter a title' }]}
             >
               <Input
-                placeholder="e.g. Site PPE restock — Block A"
+                placeholder={t('hr.placeholder.enterTitle')}
                 maxLength={200}
               />
             </Form.Item>
 
             <Form.Item
               name="purpose"
-              label="Purpose"
+              label={t('hr.form.purpose')}
               rules={[{ required: true, message: 'Provide a purpose' }]}
             >
               <Input.TextArea
                 rows={4}
                 maxLength={2000}
                 showCount
-                placeholder="Explain what the materials are needed for"
+                placeholder={t('hr.placeholder.enterPurpose')}
               />
             </Form.Item>
 
-            <Form.Item name="requiredByDate" label="Required By Date">
+            <Form.Item name="requiredByDate" label={t('hr.form.requiredByDate')}>
               <DatePicker
                 style={{ width: '100%' }}
                 disabledDate={(d) => d.isBefore(dayjs(), 'day')}
               />
             </Form.Item>
 
-            <Form.Item name="projectId" label="Project (optional)">
+            <Form.Item name="projectId" label={t('hr.form.project')}>
               <Select
                 showSearch
                 allowClear
-                placeholder="Select a project"
+                placeholder={t('hr.placeholder.selectProject')}
                 options={projectOptions}
                 loading={projectsQuery.isLoading}
                 filterOption={(input, option) =>
@@ -338,7 +340,7 @@ export default function MaterialRequisitionForm({
 
             <Form.Item
               name="warehouseLocation"
-              label="Warehouse Location (optional)"
+              label={t('hr.form.warehouseLocation')}
             >
               <Input
                 placeholder="Which warehouse to draw from"
@@ -358,7 +360,7 @@ export default function MaterialRequisitionForm({
       {currentStep === 1 ? (
         <div className="mx-auto w-full max-w-4xl flex flex-col gap-4">
           <SectionCard
-            title="Items"
+            title={t('hr.section.items')}
             bodyClassName="px-5 py-4"
             action={
               !showItemForm ? (
@@ -368,7 +370,7 @@ export default function MaterialRequisitionForm({
                   icon={<PlusOutlined />}
                   onClick={openAddItem}
                 >
-                  Add Item
+                  {t('hr.buttons.addItem')}
                 </Button>
               ) : undefined
             }
@@ -385,34 +387,34 @@ export default function MaterialRequisitionForm({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                     <Form.Item
                       name="itemName"
-                      label="Item Name"
+                      label={t('hr.form.itemName')}
                       rules={[{ required: true, message: 'Required' }]}
                     >
                       <Input maxLength={200} />
                     </Form.Item>
-                    <Form.Item name="itemCode" label="Item Code">
+                    <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
                       <Input
-                        placeholder="Catalogue or stock code"
+                        placeholder={t('hr.placeholder.enterItemCode')}
                         maxLength={100}
                       />
                     </Form.Item>
                     <Form.Item
                       name="quantity"
-                      label="Quantity"
+                      label={t('hr.form.quantity')}
                       rules={[{ required: true, message: 'Required' }]}
                     >
                       <InputNumber min={0.01} style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item
                       name="unit"
-                      label="Unit"
+                      label={t('hr.form.unit')}
                       rules={[{ required: true, message: 'Required' }]}
                     >
                       <Input placeholder="pcs, kg, m, box, roll…" maxLength={50} />
                     </Form.Item>
                     <Form.Item
                       name="description"
-                      label="Description"
+                      label={t('hr.form.description')}
                       className="md:col-span-2"
                     >
                       <Input maxLength={1000} />
@@ -420,9 +422,9 @@ export default function MaterialRequisitionForm({
                   </div>
                   <Space>
                     <Button type="primary" onClick={() => void saveItem()}>
-                      {editingKey ? 'Update Item' : 'Add Item'}
+                      {editingKey ? 'Update Item' : t('hr.buttons.addItem')}
                     </Button>
-                    <Button onClick={cancelItemForm}>Cancel</Button>
+                    <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
                   </Space>
                 </Form>
               </div>
@@ -434,12 +436,12 @@ export default function MaterialRequisitionForm({
               columns={itemColumns}
               dataSource={items}
               pagination={false}
-              locale={{ emptyText: 'No items added yet' }}
+              locale={{ emptyText: t('hr.empty.noItems') }}
             />
           </SectionCard>
 
           <div className="flex justify-between">
-            <Button onClick={() => setCurrentStep(0)}>Back</Button>
+            <Button onClick={() => setCurrentStep(0)}>{t('hr.buttons.back')}</Button>
             <Button type="primary" onClick={goToStep3}>
               Continue to Submit
             </Button>
@@ -471,7 +473,7 @@ export default function MaterialRequisitionForm({
             </Typography.Text>
           </SectionCard>
 
-          <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.attachments')} bodyClassName="px-5 py-4">
             <Typography.Paragraph type="secondary" className="mb-3">
               Upload drawings or specifications if relevant
             </Typography.Paragraph>
@@ -485,13 +487,13 @@ export default function MaterialRequisitionForm({
           </SectionCard>
 
           <div className="flex justify-between">
-            <Button onClick={() => setCurrentStep(1)}>Back</Button>
+            <Button onClick={() => setCurrentStep(1)}>{t('hr.buttons.back')}</Button>
             <Button
               type="primary"
               loading={submitting}
               onClick={() => void handleFinalSubmit()}
             >
-              Submit for Approval
+              {t('hr.buttons.submitRequest')}
             </Button>
           </div>
         </div>

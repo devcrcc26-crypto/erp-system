@@ -67,7 +67,7 @@ export default function BusinessTripSummary({
         <Descriptions.Item label={t('hr.labels.return')}>
           {tripDetails.returnDate
             ? formatProjectDate(tripDetails.returnDate.format('YYYY-MM-DD'))
-            : 'One Way'}
+            : t('hr.tripType.ONE_WAY')}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.ticketClass')}>
           {formatTicketClass(tripDetails.ticketClass, t)}
@@ -109,7 +109,7 @@ export default function BusinessTripSummary({
           {additional.perDiemRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
         </Descriptions.Item>
         {additional.files.length > 0 ? (
-          <Descriptions.Item label="Attachments" span={2}>
+          <Descriptions.Item label={t('hr.section.attachments')} span={2}>
             {additional.files.map((f) => f.name).join(', ')}
           </Descriptions.Item>
         ) : null}

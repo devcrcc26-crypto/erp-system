@@ -100,81 +100,84 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<PurchaseRequestListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 130,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: PurchaseRequestListItem) =>
-              formatPurchaseRequestEmployeeName(row.employee),
-          } satisfies ColumnsType<PurchaseRequestListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: 'Items',
-      dataIndex: 'itemCount',
-      key: 'itemCount',
-      width: 70,
-      align: 'right',
-    },
-    {
-      title: 'Total (ETB)',
-      dataIndex: 'totalEstimatedEtb',
-      key: 'totalEstimatedEtb',
-      width: 140,
-      align: 'right',
-      render: (value: number | string) => formatEtbAmount(value),
-    },
-    {
-      title: 'Required By',
-      dataIndex: 'requiredByDate',
-      key: 'requiredByDate',
-      width: 120,
-      render: (value: string | null | undefined) =>
-        value ? formatProjectDate(value) : '-',
-    },
-    {
-      title: 'Project',
-      key: 'project',
-      width: 150,
-      ellipsis: true,
-      render: (_: unknown, row: PurchaseRequestListItem) =>
-        row.project?.name ?? '-',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: PurchaseRequestStatus) => (
-        <StatusBadge
-          label={formatPurchaseRequestStatus(value, t)}
-          variant={purchaseRequestStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Tier',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 140,
-      ellipsis: true,
-      render: (value: string | null | undefined) => value ?? '-',
-    },
-  ];
+  const columns: ColumnsType<PurchaseRequestListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 130,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: PurchaseRequestListItem) =>
+                formatPurchaseRequestEmployeeName(row.employee),
+            } satisfies ColumnsType<PurchaseRequestListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.title'),
+        dataIndex: 'title',
+        key: 'title',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.items'),
+        dataIndex: 'itemCount',
+        key: 'itemCount',
+        width: 70,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.total'),
+        dataIndex: 'totalEstimatedEtb',
+        key: 'totalEstimatedEtb',
+        width: 140,
+        align: 'right',
+        render: (value: number | string) => formatEtbAmount(value),
+      },
+      {
+        title: t('hr.table.requiredBy'),
+        dataIndex: 'requiredByDate',
+        key: 'requiredByDate',
+        width: 120,
+        render: (value: string | null | undefined) =>
+          value ? formatProjectDate(value) : '-',
+      },
+      {
+        title: t('hr.table.project'),
+        key: 'project',
+        width: 150,
+        ellipsis: true,
+        render: (_: unknown, row: PurchaseRequestListItem) =>
+          row.project?.name ?? '-',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: PurchaseRequestStatus) => (
+          <StatusBadge
+            label={formatPurchaseRequestStatus(value, t)}
+            variant={purchaseRequestStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        dataIndex: 'currentTierLabel',
+        key: 'currentTierLabel',
+        width: 140,
+        ellipsis: true,
+        render: (value: string | null | undefined) => value ?? '-',
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -203,14 +206,14 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or title"
+          placeholder={t('hr.placeholder.searchPurchase')}
           style={{ width: 220 }}
         />
 
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
@@ -225,7 +228,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             loading={usersQuery.isLoading}
             value={employeeId}
             onChange={(v) => {
@@ -251,7 +254,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Project"
+            placeholder={t('hr.placeholder.project')}
             loading={projectsQuery.isLoading}
             value={projectFilter}
             onChange={(v) => {
@@ -282,7 +285,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             );
             resetPage();
           }}
-          placeholder={['From date', 'To date']}
+          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
         />
 
         <InputNumber
@@ -313,7 +316,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             icon={<PlusOutlined />}
             onClick={() => router.push('/approvals/new/purchase-request')}
           >
-            New Request
+            {t('hr.buttons.newPurchaseRequest')}
           </Button>
         </div>
       </div>
@@ -336,8 +339,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<ShoppingCartOutlined />}
-              title="No purchase requests found"
-              description="Submit a new purchase request to get started."
+              title={t('hr.empty.noPurchaseRequests')}
             />
           ),
         }}

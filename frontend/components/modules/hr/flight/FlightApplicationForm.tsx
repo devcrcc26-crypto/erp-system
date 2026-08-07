@@ -21,6 +21,7 @@ import {
 } from '@/lib/query/flight';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface FlightApplicationFormProps {
   onSuccess?: (created: FlightApplicationDetail) => void;
@@ -52,8 +53,9 @@ const INITIAL_ADDITIONAL: FlightAdditionalValues = {
  */
 export function FlightApplicationForm({
   onSuccess,
-  submitLabel = 'Submit Application',
+  submitLabel,
 }: FlightApplicationFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useSelectablePassengers();
@@ -84,11 +86,13 @@ export function FlightApplicationForm({
   }, [currentUser.data, passengersQuery.data, seededSelf]);
 
   const selectablePassengers = passengersQuery.data ?? [];
+  const resolvedSubmitLabel =
+    submitLabel ?? t('hr.buttons.submitApplication');
 
   const steps = useMemo(
     () => [
       {
-        title: 'Trip Details',
+        title: t('hr.form.tripDetails'),
         content: (
           <FlightTripDetailsStep
             values={tripDetails}
@@ -128,7 +132,7 @@ export function FlightApplicationForm({
         },
       },
       {
-        title: 'Passengers',
+        title: t('hr.form.passengers'),
         content: (
           <FlightPassengersStep
             values={passengers}
@@ -160,7 +164,7 @@ export function FlightApplicationForm({
         },
       },
       {
-        title: 'Review & Submit',
+        title: t('hr.form.reviewSubmit'),
         content: (
           <div className="flex flex-col gap-6">
             <FlightAdditionalStep
@@ -185,6 +189,7 @@ export function FlightApplicationForm({
       passengersQuery.isLoading,
       submitMutation.isPending,
       messageApi,
+      t,
     ],
   );
 
@@ -250,7 +255,7 @@ export function FlightApplicationForm({
       <StepperForm
         steps={steps}
         onSubmit={handleSubmit}
-        submitLabel={submitLabel}
+        submitLabel={resolvedSubmitLabel}
         isSubmitting={submitMutation.isPending}
       />
     </div>

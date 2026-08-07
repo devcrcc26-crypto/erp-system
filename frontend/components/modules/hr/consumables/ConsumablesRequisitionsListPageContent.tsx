@@ -83,76 +83,79 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<ConsumablesRequisitionListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 130,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: ConsumablesRequisitionListItem) =>
-              formatConsumablesRequisitionEmployeeName(row.employee),
-          } satisfies ColumnsType<ConsumablesRequisitionListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: 'Department',
-      dataIndex: 'department',
-      key: 'department',
-      width: 140,
-      ellipsis: true,
-      render: (v: string | null | undefined) => v || '-',
-    },
-    {
-      title: 'Items',
-      dataIndex: 'itemCount',
-      key: 'itemCount',
-      width: 70,
-      align: 'right',
-    },
-    {
-      title: 'Required By',
-      dataIndex: 'requiredByDate',
-      key: 'requiredByDate',
-      width: 120,
-      render: (value: string | null | undefined) =>
-        value ? formatProjectDate(value) : '-',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: ConsumablesRequisitionStatus) => (
-        <StatusBadge
-          label={formatConsumablesRequisitionStatus(value, t)}
-          variant={consumablesRequisitionStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Tier',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 140,
-      ellipsis: true,
-      render: (_: string | null | undefined, row: ConsumablesRequisitionListItem) =>
-        row.directApproved
-          ? 'Direct approval'
-          : (row.currentTierLabel ?? '-'),
-    },
-  ];
+  const columns: ColumnsType<ConsumablesRequisitionListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 130,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: ConsumablesRequisitionListItem) =>
+                formatConsumablesRequisitionEmployeeName(row.employee),
+            } satisfies ColumnsType<ConsumablesRequisitionListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.title'),
+        dataIndex: 'title',
+        key: 'title',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.department'),
+        dataIndex: 'department',
+        key: 'department',
+        width: 140,
+        ellipsis: true,
+        render: (v: string | null | undefined) => v || '-',
+      },
+      {
+        title: t('hr.table.items'),
+        dataIndex: 'itemCount',
+        key: 'itemCount',
+        width: 70,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.requiredBy'),
+        dataIndex: 'requiredByDate',
+        key: 'requiredByDate',
+        width: 120,
+        render: (value: string | null | undefined) =>
+          value ? formatProjectDate(value) : '-',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: ConsumablesRequisitionStatus) => (
+          <StatusBadge
+            label={formatConsumablesRequisitionStatus(value, t)}
+            variant={consumablesRequisitionStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        dataIndex: 'currentTierLabel',
+        key: 'currentTierLabel',
+        width: 140,
+        ellipsis: true,
+        render: (_: string | null | undefined, row: ConsumablesRequisitionListItem) =>
+          row.directApproved
+            ? 'Direct approval'
+            : (row.currentTierLabel ?? '-'),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -180,14 +183,14 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request #, title, or department"
+          placeholder={t('hr.placeholder.searchConsumables')}
           style={{ width: 260 }}
         />
 
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
@@ -202,7 +205,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
           <Select
             showSearch
             allowClear
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             loading={usersQuery.isLoading}
             value={employeeId}
             onChange={(v) => {
@@ -233,7 +236,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
             );
             resetPage();
           }}
-          placeholder={['From date', 'To date']}
+          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
         />
 
         <div className="ml-auto">
@@ -242,7 +245,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
             icon={<PlusOutlined />}
             onClick={() => router.push('/approvals/new/consumables')}
           >
-            New Requisition
+            {t('hr.buttons.newConsumables')}
           </Button>
         </div>
       </div>
@@ -265,8 +268,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
           emptyText: (
             <TableEmptyState
               icon={<ShoppingOutlined />}
-              title="No consumables requisitions found"
-              description="Submit a new consumables requisition to get started."
+              title={t('hr.empty.noConsumablesRequests')}
             />
           ),
         }}

@@ -79,88 +79,91 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<VehicleRefuelingListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 120,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: VehicleRefuelingListItem) =>
-              formatVehicleRefuelingEmployeeName(row.employee),
-          } satisfies ColumnsType<VehicleRefuelingListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Vehicle',
-      key: 'vehicle',
-      width: 130,
-      render: (_: unknown, row: VehicleRefuelingListItem) =>
-        row.vehicle?.plateNumber ?? '-',
-    },
-    {
-      title: 'Fuel Date',
-      dataIndex: 'fuelDate',
-      key: 'fuelDate',
-      width: 120,
-      render: (v: string) => formatProjectDate(v),
-    },
-    {
-      title: 'Fuel Type',
-      dataIndex: 'fuelType',
-      key: 'fuelType',
-      width: 90,
-      render: (v: string) => formatFuelType(v, t),
-    },
-    {
-      title: 'Station',
-      dataIndex: 'fuelStation',
-      key: 'fuelStation',
-      ellipsis: true,
-    },
-    {
-      title: 'Litres',
-      dataIndex: 'requestedLitres',
-      key: 'requestedLitres',
-      width: 80,
-      align: 'right',
-      render: (v: number | string | null | undefined) => v ?? '-',
-    },
-    {
-      title: 'Cost (ETB)',
-      dataIndex: 'estimatedCostEtb',
-      key: 'estimatedCostEtb',
-      width: 100,
-      align: 'right',
-      render: (v: number | string | null | undefined) => v ?? '-',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: VehicleRefuelingStatus) => (
-        <StatusBadge
-          label={formatVehicleRefuelingStatus(value, t)}
-          variant={vehicleRefuelingStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Tier',
-      dataIndex: 'currentTierLabel',
-      key: 'currentTierLabel',
-      width: 140,
-      ellipsis: true,
-      render: (_: string | null | undefined, row: VehicleRefuelingListItem) =>
-        row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '-'),
-    },
-  ];
+  const columns: ColumnsType<VehicleRefuelingListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 120,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: VehicleRefuelingListItem) =>
+                formatVehicleRefuelingEmployeeName(row.employee),
+            } satisfies ColumnsType<VehicleRefuelingListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.vehicle'),
+        key: 'vehicle',
+        width: 130,
+        render: (_: unknown, row: VehicleRefuelingListItem) =>
+          row.vehicle?.plateNumber ?? '-',
+      },
+      {
+        title: t('hr.table.fuelDate'),
+        dataIndex: 'fuelDate',
+        key: 'fuelDate',
+        width: 120,
+        render: (v: string) => formatProjectDate(v),
+      },
+      {
+        title: t('hr.table.fuelType'),
+        dataIndex: 'fuelType',
+        key: 'fuelType',
+        width: 90,
+        render: (v: string) => formatFuelType(v, t),
+      },
+      {
+        title: t('hr.table.fuelStation'),
+        dataIndex: 'fuelStation',
+        key: 'fuelStation',
+        ellipsis: true,
+      },
+      {
+        title: t('hr.table.litres'),
+        dataIndex: 'requestedLitres',
+        key: 'requestedLitres',
+        width: 80,
+        align: 'right',
+        render: (v: number | string | null | undefined) => v ?? '-',
+      },
+      {
+        title: t('hr.table.estimatedCost'),
+        dataIndex: 'estimatedCostEtb',
+        key: 'estimatedCostEtb',
+        width: 100,
+        align: 'right',
+        render: (v: number | string | null | undefined) => v ?? '-',
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: VehicleRefuelingStatus) => (
+          <StatusBadge
+            label={formatVehicleRefuelingStatus(value, t)}
+            variant={vehicleRefuelingStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        dataIndex: 'currentTierLabel',
+        key: 'currentTierLabel',
+        width: 140,
+        ellipsis: true,
+        render: (_: string | null | undefined, row: VehicleRefuelingListItem) =>
+          row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '-'),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -188,14 +191,14 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or station"
+          placeholder={t('hr.placeholder.searchRefueling')}
           style={{ width: 260 }}
         />
 
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
@@ -210,7 +213,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           <Select
             showSearch
             allowClear
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             loading={usersQuery.isLoading}
             value={employeeId}
             onChange={(v) => {
@@ -239,7 +242,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
             setDateRange(v as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null);
             resetPage();
           }}
-          placeholder={['From date', 'To date']}
+          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
         />
 
         <div className="ml-auto">
@@ -248,7 +251,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
             icon={<PlusOutlined />}
             onClick={() => router.push('/approvals/new/vehicle-refueling')}
           >
-            New Refueling
+            {t('hr.buttons.newVehicleRefueling')}
           </Button>
         </div>
       </div>
@@ -271,8 +274,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<ThunderboltOutlined />}
-              title="No refueling requests found"
-              description="Submit a new vehicle refueling request to get started."
+              title={t('hr.empty.noRefuelingRequests')}
             />
           ),
         }}

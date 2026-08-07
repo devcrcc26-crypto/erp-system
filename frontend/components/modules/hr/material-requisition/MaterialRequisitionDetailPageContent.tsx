@@ -167,33 +167,33 @@ export default function MaterialRequisitionDetailPageContent({
 
   const itemColumns: ColumnsType<MaterialRequisitionItem> = [
     {
-      title: 'Item Name',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Item Code',
+      title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 120,
       render: (v: string | null | undefined) => v || '-',
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       render: (v: string | null | undefined) => v || '-',
     },
     {
-      title: 'Quantity',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 90,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     ...(canEdit
       ? [
           {
@@ -230,11 +230,11 @@ export default function MaterialRequisitionDetailPageContent({
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/material-requisition')}
         >
-          Back
+          {t('hr.buttons.back')}
         </Button>
         {canCancel ? (
           <Button danger className="ml-auto" onClick={() => setConfirmCancel(true)}>
-            Cancel Requisition
+            {t('hr.buttons.cancelRequest')}
           </Button>
         ) : null}
         {requisition.status === 'RETURNED' && isOwner ? (
@@ -245,7 +245,7 @@ export default function MaterialRequisitionDetailPageContent({
               router.push(`/approvals/${requisition.approvalRequestId}`)
             }
           >
-            Resubmit in Approvals
+            {t('hr.buttons.resubmit')}
           </Button>
         ) : null}
       </div>
@@ -293,16 +293,16 @@ export default function MaterialRequisitionDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: 'Items', value: String(requisition.items.length) },
+              { label: t('hr.table.items'), value: String(requisition.items.length) },
               {
-                label: 'Required By',
+                label: t('hr.table.requiredBy'),
                 value: requisition.requiredByDate
                   ? formatProjectDate(requisition.requiredByDate)
                   : '-',
               },
-              { label: 'Project', value: requisition.project?.name ?? '-' },
+              { label: t('hr.table.project'), value: requisition.project?.name ?? '-' },
               {
-                label: 'Warehouse',
+                label: t('hr.form.warehouseLocation'),
                 value: requisition.warehouseLocation ?? '-',
               },
             ]}
@@ -316,17 +316,17 @@ export default function MaterialRequisitionDetailPageContent({
             />
           ) : null}
 
-          <SectionCard title="Purpose" bodyClassName="px-5 py-4">
-            <MetaItem label="What are the materials needed for?">
+          <SectionCard title={t('hr.form.purpose')} bodyClassName="px-5 py-4">
+            <MetaItem label={t('hr.form.purpose')}>
               <p className="whitespace-pre-wrap leading-relaxed m-0">
                 {requisition.purpose}
               </p>
             </MetaItem>
           </SectionCard>
 
-          <SectionCard title="Items" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
             {requisition.items.length === 0 ? (
-              <Empty description="No items" />
+              <Empty description={t('hr.empty.noItems')} />
             ) : (
               <Table<MaterialRequisitionItem>
                 rowKey="id"
@@ -339,14 +339,14 @@ export default function MaterialRequisitionDetailPageContent({
           </SectionCard>
 
           {(requisition.documents?.length ?? 0) > 0 ? (
-            <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.attachments')} bodyClassName="px-5 py-4">
               <AttachmentDownloadList documents={requisition.documents} />
             </SectionCard>
           ) : null}
         </div>
 
         <div className="min-w-0">
-          <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
+          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
             {tiers.length > 0 ? (
               <ApprovalTierTimeline
                 tiers={tiers}
@@ -375,27 +375,27 @@ export default function MaterialRequisitionDetailPageContent({
         <Form form={itemForm} layout="vertical" className="mt-2">
           <Form.Item
             name="itemName"
-            label="Item Name"
+            label={t('hr.form.itemName')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <Input maxLength={200} />
           </Form.Item>
-          <Form.Item name="itemCode" label="Item Code">
+          <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label={t('hr.form.description')}>
             <Input maxLength={1000} />
           </Form.Item>
           <Form.Item
             name="quantity"
-            label="Quantity"
+            label={t('hr.form.quantity')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <InputNumber min={0.01} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             name="unit"
-            label="Unit"
+            label={t('hr.form.unit')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <Input maxLength={50} />

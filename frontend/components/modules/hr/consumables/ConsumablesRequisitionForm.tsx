@@ -27,6 +27,7 @@ import { CONSUMABLES_MAX_ITEMS } from '@/lib/api/consumables-requisition.types';
 import { useCreateConsumablesRequisition } from '@/lib/query/consumables-requisition';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface DetailsValues {
   title: string;
@@ -64,6 +65,7 @@ function nextKey(): string {
 export default function ConsumablesRequisitionForm({
   onSuccess,
 }: ConsumablesRequisitionFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [detailsForm] = Form.useForm<DetailsValues>();
   const [itemForm] = Form.useForm<ItemFormValues>();
@@ -209,33 +211,33 @@ export default function ConsumablesRequisitionForm({
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
-      title: 'Item',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Code',
+      title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 110,
       render: (v: string | undefined) => v || '-',
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       render: (v: string | undefined) => v || '-',
     },
     {
-      title: 'Qty',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 70,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     {
       title: '',
       key: 'actions',
@@ -264,40 +266,40 @@ export default function ConsumablesRequisitionForm({
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
-      <SectionCard title="Details" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
         <Form form={detailsForm} layout="vertical">
           <Form.Item
             name="title"
-            label="Title"
+            label={t('hr.form.title')}
             rules={[{ required: true, message: 'Enter a title' }]}
           >
             <Input
-              placeholder="e.g. Office stationery restock — August"
+              placeholder={t('hr.placeholder.enterTitle')}
               maxLength={200}
             />
           </Form.Item>
 
           <Form.Item
             name="purpose"
-            label="Purpose"
+            label={t('hr.form.purpose')}
             rules={[{ required: true, message: 'Provide a purpose' }]}
           >
             <Input.TextArea
               rows={3}
               maxLength={2000}
               showCount
-              placeholder="Explain why these consumables are needed"
+              placeholder={t('hr.placeholder.enterPurpose')}
             />
           </Form.Item>
 
-          <Form.Item name="department" label="Department (optional)">
+          <Form.Item name="department" label={t('hr.form.department')}>
             <Input
-              placeholder="Which department is requesting"
+              placeholder={t('hr.placeholder.enterDepartment')}
               maxLength={200}
             />
           </Form.Item>
 
-          <Form.Item name="requiredByDate" label="Required By Date">
+          <Form.Item name="requiredByDate" label={t('hr.form.requiredByDate')}>
             <DatePicker
               style={{ width: '100%' }}
               disabledDate={(d) => d.isBefore(dayjs(), 'day')}
@@ -307,7 +309,7 @@ export default function ConsumablesRequisitionForm({
       </SectionCard>
 
       <SectionCard
-        title="Items"
+        title={t('hr.section.items')}
         bodyClassName="px-5 py-4"
         action={
           !showItemForm ? (
@@ -323,7 +325,7 @@ export default function ConsumablesRequisitionForm({
               }
               onClick={openAddItem}
             >
-              Add Item
+              {t('hr.buttons.addItem')}
             </Button>
           ) : undefined
         }
@@ -352,31 +354,31 @@ export default function ConsumablesRequisitionForm({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                 <Form.Item
                   name="itemName"
-                  label="Item Name"
+                  label={t('hr.form.itemName')}
                   rules={[{ required: true, message: 'Required' }]}
                 >
                   <Input maxLength={200} />
                 </Form.Item>
-                <Form.Item name="itemCode" label="Item Code">
-                  <Input placeholder="Optional stock code" maxLength={100} />
+                <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
+                  <Input placeholder={t('hr.placeholder.enterItemCode')} maxLength={100} />
                 </Form.Item>
                 <Form.Item
                   name="quantity"
-                  label="Quantity"
+                  label={t('hr.form.quantity')}
                   rules={[{ required: true, message: 'Required' }]}
                 >
                   <InputNumber min={0.01} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item
                   name="unit"
-                  label="Unit"
+                  label={t('hr.form.unit')}
                   rules={[{ required: true, message: 'Required' }]}
                 >
                   <Input placeholder="pcs, box, pack…" maxLength={50} />
                 </Form.Item>
                 <Form.Item
                   name="description"
-                  label="Description"
+                  label={t('hr.form.description')}
                   className="md:col-span-2"
                 >
                   <Input maxLength={1000} />
@@ -398,7 +400,7 @@ export default function ConsumablesRequisitionForm({
           columns={itemColumns}
           dataSource={items}
           pagination={false}
-          locale={{ emptyText: 'No items added yet' }}
+          locale={{ emptyText: t('hr.empty.noItems') }}
         />
       </SectionCard>
 
@@ -414,10 +416,7 @@ export default function ConsumablesRequisitionForm({
           onChange={(e) => setDeclarationConfirmed(e.target.checked)}
         >
           <span className="text-sm" style={{ color: tokens.colorTextPrimary }}>
-            I confirm that all items in this requisition are low-value
-            consumables with an estimated unit value below ETB 5,000 each.
-            Items above this value have been submitted separately through
-            Material Requisition or Purchase Request.
+            {t('hr.labels.declarationText')}
           </span>
         </Checkbox>
       </div>
@@ -429,7 +428,7 @@ export default function ConsumablesRequisitionForm({
           disabled={!declarationConfirmed || items.length === 0}
           onClick={() => void handleSubmit()}
         >
-          Submit Requisition
+          {t('hr.buttons.submitRequest')}
         </Button>
       </div>
     </div>

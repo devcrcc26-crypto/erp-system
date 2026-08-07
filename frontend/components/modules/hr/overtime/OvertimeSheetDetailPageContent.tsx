@@ -337,103 +337,106 @@ export default function OvertimeSheetDetailPageContent({
     }
   }
 
-  const columns: ColumnsType<OvertimeEntry> = [
-    {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      width: 110,
-      render: (v: string) => formatProjectDate(v),
-    },
-    {
-      title: 'Start',
-      dataIndex: 'startTime',
-      key: 'startTime',
-      width: 80,
-    },
-    {
-      title: 'End',
-      dataIndex: 'endTime',
-      key: 'endTime',
-      width: 80,
-    },
-    {
-      title: 'Holiday',
-      dataIndex: 'isHoliday',
-      key: 'isHoliday',
-      width: 80,
-      render: (v: boolean) => (v ? 'Yes' : '—'),
-    },
-    {
-      title: 'Regular',
-      dataIndex: 'regularHours',
-      key: 'regularHours',
-      width: 80,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Night',
-      dataIndex: 'nightHours',
-      key: 'nightHours',
-      width: 80,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Weekend',
-      dataIndex: 'weekendHours',
-      key: 'weekendHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Holiday hrs',
-      dataIndex: 'holidayHours',
-      key: 'holidayHours',
-      width: 100,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Total',
-      dataIndex: 'totalHours',
-      key: 'totalHours',
-      width: 80,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Tasks',
-      dataIndex: 'taskDescription',
-      key: 'taskDescription',
-      ellipsis: true,
-    },
-    ...(canEdit
-      ? [
-          {
-            title: 'Actions',
-            key: 'actions',
-            width: 140,
-            render: (_: unknown, row: OvertimeEntry) => (
-              <Space size={4}>
-                <Button type="link" size="small" onClick={() => openEditEntry(row)}>
-                  Edit
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setDeleteEntryId(row.id)}
-                />
-              </Space>
-            ),
-          } satisfies ColumnsType<OvertimeEntry>[number],
-        ]
-      : []),
-  ];
+  const columns: ColumnsType<OvertimeEntry> = useMemo(
+    () => [
+      {
+        title: t('hr.table.date'),
+        dataIndex: 'date',
+        key: 'date',
+        width: 110,
+        render: (v: string) => formatProjectDate(v),
+      },
+      {
+        title: 'Start',
+        dataIndex: 'startTime',
+        key: 'startTime',
+        width: 80,
+      },
+      {
+        title: 'End',
+        dataIndex: 'endTime',
+        key: 'endTime',
+        width: 80,
+      },
+      {
+        title: t('hr.overtimeCategory.holiday'),
+        dataIndex: 'isHoliday',
+        key: 'isHoliday',
+        width: 80,
+        render: (v: boolean) => (v ? t('hr.labels.yes') : '—'),
+      },
+      {
+        title: t('hr.overtimeCategory.regular'),
+        dataIndex: 'regularHours',
+        key: 'regularHours',
+        width: 80,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.overtimeCategory.night'),
+        dataIndex: 'nightHours',
+        key: 'nightHours',
+        width: 80,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.overtimeCategory.weekend'),
+        dataIndex: 'weekendHours',
+        key: 'weekendHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.table.holidayHours'),
+        dataIndex: 'holidayHours',
+        key: 'holidayHours',
+        width: 100,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.overtimeCategory.total'),
+        dataIndex: 'totalHours',
+        key: 'totalHours',
+        width: 80,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.labels.taskDescription'),
+        dataIndex: 'taskDescription',
+        key: 'taskDescription',
+        ellipsis: true,
+      },
+      ...(canEdit
+        ? [
+            {
+              title: t('hr.table.actions'),
+              key: 'actions',
+              width: 140,
+              render: (_: unknown, row: OvertimeEntry) => (
+                <Space size={4}>
+                  <Button type="link" size="small" onClick={() => openEditEntry(row)}>
+                    Edit
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<Trash2 size={14} />}
+                    onClick={() => setDeleteEntryId(row.id)}
+                  />
+                </Space>
+              ),
+            } satisfies ColumnsType<OvertimeEntry>[number],
+          ]
+        : []),
+    ],
+    [canEdit, t],
+  );
 
   if (detailQuery.isLoading) {
     return <Skeleton active paragraph={{ rows: 10 }} />;
@@ -505,7 +508,7 @@ export default function OvertimeSheetDetailPageContent({
             <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               {canCancel ? (
                 <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-                  Cancel
+                  {t('hr.buttons.cancelSheet')}
                 </Button>
               ) : null}
               {canEdit ? (
@@ -515,7 +518,7 @@ export default function OvertimeSheetDetailPageContent({
                   disabled={!canSubmit}
                   onClick={() => setConfirmSubmit(true)}
                 >
-                  Submit for approval
+                  {t('hr.buttons.submitSheet')}
                 </Button>
               ) : null}
             </div>
@@ -543,7 +546,7 @@ export default function OvertimeSheetDetailPageContent({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <SectionCard
-          title="Entries"
+          title={t('hr.section.entries')}
           bodyClassName="px-5 py-4"
           action={
             canEdit ? (
@@ -553,7 +556,7 @@ export default function OvertimeSheetDetailPageContent({
                 icon={<Plus size={16} />}
                 onClick={openAddEntry}
               >
-                Add entry
+                {t('hr.buttons.addEntry')}
               </Button>
             ) : undefined
           }
@@ -569,7 +572,7 @@ export default function OvertimeSheetDetailPageContent({
               expandedRowRender: (entry) => (
                 <div className="space-y-2 py-1">
                   <Typography.Text strong style={{ fontSize: 13 }}>
-                    Attachments
+                    {t('hr.section.attachments')}
                   </Typography.Text>
                   <AttachmentDownloadList documents={entry.documents} />
                   {canEdit ? (
@@ -604,13 +607,7 @@ export default function OvertimeSheetDetailPageContent({
             }}
             locale={{
               emptyText: (
-                <Empty
-                  description={
-                    canEdit
-                      ? 'Add overtime sessions for this month'
-                      : 'No entries'
-                  }
-                />
+                <Empty description={t('hr.empty.noEntries')} />
               ),
             }}
           />
@@ -618,9 +615,9 @@ export default function OvertimeSheetDetailPageContent({
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
           {!sheet.approvalRequestId ? (
-            <SectionCard title="Approval Chain" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                Approval chain appears after submit.
+                {t('hr.empty.noApprovalChain')}
               </p>
             </SectionCard>
           ) : (
@@ -633,7 +630,7 @@ export default function OvertimeSheetDetailPageContent({
       </div>
 
       <Modal
-        title={editingEntry ? 'Edit entry' : 'Add entry'}
+        title={editingEntry ? 'Edit entry' : t('hr.buttons.addEntry')}
         open={entryModalOpen}
         onCancel={() => {
           setEntryModalOpen(false);
@@ -647,7 +644,7 @@ export default function OvertimeSheetDetailPageContent({
         <Form form={form} layout="vertical" requiredMark={false}>
           <Form.Item
             name="date"
-            label="Date"
+            label={t('hr.table.date')}
             rules={[{ required: true, message: 'Date is required' }]}
           >
             <DatePicker
@@ -673,7 +670,7 @@ export default function OvertimeSheetDetailPageContent({
             </Form.Item>
           </div>
           <Form.Item name="isHoliday" valuePropName="checked">
-            <Checkbox>Public holiday</Checkbox>
+            <Checkbox>{t('hr.overtimeCategory.holiday')}</Checkbox>
           </Form.Item>
           {liveHours ? (
             <Alert
@@ -681,16 +678,16 @@ export default function OvertimeSheetDetailPageContent({
               showIcon
               className="mb-4"
               title={
-                `Live breakdown — Regular ${formatOvertimeHours(liveHours.regularHours)} · ` +
-                `Night ${formatOvertimeHours(liveHours.nightHours)} · ` +
-                `Weekend ${formatOvertimeHours(liveHours.weekendHours)} · ` +
-                `Holiday ${formatOvertimeHours(liveHours.holidayHours)}`
+                `Live breakdown — ${t('hr.overtimeCategory.regular')} ${formatOvertimeHours(liveHours.regularHours)} · ` +
+                `${t('hr.overtimeCategory.night')} ${formatOvertimeHours(liveHours.nightHours)} · ` +
+                `${t('hr.overtimeCategory.weekend')} ${formatOvertimeHours(liveHours.weekendHours)} · ` +
+                `${t('hr.overtimeCategory.holiday')} ${formatOvertimeHours(liveHours.holidayHours)}`
               }
             />
           ) : null}
           <Form.Item
             name="taskDescription"
-            label="Tasks"
+            label={t('hr.labels.taskDescription')}
             rules={[
               { required: true, message: 'Describe the work performed' },
               { max: 4000 },
@@ -705,7 +702,7 @@ export default function OvertimeSheetDetailPageContent({
         open={confirmSubmit}
         title="Submit overtime sheet?"
         description="This will start the approval workflow. You will not be able to edit entries until the sheet is returned."
-        confirmLabel="Submit"
+        confirmLabel={t('hr.buttons.submitSheet')}
         confirmLoading={submitMutation.isPending}
         onConfirm={() => void handleSubmit()}
         onCancel={() => setConfirmSubmit(false)}
@@ -715,7 +712,7 @@ export default function OvertimeSheetDetailPageContent({
         open={confirmCancel}
         title="Cancel overtime sheet?"
         description="This cancels the sheet and any linked approval request."
-        confirmLabel="Cancel sheet"
+        confirmLabel={t('hr.buttons.cancelSheet')}
         danger
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => void handleCancel()}

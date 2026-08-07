@@ -76,53 +76,66 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<PerDiemRequestListItem> = [
-    {
-      title: 'Request #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 120,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            render: (_: unknown, row: PerDiemRequestListItem) =>
-              formatPerDiemEmployeeName(row.employee),
-          } satisfies ColumnsType<PerDiemRequestListItem>[number],
-        ]
-      : []),
-    { title: 'Destination', dataIndex: 'destination', key: 'destination' },
-    {
-      title: 'Dates',
-      key: 'dates',
-      width: 200,
-      render: (_: unknown, row: PerDiemRequestListItem) =>
-        `${formatProjectDate(row.startDate)} – ${formatProjectDate(row.endDate)}`,
-    },
-    { title: 'Days', dataIndex: 'days', key: 'days', width: 70, align: 'right' },
-    {
-      title: 'Total',
-      dataIndex: 'totalAmountEtb',
-      key: 'totalAmountEtb',
-      width: 140,
-      align: 'right',
-      render: (value: number) => formatEtbAmount(value),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: PerDiemStatus) => (
-        <StatusBadge
-          label={formatPerDiemStatus(value, t)}
-          variant={perDiemStatusVariant(value)}
-        />
-      ),
-    },
-  ];
+  const columns: ColumnsType<PerDiemRequestListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 120,
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              render: (_: unknown, row: PerDiemRequestListItem) =>
+                formatPerDiemEmployeeName(row.employee),
+            } satisfies ColumnsType<PerDiemRequestListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.destination'),
+        dataIndex: 'destination',
+        key: 'destination',
+      },
+      {
+        title: t('hr.table.startDate'),
+        key: 'dates',
+        width: 200,
+        render: (_: unknown, row: PerDiemRequestListItem) =>
+          `${formatProjectDate(row.startDate)} – ${formatProjectDate(row.endDate)}`,
+      },
+      {
+        title: t('hr.table.days'),
+        dataIndex: 'days',
+        key: 'days',
+        width: 70,
+        align: 'right',
+      },
+      {
+        title: t('hr.table.total'),
+        dataIndex: 'totalAmountEtb',
+        key: 'totalAmountEtb',
+        width: 140,
+        align: 'right',
+        render: (value: number) => formatEtbAmount(value),
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: PerDiemStatus) => (
+          <StatusBadge
+            label={formatPerDiemStatus(value, t)}
+            variant={perDiemStatusVariant(value)}
+          />
+        ),
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -151,12 +164,12 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search request # or destination"
+          placeholder={t('hr.placeholder.searchPerDiem')}
         />
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           style={{ minWidth: 180 }}
           options={statusOptions}
           value={statusFilter}
@@ -170,7 +183,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             allowClear
             showSearch
             optionFilterProp="label"
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             options={(usersQuery.data?.data ?? []).map((user) => ({
               value: user.id,
@@ -187,7 +200,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         <div className="flex items-center gap-2 ml-auto">
           {canManageRates ? (
             <Button onClick={() => router.push('/hr/per-diem-rates')}>
-              Manage Rates
+              {t('hr.labels.perDiemRates')}
             </Button>
           ) : null}
           <Button
@@ -195,7 +208,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             icon={<PlusOutlined />}
             onClick={() => router.push('/approvals/new/per-diem')}
           >
-            New Request
+            {t('hr.buttons.newPerDiem')}
           </Button>
         </div>
       </div>
@@ -215,8 +228,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<WalletOutlined />}
-                title="No per diem requests"
-                description="Submit a request to start the approval workflow."
+                title={t('hr.empty.noPerDiemRequests')}
               />
             ),
           }}

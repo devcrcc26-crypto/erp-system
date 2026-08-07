@@ -184,7 +184,7 @@ export default function LeaveRequestDetailPageContent({
                     router.push(`/approvals/${request.approvalRequestId}`)
                   }
                 >
-                  View in Approvals
+                  {t('hr.buttons.viewInApprovals')}
                 </Button>
               ) : null}
               {canCancel ? (
@@ -193,7 +193,7 @@ export default function LeaveRequestDetailPageContent({
                   size="small"
                   onClick={() => setConfirmCancel(true)}
                 >
-                  Cancel
+                  {t('hr.buttons.cancelRequest')}
                 </Button>
               ) : null}
             </div>
@@ -237,7 +237,7 @@ export default function LeaveRequestDetailPageContent({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <div className="flex flex-col gap-4 min-w-0">
-          <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <MetaItem label={t('hr.labels.employee')}>
                 {formatLeaveEmployeeName(request.employee)}
@@ -289,9 +289,9 @@ export default function LeaveRequestDetailPageContent({
               currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                No approval workflow linked.
+                {t('hr.empty.noApprovalChain')}
               </p>
             </SectionCard>
           )}
@@ -302,7 +302,7 @@ export default function LeaveRequestDetailPageContent({
         open={confirmCancel}
         title="Cancel leave request?"
         description="This will cancel the leave request and release any pending balance. This cannot be undone."
-        confirmLabel="Cancel request"
+        confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
         onCancel={() => setConfirmCancel(false)}

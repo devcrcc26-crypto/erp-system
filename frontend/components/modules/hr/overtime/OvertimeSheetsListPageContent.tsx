@@ -99,99 +99,103 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
     return Array.from({ length: 6 }, (_, i) => current - i);
   }, []);
 
-  const columns: ColumnsType<OvertimeSheetListItem> = [
-    {
-      title: 'Sheet #',
-      dataIndex: 'sheetNumber',
-      key: 'sheetNumber',
-      width: 140,
-      render: (value: string) => (
-        <span className="font-medium text-[var(--color-text-primary)]">
-          {value}
-        </span>
-      ),
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Employee',
-            key: 'employee',
-            width: 180,
-            render: (_: unknown, row: OvertimeSheetListItem) =>
-              formatOvertimeEmployeeName(row.employee),
-          } satisfies ColumnsType<OvertimeSheetListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Period',
-      key: 'period',
-      width: 140,
-      render: (_, row) => formatOvertimePeriod(row.month, row.year, t),
-    },
-    {
-      title: 'Regular',
-      dataIndex: 'totalRegularHours',
-      key: 'totalRegularHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Night',
-      dataIndex: 'totalNightHours',
-      key: 'totalNightHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Weekend',
-      dataIndex: 'totalWeekendHours',
-      key: 'totalWeekendHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Holiday',
-      dataIndex: 'totalHolidayHours',
-      key: 'totalHolidayHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Total',
-      dataIndex: 'totalHours',
-      key: 'totalHours',
-      width: 90,
-      align: 'right',
-      render: (v: number) => (
-        <span className="font-medium">{formatOvertimeHours(v)}</span>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (value: OvertimeSheetStatus) => (
-        <StatusBadge
-          label={formatOvertimeStatus(value, t)}
-          variant={overtimeStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Tier',
-      key: 'tier',
-      width: 80,
-      render: (_, row) =>
-        row.approvalRequest?.currentTier != null
-          ? String(row.approvalRequest.currentTier)
-          : '—',
-    },
-  ];
+  const columns: ColumnsType<OvertimeSheetListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.sheetNumber'),
+        dataIndex: 'sheetNumber',
+        key: 'sheetNumber',
+        width: 140,
+        render: (value: string) => (
+          <span className="font-medium text-[var(--color-text-primary)]">
+            {value}
+          </span>
+        ),
+      },
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.employee'),
+              key: 'employee',
+              width: 180,
+              render: (_: unknown, row: OvertimeSheetListItem) =>
+                formatOvertimeEmployeeName(row.employee),
+            } satisfies ColumnsType<OvertimeSheetListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.period'),
+        key: 'period',
+        width: 140,
+        render: (_: unknown, row: OvertimeSheetListItem) =>
+          formatOvertimePeriod(row.month, row.year, t),
+      },
+      {
+        title: t('hr.table.regularHours'),
+        dataIndex: 'totalRegularHours',
+        key: 'totalRegularHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.table.nightHours'),
+        dataIndex: 'totalNightHours',
+        key: 'totalNightHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.table.weekendHours'),
+        dataIndex: 'totalWeekendHours',
+        key: 'totalWeekendHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.table.holidayHours'),
+        dataIndex: 'totalHolidayHours',
+        key: 'totalHolidayHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => formatOvertimeHours(v),
+      },
+      {
+        title: t('hr.table.total'),
+        dataIndex: 'totalHours',
+        key: 'totalHours',
+        width: 90,
+        align: 'right' as const,
+        render: (v: number) => (
+          <span className="font-medium">{formatOvertimeHours(v)}</span>
+        ),
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 120,
+        render: (value: OvertimeSheetStatus) => (
+          <StatusBadge
+            label={formatOvertimeStatus(value, t)}
+            variant={overtimeStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentTier'),
+        key: 'tier',
+        width: 80,
+        render: (_: unknown, row: OvertimeSheetListItem) =>
+          row.approvalRequest?.currentTier != null
+            ? String(row.approvalRequest.currentTier)
+            : '—',
+      },
+    ],
+    [canViewHr, t],
+  );
 
   if (!canAccess) {
     return (
@@ -231,12 +235,12 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search sheet number"
+          placeholder={t('hr.placeholder.searchSheet')}
         />
         <Select
           mode="multiple"
           allowClear
-          placeholder="Status"
+          placeholder={t('hr.placeholder.status')}
           style={{ minWidth: 180 }}
           options={statusOptions}
           value={statusFilter}
@@ -249,7 +253,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           <Select
             allowClear
             showSearch
-            placeholder="Employee"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             optionFilterProp="label"
             value={employeeId}
@@ -265,7 +269,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         ) : null}
         <Select
           allowClear
-          placeholder="Month"
+          placeholder={t('hr.placeholder.month')}
           style={{ minWidth: 140 }}
           options={monthOptions}
           value={month}
@@ -276,7 +280,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         />
         <Select
           allowClear
-          placeholder="Year"
+          placeholder={t('hr.placeholder.year')}
           style={{ minWidth: 110 }}
           options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
           value={year}
@@ -295,7 +299,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             className="ml-auto"
             onClick={() => router.push('/approvals/new/overtime')}
           >
-            {t('pages.hr.overtime.new')}
+            {t('hr.buttons.thisMonthSheet')}
           </Button>
         ) : null}
       </div>
@@ -315,8 +319,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<ClockCircleOutlined />}
-                title="No overtime sheets"
-                description="Open this month's sheet to start logging overtime."
+                title={t('hr.empty.noOvertimeSheets')}
               />
             ),
           }}

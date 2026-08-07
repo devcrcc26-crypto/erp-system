@@ -169,7 +169,7 @@ export default function FlightApplicationDetailPageContent({
               />
               {application.isInternational ? (
                 <Tag color="volcano" className="m-0">
-                  International
+                  {t('hr.labels.international')}
                 </Tag>
               ) : null}
             </div>
@@ -181,7 +181,7 @@ export default function FlightApplicationDetailPageContent({
                     router.push(`/approvals/${application.approvalRequestId}`)
                   }
                 >
-                  View in Approvals
+                  {t('hr.buttons.viewInApprovals')}
                 </Button>
               ) : null}
               {canCancel ? (
@@ -190,7 +190,7 @@ export default function FlightApplicationDetailPageContent({
                   size="small"
                   onClick={() => setConfirmCancel(true)}
                 >
-                  Cancel
+                  {t('hr.buttons.cancel')}
                 </Button>
               ) : null}
             </div>
@@ -223,7 +223,7 @@ export default function FlightApplicationDetailPageContent({
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
             <span>
-              Submitted by{' '}
+              {t('hr.table.submittedBy')}{' '}
               <span className="font-medium text-[var(--color-text-primary)]">
                 {formatFlightSubmitterName(application.submitter)}
               </span>
@@ -265,7 +265,7 @@ export default function FlightApplicationDetailPageContent({
             label: t('hr.labels.return'),
             value: application.returnDate
               ? formatProjectDate(application.returnDate)
-              : 'One way',
+              : t('hr.tripType.ONE_WAY'),
           },
           {
             label: t('hr.labels.passengers'),
@@ -345,13 +345,13 @@ export default function FlightApplicationDetailPageContent({
                 <MetaItem label={t('hr.labels.ticketClass')}>
                   {formatTicketClass(application.ticketClass, t)}
                 </MetaItem>
-                <MetaItem label="International">
+                <MetaItem label={t('hr.labels.international')}>
                   {application.isInternational ? (
                     <Tag color="volcano" className="m-0 w-fit">
-                      International
+                      {t('hr.labels.international')}
                     </Tag>
                   ) : (
-                    <Tag className="m-0 w-fit">Domestic</Tag>
+                    <Tag className="m-0 w-fit">{t('hr.labels.domestic')}</Tag>
                   )}
                 </MetaItem>
               </div>
@@ -398,10 +398,10 @@ export default function FlightApplicationDetailPageContent({
             <div className="px-5 py-4">
               <SubsectionHeader
                 icon={<FileText size={15} />}
-                title="Purpose & Notes"
+                title={t('hr.labels.purpose')}
               />
               <div className="ml-0 sm:ml-[23px] flex flex-col gap-4">
-                <MetaItem label="Purpose">
+                <MetaItem label={t('hr.labels.purpose')}>
                   <p className="whitespace-pre-wrap leading-relaxed m-0">
                     {application.purpose}
                   </p>
@@ -468,21 +468,21 @@ export default function FlightApplicationDetailPageContent({
                           <Tag color="volcano" className="m-0">
                             {row.visaStatus
                               ? formatVisaStatus(row.visaStatus, t)
-                              : 'Visa Required'}
+                              : t('hr.form.visaRequired')}
                           </Tag>
                         ) : (
-                          <Tag className="m-0">No Visa</Tag>
+                          <Tag className="m-0">{t('hr.labels.notRequired')}</Tag>
                         )}
                         {hasOwnTicket ? (
                           <Tag color="green" className="m-0">
-                            Own Ticket
+                            {t('hr.table.ticket')}
                           </Tag>
                         ) : hasTicket ? (
                           <Tag color="blue" className="m-0">
-                            Combined Ticket
+                            {t('hr.labels.combinedTicket')}
                           </Tag>
                         ) : (
-                          <Tag className="m-0">No Ticket</Tag>
+                          <Tag className="m-0">{t('hr.labels.noTicket')}</Tag>
                         )}
                       </div>
                     </div>
@@ -490,7 +490,7 @@ export default function FlightApplicationDetailPageContent({
                       <MetaItem label={t('hr.labels.passport')}>
                         {row.passportNumber ?? (
                           <span className="text-[var(--color-text-tertiary)]">
-                            Not provided
+                            —
                           </span>
                         )}
                       </MetaItem>
@@ -499,7 +499,7 @@ export default function FlightApplicationDetailPageContent({
                           ? row.visaStatus
                             ? formatVisaStatus(row.visaStatus, t)
                             : t('hr.labels.required')
-                          : 'Not required'}
+                          : t('hr.labels.notRequired')}
                       </MetaItem>
                     </div>
                   </li>
@@ -520,7 +520,7 @@ export default function FlightApplicationDetailPageContent({
               <AttachmentDownloadList documents={application.documents} />
             ) : (
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                No supporting documents attached.
+                {t('hr.empty.noAttachments')}
               </p>
             )}
           </SectionCard>
@@ -535,7 +535,7 @@ export default function FlightApplicationDetailPageContent({
           ) : (
             <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                No approval workflow linked.
+                {t('hr.empty.noApprovalChain')}
               </p>
             </SectionCard>
           )}

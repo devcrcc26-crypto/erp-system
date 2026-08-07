@@ -169,33 +169,33 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   const itemColumns: ColumnsType<ConsumablesRequisitionItem> = [
     {
-      title: 'Item Name',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Item Code',
+      title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 120,
       render: (v: string | null | undefined) => v || '-',
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       render: (v: string | null | undefined) => v || '-',
     },
     {
-      title: 'Quantity',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 90,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     ...(canEdit
       ? [
           {
@@ -281,7 +281,7 @@ export default function ConsumablesRequisitionDetailPageContent({
                   )}
                 />
                 {requisition.declarationConfirmed ? (
-                  <Tag color="green">Declaration confirmed</Tag>
+                  <Tag color="green">{t('hr.labels.declaration')}</Tag>
                 ) : null}
                 {isDirectApproved ? (
                   <Tag color="blue">Direct approval</Tag>
@@ -307,15 +307,15 @@ export default function ConsumablesRequisitionDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: 'Items', value: String(requisition.items.length) },
+              { label: t('hr.table.items'), value: String(requisition.items.length) },
               {
-                label: 'Required By',
+                label: t('hr.table.requiredBy'),
                 value: requisition.requiredByDate
                   ? formatProjectDate(requisition.requiredByDate)
                   : '-',
               },
               {
-                label: 'Department',
+                label: t('hr.table.department'),
                 value: requisition.department ?? '-',
               },
             ]}
@@ -329,17 +329,17 @@ export default function ConsumablesRequisitionDetailPageContent({
             />
           ) : null}
 
-          <SectionCard title="Purpose" bodyClassName="px-5 py-4">
-            <MetaItem label="What are these consumables needed for?">
+          <SectionCard title={t('hr.form.purpose')} bodyClassName="px-5 py-4">
+            <MetaItem label={t('hr.form.purpose')}>
               <p className="whitespace-pre-wrap leading-relaxed m-0">
                 {requisition.purpose}
               </p>
             </MetaItem>
           </SectionCard>
 
-          <SectionCard title="Items" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
             {requisition.items.length === 0 ? (
-              <Empty description="No items" />
+              <Empty description={t('hr.empty.noItems')} />
             ) : (
               <>
                 <Table<ConsumablesRequisitionItem>
@@ -360,7 +360,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
+          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
             {isDirectApproved ? (
               <Typography.Text type="secondary">
                 Approved directly — no approval required
@@ -372,7 +372,7 @@ export default function ConsumablesRequisitionDetailPageContent({
               />
             ) : (
               <Typography.Text type="secondary">
-                No approval chain yet
+                {t('hr.empty.noApprovalChain')}
               </Typography.Text>
             )}
           </SectionCard>
@@ -393,27 +393,27 @@ export default function ConsumablesRequisitionDetailPageContent({
         <Form form={itemForm} layout="vertical" className="mt-2">
           <Form.Item
             name="itemName"
-            label="Item Name"
+            label={t('hr.form.itemName')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <Input maxLength={200} />
           </Form.Item>
-          <Form.Item name="itemCode" label="Item Code">
+          <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label={t('hr.form.description')}>
             <Input maxLength={1000} />
           </Form.Item>
           <Form.Item
             name="quantity"
-            label="Quantity"
+            label={t('hr.form.quantity')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <InputNumber min={0.01} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
             name="unit"
-            label="Unit"
+            label={t('hr.form.unit')}
             rules={[{ required: true, message: 'Required' }]}
           >
             <Input maxLength={50} />

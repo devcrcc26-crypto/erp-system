@@ -120,134 +120,136 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
 
-  const columns: ColumnsType<BusinessTripListItem> = [
-    {
-      title: 'Trip #',
-      dataIndex: 'tripNumber',
-      key: 'tripNumber',
-      width: 140,
-    },
-    ...(canViewHr
-      ? [
-          {
-            title: 'Submitted by',
-            key: 'submitter',
-            render: (_: unknown, row: BusinessTripListItem) =>
-              formatBusinessTripSubmitterName(row.submitter),
-          } satisfies ColumnsType<BusinessTripListItem>[number],
-        ]
-      : []),
-    {
-      title: 'Destination',
-      key: 'destination',
-      render: (_: unknown, row: BusinessTripListItem) => (
-        <span>
-          {row.destinationCountry}
-          {row.destinationCity ? (
-            <>
-              <span
-                style={{ margin: '0 4px', color: tokens.colorTextSecondary }}
-              >
-                -
-              </span>
-              {row.destinationCity}
-            </>
-          ) : null}
-        </span>
-      ),
-    },
-    {
-      title: 'Departure',
-      dataIndex: 'departureDate',
-      key: 'departureDate',
-      width: 120,
-      render: (value: string) => formatProjectDate(value),
-    },
-    {
-      title: 'Trip Type',
-      dataIndex: 'tripType',
-      key: 'tripType',
-      width: 120,
-      render: (value: string) => (
-        <StatusBadge
-          label={formatTripType(value, t)}
-          variant={tripTypeVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Passengers',
-      dataIndex: 'passengerCount',
-      key: 'passengerCount',
-      width: 100,
-      align: 'center' as const,
-    },
-    {
-      title: 'Estimated Total',
-      dataIndex: 'estimatedTotalCost',
-      key: 'estimatedTotalCost',
-      width: 140,
-      render: (value: number | null | undefined) => formatEtb(value),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 130,
-      render: (value: BusinessTripStatus) => (
-        <StatusBadge
-          label={formatBusinessTripStatus(value, t)}
-          variant={businessTripStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: 'Current Step',
-      key: 'currentStep',
-      width: 180,
-      render: (_: unknown, row: BusinessTripListItem) => {
-        const label = getCurrentStepLabel(row, t);
-        if (!label || label === '—') {
-          return (
-            <span style={{ color: tokens.colorTextSecondary }}>—</span>
-          );
-        }
-        const color =
-          row.status === 'APPROVED'
-            ? label === 'Buying Ticket'
-              ? 'orange'
-              : label === 'Completed'
-                ? 'green'
-                : 'blue'
-            : 'blue';
-        return <Tag color={color}>{label}</Tag>;
+  const columns: ColumnsType<BusinessTripListItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.tripNumber'),
+        dataIndex: 'tripNumber',
+        key: 'tripNumber',
+        width: 140,
       },
-    },
-    ...(canManage
-      ? [
-          {
-            title: '',
-            key: 'ticketAction',
-            width: 110,
-            render: (_: unknown, row: BusinessTripListItem) =>
-              row.needsTicketAttachment ? (
-                <Tag
-                  color="orange"
-                  icon={<SendOutlined />}
-                  style={{ cursor: 'pointer' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/hr/business-trips/${row.id}`);
-                  }}
+      ...(canViewHr
+        ? [
+            {
+              title: t('hr.table.submittedBy'),
+              key: 'submitter',
+              render: (_: unknown, row: BusinessTripListItem) =>
+                formatBusinessTripSubmitterName(row.submitter),
+            } satisfies ColumnsType<BusinessTripListItem>[number],
+          ]
+        : []),
+      {
+        title: t('hr.table.destination'),
+        key: 'destination',
+        render: (_: unknown, row: BusinessTripListItem) => (
+          <span>
+            {row.destinationCountry}
+            {row.destinationCity ? (
+              <>
+                <span
+                  style={{ margin: '0 4px', color: tokens.colorTextSecondary }}
                 >
-                  Attach Ticket
-                </Tag>
-              ) : null,
-          } satisfies ColumnsType<BusinessTripListItem>[number],
-        ]
-      : []),
-  ];
-
+                  -
+                </span>
+                {row.destinationCity}
+              </>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        title: t('hr.table.departure'),
+        dataIndex: 'departureDate',
+        key: 'departureDate',
+        width: 120,
+        render: (value: string) => formatProjectDate(value),
+      },
+      {
+        title: t('hr.table.tripType'),
+        dataIndex: 'tripType',
+        key: 'tripType',
+        width: 120,
+        render: (value: string) => (
+          <StatusBadge
+            label={formatTripType(value, t)}
+            variant={tripTypeVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.passengers'),
+        dataIndex: 'passengerCount',
+        key: 'passengerCount',
+        width: 100,
+        align: 'center' as const,
+      },
+      {
+        title: t('hr.table.estimatedTotal'),
+        dataIndex: 'estimatedTotalCost',
+        key: 'estimatedTotalCost',
+        width: 140,
+        render: (value: number | null | undefined) => formatEtb(value),
+      },
+      {
+        title: t('hr.table.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 130,
+        render: (value: BusinessTripStatus) => (
+          <StatusBadge
+            label={formatBusinessTripStatus(value, t)}
+            variant={businessTripStatusVariant(value)}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.currentStep'),
+        key: 'currentStep',
+        width: 180,
+        render: (_: unknown, row: BusinessTripListItem) => {
+          const label = getCurrentStepLabel(row, t);
+          if (!label || label === '—') {
+            return (
+              <span style={{ color: tokens.colorTextSecondary }}>—</span>
+            );
+          }
+          const color =
+            row.status === 'APPROVED'
+              ? label === t('hr.labels.buyingTicket')
+                ? 'orange'
+                : label === t('hr.labels.completed')
+                  ? 'green'
+                  : 'blue'
+              : 'blue';
+          return <Tag color={color}>{label}</Tag>;
+        },
+      },
+      ...(canManage
+        ? [
+            {
+              title: '',
+              key: 'ticketAction',
+              width: 110,
+              render: (_: unknown, row: BusinessTripListItem) =>
+                row.needsTicketAttachment ? (
+                  <Tag
+                    color="orange"
+                    icon={<SendOutlined />}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/hr/business-trips/${row.id}`);
+                    }}
+                  >
+                    {t('hr.labels.attachTicket')}
+                  </Tag>
+                ) : null,
+            } satisfies ColumnsType<BusinessTripListItem>[number],
+          ]
+        : []),
+    ],
+    [canManage, canViewHr, router, t],
+  );
   if (!canAccess) {
     return (
       <Alert
@@ -261,8 +263,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
   }
-
-  const newLabel = t('pages.hr.businessTrip.new');
 
   return (
     <div>
@@ -287,12 +287,12 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             resetPage();
           }}
           items={[
-            { key: 'ALL', label: 'All Trips' },
+            { key: 'ALL', label: t('hr.tabs.allTrips') },
             {
               key: 'NEEDS_TICKET',
               label: (
                 <span className="inline-flex items-center gap-1.5">
-                  Needs Ticket
+                  {t('hr.tabs.needsTicket')}
                   {needsTicketCount > 0 ? (
                     <span
                       className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
@@ -317,13 +317,13 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             setSearch(value);
             resetPage();
           }}
-          placeholder="Search trip # or destination"
+          placeholder={t('hr.placeholder.searchBusinessTrip')}
         />
         {!needsTicketTab ? (
           <Select
             mode="multiple"
             allowClear
-            placeholder="Status"
+            placeholder={t('hr.placeholder.status')}
             style={{ minWidth: 180 }}
             options={statusOptions}
             value={statusFilter}
@@ -335,7 +335,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         ) : null}
         <Input
           allowClear
-          placeholder="Destination country"
+          placeholder={t('hr.form.destinationCountry')}
           style={{ width: 180 }}
           value={destinationCountry}
           onChange={(e) => {
@@ -348,7 +348,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             allowClear
             showSearch
             optionFilterProp="label"
-            placeholder="Submitted by"
+            placeholder={t('hr.placeholder.employee')}
             style={{ minWidth: 200 }}
             options={(usersQuery.data?.data ?? []).map((user) => ({
               value: user.id,
@@ -362,7 +362,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           />
         ) : null}
         <DatePicker.RangePicker
-          placeholder={['Departure from', 'Departure to']}
           value={dateRange}
           onChange={(value) => {
             setDateRange(value);
@@ -377,7 +376,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             className="ml-auto"
             onClick={() => router.push('/approvals/new/business-trip')}
           >
-            {newLabel}
+            {t('hr.buttons.newBusinessTrip')}
           </Button>
         ) : null}
       </div>
@@ -397,16 +396,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             emptyText: (
               <TableEmptyState
                 icon={<SendOutlined />}
-                title={
-                  needsTicketTab
-                    ? 'No trips need tickets'
-                    : 'No business trips'
-                }
-                description={
-                  needsTicketTab
-                    ? 'Approved trips awaiting ticket booking will appear here.'
-                    : 'Submit a new business trip to start the approval process.'
-                }
+                title={t('hr.empty.noBusinessTrips')}
               />
             ),
           }}

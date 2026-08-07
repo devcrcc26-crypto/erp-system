@@ -23,6 +23,7 @@ import {
 } from '@/lib/query/business-trip';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface BusinessTripFormProps {
   onSuccess?: (created: BusinessTripDetail) => void;
@@ -65,8 +66,9 @@ const INITIAL_ADDITIONAL: BusinessTripAdditionalValues = {
  */
 export function BusinessTripForm({
   onSuccess,
-  submitLabel = 'Submit Business Trip',
+  submitLabel,
 }: BusinessTripFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useBusinessTripSelectablePassengers();
@@ -101,11 +103,13 @@ export function BusinessTripForm({
   }, [currentUser.data, passengersQuery.data, seededSelf]);
 
   const selectablePassengers = passengersQuery.data ?? [];
+  const resolvedSubmitLabel =
+    submitLabel ?? t('hr.buttons.submitBusinessTrip');
 
   const steps = useMemo(
     () => [
       {
-        title: 'Trip Details',
+        title: t('hr.form.tripDetails'),
         content: (
           <BusinessTripDetailsStep
             values={tripDetails}
@@ -145,7 +149,7 @@ export function BusinessTripForm({
         },
       },
       {
-        title: 'Purpose & Budget',
+        title: t('hr.form.purposeBudget'),
         content: (
           <BusinessTripPurposeBudgetStep
             values={purposeBudget}
@@ -161,7 +165,7 @@ export function BusinessTripForm({
         },
       },
       {
-        title: 'Passengers',
+        title: t('hr.form.passengers'),
         content: (
           <BusinessTripPassengersStep
             values={passengers}
@@ -188,7 +192,7 @@ export function BusinessTripForm({
         },
       },
       {
-        title: 'Review & Submit',
+        title: t('hr.form.reviewSubmit'),
         content: (
           <div className="flex flex-col gap-6">
             <BusinessTripAdditionalStep
@@ -215,6 +219,7 @@ export function BusinessTripForm({
       passengersQuery.isLoading,
       submitMutation.isPending,
       messageApi,
+      t,
     ],
   );
 
@@ -295,7 +300,7 @@ export function BusinessTripForm({
       <StepperForm
         steps={steps}
         onSubmit={handleSubmit}
-        submitLabel={submitLabel}
+        submitLabel={resolvedSubmitLabel}
         isSubmitting={submitMutation.isPending}
       />
     </div>

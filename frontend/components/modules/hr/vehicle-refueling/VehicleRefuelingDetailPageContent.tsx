@@ -175,39 +175,39 @@ export default function VehicleRefuelingDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: 'Station', value: refueling.fuelStation },
+              { label: t('hr.labels.fuelStation'), value: refueling.fuelStation },
           { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
               {
-                label: 'Litres',
+                label: t('hr.table.litres'),
                 value: refueling.requestedLitres?.toString() ?? '-',
               },
               {
-                label: 'Cost (ETB)',
+                label: t('hr.labels.estimatedCost'),
                 value: refueling.estimatedCostEtb?.toString() ?? '-',
               },
             ]}
           />
 
-          <SectionCard title="Refueling Details" bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MetaItem label="Fuel Date">
+              <MetaItem label={t('hr.form.fuelDate')}>
                 {formatProjectDate(refueling.fuelDate)}
               </MetaItem>
-              <MetaItem label="Current Mileage (km)">
+              <MetaItem label={t('hr.form.currentMileage')}>
                 {refueling.currentMileage?.toString() ?? '-'}
               </MetaItem>
-              <MetaItem label="Vehicle">
+              <MetaItem label={t('hr.form.vehicle')}>
                 {refueling.vehicle
                   ? `${refueling.vehicle.plateNumber} - ${refueling.vehicle.make} ${refueling.vehicle.model}`
                   : '-'}
               </MetaItem>
               {refueling.driver ? (
-                <MetaItem label="Driver">
+                <MetaItem label={t('hr.form.driver')}>
                   {formatVehicleRefuelingEmployeeName(refueling.driver)}
                 </MetaItem>
               ) : null}
               {refueling.notes ? (
-                <MetaItem label="Notes">
+                <MetaItem label={t('hr.form.notes')}>
                   <p className="whitespace-pre-wrap leading-relaxed m-0">
                     {refueling.notes}
                   </p>
@@ -217,7 +217,7 @@ export default function VehicleRefuelingDetailPageContent({
           </SectionCard>
 
           {showReceiptUpload ? (
-            <SectionCard title="Receipt Upload" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.form.receipt')} bodyClassName="px-5 py-4">
               <Alert
                 type="info"
                 showIcon
@@ -242,13 +242,13 @@ export default function VehicleRefuelingDetailPageContent({
                 loading={uploadMutation.isPending}
                 onClick={() => fileInputRef.current?.click()}
               >
-                Upload Receipt
+                {t('hr.buttons.attachReceipt')}
               </Button>
             </SectionCard>
           ) : null}
 
           {refueling.receiptDocumentId ? (
-            <SectionCard title="Receipt" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.table.receipt')} bodyClassName="px-5 py-4">
               <Typography.Text>
                 Receipt attached
                 {refueling.receiptDocument?.name
@@ -260,7 +260,7 @@ export default function VehicleRefuelingDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
+          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
             {isDirectApproved ? (
               <Typography.Text type="secondary">
                 Approved directly - no approval required
@@ -272,7 +272,7 @@ export default function VehicleRefuelingDetailPageContent({
               />
             ) : (
               <Typography.Text type="secondary">
-                No approval chain yet
+                {t('hr.empty.noApprovalChain')}
               </Typography.Text>
             )}
           </SectionCard>

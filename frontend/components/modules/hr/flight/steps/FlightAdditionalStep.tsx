@@ -2,6 +2,7 @@
 
 import { Checkbox, Input, Typography } from 'antd';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
 import type { FlightAdditionalValues } from './flight-stepper.types';
 
@@ -17,6 +18,8 @@ export default function FlightAdditionalStep({
   onChange: (next: FlightAdditionalValues) => void;
   disabled?: boolean;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
   function patch(partial: Partial<FlightAdditionalValues>): void {
     onChange({ ...values, ...partial });
   }
@@ -31,7 +34,7 @@ export default function FlightAdditionalStep({
         }}
       >
         <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          Additional Options
+          {t('hr.section.additionalOptions')}
         </Typography.Title>
 
         <div className="mb-3">
@@ -42,7 +45,7 @@ export default function FlightAdditionalStep({
             }
             disabled={disabled}
           >
-            Accommodation required
+            {t('hr.form.accommodation')}
           </Checkbox>
         </div>
 
@@ -51,7 +54,7 @@ export default function FlightAdditionalStep({
             <Typography.Text
               style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
             >
-              Accommodation Details
+              {t('hr.form.accommodationDetails')}
             </Typography.Text>
             <Input.TextArea
               rows={3}
@@ -59,7 +62,7 @@ export default function FlightAdditionalStep({
               showCount
               value={values.accommodationDetails}
               onChange={(e) => patch({ accommodationDetails: e.target.value })}
-              placeholder="Hotel name, check-in/out dates, preferences…"
+              placeholder={t('hr.form.accommodationDetails')}
               disabled={disabled}
             />
           </div>
@@ -71,7 +74,7 @@ export default function FlightAdditionalStep({
             onChange={(e) => patch({ perDiemRequired: e.target.checked })}
             disabled={disabled}
           >
-            Per diem required
+            {t('hr.form.perDiemRequired')}
           </Checkbox>
         </div>
 
@@ -79,7 +82,7 @@ export default function FlightAdditionalStep({
           <Typography.Text
             style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
           >
-            Notes (optional)
+            {t('hr.form.notes')}
           </Typography.Text>
           <Input.TextArea
             rows={3}
@@ -87,7 +90,7 @@ export default function FlightAdditionalStep({
             showCount
             value={values.notes}
             onChange={(e) => patch({ notes: e.target.value })}
-            placeholder="Any other information for the approver"
+            placeholder={t('hr.placeholder.enterNotes')}
             disabled={disabled}
           />
         </div>
@@ -101,14 +104,13 @@ export default function FlightAdditionalStep({
         }}
       >
         <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>
-          Supporting Attachments
+          {t('hr.labels.supportingAttachments')}
         </Typography.Title>
         <Typography.Paragraph
           type="secondary"
           style={{ marginBottom: 12, fontSize: 13 }}
         >
-          Upload supporting documents such as itinerary, invitation letters, or
-          visa copies.
+          {t('hr.form.supportingDocuments')}
         </Typography.Paragraph>
         <FileUploadInput
           files={values.files}
