@@ -164,6 +164,14 @@
         "listDescription": "Review and process warehouse material requisitions.",
         "myListDescription": "Submit and track your material requisitions through the approval workflow."
       },
+      "consumables": {
+        "new": "New Consumables Requisition",
+        "detail": "Consumables Requisition",
+        "listTitle": "Consumables Requisitions",
+        "myListTitle": "My Consumables Requisitions",
+        "listDescription": "Review and process low-value consumables requisitions.",
+        "myListDescription": "Submit and track your consumables requisitions through the approval workflow."
+      },
       "perDiem": {
         "new": "New Per Diem Request",
         "detail": "Per Diem Request",

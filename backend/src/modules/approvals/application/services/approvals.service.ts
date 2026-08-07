@@ -21,6 +21,7 @@ import {
   Prisma,
   PurchaseRequestStatus,
   MaterialRequisitionStatus,
+  ConsumablesRequisitionStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -93,6 +94,7 @@ const REQUEST_DETAIL_INCLUDE = {
   perDiemRequest: { select: { id: true } },
   purchaseRequest: { select: { id: true } },
   materialRequisition: { select: { id: true } },
+  consumablesRequisition: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -329,6 +331,7 @@ export class ApprovalsService {
       request.perDiemRequest?.id ??
       request.purchaseRequest?.id ??
       request.materialRequisition?.id ??
+      request.consumablesRequisition?.id ??
       null;
 
     return {
@@ -343,6 +346,7 @@ export class ApprovalsService {
       perDiemRequest: undefined,
       purchaseRequest: undefined,
       materialRequisition: undefined,
+      consumablesRequisition: undefined,
     };
   }
 
@@ -1108,6 +1112,7 @@ export class ApprovalsService {
         perDiemRequest: true,
         purchaseRequest: true,
         materialRequisition: true,
+        consumablesRequisition: true,
       },
     });
     if (!request) {
@@ -1264,6 +1269,17 @@ export class ApprovalsService {
             where: { id: request.materialRequisition.id },
             data: {
               status: MaterialRequisitionStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.consumablesRequisition) {
+          await tx.consumablesRequisition.update({
+            where: { id: request.consumablesRequisition.id },
+            data: {
+              status: ConsumablesRequisitionStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },

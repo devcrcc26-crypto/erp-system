@@ -33,6 +33,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   PER_DIEM: '/approvals/new/per-diem',
   PURCHASE_REQUEST: '/approvals/new/purchase-request',
   MATERIAL_REQUISITION: '/approvals/new/material-requisition',
+  CONSUMABLES_REQUISITION: '/approvals/new/consumables',
 };
 
 /**

@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import ConsumablesRequisitionsListPageContent from '@/components/modules/hr/consumables/ConsumablesRequisitionsListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.consumables" />;
+export default function ConsumablesRequisitionListPage(): React.ReactNode {
+  return <ConsumablesRequisitionsListPageContent />;
 }

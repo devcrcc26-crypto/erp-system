@@ -76,6 +76,7 @@ enum FolderContextType {
   PER_DIEM
   PURCHASE_REQUEST
   MATERIAL_REQUISITION
+  CONSUMABLES_REQUISITION
 }
 
 enum NotificationChannel {
@@ -241,6 +242,7 @@ model Company {
   perDiemRequests          PerDiemRequest[]
   purchaseRequests         PurchaseRequest[]
   materialRequisitions     MaterialRequisition[]
+  consumablesRequisitions  ConsumablesRequisition[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -645,6 +647,8 @@ model User {
   purchaseRequestsCreated     PurchaseRequest[]   @relation("PurchaseRequestCreator")
   materialRequisitionsAsEmployee MaterialRequisition[] @relation("MaterialRequisitionEmployee")
   materialRequisitionsCreated    MaterialRequisition[] @relation("MaterialRequisitionCreator")
+  consumablesRequisitionsAsEmployee ConsumablesRequisition[] @relation("ConsumablesRequisitionEmployee")
+  consumablesRequisitionsCreated    ConsumablesRequisition[] @relation("ConsumablesRequisitionCreator")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -963,6 +967,7 @@ model DocumentFolder {
   perDiemRequests            PerDiemRequest[]
   purchaseRequests           PurchaseRequest[]
   materialRequisitions       MaterialRequisition[]
+  consumablesRequisitions    ConsumablesRequisition[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -3345,6 +3350,7 @@ model ApprovalRequest {
   perDiemRequest     PerDiemRequest?
   purchaseRequest      PurchaseRequest?
   materialRequisition  MaterialRequisition?
+  consumablesRequisition ConsumablesRequisition?
 
   @@index([companyId])
   @@index([categoryId])
@@ -4124,5 +4130,70 @@ model MaterialRequisitionItem {
 
   @@index([requisitionId], map: "idx_material_requisition_item")
   @@map("material_requisition_item")
+}
+
+enum ConsumablesRequisitionStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+model ConsumablesRequisition {
+  id                   String                       @id @default(uuid())
+  companyId            String                       @map("company_id")
+  requestNumber        String                       @map("request_number")
+  employeeId           String                       @map("employee_id")
+  title                String
+  purpose              String
+  requiredByDate       DateTime?                    @map("required_by_date") @db.Date
+  department           String?
+  declarationConfirmed Boolean                      @default(false) @map("declaration_confirmed")
+  status               ConsumablesRequisitionStatus @default(DRAFT)
+  approvalRequestId    String?                      @unique @map("approval_request_id")
+  attachmentFolderId   String?                      @map("attachment_folder_id")
+  submittedAt          DateTime?                    @map("submitted_at")
+  completedAt          DateTime?                    @map("completed_at")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  createdBy            String                       @map("created_by")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  updatedBy            String                       @map("updated_by")
+  deletedAt            DateTime?                    @map("deleted_at")
+  deletedBy            String?                      @map("deleted_by")
+
+  company          Company                      @relation(fields: [companyId], references: [id])
+  employee         User                         @relation("ConsumablesRequisitionEmployee", fields: [employeeId], references: [id])
+  approvalRequest  ApprovalRequest?             @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder?              @relation(fields: [attachmentFolderId], references: [id])
+  creator          User                         @relation("ConsumablesRequisitionCreator", fields: [createdBy], references: [id])
+  items            ConsumablesRequisitionItem[]
+
+  @@unique([companyId, requestNumber], map: "uq_consumables_requisition_company_number")
+  @@index([companyId], map: "idx_consumables_req_company")
+  @@index([employeeId], map: "idx_consumables_req_employee")
+  @@index([status], map: "idx_consumables_req_status")
+  @@index([companyId, deletedAt], map: "idx_consumables_req_company_deleted")
+  @@index([attachmentFolderId], map: "idx_consumables_req_attachment_folder")
+  @@map("consumables_requisition")
+}
+
+model ConsumablesRequisitionItem {
+  id            String   @id @default(uuid())
+  requisitionId String   @map("requisition_id")
+  itemName      String   @map("item_name")
+  itemCode      String?  @map("item_code")
+  description   String?
+  quantity      Decimal  @db.Decimal(10, 2)
+  unit          String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  requisition ConsumablesRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  @@index([requisitionId], map: "idx_consumables_req_item")
+  @@map("consumables_requisition_item")
 }
 

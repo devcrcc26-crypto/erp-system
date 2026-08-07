@@ -363,6 +363,13 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/vehicle-refueling',
+        labelKey: 'nav.hr.vehicleRefueling',
+        href: '/hr/vehicle-refueling',
+        iconKey: 'hr-refueling',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/official-seal',
         labelKey: 'nav.hr.officialSeal',
         href: '/hr/official-seal',
@@ -374,13 +381,6 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.projectSeal',
         href: '/hr/project-seal',
         iconKey: 'hr-project-seal',
-        visible: canViewHr,
-      },
-      {
-        key: '/hr/vehicle-refueling',
-        labelKey: 'nav.hr.vehicleRefueling',
-        href: '/hr/vehicle-refueling',
-        iconKey: 'hr-refueling',
         visible: canViewHr,
       },
       {
@@ -608,7 +608,8 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/expense-claim' ||
     pathname === '/approvals/new/per-diem' ||
     pathname === '/approvals/new/purchase-request' ||
-    pathname === '/approvals/new/material-requisition'
+    pathname === '/approvals/new/material-requisition' ||
+    pathname === '/approvals/new/consumables'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -727,6 +728,20 @@ export function resolveRouteMeta(
           href: '/hr/material-requisition',
         },
         { label: t('pages.hr.materialRequisition.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/consumables/')) {
+    return {
+      titleKey: 'pages.hr.consumables.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.consumables'),
+          href: '/hr/consumables',
+        },
+        { label: t('pages.hr.consumables.detail') },
       ],
     };
   }

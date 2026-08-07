@@ -164,6 +164,14 @@
         "listDescription": "审核并处理仓库材料领用申请。",
         "myListDescription": "提交并跟踪您的材料领用审批流程。"
       },
+      "consumables": {
+        "new": "新建低值易耗品申请",
+        "detail": "低值易耗品申请",
+        "listTitle": "低值易耗品申请",
+        "myListTitle": "我的低值易耗品申请",
+        "listDescription": "审核并处理低值易耗品领用申请。",
+        "myListDescription": "提交并跟踪您的低值易耗品审批流程。"
+      },
       "perDiem": {
         "new": "新建差旅补贴申请",
         "detail": "差旅补贴申请",

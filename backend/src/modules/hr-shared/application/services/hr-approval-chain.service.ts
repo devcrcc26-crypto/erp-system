@@ -43,6 +43,41 @@ export class HrApprovalChainService {
   }
 
   /**
+   * Approval chain for consumables requisitions.
+   * Empty array = HR Officer / above — direct APPROVED (no approval request).
+   * Otherwise a single HR Officer tier.
+   */
+  async buildConsumablesApprovalChain(
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const submitterRole =
+      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
+
+    const isHrOrAbove = [
+      'HR Officer',
+      'HR Manager',
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(submitterRole);
+
+    if (isHrOrAbove) {
+      return [];
+    }
+
+    const hr = await this.getHROfficer(companyId);
+    return [
+      {
+        tierOrder: 1,
+        label: 'HR Officer',
+        approverId: hr.id,
+        resolver: 'ROLE:HR Officer',
+      },
+    ];
+  }
+
+  /**
    * Org-structure approval chain with duplicate approver collapse.
    * @param includeGeneralManager When true, appends General Manager as tier 3.
    */
