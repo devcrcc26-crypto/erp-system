@@ -6,6 +6,8 @@ import type {
 } from '@/lib/api/vehicle-application.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const VEHICLE_APPLICATION_STATUS_OPTIONS: Array<{
   value: VehicleApplicationStatus;
   label: string;
@@ -24,7 +26,11 @@ export const DRIVE_TYPE_OPTIONS: Array<{ value: DriveType; label: string }> = [
   { value: 'SELF_DRIVE', label: 'Self Drive' },
 ];
 
-export function formatVehicleApplicationStatus(status: string): string {
+export function formatVehicleApplicationStatus(
+  status: string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.status.${status}`);
   const found = VEHICLE_APPLICATION_STATUS_OPTIONS.find(
     (o) => o.value === status,
   );
@@ -52,7 +58,11 @@ export function vehicleApplicationStatusVariant(
   }
 }
 
-export function formatDriveType(driveType: DriveType | string): string {
+export function formatDriveType(
+  driveType: DriveType | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.driveType.${driveType}`);
   const found = DRIVE_TYPE_OPTIONS.find((o) => o.value === driveType);
   return found?.label ?? driveType;
 }

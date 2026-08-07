@@ -23,6 +23,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const TICKET_ACCEPT = '.pdf,.jpg,.jpeg,.png';
 
@@ -53,6 +54,7 @@ function AckStatus({
   acknowledgeVariables: string | undefined;
   onAcknowledge: (passengerId: string) => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   if (passenger.acknowledgementStatus === 'ACKNOWLEDGED') {
     return (
       <div className="flex flex-col items-end gap-0.5">
@@ -80,7 +82,7 @@ function AckStatus({
         loading={acknowledgePending && acknowledgeVariables === passenger.id}
         onClick={() => onAcknowledge(passenger.id)}
       >
-        Acknowledge Receipt
+        {t('hr.labels.acknowledgeReceipt')}
       </Button>
     );
   }
@@ -100,6 +102,7 @@ export default function BusinessTripTicketAssignmentPanel({
 }: {
   trip: BusinessTripDetail;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
@@ -249,9 +252,9 @@ export default function BusinessTripTicketAssignmentPanel({
             Replace
           </Button>
           <Popconfirm
-            title="Remove ticket?"
-            description="Passenger acknowledgement will be reset."
-            okText="Remove"
+            title={t('hr.labels.removeTicket')}
+            description={t('hr.labels.removeTicketDesc')}
+            okText={t('hr.labels.remove')}
             okButtonProps={{ danger: true }}
             onConfirm={() => void handleRemovePassenger(row.id)}
           >
@@ -264,7 +267,7 @@ export default function BusinessTripTicketAssignmentPanel({
                 removePassenger.variables === row.id
               }
             >
-              Remove
+              {t('hr.labels.remove')}
             </Button>
           </Popconfirm>
         </div>
@@ -387,9 +390,9 @@ export default function BusinessTripTicketAssignmentPanel({
                 Replace
               </Button>
               <Popconfirm
-                title="Remove combined ticket?"
-                description="All passenger acknowledgements will be reset."
-                okText="Remove"
+                title={t('hr.labels.removeCombinedTicket')}
+                description={t('hr.labels.removeCombinedTicketDesc')}
+                okText={t('hr.labels.remove')}
                 okButtonProps={{ danger: true }}
                 onConfirm={() => void handleRemoveCombined()}
               >
@@ -399,7 +402,7 @@ export default function BusinessTripTicketAssignmentPanel({
                   icon={<DeleteOutlined />}
                   loading={removeCombined.isPending}
                 >
-                  Remove
+                  {t('hr.labels.remove')}
                 </Button>
               </Popconfirm>
             </div>
@@ -501,7 +504,7 @@ export default function BusinessTripTicketAssignmentPanel({
                             Covered by combined
                           </Tag>
                         ) : (
-                          <Tag className="m-0">No ticket</Tag>
+                          <Tag className="m-0">{t('hr.labels.noTicket')}</Tag>
                         )}
                       </div>
                     </div>
@@ -519,7 +522,7 @@ export default function BusinessTripTicketAssignmentPanel({
                     <div className="rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] p-2.5">
                       <AttachmentDownloadList
                         documents={tickets}
-                        emptyLabel="No ticket"
+                        emptyLabel={t('hr.labels.noTicket')}
                       />
                     </div>
                   ) : null}

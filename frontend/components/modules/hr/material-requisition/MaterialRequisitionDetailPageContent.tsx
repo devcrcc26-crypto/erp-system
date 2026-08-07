@@ -48,6 +48,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Material requisition detail — item editing, cancellation, and approval chain.
@@ -57,6 +58,7 @@ export default function MaterialRequisitionDetailPageContent({
 }: {
   requisitionId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -267,7 +269,7 @@ export default function MaterialRequisitionDetailPageContent({
                 </span>
                 <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
-                  label={formatMaterialRequisitionStatus(requisition.status)}
+                  label={formatMaterialRequisitionStatus(requisition.status, t)}
                   variant={materialRequisitionStatusVariant(requisition.status)}
                 />
               </div>

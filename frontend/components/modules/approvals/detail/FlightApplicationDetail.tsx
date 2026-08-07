@@ -39,6 +39,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 function passengerHasTicket(
   row: FlightPassenger,
@@ -60,6 +61,7 @@ export default function FlightApplicationDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const detailQuery = useFlightApplication(sourceId);
@@ -149,9 +151,9 @@ export default function FlightApplicationDetail({
               {application.applicationNumber}
             </span>
             <span className="text-[var(--color-border-secondary)]">·</span>
-            <Tag className="m-0">{formatTripType(application.tripType)}</Tag>
+            <Tag className="m-0">{formatTripType(application.tripType, t)}</Tag>
             <StatusBadge
-              label={formatFlightStatus(application.status)}
+              label={formatFlightStatus(application.status, t)}
               variant={flightStatusVariant(application.status)}
             />
             {application.isInternational ? (
@@ -264,7 +266,7 @@ export default function FlightApplicationDetail({
           },
           {
             label: 'Class',
-            value: formatTicketClass(application.ticketClass),
+            value: formatTicketClass(application.ticketClass, t),
           },
         ]}
       />
@@ -329,10 +331,10 @@ export default function FlightApplicationDetail({
           <SubsectionHeader icon={<Plane size={15} />} title="Flight" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
             <MetaItem label="Trip Type">
-              {formatTripType(application.tripType)}
+              {formatTripType(application.tripType, t)}
             </MetaItem>
             <MetaItem label="Ticket Class">
-              {formatTicketClass(application.ticketClass)}
+              {formatTicketClass(application.ticketClass, t)}
             </MetaItem>
           </div>
         </div>
@@ -447,7 +449,7 @@ export default function FlightApplicationDetail({
                     {row.visaRequired ? (
                       <Tag color="volcano" className="m-0">
                         {row.visaStatus
-                          ? formatVisaStatus(row.visaStatus)
+                          ? formatVisaStatus(row.visaStatus, t)
                           : 'Visa Required'}
                       </Tag>
                     ) : (
@@ -477,7 +479,7 @@ export default function FlightApplicationDetail({
                   <MetaItem label="Visa">
                     {row.visaRequired
                       ? row.visaStatus
-                        ? formatVisaStatus(row.visaStatus)
+                        ? formatVisaStatus(row.visaStatus, t)
                         : 'Required'
                       : 'Not required'}
                   </MetaItem>

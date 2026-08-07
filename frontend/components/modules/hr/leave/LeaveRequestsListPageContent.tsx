@@ -29,8 +29,6 @@ import type {
 import { useLeaveRequests, useMyLeaveRequests } from '@/lib/query/leave';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  LEAVE_STATUS_OPTIONS,
-  LEAVE_TYPE_OPTIONS,
   formatLeaveEmployeeName,
   formatLeaveStatus,
   formatLeaveType,
@@ -46,6 +44,32 @@ import { formatUserName } from '@/lib/utils/user-display';
 export default function LeaveRequestsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+
+  const leaveTypeOptions = useMemo(
+    () => [
+      { value: 'ANNUAL', label: t('hr.leaveType.ANNUAL') },
+      { value: 'SICK', label: t('hr.leaveType.SICK') },
+      { value: 'UNPAID', label: t('hr.leaveType.UNPAID') },
+      { value: 'MATERNITY', label: t('hr.leaveType.MATERNITY') },
+      { value: 'PATERNITY', label: t('hr.leaveType.PATERNITY') },
+      { value: 'EMERGENCY', label: t('hr.leaveType.EMERGENCY') },
+      { value: 'COMPASSIONATE', label: t('hr.leaveType.COMPASSIONATE') },
+    ],
+    [t],
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateLeave();
@@ -119,7 +143,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       width: 140,
       render: (value: LeaveType) => (
         <StatusBadge
-          label={formatLeaveType(value)}
+          label={formatLeaveType(value, t)}
           variant={leaveTypeVariant(value)}
         />
       ),
@@ -152,7 +176,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: LeaveRequestStatus) => (
         <StatusBadge
-          label={formatLeaveStatus(value)}
+          label={formatLeaveStatus(value, t)}
           variant={leaveStatusVariant(value)}
         />
       ),
@@ -203,7 +227,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           allowClear
           placeholder="Status"
           style={{ minWidth: 180 }}
-          options={LEAVE_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(value: LeaveRequestStatus[]) => {
             setStatusFilter(value);
@@ -214,7 +238,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           allowClear
           placeholder="Leave type"
           style={{ minWidth: 160 }}
-          options={LEAVE_TYPE_OPTIONS}
+          options={leaveTypeOptions}
           value={leaveType}
           onChange={(value: LeaveType | undefined) => {
             setLeaveType(value);

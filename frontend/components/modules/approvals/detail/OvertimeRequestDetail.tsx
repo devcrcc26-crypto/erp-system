@@ -22,6 +22,7 @@ import {
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Typed overtime sheet body for Approvals detail.
@@ -33,6 +34,7 @@ export default function OvertimeRequestDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sourceId);
   const sheet = detailQuery.data;
@@ -115,7 +117,7 @@ export default function OvertimeRequestDetail({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
-              label={formatOvertimeStatus(sheet.status)}
+              label={formatOvertimeStatus(sheet.status, t)}
               variant={overtimeStatusVariant(sheet.status)}
             />
             {canEdit ? (
@@ -134,7 +136,7 @@ export default function OvertimeRequestDetail({
             {formatOvertimeEmployeeName(sheet.employee)}
           </MetaItem>
           <MetaItem label="Period">
-            {formatOvertimePeriod(sheet.month, sheet.year)}
+            {formatOvertimePeriod(sheet.month, sheet.year, t)}
           </MetaItem>
         </div>
       </SectionCard>

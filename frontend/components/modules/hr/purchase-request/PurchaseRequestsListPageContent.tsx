@@ -23,13 +23,13 @@ import { usePurchaseRequests } from '@/lib/query/purchase-request';
 import { useUsersDirectory } from '@/lib/query/users';
 import { useAllProjects } from '@/lib/query/projects';
 import {
-  PURCHASE_REQUEST_STATUS_OPTIONS,
   formatEtbAmount,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
   purchaseRequestStatusVariant,
 } from '@/lib/utils/purchase-request-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const { RangePicker } = DatePicker;
 
@@ -37,6 +37,20 @@ const { RangePicker } = DatePicker;
  * Company or personal purchase request list with filters.
  */
 export default function PurchaseRequestsListPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -147,7 +161,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: PurchaseRequestStatus) => (
         <StatusBadge
-          label={formatPurchaseRequestStatus(value)}
+          label={formatPurchaseRequestStatus(value, t)}
           variant={purchaseRequestStatusVariant(value)}
         />
       ),
@@ -197,7 +211,7 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           mode="multiple"
           allowClear
           placeholder="Status"
-          options={PURCHASE_REQUEST_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
             setStatusFilter(v);

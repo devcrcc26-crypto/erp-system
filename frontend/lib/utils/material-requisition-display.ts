@@ -5,6 +5,8 @@ import type {
 } from '@/lib/api/material-requisition.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const MATERIAL_REQUISITION_STATUS_OPTIONS: Array<{
   value: MaterialRequisitionStatus;
   label: string;
@@ -18,7 +20,11 @@ export const MATERIAL_REQUISITION_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatMaterialRequisitionStatus(status: string): string {
+export function formatMaterialRequisitionStatus(
+  status: string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.status.${status}`);
   const found = MATERIAL_REQUISITION_STATUS_OPTIONS.find(
     (o) => o.value === status,
   );

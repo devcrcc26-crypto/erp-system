@@ -5,6 +5,8 @@ import type {
 } from '@/lib/api/consumables-requisition.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const CONSUMABLES_REQUISITION_STATUS_OPTIONS: Array<{
   value: ConsumablesRequisitionStatus;
   label: string;
@@ -18,7 +20,11 @@ export const CONSUMABLES_REQUISITION_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatConsumablesRequisitionStatus(status: string): string {
+export function formatConsumablesRequisitionStatus(
+  status: string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.status.${status}`);
   const found = CONSUMABLES_REQUISITION_STATUS_OPTIONS.find(
     (o) => o.value === status,
   );

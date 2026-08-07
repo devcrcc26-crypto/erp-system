@@ -40,6 +40,7 @@ import {
   leaveStatusVariant,
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const LEAVE_TYPE_COLORS: Record<string, string> = {
   ANNUAL: '#378ADD',
@@ -68,6 +69,7 @@ export default function HrDashboard({
 }: {
   enabled?: boolean;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const hrQuery = useHrDashboard(enabled);
   const hr = hrQuery.data;
   const loading = hrQuery.isLoading || hrQuery.isFetching;
@@ -93,7 +95,7 @@ export default function HrDashboard({
   const leaveByTypeData = Object.entries(hr.leaveByType)
     .filter(([, count]) => count > 0)
     .map(([type, count]) => ({
-      name: formatLeaveType(type),
+      name: formatLeaveType(type, t),
       value: count,
       fill: LEAVE_TYPE_COLORS[type] ?? tokens.colorGray200,
     }));
@@ -237,12 +239,12 @@ export default function HrDashboard({
                       {req.employeeName}
                     </p>
                     <p className="text-xs text-[var(--color-text-tertiary)] m-0 mt-0.5">
-                      {formatLeaveType(req.leaveType)} · {req.days}d ·{' '}
+                      {formatLeaveType(req.leaveType, t)} · {req.days}d ·{' '}
                       {formatProjectDate(req.startDate)}
                     </p>
                   </div>
                   <StatusBadge
-                    label={formatLeaveStatus(req.status)}
+                    label={formatLeaveStatus(req.status, t)}
                     variant={leaveStatusVariant(req.status)}
                   />
                 </div>

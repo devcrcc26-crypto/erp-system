@@ -31,6 +31,7 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Leave request detail with approval tier sidebar.
@@ -40,6 +41,7 @@ export default function LeaveRequestDetailPageContent({
 }: {
   requestId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
@@ -168,9 +170,9 @@ export default function LeaveRequestDetailPageContent({
                 {request.requestNumber}
               </span>
               <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatLeaveType(request.leaveType)}</Tag>
+              <Tag className="m-0">{formatLeaveType(request.leaveType, t)}</Tag>
               <StatusBadge
-                label={formatLeaveStatus(request.status)}
+                label={formatLeaveStatus(request.status, t)}
                 variant={leaveStatusVariant(request.status)}
               />
             </div>
@@ -198,7 +200,7 @@ export default function LeaveRequestDetailPageContent({
           </div>
 
           <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-            {formatLeaveType(request.leaveType)} Leave
+            {formatLeaveType(request.leaveType, t)}
           </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
@@ -223,12 +225,12 @@ export default function LeaveRequestDetailPageContent({
 
       <SummaryStrip
         items={[
-          { label: 'Start', value: formatProjectDate(request.startDate) },
-          { label: 'End', value: formatProjectDate(request.endDate) },
-          { label: 'Days', value: String(request.days), emphasize: true },
+          { label: t('hr.labels.startDate'), value: formatProjectDate(request.startDate) },
+          { label: t('hr.labels.endDate'), value: formatProjectDate(request.endDate) },
+          { label: t('hr.labels.days'), value: String(request.days), emphasize: true },
           {
-            label: 'Type',
-            value: formatLeaveType(request.leaveType),
+            label: t('hr.labels.leaveType'),
+            value: formatLeaveType(request.leaveType, t),
           },
         ]}
       />
@@ -237,16 +239,16 @@ export default function LeaveRequestDetailPageContent({
         <div className="flex flex-col gap-4 min-w-0">
           <SectionCard title="Request Details" bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-              <MetaItem label="Employee">
+              <MetaItem label={t('hr.labels.employee')}>
                 {formatLeaveEmployeeName(request.employee)}
               </MetaItem>
-              <MetaItem label="Leave Type">
+              <MetaItem label={t('hr.labels.leaveType')}>
                 <StatusBadge
-                  label={formatLeaveType(request.leaveType)}
+                  label={formatLeaveType(request.leaveType, t)}
                   variant={leaveTypeVariant(request.leaveType)}
                 />
               </MetaItem>
-              <MetaItem label="Start">
+              <MetaItem label={t('hr.labels.startDate')}>
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar
                     size={13}
@@ -255,7 +257,7 @@ export default function LeaveRequestDetailPageContent({
                   {formatProjectDate(request.startDate)}
                 </span>
               </MetaItem>
-              <MetaItem label="End">
+              <MetaItem label={t('hr.labels.endDate')}>
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar
                     size={13}
@@ -264,12 +266,12 @@ export default function LeaveRequestDetailPageContent({
                   {formatProjectDate(request.endDate)}
                 </span>
               </MetaItem>
-              <MetaItem label="Days">
+              <MetaItem label={t('hr.labels.days')}>
                 <span className="font-semibold">{request.days}</span>
               </MetaItem>
               {request.reason?.trim() ? (
                 <div className="sm:col-span-2">
-                  <MetaItem label="Reason">
+                  <MetaItem label={t('hr.labels.reason')}>
                     <p className="whitespace-pre-wrap leading-relaxed m-0">
                       {request.reason}
                     </p>
@@ -287,7 +289,7 @@ export default function LeaveRequestDetailPageContent({
               currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title="Approval Chain" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
                 No approval workflow linked.
               </p>

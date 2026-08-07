@@ -9,6 +9,8 @@ import type {
 import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const FLIGHT_STATUS_OPTIONS: Array<{
   value: FlightApplicationStatus;
   label: string;
@@ -47,7 +49,11 @@ export const FLIGHT_VISA_STATUS_OPTIONS: Array<{
   { value: 'APPROVED', label: 'Approved' },
 ];
 
-export function formatFlightStatus(status: FlightApplicationStatus | string): string {
+export function formatFlightStatus(
+  status: FlightApplicationStatus | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.status.${status}`);
   const found = FLIGHT_STATUS_OPTIONS.find((o) => o.value === status);
   if (found) {
     return found.label;
@@ -79,7 +85,11 @@ export function flightStatusVariant(
   }
 }
 
-export function formatTripType(tripType: FlightTripType | string): string {
+export function formatTripType(
+  tripType: FlightTripType | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.tripType.${tripType}`);
   const found = FLIGHT_TRIP_TYPE_OPTIONS.find((o) => o.value === tripType);
   return found?.label ?? tripType;
 }
@@ -90,12 +100,20 @@ export function tripTypeVariant(
   return tripType === 'ROUND_TRIP' ? 'info' : 'cyan';
 }
 
-export function formatTicketClass(ticketClass: FlightTicketClass | string): string {
+export function formatTicketClass(
+  ticketClass: FlightTicketClass | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.ticketClass.${ticketClass}`);
   const found = FLIGHT_TICKET_CLASS_OPTIONS.find((o) => o.value === ticketClass);
   return found?.label ?? ticketClass;
 }
 
-export function formatVisaStatus(visaStatus: FlightVisaStatus | string): string {
+export function formatVisaStatus(
+  visaStatus: FlightVisaStatus | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.visaStatus.${visaStatus}`);
   const found = FLIGHT_VISA_STATUS_OPTIONS.find((o) => o.value === visaStatus);
   return found?.label ?? visaStatus;
 }
@@ -136,35 +154,40 @@ type FlightStepSource = {
   currentStepLabel?: string | null;
 };
 
+function tr(t: TFn | undefined, key: string, fallback: string): string {
+  return t ? t(key) : fallback;
+}
+
 /**
  * Resolves the post-status workflow step for banners and list columns.
  */
 export function getCurrentStep(
   application: FlightStepSource,
+  t?: TFn,
 ): FlightCurrentStep | null {
   switch (application.status) {
     case 'DRAFT':
       return {
-        step: 'Draft',
+        step: tr(t, 'hr.status.DRAFT', 'Draft'),
         description: 'Not yet submitted',
         color: 'gray',
       };
     case 'SUBMITTED':
     case 'IN_REVIEW':
       return {
-        step: 'Under Review',
+        step: tr(t, 'hr.status.IN_REVIEW', 'Under Review'),
         description: 'Awaiting approval',
         color: 'blue',
       };
     case 'RETURNED':
       return {
-        step: 'Returned',
+        step: tr(t, 'hr.status.RETURNED', 'Returned'),
         description: 'Changes requested — please resubmit',
         color: 'orange',
       };
     case 'REJECTED':
       return {
-        step: 'Rejected',
+        step: tr(t, 'hr.status.REJECTED', 'Rejected'),
         description: application.rejectionNote ?? '',
         color: 'red',
       };
@@ -178,60 +201,64 @@ export function getCurrentStep(
         passengers.length > 0 &&
         passengers.every((p) => p.acknowledgementStatus === 'ACKNOWLEDGED');
 
+      const completedStep = (): FlightCurrentStep => ({
+        step: tr(t, 'hr.labels.completed', 'Completed'),
+        description: tr(
+          t,
+          'hr.labels.completedDesc',
+          'All tickets acknowledged',
+        ),
+        color: 'green',
+      });
+
+      const awaitingStep = (): FlightCurrentStep => ({
+        step: tr(
+          t,
+          'hr.labels.awaitingAcknowledgement',
+          'Awaiting Acknowledgement',
+        ),
+        description: tr(
+          t,
+          'hr.labels.awaitingAcknowledgementDesc',
+          'Tickets attached - passengers must acknowledge receipt',
+        ),
+        color: 'blue',
+      });
+
       if (allAcknowledged) {
-        return {
-          step: 'Completed',
-          description: 'All tickets acknowledged',
-          color: 'green',
-        };
+        return completedStep();
       }
 
       if (allTicketsAttached) {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+        return awaitingStep();
       }
 
-      // List rows may only ship currentStepLabel / needsTicketAttachment
       if (application.currentStepLabel === 'Completed') {
-        return {
-          step: 'Completed',
-          description: 'All tickets acknowledged',
-          color: 'green',
-        };
+        return completedStep();
       }
       if (application.currentStepLabel === 'Awaiting Acknowledgement') {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+        return awaitingStep();
       }
       if (
         application.needsTicketAttachment === false &&
         !application.currentStepLabel
       ) {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+        return awaitingStep();
       }
 
       return {
-        step: 'Buying Ticket',
-        description: 'Approved — HR is arranging ticket booking',
+        step: tr(t, 'hr.labels.buyingTicket', 'Buying Ticket'),
+        description: tr(
+          t,
+          'hr.labels.buyingTicketDesc',
+          'Approved - HR is arranging ticket booking',
+        ),
         color: 'amber',
       };
     }
     case 'CANCELLED':
       return {
-        step: 'Cancelled',
+        step: tr(t, 'hr.status.CANCELLED', 'Cancelled'),
         description: 'Application cancelled',
         color: 'gray',
       };
@@ -243,18 +270,21 @@ export function getCurrentStep(
 /**
  * List-column label: APPROVED uses workflow step; otherwise current tier or step name.
  */
-export function getCurrentStepLabel(application: FlightStepSource): string {
+export function getCurrentStepLabel(
+  application: FlightStepSource,
+  t?: TFn,
+): string {
   if (application.status === 'APPROVED') {
     return (
       application.currentStepLabel ??
-      getCurrentStep(application)?.step ??
-      'Buying Ticket'
+      getCurrentStep(application, t)?.step ??
+      tr(t, 'hr.labels.buyingTicket', 'Buying Ticket')
     );
   }
   if (application.currentTierLabel) {
     return application.currentTierLabel;
   }
-  return getCurrentStep(application)?.step ?? '—';
+  return getCurrentStep(application, t)?.step ?? '—';
 }
 
 /**

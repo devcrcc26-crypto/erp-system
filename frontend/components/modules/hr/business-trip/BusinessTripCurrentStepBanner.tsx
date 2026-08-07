@@ -5,6 +5,7 @@ import {
   businessTripCurrentStepBannerStyle,
 } from '@/lib/utils/business-trip-display';
 import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Prominent current-step banner for business trip detail views.
@@ -24,7 +25,8 @@ export default function BusinessTripCurrentStepBanner({
   /** When true, renders as a flat footer strip (no outer card chrome). */
   embedded?: boolean;
 }): React.ReactNode {
-  const currentStep = getCurrentStep(trip);
+  const { t } = useEpcTranslation();
+  const currentStep = getCurrentStep(trip, t);
   if (!currentStep) {
     return null;
   }
@@ -50,7 +52,7 @@ export default function BusinessTripCurrentStepBanner({
       />
       <div className="min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Current Step
+          {t('hr.labels.currentStep')}
         </span>
         <span className="hidden sm:inline text-xs opacity-40">·</span>
         <span className="text-sm font-semibold">{currentStep.step}</span>

@@ -16,6 +16,8 @@ import {
 } from '@/lib/utils/flight-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export {
   FLIGHT_TICKET_CLASS_OPTIONS as BUSINESS_TRIP_TICKET_CLASS_OPTIONS,
   FLIGHT_VISA_STATUS_OPTIONS as BUSINESS_TRIP_VISA_STATUS_OPTIONS,
@@ -45,7 +47,9 @@ export const BUSINESS_TRIP_TYPE_OPTIONS: Array<{
 
 export function formatBusinessTripStatus(
   status: BusinessTripStatus | string,
+  t?: TFn,
 ): string {
+  if (t) return t(`hr.status.${status}`);
   const found = BUSINESS_TRIP_STATUS_OPTIONS.find((o) => o.value === status);
   if (found) {
     return found.label;
@@ -132,35 +136,40 @@ type BusinessTripStepSource = {
   currentStepLabel?: string | null;
 };
 
+function tr(t: TFn | undefined, key: string, fallback: string): string {
+  return t ? t(key) : fallback;
+}
+
 /**
  * Resolves the post-status workflow step for banners and list columns.
  */
 export function getCurrentStep(
   trip: BusinessTripStepSource,
+  t?: TFn,
 ): BusinessTripCurrentStep | null {
   switch (trip.status) {
     case 'DRAFT':
       return {
-        step: 'Draft',
+        step: tr(t, 'hr.status.DRAFT', 'Draft'),
         description: 'Not yet submitted',
         color: 'gray',
       };
     case 'SUBMITTED':
     case 'IN_REVIEW':
       return {
-        step: 'Under Review',
+        step: tr(t, 'hr.status.IN_REVIEW', 'Under Review'),
         description: 'Awaiting approval',
         color: 'blue',
       };
     case 'RETURNED':
       return {
-        step: 'Returned',
+        step: tr(t, 'hr.status.RETURNED', 'Returned'),
         description: 'Changes requested — please resubmit',
         color: 'orange',
       };
     case 'REJECTED':
       return {
-        step: 'Rejected',
+        step: tr(t, 'hr.status.REJECTED', 'Rejected'),
         description: trip.rejectionNote ?? '',
         color: 'red',
       };
@@ -174,59 +183,61 @@ export function getCurrentStep(
         passengers.length > 0 &&
         passengers.every((p) => p.acknowledgementStatus === 'ACKNOWLEDGED');
 
+      const completedStep = (): BusinessTripCurrentStep => ({
+        step: tr(t, 'hr.labels.completed', 'Completed'),
+        description: tr(
+          t,
+          'hr.labels.completedDesc',
+          'All tickets acknowledged',
+        ),
+        color: 'green',
+      });
+
+      const awaitingStep = (): BusinessTripCurrentStep => ({
+        step: tr(
+          t,
+          'hr.labels.awaitingAcknowledgement',
+          'Awaiting Acknowledgement',
+        ),
+        description: tr(
+          t,
+          'hr.labels.awaitingAcknowledgementDesc',
+          'Tickets attached - passengers must acknowledge receipt',
+        ),
+        color: 'blue',
+      });
+
       if (allAcknowledged) {
-        return {
-          step: 'Completed',
-          description: 'All tickets acknowledged',
-          color: 'green',
-        };
+        return completedStep();
       }
 
       if (allTicketsAttached) {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+        return awaitingStep();
       }
 
       if (trip.currentStepLabel === 'Completed') {
-        return {
-          step: 'Completed',
-          description: 'All tickets acknowledged',
-          color: 'green',
-        };
+        return completedStep();
       }
       if (trip.currentStepLabel === 'Awaiting Acknowledgement') {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+        return awaitingStep();
       }
-      if (
-        trip.needsTicketAttachment === false &&
-        !trip.currentStepLabel
-      ) {
-        return {
-          step: 'Awaiting Acknowledgement',
-          description:
-            'Tickets attached — passengers must acknowledge receipt',
-          color: 'blue',
-        };
+      if (trip.needsTicketAttachment === false && !trip.currentStepLabel) {
+        return awaitingStep();
       }
 
       return {
-        step: 'Buying Ticket',
-        description: 'Approved — HR is arranging ticket booking',
+        step: tr(t, 'hr.labels.buyingTicket', 'Buying Ticket'),
+        description: tr(
+          t,
+          'hr.labels.buyingTicketDesc',
+          'Approved - HR is arranging ticket booking',
+        ),
         color: 'amber',
       };
     }
     case 'CANCELLED':
       return {
-        step: 'Cancelled',
+        step: tr(t, 'hr.status.CANCELLED', 'Cancelled'),
         description: 'Trip cancelled',
         color: 'gray',
       };
@@ -238,18 +249,21 @@ export function getCurrentStep(
 /**
  * List-column label: APPROVED uses workflow step; otherwise current tier or step name.
  */
-export function getCurrentStepLabel(trip: BusinessTripStepSource): string {
+export function getCurrentStepLabel(
+  trip: BusinessTripStepSource,
+  t?: TFn,
+): string {
   if (trip.status === 'APPROVED') {
     return (
       trip.currentStepLabel ??
-      getCurrentStep(trip)?.step ??
-      'Buying Ticket'
+      getCurrentStep(trip, t)?.step ??
+      tr(t, 'hr.labels.buyingTicket', 'Buying Ticket')
     );
   }
   if (trip.currentTierLabel) {
     return trip.currentTierLabel;
   }
-  return getCurrentStep(trip)?.step ?? '—';
+  return getCurrentStep(trip, t)?.step ?? '—';
 }
 
 /**

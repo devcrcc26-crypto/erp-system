@@ -6,6 +6,8 @@ import type {
 } from '@/lib/api/leave.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const LEAVE_TYPE_OPTIONS: Array<{ value: LeaveType; label: string }> = [
   { value: 'ANNUAL', label: 'Annual' },
   { value: 'SICK', label: 'Sick' },
@@ -29,7 +31,8 @@ export const LEAVE_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatLeaveType(leaveType: LeaveType | string): string {
+export function formatLeaveType(leaveType: LeaveType | string, t?: TFn): string {
+  if (t) return t(`hr.leaveType.${leaveType}`);
   const found = LEAVE_TYPE_OPTIONS.find((o) => o.value === leaveType);
   if (found) {
     return found.label;
@@ -40,7 +43,8 @@ export function formatLeaveType(leaveType: LeaveType | string): string {
     .join(' ');
 }
 
-export function formatLeaveStatus(status: string): string {
+export function formatLeaveStatus(status: string, t?: TFn): string {
+  if (t) return t(`hr.status.${status}`);
   return status
     .split('_')
     .map((part) => part.charAt(0) + part.slice(1).toLowerCase())

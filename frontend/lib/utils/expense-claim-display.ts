@@ -5,6 +5,8 @@ import type {
 } from '@/lib/api/expense-claim.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const EXPENSE_CLAIM_STATUS_OPTIONS: Array<{
   value: ExpenseClaimStatus;
   label: string;
@@ -18,7 +20,8 @@ export const EXPENSE_CLAIM_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatExpenseClaimStatus(status: string): string {
+export function formatExpenseClaimStatus(status: string, t?: TFn): string {
+  if (t) return t(`hr.status.${status}`);
   const found = EXPENSE_CLAIM_STATUS_OPTIONS.find((o) => o.value === status);
   return found?.label ?? status;
 }

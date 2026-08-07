@@ -30,12 +30,14 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function VehicleApplicationDetailPageContent({
   applicationId,
 }: {
   applicationId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -154,7 +156,7 @@ export default function VehicleApplicationDetailPageContent({
                 </span>
                 <span style={{ color: tokens.colorBorder }}>|</span>
                 <StatusBadge
-                  label={formatVehicleApplicationStatus(application.status)}
+                  label={formatVehicleApplicationStatus(application.status, t)}
                   variant={vehicleApplicationStatusVariant(application.status)}
                 />
                 {isDirectApproved ? (
@@ -184,51 +186,51 @@ export default function VehicleApplicationDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: 'Destination', value: application.destination },
+              { label: t('hr.labels.destination'), value: application.destination },
               {
                 label: 'Drive Type',
-                value: formatDriveType(application.driveType),
+                value: formatDriveType(application.driveType, t),
               },
               {
-                label: 'Passengers',
+                label: t('hr.labels.passengers'),
                 value: String(application.passengerCount),
               },
               {
-                label: 'Vehicle',
+                label: t('hr.labels.vehicle'),
                 value: application.vehicle
                   ? `${application.vehicle.plateNumber} (${application.vehicle.make} ${application.vehicle.model})`
-                  : '-',
+                  : t('hr.labels.noVehicle'),
               },
             ]}
           />
 
           <SectionCard title="Trip Details" bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MetaItem label="Departure">
+              <MetaItem label={t('hr.labels.departure')}>
                 {formatProjectDate(application.departureDatetime)}
               </MetaItem>
-              <MetaItem label="Return">
+              <MetaItem label={t('hr.labels.return')}>
                 {formatProjectDate(application.returnDatetime)}
               </MetaItem>
-              <MetaItem label="Purpose">
+              <MetaItem label={t('hr.labels.purpose')}>
                 <p className="whitespace-pre-wrap leading-relaxed m-0">
                   {application.purpose}
                 </p>
               </MetaItem>
               {application.passengerNames ? (
-                <MetaItem label="Passenger Names">
+                <MetaItem label={t('hr.labels.passengers')}>
                   <p className="whitespace-pre-wrap leading-relaxed m-0">
                     {application.passengerNames}
                   </p>
                 </MetaItem>
               ) : null}
               {application.project ? (
-                <MetaItem label="Project">
+                <MetaItem label={t('hr.labels.project')}>
                   {application.project.projectCode} - {application.project.name}
                 </MetaItem>
               ) : null}
               {application.notes ? (
-                <MetaItem label="Notes">
+                <MetaItem label={t('hr.labels.notes')}>
                   <p className="whitespace-pre-wrap leading-relaxed m-0">
                     {application.notes}
                   </p>

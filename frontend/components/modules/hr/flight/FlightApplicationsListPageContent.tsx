@@ -32,7 +32,6 @@ import {
 } from '@/lib/query/flight';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  FLIGHT_STATUS_OPTIONS,
   flightStatusVariant,
   formatFlightStatus,
   formatFlightSubmitterName,
@@ -51,6 +50,19 @@ type ListTab = 'ALL' | 'NEEDS_TICKET';
 export default function FlightApplicationsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const canAccess = useCanAccessFlight();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateFlight();
@@ -159,7 +171,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       width: 120,
       render: (value: string) => (
         <StatusBadge
-          label={formatTripType(value)}
+          label={formatTripType(value, t)}
           variant={tripTypeVariant(value)}
         />
       ),
@@ -190,7 +202,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: FlightApplicationStatus) => (
         <StatusBadge
-          label={formatFlightStatus(value)}
+          label={formatFlightStatus(value, t)}
           variant={flightStatusVariant(value)}
         />
       ),
@@ -200,7 +212,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       key: 'currentStep',
       width: 180,
       render: (_: unknown, row: FlightApplicationListItem) => {
-        const label = getCurrentStepLabel(row);
+        const label = getCurrentStepLabel(row, t);
         if (!label || label === '—') {
           return (
             <span style={{ color: tokens.colorTextSecondary }}>—</span>
@@ -317,7 +329,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             allowClear
             placeholder="Status"
             style={{ minWidth: 180 }}
-            options={FLIGHT_STATUS_OPTIONS}
+            options={statusOptions}
             value={statusFilter}
             onChange={(value: FlightApplicationStatus[]) => {
               setStatusFilter(value);
@@ -330,8 +342,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           placeholder="International / Domestic"
           style={{ minWidth: 180 }}
           options={[
-            { value: 'true', label: 'International' },
-            { value: 'false', label: 'Domestic' },
+            { value: 'true', label: t('hr.labels.international') },
+            { value: 'false', label: t('hr.labels.domestic') },
           ]}
           value={internationalFilter}
           onChange={(value: string | undefined) => {

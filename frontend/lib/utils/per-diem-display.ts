@@ -2,6 +2,8 @@ import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge
 import type { PerDiemStatus, PerDiemUserSummary } from '@/lib/api/per-diem.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const PER_DIEM_STATUS_OPTIONS: Array<{
   value: PerDiemStatus;
   label: string;
@@ -15,7 +17,8 @@ export const PER_DIEM_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatPerDiemStatus(status: string): string {
+export function formatPerDiemStatus(status: string, t?: TFn): string {
+  if (t) return t(`hr.perDiemStatus.${status}`);
   const found = PER_DIEM_STATUS_OPTIONS.find((o) => o.value === status);
   return found?.label ?? status;
 }

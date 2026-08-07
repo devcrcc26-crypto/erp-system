@@ -61,6 +61,7 @@ import {
 } from '@/lib/utils/overtime-hours.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface EntryFormValues {
   date: Dayjs;
@@ -83,15 +84,28 @@ function HoursSummaryCards({
   holiday: number;
   total: number;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   return (
     <SummaryStrip
       items={[
-        { label: 'Regular', value: `${formatOvertimeHours(regular)} hrs` },
-        { label: 'Night', value: `${formatOvertimeHours(night)} hrs` },
-        { label: 'Weekend', value: `${formatOvertimeHours(weekend)} hrs` },
-        { label: 'Holiday', value: `${formatOvertimeHours(holiday)} hrs` },
         {
-          label: 'Total',
+          label: t('hr.overtimeCategory.regular'),
+          value: `${formatOvertimeHours(regular)} hrs`,
+        },
+        {
+          label: t('hr.overtimeCategory.night'),
+          value: `${formatOvertimeHours(night)} hrs`,
+        },
+        {
+          label: t('hr.overtimeCategory.weekend'),
+          value: `${formatOvertimeHours(weekend)} hrs`,
+        },
+        {
+          label: t('hr.overtimeCategory.holiday'),
+          value: `${formatOvertimeHours(holiday)} hrs`,
+        },
+        {
+          label: t('hr.overtimeCategory.total'),
           value: `${formatOvertimeHours(total)} hrs`,
           emphasize: true,
         },
@@ -108,6 +122,7 @@ export default function OvertimeSheetDetailPageContent({
 }: {
   sheetId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
@@ -483,7 +498,7 @@ export default function OvertimeSheetDetailPageContent({
                 {sheet.sheetNumber}
               </span>
               <StatusBadge
-                label={formatOvertimeStatus(sheet.status)}
+                label={formatOvertimeStatus(sheet.status, t)}
                 variant={overtimeStatusVariant(sheet.status)}
               />
             </div>
@@ -507,7 +522,7 @@ export default function OvertimeSheetDetailPageContent({
           </div>
 
           <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-            {formatOvertimePeriod(sheet.month, sheet.year)}
+            {formatOvertimePeriod(sheet.month, sheet.year, t)}
           </h1>
 
           <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">

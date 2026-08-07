@@ -5,6 +5,8 @@ import type {
 } from '@/lib/api/vehicle-refueling.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const VEHICLE_REFUELING_STATUS_OPTIONS: Array<{
   value: VehicleRefuelingStatus;
   label: string;
@@ -18,7 +20,8 @@ export const VEHICLE_REFUELING_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatVehicleRefuelingStatus(status: string): string {
+export function formatVehicleRefuelingStatus(status: string, t?: TFn): string {
+  if (t) return t(`hr.status.${status}`);
   const found = VEHICLE_REFUELING_STATUS_OPTIONS.find(
     (o) => o.value === status,
   );

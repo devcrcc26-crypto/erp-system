@@ -26,8 +26,6 @@ import type {
 import { useOvertimeSheets } from '@/lib/query/overtime';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  OVERTIME_MONTH_OPTIONS,
-  OVERTIME_STATUS_OPTIONS,
   formatOvertimeEmployeeName,
   formatOvertimeHours,
   formatOvertimePeriod,
@@ -42,6 +40,28 @@ import { formatUserName } from '@/lib/utils/user-display';
 export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: i + 1,
+        label: t(`hr.months.${i + 1}`),
+      })),
+    [t],
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const canAccess = useCanAccessOvertime();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateOvertime();
@@ -106,7 +126,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
       title: 'Period',
       key: 'period',
       width: 140,
-      render: (_, row) => formatOvertimePeriod(row.month, row.year),
+      render: (_, row) => formatOvertimePeriod(row.month, row.year, t),
     },
     {
       title: 'Regular',
@@ -157,7 +177,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
       width: 120,
       render: (value: OvertimeSheetStatus) => (
         <StatusBadge
-          label={formatOvertimeStatus(value)}
+          label={formatOvertimeStatus(value, t)}
           variant={overtimeStatusVariant(value)}
         />
       ),
@@ -218,7 +238,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           allowClear
           placeholder="Status"
           style={{ minWidth: 180 }}
-          options={OVERTIME_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(value: OvertimeSheetStatus[]) => {
             setStatusFilter(value);
@@ -247,7 +267,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           allowClear
           placeholder="Month"
           style={{ minWidth: 140 }}
-          options={OVERTIME_MONTH_OPTIONS}
+          options={monthOptions}
           value={month}
           onChange={(value: number | undefined) => {
             setMonth(value);

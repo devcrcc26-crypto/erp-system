@@ -14,6 +14,7 @@ import type {
   BusinessTripPassengerValues,
   BusinessTripPurposeBudgetValues,
 } from './business-trip-stepper.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Read-only review card for the final business trip step.
@@ -29,6 +30,7 @@ export default function BusinessTripSummary({
   passengers: BusinessTripPassengerValues[];
   additional: BusinessTripAdditionalValues;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const totalCost =
     (Number(purposeBudget.estimatedFlightCost) || 0) +
     (Number(purposeBudget.estimatedAccommodationCost) || 0) +
@@ -37,74 +39,74 @@ export default function BusinessTripSummary({
 
   return (
     <Card
-      title="Review Your Business Trip Application"
+      title={t('hr.labels.reviewBusinessTrip')}
       size="small"
       styles={{
         body: { background: tokens.colorGray50 },
       }}
     >
       <Descriptions column={2} bordered size="small">
-        <Descriptions.Item label="Trip Type">
-          {formatTripType(tripDetails.tripType)}
+        <Descriptions.Item label={t('hr.labels.tripType')}>
+          {formatTripType(tripDetails.tripType, t)}
         </Descriptions.Item>
-        <Descriptions.Item label="Origin">
+        <Descriptions.Item label={t('hr.labels.origin')}>
           {[tripDetails.originCity, tripDetails.originCountry]
             .filter(Boolean)
             .join(', ') || '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Destination">
+        <Descriptions.Item label={t('hr.labels.destination')}>
           {[tripDetails.destinationCity, tripDetails.destinationCountry]
             .filter(Boolean)
             .join(', ') || '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Departure">
+        <Descriptions.Item label={t('hr.labels.departure')}>
           {tripDetails.departureDate
             ? formatProjectDate(tripDetails.departureDate.format('YYYY-MM-DD'))
             : '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Return">
+        <Descriptions.Item label={t('hr.labels.return')}>
           {tripDetails.returnDate
             ? formatProjectDate(tripDetails.returnDate.format('YYYY-MM-DD'))
             : 'One Way'}
         </Descriptions.Item>
-        <Descriptions.Item label="Ticket Class">
-          {formatTicketClass(tripDetails.ticketClass)}
+        <Descriptions.Item label={t('hr.labels.ticketClass')}>
+          {formatTicketClass(tripDetails.ticketClass, t)}
         </Descriptions.Item>
-        <Descriptions.Item label="Purpose" span={2}>
+        <Descriptions.Item label={t('hr.labels.purpose')} span={2}>
           {purposeBudget.purpose || '—'}
         </Descriptions.Item>
         {purposeBudget.hostOrganization.trim() ? (
-          <Descriptions.Item label="Host Organization" span={2}>
+          <Descriptions.Item label={t('hr.labels.host')} span={2}>
             {purposeBudget.hostOrganization}
           </Descriptions.Item>
         ) : null}
-        <Descriptions.Item label="Est. Flight Cost">
+        <Descriptions.Item label={t('hr.labels.estimatedFlight')}>
           {formatEtb(purposeBudget.estimatedFlightCost ?? 0)}
         </Descriptions.Item>
-        <Descriptions.Item label="Est. Accommodation">
+        <Descriptions.Item label={t('hr.labels.estimatedAccommodation')}>
           {formatEtb(purposeBudget.estimatedAccommodationCost ?? 0)}
         </Descriptions.Item>
-        <Descriptions.Item label="Est. Per Diem">
+        <Descriptions.Item label={t('hr.labels.estimatedPerDiem')}>
           {formatEtb(purposeBudget.estimatedPerDiem ?? 0)}
         </Descriptions.Item>
-        <Descriptions.Item label="Est. Other">
+        <Descriptions.Item label={t('hr.labels.estimatedOther')}>
           {formatEtb(purposeBudget.estimatedOtherCost ?? 0)}
         </Descriptions.Item>
-        <Descriptions.Item label="Estimated Total" span={2}>
+        <Descriptions.Item label={t('hr.labels.estimatedTotal')} span={2}>
           <span className="text-lg font-bold">{formatEtb(totalCost)}</span>
         </Descriptions.Item>
-        <Descriptions.Item label="Passengers" span={2}>
+        <Descriptions.Item label={t('hr.labels.passengers')} span={2}>
           {passengers.length > 0
             ? passengers.map((p) => p.name).join(', ')
             : '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Accommodation">
+        <Descriptions.Item label={t('hr.labels.accommodation')}>
           {additional.accommodationRequired
-            ? additional.accommodationDetails.trim() || 'Required'
-            : 'Not Required'}
+            ? additional.accommodationDetails.trim() || t('hr.labels.required')
+            : t('hr.labels.notRequired')}
         </Descriptions.Item>
-        <Descriptions.Item label="Per Diem">
-          {additional.perDiemRequired ? 'Required' : 'Not Required'}
+        <Descriptions.Item label={t('hr.labels.perDiem')}>
+          {additional.perDiemRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
         </Descriptions.Item>
         {additional.files.length > 0 ? (
           <Descriptions.Item label="Attachments" span={2}>

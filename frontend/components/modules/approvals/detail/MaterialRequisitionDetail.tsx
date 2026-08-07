@@ -19,6 +19,7 @@ import {
 } from '@/lib/utils/material-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Material requisition body for the Approvals detail inbox (read-only).
@@ -29,6 +30,7 @@ export default function MaterialRequisitionDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = useMaterialRequisition(sourceId);
   const requisition = detailQuery.data;
 
@@ -110,7 +112,7 @@ export default function MaterialRequisitionDetail({
             </span>
             <span style={{ color: tokens.colorBorder }}>·</span>
             <StatusBadge
-              label={formatMaterialRequisitionStatus(requisition.status)}
+              label={formatMaterialRequisitionStatus(requisition.status, t)}
               variant={materialRequisitionStatusVariant(requisition.status)}
             />
           </div>

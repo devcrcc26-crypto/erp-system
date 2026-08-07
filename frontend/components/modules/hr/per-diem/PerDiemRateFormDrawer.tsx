@@ -6,6 +6,7 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import type { PerDiemRate, SupportedCurrency } from '@/lib/api/per-diem.types';
 import { useCreatePerDiemRate, useUpdatePerDiemRate } from '@/lib/query/per-diem';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface RateFormValues {
   destinationCategory: string;
@@ -33,6 +34,7 @@ export default function PerDiemRateFormDrawer({
   editingRate: PerDiemRate | null;
   onClose: () => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<RateFormValues>();
   const createMutation = useCreatePerDiemRate();
@@ -88,7 +90,7 @@ export default function PerDiemRateFormDrawer({
   return (
     <Drawer
       open={open}
-      title={editingRate ? 'Edit Per Diem Rate' : 'Add Per Diem Rate'}
+      title={editingRate ? t('hr.labels.editRate') : t('hr.labels.addRate')}
       size={480}
       className="erp-responsive-drawer"
       onClose={onClose}
@@ -106,7 +108,7 @@ export default function PerDiemRateFormDrawer({
       >
         <Form.Item
           name="destinationCategory"
-          label="Destination Category"
+          label={t('hr.labels.destinationCategory')}
           rules={[{ required: true, message: 'Enter a destination category' }]}
         >
           <Input placeholder="e.g. Domestic, East Africa, Middle East" maxLength={100} />
@@ -115,7 +117,7 @@ export default function PerDiemRateFormDrawer({
         <div className="grid grid-cols-2 gap-3">
           <Form.Item
             name="dailyRate"
-            label="Daily Rate"
+            label={t('hr.labels.dailyRate')}
             rules={[{ required: true, message: 'Enter the daily rate' }]}
           >
             <InputNumber className="w-full" min={0.01} precision={2} />

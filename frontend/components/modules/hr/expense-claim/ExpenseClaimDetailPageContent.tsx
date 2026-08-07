@@ -31,6 +31,7 @@ import {
 } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Expense claim detail — draft item editing, submission, and approval chain.
@@ -40,6 +41,7 @@ export default function ExpenseClaimDetailPageContent({
 }: {
   claimId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -225,7 +227,7 @@ export default function ExpenseClaimDetailPageContent({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <StatusBadge
-              label={formatExpenseClaimStatus(claim.status)}
+              label={formatExpenseClaimStatus(claim.status, t)}
               variant={expenseClaimStatusVariant(claim.status)}
             />
             {canCancel ? (

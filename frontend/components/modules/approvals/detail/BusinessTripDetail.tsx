@@ -36,6 +36,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 function SectionCard({
   title,
@@ -112,16 +113,17 @@ function TripSummaryStrip({
   ticketClass: string;
   estimatedTotalCost?: number | null;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const items = [
-    { label: 'Departure', value: formatProjectDate(departureDate) },
+    { label: t('hr.labels.departure'), value: formatProjectDate(departureDate) },
     {
-      label: 'Return',
+      label: t('hr.labels.return'),
       value: returnDate ? formatProjectDate(returnDate) : 'One way',
     },
-    { label: 'Passengers', value: String(passengerCount) },
-    { label: 'Class', value: formatTicketClass(ticketClass) },
+    { label: t('hr.labels.passengers'), value: String(passengerCount) },
+    { label: t('hr.labels.ticketClass'), value: formatTicketClass(ticketClass, t) },
     {
-      label: 'Est. Total',
+      label: t('hr.labels.estimatedTotal'),
       value: formatEtb(estimatedTotalCost),
       emphasize: true,
     },
@@ -172,6 +174,7 @@ export default function BusinessTripDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const detailQuery = useBusinessTrip(sourceId);
@@ -278,9 +281,9 @@ export default function BusinessTripDetail({
               {trip.tripNumber}
             </span>
             <span className="text-[var(--color-border-secondary)]">·</span>
-            <Tag className="m-0">{formatTripType(trip.tripType)}</Tag>
+            <Tag className="m-0">{formatTripType(trip.tripType, t)}</Tag>
             <StatusBadge
-              label={formatBusinessTripStatus(trip.status)}
+              label={formatBusinessTripStatus(trip.status, t)}
               variant={businessTripStatusVariant(trip.status)}
             />
           </div>
@@ -436,10 +439,10 @@ export default function BusinessTripDetail({
           <SubsectionHeader icon={<Plane size={15} />} title="Flight" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
             <MetaItem label="Trip Type">
-              {formatTripType(trip.tripType)}
+              {formatTripType(trip.tripType, t)}
             </MetaItem>
             <MetaItem label="Ticket Class">
-              {formatTicketClass(trip.ticketClass)}
+              {formatTicketClass(trip.ticketClass, t)}
             </MetaItem>
           </div>
         </div>
@@ -622,7 +625,7 @@ export default function BusinessTripDetail({
                     {row.visaRequired ? (
                       <Tag color="volcano" className="m-0">
                         {row.visaStatus
-                          ? formatVisaStatus(row.visaStatus)
+                          ? formatVisaStatus(row.visaStatus, t)
                           : 'Visa Required'}
                       </Tag>
                     ) : (
@@ -652,7 +655,7 @@ export default function BusinessTripDetail({
                   <MetaItem label="Visa">
                     {row.visaRequired
                       ? row.visaStatus
-                        ? formatVisaStatus(row.visaStatus)
+                        ? formatVisaStatus(row.visaStatus, t)
                         : 'Required'
                       : 'Not required'}
                   </MetaItem>

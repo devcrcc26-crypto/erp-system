@@ -24,6 +24,7 @@ import {
 } from '@/lib/utils/per-diem-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Per diem request detail with approval tier sidebar.
@@ -33,6 +34,7 @@ export default function PerDiemRequestDetailPageContent({
 }: {
   requestId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -118,7 +120,7 @@ export default function PerDiemRequestDetailPageContent({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <StatusBadge
-              label={formatPerDiemStatus(request.status)}
+              label={formatPerDiemStatus(request.status, t)}
               variant={perDiemStatusVariant(request.status)}
             />
             {canCancel ? (
@@ -136,7 +138,7 @@ export default function PerDiemRequestDetailPageContent({
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Destination Category
+                  {t('hr.labels.destinationCategory')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {request.destinationCategory}
@@ -144,7 +146,7 @@ export default function PerDiemRequestDetailPageContent({
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Destination
+                  {t('hr.labels.destination')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {request.destination}
@@ -152,7 +154,7 @@ export default function PerDiemRequestDetailPageContent({
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Start Date
+                  {t('hr.labels.startDate')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {formatProjectDate(request.startDate)}
@@ -160,7 +162,7 @@ export default function PerDiemRequestDetailPageContent({
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  End Date
+                  {t('hr.labels.endDate')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {formatProjectDate(request.endDate)}
@@ -168,7 +170,7 @@ export default function PerDiemRequestDetailPageContent({
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Days
+                  {t('hr.labels.days')}
                 </dt>
                 <dd className="text-sm font-semibold text-[var(--color-text-primary)]">
                   {request.days}
@@ -176,7 +178,7 @@ export default function PerDiemRequestDetailPageContent({
               </div>
               <div>
                 <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                  Daily Rate
+                  {t('hr.labels.dailyRate')}
                 </dt>
                 <dd className="text-sm text-[var(--color-text-primary)]">
                   {formatCurrencyAmount(request.dailyRate, request.currency)}
@@ -185,7 +187,7 @@ export default function PerDiemRequestDetailPageContent({
               {linkedTravel ? (
                 <div className="col-span-2">
                   <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                    Linked Travel
+                    {t('hr.labels.linkedTravel')}
                   </dt>
                   <dd className="text-sm text-[var(--color-text-primary)]">
                     {linkedTravel}
@@ -195,7 +197,7 @@ export default function PerDiemRequestDetailPageContent({
               {request.notes ? (
                 <div className="col-span-2">
                   <dt className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-                    Notes
+                    {t('hr.labels.notes')}
                   </dt>
                   <dd className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">
                     {request.notes}

@@ -21,7 +21,6 @@ import type {
 import { useExpenseClaims } from '@/lib/query/expense-claim';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  EXPENSE_CLAIM_STATUS_OPTIONS,
   expenseClaimStatusVariant,
   formatEtbAmount,
   formatExpenseClaimEmployeeName,
@@ -29,11 +28,26 @@ import {
 } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Company or personal expense claim list with filters.
  */
 export default function ExpenseClaimsListPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -106,7 +120,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: ExpenseClaimStatus) => (
         <StatusBadge
-          label={formatExpenseClaimStatus(value)}
+          label={formatExpenseClaimStatus(value, t)}
           variant={expenseClaimStatusVariant(value)}
         />
       ),
@@ -154,7 +168,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           allowClear
           placeholder="Status"
           style={{ minWidth: 180 }}
-          options={EXPENSE_CLAIM_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(value: ExpenseClaimStatus[]) => {
             setStatusFilter(value);

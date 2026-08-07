@@ -13,6 +13,7 @@ import {
   parseTierConditions,
 } from '@/lib/utils/approval-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface ApprovalTierTimelineProps {
   tiers: ApprovalTier[];
@@ -28,6 +29,7 @@ export default function ApprovalTierTimeline({
   currentTier: currentTierOrder,
   title = 'Approval chain',
 }: ApprovalTierTimelineProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const sorted = [...tiers].sort((a, b) => a.tierOrder - b.tierOrder);
   const currentTier = findCurrentTier(sorted, currentTierOrder);
 
@@ -77,7 +79,7 @@ export default function ApprovalTierTimeline({
                   <Space wrap size={6}>
                     <Typography.Text strong>{tier.label}</Typography.Text>
                     <StatusBadge
-                      label={formatApprovalStatus(tier.decision)}
+                      label={formatApprovalStatus(tier.decision, t)}
                       variant={approvalTierDecisionVariant(tier.decision)}
                     />
                     {isCurrent ? (

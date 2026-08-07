@@ -46,6 +46,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 function SectionCard({
   title,
@@ -129,25 +130,26 @@ function TripSummaryStrip({
   ticketClass: string;
   estimatedTotalCost?: number | null;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const items = [
     {
-      label: 'Departure',
+      label: t('hr.labels.departure'),
       value: formatProjectDate(departureDate),
     },
     {
-      label: 'Return',
+      label: t('hr.labels.return'),
       value: returnDate ? formatProjectDate(returnDate) : 'One way',
     },
     {
-      label: 'Passengers',
+      label: t('hr.labels.passengers'),
       value: String(passengerCount),
     },
     {
-      label: 'Class',
-      value: formatTicketClass(ticketClass),
+      label: t('hr.labels.ticketClass'),
+      value: formatTicketClass(ticketClass, t),
     },
     {
-      label: 'Est. Total',
+      label: t('hr.labels.estimatedTotal'),
       value: formatEtb(estimatedTotalCost),
       emphasize: true,
     },
@@ -197,6 +199,7 @@ export default function BusinessTripDetailPageContent({
 }: {
   tripId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -306,9 +309,9 @@ export default function BusinessTripDetailPageContent({
                 {trip.tripNumber}
               </span>
               <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatTripType(trip.tripType)}</Tag>
+              <Tag className="m-0">{formatTripType(trip.tripType, t)}</Tag>
               <StatusBadge
-                label={formatBusinessTripStatus(trip.status)}
+                label={formatBusinessTripStatus(trip.status, t)}
                 variant={businessTripStatusVariant(trip.status)}
               />
             </div>
@@ -389,8 +392,8 @@ export default function BusinessTripDetailPageContent({
         <Alert
           type="info"
           showIcon
-          title="Tickets required"
-          description="The trip is approved. Upload a combined ticket and/or individual passenger tickets below."
+          title={t('hr.labels.ticketsRequired')}
+          description={t('hr.labels.ticketsRequiredDesc')}
         />
       ) : null}
 
@@ -405,11 +408,11 @@ export default function BusinessTripDetailPageContent({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Travel Details */}
-          <SectionCard title="Travel Details">
+          <SectionCard title={t('hr.labels.travelDetails')}>
             <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader
                 icon={<MapPin size={15} />}
-                title="Route & Schedule"
+                title={t('hr.labels.routeSchedule')}
               />
               <div className="rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3 mb-4">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -436,7 +439,7 @@ export default function BusinessTripDetailPageContent({
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
-                <MetaItem label="Departure">
+                <MetaItem label={t('hr.labels.departure')}>
                   <span className="inline-flex items-center gap-1.5">
                     <Calendar
                       size={13}
@@ -445,7 +448,7 @@ export default function BusinessTripDetailPageContent({
                     {formatProjectDate(trip.departureDate)}
                   </span>
                 </MetaItem>
-                <MetaItem label="Return">
+                <MetaItem label={t('hr.labels.return')}>
                   {trip.returnDate ? (
                     <span className="inline-flex items-center gap-1.5">
                       <Calendar
@@ -462,13 +465,13 @@ export default function BusinessTripDetailPageContent({
             </div>
 
             <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
-              <SubsectionHeader icon={<Plane size={15} />} title="Flight" />
+              <SubsectionHeader icon={<Plane size={15} />} title={t('hr.labels.flight')} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
-                <MetaItem label="Trip Type">
-                  {formatTripType(trip.tripType)}
+                <MetaItem label={t('hr.labels.tripType')}>
+                  {formatTripType(trip.tripType, t)}
                 </MetaItem>
-                <MetaItem label="Ticket Class">
-                  {formatTicketClass(trip.ticketClass)}
+                <MetaItem label={t('hr.labels.ticketClass')}>
+                  {formatTicketClass(trip.ticketClass, t)}
                 </MetaItem>
               </div>
             </div>
@@ -476,14 +479,14 @@ export default function BusinessTripDetailPageContent({
             <div className="px-5 py-4">
               <SubsectionHeader
                 icon={<BedDouble size={15} />}
-                title="Stay & Allowances"
+                title={t('hr.labels.stayAllowances')}
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
-                <MetaItem label="Accommodation">
+                <MetaItem label={t('hr.labels.accommodation')}>
                   {trip.accommodationRequired ? (
                     <div className="flex flex-col gap-1.5">
                       <Tag color="blue" className="w-fit m-0">
-                        Required
+                        {t('hr.labels.required')}
                       </Tag>
                       {trip.accommodationDetails ? (
                         <span className="text-[var(--color-text-secondary)] leading-relaxed">
@@ -493,25 +496,25 @@ export default function BusinessTripDetailPageContent({
                     </div>
                   ) : (
                     <span className="text-[var(--color-text-tertiary)]">
-                      Not required
+                      {t('hr.labels.notRequired')}
                     </span>
                   )}
                 </MetaItem>
-                <MetaItem label="Per Diem">
+                <MetaItem label={t('hr.labels.perDiem')}>
                   {trip.perDiemRequired ? (
                     <Tag color="blue" className="m-0 w-fit">
-                      Required
+                      {t('hr.labels.required')}
                     </Tag>
                   ) : (
                     <span className="text-[var(--color-text-tertiary)]">
-                      Not required
+                      {t('hr.labels.notRequired')}
                     </span>
                   )}
                 </MetaItem>
               </div>
               {trip.notes ? (
                 <div className="mt-4 ml-0 sm:ml-[23px]">
-                  <MetaItem label="Notes">
+                  <MetaItem label={t('hr.labels.notes')}>
                     <p className="whitespace-pre-wrap leading-relaxed m-0">
                       {trip.notes}
                     </p>
@@ -523,11 +526,11 @@ export default function BusinessTripDetailPageContent({
 
           {/* Purpose & Host */}
           {hasPurposeContent ? (
-            <SectionCard title="Purpose & Host">
+            <SectionCard title={t('hr.labels.purposeHost')}>
               <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
                 <SubsectionHeader
                   icon={<FileText size={15} />}
-                  title="Purpose"
+                  title={t('hr.labels.purpose')}
                 />
                 <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
                   {trip.purpose}
@@ -538,16 +541,16 @@ export default function BusinessTripDetailPageContent({
                 <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
                   <SubsectionHeader
                     icon={<Building2 size={15} />}
-                    title="Host"
+                    title={t('hr.labels.host')}
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
                     {trip.hostOrganization ? (
-                      <MetaItem label="Organization">
+                      <MetaItem label={t('hr.labels.organization')}>
                         {trip.hostOrganization}
                       </MetaItem>
                     ) : null}
                     {trip.hostContact ? (
-                      <MetaItem label="Contact">{trip.hostContact}</MetaItem>
+                      <MetaItem label={t('hr.labels.contact')}>{trip.hostContact}</MetaItem>
                     ) : null}
                   </div>
                 </div>
@@ -557,7 +560,7 @@ export default function BusinessTripDetailPageContent({
                 <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
                   <SubsectionHeader
                     icon={<Target size={15} />}
-                    title="Expected Outcomes"
+                    title={t('hr.labels.expectedOutcomes')}
                   />
                   <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
                     {trip.expectedOutcomes}
@@ -569,7 +572,7 @@ export default function BusinessTripDetailPageContent({
                 <div className="px-5 py-4">
                   <SubsectionHeader
                     icon={<Calendar size={15} />}
-                    title="Itinerary"
+                    title={t('hr.labels.itinerary')}
                   />
                   <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
                     {trip.itinerary}
@@ -581,7 +584,7 @@ export default function BusinessTripDetailPageContent({
 
           {/* Passengers */}
           <SectionCard
-            title="Passengers"
+            title={t('hr.labels.passengers')}
             action={
               <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
                 <span className="inline-flex items-center gap-1">
@@ -630,7 +633,7 @@ export default function BusinessTripDetailPageContent({
                         {row.visaRequired ? (
                           <Tag color="volcano" className="m-0">
                             {row.visaStatus
-                              ? formatVisaStatus(row.visaStatus)
+                              ? formatVisaStatus(row.visaStatus, t)
                               : 'Visa Required'}
                           </Tag>
                         ) : (
@@ -650,18 +653,18 @@ export default function BusinessTripDetailPageContent({
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                      <MetaItem label="Passport">
+                      <MetaItem label={t('hr.labels.passport')}>
                         {row.passportNumber ?? (
                           <span className="text-[var(--color-text-tertiary)]">
                             Not provided
                           </span>
                         )}
                       </MetaItem>
-                      <MetaItem label="Visa">
+                      <MetaItem label={t('hr.labels.visa')}>
                         {row.visaRequired
                           ? row.visaStatus
-                            ? formatVisaStatus(row.visaStatus)
-                            : 'Required'
+                            ? formatVisaStatus(row.visaStatus, t)
+                            : t('hr.labels.required')
                           : 'Not required'}
                       </MetaItem>
                     </div>
@@ -676,7 +679,7 @@ export default function BusinessTripDetailPageContent({
           ) : null}
 
           <SectionCard
-            title="Supporting Attachments"
+            title={t('hr.labels.supportingAttachments')}
             bodyClassName="px-5 py-4"
           >
             {trip.documents.length > 0 ? (
@@ -690,7 +693,7 @@ export default function BusinessTripDetailPageContent({
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          <SectionCard title="Budget Estimate">
+          <SectionCard title={t('hr.labels.budgetEstimate')}>
             <div className="divide-y divide-[rgba(0,0,0,0.06)]">
               {budgetRows.map(({ label, value }) => (
                 <div
@@ -722,7 +725,7 @@ export default function BusinessTripDetailPageContent({
               currentTier={trip.approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title="Approval Chain" bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
                 No approval workflow linked.
               </p>
@@ -733,9 +736,9 @@ export default function BusinessTripDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel business trip?"
-        description="This will cancel the business trip. This cannot be undone."
-        confirmLabel="Cancel trip"
+        title={t('hr.labels.cancelTrip')}
+        description={t('hr.labels.cancelTripDesc')}
+        confirmLabel={t('hr.labels.cancelTripConfirm')}
         danger
         confirmLoading={cancelMutation.isPending}
         onCancel={() => setConfirmCancel(false)}

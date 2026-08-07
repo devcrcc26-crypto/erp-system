@@ -20,6 +20,7 @@ import {
   formatExpenseClaimStatus,
 } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Expense claim body for the Approvals detail inbox.
@@ -30,6 +31,7 @@ export default function ExpenseClaimDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = useExpenseClaim(sourceId);
   const claim = detailQuery.data;
 
@@ -101,7 +103,7 @@ export default function ExpenseClaimDetail({
             </span>
             <span className="text-[var(--color-border-secondary)]">·</span>
             <StatusBadge
-              label={formatExpenseClaimStatus(claim.status)}
+              label={formatExpenseClaimStatus(claim.status, t)}
               variant={expenseClaimStatusVariant(claim.status)}
             />
           </div>

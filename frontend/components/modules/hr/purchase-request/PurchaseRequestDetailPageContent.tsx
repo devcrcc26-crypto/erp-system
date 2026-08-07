@@ -55,6 +55,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
   { value: 'ETB', label: 'ETB' },
@@ -70,6 +71,7 @@ export default function PurchaseRequestDetailPageContent({
 }: {
   requestId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -278,7 +280,7 @@ export default function PurchaseRequestDetailPageContent({
                 </span>
                 <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
-                  label={formatPurchaseRequestStatus(request.status)}
+                  label={formatPurchaseRequestStatus(request.status, t)}
                   variant={purchaseRequestStatusVariant(request.status)}
                 />
                 {gmRequired ? (

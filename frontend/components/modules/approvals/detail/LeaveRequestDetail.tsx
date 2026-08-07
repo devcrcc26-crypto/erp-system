@@ -37,6 +37,7 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Typed leave body for Approvals detail — editable when RETURNED by requester.
@@ -47,6 +48,7 @@ export default function LeaveRequestDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(sourceId);
@@ -113,9 +115,9 @@ export default function LeaveRequestDetail({
                 {leave.requestNumber}
               </span>
               <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatLeaveType(leave.leaveType)}</Tag>
+              <Tag className="m-0">{formatLeaveType(leave.leaveType, t)}</Tag>
               <StatusBadge
-                label={formatLeaveStatus(leave.status)}
+                label={formatLeaveStatus(leave.status, t)}
                 variant={leaveStatusVariant(leave.status)}
               />
             </div>
@@ -138,7 +140,7 @@ export default function LeaveRequestDetail({
           </div>
 
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug mt-4 mb-0">
-            {formatLeaveType(leave.leaveType)} Leave
+            {formatLeaveType(leave.leaveType, t)}
           </h2>
         </div>
       </div>
@@ -149,7 +151,7 @@ export default function LeaveRequestDetail({
             { label: 'Start', value: formatProjectDate(leave.startDate) },
             { label: 'End', value: formatProjectDate(leave.endDate) },
             { label: 'Days', value: String(leave.days), emphasize: true },
-            { label: 'Type', value: formatLeaveType(leave.leaveType) },
+            { label: 'Type', value: formatLeaveType(leave.leaveType, t) },
           ]}
         />
       ) : null}
@@ -198,7 +200,7 @@ export default function LeaveRequestDetail({
               </MetaItem>
               <MetaItem label="Leave type">
                 <StatusBadge
-                  label={formatLeaveType(leave.leaveType)}
+                  label={formatLeaveType(leave.leaveType, t)}
                   variant={leaveTypeVariant(leave.leaveType)}
                 />
               </MetaItem>

@@ -58,6 +58,7 @@ import {
 } from '@/lib/utils/approval-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
 
@@ -216,6 +217,7 @@ export default function ApprovalDetailPageContent({
 }: {
   requestId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -290,7 +292,7 @@ export default function ApprovalDetailPageContent({
   }, [currentTier]);
 
   const displayStatus = request
-    ? resolveDisplayStatus(request.status, currentTier)
+    ? resolveDisplayStatus(request.status, currentTier, t)
     : null;
 
   const actionLoading =
@@ -532,7 +534,7 @@ export default function ApprovalDetailPageContent({
                     <Space wrap size={6}>
                       <Typography.Text strong>{tier.label}</Typography.Text>
                       <StatusBadge
-                        label={formatApprovalStatus(tier.decision)}
+                        label={formatApprovalStatus(tier.decision, t)}
                         variant={approvalTierDecisionVariant(tier.decision)}
                       />
                       {isCurrent ? (

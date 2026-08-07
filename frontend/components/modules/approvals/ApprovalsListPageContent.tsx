@@ -180,7 +180,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           row.tiers as ApprovalTier[] | undefined,
           row.currentTier,
         );
-        const display = resolveDisplayStatus(row.status, current);
+        const display = resolveDisplayStatus(row.status, current, t);
         return <StatusBadge label={display.label} variant={display.variant} />;
       },
     },

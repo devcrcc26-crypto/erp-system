@@ -22,17 +22,31 @@ import type {
 import { useVehicleRefuelings } from '@/lib/query/vehicle-refueling';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  VEHICLE_REFUELING_STATUS_OPTIONS,
   formatVehicleRefuelingEmployeeName,
   formatVehicleRefuelingStatus,
   vehicleRefuelingStatusVariant,
 } from '@/lib/utils/vehicle-refueling-display';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const { RangePicker } = DatePicker;
 
 export default function VehicleRefuelingListPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -101,7 +115,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
       dataIndex: 'fuelType',
       key: 'fuelType',
       width: 90,
-      render: (v: string) => formatFuelType(v),
+      render: (v: string) => formatFuelType(v, t),
     },
     {
       title: 'Station',
@@ -132,7 +146,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
       width: 130,
       render: (value: VehicleRefuelingStatus) => (
         <StatusBadge
-          label={formatVehicleRefuelingStatus(value)}
+          label={formatVehicleRefuelingStatus(value, t)}
           variant={vehicleRefuelingStatusVariant(value)}
         />
       ),
@@ -182,7 +196,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           mode="multiple"
           allowClear
           placeholder="Status"
-          options={VEHICLE_REFUELING_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
             setStatusFilter(v);

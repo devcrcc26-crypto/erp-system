@@ -23,6 +23,7 @@ import {
 } from '@/lib/utils/purchase-request-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Purchase request body for the Approvals detail inbox (read-only).
@@ -33,6 +34,7 @@ export default function PurchaseRequestDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = usePurchaseRequest(sourceId);
   const request = detailQuery.data;
 
@@ -126,7 +128,7 @@ export default function PurchaseRequestDetail({
             </span>
             <span style={{ color: tokens.colorBorder }}>·</span>
             <StatusBadge
-              label={formatPurchaseRequestStatus(request.status)}
+              label={formatPurchaseRequestStatus(request.status, t)}
               variant={purchaseRequestStatusVariant(request.status)}
             />
             {gmRequired ? (

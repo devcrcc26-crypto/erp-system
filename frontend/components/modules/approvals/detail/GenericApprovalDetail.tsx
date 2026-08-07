@@ -9,6 +9,7 @@ import {
 } from '@/lib/utils/approval-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Generic approval body — form data + comments (extracted from Approvals detail).
@@ -18,13 +19,14 @@ export default function GenericApprovalDetail({
 }: {
   request: ApprovalRequestDetail;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const fieldLabels = getFormFieldLabels(request.category?.formSchema);
   const formEntries = Object.entries(request.formData ?? {})
     .filter(([key]) => !key.startsWith('_'))
     .map(([key, value]) => ({
       key,
       label: fieldLabels.get(key) ?? key,
-      value: formatFormDataValue(value),
+      value: formatFormDataValue(value, t),
     }));
 
   return (

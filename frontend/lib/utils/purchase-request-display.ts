@@ -8,6 +8,8 @@ import { formatUserName } from '@/lib/utils/user-display';
 
 export { formatEtbAmount, formatCurrencyAmount };
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const PURCHASE_REQUEST_STATUS_OPTIONS: Array<{
   value: PurchaseRequestStatus;
   label: string;
@@ -21,7 +23,8 @@ export const PURCHASE_REQUEST_STATUS_OPTIONS: Array<{
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-export function formatPurchaseRequestStatus(status: string): string {
+export function formatPurchaseRequestStatus(status: string, t?: TFn): string {
+  if (t) return t(`hr.status.${status}`);
   const found = PURCHASE_REQUEST_STATUS_OPTIONS.find((o) => o.value === status);
   return found?.label ?? status;
 }

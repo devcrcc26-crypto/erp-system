@@ -49,6 +49,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Consumables requisition detail — item editing, cancellation, and approval chain.
@@ -58,6 +59,7 @@ export default function ConsumablesRequisitionDetailPageContent({
 }: {
   requisitionId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -273,7 +275,7 @@ export default function ConsumablesRequisitionDetailPageContent({
                 </span>
                 <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
-                  label={formatConsumablesRequisitionStatus(requisition.status)}
+                  label={formatConsumablesRequisitionStatus(requisition.status, t)}
                   variant={consumablesRequisitionStatusVariant(
                     requisition.status,
                   )}

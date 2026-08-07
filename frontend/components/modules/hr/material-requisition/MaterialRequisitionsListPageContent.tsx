@@ -23,12 +23,12 @@ import { useMaterialRequisitions } from '@/lib/query/material-requisition';
 import { useUsersDirectory } from '@/lib/query/users';
 import { useAllProjects } from '@/lib/query/projects';
 import {
-  MATERIAL_REQUISITION_STATUS_OPTIONS,
   formatMaterialRequisitionEmployeeName,
   formatMaterialRequisitionStatus,
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const { RangePicker } = DatePicker;
 
@@ -36,6 +36,20 @@ const { RangePicker } = DatePicker;
  * Company or personal material requisition list with filters.
  */
 export default function MaterialRequisitionsListPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -134,7 +148,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: MaterialRequisitionStatus) => (
         <StatusBadge
-          label={formatMaterialRequisitionStatus(value)}
+          label={formatMaterialRequisitionStatus(value, t)}
           variant={materialRequisitionStatusVariant(value)}
         />
       ),
@@ -183,7 +197,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           mode="multiple"
           allowClear
           placeholder="Status"
-          options={MATERIAL_REQUISITION_STATUS_OPTIONS}
+          options={statusOptions}
           value={statusFilter}
           onChange={(v) => {
             setStatusFilter(v);

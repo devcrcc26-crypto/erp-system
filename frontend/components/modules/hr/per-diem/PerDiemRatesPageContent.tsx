@@ -17,11 +17,13 @@ import type { PerDiemRate } from '@/lib/api/per-diem.types';
 import { useDeletePerDiemRate, usePerDiemRates } from '@/lib/query/per-diem';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * HR configuration page — per diem destination rate management.
  */
 export default function PerDiemRatesPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const canManage = useCanManagePerDiemRates();
   const listQuery = usePerDiemRates(canManage);
@@ -68,12 +70,12 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
 
   const columns: ColumnsType<PerDiemRate> = [
     {
-      title: 'Destination Category',
+      title: t('hr.labels.destinationCategory'),
       dataIndex: 'destinationCategory',
       key: 'destinationCategory',
     },
     {
-      title: 'Daily Rate',
+      title: t('hr.labels.dailyRate'),
       key: 'dailyRate',
       width: 160,
       render: (_: unknown, row: PerDiemRate) =>
@@ -134,7 +136,7 @@ export default function PerDiemRatesPageContent(): React.ReactNode {
 
       <div className="flex items-center justify-end mb-4">
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Add Rate
+          {t('hr.labels.addRate')}
         </Button>
       </div>
 

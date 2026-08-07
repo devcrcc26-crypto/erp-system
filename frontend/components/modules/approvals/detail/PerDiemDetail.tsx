@@ -16,6 +16,7 @@ import {
   perDiemStatusVariant,
 } from '@/lib/utils/per-diem-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Per diem request body for the Approvals detail inbox.
@@ -26,6 +27,7 @@ export default function PerDiemDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = usePerDiemRequest(sourceId);
   const request = detailQuery.data;
 
@@ -68,7 +70,7 @@ export default function PerDiemDetail({
             </span>
             <span className="text-[var(--color-border-secondary)]">·</span>
             <StatusBadge
-              label={formatPerDiemStatus(request.status)}
+              label={formatPerDiemStatus(request.status, t)}
               variant={perDiemStatusVariant(request.status)}
             />
           </div>

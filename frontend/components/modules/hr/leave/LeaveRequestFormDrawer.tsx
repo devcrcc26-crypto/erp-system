@@ -23,11 +23,11 @@ import {
   useSubmitLeaveRequest,
 } from '@/lib/query/leave';
 import {
-  LEAVE_TYPE_OPTIONS,
   calculateLeaveDays,
   formatLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -67,6 +67,7 @@ export default function LeaveRequestFormDrawer({
   onClose: () => void;
   onSubmitted?: () => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
@@ -78,6 +79,19 @@ export default function LeaveRequestFormDrawer({
   const dateRange = Form.useWatch('dateRange', form) as
     | [Dayjs, Dayjs]
     | undefined;
+
+  const leaveTypeOptions = useMemo(
+    () => [
+      { value: 'ANNUAL' as const, label: t('hr.leaveType.ANNUAL') },
+      { value: 'SICK' as const, label: t('hr.leaveType.SICK') },
+      { value: 'UNPAID' as const, label: t('hr.leaveType.UNPAID') },
+      { value: 'MATERNITY' as const, label: t('hr.leaveType.MATERNITY') },
+      { value: 'PATERNITY' as const, label: t('hr.leaveType.PATERNITY') },
+      { value: 'EMERGENCY' as const, label: t('hr.leaveType.EMERGENCY') },
+      { value: 'COMPASSIONATE' as const, label: t('hr.leaveType.COMPASSIONATE') },
+    ],
+    [t],
+  );
 
   const selectedBalance = useMemo(() => {
     if (!leaveType) {
@@ -181,7 +195,7 @@ export default function LeaveRequestFormDrawer({
               rules={[{ required: true, message: 'Select a leave type' }]}
             >
               <Select
-                options={LEAVE_TYPE_OPTIONS}
+                options={leaveTypeOptions}
                 placeholder="Select leave type"
               />
             </Form.Item>
@@ -228,7 +242,7 @@ export default function LeaveRequestFormDrawer({
               size={4}
               style={{ width: '100%' }}
             >
-              <Typography.Text>{formatLeaveType(leaveType)}</Typography.Text>
+              <Typography.Text>{formatLeaveType(leaveType, t)}</Typography.Text>
               <Typography.Text type="secondary">
                 Entitled: {selectedBalance.entitled}
               </Typography.Text>

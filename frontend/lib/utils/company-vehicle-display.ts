@@ -7,6 +7,8 @@ import type {
 } from '@/lib/api/company-vehicle.types';
 import type { User } from '@/lib/api/types';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const VEHICLE_TYPE_OPTIONS: Array<{ value: VehicleType; label: string }> = [
   { value: 'CAR', label: 'Car' },
   { value: 'TRUCK', label: 'Truck' },
@@ -32,17 +34,23 @@ export const VEHICLE_STATUS_OPTIONS: Array<{ value: VehicleStatus; label: string
   { value: 'RETIRED', label: 'Retired' },
 ];
 
-export function formatVehicleType(type: VehicleType | string): string {
+export function formatVehicleType(type: VehicleType | string, t?: TFn): string {
+  if (t) return t(`hr.vehicleType.${type}`);
   const found = VEHICLE_TYPE_OPTIONS.find((o) => o.value === type);
   return found?.label ?? type;
 }
 
-export function formatFuelType(type: FuelType | string): string {
+export function formatFuelType(type: FuelType | string, t?: TFn): string {
+  if (t) return t(`hr.fuelType.${type}`);
   const found = FUEL_TYPE_OPTIONS.find((o) => o.value === type);
   return found?.label ?? type;
 }
 
-export function formatVehicleStatus(status: VehicleStatus | string): string {
+export function formatVehicleStatus(
+  status: VehicleStatus | string,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.vehicleStatus.${status}`);
   const found = VEHICLE_STATUS_OPTIONS.find((o) => o.value === status);
   return found?.label ?? status;
 }

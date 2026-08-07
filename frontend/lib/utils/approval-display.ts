@@ -9,6 +9,8 @@ import type {
   ApprovalUserSummary,
 } from '@/lib/api/approvals.types';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export function formatApprovalUserName(
   user?: ApprovalUserSummary | null,
 ): string {
@@ -19,7 +21,15 @@ export function formatApprovalUserName(
   return name || user.email || '—';
 }
 
-export function formatApprovalStatus(status: string): string {
+export function formatApprovalStatus(status: string, t?: TFn): string {
+  if (t) {
+    const decisionKey = `hr.approvalDecision.${status}`;
+    const decision = t(decisionKey);
+    if (decision !== decisionKey) {
+      return decision;
+    }
+    return t(`hr.status.${status}`);
+  }
   return status
     .split('_')
     .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
@@ -74,6 +84,7 @@ export function approvalTierDecisionVariant(
 export function resolveDisplayStatus(
   requestStatus: ApprovalRequestStatus,
   currentTier?: ApprovalTier | null,
+  t?: TFn,
 ): { label: string; variant: StatusBadgeVariant; raw: string } {
   if (
     currentTier?.decision === 'CONDITIONALLY_APPROVED' &&
@@ -83,13 +94,13 @@ export function resolveDisplayStatus(
   ) {
     return {
       raw: 'CONDITIONALLY_APPROVED',
-      label: formatApprovalStatus('CONDITIONALLY_APPROVED'),
+      label: formatApprovalStatus('CONDITIONALLY_APPROVED', t),
       variant: 'info',
     };
   }
   return {
     raw: requestStatus,
-    label: formatApprovalStatus(requestStatus),
+    label: formatApprovalStatus(requestStatus, t),
     variant: approvalRequestStatusVariant(requestStatus),
   };
 }
@@ -145,15 +156,17 @@ export function getFormFieldLabels(
   return map;
 }
 
-export function formatFormDataValue(value: unknown): string {
+export function formatFormDataValue(value: unknown, t?: TFn): string {
   if (value === null || value === undefined || value === '') {
     return '—';
   }
   if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
+    return value
+      ? (t?.('hr.labels.yes') ?? 'Yes')
+      : (t?.('hr.labels.no') ?? 'No');
   }
   if (Array.isArray(value)) {
-    return value.map((item) => formatFormDataValue(item)).join(', ');
+    return value.map((item) => formatFormDataValue(item, t)).join(', ');
   }
   if (typeof value === 'object') {
     return JSON.stringify(value);

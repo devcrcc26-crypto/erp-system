@@ -38,9 +38,6 @@ import {
 } from '@/lib/query/company-vehicle';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import {
-  FUEL_TYPE_OPTIONS,
-  VEHICLE_STATUS_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
   formatDriverName,
   formatFuelType,
   formatVehicleStatus,
@@ -49,10 +46,46 @@ import {
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 type DrawerMode = 'create' | 'edit';
 
 export default function VehiclesPageContent(): React.ReactNode {
+  const { t } = useEpcTranslation();
+
+  const vehicleStatusOptions = useMemo(
+    () => [
+      { value: 'AVAILABLE', label: t('hr.vehicleStatus.AVAILABLE') },
+      { value: 'APPROVED', label: t('hr.vehicleStatus.APPROVED') },
+      { value: 'IN_USE', label: t('hr.vehicleStatus.IN_USE') },
+      { value: 'MAINTENANCE', label: t('hr.vehicleStatus.MAINTENANCE') },
+      { value: 'RETIRED', label: t('hr.vehicleStatus.RETIRED') },
+    ],
+    [t],
+  );
+
+  const vehicleTypeOptions = useMemo(
+    () => [
+      { value: 'CAR', label: t('hr.vehicleType.CAR') },
+      { value: 'TRUCK', label: t('hr.vehicleType.TRUCK') },
+      { value: 'VAN', label: t('hr.vehicleType.VAN') },
+      { value: 'BUS', label: t('hr.vehicleType.BUS') },
+      { value: 'PICKUP', label: t('hr.vehicleType.PICKUP') },
+      { value: 'MOTORCYCLE', label: t('hr.vehicleType.MOTORCYCLE') },
+      { value: 'OTHER', label: t('hr.vehicleType.OTHER') },
+    ],
+    [t],
+  );
+
+  const fuelTypeOptions = useMemo(
+    () => [
+      { value: 'PETROL', label: t('hr.fuelType.PETROL') },
+      { value: 'DIESEL', label: t('hr.fuelType.DIESEL') },
+      { value: 'ELECTRIC', label: t('hr.fuelType.ELECTRIC') },
+      { value: 'HYBRID', label: t('hr.fuelType.HYBRID') },
+    ],
+    [t],
+  );
   const messageApi = useAppMessage();
   const { params, resetPage, bindMeta } = useTablePagination();
 
@@ -183,7 +216,7 @@ export default function VehiclesPageContent(): React.ReactNode {
       dataIndex: 'vehicleType',
       key: 'vehicleType',
       width: 110,
-      render: (v: string) => formatVehicleType(v),
+      render: (v: string) => formatVehicleType(v, t),
     },
     {
       title: 'Make',
@@ -211,7 +244,7 @@ export default function VehiclesPageContent(): React.ReactNode {
       dataIndex: 'fuelType',
       key: 'fuelType',
       width: 90,
-      render: (v: string) => formatFuelType(v),
+      render: (v: string) => formatFuelType(v, t),
     },
     {
       title: 'Assigned Driver',
@@ -228,7 +261,7 @@ export default function VehiclesPageContent(): React.ReactNode {
       width: 120,
       render: (value: VehicleStatus) => (
         <StatusBadge
-          label={formatVehicleStatus(value)}
+          label={formatVehicleStatus(value, t)}
           variant={vehicleStatusVariant(value)}
         />
       ),
@@ -295,7 +328,7 @@ export default function VehiclesPageContent(): React.ReactNode {
         <Select
           allowClear
           placeholder="Status"
-          options={VEHICLE_STATUS_OPTIONS}
+          options={vehicleStatusOptions}
           value={statusFilter}
           onChange={(v) => {
             setStatusFilter(v);
@@ -366,14 +399,14 @@ export default function VehiclesPageContent(): React.ReactNode {
               label="Vehicle Type"
               rules={[{ required: true, message: 'Required' }]}
             >
-              <Select options={VEHICLE_TYPE_OPTIONS} placeholder="Select type" />
+              <Select options={vehicleTypeOptions} placeholder="Select type" />
             </Form.Item>
             <Form.Item
               name="fuelType"
               label="Fuel Type"
             >
               <Select
-                options={FUEL_TYPE_OPTIONS}
+                options={fuelTypeOptions}
                 placeholder="Select fuel"
                 allowClear
               />
@@ -453,7 +486,7 @@ export default function VehiclesPageContent(): React.ReactNode {
         <Select
           value={newStatus}
           onChange={setNewStatus}
-          options={VEHICLE_STATUS_OPTIONS}
+          options={vehicleStatusOptions}
           style={{ width: '100%', marginTop: 8 }}
         />
       </ConfirmDialog>

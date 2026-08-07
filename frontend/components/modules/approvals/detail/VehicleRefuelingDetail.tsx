@@ -17,6 +17,7 @@ import {
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function VehicleRefuelingDetail({
   sourceId,
@@ -24,6 +25,7 @@ export default function VehicleRefuelingDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = useVehicleRefueling(sourceId);
   const refueling = detailQuery.data;
 
@@ -74,7 +76,7 @@ export default function VehicleRefuelingDetail({
             </span>
             <span style={{ color: tokens.colorBorder }}>·</span>
             <StatusBadge
-              label={formatVehicleRefuelingStatus(refueling.status)}
+              label={formatVehicleRefuelingStatus(refueling.status, t)}
               variant={vehicleRefuelingStatusVariant(refueling.status)}
             />
             {refueling.receiptDocumentId ? (
@@ -108,7 +110,7 @@ export default function VehicleRefuelingDetail({
       <SummaryStrip
         items={[
           { label: 'Station', value: refueling.fuelStation },
-          { label: 'Fuel Type', value: formatFuelType(refueling.fuelType) },
+          { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
           { label: 'Litres', value: refueling.requestedLitres?.toString() ?? '-' },
           { label: 'Cost (ETB)', value: refueling.estimatedCostEtb?.toString() ?? '-' },
         ]}

@@ -28,6 +28,7 @@ import { useSubmitVehicleApplication } from '@/lib/query/vehicle-application';
 import { useAllProjects } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
 
 interface TripValues {
@@ -54,6 +55,7 @@ interface VehicleApplicationFormProps {
 export default function VehicleApplicationForm({
   onSuccess,
 }: VehicleApplicationFormProps): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [tripForm] = Form.useForm<TripValues>();
   const [mainForm] = Form.useForm<FormValues>();
@@ -261,13 +263,13 @@ export default function VehicleApplicationForm({
 
           <Form.Item name="driveType" label="Drive Type" rules={[{ required: true }]}>
             <Radio.Group onChange={(e) => handleDriveTypeChange(e.target.value as DriveType)}>
-              <Radio value="COMPANY_DRIVER">Company Driver</Radio>
-              <Radio value="SELF_DRIVE">Self Drive</Radio>
+              <Radio value="COMPANY_DRIVER">{t('hr.driveType.COMPANY_DRIVER')}</Radio>
+              <Radio value="SELF_DRIVE">{t('hr.driveType.SELF_DRIVE')}</Radio>
             </Radio.Group>
           </Form.Item>
 
           {driveType === 'COMPANY_DRIVER' ? (
-            <Form.Item name="driverId" label="Driver">
+            <Form.Item name="driverId" label={t('hr.labels.driver')}>
               <Input
                 disabled
                 value={

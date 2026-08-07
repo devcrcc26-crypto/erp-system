@@ -18,6 +18,7 @@ import {
 } from '@/lib/utils/consumables-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Consumables requisition body for the Approvals detail inbox (read-only).
@@ -28,6 +29,7 @@ export default function ConsumablesRequisitionDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = useConsumablesRequisition(sourceId);
   const requisition = detailQuery.data;
 
@@ -109,7 +111,7 @@ export default function ConsumablesRequisitionDetail({
             </span>
             <span style={{ color: tokens.colorBorder }}>·</span>
             <StatusBadge
-              label={formatConsumablesRequisitionStatus(requisition.status)}
+              label={formatConsumablesRequisitionStatus(requisition.status, t)}
               variant={consumablesRequisitionStatusVariant(requisition.status)}
             />
             {requisition.declarationConfirmed ? (

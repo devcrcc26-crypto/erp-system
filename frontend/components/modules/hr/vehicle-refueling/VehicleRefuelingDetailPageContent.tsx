@@ -30,12 +30,14 @@ import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export default function VehicleRefuelingDetailPageContent({
   refuelingId,
 }: {
   refuelingId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
@@ -143,7 +145,7 @@ export default function VehicleRefuelingDetailPageContent({
                 </span>
                 <span style={{ color: tokens.colorBorder }}>|</span>
                 <StatusBadge
-                  label={formatVehicleRefuelingStatus(refueling.status)}
+                  label={formatVehicleRefuelingStatus(refueling.status, t)}
                   variant={vehicleRefuelingStatusVariant(refueling.status)}
                 />
                 {isDirectApproved ? (
@@ -174,7 +176,7 @@ export default function VehicleRefuelingDetailPageContent({
           <SummaryStrip
             items={[
               { label: 'Station', value: refueling.fuelStation },
-              { label: 'Fuel Type', value: formatFuelType(refueling.fuelType) },
+          { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
               {
                 label: 'Litres',
                 value: refueling.requestedLitres?.toString() ?? '-',

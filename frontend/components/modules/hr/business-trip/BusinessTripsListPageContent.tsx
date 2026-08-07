@@ -32,7 +32,6 @@ import {
 } from '@/lib/query/business-trip';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  BUSINESS_TRIP_STATUS_OPTIONS,
   businessTripStatusVariant,
   formatBusinessTripStatus,
   formatBusinessTripSubmitterName,
@@ -52,6 +51,19 @@ type ListTab = 'ALL' | 'NEEDS_TICKET';
 export default function BusinessTripsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'DRAFT', label: t('hr.status.DRAFT') },
+      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
+      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
+      { value: 'APPROVED', label: t('hr.status.APPROVED') },
+      { value: 'REJECTED', label: t('hr.status.REJECTED') },
+      { value: 'RETURNED', label: t('hr.status.RETURNED') },
+      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
+    ],
+    [t],
+  );
   const canAccess = useCanAccessBusinessTrip();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateBusinessTrip();
@@ -158,7 +170,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       width: 120,
       render: (value: string) => (
         <StatusBadge
-          label={formatTripType(value)}
+          label={formatTripType(value, t)}
           variant={tripTypeVariant(value)}
         />
       ),
@@ -184,7 +196,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       width: 130,
       render: (value: BusinessTripStatus) => (
         <StatusBadge
-          label={formatBusinessTripStatus(value)}
+          label={formatBusinessTripStatus(value, t)}
           variant={businessTripStatusVariant(value)}
         />
       ),
@@ -194,7 +206,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       key: 'currentStep',
       width: 180,
       render: (_: unknown, row: BusinessTripListItem) => {
-        const label = getCurrentStepLabel(row);
+        const label = getCurrentStepLabel(row, t);
         if (!label || label === '—') {
           return (
             <span style={{ color: tokens.colorTextSecondary }}>—</span>
@@ -313,7 +325,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             allowClear
             placeholder="Status"
             style={{ minWidth: 180 }}
-            options={BUSINESS_TRIP_STATUS_OPTIONS}
+            options={statusOptions}
             value={statusFilter}
             onChange={(value: BusinessTripStatus[]) => {
               setStatusFilter(value);

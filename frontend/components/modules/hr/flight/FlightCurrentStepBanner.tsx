@@ -5,6 +5,7 @@ import {
   flightCurrentStepBannerStyle,
 } from '@/lib/utils/flight-display';
 import type { FlightApplicationDetail } from '@/lib/api/flight.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Prominent current-step banner for flight application detail views.
@@ -24,7 +25,8 @@ export default function FlightCurrentStepBanner({
   /** When true, renders as a flat footer strip (no outer card chrome). */
   embedded?: boolean;
 }): React.ReactNode {
-  const currentStep = getCurrentStep(application);
+  const { t } = useEpcTranslation();
+  const currentStep = getCurrentStep(application, t);
   if (!currentStep) {
     return null;
   }
@@ -50,7 +52,7 @@ export default function FlightCurrentStepBanner({
       />
       <div className="min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Current Step
+          {t('hr.labels.currentStep')}
         </span>
         <span className="hidden sm:inline text-xs opacity-40">·</span>
         <span className="text-sm font-semibold">{currentStep.step}</span>

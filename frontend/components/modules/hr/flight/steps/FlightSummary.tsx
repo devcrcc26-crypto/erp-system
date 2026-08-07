@@ -12,6 +12,7 @@ import type {
   FlightPassengerValues,
   FlightTripDetailsValues,
 } from './flight-stepper.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Read-only review card shown on the final flight application step.
@@ -25,55 +26,56 @@ export default function FlightSummary({
   passengers: FlightPassengerValues[];
   additional: FlightAdditionalValues;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   return (
     <Card
-      title="Review Your Application"
+      title={t('hr.labels.reviewApplication')}
       size="small"
       styles={{
         body: { background: tokens.colorGray50 },
       }}
     >
       <Descriptions column={2} bordered size="small">
-        <Descriptions.Item label="Trip Type">
-          {formatTripType(tripDetails.tripType)}
+        <Descriptions.Item label={t('hr.labels.tripType')}>
+          {formatTripType(tripDetails.tripType, t)}
         </Descriptions.Item>
         <Descriptions.Item label="International">
           {tripDetails.isInternational ? 'Yes' : 'No'}
         </Descriptions.Item>
-        <Descriptions.Item label="Origin">
+        <Descriptions.Item label={t('hr.labels.origin')}>
           {[tripDetails.originCity, tripDetails.originCountry]
             .filter(Boolean)
             .join(', ') || '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Destination">
+        <Descriptions.Item label={t('hr.labels.destination')}>
           {tripDetails.destination || '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Departure">
+        <Descriptions.Item label={t('hr.labels.departure')}>
           {tripDetails.departureDate
             ? formatProjectDate(tripDetails.departureDate.format('YYYY-MM-DD'))
             : '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Return">
+        <Descriptions.Item label={t('hr.labels.return')}>
           {tripDetails.returnDate
             ? formatProjectDate(tripDetails.returnDate.format('YYYY-MM-DD'))
             : 'One Way'}
         </Descriptions.Item>
-        <Descriptions.Item label="Purpose" span={2}>
+        <Descriptions.Item label={t('hr.labels.purpose')} span={2}>
           {tripDetails.purpose || '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Ticket Class">
-          {formatTicketClass(tripDetails.ticketClass)}
+        <Descriptions.Item label={t('hr.labels.ticketClass')}>
+          {formatTicketClass(tripDetails.ticketClass, t)}
         </Descriptions.Item>
-        <Descriptions.Item label="Passengers">
+        <Descriptions.Item label={t('hr.labels.passengers')}>
           {passengers.length > 0
             ? passengers.map((p) => p.name).join(', ')
             : '—'}
         </Descriptions.Item>
-        <Descriptions.Item label="Accommodation">
-          {additional.accommodationRequired ? 'Required' : 'Not Required'}
+        <Descriptions.Item label={t('hr.labels.accommodation')}>
+          {additional.accommodationRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
         </Descriptions.Item>
-        <Descriptions.Item label="Per Diem">
-          {additional.perDiemRequired ? 'Required' : 'Not Required'}
+        <Descriptions.Item label={t('hr.labels.perDiem')}>
+          {additional.perDiemRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
         </Descriptions.Item>
         {additional.files.length > 0 ? (
           <Descriptions.Item label="Attachments" span={2}>

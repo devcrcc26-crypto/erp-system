@@ -5,6 +5,8 @@ import type {
 } from '@/lib/api/overtime.types';
 import { formatUserName } from '@/lib/utils/user-display';
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
 export const OVERTIME_STATUS_OPTIONS: {
   value: OvertimeSheetStatus;
   label: string;
@@ -27,7 +29,11 @@ export const OVERTIME_MONTH_OPTIONS: { value: number; label: string }[] =
     }),
   }));
 
-export function formatOvertimeStatus(status: OvertimeSheetStatus): string {
+export function formatOvertimeStatus(
+  status: OvertimeSheetStatus,
+  t?: TFn,
+): string {
+  if (t) return t(`hr.status.${status}`);
   return (
     OVERTIME_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     status
@@ -63,7 +69,12 @@ export function formatOvertimeEmployeeName(
   return formatUserName(user);
 }
 
-export function formatOvertimePeriod(month: number, year: number): string {
+export function formatOvertimePeriod(
+  month: number,
+  year: number,
+  t?: TFn,
+): string {
+  if (t) return `${t(`hr.months.${month}`)} ${year}`;
   const label =
     OVERTIME_MONTH_OPTIONS.find((m) => m.value === month)?.label ??
     String(month);
