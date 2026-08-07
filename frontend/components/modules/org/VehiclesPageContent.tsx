@@ -204,9 +204,10 @@ export default function VehiclesPageContent(): React.ReactNode {
     }
   }
 
-  const columns: ColumnsType<CompanyVehicleListItem> = [
+  const columns: ColumnsType<CompanyVehicleListItem> = useMemo(
+    () => [
     {
-      title: 'Plate Number',
+      title: t('hr.table.plateNumber'),
       dataIndex: 'plateNumber',
       key: 'plateNumber',
       width: 130,
@@ -219,35 +220,35 @@ export default function VehiclesPageContent(): React.ReactNode {
       render: (v: string) => formatVehicleType(v, t),
     },
     {
-      title: 'Make',
+      title: t('hr.table.make'),
       dataIndex: 'make',
       key: 'make',
       width: 120,
       ellipsis: true,
     },
     {
-      title: 'Model',
+      title: t('hr.table.model'),
       dataIndex: 'model',
       key: 'model',
       width: 120,
       ellipsis: true,
     },
     {
-      title: 'Year',
+      title: t('hr.table.year'),
       dataIndex: 'year',
       key: 'year',
       width: 70,
       align: 'right',
     },
     {
-      title: 'Fuel',
+      title: t('hr.table.fuelType'),
       dataIndex: 'fuelType',
       key: 'fuelType',
       width: 90,
       render: (v: string) => formatFuelType(v, t),
     },
     {
-      title: 'Assigned Driver',
+      title: t('hr.table.assignedDriver'),
       key: 'assignedDriver',
       width: 160,
       ellipsis: true,
@@ -255,7 +256,7 @@ export default function VehiclesPageContent(): React.ReactNode {
         formatDriverName(row.assignedDriver),
     },
     {
-      title: 'Status',
+      title: t('hr.table.status'),
       dataIndex: 'status',
       key: 'status',
       width: 120,
@@ -267,7 +268,7 @@ export default function VehiclesPageContent(): React.ReactNode {
       ),
     },
     {
-      title: '',
+      title: t('hr.table.actions'),
       key: 'actions',
       width: 200,
       render: (_: unknown, row: CompanyVehicleListItem) => (
@@ -293,7 +294,9 @@ export default function VehiclesPageContent(): React.ReactNode {
         </Space>
       ),
     },
-  ];
+  ],
+  [t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return <PageLoadingSkeleton />;
@@ -358,7 +361,7 @@ export default function VehiclesPageContent(): React.ReactNode {
           emptyText: (
             <TableEmptyState
               icon={<CarOutlined />}
-              title="No vehicles found"
+              title={t('hr.empty.noVehicles')}
               description="Add your first company vehicle to get started."
             />
           ),

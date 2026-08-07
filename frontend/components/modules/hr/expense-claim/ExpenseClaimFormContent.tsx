@@ -42,7 +42,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
 
   return (
     <FormLayout
-      title="New Expense Claim"
+      title={t('hr.buttons.newExpenseClaim')}
       description="Start with claim details, then add line items with receipts on the next page."
       extra={
         <Space>

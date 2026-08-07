@@ -386,9 +386,9 @@ export default function ConsumablesRequisitionForm({
               </div>
               <Space>
                 <Button type="primary" onClick={() => void saveItem()}>
-                  {editingKey ? 'Update Item' : 'Add Item'}
+                  {editingKey ? 'Update Item' : t('hr.buttons.addItem')}
                 </Button>
-                <Button onClick={cancelItemForm}>Cancel</Button>
+                <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
               </Space>
             </Form>
           </div>
