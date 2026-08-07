@@ -124,7 +124,7 @@ export default function VehicleRefuelingForm({
                 loading={usersQuery.isLoading}
                 notFoundContent={
                   usersQuery.isLoading
-                    ? 'Loading…'
+                    ? 'Loading...'
                     : 'No users with Driver position'
                 }
                 filterOption={(input, option) =>

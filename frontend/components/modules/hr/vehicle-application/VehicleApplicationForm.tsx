@@ -193,12 +193,12 @@ export default function VehicleApplicationForm({
           <Alert
             type="info"
             showIcon
-            message="Select departure and return dates above to see available vehicles."
+            title="Select departure and return dates above to see available vehicles."
           />
         ) : availableQuery.isLoading ? (
           <Typography.Text type="secondary">Loading vehicles...</Typography.Text>
         ) : vehicles.length === 0 ? (
-          <Alert type="warning" showIcon message="No vehicles found in the fleet." />
+          <Alert type="warning" showIcon title="No vehicles found in the fleet." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {vehicles.map((v) => (
@@ -318,7 +318,7 @@ export default function VehicleApplicationForm({
                 options={
                   projectsQuery.data?.data?.map((p) => ({
                     value: p.id,
-                    label: `${p.projectCode} — ${p.name}`,
+                    label: `${p.projectCode} - ${p.name}`,
                   })) ?? []
                 }
               />

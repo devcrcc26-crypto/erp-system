@@ -159,7 +159,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
-          message={
+          title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
               : 'Failed to load vehicle refueling requests'

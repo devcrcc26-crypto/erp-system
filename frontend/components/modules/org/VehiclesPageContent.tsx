@@ -273,7 +273,7 @@ export default function VehiclesPageContent(): React.ReactNode {
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
-          message={
+          title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
               : 'Failed to load vehicles'
@@ -423,7 +423,7 @@ export default function VehiclesPageContent(): React.ReactNode {
               loading={usersQuery.isLoading}
               notFoundContent={
                 usersQuery.isLoading
-                  ? 'Loading…'
+                  ? 'Loading...'
                   : 'No users with Driver position'
               }
               filterOption={(input, option) =>

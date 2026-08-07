@@ -88,7 +88,7 @@ export default function VehicleApplicationDetailPageContent({
       <Alert
         type="error"
         showIcon
-        message={
+        title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
             : 'Vehicle application not found'
@@ -115,7 +115,7 @@ export default function VehicleApplicationDetailPageContent({
         {canRelease ? (
           <Popconfirm
             title="Release vehicle?"
-            description="This confirms the vehicle has been returned."
+            description="The vehicle will be marked as available for other bookings."
             onConfirm={() => void handleRelease()}
             okButtonProps={{ loading: releaseMutation.isPending }}
           >
@@ -152,7 +152,7 @@ export default function VehicleApplicationDetailPageContent({
                 >
                   {application.applicationNumber}
                 </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
+                <span style={{ color: tokens.colorBorder }}>|</span>
                 <StatusBadge
                   label={formatVehicleApplicationStatus(application.status)}
                   variant={vehicleApplicationStatusVariant(application.status)}
@@ -168,7 +168,7 @@ export default function VehicleApplicationDetailPageContent({
                 className="text-lg font-semibold leading-snug m-0"
                 style={{ color: tokens.colorTextPrimary }}
               >
-                Vehicle Application — {application.vehicle?.plateNumber}
+                Vehicle Application - {application.vehicle?.plateNumber}
               </h2>
               <p
                 className="mt-1 text-sm m-0"
@@ -176,7 +176,7 @@ export default function VehicleApplicationDetailPageContent({
               >
                 {formatVehicleApplicationEmployeeName(application.employee)}
                 {application.submittedAt
-                  ? ` · Submitted ${formatProjectDate(application.submittedAt)}`
+                  ? ` | Submitted ${formatProjectDate(application.submittedAt)}`
                   : null}
               </p>
             </div>
@@ -185,8 +185,14 @@ export default function VehicleApplicationDetailPageContent({
           <SummaryStrip
             items={[
               { label: 'Destination', value: application.destination },
-              { label: 'Drive Type', value: formatDriveType(application.driveType) },
-              { label: 'Passengers', value: String(application.passengerCount) },
+              {
+                label: 'Drive Type',
+                value: formatDriveType(application.driveType),
+              },
+              {
+                label: 'Passengers',
+                value: String(application.passengerCount),
+              },
               {
                 label: 'Vehicle',
                 value: application.vehicle
@@ -218,7 +224,7 @@ export default function VehicleApplicationDetailPageContent({
               ) : null}
               {application.project ? (
                 <MetaItem label="Project">
-                  {application.project.projectCode} — {application.project.name}
+                  {application.project.projectCode} - {application.project.name}
                 </MetaItem>
               ) : null}
               {application.notes ? (
@@ -241,7 +247,7 @@ export default function VehicleApplicationDetailPageContent({
           <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
             {isDirectApproved ? (
               <Typography.Text type="secondary">
-                Approved directly — no approval required
+                Approved directly - no approval required
               </Typography.Text>
             ) : tiers.length > 0 ? (
               <ApprovalTierTimeline

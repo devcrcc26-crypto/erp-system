@@ -89,7 +89,7 @@ export default function VehicleRefuelingDetailPageContent({
       <Alert
         type="error"
         showIcon
-        message={
+        title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
             : 'Vehicle refueling request not found'
@@ -141,7 +141,7 @@ export default function VehicleRefuelingDetailPageContent({
                 >
                   {refueling.requestNumber}
                 </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
+                <span style={{ color: tokens.colorBorder }}>|</span>
                 <StatusBadge
                   label={formatVehicleRefuelingStatus(refueling.status)}
                   variant={vehicleRefuelingStatusVariant(refueling.status)}
@@ -157,7 +157,7 @@ export default function VehicleRefuelingDetailPageContent({
                 className="text-lg font-semibold leading-snug m-0"
                 style={{ color: tokens.colorTextPrimary }}
               >
-                Vehicle Refueling — {refueling.vehicle?.plateNumber}
+                Vehicle Refueling - {refueling.vehicle?.plateNumber}
               </h2>
               <p
                 className="mt-1 text-sm m-0"
@@ -165,7 +165,7 @@ export default function VehicleRefuelingDetailPageContent({
               >
                 {formatVehicleRefuelingEmployeeName(refueling.employee)}
                 {refueling.submittedAt
-                  ? ` · Submitted ${formatProjectDate(refueling.submittedAt)}`
+                  ? ` | Submitted ${formatProjectDate(refueling.submittedAt)}`
                   : null}
               </p>
             </div>
@@ -175,8 +175,14 @@ export default function VehicleRefuelingDetailPageContent({
             items={[
               { label: 'Station', value: refueling.fuelStation },
               { label: 'Fuel Type', value: formatFuelType(refueling.fuelType) },
-              { label: 'Litres', value: refueling.requestedLitres?.toString() ?? '-' },
-              { label: 'Cost (ETB)', value: refueling.estimatedCostEtb?.toString() ?? '-' },
+              {
+                label: 'Litres',
+                value: refueling.requestedLitres?.toString() ?? '-',
+              },
+              {
+                label: 'Cost (ETB)',
+                value: refueling.estimatedCostEtb?.toString() ?? '-',
+              },
             ]}
           />
 
@@ -190,7 +196,7 @@ export default function VehicleRefuelingDetailPageContent({
               </MetaItem>
               <MetaItem label="Vehicle">
                 {refueling.vehicle
-                  ? `${refueling.vehicle.plateNumber} — ${refueling.vehicle.make} ${refueling.vehicle.model}`
+                  ? `${refueling.vehicle.plateNumber} - ${refueling.vehicle.make} ${refueling.vehicle.model}`
                   : '-'}
               </MetaItem>
               {refueling.driver ? (
@@ -214,7 +220,7 @@ export default function VehicleRefuelingDetailPageContent({
                 type="info"
                 showIcon
                 className="mb-4"
-                message="This request has been approved. Please upload the fuel receipt."
+                title="This request has been approved. Please upload the fuel receipt."
               />
               <input
                 ref={fileInputRef}
@@ -239,16 +245,14 @@ export default function VehicleRefuelingDetailPageContent({
             </SectionCard>
           ) : null}
 
-          {refueling.receiptDocument ? (
+          {refueling.receiptDocumentId ? (
             <SectionCard title="Receipt" bodyClassName="px-5 py-4">
-              <div className="flex items-center gap-3">
-                <Typography.Text>
-                  {refueling.receiptDocument.name}
-                </Typography.Text>
-                <Typography.Text type="secondary" className="text-xs">
-                  ({Math.round(refueling.receiptDocument.fileSizeBytes / 1024)} KB)
-                </Typography.Text>
-              </div>
+              <Typography.Text>
+                Receipt attached
+                {refueling.receiptDocument?.name
+                  ? `: ${refueling.receiptDocument.name}`
+                  : ''}
+              </Typography.Text>
             </SectionCard>
           ) : null}
         </div>
@@ -257,7 +261,7 @@ export default function VehicleRefuelingDetailPageContent({
           <SectionCard title="Approval Chain" bodyClassName="px-4 py-4">
             {isDirectApproved ? (
               <Typography.Text type="secondary">
-                Approved directly — no approval required
+                Approved directly - no approval required
               </Typography.Text>
             ) : tiers.length > 0 ? (
               <ApprovalTierTimeline
@@ -276,7 +280,7 @@ export default function VehicleRefuelingDetailPageContent({
       <ConfirmDialog
         open={confirmCancel}
         title="Cancel request?"
-        description="This will cancel the refueling request and any open approval request."
+        description="This will cancel the vehicle refueling request and any open approval request."
         confirmLabel="Cancel Request"
         danger
         confirmLoading={cancelMutation.isPending}
