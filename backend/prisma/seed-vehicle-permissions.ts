@@ -51,48 +51,48 @@ const SAMPLE_VEHICLES: Array<{
   fuelType: FuelType;
 }> = [
   {
-    plateNumber: 'AA-01234',
+    plateNumber: 'AA-12345',
     make: 'Toyota',
     model: 'Land Cruiser',
-    year: 2023,
+    year: 2022,
     color: 'White',
     vehicleType: VehicleType.CAR,
     fuelType: FuelType.DIESEL,
   },
   {
-    plateNumber: 'AA-05678',
+    plateNumber: 'AA-23456',
     make: 'Toyota',
     model: 'Hilux',
-    year: 2022,
-    color: 'Silver',
+    year: 2021,
+    color: 'White',
     vehicleType: VehicleType.PICKUP,
     fuelType: FuelType.DIESEL,
   },
   {
-    plateNumber: 'AA-09012',
-    make: 'Hyundai',
-    model: 'H-1',
-    year: 2024,
-    color: 'Blue',
+    plateNumber: 'AA-34567',
+    make: 'Toyota',
+    model: 'HiAce',
+    year: 2020,
+    color: 'White',
     vehicleType: VehicleType.VAN,
     fuelType: FuelType.DIESEL,
   },
   {
-    plateNumber: 'AA-03456',
+    plateNumber: 'AA-45678',
     make: 'Toyota',
-    model: 'Corolla',
-    year: 2023,
-    color: 'Black',
-    vehicleType: VehicleType.CAR,
-    fuelType: FuelType.PETROL,
+    model: 'Coaster',
+    year: 2019,
+    color: 'White',
+    vehicleType: VehicleType.BUS,
+    fuelType: FuelType.DIESEL,
   },
   {
-    plateNumber: 'AA-07890',
-    make: 'Mitsubishi',
-    model: 'L200',
+    plateNumber: 'AA-56789',
+    make: 'Isuzu',
+    model: 'NPR',
     year: 2021,
-    color: 'Red',
-    vehicleType: VehicleType.PICKUP,
+    color: 'Blue',
+    vehicleType: VehicleType.TRUCK,
     fuelType: FuelType.DIESEL,
   },
 ];
@@ -173,6 +173,19 @@ async function main(): Promise<void> {
 
     // ── Sample vehicles ──────────────────────────────────────────────────────
 
+    const actor = await prisma.user.findFirst({
+      where: {
+        companyId: company.id,
+        deletedAt: null,
+        isActive: true,
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!actor) {
+      throw new Error('No user found to seed vehicles');
+    }
+
     let vehiclesCreated = 0;
     for (const v of SAMPLE_VEHICLES) {
       const existing = await prisma.companyVehicle.findFirst({
@@ -197,8 +210,8 @@ async function main(): Promise<void> {
             fuelType: v.fuelType,
             isActive: true,
             status: VehicleStatus.AVAILABLE,
-            createdBy: SYSTEM_USER_ID,
-            updatedBy: SYSTEM_USER_ID,
+            createdBy: actor.id,
+            updatedBy: actor.id,
           },
         });
         vehiclesCreated++;

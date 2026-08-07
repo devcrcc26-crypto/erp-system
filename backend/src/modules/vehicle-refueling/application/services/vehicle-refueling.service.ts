@@ -147,14 +147,8 @@ export class VehicleRefuelingService
           fuelDate,
           fuelType: dto.fuelType,
           fuelStation: dto.fuelStation.trim(),
-          currentMileage:
-            dto.currentMileage != null
-              ? new Prisma.Decimal(dto.currentMileage)
-              : null,
-          requestedLitres:
-            dto.requestedLitres != null
-              ? new Prisma.Decimal(dto.requestedLitres)
-              : null,
+          currentMileage: new Prisma.Decimal(dto.currentMileage),
+          requestedLitres: new Prisma.Decimal(dto.requestedLitres),
           estimatedCostEtb:
             dto.estimatedCostEtb != null
               ? new Prisma.Decimal(dto.estimatedCostEtb)
@@ -207,14 +201,8 @@ export class VehicleRefuelingService
         fuelDate,
         fuelType: dto.fuelType,
         fuelStation: dto.fuelStation.trim(),
-        currentMileage:
-          dto.currentMileage != null
-            ? new Prisma.Decimal(dto.currentMileage)
-            : null,
-        requestedLitres:
-          dto.requestedLitres != null
-            ? new Prisma.Decimal(dto.requestedLitres)
-            : null,
+        currentMileage: new Prisma.Decimal(dto.currentMileage),
+        requestedLitres: new Prisma.Decimal(dto.requestedLitres),
         estimatedCostEtb:
           dto.estimatedCostEtb != null
             ? new Prisma.Decimal(dto.estimatedCostEtb)

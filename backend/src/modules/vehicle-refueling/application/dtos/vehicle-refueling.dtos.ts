@@ -38,19 +38,17 @@ export class SubmitVehicleRefuelingDto {
   @MaxLength(200)
   fuelStation!: string;
 
-  @ApiPropertyOptional({ description: 'Current vehicle mileage' })
-  @IsOptional()
+  @ApiProperty({ description: 'Current vehicle mileage (odometer km)' })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  currentMileage?: number;
+  currentMileage!: number;
 
-  @ApiPropertyOptional({ description: 'Requested litres of fuel' })
-  @IsOptional()
+  @ApiProperty({ description: 'Requested litres of fuel' })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  requestedLitres?: number;
+  requestedLitres!: number;
 
   @ApiPropertyOptional({ description: 'Estimated cost in ETB' })
   @IsOptional()

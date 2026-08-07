@@ -34,6 +34,8 @@ const CATEGORY_ROUTES: Record<string, string> = {
   PURCHASE_REQUEST: '/approvals/new/purchase-request',
   MATERIAL_REQUISITION: '/approvals/new/material-requisition',
   CONSUMABLES_REQUISITION: '/approvals/new/consumables',
+  VEHICLE_APPLICATION: '/approvals/new/vehicle-application',
+  VEHICLE_REFUELING: '/approvals/new/vehicle-refueling',
 };
 
 /**

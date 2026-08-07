@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import VehicleApplicationListPageContent from '@/components/modules/hr/vehicle-application/VehicleApplicationListPageContent';
 
-export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.vehicleApplications" />;
+export default function VehicleApplicationsPage(): React.ReactNode {
+  return <VehicleApplicationListPageContent />;
 }

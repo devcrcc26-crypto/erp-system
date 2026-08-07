@@ -22,6 +22,8 @@ import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
 import PurchaseRequestDetail from '@/components/modules/approvals/detail/PurchaseRequestDetail';
 import MaterialRequisitionDetail from '@/components/modules/approvals/detail/MaterialRequisitionDetail';
 import ConsumablesRequisitionDetail from '@/components/modules/approvals/detail/ConsumablesRequisitionDetail';
+import VehicleApplicationDetail from '@/components/modules/approvals/detail/VehicleApplicationDetail';
+import VehicleRefuelingDetail from '@/components/modules/approvals/detail/VehicleRefuelingDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -177,6 +179,26 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <ConsumablesRequisitionDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'VEHICLE_APPLICATION':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <VehicleApplicationDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'VEHICLE_REFUELING':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <VehicleRefuelingDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />

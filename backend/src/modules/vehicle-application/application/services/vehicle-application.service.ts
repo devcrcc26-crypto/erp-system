@@ -139,29 +139,38 @@ export class VehicleApplicationService
     const id = randomUUID();
 
     if (resolvedTiers.length === 0) {
-      await this.prisma.vehicleApplication.create({
-        data: {
-          id,
-          companyId,
-          applicationNumber,
-          employeeId: userId,
-          vehicleId: dto.vehicleId,
-          driveType: dto.driveType,
-          driverId: dto.driverId || null,
-          departureDatetime: departure,
-          returnDatetime: returnDt,
-          destination: dto.destination.trim(),
-          purpose: dto.purpose.trim(),
-          passengerCount: dto.passengerCount ?? 1,
-          passengerNames: dto.passengerNames?.trim() || null,
-          projectId: dto.projectId || null,
-          notes: dto.notes?.trim() || null,
-          status: VehicleApplicationStatus.APPROVED,
-          submittedAt: now,
-          completedAt: now,
-          createdBy: userId,
-          updatedBy: userId,
-        },
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.vehicleApplication.create({
+          data: {
+            id,
+            companyId,
+            applicationNumber,
+            employeeId: userId,
+            vehicleId: dto.vehicleId,
+            driveType: dto.driveType,
+            driverId: dto.driverId || null,
+            departureDatetime: departure,
+            returnDatetime: returnDt,
+            destination: dto.destination.trim(),
+            purpose: dto.purpose.trim(),
+            passengerCount: dto.passengerCount ?? 1,
+            passengerNames: dto.passengerNames?.trim() || null,
+            projectId: dto.projectId || null,
+            notes: dto.notes?.trim() || null,
+            status: VehicleApplicationStatus.APPROVED,
+            submittedAt: now,
+            completedAt: now,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await tx.companyVehicle.update({
+          where: { id: dto.vehicleId },
+          data: {
+            status: VehicleStatus.APPROVED,
+            updatedBy: userId,
+          },
+        });
       });
       this.logger.log(
         `Vehicle application ${applicationNumber} auto-approved (HR+ submitter)`,

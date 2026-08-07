@@ -37,6 +37,9 @@
       "humanResources": "人力资源",
       "organization": "组织架构"
     },
+    "organization": {
+      "vehicles": "公司车辆"
+    },
     "hr": {
       "leaveRequests": "请假申请",
       "overtime": "加班申请",
@@ -179,6 +182,22 @@
         "myListTitle": "我的差旅补贴申请",
         "listDescription": "审核并处理员工差旅补贴申请。",
         "myListDescription": "提交并跟踪您的差旅补贴审批流程。"
+      },
+      "vehicleApplication": {
+        "new": "新建用车申请",
+        "detail": "用车申请",
+        "listTitle": "用车申请",
+        "myListTitle": "我的用车申请",
+        "listDescription": "审核并处理公司车辆使用申请。",
+        "myListDescription": "提交并跟踪您的用车审批流程。"
+      },
+      "vehicleRefueling": {
+        "new": "新建车辆加油申请",
+        "detail": "车辆加油",
+        "listTitle": "车辆加油申请",
+        "myListTitle": "我的加油申请",
+        "listDescription": "审核并处理车辆加油申请。",
+        "myListDescription": "提交并跟踪您的车辆加油审批流程。"
       }
     },
     "dashboard": {

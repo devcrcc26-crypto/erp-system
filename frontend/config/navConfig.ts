@@ -83,6 +83,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/official-seal': 'nav.hr.officialSeal',
   '/hr/project-seal': 'nav.hr.projectSeal',
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
+  '/organization/vehicles': 'nav.organization.vehicles',
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
@@ -434,6 +435,13 @@ export function buildIconRailNav(
         iconKey: 'disciplines-catalog',
         visible: canViewDisciplinesCatalog,
       },
+      {
+        key: '/organization/vehicles',
+        labelKey: 'nav.organization.vehicles',
+        href: '/organization/vehicles',
+        iconKey: 'hr-vehicle',
+        visible: canViewHr,
+      },
     ],
   };
 
@@ -465,7 +473,8 @@ export function buildIconRailNav(
     canManageUsers ||
     canViewDepartments ||
     canViewPositions ||
-    canViewDisciplinesCatalog;
+    canViewDisciplinesCatalog ||
+    canViewHr;
 
   return {
     topItems,
@@ -609,7 +618,9 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/per-diem' ||
     pathname === '/approvals/new/purchase-request' ||
     pathname === '/approvals/new/material-requisition' ||
-    pathname === '/approvals/new/consumables'
+    pathname === '/approvals/new/consumables' ||
+    pathname === '/approvals/new/vehicle-application' ||
+    pathname === '/approvals/new/vehicle-refueling'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -742,6 +753,45 @@ export function resolveRouteMeta(
           href: '/hr/consumables',
         },
         { label: t('pages.hr.consumables.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/vehicle-applications/')) {
+    return {
+      titleKey: 'pages.hr.vehicleApplication.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.vehicleApplications'),
+          href: '/hr/vehicle-applications',
+        },
+        { label: t('pages.hr.vehicleApplication.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/vehicle-refueling/')) {
+    return {
+      titleKey: 'pages.hr.vehicleRefueling.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.vehicleRefueling'),
+          href: '/hr/vehicle-refueling',
+        },
+        { label: t('pages.hr.vehicleRefueling.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/organization/vehicles')) {
+    return {
+      titleKey: 'nav.organization.vehicles',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.organization') },
+        { label: t('nav.organization.vehicles') },
       ],
     };
   }

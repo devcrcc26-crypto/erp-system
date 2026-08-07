@@ -37,6 +37,9 @@
       "humanResources": "Human Resources",
       "organization": "Organization"
     },
+    "organization": {
+      "vehicles": "Company Vehicles"
+    },
     "hr": {
       "leaveRequests": "Leave Requests",
       "overtime": "Overtime",
@@ -179,6 +182,22 @@
         "myListTitle": "My Per Diem Requests",
         "listDescription": "Review and process employee per diem requests.",
         "myListDescription": "Submit and track your per diem requests through the approval workflow."
+      },
+      "vehicleApplication": {
+        "new": "New Vehicle Application",
+        "detail": "Vehicle Application",
+        "listTitle": "Vehicle Applications",
+        "myListTitle": "My Vehicle Applications",
+        "listDescription": "Review and process company vehicle requests.",
+        "myListDescription": "Submit and track your vehicle applications through the approval workflow."
+      },
+      "vehicleRefueling": {
+        "new": "New Vehicle Refueling",
+        "detail": "Vehicle Refueling",
+        "listTitle": "Vehicle Refueling Requests",
+        "myListTitle": "My Refueling Requests",
+        "listDescription": "Review and process vehicle refueling requests.",
+        "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow."
       }
     },
     "dashboard": {
