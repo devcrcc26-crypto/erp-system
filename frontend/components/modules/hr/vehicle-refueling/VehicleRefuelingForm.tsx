@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
@@ -15,9 +15,12 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import type { FuelType } from '@/lib/api/company-vehicle.types';
 import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useCompanyVehicles } from '@/lib/query/company-vehicle';
-import { useUsersDirectory } from '@/lib/query/users';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import { useSubmitVehicleRefueling } from '@/lib/query/vehicle-refueling';
-import { FUEL_TYPE_OPTIONS } from '@/lib/utils/company-vehicle-display';
+import {
+  FUEL_TYPE_OPTIONS,
+  toDriverSelectOptions,
+} from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface FormValues {
@@ -44,8 +47,12 @@ export default function VehicleRefuelingForm({
   const [submitting, setSubmitting] = useState(false);
 
   const submitMutation = useSubmitVehicleRefueling();
-  const vehiclesQuery = useCompanyVehicles({ page: 1, limit: 200 });
-  const usersQuery = useUsersDirectory({ page: 1, limit: 200 });
+  const vehiclesQuery = useCompanyVehicles({ page: 1, limit: 100 });
+  const usersQuery = useFullUsersDirectory();
+  const driverOptions = useMemo(
+    () => toDriverSelectOptions(usersQuery.data ?? []),
+    [usersQuery.data],
+  );
 
   async function handleSubmit(): Promise<void> {
     let values: FormValues;
@@ -115,17 +122,17 @@ export default function VehicleRefuelingForm({
                 allowClear
                 placeholder="Select driver"
                 loading={usersQuery.isLoading}
+                notFoundContent={
+                  usersQuery.isLoading
+                    ? 'Loading…'
+                    : 'No users with Driver position'
+                }
                 filterOption={(input, option) =>
                   String(option?.label ?? '')
                     .toLowerCase()
                     .includes(input.toLowerCase())
                 }
-                options={
-                  usersQuery.data?.data?.map((u) => ({
-                    value: u.id,
-                    label: `${u.firstName} ${u.lastName}`,
-                  })) ?? []
-                }
+                options={driverOptions}
               />
             </Form.Item>
           </div>

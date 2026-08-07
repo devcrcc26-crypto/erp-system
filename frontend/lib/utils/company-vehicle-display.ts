@@ -5,6 +5,7 @@ import type {
   VehicleStatus,
   VehicleType,
 } from '@/lib/api/company-vehicle.types';
+import type { User } from '@/lib/api/types';
 
 export const VEHICLE_TYPE_OPTIONS: Array<{ value: VehicleType; label: string }> = [
   { value: 'CAR', label: 'Car' },
@@ -69,4 +70,28 @@ export function formatDriverName(
 ): string {
   if (!driver) return '-';
   return `${driver.firstName} ${driver.lastName}`;
+}
+
+/** Users whose position title includes the word Driver. */
+export function isDriverUser(user: User): boolean {
+  const title = user.position?.title?.trim() ?? '';
+  return /\bdriver\b/i.test(title);
+}
+
+/** Select options for assigned-driver pickers. */
+export function toDriverSelectOptions(
+  users: User[],
+  includeUserIds: string[] = [],
+): Array<{ value: string; label: string }> {
+  const include = new Set(includeUserIds.filter(Boolean));
+  return users
+    .filter((user) => isDriverUser(user) || include.has(user.id))
+    .map((user) => {
+      const name = `${user.firstName} ${user.lastName}`.trim();
+      const position = user.position?.title?.trim();
+      return {
+        value: user.id,
+        label: position ? `${name} — ${position}` : name,
+      };
+    });
 }

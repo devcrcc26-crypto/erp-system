@@ -36,7 +36,7 @@ import {
   useUpdateCompanyVehicleStatus,
   useDeleteCompanyVehicle,
 } from '@/lib/query/company-vehicle';
-import { useUsersDirectory } from '@/lib/query/users';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import {
   FUEL_TYPE_OPTIONS,
   VEHICLE_STATUS_OPTIONS,
@@ -45,6 +45,7 @@ import {
   formatFuelType,
   formatVehicleStatus,
   formatVehicleType,
+  toDriverSelectOptions,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -78,7 +79,7 @@ export default function VehiclesPageContent(): React.ReactNode {
   );
 
   const listQuery = useCompanyVehicles(listParams);
-  const usersQuery = useUsersDirectory({ page: 1, limit: 200 });
+  const usersQuery = useFullUsersDirectory();
   const createMutation = useCreateCompanyVehicle();
   const updateMutation = useUpdateCompanyVehicle(editingVehicle?.id ?? '');
   const deleteMutation = useDeleteCompanyVehicle();
@@ -88,6 +89,16 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+  const driverOptions = useMemo(
+    () =>
+      toDriverSelectOptions(
+        usersQuery.data ?? [],
+        editingVehicle?.assignedDriverId
+          ? [editingVehicle.assignedDriverId]
+          : [],
+      ),
+    [usersQuery.data, editingVehicle?.assignedDriverId],
+  );
 
   function openCreate(): void {
     setDrawerMode('create');
@@ -410,17 +421,17 @@ export default function VehiclesPageContent(): React.ReactNode {
               allowClear
               placeholder="Select driver"
               loading={usersQuery.isLoading}
+              notFoundContent={
+                usersQuery.isLoading
+                  ? 'Loading…'
+                  : 'No users with Driver position'
+              }
               filterOption={(input, option) =>
                 String(option?.label ?? '')
                   .toLowerCase()
                   .includes(input.toLowerCase())
               }
-              options={
-                usersQuery.data?.data?.map((u) => ({
-                  value: u.id,
-                  label: `${u.firstName} ${u.lastName}`,
-                })) ?? []
-              }
+              options={driverOptions}
             />
           </Form.Item>
 

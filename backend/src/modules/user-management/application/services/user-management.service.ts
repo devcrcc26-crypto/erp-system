@@ -615,6 +615,8 @@ export class UserManagementService {
       lastName: true,
       chineseName: true,
       email: true,
+      positionId: true,
+      position: { select: { id: true, title: true } },
       discipline: true,
       engineeringDisciplineId: true,
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
