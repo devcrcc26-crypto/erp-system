@@ -4439,7 +4439,7 @@ model VehicleRefueling {
 }
 
 enum InspectionRepairUrgency {
-  CRITICALLY
+  CRITICAL
   URGENT
   MEDIUM
   MINOR
@@ -4506,7 +4506,7 @@ model InspectionRepair {
 
 
 enum SealUrgency {
-  CRITICALLY
+  CRITICAL
   URGENT
   MEDIUM
   MINOR

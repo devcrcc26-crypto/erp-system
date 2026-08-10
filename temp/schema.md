@@ -7,7 +7,7 @@ model Company {
 
 
 enum SealUrgency {
-  CRITICALLY
+  CRITICAL
   URGENT
   MEDIUM
   MINOR

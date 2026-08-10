@@ -148,6 +148,67 @@ export class HrApprovalChainService {
   }
 
   /**
+ * Approval chain for official seal requests.
+ * Empty array = General Manager / above — direct APPROVED (no approval request).
+ * if HR Officer / above, a single HR Officer tier. Then a General Manager tier.
+ * Otherwise a single HR Officer and General Manager tier.
+ */
+
+  async buildOfficialSealApprovalChain(
+    submitterId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const submitterRole =
+      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
+
+    const isGmOrAbove = [
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(submitterRole);
+
+    if (isGmOrAbove) {
+      return [];
+    }
+
+    const isHrOrAbove = [
+      'HR Officer',
+      'HR Manager'
+    ].includes(submitterRole);
+
+    const tiers: ChainTierDraft[] = [];
+    const hr = await this.getHROfficer(companyId);
+    const gm = await this.getGeneralManager(companyId);
+    if (!isHrOrAbove) {
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Officer',
+        approverId: hr.id,
+        resolver: 'ROLE:HR Officer',
+      });
+    }
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'General Manager',
+      approverId: gm.id,
+      resolver: 'ROLE:General Manager',
+    });
+
+    const uniqueTiers = tiers.filter(
+      (tier, index, self) =>
+        index === self.findIndex((t) => t.approverId === tier.approverId),
+    );
+
+    return uniqueTiers.map((tier, index) => ({
+      tierOrder: index + 1,
+      label: tier.label,
+      approverId: tier.approverId,
+      resolver: tier.resolver,
+    }));
+
+  }
+
+  /**
    * Org-structure approval chain with duplicate approver collapse.
    * @param includeGeneralManager When true, appends General Manager as tier 3.
    */
