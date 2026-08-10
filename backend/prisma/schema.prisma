@@ -79,6 +79,9 @@ enum FolderContextType {
   CONSUMABLES_REQUISITION
   VEHICLE_APPLICATION
   VEHICLE_REFUELING
+  INSPECTION_REPAIR
+  OFFICIAL_SEAL
+  PROJECT_SEAL
 }
 
 enum NotificationChannel {
@@ -248,6 +251,10 @@ model Company {
   companyVehicles          CompanyVehicle[]
   vehicleApplications      VehicleApplication[]
   vehicleRefuelings        VehicleRefueling[]
+  inspectionRepairs        InspectionRepair[]
+  officialSeals             OfficialSeal[]
+  projectSeals             ProjectSeal[]
+  
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -663,6 +670,18 @@ model User {
   vehicleRefuelingsAsEmployee      VehicleRefueling[]       @relation("RefuelingEmployee")
   vehicleRefuelingsAsDriver        VehicleRefueling[]       @relation("RefuelingDriver")
   vehicleRefuelingsCreated         VehicleRefueling[]       @relation("RefuelingCreator")
+  inspectionRepairsAsEmployee      InspectionRepair[]       @relation("InspectionRepairEmployee")
+  inspectionRepairsCreated         InspectionRepair[]       @relation("InspectionRepairCreator")
+
+  officialSealCreated              OfficialSeal[]           @relation("OfficialSealCreator")
+  officialSealEmployee             OfficialSeal[]           @relation("OfficialSealEmployee")
+  officialSealIssued               OfficialSeal[]           @relation("OfficialSealIssuer")
+
+  projectSealCreated              ProjectSeal[]             @relation("ProjectSealCreator")
+  projectSealEmployee             ProjectSeal[]             @relation("ProjectSealEmployee")
+  projectSealIssued               ProjectSeal[]             @relation("ProjectSealIssuer")
+
+
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -984,6 +1003,10 @@ model DocumentFolder {
   consumablesRequisitions    ConsumablesRequisition[]
   vehicleApplications        VehicleApplication[]
   vehicleRefuelings          VehicleRefueling[]
+  inspectionRepairs          InspectionRepair[]
+  officialSeals       OfficialSeal[]
+  projectSeals        ProjectSeal[]
+
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1032,6 +1055,8 @@ model Document {
   businessTripPassengerTickets BusinessTripPassenger[]   @relation("BusinessTripPassengerTicket")
   expenseClaimItemReceipts    ExpenseClaimItem[]         @relation("ExpenseItemReceipt")
   vehicleRefuelingReceipts    VehicleRefueling[]         @relation("RefuelingReceipt")
+  officialSealedDocuments     OfficialSeal[]             @relation("OfficialSealSealedDocument")
+  projectSealedDocuments      ProjectSeal[]              @relation("ProjectSealSealedDocument")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3371,6 +3396,10 @@ model ApprovalRequest {
   consumablesRequisition ConsumablesRequisition?
   vehicleApplication     VehicleApplication?
   vehicleRefueling       VehicleRefueling?
+  inspectionRepair       InspectionRepair?
+  officialSeal            OfficialSeal?
+  projectSeal            ProjectSeal?
+
 
   @@index([companyId])
   @@index([categoryId])
@@ -4408,4 +4437,178 @@ model VehicleRefueling {
   @@index([receiptDocumentId], map: "idx_vehicle_refueling_receipt")
   @@map("vehicle_refueling")
 }
+
+enum InspectionRepairUrgency {
+  CRITICALLY
+  URGENT
+  MEDIUM
+  MINOR
+}
+
+enum InspectionRepairStatus {
+  DRAFT
+  SUBMITTED
+  IN_REPAIR
+  APPROVED
+  REPAIRED
+  RETURNED
+  REJECTED
+}
+
+enum InspectionRepairType {
+  INSPECTION
+  MAINTENANCE
+  REPAIR
+}
+
+model InspectionRepair {
+  id                 String                  @id @default(uuid())
+  companyId          String                  @map("company_id")
+  employeeId         String                  @map("employee_id")
+  location           String
+  deviceName         String                  @map("device_name")
+  description        String
+  make               String
+  model              String
+  year               Int
+  urgency            InspectionRepairUrgency @default(MINOR)
+  solution           String?
+  requestNumber      String                  @map("inspection_repair_number")
+  approvalRequestId  String?                 @unique @map("approval_request_id")
+  attachmentFolderId String?                 @map("attachment_folder_id")
+  inspectionType     InspectionRepairType    @map("inspection_type")
+  status             InspectionRepairStatus  @default(DRAFT)
+  submittedAt        DateTime?               @map("submitted_at")
+  completedAt        DateTime?               @map("completed_at")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  createdBy          String                  @map("created_by")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  updatedBy          String                  @map("updated_by")
+  deletedAt          DateTime?               @map("deleted_at")
+  deletedBy          String?                 @map("deleted_by")
+
+  company          Company         @relation(fields: [companyId], references: [id])
+  employee         User            @relation("InspectionRepairEmployee", fields: [employeeId], references: [id])
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder DocumentFolder? @relation(fields: [attachmentFolderId], references: [id])
+  creator          User            @relation("InspectionRepairCreator", fields: [createdBy], references: [id])
+
+  @@unique([companyId, requestNumber], map: "uq_inspection_repair_company_number")
+  @@index([companyId], map: "idx_inspection_repair_company")
+  @@index([employeeId], map: "idx_inspection_repair_employee")
+  @@index([status], map: "idx_inspection_repair_status")
+  @@index([companyId, deletedAt], map: "idx_inspection_repair_deleted")
+  @@index([attachmentFolderId], map: "idx_inspection_repair_attachment_folder")
+  @@map("inspection_repair")
+}
+
+
+
+
+enum SealUrgency {
+  CRITICALLY
+  URGENT
+  MEDIUM
+  MINOR
+}
+
+enum SealStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  SEAL_ISSUED
+  RETURNED
+}
+
+model OfficialSeal {
+  id                    String                  @id @default(uuid())
+  companyId             String                  @map("company_id")
+  requestNumber         String                  @map("request_number")
+  employeeId            String                  @map("employee_id")
+  description           String
+  urgency               SealUrgency             @default(MINOR)
+  status                SealStatus              @default(DRAFT)
+  approvalRequestId     String?                 @unique @map("approval_request_id")
+  attachmentFolderId    String?                 @map("attachment_folder_id")
+  dateNeeded            DateTime                @map("date_needed") @db.Date
+  submittedAt           DateTime?               @map("submitted_at") 
+  issuedBy              String?                 @map("issued_by")
+  issuedAt              DateTime?               @map("issued_at")
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  createdBy             String                  @map("created_by")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  updatedBy             String                  @map("updated_by")
+  deletedAt             DateTime?               @map("deleted_at")
+  deletedBy             String?                 @map("deleted_by")
+  sealedDocumentId      String?                 @map("sealed_document_id")
+
+
+  company               Company                 @relation(fields: [companyId], references: [id])
+  employee              User                    @relation("OfficialSealEmployee", fields: [employeeId], references: [id])
+  issuer                User?                   @relation("OfficialSealIssuer", fields: [issuedBy], references: [id])
+  creator               User                    @relation("OfficialSealCreator", fields:[createdBy], references: [id])
+  approvalRequest       ApprovalRequest?        @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder      DocumentFolder?         @relation(fields: [attachmentFolderId], references: [id])
+  sealedDocument        Document?               @relation("OfficialSealSealedDocument", fields: [sealedDocumentId], references: [id])
+
+
+  @@unique([companyId, requestNumber], map: "uq_official_seal_company_number")
+  @@index([companyId], map:"idx_official_seal_company")
+  @@index([employeeId], map: "idx_official_seal_employee")
+  @@index([issuedBy], map: "idx_official_seal_issuer")
+  @@index([status],map: "idx_official_seal_status")
+  @@index([companyId, deletedAt], map: "idx_official_seal_company_deleted")
+  @@index([attachmentFolderId], map: "idx_official_seal_attachment_folder")
+  @@index([sealedDocumentId], map: "idx_official_seal_document")
+  @@map("official_seal")
+}
+
+
+model ProjectSeal {
+  id                    String                  @id @default(uuid())
+  companyId             String                  @map("company_id")
+  requestNumber         String                  @map("request_number")
+  employeeId            String                  @map("employee_id")
+  description           String
+  urgency               SealUrgency             @default(MINOR)
+  status                SealStatus              @default(DRAFT)
+  approvalRequestId     String?                 @unique @map("approval_request_id")
+  attachmentFolderId    String?                 @map("attachment_folder_id")
+  submittedAt           DateTime?               @map("submitted_at")
+  dateNeeded            DateTime                @map("date_needed") @db.Date
+  issuedBy              String?                 @map("issued_by")
+  issuedAt              DateTime?               @map("issued_at")
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  createdBy             String                  @map("created_by")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  updatedBy             String                  @map("updated_by")
+  deletedAt             DateTime?               @map("deleted_at")
+  deletedBy             String?                 @map("deleted_by")
+  sealedDocumentId      String?                 @map("sealed_document_id")
+
+  company               Company                 @relation(fields: [companyId], references: [id])
+  employee              User                    @relation("ProjectSealEmployee", fields: [employeeId], references: [id])
+  issuer                User?                   @relation("ProjectSealIssuer", fields: [issuedBy], references: [id]) 
+  creator               User                    @relation("ProjectSealCreator", fields:[createdBy], references: [id])
+  approvalRequest       ApprovalRequest?        @relation(fields: [approvalRequestId], references: [id])
+  attachmentFolder      DocumentFolder?         @relation(fields: [attachmentFolderId], references: [id])
+  sealedDocument        Document?               @relation("ProjectSealSealedDocument", fields: [sealedDocumentId], references: [id])
+
+  @@unique([companyId, requestNumber], map: "uq_project_seal_company_number")
+  @@index([companyId], map:"idx_project_seal_company")
+  @@index([companyId, deletedAt], map: "idx_project_seal_company_deleted")
+  @@index([employeeId], map: "idx_project_seal_employee")
+  @@index([issuedBy], map: "idx_project_seal_issuer")
+  @@index([status],map: "idx_project_seal_status")
+  @@index([attachmentFolderId], map: "idx_project_seal_attachment_folder")
+  @@index([sealedDocumentId], map: "idx_project_seal_document")
+  
+  @@map("project_seal")
+}
+
 

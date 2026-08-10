@@ -31,6 +31,7 @@ import { VehicleRefuelingModule } from './modules/vehicle-refueling/vehicle-refu
 import { ProjectManagementModule } from './modules/project-management/project-management.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
+import { InspectionRepairModule } from './modules/inspection-repair/inspection-repair.module';
 import { envValidationSchema } from './shared/config/env.validation';
 import { RequestContextMiddleware } from './shared/context/request-context.middleware';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
@@ -89,6 +90,7 @@ import { StorageModule } from './shared/storage/storage.module';
     CompanyVehicleModule,
     VehicleApplicationModule,
     VehicleRefuelingModule,
+    InspectionRepairModule,
   ],
   controllers: [AppController],
   providers: [

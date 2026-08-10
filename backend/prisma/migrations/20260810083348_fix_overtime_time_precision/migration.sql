@@ -1,0 +1,3 @@
+-- Resolved manually after partial failure.
+-- Original auto-generated drift SQL (FK churn, generated-column SET DEFAULT) was removed.
+-- Overtime time precision is applied in 20260810090000_fix_overtime_time_precision.
