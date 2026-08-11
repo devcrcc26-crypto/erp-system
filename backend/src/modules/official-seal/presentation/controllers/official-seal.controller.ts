@@ -1,0 +1,135 @@
+import { BadRequestException, Controller, Get, Param, Query } from "@nestjs/common";
+import { OfficialSealService } from "../../application/services/official-seal.service";
+import { CurrentUser } from "@/shared/decorators/current-user.decorator";
+import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
+import { Body, Patch, Post } from "@nestjs/common";
+import { AuthenticatedUser } from "../../../../shared/types/jwt-payload.type";
+import { ListOfficialSealsDto, SubmitOfficialSealRequestDto } from "../../application/dtos/official-seal.dtos";
+import { validate } from "class-validator";
+import { plainToInstance } from "class-transformer";
+import { DelegatePermissionCheck } from "../../../../shared/permissions/delegate-permission-check.decorator";
+import { ApiOperation } from "@nestjs/swagger";
+
+async function parseDto<T extends object>(
+    cls: new () => T,
+    body: Record<string, unknown>,
+  ): Promise<T> {
+    const dto = plainToInstance(cls, body);
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    if (errors.length > 0) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        details: errors.map((error) => ({
+          property: error.property,
+          constraints: error.constraints,
+        })),
+      });
+    }
+    return dto;
+  }
+
+  
+@Controller('hr/official-seal')
+export class OfficialSealController {
+
+    constructor(private readonly officialSealService: OfficialSealService){}
+
+    @Post()
+    @DelegatePermissionCheck()
+    @ApiOperation({
+        summary: 'Submit a new official seal request',
+        description: 'Submit a new official seal request',
+    })
+    async submit(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Body() body: Record<string, unknown>,
+    ): Promise<unknown> {
+        const dto = await parseDto(SubmitOfficialSealRequestDto, body);
+        return this.officialSealService.submitRequest(
+            dto,
+            companyId,
+            user.userId,
+        );
+    }
+
+
+    @Get()
+    @ApiOperation({
+        summary: 'List official seal requests (company-wide for hr.view; own otherwise)',
+    })
+    async list(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Query() query: ListOfficialSealsDto,
+    ): Promise<unknown> {
+        return this.officialSealService.listOfficialSeals(
+            query,
+            companyId,
+            user.userId,
+        );
+    }
+
+    @Get(':id')
+    @ApiOperation({
+        summary: 'Get an official seal request (company-wide for hr.view; own otherwise)',
+    })
+    async getOne(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+    ): Promise<unknown> {
+        return this.officialSealService.getOfficialSeal(
+            id,
+            companyId,
+            user.userId,
+        );
+    }
+
+
+    @Patch(':id/cancel')
+    @DelegatePermissionCheck()
+    @ApiOperation({
+        summary: 'Cancel an official seal request',
+        description: 'Cancel an official seal request',
+    })
+    cancel( 
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+    ): Promise<unknown> {
+        return this.officialSealService.cancelOfficialSeal(id, companyId, user.userId);
+    }
+
+    @Post(':id/issue')
+    @DelegatePermissionCheck()
+    @ApiOperation({
+        summary: 'Issue an official seal request',
+        description: 'Issue an official seal request (only hr can issue)',
+    })
+    issue(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+    ): Promise<unknown> {
+        return this.officialSealService.issueSeal(id, companyId, user.userId);
+    }
+
+    @Post(':id/seal')
+    @DelegatePermissionCheck()
+    @ApiOperation({
+        summary: 'Attach a seal to an official seal request',
+        description: 'Attach a seal to an official seal request',
+    })
+    attachSeal(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+        @Body() body: Record<string, unknown>,
+    ): Promise<unknown> {
+        return this.officialSealService.issueSeal(id, companyId, user.userId);
+    }
+}
