@@ -43,6 +43,7 @@ import { MailModule } from './shared/mail/mail.module';
 import { PermissionsModule } from './shared/permissions/permissions.module';
 import { PrismaModule } from './shared/prisma/prisma.module';
 import { StorageModule } from './shared/storage/storage.module';
+import { OfficialSealModule } from './modules/official-seal/official-seal.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { StorageModule } from './shared/storage/storage.module';
     VehicleApplicationModule,
     VehicleRefuelingModule,
     InspectionRepairModule,
+    OfficialSealModule,
   ],
   controllers: [AppController],
   providers: [

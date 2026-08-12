@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Param, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Param, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { OfficialSealService } from "../../application/services/official-seal.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
@@ -8,7 +8,11 @@ import { ListOfficialSealsDto, SubmitOfficialSealRequestDto } from "../../applic
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { DelegatePermissionCheck } from "../../../../shared/permissions/delegate-permission-check.decorator";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { memoryStorage } from "multer";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
+import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 
 async function parseDto<T extends object>(
     cls: new () => T,
@@ -32,6 +36,14 @@ async function parseDto<T extends object>(
   }
 
   
+@ApiTags('HR Official Seal')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'official-seal', action: 'view' },
+    { module: 'official-seal', action: 'create' },
+)       
 @Controller('hr/official-seal')
 export class OfficialSealController {
 
@@ -120,6 +132,8 @@ export class OfficialSealController {
 
     @Post(':id/seal')
     @DelegatePermissionCheck()
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
     @ApiOperation({
         summary: 'Attach a seal to an official seal request',
         description: 'Attach a seal to an official seal request',
@@ -128,8 +142,16 @@ export class OfficialSealController {
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
         @Param('id') id: string,
-        @Body() body: Record<string, unknown>,
+        @UploadedFile() file?: Express.Multer.File,
     ): Promise<unknown> {
-        return this.officialSealService.issueSeal(id, companyId, user.userId);
+        if(!file) {
+            throw new BadRequestException('Seal file is required');
+        }
+        return this.officialSealService.issueSeal(id, companyId, user.userId,{
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            buffer: file.buffer,
+        });
     }
 }

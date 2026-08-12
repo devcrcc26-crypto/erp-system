@@ -24,6 +24,7 @@ import {
   ConsumablesRequisitionStatus,
   VehicleApplicationStatus,
   VehicleRefuelingStatus,
+  SealStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -99,6 +100,7 @@ const REQUEST_DETAIL_INCLUDE = {
   consumablesRequisition: { select: { id: true } },
   vehicleApplication: { select: { id: true } },
   vehicleRefueling: { select: { id: true } },
+  officialSeal: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -338,7 +340,8 @@ export class ApprovalsService {
       request.consumablesRequisition?.id ??
       request.vehicleApplication?.id ??
       request.vehicleRefueling?.id ??
-      null;
+      request.officialSeal?.id ??
+      null; 
 
     return {
       ...request,
@@ -355,6 +358,7 @@ export class ApprovalsService {
       consumablesRequisition: undefined,
       vehicleApplication: undefined,
       vehicleRefueling: undefined,
+      officialSeal: undefined,
     };
   }
 
@@ -1123,6 +1127,7 @@ export class ApprovalsService {
         consumablesRequisition: true,
         vehicleApplication: true,
         vehicleRefueling: true,
+        officialSeal: true,
       },
     });
     if (!request) {
@@ -1312,6 +1317,16 @@ export class ApprovalsService {
             where: { id: request.vehicleRefueling.id },
             data: {
               status: VehicleRefuelingStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+        if (request.officialSeal) {
+          await tx.officialSeal.update({
+            where: { id: request.officialSeal.id },
+            data: {
+              status: SealStatus.SUBMITTED,
               completedAt: null,
               updatedBy: userId,
             },
