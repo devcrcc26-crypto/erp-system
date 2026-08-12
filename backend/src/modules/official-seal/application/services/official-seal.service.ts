@@ -24,6 +24,16 @@ const USER_SELECT = {
 
 const OFFICIAL_SEAL_INCLUDE = {
     employee: { select: USER_SELECT },
+    issuer: { select: USER_SELECT },
+    sealedDocument: {
+        select: {
+            id: true,
+            name: true,
+            fileKey: true,
+            fileType: true,
+            fileSizeBytes: true,
+        },
+    },
     approvalRequest: {
         include: {
             tiers: {
