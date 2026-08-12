@@ -10,6 +10,7 @@ import { useSubmitOfficialSeal } from "@/lib/query/official-seal";
 import { useAppMessage } from "@/hooks/use-app-message";
 import { OFFICIAL_SEAL_URGENCY_OPTIONS } from "@/lib/utils/official-seal";
 import FileUploadInput from "@/components/ui/FileUploadInput/FileUploadInput";
+import { OFFICIAL_SEAL_FILE_ACCEPT } from "@/lib/constants/official-seal-upload";
 
 interface FormValues {
     description: string;
@@ -117,7 +118,7 @@ export default function OfficialSealForm({
                 <FileUploadInput
                     files={selectedFiles}
                     onChange={setSelectedFiles}
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    accept={OFFICIAL_SEAL_FILE_ACCEPT}
                     multiple
                     disabled={submitting || submitMutation.isPending}
                     placeholder={t('hr.buttons.chooseDocumentOptional')}

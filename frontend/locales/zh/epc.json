@@ -881,7 +881,7 @@
       "failedToSubmitOfficialSeal": "提交公章使用申请失败",
       "issueSealApprovedInfo": "申请已批准，请完成用印。",
       "issueSealDownloadHint": "请先下载上方提交的文档，打印并盖章后，可在下方选填上传已用印文件。",
-      "documentToSealHint": "可选 — 上传需要用印的文档，便于 HR 在审批通过后下载、打印并盖章。",
+      "documentToSealHint": "可选 — 上传需要用印的文件（PDF、Word、Excel 或 CAD 文件如 DWG、DXF、DRW、RVT、IFC），审批通过后 HR 可下载打印并盖章。",
       "directApprovalNoChain": "直接批准，无需审批",
       "documentAttached": "已附加文件",
       "failedToLoadOfficialSeals": "加载公章使用申请失败"

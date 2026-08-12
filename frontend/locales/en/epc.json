@@ -883,7 +883,7 @@
       "failedToSubmitOfficialSeal": "Failed to submit official seal request",
       "issueSealApprovedInfo": "This request has been approved. Please issue the seal.",
       "issueSealDownloadHint": "Download the submitted document above, print and stamp it, then optionally upload the sealed copy below.",
-      "documentToSealHint": "Optional — upload the document that needs the official seal so HR can download, print, and stamp it after approval.",
+      "documentToSealHint": "Optional — upload the document that needs the official seal (PDF, Word, Excel, or CAD files such as DWG, DXF, DRW, RVT, IFC). HR can download it after approval to print and stamp.",
       "directApprovalNoChain": "Approved directly — no approval required",
       "documentAttached": "Document attached",
       "failedToLoadOfficialSeals": "Failed to load official seal requests"

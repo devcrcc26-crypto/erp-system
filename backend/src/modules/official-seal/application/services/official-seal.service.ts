@@ -8,7 +8,8 @@ import { ApprovalsService } from "@/modules/approvals/application/services/appro
 import { ApprovalDecisionRegistry } from "@/modules/approvals/application/services/approval-decision-registry.service";
 import { PermissionService } from "@/shared/permissions/permission.service";
 import { IStorageService } from "@/shared/storage/storage.interface";
-import { ALLOWED_UPLOAD_MIME_TYPES, STORAGE_BUCKETS, STORAGE_SERVICE } from "@/shared/storage/storage.constants";
+import { STORAGE_BUCKETS, STORAGE_SERVICE } from "@/shared/storage/storage.constants";
+import { isAllowedUploadFile } from "@/shared/storage/upload-validation.util";
 import { randomUUID } from "crypto";
 import { ForbiddenException } from "@nestjs/common";
 import { ApprovalDecisionListener, ApprovalFinalDecision } from "@/modules/approvals/application/ports/approval-decision.listener";
@@ -382,8 +383,10 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
 
         if (file?.buffer?.length) {
 
-            if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
-                throw new BadRequestException(`File type not allowed: ${file.mimetype}`);
+            if (!isAllowedUploadFile(file)) {
+                throw new BadRequestException(
+                    `File type not allowed: ${file.mimetype || 'unknown'} (${file.originalname})`,
+                );
             }
 
             const folderId = await this.ensureOfficialSealFolder(officialSeal, userId);
@@ -577,9 +580,9 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
             if (!file?.buffer?.length) {
                 continue;
             }
-            if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+            if (!isAllowedUploadFile(file)) {
                 throw new BadRequestException(
-                    `File type not allowed: ${file.mimetype}`,
+                    `File type not allowed: ${file.mimetype || 'unknown'} (${file.originalname})`,
                 );
             }
 

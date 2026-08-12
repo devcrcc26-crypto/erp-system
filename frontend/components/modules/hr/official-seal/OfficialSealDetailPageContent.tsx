@@ -21,6 +21,7 @@ import { useAppMessage } from "@/hooks/use-app-message";
 import { ApiRequestError } from "@/lib/api/errors";
 import ApprovalTierTimeline from "../../approvals/ApprovalTierTimeline";
 import { ApprovalTier } from "@/lib/api/approvals.types";
+import { OFFICIAL_SEAL_FILE_ACCEPT } from "@/lib/constants/official-seal-upload";
 import { useCanViewHr } from "@/hooks/use-auth-capabilities";
 import AttachmentDownloadList from "@/components/ui/FileUploadInput/AttachmentDownloadList";
 
@@ -231,7 +232,7 @@ export default function OfficialSealDetailPageContent({
                             type="file"
                             ref={fileInputRef}
                             hidden
-                            accept="image/*,application/pdf"
+                            accept={OFFICIAL_SEAL_FILE_ACCEPT}
                             onChange={(e) => setSelectedFile(e.target.files?.[0])}
                         />
                         <div className="flex flex-wrap items-center gap-2">
