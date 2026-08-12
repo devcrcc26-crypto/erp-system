@@ -198,6 +198,14 @@
         "myListTitle": "我的加油申请",
         "listDescription": "审核并处理车辆加油申请。",
         "myListDescription": "提交并跟踪您的车辆加油审批流程。"
+      },
+      "officialSeal": {
+        "new": "新建公章使用申请",
+        "detail": "公章使用",
+        "listTitle": "公章使用申请",
+        "myListTitle": "我的公章使用申请",
+        "listDescription": "审核并处理公章使用申请。",
+        "myListDescription": "提交并跟踪您的公章使用审批流程。"
       }
     },
     "dashboard": {
@@ -858,7 +866,12 @@
       "APPROVED": "已批准",
       "REJECTED": "已拒绝",
       "RETURNED": "已退回",
-      "CANCELLED": "已取消"
+      "CANCELLED": "已取消",
+      "SEAL_ISSUED": "已用印"
+    },
+    "messages": {
+      "requestApproved": "申请已批准",
+      "requestSubmitted": "申请已提交审批"
     },
     "leaveType": {
       "ANNUAL": "年假",
@@ -1012,6 +1025,8 @@
       "mileage": "里程数",
       "fuelType": "燃油类型",
       "fuelStation": "加油站",
+      "urgency": "紧急程度",
+      "dateNeeded": "需用日期",
       "requestedLitres": "申请升数",
       "estimatedCost": "预计费用",
       "employee": "员工",
@@ -1123,6 +1138,9 @@
       "litres": "升数",
       "estimatedCost": "预计费用",
       "receipt": "票据",
+      "urgency": "紧急程度",
+      "dateNeeded": "需用日期",
+      "seal": "用印文件",
       "date": "日期",
       "category": "类别",
       "description": "描述",
@@ -1177,6 +1195,7 @@
       "newPerDiem": "新建差旅补贴申请",
       "newVehicleApplication": "新建用车申请",
       "newVehicleRefueling": "新建加油申请",
+      "newOfficialSeal": "新建公章使用申请",
       "thisMonthSheet": "本月加班表",
       "submitApplication": "提交申请",
       "submitRequest": "提交申请",
@@ -1300,6 +1319,7 @@
       "searchConsumables": "搜索申请编号或标题",
       "searchVehicle": "搜索申请编号或目的地",
       "searchRefueling": "搜索申请编号或车牌",
+      "searchOfficialSeal": "搜索申请编号或说明",
       "searchBusinessTrip": "搜索出差编号或目的地",
       "searchFlight": "搜索申请编号或路线",
       "searchPerDiem": "搜索申请编号或目的地",
@@ -1352,7 +1372,8 @@
       "noAttachments": "暂无附件。",
       "noReceipt": "暂未上传票据。",
       "noTicket": "暂未上传机票。",
-      "noApprovalChain": "提交后显示审批链。"
+      "noApprovalChain": "提交后显示审批链。",
+      "noOfficialSealRequests": "暂无公章使用申请。"
     },
     "section": {
       "requestDetails": "申请详情",

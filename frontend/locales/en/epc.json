@@ -869,15 +869,11 @@
       "REJECTED": "Rejected",
       "RETURNED": "Returned",
       "CANCELLED": "Cancelled",
-      "ISSUED": "Issued"
+      "SEAL_ISSUED": "Seal Issued"
     },
-    "officialSealStatus": {
-      "DRAFT": "Draft",
-      "SUBMITTED": "Submitted",
-      "IN_REVIEW": "In Review",
-      "APPROVED": "Approved",
-      "REJECTED": "Rejected",
-      "RETURNED": "Returned"
+    "messages": {
+      "requestApproved": "Request approved",
+      "requestSubmitted": "Request submitted for approval"
     },
     "leaveType": {
       "ANNUAL": "Annual",
@@ -1031,6 +1027,8 @@
       "mileage": "Mileage",
       "fuelType": "Fuel Type",
       "fuelStation": "Fuel Station",
+      "urgency": "Urgency",
+      "dateNeeded": "Date needed",
       "requestedLitres": "Requested Litres",
       "estimatedCost": "Estimated Cost",
       "employee": "Employee",
@@ -1325,6 +1323,7 @@
       "searchConsumables": "Search request # or title",
       "searchVehicle": "Search application # or destination",
       "searchRefueling": "Search request # or plate",
+      "searchOfficialSeal": "Search request # or description",
       "searchBusinessTrip": "Search trip # or destination",
       "searchFlight": "Search application # or route",
       "searchPerDiem": "Search request # or destination",
