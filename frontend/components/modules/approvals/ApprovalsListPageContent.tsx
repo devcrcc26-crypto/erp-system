@@ -77,7 +77,7 @@ function getActionNeeded(
 }
 
 /**
- * Approval inbox — Pending My Action, My Requests, and All Requests (hr.view).
+ * Approval inbox — My Requests (default), Pending My Action, and All Requests (hr.view).
  * Scoping is enforced server-side via the `inbox` query param (JWT user id).
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
@@ -87,7 +87,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id ?? '';
   const { params, resetPage, bindMeta } = useTablePagination();
-  const [inbox, setInbox] = useState<InboxTab>('PENDING_MY_ACTION');
+  const [inbox, setInbox] = useState<InboxTab>('MY_REQUESTS');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApprovalRequestStatus[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();
@@ -97,7 +97,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
 
   useEffect(() => {
     if (inbox === 'ALL' && !isFullAccess) {
-      setInbox('PENDING_MY_ACTION');
+      setInbox('MY_REQUESTS');
     }
   }, [inbox, isFullAccess]);
 
@@ -258,6 +258,10 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         }}
         items={[
           {
+            key: 'MY_REQUESTS',
+            label: t('pages.approvals.tabs.myRequests'),
+          },
+          {
             key: 'PENDING_MY_ACTION',
             label: (
               <span className="inline-flex items-center gap-1.5">
@@ -272,10 +276,6 @@ export default function ApprovalsListPageContent(): React.ReactNode {
                 ) : null}
               </span>
             ),
-          },
-          {
-            key: 'MY_REQUESTS',
-            label: t('pages.approvals.tabs.myRequests'),
           },
           ...(isFullAccess
             ? [
