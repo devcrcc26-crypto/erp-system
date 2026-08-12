@@ -4,10 +4,11 @@ import type { OfficialSealDetail, OfficialSealUrgency } from "@/lib/api/official
 import { Button, DatePicker, Form, Input, Select } from "antd";
 import type dayjs from "dayjs";
 import { SectionCard } from "../shared/hr-page-chrome";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { notifyApiError } from "@/lib/utils/notify-api-error";
 import { useSubmitOfficialSeal } from "@/lib/query/official-seal";
 import { useAppMessage } from "@/hooks/use-app-message";
+import { OFFICIAL_SEAL_URGENCY_OPTIONS } from "@/lib/utils/official-seal";
 
 interface FormValues {
     description: string;
@@ -28,6 +29,15 @@ export default function OfficialSealForm({
     const [submitting, setSubmitting] = useState(false);
     const submitMutation = useSubmitOfficialSeal();
     const messageApi = useAppMessage();
+
+    const urgencyOptions = useMemo(
+        () =>
+            OFFICIAL_SEAL_URGENCY_OPTIONS.map((option) => ({
+                value: option.value,
+                label: t(`hr.urgency.${option.value}`),
+            })),
+        [t],
+    );
 
     async function handleSubmit(): Promise<void> {
 
@@ -56,7 +66,7 @@ export default function OfficialSealForm({
             onSuccess(result);
 
         } catch (error: unknown) {
-            notifyApiError(error, 'Failed to submit official seal request', messageApi);
+            notifyApiError(error, t('hr.messages.failedToSubmitOfficialSeal'), messageApi);
         } finally {
             setSubmitting(false);
         }
@@ -70,30 +80,25 @@ export default function OfficialSealForm({
                 <Form form={form} layout="vertical" initialValues={{ urgency: 'MINOR' }}>
                     <Form.Item
                         name="description"
-                        label="Description"
-                        rules={[{ required: true, message: 'Enter description' }]}
+                        label={t('hr.form.description')}
+                        rules={[{ required: true, message: t('hr.placeholder.enterOfficialSealDescription') }]}
                     >
-                        <Input.TextArea rows={4} maxLength={1000} placeholder="Enter description" />
+                        <Input.TextArea rows={4} maxLength={1000} placeholder={t('hr.placeholder.enterOfficialSealDescription')} />
                     </Form.Item>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                         <Form.Item
                             name="dateNeeded"
-                            label="Date needed"
-                            rules={[{ required: true, message: 'Select date' }]}
+                            label={t('hr.labels.dateNeeded')}
+                            rules={[{ required: true, message: t('hr.validation.selectDate') }]}
                         >
                             <DatePicker style={{ width: '100%' }} />
                         </Form.Item>
                         <Form.Item
                             name="urgency"
-                            label="Urgency"
-                            rules={[{ required: true, message: 'Select urgency' }]}
+                            label={t('hr.labels.urgency')}
+                            rules={[{ required: true, message: t('hr.validation.selectUrgency') }]}
                         >
-                            <Select options={[
-                                { value: 'MINOR', label: 'Minor' },
-                                { value: 'MEDIUM', label: 'Medium' },
-                                { value: 'URGENT', label: 'Urgent' },
-                                { value: 'CRITICAL', label: 'Critical' },
-                            ]} />
+                            <Select options={urgencyOptions} />
                         </Form.Item>
                     </div>
                 </Form>

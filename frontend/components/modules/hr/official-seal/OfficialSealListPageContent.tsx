@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import { OfficialSealListItem, OfficialSealStatus } from "@/lib/api/official-seal.types";
 import { useUsersDirectory } from "@/lib/query/users";
 import { useCanViewHr } from "@/hooks/use-auth-capabilities";
-import { DatePicker } from "antd";
 import { PlusOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import TableUpdatingIndicator from "@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator";
@@ -17,9 +16,6 @@ import { DataTable, StatusBadge, TableEmptyState } from "@/components/ui";
 import { ColumnsType } from "antd/es/table";
 import { formatOfficialSealEmployeeName, formatOfficialSealStatus, officialSealStatusVariant } from "@/lib/utils/official-seal";
 import { formatProjectDate } from "@/lib/utils/project-display";
-import dayjs from "dayjs";
-
-const { RangePicker } = DatePicker;
 
 export default function OfficialSealListPageContent(): React.ReactNode {
     const { params, resetPage, bindMeta } = useTablePagination();
@@ -45,10 +41,6 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         { page: 1, limit: 100 },
         { enabled: canViewHr },
     );
-//     const [dateRange, setDateRange] = useState<
-//     [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
-//   >(null);
-
     const [search, setSearch] = useState('');
     const listParams = useMemo(
         () => ({
@@ -115,7 +107,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                 width: 140,
                 ellipsis: true,
                 render: (_: string | null | undefined, row: OfficialSealListItem) =>
-                    row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '-'),
+                    row.directApproved ? t('hr.labels.directApproval') : (row.currentTierLabel ?? '-'),
             },
         ],
         [canViewHr, t],
@@ -128,7 +120,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                     type="error"
                     showIcon
                     style={{ marginBottom: 16 }}
-                    title={listQuery.error instanceof ApiRequestError ? listQuery.error.message : 'Failed to load official seals'}
+                    title={listQuery.error instanceof ApiRequestError ? listQuery.error.message : t('hr.messages.failedToLoadOfficialSeals')}
                 />
             ) : null}
             <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">

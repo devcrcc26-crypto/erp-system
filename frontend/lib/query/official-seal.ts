@@ -66,6 +66,7 @@ export function useSubmitOfficialSeal() {
                 void queryClient.invalidateQueries({
                     queryKey: officialSealKeys.lists(),
                 });
+                void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
                 void queryClient.setQueryData(
                     officialSealKeys.detail(created.id),
                     created,
@@ -115,6 +116,7 @@ export function useIssueOfficialSeal(id: string) {
             void queryClient.invalidateQueries({
                 queryKey: officialSealKeys.lists(),
             });
+            void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
             void queryClient.setQueryData(
                 officialSealKeys.detail(id),
                 updated,

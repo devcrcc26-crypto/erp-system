@@ -1,7 +1,21 @@
-import { OfficialSealStatus, OfficialSealUserSummary } from "../api/official-seal.types";
+import {
+    OfficialSealStatus,
+    OfficialSealUrgency,
+    OfficialSealUserSummary,
+} from "../api/official-seal.types";
 import type { StatusBadgeVariant } from "@/components/ui/StatusBadge/StatusBadge";
 import { formatUserName } from "./user-display";
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export const OFFICIAL_SEAL_URGENCY_OPTIONS: Array<{
+    value: OfficialSealUrgency;
+    label: string;
+}> = [
+    { value: 'MINOR', label: 'Minor' },
+    { value: 'MEDIUM', label: 'Medium' },
+    { value: 'URGENT', label: 'Urgent' },
+    { value: 'CRITICAL', label: 'Critical' },
+];
 
 export const OFFICIAL_SEAL_STATUS_OPTIONS: Array<{
     value: OfficialSealStatus;
@@ -52,4 +66,10 @@ export function formatOfficialSealEmployeeName(
 ): string {
     if (!user) return '-';
     return formatUserName(user);
+}
+
+export function formatOfficialSealUrgency(urgency: string, t?: TFn): string {
+    if (t) return t(`hr.urgency.${urgency}`);
+    const found = OFFICIAL_SEAL_URGENCY_OPTIONS.find((o) => o.value === urgency);
+    return found?.label ?? urgency;
 }

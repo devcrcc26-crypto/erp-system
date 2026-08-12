@@ -873,7 +873,24 @@
     },
     "messages": {
       "requestApproved": "Request approved",
-      "requestSubmitted": "Request submitted for approval"
+      "requestSubmitted": "Request submitted for approval",
+      "officialSealNotFound": "Official seal request not found",
+      "officialSealRequestNotFound": "Official seal request not found",
+      "officialSealCancelled": "Official seal request cancelled",
+      "officialSealIssued": "Official seal issued",
+      "failedToIssueSeal": "Failed to issue seal",
+      "failedToCancelOfficialSeal": "Failed to cancel request",
+      "failedToSubmitOfficialSeal": "Failed to submit official seal request",
+      "issueSealApprovedInfo": "This request has been approved. Please issue the seal.",
+      "directApprovalNoChain": "Approved directly — no approval required",
+      "documentAttached": "Document attached",
+      "failedToLoadOfficialSeals": "Failed to load official seal requests"
+    },
+    "urgency": {
+      "MINOR": "Minor",
+      "MEDIUM": "Medium",
+      "URGENT": "Urgent",
+      "CRITICAL": "Critical"
     },
     "leaveType": {
       "ANNUAL": "Annual",
@@ -1032,6 +1049,15 @@
       "requestedLitres": "Requested Litres",
       "estimatedCost": "Estimated Cost",
       "employee": "Employee",
+      "issued": "Issued",
+      "issuedBy": "Issued by",
+      "completed": "Completed",
+      "directApproval": "Direct approval",
+      "sealAttached": "Seal attached",
+      "sealedDocumentAttached": "Sealed document attached",
+      "sealedDocument": "Sealed Document",
+      "submitted": "Submitted",
+      "officialSeal": "Official Seal",
       "leaveType": "Leave Type",
       "startDate": "Start Date",
       "endDate": "End Date",
@@ -1229,7 +1255,17 @@
       "conditionallyApprove": "Conditionally Approve",
       "resubmit": "Resubmit",
       "viewInApprovals": "View in Approvals",
-      "issueSeal": "Issue Seal"
+      "issueSeal": "Issue Seal",
+      "chooseDocumentOptional": "Choose document (optional)",
+      "backToList": "Back to list"
+    },
+    "validation": {
+      "selectDate": "Select date",
+      "selectUrgency": "Select urgency"
+    },
+    "dialog": {
+      "cancelOfficialSealTitle": "Cancel request?",
+      "cancelOfficialSealDesc": "This will cancel the official seal request and any open approval request."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -1346,6 +1382,7 @@
       "enterTitle": "Enter a short title for this request",
       "enterJustification": "Describe why this purchase is needed",
       "enterPurpose": "Describe what the materials are needed for",
+      "enterOfficialSealDescription": "Describe what the seal is needed for",
       "enterReason": "Optional - describe the reason for leave",
       "enterNotes": "Any additional information for the approver",
       "enterCategory": "e.g. Transport, Meals, Accommodation",
@@ -1398,7 +1435,9 @@
       "individualTickets": "Individual Tickets",
       "perDiemRates": "Per Diem Rates",
       "vehicleAvailability": "Vehicle Availability",
-      "hourSummary": "Hour Summary"
+      "hourSummary": "Hour Summary",
+      "officialSealDetails": "Official Seal Details",
+      "issueSeal": "Issue Seal"
     }
   }
 }

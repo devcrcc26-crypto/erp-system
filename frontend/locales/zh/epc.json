@@ -871,7 +871,24 @@
     },
     "messages": {
       "requestApproved": "申请已批准",
-      "requestSubmitted": "申请已提交审批"
+      "requestSubmitted": "申请已提交审批",
+      "officialSealNotFound": "未找到公章使用申请",
+      "officialSealRequestNotFound": "未找到公章使用申请",
+      "officialSealCancelled": "公章使用申请已取消",
+      "officialSealIssued": "公章已用印",
+      "failedToIssueSeal": "用印失败",
+      "failedToCancelOfficialSeal": "取消申请失败",
+      "failedToSubmitOfficialSeal": "提交公章使用申请失败",
+      "issueSealApprovedInfo": "申请已批准，请完成用印。",
+      "directApprovalNoChain": "直接批准，无需审批",
+      "documentAttached": "已附加文件",
+      "failedToLoadOfficialSeals": "加载公章使用申请失败"
+    },
+    "urgency": {
+      "MINOR": "一般",
+      "MEDIUM": "中等",
+      "URGENT": "紧急",
+      "CRITICAL": "特急"
     },
     "leaveType": {
       "ANNUAL": "年假",
@@ -1030,6 +1047,15 @@
       "requestedLitres": "申请升数",
       "estimatedCost": "预计费用",
       "employee": "员工",
+      "issued": "用印日期",
+      "issuedBy": "用印人",
+      "completed": "完成日期",
+      "directApproval": "直接批准",
+      "sealAttached": "已用印",
+      "sealedDocumentAttached": "已附加用印文件",
+      "sealedDocument": "用印文件",
+      "submitted": "提交",
+      "officialSeal": "公章使用",
       "leaveType": "假期类型",
       "startDate": "开始日期",
       "endDate": "结束日期",
@@ -1225,7 +1251,18 @@
       "return": "退回",
       "conditionallyApprove": "有条件批准",
       "resubmit": "重新提交",
-      "viewInApprovals": "在审批中查看"
+      "viewInApprovals": "在审批中查看",
+      "issueSeal": "用印",
+      "chooseDocumentOptional": "选择文件（可选）",
+      "backToList": "返回列表"
+    },
+    "validation": {
+      "selectDate": "请选择日期",
+      "selectUrgency": "请选择紧急程度"
+    },
+    "dialog": {
+      "cancelOfficialSealTitle": "取消申请？",
+      "cancelOfficialSealDesc": "这将取消公章使用申请及所有未完成的审批。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -1342,6 +1379,7 @@
       "enterTitle": "请输入申请标题",
       "enterJustification": "请描述采购原因",
       "enterPurpose": "请描述所需材料的用途",
+      "enterOfficialSealDescription": "请描述公章用途",
       "enterReason": "可选 - 请描述请假原因",
       "enterNotes": "填写任何需要告知审批人的信息",
       "enterCategory": "例如：交通、餐饮、住宿",
@@ -1394,7 +1432,9 @@
       "individualTickets": "个人机票",
       "perDiemRates": "差旅补贴标准",
       "vehicleAvailability": "车辆可用性",
-      "hourSummary": "加班时长汇总"
+      "hourSummary": "加班时长汇总",
+      "officialSealDetails": "公章使用详情",
+      "issueSeal": "用印"
     }
   }
 }

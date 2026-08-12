@@ -1,10 +1,18 @@
+'use client';
+
 import { tokens } from "@/lib/theme/tokens";
 import { MetaItem, SectionCard, SummaryStrip } from "../../hr/shared/hr-page-chrome";
-import { Alert, Skeleton, Tag, Typography } from "antd";
+import { Alert, Skeleton, Tag } from "antd";
+import Link from "next/link";
 import { useOfficialSeal } from "@/lib/query/official-seal";
 import { useEpcTranslation } from "@/hooks/use-epc-translation";
 import StatusBadge from "@/components/ui/StatusBadge/StatusBadge";
-import { formatOfficialSealEmployeeName, formatOfficialSealStatus, officialSealStatusVariant } from "@/lib/utils/official-seal";
+import {
+    formatOfficialSealEmployeeName,
+    formatOfficialSealStatus,
+    formatOfficialSealUrgency,
+    officialSealStatusVariant,
+} from "@/lib/utils/official-seal";
 import { ApiRequestError } from "@/lib/api/errors";
 import { formatProjectDate } from "@/lib/utils/project-display";
 
@@ -37,11 +45,17 @@ export default function OfficialSealDetail({
                 message={
                     detailQuery.error instanceof ApiRequestError
                         ? detailQuery.error.message
-                        : 'Official seal not found'
+                        : t('hr.messages.officialSealNotFound')
                 }
             />
         );
     }
+
+    const sealedDocumentLink = seal.sealedDocument?.id ? (
+        <Link href={`/hr/official-seal/${sourceId}`}>
+            {seal.sealedDocument.name}
+        </Link>
+    ) : '-';
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +71,7 @@ export default function OfficialSealDetail({
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: tokens.colorTextTertiary }}
                 >
-                    {seal?.requestNumber}
+                    {seal.requestNumber}
                 </span>
                 <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
@@ -65,38 +79,38 @@ export default function OfficialSealDetail({
                     variant={officialSealStatusVariant(seal.status)}
                 />
                 {
-                    seal?.sealedDocument?.id ? (
-                        <Tag color="green">Receipt attached</Tag>
+                    seal.sealedDocument?.id ? (
+                        <Tag color="green">{t('hr.labels.sealedDocumentAttached')}</Tag>
                     ) : null
                 }
             </div>
         </div>
         <SummaryStrip items={[
-            {label: t('hr.labels.urgency'), value: seal.urgency},
+            {label: t('hr.labels.urgency'), value: formatOfficialSealUrgency(seal.urgency, t)},
             {label: t('hr.labels.dateNeeded'), value: formatProjectDate(seal.dateNeeded ?? null)},
-            {label: 'Issued', value: seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'},
-            {label: 'Sealed Document', value: seal.sealedDocument?.id ? <a href={`/hr/official-seal/${seal.sealedDocument.id}`}>{seal.sealedDocument.name}</a> : '-'},
+            {label: t('hr.labels.issued'), value: seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'},
+            {label: t('hr.labels.sealedDocument'), value: sealedDocumentLink},
         ]} />
 
-        <SectionCard title="Official Seal Details" bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.officialSealDetails')} bodyClassName="px-5 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">   
-                <MetaItem label="Description">
+                <MetaItem label={t('hr.form.description')}>
                     {seal.description}
                 </MetaItem>
-                <MetaItem label="Employee">
+                <MetaItem label={t('hr.labels.employee')}>
                     {formatOfficialSealEmployeeName(seal.employee)}
                 </MetaItem>
-                <MetaItem label="Urgency">
-                    {seal.urgency}
+                <MetaItem label={t('hr.labels.urgency')}>
+                    {formatOfficialSealUrgency(seal.urgency, t)}
                 </MetaItem>
-                <MetaItem label="Date Needed">
+                <MetaItem label={t('hr.labels.dateNeeded')}>
                     {formatProjectDate(seal.dateNeeded ?? null)}
                 </MetaItem>
-                <MetaItem label="Issued">
+                <MetaItem label={t('hr.labels.issued')}>
                     {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'}
                 </MetaItem>
-                <MetaItem label="Sealed Document">
-                    {seal.sealedDocument?.id ? <a href={`/hr/official-seal/${seal.sealedDocument.id}`}>{seal.sealedDocument.name}</a> : '-'}
+                <MetaItem label={t('hr.labels.sealedDocument')}>
+                    {sealedDocumentLink}
                 </MetaItem>
         
             </div>
