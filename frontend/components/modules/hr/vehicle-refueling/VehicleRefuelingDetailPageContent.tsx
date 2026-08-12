@@ -176,7 +176,7 @@ export default function VehicleRefuelingDetailPageContent({
           <SummaryStrip
             items={[
               { label: t('hr.labels.fuelStation'), value: refueling.fuelStation },
-          { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
+              { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
               {
                 label: t('hr.table.litres'),
                 value: refueling.requestedLitres?.toString() ?? '-',
