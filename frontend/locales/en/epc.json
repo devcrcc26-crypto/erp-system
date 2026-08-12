@@ -56,7 +56,9 @@
       "businessTrips": "Business Trips",
       "reports": "HR Reports",
       "perDiem": "Per Diem",
-      "perDiemRates": "Per Diem Rates"
+      "perDiemRates": "Per Diem Rates",
+      "noApprovalChain": "No approval chain required",
+      "directApproved": "Approved directly - no approval required"
     }
   },
   "workspace": {
@@ -198,6 +200,14 @@
         "myListTitle": "My Refueling Requests",
         "listDescription": "Review and process vehicle refueling requests.",
         "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow."
+      },
+      "officialSeal": {
+        "new": "New Official Seal",
+        "detail": "Official Seal",
+        "listTitle": "Official Seal Requests",
+        "myListTitle": "My Official Seal Requests",
+        "listDescription": "Review and process official seal requests.",
+        "myListDescription": "Submit and track your official seal requests through the approval workflow."
       }
     },
     "dashboard": {
@@ -858,7 +868,16 @@
       "APPROVED": "Approved",
       "REJECTED": "Rejected",
       "RETURNED": "Returned",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "ISSUED": "Issued"
+    },
+    "officialSealStatus": {
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "IN_REVIEW": "In Review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "RETURNED": "Returned"
     },
     "leaveType": {
       "ANNUAL": "Annual",
@@ -1123,6 +1142,10 @@
       "litres": "Litres",
       "estimatedCost": "Est. Cost",
       "receipt": "Receipt",
+      "urgency": "Urgency",
+      "dateNeeded": "Date Needed",
+      "seal" : "Seal",
+      "noOfficialSealRequests": "No official seal requests",
       "date": "Date",
       "category": "Category",
       "description": "Description",
@@ -1177,6 +1200,7 @@
       "newPerDiem": "New Per Diem Request",
       "newVehicleApplication": "New Vehicle Application",
       "newVehicleRefueling": "New Refueling Request",
+      "newOfficialSeal": "New Official Seal",
       "thisMonthSheet": "This month's sheet",
       "submitApplication": "Submit Application",
       "submitRequest": "Submit Request",
@@ -1206,7 +1230,8 @@
       "return": "Return",
       "conditionallyApprove": "Conditionally Approve",
       "resubmit": "Resubmit",
-      "viewInApprovals": "View in Approvals"
+      "viewInApprovals": "View in Approvals",
+      "issueSeal": "Issue Seal"
     },
     "form": {
       "leaveType": "Leave Type",
@@ -1352,7 +1377,8 @@
       "noAttachments": "No attachments.",
       "noReceipt": "No receipt attached.",
       "noTicket": "No ticket attached yet.",
-      "noApprovalChain": "Approval chain appears after submission."
+      "noApprovalChain": "Approval chain appears after submission.",
+      "noOfficialSealRequests": "No official seal requests yet."
     },
     "section": {
       "requestDetails": "Request Details",

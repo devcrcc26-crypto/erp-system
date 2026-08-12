@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import OfficialSealListPageContent from "@/components/modules/hr/official-seal/OfficialSealListPageContent";
 
 export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.officialSeal" />;
+  return <OfficialSealListPageContent />
 }

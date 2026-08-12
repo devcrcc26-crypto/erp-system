@@ -6,7 +6,7 @@ import { ApiRequestError } from "@/lib/api/errors";
 import { useOfficialSeals } from "@/lib/query/official-seal";
 import { Alert, Button, Select } from "antd";
 import { useMemo, useState } from "react";
-import { OfficialSealListItem, OfficialSealStatus, OfficialSealUrgency } from "@/lib/api/official-seal.types";
+import { OfficialSealListItem, OfficialSealStatus } from "@/lib/api/official-seal.types";
 import { useUsersDirectory } from "@/lib/query/users";
 import { useCanViewHr } from "@/hooks/use-auth-capabilities";
 import { DatePicker } from "antd";
@@ -17,6 +17,7 @@ import { DataTable, StatusBadge, TableEmptyState } from "@/components/ui";
 import { ColumnsType } from "antd/es/table";
 import { formatOfficialSealEmployeeName, formatOfficialSealStatus, officialSealStatusVariant } from "@/lib/utils/official-seal";
 import { formatProjectDate } from "@/lib/utils/project-display";
+import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;
 
@@ -44,9 +45,22 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         { page: 1, limit: 100 },
         { enabled: canViewHr },
     );
-    
-    const listQuery = useOfficialSeals();
+//     const [dateRange, setDateRange] = useState<
+//     [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+//   >(null);
+
     const [search, setSearch] = useState('');
+    const listParams = useMemo(
+        () => ({
+            ...params,
+            search: search.trim() || undefined,
+            status: statusFilter.length > 0 ? statusFilter : undefined,
+            employeeId: canViewHr ? employeeId : undefined,
+        }),
+        [params, search, statusFilter, employeeId, canViewHr],
+    )
+    
+    const listQuery = useOfficialSeals(listParams, true);
     const router = useRouter();
 
     const meta = listQuery.data?.meta;
@@ -80,6 +94,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                 dataIndex: 'dateNeeded',
                 key: 'dateNeeded',
                 width: 120,
+                render: (value: string) => formatProjectDate(value),
             },
             {
                 title: t('hr.table.status'),
@@ -134,6 +149,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                     value={statusFilter}
                     onChange={(v) => {
                         setStatusFilter(v);
+                        resetPage();
                     }}
                     style={{ minWidth: 160 }}
                     maxTagCount="responsive"
@@ -162,10 +178,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                             })) ?? []}
                     />
                 ):null}
-                <RangePicker
-                    style={{ width: 230 }}
-                    placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
-                />
+
                 <div className="ml-auto">
                     <Button
                         type="primary"
@@ -192,7 +205,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                 locale={{
                     emptyText: (
                         <TableEmptyState
-                            title={t('hr.table.noOfficialSealRequests')}
+                            title={t('hr.empty.noOfficialSealRequests')}
                             icon = {<ThunderboltOutlined/>}
                         />
                     )

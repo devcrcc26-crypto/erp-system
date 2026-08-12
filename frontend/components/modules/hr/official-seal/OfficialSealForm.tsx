@@ -90,7 +90,7 @@ export default function OfficialSealForm({
                         >
                             <Select options={[
                                 { value: 'MINOR', label: 'Minor' },
-                                { value: 'NORMAL', label: 'Normal' },
+                                { value: 'MEDIUM', label: 'Medium' },
                                 { value: 'URGENT', label: 'Urgent' },
                                 { value: 'CRITICAL', label: 'Critical' },
                             ]} />

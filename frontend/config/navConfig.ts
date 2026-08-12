@@ -82,6 +82,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/vehicle-applications': 'nav.hr.vehicleApplications',
   '/hr/official-seal': 'nav.hr.officialSeal',
   '/hr/project-seal': 'nav.hr.projectSeal',
+  '/hr/official-seal-requests': 'nav.hr.officialSealRequests',
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
   '/organization/vehicles': 'nav.organization.vehicles',
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
@@ -620,7 +621,8 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/material-requisition' ||
     pathname === '/approvals/new/consumables' ||
     pathname === '/approvals/new/vehicle-application' ||
-    pathname === '/approvals/new/vehicle-refueling'
+    pathname === '/approvals/new/vehicle-refueling' ||
+    pathname === '/approvals/new/official-seal'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -803,6 +805,16 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.perDiem'), href: '/hr/per-diem' },
         { label: t('pages.hr.perDiem.detail') },
+      ],
+    };
+  }
+  if (pathname.startsWith('/hr/official-seal/')) {
+    return {
+      titleKey: 'pages.hr.officialSeal.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.officialSeal'), href: '/hr/official-seal' },
+        { label: t('pages.hr.officialSeal.detail') },
       ],
     };
   }

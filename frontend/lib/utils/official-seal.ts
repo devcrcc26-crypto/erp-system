@@ -29,6 +29,7 @@ export function officialSealStatusVariant(
     status: OfficialSealStatus | string
 ): StatusBadgeVariant {
     switch(status) {
+        case 'SEAL_ISSUED':
         case 'APPROVED':
             return 'success';
         case 'REJECTED':
@@ -41,7 +42,6 @@ export function officialSealStatusVariant(
             return 'warning';
         case 'CANCELLED':
         case 'DRAFT':
-        case 'SEAL_ISSUED':
         default:
             return 'default';
     }

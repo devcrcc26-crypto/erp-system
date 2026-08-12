@@ -94,8 +94,6 @@ export function useCancelOfficialSeal(id: string) {
     });
 }
 
-
-
 export function useIssueOfficialSeal(id: string) {
     const queryClient = useQueryClient();
     return useMutation({

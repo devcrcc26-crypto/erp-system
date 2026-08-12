@@ -24,6 +24,7 @@ import MaterialRequisitionDetail from '@/components/modules/approvals/detail/Mat
 import ConsumablesRequisitionDetail from '@/components/modules/approvals/detail/ConsumablesRequisitionDetail';
 import VehicleApplicationDetail from '@/components/modules/approvals/detail/VehicleApplicationDetail';
 import VehicleRefuelingDetail from '@/components/modules/approvals/detail/VehicleRefuelingDetail';
+import OfficialSealDetail from '@/components/modules/approvals/detail/OfficialSealDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -59,6 +60,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
 
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
 
@@ -204,8 +206,19 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
           sourceId={sourceId}
         />
       );
+    case 'OFFICIAL_SEAL_USAGE':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <OfficialSealDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
     default:
       return <GenericApprovalDetail request={request} />;
+
   }
 }
 
