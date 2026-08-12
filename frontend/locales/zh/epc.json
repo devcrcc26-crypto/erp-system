@@ -880,6 +880,8 @@
       "failedToCancelOfficialSeal": "取消申请失败",
       "failedToSubmitOfficialSeal": "提交公章使用申请失败",
       "issueSealApprovedInfo": "申请已批准，请完成用印。",
+      "issueSealDownloadHint": "请先下载上方提交的文档，打印并盖章后，可在下方选填上传已用印文件。",
+      "documentToSealHint": "可选 — 上传需要用印的文档，便于 HR 在审批通过后下载、打印并盖章。",
       "directApprovalNoChain": "直接批准，无需审批",
       "documentAttached": "已附加文件",
       "failedToLoadOfficialSeals": "加载公章使用申请失败"
@@ -1056,6 +1058,7 @@
       "sealedDocument": "用印文件",
       "submitted": "提交",
       "officialSeal": "公章使用",
+      "documentToSealAttached": "已附待用印文件",
       "leaveType": "假期类型",
       "startDate": "开始日期",
       "endDate": "结束日期",
@@ -1434,7 +1437,9 @@
       "vehicleAvailability": "车辆可用性",
       "hourSummary": "加班时长汇总",
       "officialSealDetails": "公章使用详情",
-      "issueSeal": "用印"
+      "issueSeal": "用印",
+      "documentToSeal": "待用印文件",
+      "sealedProof": "已用印文件（凭证）"
     }
   }
 }

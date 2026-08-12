@@ -3,7 +3,7 @@
 import { tokens } from "@/lib/theme/tokens";
 import { MetaItem, SectionCard, SummaryStrip } from "../../hr/shared/hr-page-chrome";
 import { Alert, Skeleton, Tag } from "antd";
-import Link from "next/link";
+import AttachmentDownloadList from "@/components/ui/FileUploadInput/AttachmentDownloadList";
 import { useOfficialSeal } from "@/lib/query/official-seal";
 import { useEpcTranslation } from "@/hooks/use-epc-translation";
 import StatusBadge from "@/components/ui/StatusBadge/StatusBadge";
@@ -52,9 +52,7 @@ export default function OfficialSealDetail({
     }
 
     const sealedDocumentLink = seal.sealedDocument?.id ? (
-        <Link href={`/hr/official-seal/${sourceId}`}>
-            {seal.sealedDocument.name}
-        </Link>
+        seal.sealedDocument.name
     ) : '-';
 
   return (
@@ -115,6 +113,22 @@ export default function OfficialSealDetail({
         
             </div>
         </SectionCard>
+        {(seal.documents?.length ?? 0) > 0 ? (
+            <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
+                <AttachmentDownloadList
+                    documents={seal.documents}
+                    emptyLabel={t('hr.empty.noAttachments')}
+                />
+            </SectionCard>
+        ) : null}
+        {seal.sealedDocument ? (
+            <SectionCard title={t('hr.section.sealedProof')} bodyClassName="px-5 py-4">
+                <AttachmentDownloadList
+                    documents={[seal.sealedDocument]}
+                    emptyLabel={t('hr.empty.noAttachments')}
+                />
+            </SectionCard>
+        ) : null}
     </div>
   );
 }

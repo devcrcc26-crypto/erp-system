@@ -882,6 +882,8 @@
       "failedToCancelOfficialSeal": "Failed to cancel request",
       "failedToSubmitOfficialSeal": "Failed to submit official seal request",
       "issueSealApprovedInfo": "This request has been approved. Please issue the seal.",
+      "issueSealDownloadHint": "Download the submitted document above, print and stamp it, then optionally upload the sealed copy below.",
+      "documentToSealHint": "Optional — upload the document that needs the official seal so HR can download, print, and stamp it after approval.",
       "directApprovalNoChain": "Approved directly — no approval required",
       "documentAttached": "Document attached",
       "failedToLoadOfficialSeals": "Failed to load official seal requests"
@@ -1058,6 +1060,7 @@
       "sealedDocument": "Sealed Document",
       "submitted": "Submitted",
       "officialSeal": "Official Seal",
+      "documentToSealAttached": "Document attached",
       "leaveType": "Leave Type",
       "startDate": "Start Date",
       "endDate": "End Date",
@@ -1437,7 +1440,9 @@
       "vehicleAvailability": "Vehicle Availability",
       "hourSummary": "Hour Summary",
       "officialSealDetails": "Official Seal Details",
-      "issueSeal": "Issue Seal"
+      "issueSeal": "Issue Seal",
+      "documentToSeal": "Document to Seal",
+      "sealedProof": "Sealed Document (Proof)"
     }
   }
 }

@@ -29,6 +29,13 @@ export interface OfficialSealSealedDocument{
     fileSizeBytes: number;
 }
 
+export interface OfficialSealAttachmentDocument {
+    id: string;
+    name: string;
+    fileType: string;
+    fileSizeBytes: number;
+}
+
 export interface OfficialSealListItem {
     id: string;
     requestNumber: string;
@@ -51,6 +58,7 @@ export interface OfficialSealListItem {
 
 
 export interface OfficialSealDetail extends OfficialSealListItem {
+    documents?: OfficialSealAttachmentDocument[];
     sealedDocument?: OfficialSealSealedDocument | null;
     issuer?: OfficialSealUserSummary | null;
     approvalRequest?: {
@@ -74,6 +82,7 @@ export interface SubmitOfficialSealPayload {
     description: string;
     urgency: OfficialSealUrgency;
     dateNeeded: string;
+    files?: File[];
 }
 
 export interface ListOfficialSealsParams {

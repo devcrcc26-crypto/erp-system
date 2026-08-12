@@ -22,16 +22,26 @@ const USER_SELECT = {
     email: true,
 } as const;
 
+const DOCUMENT_SELECT = {
+    id: true,
+    name: true,
+    fileKey: true,
+    fileType: true,
+    fileSizeBytes: true,
+} as const;
+
 const OFFICIAL_SEAL_INCLUDE = {
     employee: { select: USER_SELECT },
     issuer: { select: USER_SELECT },
     sealedDocument: {
-        select: {
-            id: true,
-            name: true,
-            fileKey: true,
-            fileType: true,
-            fileSizeBytes: true,
+        select: DOCUMENT_SELECT,
+    },
+    attachmentFolder: {
+        include: {
+            documents: {
+                where: { deletedAt: null, isCurrent: true },
+                select: DOCUMENT_SELECT,
+            },
         },
     },
     approvalRequest: {
@@ -79,6 +89,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         dto: SubmitOfficialSealRequestDto,
         companyId: string,
         userId: string,
+        files: UploadedFile[] = [],
       ): Promise<unknown> {
        
     
@@ -111,6 +122,9 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
               updatedBy: userId,
             },
           });
+          if (files.length > 0) {
+            await this.attachSubmissionFiles(id, companyId, userId, files);
+          }
           this.logger.log(
             `Official seal ${requestNumber} auto-approved (GM+ submitter)`,
           );
@@ -137,22 +151,40 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
           },
         )) as { id: string; requestNumber: string };
     
-        await this.prisma.officialSeal.create({
-          data: {
-            id,
-            companyId,
-            requestNumber,
-            employeeId: userId,
-            description: dto.description,
-            urgency: dto.urgency,
-            dateNeeded: dateNeeded,
-            status: SealStatus.SUBMITTED,
-            approvalRequestId: approval.id,
-            submittedAt: now,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+        try {
+          await this.prisma.officialSeal.create({
+            data: {
+              id,
+              companyId,
+              requestNumber,
+              employeeId: userId,
+              description: dto.description,
+              urgency: dto.urgency,
+              dateNeeded: dateNeeded,
+              status: SealStatus.SUBMITTED,
+              approvalRequestId: approval.id,
+              submittedAt: now,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+          if (files.length > 0) {
+            await this.attachSubmissionFiles(id, companyId, userId, files);
+          }
+        } catch (error: unknown) {
+          this.logger.error(
+            `Official seal create failed after approval ${approval.id}; cancelling approval`,
+            error instanceof Error ? error.message : String(error),
+          );
+          await this.prisma.approvalRequest.update({
+            where: { id: approval.id },
+            data: {
+              status: ApprovalRequestStatus.CANCELLED,
+              updatedBy: userId,
+            },
+          });
+          throw error;
+        }
         return this.getOfficialSeal(id, companyId, userId);
     }
 
@@ -249,19 +281,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
     }
     await this.assertCanView(officialSeal, companyId, userId);
 
-    const pendingTier = officialSeal.approvalRequest?.tiers.find(
-        (t) =>
-        t.tierOrder === officialSeal.approvalRequest?.currentTier &&
-        t.decision === 'PENDING',
-    );
-
-    return {
-        ...officialSeal,
-        currentTierLabel: pendingTier?.label ?? null,
-        directApproved:
-        officialSeal.status === SealStatus.APPROVED &&
-        !officialSeal.approvalRequestId,
-    };
+    return this.mapOfficialSealDetail(officialSeal);
     }
 
     async onApprovalDecision(
@@ -369,7 +389,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
             const folderId = await this.ensureOfficialSealFolder(officialSeal, userId);
             const documentId = randomUUID();
             const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const fileKey = `${companyId}/official-seal/${officialSeal.requestNumber}/${safeName}`;
+            const fileKey = `${companyId}/official-seal/${officialSeal.requestNumber}/sealed/${safeName}`;
 
             await this.storage.upload({
                 bucket: STORAGE_BUCKETS.HR,
@@ -525,6 +545,132 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
     
         return folderId;
       }
+
+    /**
+     * Uploads optional document(s) submitted with the request (document to be sealed).
+     */
+    private async attachSubmissionFiles(
+        officialSealId: string,
+        companyId: string,
+        userId: string,
+        files: UploadedFile[],
+    ): Promise<void> {
+        const officialSeal = await this.prisma.officialSeal.findFirst({
+            where: activeOnly({ id: officialSealId, companyId }),
+            select: {
+                id: true,
+                companyId: true,
+                requestNumber: true,
+                attachmentFolderId: true,
+            },
+        });
+        if (!officialSeal) {
+            throw new NotFoundException('Official seal not found');
+        }
+
+        const folderId = await this.ensureOfficialSealFolder(
+            officialSeal,
+            userId,
+        );
+
+        for (const file of files) {
+            if (!file?.buffer?.length) {
+                continue;
+            }
+            if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+                throw new BadRequestException(
+                    `File type not allowed: ${file.mimetype}`,
+                );
+            }
+
+            const documentId = randomUUID();
+            const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const fileKey = `${companyId}/official-seal/${officialSeal.requestNumber}/attachments/${safeName}`;
+
+            await this.storage.upload({
+                bucket: STORAGE_BUCKETS.HR,
+                key: fileKey,
+                body: file.buffer,
+                contentType: file.mimetype,
+                contentLength: file.size,
+            });
+
+            await this.prisma.$transaction(async (tx) => {
+                await tx.document.create({
+                    data: {
+                        id: documentId,
+                        companyId,
+                        folderId,
+                        name: file.originalname,
+                        fileKey,
+                        fileType: file.mimetype,
+                        fileSizeBytes: file.size,
+                        version: 1,
+                        isCurrent: true,
+                        createdBy: userId,
+                        updatedBy: userId,
+                    },
+                });
+                await tx.documentVersion.create({
+                    data: {
+                        documentId,
+                        uploadedBy: userId,
+                        versionNumber: 1,
+                        fileKey,
+                        fileSizeBytes: file.size,
+                    },
+                });
+            });
+        }
+    }
+
+    private mapOfficialSealDetail(
+        officialSeal: {
+            status: SealStatus;
+            approvalRequestId: string | null;
+            sealedDocumentId: string | null;
+            approvalRequest?: {
+                currentTier: number;
+                tiers: Array<{
+                    tierOrder: number;
+                    label: string;
+                    decision: string;
+                }>;
+            } | null;
+            attachmentFolder?: {
+                id: string;
+                documents: Array<{
+                    id: string;
+                    name: string;
+                    fileKey: string;
+                    fileType: string;
+                    fileSizeBytes: number;
+                }>;
+            } | null;
+        } & Record<string, unknown>,
+    ): Record<string, unknown> {
+        const { attachmentFolder, ...rest } = officialSeal;
+        const folderDocuments = attachmentFolder?.documents ?? [];
+        const documents = folderDocuments.filter(
+            (doc) => doc.id !== officialSeal.sealedDocumentId,
+        );
+        const pendingTier = officialSeal.approvalRequest?.tiers.find(
+            (tier) =>
+                tier.tierOrder === officialSeal.approvalRequest?.currentTier &&
+                tier.decision === 'PENDING',
+        );
+
+        return {
+            ...rest,
+            documents,
+            attachmentFolderId:
+                attachmentFolder?.id ?? rest.attachmentFolderId ?? null,
+            currentTierLabel: pendingTier?.label ?? null,
+            directApproved:
+                officialSeal.status === SealStatus.APPROVED &&
+                !officialSeal.approvalRequestId,
+        };
+    }
 
     private async nextRequestNumber(): Promise<string> {
     const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`

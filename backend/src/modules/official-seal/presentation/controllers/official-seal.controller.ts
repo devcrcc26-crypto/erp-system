@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Param, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Param, Query, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { OfficialSealService } from "../../application/services/official-seal.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
@@ -8,9 +8,9 @@ import { ListOfficialSealsDto, SubmitOfficialSealRequestDto } from "../../applic
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { DelegatePermissionCheck } from "../../../../shared/permissions/delegate-permission-check.decorator";
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { memoryStorage } from "multer";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 
@@ -51,20 +51,46 @@ export class OfficialSealController {
 
     @Post()
     @DelegatePermissionCheck()
+    @ApiConsumes('multipart/form-data', 'application/json')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            required: ['description', 'urgency', 'dateNeeded'],
+            properties: {
+                description: { type: 'string' },
+                urgency: { type: 'string' },
+                dateNeeded: { type: 'string', format: 'date' },
+                files: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                },
+            },
+        },
+    })
+    @UseInterceptors(
+        FilesInterceptor('files', 5, { storage: memoryStorage() }),
+    )
     @ApiOperation({
         summary: 'Submit a new official seal request',
-        description: 'Submit a new official seal request',
+        description: 'Submit a new official seal request with optional document(s) to seal',
     })
     async submit(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
         @Body() body: Record<string, unknown>,
+        @UploadedFiles() files?: Express.Multer.File[],
     ): Promise<unknown> {
         const dto = await parseDto(SubmitOfficialSealRequestDto, body);
         return this.officialSealService.submitRequest(
             dto,
             companyId,
             user.userId,
+            (files ?? []).map((file) => ({
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                buffer: file.buffer,
+            })),
         );
     }
 

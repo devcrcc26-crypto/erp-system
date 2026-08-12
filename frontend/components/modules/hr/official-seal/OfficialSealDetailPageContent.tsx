@@ -22,6 +22,7 @@ import { ApiRequestError } from "@/lib/api/errors";
 import ApprovalTierTimeline from "../../approvals/ApprovalTierTimeline";
 import { ApprovalTier } from "@/lib/api/approvals.types";
 import { useCanViewHr } from "@/hooks/use-auth-capabilities";
+import AttachmentDownloadList from "@/components/ui/FileUploadInput/AttachmentDownloadList";
 
 
 export default function OfficialSealDetailPageContent({
@@ -147,6 +148,9 @@ export default function OfficialSealDetailPageContent({
                             {seal.sealedDocument?.id ? (
                                 <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
                             ) : null}
+                            {(seal.documents?.length ?? 0) > 0 ? (
+                                <Tag color="blue">{t('hr.labels.documentToSealAttached')}</Tag>
+                            ) : null}
                         </div>
                         <h2
                             className="text-lg font-semibold leading-snug m-0"
@@ -202,6 +206,14 @@ export default function OfficialSealDetailPageContent({
                         }
                     </div>
                 </SectionCard>
+                {(seal.documents?.length ?? 0) > 0 ? (
+                    <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
+                        <AttachmentDownloadList
+                            documents={seal.documents}
+                            emptyLabel={t('hr.empty.noAttachments')}
+                        />
+                    </SectionCard>
+                ) : null}
                 {showIssueSeal ? (
                     <SectionCard title={t('hr.section.issueSeal')} bodyClassName="px-5 py-4">
                         <Alert
@@ -209,6 +221,11 @@ export default function OfficialSealDetailPageContent({
                             showIcon
                             className="mb-4"
                             title={t('hr.messages.issueSealApprovedInfo')}
+                            description={
+                                (seal.documents?.length ?? 0) > 0
+                                    ? t('hr.messages.issueSealDownloadHint')
+                                    : undefined
+                            }
                         />
                         <input
                             type="file"
@@ -237,8 +254,11 @@ export default function OfficialSealDetailPageContent({
                 </SectionCard>
                 ) : null}
                 {seal.sealedDocument ? (
-                    <SectionCard title={t('hr.table.seal')} bodyClassName="px-5 py-4">
-                        {seal.sealedDocument.name ?? t('hr.messages.documentAttached')}
+                    <SectionCard title={t('hr.section.sealedProof')} bodyClassName="px-5 py-4">
+                        <AttachmentDownloadList
+                            documents={[seal.sealedDocument]}
+                            emptyLabel={t('hr.empty.noAttachments')}
+                        />
                     </SectionCard>
                 ):null}
             </div>      

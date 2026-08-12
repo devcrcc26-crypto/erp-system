@@ -1,7 +1,7 @@
 'use client';
 import { useEpcTranslation } from "@/hooks/use-epc-translation";
 import type { OfficialSealDetail, OfficialSealUrgency } from "@/lib/api/official-seal.types";
-import { Button, DatePicker, Form, Input, Select } from "antd";
+import { Button, DatePicker, Form, Input, Select, Typography } from "antd";
 import type dayjs from "dayjs";
 import { SectionCard } from "../shared/hr-page-chrome";
 import { useMemo, useState } from "react";
@@ -9,6 +9,7 @@ import { notifyApiError } from "@/lib/utils/notify-api-error";
 import { useSubmitOfficialSeal } from "@/lib/query/official-seal";
 import { useAppMessage } from "@/hooks/use-app-message";
 import { OFFICIAL_SEAL_URGENCY_OPTIONS } from "@/lib/utils/official-seal";
+import FileUploadInput from "@/components/ui/FileUploadInput/FileUploadInput";
 
 interface FormValues {
     description: string;
@@ -27,6 +28,7 @@ export default function OfficialSealForm({
     const { t } = useEpcTranslation();
     const [form] = Form.useForm<FormValues>();
     const [submitting, setSubmitting] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const submitMutation = useSubmitOfficialSeal();
     const messageApi = useAppMessage();
 
@@ -56,6 +58,7 @@ export default function OfficialSealForm({
                 description: values.description.trim(),
                 urgency: values.urgency,
                 dateNeeded: values.dateNeeded.format('YYYY-MM-DD'),
+                files: selectedFiles.length > 0 ? selectedFiles : undefined,
             });
 
             messageApi.success(
@@ -103,8 +106,30 @@ export default function OfficialSealForm({
                     </div>
                 </Form>
             </SectionCard>
+
+            <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
+                <Typography.Paragraph
+                    type="secondary"
+                    style={{ marginBottom: 12, fontSize: 13 }}
+                >
+                    {t('hr.messages.documentToSealHint')}
+                </Typography.Paragraph>
+                <FileUploadInput
+                    files={selectedFiles}
+                    onChange={setSelectedFiles}
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    multiple
+                    disabled={submitting || submitMutation.isPending}
+                    placeholder={t('hr.buttons.chooseDocumentOptional')}
+                />
+            </SectionCard>
+
             <div className="flex justify-end">
-                <Button type="primary" loading={submitting} onClick={() => void handleSubmit()}>
+                <Button
+                    type="primary"
+                    loading={submitting || submitMutation.isPending}
+                    onClick={() => void handleSubmit()}
+                >
                     {t('hr.buttons.submitRequest')}
                 </Button>
             </div>

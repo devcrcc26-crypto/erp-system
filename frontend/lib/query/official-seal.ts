@@ -1,6 +1,6 @@
 'use client';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiGetPaginated, apiPatch, apiPost } from "../api/client";
+import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
 import { ListOfficialSealsParams, OfficialSealDetail, OfficialSealListItem, SubmitOfficialSealPayload } from "../api/official-seal.types";
 import { PaginatedResult } from "../api/types";
 import { toQueryString } from "./pm-query-utils";
@@ -57,11 +57,27 @@ export function useOfficialSeal(id: string, enabled = true){
 export function useSubmitOfficialSeal() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (payload: SubmitOfficialSealPayload) =>
-            apiPost<OfficialSealDetail>(
-                `${OFFICIAL_SEAL_PATH}`,
-                payload,
-            ),
+        mutationFn: (payload: SubmitOfficialSealPayload) => {
+            const hasFiles = (payload.files?.length ?? 0) > 0;
+            if (hasFiles) {
+                const formData = new FormData();
+                formData.append('description', payload.description);
+                formData.append('urgency', payload.urgency);
+                formData.append('dateNeeded', payload.dateNeeded);
+                for (const file of payload.files ?? []) {
+                    formData.append('files', file);
+                }
+                return apiPostForm<OfficialSealDetail>(OFFICIAL_SEAL_PATH, formData);
+            }
+            return apiPost<OfficialSealDetail>(
+                OFFICIAL_SEAL_PATH,
+                {
+                    description: payload.description,
+                    urgency: payload.urgency,
+                    dateNeeded: payload.dateNeeded,
+                },
+            );
+        },
             onSuccess: (created) => {
                 void queryClient.invalidateQueries({
                     queryKey: officialSealKeys.lists(),
@@ -102,10 +118,9 @@ export function useIssueOfficialSeal(id: string) {
             if(file){
                 const formData = new FormData();
                 formData.append('file', file);
-                return apiPost<OfficialSealDetail>(
+                return apiPostForm<OfficialSealDetail>(
                     `${OFFICIAL_SEAL_PATH}/${id}/seal`,
                     formData,
-                    { headers: { 'Content-Type': 'multipart/form-data' } },
                 );
             }
             return apiPost<OfficialSealDetail>(
