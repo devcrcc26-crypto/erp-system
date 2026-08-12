@@ -16,6 +16,7 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useAuthStore } from '@/stores/auth.store';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -76,9 +77,13 @@ function getActionNeeded(
   return 'Approval Required';
 }
 
+function resolveDefaultInbox(canViewHr: boolean): InboxTab {
+  return canViewHr ? 'ALL' : 'MY_REQUESTS';
+}
+
 /**
- * Approval inbox — My Requests (default), Pending My Action, and All Requests (hr.view).
- * Scoping is enforced server-side via the `inbox` query param (JWT user id).
+ * Approval inbox — All Requests (default for hr.view), My Requests (default otherwise),
+ * and Pending My Action. Scoping is enforced server-side via the `inbox` query param.
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -87,7 +92,9 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id ?? '';
   const { params, resetPage, bindMeta } = useTablePagination();
-  const [inbox, setInbox] = useState<InboxTab>('MY_REQUESTS');
+  const [inbox, setInbox] = useState<InboxTab>(() =>
+    resolveDefaultInbox(useAuthStore.getState().capabilities.canViewHr),
+  );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApprovalRequestStatus[]>([]);
   const [categoryId, setCategoryId] = useState<string | undefined>();

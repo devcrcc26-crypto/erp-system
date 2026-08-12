@@ -585,7 +585,17 @@ export class DocumentService {
         folder?.contextType === FolderContextType.LEAVE ||
         folder?.contextType === FolderContextType.OVERTIME ||
         folder?.contextType === FolderContextType.FLIGHT ||
-        folder?.contextType === FolderContextType.BUSINESS_TRIP
+        folder?.contextType === FolderContextType.BUSINESS_TRIP ||
+        folder?.contextType === FolderContextType.OFFICIAL_SEAL ||
+        folder?.contextType === FolderContextType.PROJECT_SEAL ||
+        folder?.contextType === FolderContextType.VEHICLE_REFUELING ||
+        folder?.contextType === FolderContextType.EXPENSE_CLAIM ||
+        folder?.contextType === FolderContextType.PURCHASE_REQUEST ||
+        folder?.contextType === FolderContextType.MATERIAL_REQUISITION ||
+        folder?.contextType === FolderContextType.CONSUMABLES_REQUISITION ||
+        folder?.contextType === FolderContextType.PER_DIEM ||
+        folder?.contextType === FolderContextType.VEHICLE_APPLICATION ||
+        folder?.contextType === FolderContextType.INSPECTION_REPAIR
       ) {
         bucket = STORAGE_BUCKETS.HR;
       }
@@ -594,7 +604,13 @@ export class DocumentService {
       fileKey.includes('/hr/leave/') ||
       fileKey.includes('/hr/overtime/') ||
       fileKey.includes('/hr/flight/') ||
-      fileKey.includes('/hr/business-trips/')
+      fileKey.includes('/hr/business-trips/') ||
+      fileKey.includes('/hr/expense-claim/') ||
+      fileKey.includes('/hr/purchase-requests/') ||
+      fileKey.includes('/hr/material-requisition/') ||
+      fileKey.includes('/official-seal/') ||
+      fileKey.includes('/project-seal/') ||
+      fileKey.includes('/vehicle-refueling/')
     ) {
       bucket = STORAGE_BUCKETS.HR;
     }

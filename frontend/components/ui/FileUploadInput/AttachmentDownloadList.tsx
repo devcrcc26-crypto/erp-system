@@ -3,8 +3,8 @@
 import { Button, Typography } from 'antd';
 import { Download } from 'lucide-react';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { apiGet } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
+import { downloadDocument } from '@/lib/utils/document-download';
 import { tokens } from '@/lib/theme/tokens';
 
 export interface AttachmentDocumentSummary {
@@ -27,12 +27,12 @@ export default function AttachmentDownloadList({
   const message = useAppMessage();
   const items = documents ?? [];
 
-  async function handleDownload(documentId: string): Promise<void> {
+  async function handleDownload(
+    documentId: string,
+    fileName: string,
+  ): Promise<void> {
     try {
-      const result = await apiGet<{ url: string; expiresIn: number }>(
-        `/documents/${documentId}/download-url`,
-      );
-      window.open(result.url, '_blank', 'noopener,noreferrer');
+      await downloadDocument(documentId, fileName);
     } catch (error) {
       const text =
         error instanceof ApiRequestError
@@ -68,7 +68,7 @@ export default function AttachmentDownloadList({
             type="link"
             size="small"
             icon={<Download size={14} />}
-            onClick={() => void handleDownload(doc.id)}
+            onClick={() => void handleDownload(doc.id, doc.name)}
           >
             Download
           </Button>

@@ -939,7 +939,7 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Leave / overtime / approval attachment folders: HR viewers, owner,
+   * Leave / overtime / approval / seal attachment folders: HR viewers, owner,
    * or assigned approval-tier approver may download without documents.view.
    */
   private async canAccessHrAttachmentFolder(
@@ -953,7 +953,10 @@ export class DocumentPermissionService {
       contextType !== FolderContextType.OVERTIME &&
       contextType !== FolderContextType.APPROVAL &&
       contextType !== FolderContextType.FLIGHT &&
-      contextType !== FolderContextType.BUSINESS_TRIP
+      contextType !== FolderContextType.BUSINESS_TRIP &&
+      contextType !== FolderContextType.OFFICIAL_SEAL &&
+      contextType !== FolderContextType.PROJECT_SEAL &&
+      contextType !== FolderContextType.VEHICLE_REFUELING
     ) {
       return false;
     }
@@ -1074,6 +1077,78 @@ export class DocumentPermissionService {
       }
       return (
         trip.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.OFFICIAL_SEAL) {
+      const seal = await this.prisma.officialSeal.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!seal) {
+        return false;
+      }
+      if (seal.employeeId === userId) {
+        return true;
+      }
+      return (
+        seal.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.PROJECT_SEAL) {
+      const seal = await this.prisma.projectSeal.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!seal) {
+        return false;
+      }
+      if (seal.employeeId === userId) {
+        return true;
+      }
+      return (
+        seal.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.VEHICLE_REFUELING) {
+      const refueling = await this.prisma.vehicleRefueling.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!refueling) {
+        return false;
+      }
+      if (refueling.employeeId === userId) {
+        return true;
+      }
+      return (
+        refueling.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
         false
       );
     }
