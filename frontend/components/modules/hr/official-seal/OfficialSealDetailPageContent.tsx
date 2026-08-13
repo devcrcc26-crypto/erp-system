@@ -185,7 +185,7 @@ export default function OfficialSealDetailPageContent({
                         }
                     ]} 
                 />
-                 <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
+                <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <MetaItem label={t('hr.form.description')}>
                             <p className="whitespace-pre-wrap m-0">
