@@ -47,7 +47,10 @@ const PROJECT_SEAL_INCLUDE = {
     },
     attachmentFolder: {
         include: {
-            documents: true,
+            documents: {
+                where: {deletedAt: null, isCurrent: true},
+                select: DOCUMENT_SELECT,
+            },
         },
     },
     approvalRequest: {

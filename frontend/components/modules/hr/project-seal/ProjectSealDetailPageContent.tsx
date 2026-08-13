@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, message, Skeleton, Tag, Typography } from "antd";
+import { Alert, Button, Skeleton, Tag, Typography } from "antd";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEpcTranslation } from "@/hooks/use-epc-translation";

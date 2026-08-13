@@ -11,6 +11,7 @@ import FileUploadInput from "@/components/ui/FileUploadInput/FileUploadInput";
 import { useSubmitProjectSeal } from "@/lib/query/project-seal";
 import { useAppMessage } from "@/hooks/use-app-message";
 import { notifyApiError } from "@/lib/utils/notify-api-error";
+import { PROJECT_SEAL_FILE_ACCEPT } from "@/lib/constants/project-seal-upload";
 
 
 interface ProjectSealFormProps {
@@ -103,7 +104,7 @@ export default function ProjectSealForm({
                             <Select options={UrgencyOptions} />
                         </Form.Item>
                     </div>
-                </Form>
+                </Form>  
             </SectionCard>
             <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
                 <Typography.Paragraph
@@ -115,6 +116,9 @@ export default function ProjectSealForm({
                 <FileUploadInput
                     files={selectedFiles}
                     onChange={setSelectedFiles}
+                    accept={PROJECT_SEAL_FILE_ACCEPT}
+                    multiple
+                    disabled={submitting || submitMutation.isPending}
                     placeholder={t('hr.buttons.chooseDocumentOptional')}
                 />
             </SectionCard>

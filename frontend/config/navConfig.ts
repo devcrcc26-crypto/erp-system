@@ -622,7 +622,8 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/consumables' ||
     pathname === '/approvals/new/vehicle-application' ||
     pathname === '/approvals/new/vehicle-refueling' ||
-    pathname === '/approvals/new/official-seal'
+    pathname === '/approvals/new/official-seal' ||
+    pathname === '/approvals/new/project-seal'
   ) {
     return {
       titleKey: 'pages.approvals.new',
@@ -815,6 +816,17 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.officialSeal'), href: '/hr/official-seal' },
         { label: t('pages.hr.officialSeal.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/project-seal/')) {
+    return {
+      titleKey: 'pages.hr.projectSeal.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.projectSeal'), href: '/hr/project-seal' },
+        { label: t('pages.hr.projectSeal.detail') },
       ],
     };
   }

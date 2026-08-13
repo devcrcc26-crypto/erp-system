@@ -1,3 +1,5 @@
+"use client";
+
 import { StatusBadge } from "@/components/ui";
 import { tokens } from "@/lib/theme/tokens";
 import { formatDisplayDate } from "@/lib/utils/date-format";
