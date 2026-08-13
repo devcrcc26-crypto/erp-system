@@ -113,6 +113,7 @@ export default function OfficialSealDetail({
         
             </div>
         </SectionCard>
+        
         {(seal.documents?.length ?? 0) > 0 ? (
             <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
                 <AttachmentDownloadList

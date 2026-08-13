@@ -1,3 +1,4 @@
+"use client";
 import ListSearchInput from "@/components/ui/ListSearchInput/ListSearchInput";
 import { useCanViewHr } from "@/hooks/use-auth-capabilities";
 import { useEpcTranslation } from "@/hooks/use-epc-translation";
@@ -176,7 +177,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
                     <Button
                     type="primary"
                     icon={<PlusOutlined />}
-                    onClick={() => router.push('/approvals/new/official-seal')}
+                    onClick={() => router.push('/approvals/new/project-seal')}
                     >
                         {t('hr.buttons.newProjectSeal')}
                     </Button>

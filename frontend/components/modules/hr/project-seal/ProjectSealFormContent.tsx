@@ -1,3 +1,4 @@
+"use client";
 import { FormLayout } from "@/components/ui";
 import ProjectSealForm from "./ProjectSealForm";
 import { ProjectSealDetail } from "@/lib/api/project-seal.types";

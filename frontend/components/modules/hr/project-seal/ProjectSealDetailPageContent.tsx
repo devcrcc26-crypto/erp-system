@@ -19,6 +19,7 @@ import { notifyApiError } from "@/lib/utils/notify-api-error";
 import { useAppMessage } from "@/hooks/use-app-message";
 import { ApprovalTier } from "@/lib/api/approvals.types";
 import { ApiRequestError } from "@/lib/api/errors";
+import ApprovalTierTimeline from "../../approvals/ApprovalTierTimeline";
 
 export default function ProjectSealDetailPageContent({
     sealId,
@@ -85,10 +86,10 @@ export default function ProjectSealDetailPageContent({
                 title={
                     detailQuery.error instanceof ApiRequestError
                         ? detailQuery.error.message
-                        : t('hr.messages.officialSealRequestNotFound')
+                        : t('hr.messages.projectSealRequestNotFound')
                 }
                 action={
-                    <Button onClick={() => router.push('/hr/official-seal')}>
+                    <Button onClick={() => router.push('/hr/project-seal')}>
                         {t('hr.buttons.backToList')}
                     </Button>
                 }
@@ -262,11 +263,10 @@ export default function ProjectSealDetailPageContent({
                                     </Typography.Text>
                                 </div>
                             ) : tiers.length > 0 ? (
-                                <div className="flex flex-col gap-2">
-                                    <Typography.Text type="secondary">
-                                        {t('hr.labels.approvalChain')}
-                                    </Typography.Text>
-                                </div>
+                                <ApprovalTierTimeline
+                                    tiers={tiers}
+                                    currentTier={seal.approvalRequest?.currentTier ?? 1}
+                                />
                             ) : (
                                 <Typography.Text type="secondary">
                                     {t('hr.empty.noApprovalChain')}

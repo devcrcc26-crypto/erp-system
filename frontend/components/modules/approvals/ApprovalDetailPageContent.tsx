@@ -25,6 +25,7 @@ import ConsumablesRequisitionDetail from '@/components/modules/approvals/detail/
 import VehicleApplicationDetail from '@/components/modules/approvals/detail/VehicleApplicationDetail';
 import VehicleRefuelingDetail from '@/components/modules/approvals/detail/VehicleRefuelingDetail';
 import OfficialSealDetail from '@/components/modules/approvals/detail/OfficialSealDetail';
+import ProjectSealDetail from '@/components/modules/approvals/detail/ProjectSealDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -212,6 +213,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <OfficialSealDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'PROJECT_SEAL_USAGE':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <ProjectSealDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />

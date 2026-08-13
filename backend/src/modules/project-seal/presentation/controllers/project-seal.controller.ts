@@ -147,6 +147,7 @@ export class ProjectSealController {
 
     @Post(':id/seal')
     @DelegatePermissionCheck()
+    @ApiConsumes('multipart/form-data')
     @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
     @ApiOperation({ 
         summary: 'Attach a seal to a project seal request by id',
@@ -161,7 +162,12 @@ export class ProjectSealController {
         if(!file) {
             throw new BadRequestException('No file uploaded');
         }
-        return this.projectSealService.issueSeal(id, companyId, user.userId);
+        return this.projectSealService.issueSeal(id, companyId, user.userId,{
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            buffer: file.buffer,
+        });
     }
 
 

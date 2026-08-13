@@ -1,3 +1,4 @@
+"use client";
 import { useEpcTranslation } from "@/hooks/use-epc-translation";
 import { SectionCard } from "../shared/hr-page-chrome";
 import { Button, DatePicker, Form, Input, Select, Typography } from "antd";
@@ -57,8 +58,8 @@ export default function ProjectSealForm({
             const result = await submitMutation.mutateAsync({
                 description: values.description,
                 urgency: values.urgency,
-                dateNeeded: values.dateNeeded.toISOString(),
-                files: selectedFiles,
+                dateNeeded: values.dateNeeded.format('YYYY-MM-DD'),
+                files: selectedFiles.length > 0 ? selectedFiles : undefined,
             });
 
             messageApi.success(
