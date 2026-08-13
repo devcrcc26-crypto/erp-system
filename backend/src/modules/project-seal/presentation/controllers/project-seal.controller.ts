@@ -12,7 +12,7 @@ import { UseGuards } from "@nestjs/common";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
 import { memoryStorage } from "multer";
-import { FilesInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { SubmitProjectSealRequestDto, ListProjectSealsDto } from "../../application/dtos/project-seal.dtos";
@@ -147,6 +147,7 @@ export class ProjectSealController {
 
     @Post(':id/seal')
     @DelegatePermissionCheck()
+    @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
     @ApiOperation({ 
         summary: 'Attach a seal to a project seal request by id',
         description: 'Attach a seal to a project seal request by id',

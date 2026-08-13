@@ -50,6 +50,14 @@ const PROJECT_SEAL_INCLUDE = {
             documents: true,
         },
     },
+    approvalRequest: {
+        include: {
+            tiers: {
+                include: { approver: { select: USER_SELECT } },
+                orderBy: { tierOrder: "asc" as const },
+            },
+        },
+    },
 } as const;
 
 @Injectable()
@@ -86,8 +94,8 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
 
         const resolvedTiers =
           await this.hrApprovalChain.buildProjectSealApprovalChain(
-            companyId,
             userId,
+            companyId,
           );
 
         const now = new Date();

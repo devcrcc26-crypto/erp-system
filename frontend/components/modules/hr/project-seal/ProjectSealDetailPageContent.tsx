@@ -1,3 +1,5 @@
+"use client";
+
 import { Alert, Button, message, Skeleton, Tag, Typography } from "antd";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -42,7 +44,7 @@ export default function ProjectSealDetailPageContent({
     const showIssueSeal = canViewHr && seal?.status === "APPROVED";
     const messageApi = useAppMessage();
 
-    
+
     async function handleIssueSeal(file?: File): Promise<void> {
         try {
             await issueMutation.mutateAsync(file);
@@ -119,7 +121,7 @@ export default function ProjectSealDetailPageContent({
                     <div
                         className="rounded-lg overflow-hidden"
                         style={{
-                            backgroundColor: tokens.colorBorder,
+                            backgroundColor: tokens.colorCardBg,
                             border: `1px solid ${tokens.colorBorder}`,
                         }}
                     >
@@ -140,7 +142,7 @@ export default function ProjectSealDetailPageContent({
                                     <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
                                 ) : null}
                                 {seal.sealedDocument?.id ? (
-                                    <Tag color="green">{t('hr.labels.seaoAttached')}</Tag>
+                                    <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
                                 ) : null}
                                 {(seal.documents?.length ?? 0) > 0 ? (
                                     <Tag color="blue">{t('hr.labels.documentToSealAttached')}</Tag>
