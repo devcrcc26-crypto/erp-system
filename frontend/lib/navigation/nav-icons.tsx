@@ -26,6 +26,7 @@ import {
   IdcardOutlined,
   InboxOutlined,
   IssuesCloseOutlined,
+  LaptopOutlined,
   MailOutlined,
   MessageOutlined,
   PieChartOutlined,
@@ -45,6 +46,7 @@ import {
   WalletOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import { ComputerIcon } from 'lucide-react';
 
 type NavIconComponent = ComponentType<{ className?: string; style?: CSSProperties }>;
 
@@ -103,6 +105,8 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-business-trip': GlobalOutlined,
   'hr-per-diem': WalletOutlined,
   'hr-per-diem-rates': BankOutlined,
+  'hr-asset-management': LaptopOutlined,
+  'hr-attendance': CalendarOutlined,
 };
 
 /** Shared icon sizing for main rail and context sidebar links. */

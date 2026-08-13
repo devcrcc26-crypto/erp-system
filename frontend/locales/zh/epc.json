@@ -56,7 +56,9 @@
       "businessTrips": "第三国出差",
       "reports": "人力资源报表",
       "perDiem": "差旅补贴",
-      "perDiemRates": "差旅补贴标准"
+      "perDiemRates": "差旅补贴标准",
+      "attendance": "考勤",
+      "assetManagement": "资产管理"
     }
   },
   "workspace": {

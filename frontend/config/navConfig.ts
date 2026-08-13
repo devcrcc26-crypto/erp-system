@@ -90,6 +90,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
   '/hr/per-diem-rates': 'nav.hr.perDiemRates',
+  '/hr/asset-management': 'nav.hr.assetManagement',
+  '/hr/attendance': 'nav.hr.attendance',
 };
 
 export interface IconRailVisibility {
@@ -393,12 +395,26 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
+        key: '/hr/asset-management',
+        labelKey: 'nav.hr.assetManagement',
+        href: '/hr/asset-management',
+        iconKey: 'hr-asset-management',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/attendance',
+        labelKey: 'nav.hr.attendance',
+        href: '/hr/attendance',
+        iconKey: 'hr-attendance',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/reports',
         labelKey: 'nav.hr.reports',
         href: '/hr/reports',
         iconKey: 'reports',
         visible: canViewHr,
-      },
+      }
     ],
   };
 

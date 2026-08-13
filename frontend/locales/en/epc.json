@@ -58,7 +58,9 @@
       "perDiem": "Per Diem",
       "perDiemRates": "Per Diem Rates",
       "noApprovalChain": "No approval chain required",
-      "directApproved": "Approved directly - no approval required"
+      "directApproved": "Approved directly - no approval required",
+      "assetManagement": "Asset Management",
+      "attendance": "Attendance"
     }
   },
   "workspace": {
