@@ -41,6 +41,8 @@ export default function ProjectSealDetailPageContent({
     const canViewHr = useCanViewHr();
     const showIssueSeal = canViewHr && seal?.status === "APPROVED";
     const messageApi = useAppMessage();
+
+    
     async function handleIssueSeal(file?: File): Promise<void> {
         try {
             await issueMutation.mutateAsync(file);

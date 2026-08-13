@@ -34,7 +34,7 @@ export function useProjectSeals(
         queryKey: projectSealKeys.list(params),
         queryFn: () =>
             apiGetPaginated<ProjectSealListItem>(
-                `/project-seals?${buildListQuery(params)}`
+                `${PROJECT_SEAL_PATH}${buildListQuery(params)}`
             ) as Promise<PaginatedResult<ProjectSealListItem>>,
         enabled,
         retry: false,
@@ -45,7 +45,7 @@ export function useProjectSeal(id: string, enabled = true) {
     return useQuery({
         queryKey: projectSealKeys.detail(id),
         queryFn: () =>
-            apiGet<ProjectSealDetail>(`/project-seals/${id}`) as Promise<ProjectSealDetail>,
+            apiGet<ProjectSealDetail>(`${PROJECT_SEAL_PATH}/${id}`) as Promise<ProjectSealDetail>,
         enabled,
         retry: false,
     });
@@ -78,7 +78,7 @@ export function useSubmitProjectSeal() {
         void queryClient.invalidateQueries({ queryKey: projectSealKeys.lists() });
         void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
         void queryClient.setQueryData(
-            approvalKeys.detail(created.id),
+            projectSealKeys.detail(created.id),
             created
         );
     },

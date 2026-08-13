@@ -101,6 +101,7 @@ const REQUEST_DETAIL_INCLUDE = {
   vehicleApplication: { select: { id: true } },
   vehicleRefueling: { select: { id: true } },
   officialSeal: { select: { id: true } },
+  projectSeal: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -341,6 +342,7 @@ export class ApprovalsService {
       request.vehicleApplication?.id ??
       request.vehicleRefueling?.id ??
       request.officialSeal?.id ??
+      request.projectSeal?.id ??
       null; 
 
     return {
@@ -359,6 +361,7 @@ export class ApprovalsService {
       vehicleApplication: undefined,
       vehicleRefueling: undefined,
       officialSeal: undefined,
+      projectSeal: undefined,
     };
   }
 
