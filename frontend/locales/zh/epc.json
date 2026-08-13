@@ -206,6 +206,14 @@
         "myListTitle": "我的公章使用申请",
         "listDescription": "审核并处理公章使用申请。",
         "myListDescription": "提交并跟踪您的公章使用审批流程。"
+      },
+      "projectSeal": {
+        "new": "新建项目章使用申请",
+        "detail": "项目章使用",
+        "listTitle": "项目章使用申请",
+        "myListTitle": "我的项目章使用申请",
+        "listDescription": "审核并处理项目章使用申请。",
+        "myListDescription": "提交并跟踪您的项目章使用审批流程。"
       }
     },
     "dashboard": {
@@ -884,7 +892,14 @@
       "documentToSealHint": "可选 — 上传需要用印的文件（PDF、Word、Excel 或 CAD 文件如 DWG、DXF、DRW、RVT、IFC），审批通过后 HR 可下载打印并盖章。",
       "directApprovalNoChain": "直接批准，无需审批",
       "documentAttached": "已附加文件",
-      "failedToLoadOfficialSeals": "加载公章使用申请失败"
+      "failedToLoadOfficialSeals": "加载公章使用申请失败",
+      "projectSealNotFound": "未找到项目章使用申请",
+      "projectSealRequestNotFound": "未找到项目章使用申请",
+      "projectSealCancelled": "项目章使用申请已取消",
+      "projectSealIssued": "项目章已用印",
+      "failedToCancelProjectSeal": "取消申请失败",
+      "failedToSubmitProjectSeal": "提交项目章使用申请失败",
+      "failedToLoadProjectSeals": "加载项目章使用申请失败"
     },
     "urgency": {
       "MINOR": "一般",
@@ -1058,6 +1073,8 @@
       "sealedDocument": "用印文件",
       "submitted": "提交",
       "officialSeal": "公章使用",
+      "projectSeal": "项目章使用",
+      "completedAt": "完成时间",
       "documentToSealAttached": "已附待用印文件",
       "leaveType": "假期类型",
       "startDate": "开始日期",
@@ -1225,6 +1242,7 @@
       "newVehicleApplication": "新建用车申请",
       "newVehicleRefueling": "新建加油申请",
       "newOfficialSeal": "新建公章使用申请",
+      "newProjectSeal": "新建项目章使用申请",
       "thisMonthSheet": "本月加班表",
       "submitApplication": "提交申请",
       "submitRequest": "提交申请",
@@ -1265,7 +1283,9 @@
     },
     "dialog": {
       "cancelOfficialSealTitle": "取消申请？",
-      "cancelOfficialSealDesc": "这将取消公章使用申请及所有未完成的审批。"
+      "cancelOfficialSealDesc": "这将取消公章使用申请及所有未完成的审批。",
+      "cancelProjectSealTitle": "取消申请？",
+      "cancelProjectSealDesc": "这将取消项目章使用申请及所有未完成的审批。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -1312,6 +1332,8 @@
       "estimatedTotal": "预计总费用",
       "title": "标题",
       "description": "描述",
+      "dateNeeded": "需用日期",
+      "urgency": "紧急程度",
       "justification": "申请理由",
       "vendor": "供应商名称",
       "vendorContact": "供应商联系方式",
@@ -1360,6 +1382,7 @@
       "searchVehicle": "搜索申请编号或目的地",
       "searchRefueling": "搜索申请编号或车牌",
       "searchOfficialSeal": "搜索申请编号或说明",
+      "searchProjectSeal": "搜索申请编号或说明",
       "searchBusinessTrip": "搜索出差编号或目的地",
       "searchFlight": "搜索申请编号或路线",
       "searchPerDiem": "搜索申请编号或目的地",
@@ -1383,6 +1406,9 @@
       "enterJustification": "请描述采购原因",
       "enterPurpose": "请描述所需材料的用途",
       "enterOfficialSealDescription": "请描述公章用途",
+      "enterProjectSealDescription": "请描述项目章用途",
+      "selectProjectSealDateNeeded": "请选择需用日期",
+      "selectProjectSealUrgency": "请选择紧急程度",
       "enterReason": "可选 - 请描述请假原因",
       "enterNotes": "填写任何需要告知审批人的信息",
       "enterCategory": "例如：交通、餐饮、住宿",
@@ -1414,7 +1440,8 @@
       "noReceipt": "暂未上传票据。",
       "noTicket": "暂未上传机票。",
       "noApprovalChain": "提交后显示审批链。",
-      "noOfficialSealRequests": "暂无公章使用申请。"
+      "noOfficialSealRequests": "暂无公章使用申请。",
+      "noProjectSeals": "暂无项目章使用申请。"
     },
     "section": {
       "requestDetails": "申请详情",
@@ -1437,9 +1464,11 @@
       "vehicleAvailability": "车辆可用性",
       "hourSummary": "加班时长汇总",
       "officialSealDetails": "公章使用详情",
+      "projectSealDetails": "项目章使用详情",
       "issueSeal": "用印",
       "documentToSeal": "待用印文件",
-      "sealedProof": "已用印文件（凭证）"
+      "sealedProof": "已用印文件（凭证）",
+      "sealedDocument": "已用印文件"
     }
   }
 }

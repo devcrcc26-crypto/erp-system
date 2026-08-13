@@ -208,6 +208,14 @@
         "myListTitle": "My Official Seal Requests",
         "listDescription": "Review and process official seal requests.",
         "myListDescription": "Submit and track your official seal requests through the approval workflow."
+      },
+      "projectSeal": {
+        "new": "New Project Seal",
+        "detail": "Project Seal",
+        "listTitle": "Project Seal Requests",
+        "myListTitle": "My Project Seal Requests",
+        "listDescription": "Review and process project seal requests.",
+        "myListDescription": "Submit and track your project seal requests through the approval workflow."
       }
     },
     "dashboard": {
@@ -886,7 +894,14 @@
       "documentToSealHint": "Optional — upload the document that needs the official seal (PDF, Word, Excel, or CAD files such as DWG, DXF, DRW, RVT, IFC). HR can download it after approval to print and stamp.",
       "directApprovalNoChain": "Approved directly — no approval required",
       "documentAttached": "Document attached",
-      "failedToLoadOfficialSeals": "Failed to load official seal requests"
+      "failedToLoadOfficialSeals": "Failed to load official seal requests",
+      "projectSealNotFound": "Project seal request not found",
+      "projectSealRequestNotFound": "Project seal request not found",
+      "projectSealCancelled": "Project seal request cancelled",
+      "projectSealIssued": "Project seal issued",
+      "failedToCancelProjectSeal": "Failed to cancel request",
+      "failedToSubmitProjectSeal": "Failed to submit project seal request",
+      "failedToLoadProjectSeals": "Failed to load project seal requests"
     },
     "urgency": {
       "MINOR": "Minor",
@@ -1060,6 +1075,8 @@
       "sealedDocument": "Sealed Document",
       "submitted": "Submitted",
       "officialSeal": "Official Seal",
+      "projectSeal": "Project Seal",
+      "completedAt": "Completed at",
       "documentToSealAttached": "Document attached",
       "leaveType": "Leave Type",
       "startDate": "Start Date",
@@ -1173,6 +1190,7 @@
       "dateNeeded": "Date Needed",
       "seal" : "Seal",
       "noOfficialSealRequests": "No official seal requests",
+      "noProjectSeals": "No project seal requests",
       "date": "Date",
       "category": "Category",
       "description": "Description",
@@ -1228,6 +1246,7 @@
       "newVehicleApplication": "New Vehicle Application",
       "newVehicleRefueling": "New Refueling Request",
       "newOfficialSeal": "New Official Seal",
+      "newProjectSeal": "New Project Seal",
       "thisMonthSheet": "This month's sheet",
       "submitApplication": "Submit Application",
       "submitRequest": "Submit Request",
@@ -1268,7 +1287,9 @@
     },
     "dialog": {
       "cancelOfficialSealTitle": "Cancel request?",
-      "cancelOfficialSealDesc": "This will cancel the official seal request and any open approval request."
+      "cancelOfficialSealDesc": "This will cancel the official seal request and any open approval request.",
+      "cancelProjectSealTitle": "Cancel request?",
+      "cancelProjectSealDesc": "This will cancel the project seal request and any open approval request."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -1315,6 +1336,8 @@
       "estimatedTotal": "Estimated Total",
       "title": "Title",
       "description": "Description",
+      "dateNeeded": "Date needed",
+      "urgency": "Urgency",
       "justification": "Justification",
       "vendor": "Vendor Name",
       "vendorContact": "Vendor Contact",
@@ -1363,6 +1386,7 @@
       "searchVehicle": "Search application # or destination",
       "searchRefueling": "Search request # or plate",
       "searchOfficialSeal": "Search request # or description",
+      "searchProjectSeal": "Search request # or description",
       "searchBusinessTrip": "Search trip # or destination",
       "searchFlight": "Search application # or route",
       "searchPerDiem": "Search request # or destination",
@@ -1386,6 +1410,9 @@
       "enterJustification": "Describe why this purchase is needed",
       "enterPurpose": "Describe what the materials are needed for",
       "enterOfficialSealDescription": "Describe what the seal is needed for",
+      "enterProjectSealDescription": "Describe what the seal is needed for",
+      "selectProjectSealDateNeeded": "Select date needed",
+      "selectProjectSealUrgency": "Select urgency",
       "enterReason": "Optional - describe the reason for leave",
       "enterNotes": "Any additional information for the approver",
       "enterCategory": "e.g. Transport, Meals, Accommodation",
@@ -1417,7 +1444,8 @@
       "noReceipt": "No receipt attached.",
       "noTicket": "No ticket attached yet.",
       "noApprovalChain": "Approval chain appears after submission.",
-      "noOfficialSealRequests": "No official seal requests yet."
+      "noOfficialSealRequests": "No official seal requests yet.",
+      "noProjectSeals": "No project seal requests yet."
     },
     "section": {
       "requestDetails": "Request Details",
@@ -1440,9 +1468,11 @@
       "vehicleAvailability": "Vehicle Availability",
       "hourSummary": "Hour Summary",
       "officialSealDetails": "Official Seal Details",
+      "projectSealDetails": "Project Seal Details",
       "issueSeal": "Issue Seal",
       "documentToSeal": "Document to Seal",
-      "sealedProof": "Sealed Document (Proof)"
+      "sealedProof": "Sealed Document (Proof)",
+      "sealedDocument": "Sealed Document"
     }
   }
 }
