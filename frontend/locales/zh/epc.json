@@ -1068,7 +1068,6 @@
       "employee": "员工",
       "issued": "用印日期",
       "issuedBy": "用印人",
-      "completed": "完成日期",
       "directApproval": "直接批准",
       "sealAttached": "已用印",
       "sealedDocumentAttached": "已附加用印文件",
