@@ -82,6 +82,7 @@ enum FolderContextType {
   INSPECTION_REPAIR
   OFFICIAL_SEAL
   PROJECT_SEAL
+  EMPLOYEE_CONTRACT
 }
 
 enum NotificationChannel {
@@ -252,8 +253,9 @@ model Company {
   vehicleApplications      VehicleApplication[]
   vehicleRefuelings        VehicleRefueling[]
   inspectionRepairs        InspectionRepair[]
-  officialSeals             OfficialSeal[]
+  officialSeals            OfficialSeal[]
   projectSeals             ProjectSeal[]
+  EmployeeContracts        EmployeeContract[]
   
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -597,6 +599,7 @@ model User {
   meetingAgendaItems     MeetingAgendaItem[]
   meetingAttendees       MeetingAttendee[]
   meetingActionItems     ActionItem[]
+  completedActionItems   ActionItem[]           @relation("ActionItemCompleter")
   correspondenceSent         Correspondence[] @relation("CorrespondenceSender")
   correspondenceReceived     Correspondence[] @relation("CorrespondenceRecipient")
   correspondenceMarkedSent   Correspondence[] @relation("CorrespondenceSentBy")
@@ -635,7 +638,10 @@ model User {
   capturedReviewSnapshots  ReviewContextSnapshot[] @relation("ReviewSnapshotCapturedBy")
   assignedChangeRequests   ProjectChangeRequest[] @relation("ChangeRequestAssignedTo")
   createdCategories        ApprovalCategory[]     @relation("CategoryCreator")
+  updatedCategories        ApprovalCategory[]     @relation("CategoryUpdater")
   approvalRequests         ApprovalRequest[]      @relation("RequestRequester")
+  approvalRequestsCreated  ApprovalRequest[]      @relation("ApprovalRequestCreator")
+  approvalRequestsUpdated  ApprovalRequest[]      @relation("ApprovalRequestUpdater")
   approvalTiers            ApprovalTier[]         @relation("TierApprover")
   approvalComments         ApprovalComment[]        @relation("ApprovalCommenter")
   approvalResponses        ApprovalResponse[]       @relation("ApprovalResponder")
@@ -652,24 +658,32 @@ model User {
   businessTripPassengers      BusinessTripPassenger[] @relation("BusinessTripPassenger")
   expenseClaimsAsEmployee     ExpenseClaim[]      @relation("ExpenseClaimEmployee")
   expenseClaimsCreated        ExpenseClaim[]      @relation("ExpenseClaimCreator")
+  expenseClaimsUpdated        ExpenseClaim[]      @relation("ExpenseClaimUpdater")
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
+  perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
   perDiemRatesCreated         PerDiemRate[]       @relation("PerDiemRateCreator")
+  perDiemRatesUpdated         PerDiemRate[]       @relation("PerDiemRateUpdater")
   purchaseRequestsAsEmployee  PurchaseRequest[]   @relation("PurchaseRequestEmployee")
   purchaseRequestsCreated     PurchaseRequest[]   @relation("PurchaseRequestCreator")
+  purchaseRequestsUpdated       PurchaseRequest[]   @relation("PurchaseRequestUpdater")
   materialRequisitionsAsEmployee MaterialRequisition[] @relation("MaterialRequisitionEmployee")
   materialRequisitionsCreated    MaterialRequisition[] @relation("MaterialRequisitionCreator")
+  materialRequisitionsUpdated    MaterialRequisition[] @relation("MaterialRequisitionUpdater")
   consumablesRequisitionsAsEmployee ConsumablesRequisition[] @relation("ConsumablesRequisitionEmployee")
   consumablesRequisitionsCreated    ConsumablesRequisition[] @relation("ConsumablesRequisitionCreator")
+  consumablesRequisitionsUpdated    ConsumablesRequisition[] @relation("ConsumablesRequisitionUpdater")
   vehiclesAsDiver                  CompanyVehicle[]          @relation("VehicleDriver")
   vehiclesCreated                  CompanyVehicle[]          @relation("VehicleCreator")
   vehicleApplicationsAsEmployee    VehicleApplication[]     @relation("VehicleAppEmployee")
   vehicleApplicationsAsDriver      VehicleApplication[]     @relation("VehicleAppDriver")
   vehicleApplicationsCreated       VehicleApplication[]     @relation("VehicleAppCreator")
+
   vehicleApplicationsReleased      VehicleApplication[]     @relation("VehicleAppReleaser")
   vehicleRefuelingsAsEmployee      VehicleRefueling[]       @relation("RefuelingEmployee")
   vehicleRefuelingsAsDriver        VehicleRefueling[]       @relation("RefuelingDriver")
   vehicleRefuelingsCreated         VehicleRefueling[]       @relation("RefuelingCreator")
+
   inspectionRepairsAsEmployee      InspectionRepair[]       @relation("InspectionRepairEmployee")
   inspectionRepairsCreated         InspectionRepair[]       @relation("InspectionRepairCreator")
 
@@ -681,7 +695,8 @@ model User {
   projectSealEmployee             ProjectSeal[]             @relation("ProjectSealEmployee")
   projectSealIssued               ProjectSeal[]             @relation("ProjectSealIssuer")
 
-
+  employeeContractsCreated        EmployeeContract[]        @relation("EmployeeContractCreator")
+  employeeContractEmployee        EmployeeContract[]        @relation("EmployeeContractEmployee")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
@@ -1004,9 +1019,9 @@ model DocumentFolder {
   vehicleApplications        VehicleApplication[]
   vehicleRefuelings          VehicleRefueling[]
   inspectionRepairs          InspectionRepair[]
-  officialSeals       OfficialSeal[]
-  projectSeals        ProjectSeal[]
-
+  officialSeals              OfficialSeal[]
+  projectSeals               ProjectSeal[]
+  employeeContracts          EmployeeContract[]
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -2046,13 +2061,13 @@ model DesignPackage {
   company        Company                   @relation(fields: [companyId], references: [id])
   taskDiscipline TaskDiscipline            @relation(fields: [taskDisciplineId], references: [id])
   designerUser           User? @relation("SubtaskDesigner", fields: [designerUserId], references: [id])
-  reviewerUser           User? @relation("SubtaskReviewer", fields: [reviewerUserId], references: [id])
-  disciplinaryLeaderUser User? @relation("SubtaskDisciplinaryLeader", fields: [disciplinaryLeaderUserId], references: [id])
-  deptDeputyChiefUser    User? @relation("SubtaskDeptDeputyChief", fields: [deptDeputyChiefUserId], references: [id])
-  instituteChiefUser     User? @relation("SubtaskInstituteChief", fields: [instituteChiefUserId], references: [id])
-  disciplineOwnerUser    User? @relation("SubtaskDisciplineOwner", fields: [disciplineOwnerUserId], references: [id])
+  reviewerUser           User? @relation("SubtaskReviewer", fields: [reviewerUserId], references: [id], map: "design_package_package_reviewer_user_id_fkey")
+  disciplinaryLeaderUser User? @relation("SubtaskDisciplinaryLeader", fields: [disciplinaryLeaderUserId], references: [id], map: "design_package_package_discipline_lead_user_id_fkey")
+  deptDeputyChiefUser    User? @relation("SubtaskDeptDeputyChief", fields: [deptDeputyChiefUserId], references: [id], map: "design_package_package_chief_user_id_fkey")
+  instituteChiefUser     User? @relation("SubtaskInstituteChief", fields: [instituteChiefUserId], references: [id], map: "design_package_package_institute_chief_user_id_fkey")
+  disciplineOwnerUser    User? @relation("SubtaskDisciplineOwner", fields: [disciplineOwnerUserId], references: [id], map: "design_package_package_owner_user_id_fkey")
   supportingDesignerUser User? @relation("SubtaskSupportingDesigner", fields: [supportingDesignerUserId], references: [id])
-  siteRepresentative     User? @relation("PackageSiteRep", fields: [siteRepresentativeUserId], references: [id])
+  siteRepresentative     User? @relation("PackageSiteRep", fields: [siteRepresentativeUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items          DesignPackageItem[]
   dependencies   DesignPackageDependency[] @relation("DependentPackage")
   dependedOnBy   DesignPackageDependency[] @relation("PrerequisitePackage")
@@ -2072,13 +2087,13 @@ model DesignPackage {
   @@index([companyId, deletedAt], map: "idx_design_package_company_deleted")
   @@index([taskDisciplineId], map: "idx_design_package_task_discipline_id")
   @@index([designerUserId], map: "idx_design_package_designer_user_id")
-  @@index([reviewerUserId], map: "idx_design_package_reviewer_user_id")
-  @@index([disciplinaryLeaderUserId], map: "idx_design_package_disciplinary_leader_user_id")
-  @@index([deptDeputyChiefUserId], map: "idx_design_package_dept_deputy_chief_user_id")
-  @@index([instituteChiefUserId], map: "idx_design_package_institute_chief_user_id")
-  @@index([disciplineOwnerUserId], map: "idx_design_package_discipline_owner_user_id")
   @@index([supportingDesignerUserId], map: "idx_design_package_supporting_designer_user_id")
   @@index([siteRepresentativeUserId], map: "idx_design_package_site_representative_user_id")
+  @@index([deptDeputyChiefUserId], map: "idx_design_package_package_chief_user_id")
+  @@index([disciplinaryLeaderUserId], map: "idx_design_package_package_discipline_lead_user_id")
+  @@index([instituteChiefUserId], map: "idx_design_package_package_institute_chief_user_id")
+  @@index([disciplineOwnerUserId], map: "idx_design_package_package_owner_user_id")
+  @@index([reviewerUserId], map: "idx_design_package_package_reviewer_user_id")
   @@map("design_package")
 }
 
@@ -2421,16 +2436,16 @@ model SubmittalExternalApproval {
   approvalType     String   @map("approval_type")
   approvedByName   String   @map("approved_by_name")
   onBehalfOf       String   @map("on_behalf_of")
-  approvedAt       DateTime @map("approved_at")
+  approvedAt       DateTime @map("approved_at") @db.Timestamptz(6)
   notes            String?
   evidenceFolderId String?  @map("evidence_folder_id")
-  createdAt        DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy        String   @map("created_by")
 
-  company        Company         @relation(fields: [companyId], references: [id])
-  submittal      Submittal       @relation("SubmittalApprovals", fields: [submittalId], references: [id])
-  creator        User            @relation("ApprovalCreator", fields: [createdBy], references: [id])
-  evidenceFolder DocumentFolder? @relation(fields: [evidenceFolderId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submittal      Submittal       @relation("SubmittalApprovals", fields: [submittalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator        User            @relation("ApprovalCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evidenceFolder DocumentFolder? @relation(fields: [evidenceFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([companyId], map: "idx_submittal_external_approval_company_id")
   @@index([submittalId], map: "idx_submittal_external_approval_submittal_id")
@@ -2446,14 +2461,14 @@ model SubmittalExternalFeedback {
   comment          String
   evidenceFolderId String?  @map("evidence_folder_id")
   linkedCrId       String?  @map("linked_cr_id")
-  createdAt        DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy        String   @map("created_by")
 
-  company        Company               @relation(fields: [companyId], references: [id])
-  submittal      Submittal             @relation("SubmittalFeedback", fields: [submittalId], references: [id])
-  creator        User                  @relation("FeedbackCreator", fields: [createdBy], references: [id])
-  evidenceFolder DocumentFolder?       @relation(fields: [evidenceFolderId], references: [id])
-  linkedCr       ProjectChangeRequest? @relation(fields: [linkedCrId], references: [id])
+  company        Company               @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submittal      Submittal             @relation("SubmittalFeedback", fields: [submittalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator        User                  @relation("FeedbackCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  evidenceFolder DocumentFolder?       @relation(fields: [evidenceFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedCr       ProjectChangeRequest? @relation(fields: [linkedCrId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([companyId], map: "idx_submittal_external_feedback_company_id")
   @@index([submittalId], map: "idx_submittal_external_feedback_submittal_id")
@@ -2487,17 +2502,17 @@ model SubmittalSiteReview {
   siteRepUserId String                    @map("site_rep_user_id")
   status        SubmittalSiteReviewStatus @default(PENDING)
   comment       String?
-  reviewedAt    DateTime?                 @map("reviewed_at")
+  reviewedAt    DateTime?                 @map("reviewed_at") @db.Timestamptz(6)
   reviewedBy    String?                   @map("reviewed_by")
-  createdAt     DateTime                  @default(now()) @map("created_at")
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy     String                    @map("created_by")
-  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  updatedAt     DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   updatedBy     String                    @map("updated_by")
 
-  company   Company   @relation(fields: [companyId], references: [id])
-  submittal Submittal @relation(fields: [submittalId], references: [id])
-  siteRep   User      @relation("SubmittalSiteRep", fields: [siteRepUserId], references: [id])
-  reviewer  User?     @relation("SubmittalSiteReviewReviewedBy", fields: [reviewedBy], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submittal Submittal @relation(fields: [submittalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  siteRep   User      @relation("SubmittalSiteRep", fields: [siteRepUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviewer  User?     @relation("SubmittalSiteReviewReviewedBy", fields: [reviewedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([submittalId, siteRepUserId], map: "uq_submittal_site_review_submittal_rep")
   @@index([companyId], map: "idx_submittal_site_review_company_id")
@@ -2636,7 +2651,7 @@ model ProjectChangeRequest {
   attachmentFolderId      String?                    @map("attachment_folder_id")
   assignedTo              String?                    @map("assigned_to")
   affectedEdvIds          String[]                   @default([]) @map("affected_edv_ids")
-  affectedEdvSnapshot     Json?                      @map("affected_edv_snapshot")
+  affectedEdvSnapshot     Json?                      @default("[]") @map("affected_edv_snapshot")
   createdAt               DateTime                   @default(now()) @map("created_at")
   createdBy               String                     @map("created_by")
   updatedAt               DateTime                   @updatedAt @map("updated_at")
@@ -2882,8 +2897,8 @@ model Meeting {
 
   project        Project             @relation(fields: [projectId], references: [id])
   organizer      User                @relation(fields: [organizerId], references: [id])
-  taskDiscipline TaskDiscipline?     @relation(fields: [taskDisciplineId], references: [id])
-  designPackage  DesignPackage?      @relation(fields: [designPackageId], references: [id])
+  taskDiscipline TaskDiscipline?     @relation(fields: [taskDisciplineId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  designPackage  DesignPackage?      @relation(fields: [designPackageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   agendaItems    MeetingAgendaItem[]
   attendees      MeetingAttendee[]
   actionItems    ActionItem[]
@@ -2955,9 +2970,10 @@ model ActionItem {
   deletedBy       String?   @map("deleted_by")
 
   meeting       Meeting        @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  owner         User?          @relation(fields: [ownerId], references: [id])
-  linkedIssue   Issue?         @relation(fields: [linkedIssueId], references: [id])
-  designPackage DesignPackage? @relation(fields: [designPackageId], references: [id])
+  owner         User?          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  linkedIssue   Issue?         @relation(fields: [linkedIssueId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  designPackage DesignPackage? @relation(fields: [designPackageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  completedByUser User?          @relation("ActionItemCompleter", fields: [completedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([meetingId], map: "idx_action_item_meeting_id")
   @@index([linkedIssueId], map: "idx_action_item_linked_issue_id")
@@ -3058,11 +3074,11 @@ model RiskMitigation {
   residualScore      Int      @map("residual_score")
   notes              String?
   assessedBy         String   @map("assessed_by")
-  assessedAt         DateTime @default(now()) @map("assessed_at")
-  createdAt          DateTime @default(now()) @map("created_at")
+  assessedAt         DateTime @default(now()) @map("assessed_at") @db.Timestamp(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  risk     Risk @relation("RiskMitigations", fields: [riskId], references: [id], onDelete: Cascade)
-  assessor User @relation("MitigationAssessor", fields: [assessedBy], references: [id])
+  risk     Risk @relation("RiskMitigations", fields: [riskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assessor User @relation("MitigationAssessor", fields: [assessedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([riskId], map: "idx_risk_mitigation_risk_id")
   @@index([riskId, residualScore], map: "idx_risk_mitigation_risk_score")
@@ -3073,7 +3089,7 @@ model RiskReview {
   id                    String   @id @default(uuid())
   riskId                String   @map("risk_id")
   reviewedBy            String   @map("reviewed_by")
-  reviewedAt            DateTime @default(now()) @map("reviewed_at")
+  reviewedAt            DateTime @default(now()) @map("reviewed_at") @db.Timestamp(6)
   previousStatus        String?  @map("previous_status")
   newStatus             String?  @map("new_status")
   previousScore         Int?     @map("previous_score")
@@ -3081,10 +3097,10 @@ model RiskReview {
   previousResidualScore Int?     @map("previous_residual_score")
   newResidualScore      Int?     @map("new_residual_score")
   notes                 String?
-  createdAt             DateTime @default(now()) @map("created_at")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  risk     Risk @relation(fields: [riskId], references: [id])
-  reviewer User @relation("RiskReviewer", fields: [reviewedBy], references: [id])
+  risk     Risk @relation(fields: [riskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviewer User @relation("RiskReviewer", fields: [reviewedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([riskId], map: "idx_risk_review_risk_id")
   @@map("risk_review")
@@ -3341,15 +3357,16 @@ model ApprovalCategory {
   isActive         Boolean   @default(true) @map("is_active")
   allowAttachments Boolean   @default(true) @map("allow_attachments")
   sortOrder        Int       @default(0) @map("sort_order")
-  createdAt        DateTime  @default(now()) @map("created_at")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   createdBy        String    @map("created_by")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   updatedBy        String    @map("updated_by")
-  deletedAt        DateTime? @map("deleted_at")
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamp(6)
   deletedBy        String?   @map("deleted_by")
 
-  company  Company           @relation(fields: [companyId], references: [id])
-  creator  User              @relation("CategoryCreator", fields: [createdBy], references: [id])
+  company  Company           @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator  User              @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater  User              @relation("CategoryUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   requests ApprovalRequest[]
 
   @@unique([companyId, code])
@@ -3367,24 +3384,26 @@ model ApprovalRequest {
   status             ApprovalRequestStatus @default(DRAFT)
   currentTier        Int                   @default(0) @map("current_tier")
   matchedRuleName    String?               @map("matched_rule_name")
-  submittedAt        DateTime?             @map("submitted_at")
-  completedAt        DateTime?             @map("completed_at")
+  submittedAt        DateTime?             @map("submitted_at") @db.Timestamp(6)
+  completedAt        DateTime?             @map("completed_at") @db.Timestamp(6)
   attachmentFolderId String?               @map("attachment_folder_id")
   notes              String?
-  createdAt          DateTime              @default(now()) @map("created_at")
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
   createdBy          String                @map("created_by")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
+  updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   updatedBy          String                @map("updated_by")
-  deletedAt          DateTime?             @map("deleted_at")
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamp(6)
   deletedBy          String?               @map("deleted_by")
 
-  company          Company           @relation(fields: [companyId], references: [id])
-  category         ApprovalCategory  @relation(fields: [categoryId], references: [id])
-  requester        User              @relation("RequestRequester", fields: [requestedBy], references: [id])
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category         ApprovalCategory  @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  requester        User              @relation("RequestRequester", fields: [requestedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User              @relation("ApprovalRequestCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User              @relation("ApprovalRequestUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tiers            ApprovalTier[]
   comments         ApprovalComment[]
   responses        ApprovalResponse[]
-  attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
+  attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   leaveRequest       LeaveRequest?
   overtimeSheet      OvertimeSheet?
   flightApplication  FlightApplication?
@@ -3401,10 +3420,10 @@ model ApprovalRequest {
   projectSeal            ProjectSeal?
 
 
-  @@index([companyId])
-  @@index([categoryId])
-  @@index([status])
-  @@index([requestedBy])
+  @@index([categoryId], map: "idx_approval_request_category")
+  @@index([companyId], map: "idx_approval_request_company")
+  @@index([requestedBy], map: "idx_approval_request_requested_by")
+  @@index([status], map: "idx_approval_request_status")
   @@map("approval_request")
 }
 
@@ -3418,14 +3437,14 @@ model ApprovalTier {
   decision   ApprovalTierDecision @default(PENDING)
   comment    String?
   conditions Json                 @default("[]")
-  decidedAt  DateTime?            @map("decided_at")
-  createdAt  DateTime             @default(now()) @map("created_at")
+  decidedAt  DateTime?            @map("decided_at") @db.Timestamp(6)
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamp(6)
 
-  request  ApprovalRequest @relation(fields: [requestId], references: [id])
-  approver User            @relation("TierApprover", fields: [approverId], references: [id])
+  request  ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver User            @relation("TierApprover", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([requestId])
-  @@index([approverId])
+  @@index([approverId], map: "idx_approval_tier_approver")
+  @@index([requestId], map: "idx_approval_tier_request")
   @@map("approval_tier")
 }
 
@@ -3435,11 +3454,11 @@ model ApprovalComment {
   commentBy    String   @map("comment_by")
   commentText  String   @map("comment_text")
   attachmentId String?  @map("attachment_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  request    ApprovalRequest @relation(fields: [requestId], references: [id])
-  commenter  User            @relation("ApprovalCommenter", fields: [commentBy], references: [id])
-  attachment Document?       @relation(fields: [attachmentId], references: [id])
+  request    ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  commenter  User            @relation("ApprovalCommenter", fields: [commentBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment Document?       @relation(fields: [attachmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("approval_comment")
 }
@@ -3494,7 +3513,7 @@ model LeaveRequest {
   completedAt        DateTime?          @map("completed_at")
   createdAt          DateTime           @default(now()) @map("created_at")
   createdBy          String             @map("created_by")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at")
   updatedBy          String             @map("updated_by")
   deletedAt          DateTime?          @map("deleted_at")
   deletedBy          String?            @map("deleted_by")
@@ -3535,12 +3554,12 @@ model LeaveBalance {
   employeeId String    @map("employee_id")
   year       Int
   leaveType  LeaveType @map("leave_type")
-  entitled   Decimal   @db.Decimal(4, 1)
-  used       Decimal   @db.Decimal(4, 1)
-  pending    Decimal   @db.Decimal(4, 1)
-  remaining  Decimal   @default(dbgenerated("(entitled - used - pending)")) @db.Decimal(4, 1)
+  entitled   Decimal   @default(0) @db.Decimal(4, 1)
+  used       Decimal   @default(0) @db.Decimal(4, 1)
+  pending    Decimal   @default(0) @db.Decimal(4, 1)
+  remaining  Decimal?  @default(dbgenerated("((entitled - used) - pending)")) @db.Decimal(4, 1)
   createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
 
   company  Company @relation(fields: [companyId], references: [id])
   employee User    @relation("LeaveBalance", fields: [employeeId], references: [id])
@@ -3572,14 +3591,14 @@ model OvertimeSheet {
   totalNightHours    Decimal             @default(0) @map("total_night_hours") @db.Decimal(6, 2)
   totalWeekendHours  Decimal             @default(0) @map("total_weekend_hours") @db.Decimal(6, 2)
   totalHolidayHours  Decimal             @default(0) @map("total_holiday_hours") @db.Decimal(6, 2)
-  totalHours         Decimal             @default(dbgenerated("(total_regular_hours + total_night_hours + total_weekend_hours + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
+  totalHours         Decimal?            @default(dbgenerated("(((total_regular_hours + total_night_hours) + total_weekend_hours) + total_holiday_hours)")) @map("total_hours") @db.Decimal(6, 2)
   approvalRequestId  String?             @unique @map("approval_request_id")
   attachmentFolderId String?             @map("attachment_folder_id")
   submittedAt        DateTime?           @map("submitted_at")
   completedAt        DateTime?           @map("completed_at")
   createdAt          DateTime            @default(now()) @map("created_at")
   createdBy          String              @map("created_by")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at")
   updatedBy          String              @map("updated_by")
   deletedAt          DateTime?           @map("deleted_at")
   deletedBy          String?             @map("deleted_by")
@@ -3591,8 +3610,8 @@ model OvertimeSheet {
   creator          User             @relation("OvertimeCreator", fields: [createdBy], references: [id])
   entries          OvertimeEntry[]
 
-  @@unique([companyId, employeeId, month, year])
   @@unique([companyId, sheetNumber])
+  @@unique([companyId, employeeId, month, year], map: "overtime_sheet_company_employee_month_year_key")
   @@index([companyId], map: "idx_overtime_sheet_company")
   @@index([employeeId], map: "idx_overtime_sheet_employee")
   @@index([status], map: "idx_overtime_sheet_status")
@@ -3612,10 +3631,10 @@ model OvertimeEntry {
   nightHours      Decimal  @default(0) @map("night_hours") @db.Decimal(5, 2)
   weekendHours    Decimal  @default(0) @map("weekend_hours") @db.Decimal(5, 2)
   holidayHours    Decimal  @default(0) @map("holiday_hours") @db.Decimal(5, 2)
-  totalHours      Decimal  @default(dbgenerated("(regular_hours + night_hours + weekend_hours + holiday_hours)")) @map("total_hours") @db.Decimal(5, 2)
+  totalHours      Decimal  @default(dbgenerated("(((regular_hours + night_hours) + weekend_hours) + holiday_hours)")) @map("total_hours") @db.Decimal(5, 2)
   taskDescription String   @map("task_description")
   createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   sheet     OvertimeSheet            @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   documents OvertimeEntryDocument[]
@@ -3699,7 +3718,7 @@ model FlightApplication {
   completedAt              DateTime?               @map("completed_at")
   createdAt                DateTime                @default(now()) @map("created_at")
   createdBy                String                  @map("created_by")
-  updatedAt                DateTime                @updatedAt @map("updated_at")
+  updatedAt                DateTime                @default(now()) @updatedAt @map("updated_at")
   updatedBy                String                  @map("updated_by")
   deletedAt                DateTime?               @map("deleted_at")
   deletedBy                String?                 @map("deleted_by")
@@ -3793,7 +3812,7 @@ model BusinessTrip {
   estimatedAccommodationCost Decimal?           @map("estimated_accommodation_cost") @db.Decimal(12, 2)
   estimatedPerDiem           Decimal?           @map("estimated_per_diem") @db.Decimal(12, 2)
   estimatedOtherCost         Decimal?           @map("estimated_other_cost") @db.Decimal(12, 2)
-  estimatedTotalCost         Decimal?           @map("estimated_total_cost") @db.Decimal(12, 2) @default(dbgenerated("((COALESCE(estimated_flight_cost, (0)::numeric) + COALESCE(estimated_accommodation_cost, (0)::numeric) + COALESCE(estimated_per_diem, (0)::numeric) + COALESCE(estimated_other_cost, (0)::numeric)))"))
+  estimatedTotalCost         Decimal?           @default(dbgenerated("(((COALESCE(estimated_flight_cost, (0)::numeric) + COALESCE(estimated_accommodation_cost, (0)::numeric)) + COALESCE(estimated_per_diem, (0)::numeric)) + COALESCE(estimated_other_cost, (0)::numeric))")) @map("estimated_total_cost") @db.Decimal(12, 2)
   accommodationRequired      Boolean            @default(true) @map("accommodation_required")
   accommodationDetails       String?            @map("accommodation_details")
   perDiemRequired            Boolean            @default(true) @map("per_diem_required")
@@ -3806,7 +3825,7 @@ model BusinessTrip {
   completedAt                DateTime?          @map("completed_at")
   createdAt                  DateTime           @default(now()) @map("created_at")
   createdBy                  String             @map("created_by")
-  updatedAt                  DateTime           @updatedAt @map("updated_at")
+  updatedAt                  DateTime           @default(now()) @updatedAt @map("updated_at")
   updatedBy                  String             @map("updated_by")
   deletedAt                  DateTime?          @map("deleted_at")
   deletedBy                  String?            @map("deleted_by")
@@ -3861,23 +3880,24 @@ enum SupportedCurrency {
 }
 
 model ExchangeRate {
-  id           String            @id @default(uuid())
+  id           String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId    String            @map("company_id")
   baseCurrency SupportedCurrency @default(ETB) @map("base_currency")
   fromCurrency SupportedCurrency @map("from_currency")
   toCurrency   SupportedCurrency @default(ETB) @map("to_currency")
   rate         Decimal           @db.Decimal(18, 6)
-  fetchedAt    DateTime          @map("fetched_at") @db.Date
+  fetchedAt    DateTime          @default(dbgenerated("CURRENT_DATE")) @map("fetched_at") @db.Date
   createdAt    DateTime          @default(now()) @map("created_at")
 
-  company Company @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([companyId, fromCurrency, toCurrency, fetchedAt])
+  @@index([companyId], map: "idx_exchange_rate_company")
   @@map("exchange_rate")
 }
 
 model PerDiemRate {
-  id                  String            @id @default(uuid())
+  id                  String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId           String            @map("company_id")
   destinationCategory String            @map("destination_category")
   dailyRate           Decimal           @map("daily_rate") @db.Decimal(12, 2)
@@ -3886,16 +3906,18 @@ model PerDiemRate {
   isActive            Boolean           @default(true) @map("is_active")
   createdAt           DateTime          @default(now()) @map("created_at")
   createdBy           String            @map("created_by")
-  updatedAt           DateTime          @updatedAt @map("updated_at")
+  updatedAt           DateTime          @default(now()) @updatedAt @map("updated_at")
   updatedBy           String            @map("updated_by")
   deletedAt           DateTime?         @map("deleted_at")
   deletedBy           String?           @map("deleted_by")
 
-  company  Company          @relation(fields: [companyId], references: [id])
-  creator  User             @relation("PerDiemRateCreator", fields: [createdBy], references: [id])
+  company  Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator  User             @relation("PerDiemRateCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("PerDiemRateUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   perDiems PerDiemRequest[]
 
   @@unique([companyId, destinationCategory])
+  @@index([companyId], map: "idx_per_diem_rate_company")
   @@map("per_diem_rate")
 }
 
@@ -3912,7 +3934,7 @@ enum ExpenseClaimStatus {
 }
 
 model ExpenseClaim {
-  id                 String             @id @default(uuid())
+  id                 String             @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String             @map("company_id")
   claimNumber        String             @map("claim_number")
   employeeId         String             @map("employee_id")
@@ -3926,27 +3948,28 @@ model ExpenseClaim {
   completedAt        DateTime?          @map("completed_at")
   createdAt          DateTime           @default(now()) @map("created_at")
   createdBy          String             @map("created_by")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at")
   updatedBy          String             @map("updated_by")
   deletedAt          DateTime?          @map("deleted_at")
   deletedBy          String?            @map("deleted_by")
 
-  company          Company            @relation(fields: [companyId], references: [id])
-  employee         User               @relation("ExpenseClaimEmployee", fields: [employeeId], references: [id])
-  approvalRequest  ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?    @relation(fields: [attachmentFolderId], references: [id])
-  creator          User               @relation("ExpenseClaimCreator", fields: [createdBy], references: [id])
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User               @relation("ExpenseClaimEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?    @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User               @relation("ExpenseClaimCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("ExpenseClaimUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items            ExpenseClaimItem[]
 
   @@unique([companyId, claimNumber])
-  @@index([companyId])
-  @@index([employeeId])
-  @@index([status])
+  @@index([companyId], map: "idx_expense_claim_company")
+  @@index([employeeId], map: "idx_expense_claim_employee")
+  @@index([status], map: "idx_expense_claim_status")
   @@map("expense_claim")
 }
 
 model ExpenseClaimItem {
-  id           String            @id @default(uuid())
+  id           String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   claimId      String            @map("claim_id")
   category     String
   description  String
@@ -3957,12 +3980,12 @@ model ExpenseClaimItem {
   expenseDate  DateTime          @map("expense_date") @db.Date
   documentId   String?           @map("document_id")
   createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
 
-  claim   ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  receipt Document?    @relation("ExpenseItemReceipt", fields: [documentId], references: [id])
+  claim   ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  receipt Document?    @relation("ExpenseItemReceipt", fields: [documentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@index([claimId])
+  @@index([claimId], map: "idx_expense_claim_item_claim")
   @@map("expense_claim_item")
 }
 
@@ -3979,7 +4002,7 @@ enum PerDiemStatus {
 }
 
 model PerDiemRequest {
-  id                   String            @id @default(uuid())
+  id                   String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId            String            @map("company_id")
   requestNumber        String            @map("request_number")
   employeeId           String            @map("employee_id")
@@ -4004,24 +4027,25 @@ model PerDiemRequest {
   completedAt          DateTime?         @map("completed_at")
   createdAt            DateTime          @default(now()) @map("created_at")
   createdBy            String            @map("created_by")
-  updatedAt            DateTime          @updatedAt @map("updated_at")
+  updatedAt            DateTime          @default(now()) @updatedAt @map("updated_at")
   updatedBy            String            @map("updated_by")
   deletedAt            DateTime?         @map("deleted_at")
   deletedBy            String?           @map("deleted_by")
 
-  company         Company            @relation(fields: [companyId], references: [id])
-  employee        User               @relation("PerDiemEmployee", fields: [employeeId], references: [id])
-  perDiemRate     PerDiemRate?       @relation(fields: [perDiemRateId], references: [id])
-  linkedFlight    FlightApplication? @relation(fields: [linkedFlightId], references: [id])
-  linkedTrip      BusinessTrip?      @relation(fields: [linkedBusinessTripId], references: [id])
-  approvalRequest ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id])
-  creator         User               @relation("PerDiemCreator", fields: [createdBy], references: [id])
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee        User               @relation("PerDiemEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  perDiemRate     PerDiemRate?       @relation(fields: [perDiemRateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedFlight    FlightApplication? @relation(fields: [linkedFlightId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  linkedTrip      BusinessTrip?      @relation(fields: [linkedBusinessTripId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator         User               @relation("PerDiemCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("PerDiemUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([companyId, requestNumber])
-  @@index([companyId])
-  @@index([employeeId])
-  @@index([status])
+  @@index([companyId], map: "idx_per_diem_company")
+  @@index([employeeId], map: "idx_per_diem_employee")
+  @@index([status], map: "idx_per_diem_status")
   @@map("per_diem_request")
 }
 
@@ -4050,7 +4074,7 @@ enum PurchaseRequestStatus {
 }
 
 model PurchaseRequest {
-  id                 String                @id @default(uuid())
+  id                 String                @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                @map("company_id")
   requestNumber      String                @map("request_number")
   employeeId         String                @map("employee_id")
@@ -4070,20 +4094,21 @@ model PurchaseRequest {
   completedAt        DateTime?             @map("completed_at")
   createdAt          DateTime              @default(now()) @map("created_at")
   createdBy          String                @map("created_by")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
+  updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at")
   updatedBy          String                @map("updated_by")
   deletedAt          DateTime?             @map("deleted_at")
   deletedBy          String?               @map("deleted_by")
 
-  company          Company               @relation(fields: [companyId], references: [id])
-  employee         User                  @relation("PurchaseRequestEmployee", fields: [employeeId], references: [id])
-  project          Project?              @relation(fields: [projectId], references: [id])
-  approvalRequest  ApprovalRequest?      @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id])
-  creator          User                  @relation("PurchaseRequestCreator", fields: [createdBy], references: [id])
+  company          Company               @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User                  @relation("PurchaseRequestEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project          Project?              @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest?      @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User                  @relation("PurchaseRequestCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("PurchaseRequestUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items            PurchaseRequestItem[]
 
-  @@unique([companyId, requestNumber], map: "uq_purchase_request_company_number")
+  @@unique([companyId, requestNumber])
   @@index([companyId], map: "idx_purchase_request_company")
   @@index([employeeId], map: "idx_purchase_request_employee")
   @@index([status], map: "idx_purchase_request_status")
@@ -4094,7 +4119,7 @@ model PurchaseRequest {
 }
 
 model PurchaseRequestItem {
-  id            String            @id @default(uuid())
+  id            String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   requestId     String            @map("request_id")
   itemName      String            @map("item_name")
   description   String?
@@ -4106,9 +4131,9 @@ model PurchaseRequestItem {
   totalPriceEtb Decimal           @map("total_price_etb") @db.Decimal(14, 2)
   exchangeRate  Decimal           @default(1) @map("exchange_rate") @db.Decimal(18, 6)
   createdAt     DateTime          @default(now()) @map("created_at")
-  updatedAt     DateTime          @updatedAt @map("updated_at")
+  updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
 
-  request PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([requestId], map: "idx_purchase_request_item_request")
   @@map("purchase_request_item")
@@ -4125,7 +4150,7 @@ enum MaterialRequisitionStatus {
 }
 
 model MaterialRequisition {
-  id                 String                     @id @default(uuid())
+  id                 String                     @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                     @map("company_id")
   requestNumber      String                     @map("request_number")
   employeeId         String                     @map("employee_id")
@@ -4141,20 +4166,21 @@ model MaterialRequisition {
   completedAt        DateTime?                  @map("completed_at")
   createdAt          DateTime                   @default(now()) @map("created_at")
   createdBy          String                     @map("created_by")
-  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  updatedAt          DateTime                   @default(now()) @updatedAt @map("updated_at")
   updatedBy          String                     @map("updated_by")
   deletedAt          DateTime?                  @map("deleted_at")
   deletedBy          String?                    @map("deleted_by")
 
-  company          Company                     @relation(fields: [companyId], references: [id])
-  employee         User                        @relation("MaterialRequisitionEmployee", fields: [employeeId], references: [id])
-  project          Project?                    @relation(fields: [projectId], references: [id])
-  approvalRequest  ApprovalRequest?            @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?             @relation(fields: [attachmentFolderId], references: [id])
-  creator          User                        @relation("MaterialRequisitionCreator", fields: [createdBy], references: [id])
+  company          Company                     @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User                        @relation("MaterialRequisitionEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project          Project?                    @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest?            @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?             @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User                        @relation("MaterialRequisitionCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("MaterialRequisitionUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items            MaterialRequisitionItem[]
 
-  @@unique([companyId, requestNumber], map: "uq_material_requisition_company_number")
+  @@unique([companyId, requestNumber])
   @@index([companyId], map: "idx_material_requisition_company")
   @@index([employeeId], map: "idx_material_requisition_employee")
   @@index([status], map: "idx_material_requisition_status")
@@ -4165,7 +4191,7 @@ model MaterialRequisition {
 }
 
 model MaterialRequisitionItem {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   requisitionId String   @map("requisition_id")
   itemName      String   @map("item_name")
   itemCode      String?  @map("item_code")
@@ -4173,9 +4199,9 @@ model MaterialRequisitionItem {
   quantity      Decimal  @db.Decimal(10, 2)
   unit          String
   createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 
-  requisition MaterialRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  requisition MaterialRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([requisitionId], map: "idx_material_requisition_item")
   @@map("material_requisition_item")
@@ -4192,7 +4218,7 @@ enum ConsumablesRequisitionStatus {
 }
 
 model ConsumablesRequisition {
-  id                   String                       @id @default(uuid())
+  id                   String                       @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId            String                       @map("company_id")
   requestNumber        String                       @map("request_number")
   employeeId           String                       @map("employee_id")
@@ -4208,19 +4234,20 @@ model ConsumablesRequisition {
   completedAt          DateTime?                    @map("completed_at")
   createdAt            DateTime                     @default(now()) @map("created_at")
   createdBy            String                       @map("created_by")
-  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  updatedAt            DateTime                     @default(now()) @updatedAt @map("updated_at")
   updatedBy            String                       @map("updated_by")
   deletedAt            DateTime?                    @map("deleted_at")
   deletedBy            String?                      @map("deleted_by")
 
-  company          Company                      @relation(fields: [companyId], references: [id])
-  employee         User                         @relation("ConsumablesRequisitionEmployee", fields: [employeeId], references: [id])
-  approvalRequest  ApprovalRequest?             @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?              @relation(fields: [attachmentFolderId], references: [id])
-  creator          User                         @relation("ConsumablesRequisitionCreator", fields: [createdBy], references: [id])
+  company          Company                      @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User                         @relation("ConsumablesRequisitionEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest?             @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?              @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User                         @relation("ConsumablesRequisitionCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater          User               @relation("ConsumablesRequisitionUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items            ConsumablesRequisitionItem[]
 
-  @@unique([companyId, requestNumber], map: "uq_consumables_requisition_company_number")
+  @@unique([companyId, requestNumber])
   @@index([companyId], map: "idx_consumables_req_company")
   @@index([employeeId], map: "idx_consumables_req_employee")
   @@index([status], map: "idx_consumables_req_status")
@@ -4230,7 +4257,7 @@ model ConsumablesRequisition {
 }
 
 model ConsumablesRequisitionItem {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("(gen_random_uuid())::text"))
   requisitionId String   @map("requisition_id")
   itemName      String   @map("item_name")
   itemCode      String?  @map("item_code")
@@ -4238,9 +4265,9 @@ model ConsumablesRequisitionItem {
   quantity      Decimal  @db.Decimal(10, 2)
   unit          String
   createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 
-  requisition ConsumablesRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  requisition ConsumablesRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([requisitionId], map: "idx_consumables_req_item")
   @@map("consumables_requisition_item")
@@ -4274,7 +4301,7 @@ enum FuelType {
 }
 
 model CompanyVehicle {
-  id              String        @id @default(uuid())
+  id              String        @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId       String        @map("company_id")
   plateNumber     String        @map("plate_number")
   vehicleType     VehicleType   @map("vehicle_type")
@@ -4289,18 +4316,18 @@ model CompanyVehicle {
   isActive        Boolean       @default(true) @map("is_active")
   createdAt       DateTime      @default(now()) @map("created_at")
   createdBy       String        @map("created_by")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
   updatedBy       String        @map("updated_by")
   deletedAt       DateTime?     @map("deleted_at")
   deletedBy       String?       @map("deleted_by")
 
-  company              Company              @relation(fields: [companyId], references: [id])
-  assignedDriver       User?                @relation("VehicleDriver", fields: [assignedDriverId], references: [id])
-  creator              User                 @relation("VehicleCreator", fields: [createdBy], references: [id])
+  company              Company              @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedDriver       User?                @relation("VehicleDriver", fields: [assignedDriverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator              User                 @relation("VehicleCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   vehicleApplications  VehicleApplication[]
   vehicleRefuelings    VehicleRefueling[]
 
-  @@unique([companyId, plateNumber], map: "uq_company_vehicle_plate")
+  @@unique([companyId, plateNumber])
   @@index([companyId], map: "idx_company_vehicle_company")
   @@index([companyId, deletedAt], map: "idx_company_vehicle_company_deleted")
   @@index([status], map: "idx_company_vehicle_status")
@@ -4326,7 +4353,7 @@ enum DriveType {
 }
 
 model VehicleApplication {
-  id                 String                   @id @default(uuid())
+  id                 String                   @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                   @map("company_id")
   applicationNumber  String                   @map("application_number")
   employeeId         String                   @map("employee_id")
@@ -4350,22 +4377,22 @@ model VehicleApplication {
   completedAt        DateTime?                @map("completed_at")
   createdAt          DateTime                 @default(now()) @map("created_at")
   createdBy          String                   @map("created_by")
-  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  updatedAt          DateTime                 @default(now()) @updatedAt @map("updated_at")
   updatedBy          String                   @map("updated_by")
   deletedAt          DateTime?                @map("deleted_at")
   deletedBy          String?                  @map("deleted_by")
 
-  company          Company          @relation(fields: [companyId], references: [id])
-  employee         User             @relation("VehicleAppEmployee", fields: [employeeId], references: [id])
-  driver           User?            @relation("VehicleAppDriver", fields: [driverId], references: [id])
-  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id])
-  project          Project?         @relation(fields: [projectId], references: [id])
-  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
-  creator          User             @relation("VehicleAppCreator", fields: [createdBy], references: [id])
-  releasedByUser   User?            @relation("VehicleAppReleaser", fields: [releasedBy], references: [id])
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User             @relation("VehicleAppEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  driver           User?            @relation("VehicleAppDriver", fields: [driverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  project          Project?         @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User             @relation("VehicleAppCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  releasedByUser   User?            @relation("VehicleAppReleaser", fields: [releasedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([companyId, applicationNumber], map: "uq_vehicle_application_company_number")
+  @@unique([companyId, applicationNumber])
   @@index([companyId], map: "idx_vehicle_application_company")
   @@index([employeeId], map: "idx_vehicle_application_employee")
   @@index([vehicleId], map: "idx_vehicle_application_vehicle")
@@ -4391,7 +4418,7 @@ enum VehicleRefuelingStatus {
 }
 
 model VehicleRefueling {
-  id                 String                 @id @default(uuid())
+  id                 String                 @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                 @map("company_id")
   requestNumber      String                 @map("request_number")
   employeeId         String                 @map("employee_id")
@@ -4412,21 +4439,21 @@ model VehicleRefueling {
   completedAt        DateTime?              @map("completed_at")
   createdAt          DateTime               @default(now()) @map("created_at")
   createdBy          String                 @map("created_by")
-  updatedAt          DateTime               @updatedAt @map("updated_at")
+  updatedAt          DateTime               @default(now()) @updatedAt @map("updated_at")
   updatedBy          String                 @map("updated_by")
   deletedAt          DateTime?              @map("deleted_at")
   deletedBy          String?                @map("deleted_by")
 
-  company          Company          @relation(fields: [companyId], references: [id])
-  employee         User             @relation("RefuelingEmployee", fields: [employeeId], references: [id])
-  driver           User?            @relation("RefuelingDriver", fields: [driverId], references: [id])
-  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id])
-  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
-  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
-  receiptDocument  Document?        @relation("RefuelingReceipt", fields: [receiptDocumentId], references: [id])
-  creator          User             @relation("RefuelingCreator", fields: [createdBy], references: [id])
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee         User             @relation("RefuelingEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  driver           User?            @relation("RefuelingDriver", fields: [driverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle          CompanyVehicle   @relation(fields: [vehicleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  receiptDocument  Document?        @relation("RefuelingReceipt", fields: [receiptDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator          User             @relation("RefuelingCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([companyId, requestNumber], map: "uq_vehicle_refueling_company_number")
+  @@unique([companyId, requestNumber])
   @@index([companyId], map: "idx_vehicle_refueling_company")
   @@index([employeeId], map: "idx_vehicle_refueling_employee")
   @@index([vehicleId], map: "idx_vehicle_refueling_vehicle")
@@ -4462,7 +4489,7 @@ enum InspectionRepairType {
 }
 
 model InspectionRepair {
-  id                 String                  @id @default(uuid())
+  id                 String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                  @map("company_id")
   employeeId         String                  @map("employee_id")
   location           String
@@ -4482,7 +4509,7 @@ model InspectionRepair {
   completedAt        DateTime?               @map("completed_at")
   createdAt          DateTime                @default(now()) @map("created_at")
   createdBy          String                  @map("created_by")
-  updatedAt          DateTime                @updatedAt @map("updated_at")
+  updatedAt          DateTime                @default(now()) @updatedAt @map("updated_at")
   updatedBy          String                  @map("updated_by")
   deletedAt          DateTime?               @map("deleted_at")
   deletedBy          String?                 @map("deleted_by")
@@ -4612,3 +4639,58 @@ model ProjectSeal {
 }
 
 
+
+enum EmployeeContractStatus{
+    DRAFT
+    ACTIVE
+    SUPERSEDED
+    TERMINATED
+    EXPIRED
+}
+
+enum EmployeeContractType{
+    FIXED_TERM
+    OPEN_ENDED
+    PROBATION
+    RENEWAL
+}
+
+
+model EmployeeContract{
+  id                        String                        @id @default(uuid())
+  companyId                 String                        @map("company_id")
+  contractNumber            String                        @map("contract_number")
+  employeeId                String                        @map("employee_id")
+  contractType              EmployeeContractType          @default(FIXED_TERM) @map("contract_type")
+  status                    EmployeeContractStatus        @default(ACTIVE)
+  signedAt                  DateTime                      @map("signed_at") @db.Date
+  startDate                 DateTime                      @map("start_date") @db.Date
+  endDate                   DateTime?                     @map("end_date") @db.Date
+  terminatedAt              DateTime?                     @map("terminated_at") @db.Date
+  terminationReason         String?                       @map("termination_reason")
+  notes                     String?
+  lastWarnedAt              DateTime?                     @map("last_warned_at")
+  attachmentFolderId       String?                        @map("attachment_folder_id")
+  createdAt                 DateTime                      @default(now()) @map("created_at")
+  createdBy                 String                        @map("created_by")
+  updatedAt                 DateTime                      @updatedAt @map("updated_at")
+  updatedBy                 String                        @map("updated_by")
+  deletedAt                 DateTime?                     @map("deleted_at")
+  deletedBy                 String?                       @map("deleted_by")
+
+
+  company                   Company                       @relation(fields: [companyId], references: [id])
+  employee                  User                          @relation("EmployeeContractEmployee", fields: [employeeId], references: [id])
+  creator                   User                          @relation("EmployeeContractCreator", fields: [createdBy], references: [id])
+  attachmentFolder          DocumentFolder?               @relation(fields: [attachmentFolderId], references: [id])
+
+  @@unique([companyId, contractNumber], map: "uq_employee_contract_company_number")
+  @@index([companyId], map:"idx_employee_contract_company")
+  @@index([companyId, deletedAt], map: "idx_employee_contract_company_deleted")
+  @@index([employeeId], map: "idx_employee_contract_employee")
+  @@index([status],map: "idx_employee_contract_status")
+  @@index([attachmentFolderId], map: "idx_employee_contract_attachment_folder")
+  @@index([companyId, status, endDate], map:"idx_employee_contract_expiring")
+  
+  @@map("employee_contract")
+}
