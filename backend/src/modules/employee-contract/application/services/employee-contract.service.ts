@@ -54,6 +54,7 @@ export class EmployeeContractService {
         companyId: string,
         userId: string,
     ){
+        await this.assertCanManage(companyId, userId);
         const employee = await this.prisma.user.findFirst({
             where: activeOnly({id: dto.employeeId, companyId}),
             select: {id: true},
@@ -112,7 +113,7 @@ export class EmployeeContractService {
         companyId: string,
         userId: string,
     ){
-        const where = await this.buildListWhere(filters, companyId, userId, true);
+        const where = await this.buildListWhere(filters, companyId, userId, false);
         return this.fetchPaginatedContracts(filters, where);
     }
       /** Lists contracts for the current user only. */
@@ -219,7 +220,7 @@ export class EmployeeContractService {
             data: {
                 status: EmployeeContractStatus.TERMINATED,
                 terminatedAt,
-                terminationReason: dto.terminationReason?.trim() || null,
+                terminationReason: dto.terminationReason.trim() || null,
                 updatedBy: userId,
             }
         });
@@ -228,8 +229,8 @@ export class EmployeeContractService {
     }
 
     async deleteContract(
-        companyId: string,
         id: string,
+        companyId: string,
         userId: string,
     ): Promise<void>{
 
@@ -261,7 +262,7 @@ export class EmployeeContractService {
     //----------- Private helpers -----------------------
 
     private parseDateOnly(value: string): Date {
-        const match  = /^(\d{4}-\d{2}-\d{2})$/.exec(value);
+        const match  = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
         if(!match){
             throw new BadRequestException(`Invalid date: ${value}`);
         }

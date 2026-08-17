@@ -195,10 +195,15 @@ export class LeaveBalanceService {
     entitled: Prisma.Decimal;
     used: Prisma.Decimal;
     pending: Prisma.Decimal;
-    remaining: Prisma.Decimal;
+    remaining: Prisma.Decimal | null;
     createdAt: Date;
     updatedAt: Date;
   }): Record<string, unknown> {
+    const remaining =
+      row.remaining != null
+        ? Number(row.remaining)
+        : Number(row.entitled) - Number(row.used) - Number(row.pending);
+
     return {
       id: row.id,
       companyId: row.companyId,
@@ -208,7 +213,7 @@ export class LeaveBalanceService {
       entitled: Number(row.entitled),
       used: Number(row.used),
       pending: Number(row.pending),
-      remaining: Number(row.remaining),
+      remaining,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

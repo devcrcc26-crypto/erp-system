@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Body, Post,Patch, Query, Get, Param } from "@nestjs/common";
+import { BadRequestException, Controller, Body, Post,Patch, Query, Get, Param, Delete, UseGuards } from "@nestjs/common";
 import { CreateEmployeeContractDto, ListEmployeeContractsDto, TerminateEmployeeContractDto, UpdateEmployeeContractDto } from "../../application/dtos/employee-contract.dtos";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
@@ -6,9 +6,10 @@ import { EmployeeContractService } from "../../application/services/employee-con
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { AuthenticatedUser } from "@/shared/types/jwt-payload.type";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
-import { ApiOperation } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
+import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
 
 async function parseDto<T extends object>(
     cls: new () => T,
@@ -30,7 +31,16 @@ async function parseDto<T extends object>(
     }
     return dto;
 }
-@Controller('hr/employee-contract')
+
+@ApiTags('HR Employee Contract')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'employee-contract', action: 'view' },
+    { module: 'employee-contract', action: 'create' },
+)
+@Controller('hr/employee-contracts')
 export class EmployeeContractController {
     constructor(
         private readonly employeeContractService: EmployeeContractService,
@@ -144,10 +154,17 @@ export class EmployeeContractController {
         );
     }
 
+    @Delete(':id')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'hr', action: 'view' },
+        { module: 'employee-contract', action: 'edit' },
+    )
+    @ApiOperation({ summary: 'Delete an employee contract' })
     async remove(
-        @CurrentUser() user: AuthenticatedUser,
-        @CurrentCompany() companyId: string,
         @Param('id') id: string,
+        @CurrentCompany() companyId: string,
+        @CurrentUser() user: AuthenticatedUser,
         ): Promise<{success: boolean}>{
             await this.employeeContractService.deleteContract(
             id,

@@ -45,6 +45,7 @@ import { PrismaModule } from './shared/prisma/prisma.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { OfficialSealModule } from './modules/official-seal/official-seal.module';
 import { ProjectSealModule } from './modules/project-seal/project-seal.module';
+import { EmployeeContractModule } from './modules/employee-contract/employee-contract.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { ProjectSealModule } from './modules/project-seal/project-seal.module';
     InspectionRepairModule,
     OfficialSealModule,
     ProjectSealModule,
+    EmployeeContractModule,
   ],
   controllers: [AppController],
   providers: [
