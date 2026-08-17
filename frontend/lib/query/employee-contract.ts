@@ -1,0 +1,154 @@
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  CreateEmployeeContractPayload,
+  EmployeeContractDetail,
+  EmployeeContractListItem,
+  ListEmployeeContractsParams,
+  TerminateEmployeeContractPayload,
+  UpdateEmployeeContractPayload,
+} from "../api/employee-contract.types";
+import { toQueryString } from "./pm-query-utils";
+import { PaginatedResult } from "../api/types";
+import { apiGet, apiGetPaginated, apiPost, apiPatch, apiDelete } from "../api/client";
+
+const CONTRACT_PATH = "/hr/employee-contracts";
+
+export const employeeContractKeys = {
+  all: ["employee-contract"] as const,
+  lists: () => [...employeeContractKeys.all, "list"] as const,
+  list: (params: ListEmployeeContractsParams) =>
+    [...employeeContractKeys.lists(), params] as const,
+  myLists: () => [...employeeContractKeys.all, "my"] as const,
+  myList: (params: ListEmployeeContractsParams) =>
+    [...employeeContractKeys.myLists(), params] as const,
+  details: () => [...employeeContractKeys.all, "detail"] as const,
+  detail: (id: string) => [...employeeContractKeys.details(), id] as const,
+};
+
+function buildListQuery(params: ListEmployeeContractsParams): string {
+  const { status, ...rest } = params;
+  const statusValue = Array.isArray(status)
+    ? status.length > 0
+      ? status.join(",")
+      : undefined
+    : status;
+  return toQueryString({ ...rest, status: statusValue });
+}
+
+export function useEmployeeContracts(
+  params: ListEmployeeContractsParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: employeeContractKeys.list(params),
+    queryFn: () =>
+      apiGetPaginated<EmployeeContractListItem>(
+        `${CONTRACT_PATH}${buildListQuery(params)}`,
+      ) as Promise<PaginatedResult<EmployeeContractListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+export function useMyEmployeeContracts(
+  params: ListEmployeeContractsParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: employeeContractKeys.myList(params),
+    queryFn: () =>
+      apiGetPaginated<EmployeeContractListItem>(
+        `${CONTRACT_PATH}/my${buildListQuery(params)}`,
+      ) as Promise<PaginatedResult<EmployeeContractListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+export function useEmployeeContract(id: string, enabled = true) {
+  return useQuery({
+    queryKey: employeeContractKeys.detail(id),
+    queryFn: () =>
+      apiGet<EmployeeContractDetail>(
+        `${CONTRACT_PATH}/${id}`,
+      ) as Promise<EmployeeContractDetail>,
+    enabled,
+    retry: false,
+  });
+}
+
+export function useCreateEmployeeContract() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateEmployeeContractPayload) =>
+      apiPost<EmployeeContractDetail>(CONTRACT_PATH, payload),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.setQueryData(
+        employeeContractKeys.detail(created.id),
+        created,
+      );
+    },
+  });
+}
+
+export function useUpdateEmployeeContract(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateEmployeeContractPayload) =>
+      apiPatch<EmployeeContractDetail>(`${CONTRACT_PATH}/${id}`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.setQueryData(employeeContractKeys.detail(id), updated);
+    },
+  });
+}
+
+export function useTerminateEmployeeContract(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: TerminateEmployeeContractPayload) =>
+      apiPatch<EmployeeContractDetail>(
+        `${CONTRACT_PATH}/${id}/terminate`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.setQueryData(employeeContractKeys.detail(id), updated);
+    },
+  });
+}
+
+export function useDeleteEmployeeContract(id: string){
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: () => apiDelete<{ success: boolean }>(`${CONTRACT_PATH}/${id}`),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({
+                queryKey: employeeContractKeys.lists(),
+            });
+            void queryClient.invalidateQueries({
+                queryKey: employeeContractKeys.myLists(),
+            });
+            void queryClient.removeQueries({
+                queryKey: employeeContractKeys.detail(id),
+            });
+        },
+    });
+}

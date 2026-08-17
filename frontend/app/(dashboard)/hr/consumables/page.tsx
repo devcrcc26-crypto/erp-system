@@ -3,3 +3,5 @@ import ConsumablesRequisitionsListPageContent from '@/components/modules/hr/cons
 export default function ConsumablesRequisitionListPage(): React.ReactNode {
   return <ConsumablesRequisitionsListPageContent />;
 }
+
+
