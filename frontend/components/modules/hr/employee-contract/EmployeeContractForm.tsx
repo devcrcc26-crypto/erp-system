@@ -46,7 +46,7 @@ export default function EmployeeContractForm({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
-  const contractType = Form.useWatch('contractType', form);
+  const contractType = Form.useWatch('contractType', form) ?? contract?.contractType ?? 'FIXED_TERM';
   const requiresEndDate = contractTypeRequiresEndDate(contractType);
 
   const createMutation = useCreateEmployeeContract();

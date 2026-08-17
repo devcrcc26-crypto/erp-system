@@ -85,6 +85,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/official-seal-requests': 'nav.hr.officialSealRequests',
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
   '/hr/employee-contract': 'nav.hr.employeeContract',
+  '/hr/employee-contract/new': 'pages.hr.employeeContract.new',
   '/organization/vehicles': 'nav.organization.vehicles',
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
   '/hr/business-trips': 'nav.hr.businessTrips',
