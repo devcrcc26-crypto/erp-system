@@ -10,8 +10,8 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 /**
  * Gates /hr/* routes.
  * Full HR (hr.view) can access everything.
- * Employees may open overtime and leave-request routes for their own records;
- * page-level ownership checks enforce that.
+ * Employees may open overtime, leave-request, and employee-contract routes
+ * for their own records; page-level ownership checks enforce that.
  */
 export default function HrSectionLayout({
   children,
@@ -26,7 +26,8 @@ export default function HrSectionLayout({
 
   const isEmployeeSelfServiceRoute =
     pathname.startsWith('/hr/overtime') ||
-    pathname.startsWith('/hr/leave-requests');
+    pathname.startsWith('/hr/leave-requests') ||
+    pathname.startsWith('/hr/employee-contract');
 
   const allowed = canViewHr || isEmployeeSelfServiceRoute;
 

@@ -68,13 +68,13 @@ export interface UpdateEmployeeContractPayload {
     contractType?: EmployeeContractType;
     signedAt?: string;
     startDate?: string;
-    endDate?: string;
+    endDate?: string | null;
     notes?: string;
 }
 
 export interface TerminateEmployeeContractPayload {
     terminatedAt?: string;
-    terminationReason?: string;
+    terminationReason: string;
 }
 
 export interface ListEmployeeContractsParams {

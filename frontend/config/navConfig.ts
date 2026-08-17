@@ -84,6 +84,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/project-seal': 'nav.hr.projectSeal',
   '/hr/official-seal-requests': 'nav.hr.officialSealRequests',
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
+  '/hr/employee-contract': 'nav.hr.employeeContract',
   '/organization/vehicles': 'nav.organization.vehicles',
   '/hr/inspection-repair': 'nav.hr.inspectionRepair',
   '/hr/business-trips': 'nav.hr.businessTrips',
@@ -301,6 +302,13 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.overtime',
         href: '/hr/overtime',
         iconKey: 'hr-overtime',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/employee-contract',
+        labelKey: 'nav.hr.employeeContract',
+        href: '/hr/employee-contract',
+        iconKey: 'hr-employee-contract',
         visible: canViewHr,
       },
       {
@@ -786,6 +794,48 @@ export function resolveRouteMeta(
           href: '/hr/vehicle-applications',
         },
         { label: t('pages.hr.vehicleApplication.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/employee-contract/new') {
+    return {
+      titleKey: 'pages.hr.employeeContract.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.employeeContract'),
+          href: '/hr/employee-contract',
+        },
+        { label: t('pages.hr.employeeContract.new') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/employee-contract/') && pathname.endsWith('/edit')) {
+    return {
+      titleKey: 'pages.hr.employeeContract.edit',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.employeeContract'),
+          href: '/hr/employee-contract',
+        },
+        { label: t('pages.hr.employeeContract.edit') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/employee-contract/')) {
+    return {
+      titleKey: 'pages.hr.employeeContract.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.employeeContract'),
+          href: '/hr/employee-contract',
+        },
+        { label: t('pages.hr.employeeContract.detail') },
       ],
     };
   }

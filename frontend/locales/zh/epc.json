@@ -58,7 +58,8 @@
       "perDiem": "差旅补贴",
       "perDiemRates": "差旅补贴标准",
       "attendance": "考勤",
-      "assetManagement": "资产管理"
+      "assetManagement": "资产管理",
+      "employeeContract": "劳动合同"
     }
   },
   "workspace": {
@@ -200,6 +201,16 @@
         "myListTitle": "我的加油申请",
         "listDescription": "审核并处理车辆加油申请。",
         "myListDescription": "提交并跟踪您的车辆加油审批流程。"
+      },
+      "employeeContract": {
+        "new": "新建劳动合同",
+        "edit": "编辑劳动合同",
+        "detail": "劳动合同",
+        "listTitle": "劳动合同",
+        "myListTitle": "我的合同",
+        "listDescription": "创建并管理劳动合同。",
+        "myListDescription": "查看您的劳动合同。",
+        "formDescription": "为员工登记劳动合同类型与日期。"
       },
       "officialSeal": {
         "new": "新建公章使用申请",
@@ -877,7 +888,17 @@
       "REJECTED": "已拒绝",
       "RETURNED": "已退回",
       "CANCELLED": "已取消",
-      "SEAL_ISSUED": "已用印"
+      "SEAL_ISSUED": "已用印",
+      "ACTIVE": "生效中",
+      "SUPERSEDED": "已替换",
+      "TERMINATED": "已终止",
+      "EXPIRED": "已到期"
+    },
+    "contractType": {
+      "FIXED_TERM": "固定期限",
+      "OPEN_ENDED": "无固定期限",
+      "PROBATION": "试用期",
+      "RENEWAL": "续签"
     },
     "messages": {
       "requestApproved": "申请已批准",
@@ -901,7 +922,18 @@
       "projectSealIssued": "项目章已用印",
       "failedToCancelProjectSeal": "取消申请失败",
       "failedToSubmitProjectSeal": "提交项目章使用申请失败",
-      "failedToLoadProjectSeals": "加载项目章使用申请失败"
+      "failedToLoadProjectSeals": "加载项目章使用申请失败",
+      "employeeContractNotFound": "未找到劳动合同",
+      "failedToLoadEmployeeContracts": "加载劳动合同失败",
+      "employeeContractCreated": "劳动合同已创建",
+      "employeeContractUpdated": "劳动合同已更新",
+      "employeeContractTerminated": "劳动合同已终止",
+      "employeeContractDeleted": "劳动合同已删除",
+      "failedToCreateEmployeeContract": "创建劳动合同失败",
+      "failedToUpdateEmployeeContract": "更新劳动合同失败",
+      "failedToTerminateEmployeeContract": "终止劳动合同失败",
+      "failedToDeleteEmployeeContract": "删除劳动合同失败",
+      "cannotEditContract": "该合同无法编辑"
     },
     "urgency": {
       "MINOR": "一般",
@@ -1066,6 +1098,13 @@
       "requestedLitres": "申请升数",
       "estimatedCost": "预计费用",
       "employee": "员工",
+      "contractType": "合同类型",
+      "signedAt": "签署日期",
+      "openEnded": "无固定期限",
+      "terminatedAt": "终止日期",
+      "terminationReason": "终止原因",
+      "createdBy": "创建人",
+      "expiringSoon": "即将到期",
       "issued": "用印日期",
       "issuedBy": "用印人",
       "directApproval": "直接批准",
@@ -1219,7 +1258,10 @@
       "dailyRate": "日标准",
       "currency": "货币",
       "totalAmount": "总金额",
-      "destinationCategory": "目的地"
+      "destinationCategory": "目的地",
+      "contractNumber": "合同编号",
+      "contractType": "合同类型",
+      "signedAt": "签署日期"
     },
     "tabs": {
       "allRequests": "全部申请",
@@ -1276,17 +1318,32 @@
       "viewInApprovals": "在审批中查看",
       "issueSeal": "用印",
       "chooseDocumentOptional": "选择文件（可选）",
-      "backToList": "返回列表"
+      "backToList": "返回列表",
+      "newEmployeeContract": "新建合同",
+      "editEmployeeContract": "编辑合同",
+      "createContract": "创建合同",
+      "terminateContract": "终止",
+      "delete": "删除"
     },
     "validation": {
       "selectDate": "请选择日期",
-      "selectUrgency": "请选择紧急程度"
+      "selectUrgency": "请选择紧急程度",
+      "required": "必填",
+      "selectEmployee": "请选择员工",
+      "endDateRequired": "该合同类型必须填写结束日期",
+      "startAfterSigned": "开始日期不得早于签署日期",
+      "endAfterStart": "结束日期不得早于开始日期",
+      "terminationReasonRequired": "请填写终止原因"
     },
     "dialog": {
       "cancelOfficialSealTitle": "取消申请？",
       "cancelOfficialSealDesc": "这将取消公章使用申请及所有未完成的审批。",
       "cancelProjectSealTitle": "取消申请？",
-      "cancelProjectSealDesc": "这将取消项目章使用申请及所有未完成的审批。"
+      "cancelProjectSealDesc": "这将取消项目章使用申请及所有未完成的审批。",
+      "terminateContractTitle": "终止合同？",
+      "terminateContractDesc": "生效中的合同将被标记为已终止，此操作无法撤销。",
+      "deleteContractTitle": "删除合同？",
+      "deleteContractDesc": "这将删除该生效中的合同记录。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -1371,7 +1428,12 @@
       "linkedTravel": "关联出行（可选）",
       "dailyRate": "日标准",
       "totalAmount": "总金额",
-      "etbEquivalent": "折合埃比尔"
+      "etbEquivalent": "折合埃比尔",
+      "employee": "员工",
+      "contractType": "合同类型",
+      "signedAt": "签署日期",
+      "terminatedAt": "终止日期",
+      "terminationReason": "终止原因"
     },
     "placeholder": {
       "searchRequest": "搜索申请编号或原因",
@@ -1387,9 +1449,11 @@
       "searchBusinessTrip": "搜索出差编号或目的地",
       "searchFlight": "搜索申请编号或路线",
       "searchPerDiem": "搜索申请编号或目的地",
+      "searchEmployeeContract": "搜索合同编号或员工",
       "status": "状态",
       "leaveType": "假期类型",
       "employee": "员工",
+      "contractType": "合同类型",
       "project": "项目",
       "vehicle": "车辆",
       "month": "月份",
@@ -1442,7 +1506,8 @@
       "noTicket": "暂未上传机票。",
       "noApprovalChain": "提交后显示审批链。",
       "noOfficialSealRequests": "暂无公章使用申请。",
-      "noProjectSeals": "暂无项目章使用申请。"
+      "noProjectSeals": "暂无项目章使用申请。",
+      "noEmployeeContracts": "暂无劳动合同。"
     },
     "section": {
       "requestDetails": "申请详情",
@@ -1469,7 +1534,8 @@
       "issueSeal": "用印",
       "documentToSeal": "待用印文件",
       "sealedProof": "已用印文件（凭证）",
-      "sealedDocument": "已用印文件"
+      "sealedDocument": "已用印文件",
+      "contractDetails": "合同详情"
     }
   }
 }

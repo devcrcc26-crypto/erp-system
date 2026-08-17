@@ -60,7 +60,8 @@
       "noApprovalChain": "No approval chain required",
       "directApproved": "Approved directly - no approval required",
       "assetManagement": "Asset Management",
-      "attendance": "Attendance"
+      "attendance": "Attendance",
+      "employeeContract": "Employee Contracts"
     }
   },
   "workspace": {
@@ -202,6 +203,16 @@
         "myListTitle": "My Refueling Requests",
         "listDescription": "Review and process vehicle refueling requests.",
         "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow."
+      },
+      "employeeContract": {
+        "new": "New Employee Contract",
+        "edit": "Edit Employee Contract",
+        "detail": "Employee Contract",
+        "listTitle": "Employee Contracts",
+        "myListTitle": "My Contracts",
+        "listDescription": "Create and manage employment contracts.",
+        "myListDescription": "View your employment contracts.",
+        "formDescription": "Record employment contract dates and type for an employee."
       },
       "officialSeal": {
         "new": "New Official Seal",
@@ -879,7 +890,17 @@
       "REJECTED": "Rejected",
       "RETURNED": "Returned",
       "CANCELLED": "Cancelled",
-      "SEAL_ISSUED": "Seal Issued"
+      "SEAL_ISSUED": "Seal Issued",
+      "ACTIVE": "Active",
+      "SUPERSEDED": "Superseded",
+      "TERMINATED": "Terminated",
+      "EXPIRED": "Expired"
+    },
+    "contractType": {
+      "FIXED_TERM": "Fixed Term",
+      "OPEN_ENDED": "Open-ended",
+      "PROBATION": "Probation",
+      "RENEWAL": "Renewal"
     },
     "messages": {
       "requestApproved": "Request approved",
@@ -903,7 +924,18 @@
       "projectSealIssued": "Project seal issued",
       "failedToCancelProjectSeal": "Failed to cancel request",
       "failedToSubmitProjectSeal": "Failed to submit project seal request",
-      "failedToLoadProjectSeals": "Failed to load project seal requests"
+      "failedToLoadProjectSeals": "Failed to load project seal requests",
+      "employeeContractNotFound": "Employee contract not found",
+      "failedToLoadEmployeeContracts": "Failed to load employee contracts",
+      "employeeContractCreated": "Employee contract created",
+      "employeeContractUpdated": "Employee contract updated",
+      "employeeContractTerminated": "Employee contract terminated",
+      "employeeContractDeleted": "Employee contract deleted",
+      "failedToCreateEmployeeContract": "Failed to create employee contract",
+      "failedToUpdateEmployeeContract": "Failed to update employee contract",
+      "failedToTerminateEmployeeContract": "Failed to terminate employee contract",
+      "failedToDeleteEmployeeContract": "Failed to delete employee contract",
+      "cannotEditContract": "This contract cannot be edited"
     },
     "urgency": {
       "MINOR": "Minor",
@@ -1068,6 +1100,13 @@
       "requestedLitres": "Requested Litres",
       "estimatedCost": "Estimated Cost",
       "employee": "Employee",
+      "contractType": "Contract Type",
+      "signedAt": "Signed",
+      "openEnded": "Open-ended",
+      "terminatedAt": "Terminated",
+      "terminationReason": "Termination Reason",
+      "createdBy": "Created by",
+      "expiringSoon": "Expiring soon",
       "issued": "Issued",
       "issuedBy": "Issued by",
       "completed": "Completed",
@@ -1224,7 +1263,10 @@
       "dailyRate": "Daily Rate",
       "currency": "Currency",
       "totalAmount": "Total Amount",
-      "destinationCategory": "Destination"
+      "destinationCategory": "Destination",
+      "contractNumber": "Contract #",
+      "contractType": "Type",
+      "signedAt": "Signed"
     },
     "tabs": {
       "allRequests": "All Requests",
@@ -1281,17 +1323,32 @@
       "viewInApprovals": "View in Approvals",
       "issueSeal": "Issue Seal",
       "chooseDocumentOptional": "Choose document (optional)",
-      "backToList": "Back to list"
+      "backToList": "Back to list",
+      "newEmployeeContract": "New Contract",
+      "editEmployeeContract": "Edit Contract",
+      "createContract": "Create Contract",
+      "terminateContract": "Terminate",
+      "delete": "Delete"
     },
     "validation": {
       "selectDate": "Select date",
-      "selectUrgency": "Select urgency"
+      "selectUrgency": "Select urgency",
+      "required": "Required",
+      "selectEmployee": "Select an employee",
+      "endDateRequired": "End date is required for this contract type",
+      "startAfterSigned": "Start date must be on or after the signing date",
+      "endAfterStart": "End date must be on or after the start date",
+      "terminationReasonRequired": "Enter a termination reason"
     },
     "dialog": {
       "cancelOfficialSealTitle": "Cancel request?",
       "cancelOfficialSealDesc": "This will cancel the official seal request and any open approval request.",
       "cancelProjectSealTitle": "Cancel request?",
-      "cancelProjectSealDesc": "This will cancel the project seal request and any open approval request."
+      "cancelProjectSealDesc": "This will cancel the project seal request and any open approval request.",
+      "terminateContractTitle": "Terminate contract?",
+      "terminateContractDesc": "This will mark the active contract as terminated. This cannot be undone.",
+      "deleteContractTitle": "Delete contract?",
+      "deleteContractDesc": "This will remove this active contract record."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -1376,7 +1433,12 @@
       "linkedTravel": "Linked Travel (Optional)",
       "dailyRate": "Daily Rate",
       "totalAmount": "Total Amount",
-      "etbEquivalent": "ETB Equivalent"
+      "etbEquivalent": "ETB Equivalent",
+      "employee": "Employee",
+      "contractType": "Contract Type",
+      "signedAt": "Signed Date",
+      "terminatedAt": "Termination Date",
+      "terminationReason": "Termination Reason"
     },
     "placeholder": {
       "searchRequest": "Search request # or reason",
@@ -1392,9 +1454,11 @@
       "searchBusinessTrip": "Search trip # or destination",
       "searchFlight": "Search application # or route",
       "searchPerDiem": "Search request # or destination",
+      "searchEmployeeContract": "Search contract # or employee",
       "status": "Status",
       "leaveType": "Leave type",
       "employee": "Employee",
+      "contractType": "Contract type",
       "project": "Project",
       "vehicle": "Vehicle",
       "month": "Month",
@@ -1447,7 +1511,8 @@
       "noTicket": "No ticket attached yet.",
       "noApprovalChain": "Approval chain appears after submission.",
       "noOfficialSealRequests": "No official seal requests yet.",
-      "noProjectSeals": "No project seal requests yet."
+      "noProjectSeals": "No project seal requests yet.",
+      "noEmployeeContracts": "No employee contracts yet."
     },
     "section": {
       "requestDetails": "Request Details",
@@ -1474,7 +1539,8 @@
       "issueSeal": "Issue Seal",
       "documentToSeal": "Document to Seal",
       "sealedProof": "Sealed Document (Proof)",
-      "sealedDocument": "Sealed Document"
+      "sealedDocument": "Sealed Document",
+      "contractDetails": "Contract Details"
     }
   }
 }
