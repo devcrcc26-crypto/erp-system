@@ -114,6 +114,14 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'overtime', action: 'view', description: 'View overtime requests' },
   { module: 'overtime', action: 'create', description: 'Submit and cancel overtime requests' },
 
+  { module: 'employee-contract', action: 'view', description: 'View employee contracts' },
+  { module: 'employee-contract', action: 'create', description: 'Create employee contracts' },
+  {
+    module: 'employee-contract',
+    action: 'edit',
+    description: 'Update, terminate and delete employee contracts',
+  },
+
   { module: 'flight', action: 'view', description: 'View flight applications' },
   { module: 'flight', action: 'create', description: 'Submit and cancel flight applications' },
   { module: 'flight', action: 'manage', description: 'Attach flight tickets after approval' },
@@ -544,8 +552,13 @@ function projectAdministratorPermissionFlags(
 
   // Project Administrators receive full system access at runtime via
   // isSystemAdministrator() in PermissionService, except HR modules.
-  // Seed-time flags mirror that: grant everything except hr / leave / overtime.
-  if (module === 'hr' || module === 'leave' || module === 'overtime') {
+  // Seed-time flags mirror that: grant everything except HR modules.
+  if (
+    module === 'hr' ||
+    module === 'leave' ||
+    module === 'overtime' ||
+    module === 'employee-contract'
+  ) {
     return null;
   }
 
@@ -930,7 +943,7 @@ async function upsertRolePermission(
 }
 
 /**
- * Soft-deletes any hr / leave / overtime permissions on the given roles.
+ * Soft-deletes HR module permissions on the given roles.
  * Ensures Project Manager and Project Administrator never retain HR access.
  */
 async function revokeHrModulePermissionsForRoles(
@@ -942,7 +955,7 @@ async function revokeHrModulePermissionsForRoles(
 
   const hrPermissions = await prisma.permission.findMany({
     where: {
-      module: { in: ['hr', 'leave', 'overtime'] },
+      module: { in: ['hr', 'leave', 'overtime', 'employee-contract'] },
     },
     select: { id: true },
   });
@@ -1212,6 +1225,57 @@ async function main(): Promise<void> {
         canDelete: false,
         canApprove: false,
         canExport: false,
+      });
+    }
+  }
+
+  // Employee contracts: view for employees and leadership; manage for HR Officer.
+  const employeeContractView = permissions.find(
+    (permission) =>
+      permission.module === 'employee-contract' &&
+      permission.action === 'view',
+  );
+  const employeeContractCreate = permissions.find(
+    (permission) =>
+      permission.module === 'employee-contract' &&
+      permission.action === 'create',
+  );
+  const employeeContractEdit = permissions.find(
+    (permission) =>
+      permission.module === 'employee-contract' && permission.action === 'edit',
+  );
+  if (employeeContractView) {
+    for (const roleName of [
+      'General Manager',
+      'Managing Director',
+      'HR Officer',
+      'Employee',
+    ] as const) {
+      const roleId = roleMap.get(roleName);
+      if (!roleId) {
+        continue;
+      }
+      await upsertRolePermission(roleId, employeeContractView.id, viewOnlyFlags());
+    }
+  }
+  if (employeeContractCreate && employeeContractEdit) {
+    const hrOfficerRoleId = roleMap.get('HR Officer');
+    if (hrOfficerRoleId) {
+      await upsertRolePermission(hrOfficerRoleId, employeeContractCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+      await upsertRolePermission(hrOfficerRoleId, employeeContractEdit.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: true,
+        canApprove: false,
+        canExport: true,
       });
     }
   }
