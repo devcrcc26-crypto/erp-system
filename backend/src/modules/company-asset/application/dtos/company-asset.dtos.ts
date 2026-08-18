@@ -143,5 +143,56 @@ export class ListCompanyAssetsDto {
     type?: string;
 }
 
+export class ListCompanyAssetAssignmentsDto {
+    @ApiPropertyOptional({ default: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    page?: number;
+
+    @ApiPropertyOptional({ default: 20 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    limit?: number;
+
+    @ApiPropertyOptional({ default: false, description: "When true, include returned assignments" })
+    @IsOptional()
+    includeReturned?: boolean;
+
+    @ApiPropertyOptional({ description: "Filter by employee user ID" })
+    @IsOptional()
+    @IsUUID()
+    employeeId?: string;
+}
+
+export class IssueCompanyAssetAssignmentDto {
+    @ApiProperty({ description: "Employee user ID to issue this asset to" })
+    @IsUUID()
+    employeeId!: string;
+
+    @ApiPropertyOptional({ description: "Assignment notes", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    notes?: string;
+}
+
+export class ReturnCompanyAssetAssignmentDto {
+    @ApiPropertyOptional({ description: "Where the asset is returned to", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    returnedTo?: string;
+
+    @ApiPropertyOptional({ description: "Return notes", maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    returnedNotes?: string;
+}
+
 
 export {AssetStatus};

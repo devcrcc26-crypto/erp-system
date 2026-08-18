@@ -905,6 +905,11 @@
       "status": "状态",
       "description": "描述",
       "photo": "照片",
+      "employee": "员工",
+      "notes": "备注",
+      "assignedAt": "分配时间",
+      "returnedTo": "归还位置",
+      "returnedNotes": "归还备注",
       "createdAt": "创建时间",
       "updatedAt": "更新时间"
     },
@@ -917,6 +922,8 @@
       "color": "如 黑色",
       "type": "如 笔记本电脑",
       "description": "可选描述…",
+      "selectEmployee": "选择员工",
+      "returnedTo": "例如：主仓库",
       "filterStatus": "按状态筛选",
       "filterType": "按类型筛选"
     },
@@ -925,6 +932,8 @@
       "editAsset": "编辑资产",
       "deleteAsset": "删除资产",
       "changeStatus": "修改状态",
+      "issueAsset": "发放资产",
+      "returnAsset": "归还资产",
       "save": "保存",
       "create": "创建资产",
       "cancel": "取消",
@@ -936,22 +945,32 @@
       "updated": "资产更新成功",
       "deleted": "资产删除成功",
       "statusUpdated": "资产状态已更新",
+      "noActiveAssignment": "暂无有效分配",
+      "assignmentIssued": "资产已发放",
+      "assignmentReturned": "资产已归还",
       "notFound": "资产未找到",
       "failedToCreate": "创建资产失败",
       "failedToUpdate": "更新资产失败",
       "failedToDelete": "删除资产失败",
-      "failedToUpdateStatus": "更新资产状态失败"
+      "failedToUpdateStatus": "更新资产状态失败",
+      "failedToIssueAssignment": "发放资产失败",
+      "failedToReturnAssignment": "归还资产失败"
     },
     "assetDialog": {
       "deleteTitle": "删除资产？",
       "deleteDesc": "此操作将永久删除该资产记录，不可撤销。",
-      "statusTitle": "修改资产状态"
+      "statusTitle": "修改资产状态",
+      "issueTitle": "向员工发放资产",
+      "issueDesc": "将此资产分配给员工。",
+      "returnTitle": "从分配中归还资产",
+      "returnDesc": "将资产标记为已归还。"
     },
     "assetEmpty": {
       "noAssets": "暂无资产"
     },
     "assetSection": {
-      "assetDetails": "资产详情"
+      "assetDetails": "资产详情",
+      "assetAssignments": "资产分配"
     },
     "status": {
       "DRAFT": "草稿",

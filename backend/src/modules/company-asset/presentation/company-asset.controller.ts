@@ -29,6 +29,9 @@ import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permissio
 import {
   CreateCompanyAssetDto,
   ListCompanyAssetsDto,
+  IssueCompanyAssetAssignmentDto,
+  ListCompanyAssetAssignmentsDto,
+  ReturnCompanyAssetAssignmentDto,
   UpdateCompanyAssetDto,
   UpdateCompanyAssetStatusDto,
 } from "../application/dtos/company-asset.dtos";
@@ -168,6 +171,66 @@ export class CompanyAssetController {
   ): Promise<{ success: boolean }> {
     await this.companyAssetService.deleteAsset(id, companyId, user.userId);
     return { success: true };
+  }
+
+  @Get(":assetId/assignments")
+  @ApiOperation({ summary: "List asset assignments" })
+  listAssignments(
+    @CurrentCompany() companyId: string,
+    @Param("assetId") assetId: string,
+    @Query() query: ListCompanyAssetAssignmentsDto,
+  ): Promise<unknown> {
+    return this.companyAssetService.listAssetAssignments(
+      assetId,
+      query,
+      companyId,
+    );
+  }
+
+  @Post(":assetId/assignments/issue")
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: "assets", action: "edit" },
+    { module: "hr", action: "edit" },
+  )
+  @ApiOperation({ summary: "Issue asset to an employee" })
+  async issueAssignment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("assetId") assetId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(IssueCompanyAssetAssignmentDto, body);
+    return this.companyAssetService.issueAssetAssignment(
+      assetId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post(":assetId/assignments/:assignmentId/return")
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: "assets", action: "edit" },
+    { module: "hr", action: "edit" },
+  )
+  @ApiOperation({ summary: "Return asset from an assignment" })
+  async returnAssignment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("assetId") assetId: string,
+    @Param("assignmentId") assignmentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(ReturnCompanyAssetAssignmentDto, body);
+    return this.companyAssetService.returnAssetAssignment(
+      assetId,
+      assignmentId,
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 
   @Post(":id/photo")

@@ -907,6 +907,11 @@
       "status": "Status",
       "description": "Description",
       "photo": "Photo",
+      "employee": "Employee",
+      "notes": "Notes",
+      "assignedAt": "Assigned At",
+      "returnedTo": "Returned To",
+      "returnedNotes": "Returned Notes",
       "createdAt": "Created At",
       "updatedAt": "Updated At"
     },
@@ -919,6 +924,8 @@
       "color": "e.g. Black",
       "type": "e.g. Laptop",
       "description": "Optional description…",
+      "selectEmployee": "Select employee",
+      "returnedTo": "e.g. Main Store",
       "filterStatus": "Filter by status",
       "filterType": "Filter by type"
     },
@@ -927,6 +934,8 @@
       "editAsset": "Edit Asset",
       "deleteAsset": "Delete Asset",
       "changeStatus": "Change Status",
+      "issueAsset": "Issue Asset",
+      "returnAsset": "Return Asset",
       "save": "Save",
       "create": "Create Asset",
       "cancel": "Cancel",
@@ -938,22 +947,32 @@
       "updated": "Asset updated successfully",
       "deleted": "Asset deleted successfully",
       "statusUpdated": "Asset status updated",
+      "noActiveAssignment": "No active assignment",
+      "assignmentIssued": "Asset issued successfully",
+      "assignmentReturned": "Asset returned successfully",
       "notFound": "Asset not found",
       "failedToCreate": "Failed to create asset",
       "failedToUpdate": "Failed to update asset",
       "failedToDelete": "Failed to delete asset",
-      "failedToUpdateStatus": "Failed to update asset status"
+      "failedToUpdateStatus": "Failed to update asset status",
+      "failedToIssueAssignment": "Failed to issue asset assignment",
+      "failedToReturnAssignment": "Failed to return asset assignment"
     },
     "assetDialog": {
       "deleteTitle": "Delete asset?",
       "deleteDesc": "This will permanently delete this asset record. This action cannot be undone.",
-      "statusTitle": "Change asset status"
+      "statusTitle": "Change asset status",
+      "issueTitle": "Issue asset to employee",
+      "issueDesc": "Assign this asset to an employee.",
+      "returnTitle": "Return asset from assignment",
+      "returnDesc": "Mark the asset as returned."
     },
     "assetEmpty": {
       "noAssets": "No assets found"
     },
     "assetSection": {
-      "assetDetails": "Asset Details"
+      "assetDetails": "Asset Details",
+      "assetAssignments": "Asset Assignment"
     },
     "status": {
       "DRAFT": "Draft",

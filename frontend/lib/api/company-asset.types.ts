@@ -1,5 +1,24 @@
 export type AssetStatus = 'AVAILABLE' | 'IN_USE' | 'REPAIRING' | 'DISPOSED';
 
+export interface AssetUserRef {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface CompanyAssetAssignmentListItem {
+  id: string;
+  companyId: string;
+  assetId: string;
+  userId: string; // employeeId
+  assignedAt: string;
+  notes?: string | null;
+  returnedTo?: string | null;
+  returnedAt?: string | null;
+  returnedNotes?: string | null;
+  employee: AssetUserRef;
+}
+
 export interface CompanyAssetListItem {
   id: string;
   serialNumber: string;
@@ -53,4 +72,21 @@ export interface ListCompanyAssetsParams {
   search?: string;
   status?: AssetStatus;
   type?: string;
+}
+
+export interface ListCompanyAssetAssignmentsParams {
+  page?: number;
+  limit?: number;
+  includeReturned?: boolean;
+  employeeId?: string;
+}
+
+export interface IssueCompanyAssetAssignmentPayload {
+  employeeId: string;
+  notes?: string;
+}
+
+export interface ReturnCompanyAssetAssignmentPayload {
+  returnedTo?: string;
+  returnedNotes?: string;
 }

@@ -10,6 +10,9 @@ import { activeOnly } from "@/shared/prisma/soft-delete.util";
 import {
   CreateCompanyAssetDto,
   ListCompanyAssetsDto,
+  IssueCompanyAssetAssignmentDto,
+  ListCompanyAssetAssignmentsDto,
+  ReturnCompanyAssetAssignmentDto,
   UpdateCompanyAssetDto,
 } from "../dtos/company-asset.dtos";
 import { UpdateCompanyAssetStatusDto } from "../dtos/company-asset.dtos";
@@ -327,6 +330,166 @@ export class CompanyAssetService {
         photoDocumentId: (uploadedDocument as { id: string }).id,
         updatedBy: userId,
       },
+    });
+  }
+
+  /** Lists asset assignments for a given asset (active only by default). */
+  async listAssetAssignments(
+    assetId: string,
+    query: ListCompanyAssetAssignmentsDto,
+    companyId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+
+    const whereBase: Prisma.AssetAssignmentWhereInput = {
+      companyId,
+      assetId,
+      ...(query.employeeId ? { userId: query.employeeId } : {}),
+      ...(query.includeReturned ? {} : { returnedAt: null }),
+    };
+
+    const where = activeOnly(whereBase);
+
+    const [rows, total] = await Promise.all([
+      this.prisma.assetAssignment.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { assignedAt: "desc" },
+        include: {
+          employee: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          returnedBy: { select: { id: true, firstName: true, lastName: true } },
+          issuedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.assetAssignment.count({ where }),
+    ]);
+
+    return buildPaginatedResult(rows, total, page, limit);
+  }
+
+  /** Issues an asset to an employee (creates AssetAssignment + sets asset IN_USE). */
+  async issueAssetAssignment(
+    assetId: string,
+    dto: IssueCompanyAssetAssignmentDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const asset = await this.prisma.companyAsset.findFirst({
+      where: activeOnly({ id: assetId, companyId }),
+    });
+
+    if (!asset) {
+      throw new NotFoundException("Asset not found");
+    }
+
+    const existingActive = await this.prisma.assetAssignment.findFirst({
+      where: activeOnly({
+        companyId,
+        assetId,
+        returnedAt: null,
+      }),
+      select: { id: true },
+    });
+
+    if (existingActive) {
+      throw new ConflictException("Asset already has an active assignment");
+    }
+
+    const now = new Date();
+    const notes = dto.notes?.trim() || null;
+
+    return this.prisma.$transaction(async (tx) => {
+      const assignment = await tx.assetAssignment.create({
+        data: {
+          id: randomUUID(),
+          companyId,
+          assetId,
+          userId: dto.employeeId,
+          assignedAt: now,
+          notes,
+          returnedTo: null,
+          returnedById: null,
+          returnedAt: null,
+          returnedNotes: null,
+          issuedById: userId,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        include: {
+          employee: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          issuedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      await tx.companyAsset.update({
+        where: { id: assetId },
+        data: { status: AssetStatus.IN_USE, updatedBy: userId },
+      });
+
+      return assignment;
+    });
+  }
+
+  /** Returns an asset from an active assignment (updates AssetAssignment + sets asset AVAILABLE). */
+  async returnAssetAssignment(
+    assetId: string,
+    assignmentId: string,
+    dto: ReturnCompanyAssetAssignmentDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const assignment = await this.prisma.assetAssignment.findFirst({
+      where: activeOnly({
+        id: assignmentId,
+        companyId,
+        assetId,
+        returnedAt: null,
+      }),
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException("Active assignment not found");
+    }
+
+    const now = new Date();
+
+    const returnedTo = dto.returnedTo?.trim() || null;
+    const returnedNotes = dto.returnedNotes?.trim() || null;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.assetAssignment.update({
+        where: { id: assignmentId },
+        data: {
+          returnedTo,
+          returnedById: userId,
+          returnedAt: now,
+          returnedNotes,
+          updatedBy: userId,
+        },
+        include: {
+          employee: { select: { id: true, firstName: true, lastName: true } },
+          returnedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+      });
+
+      await tx.companyAsset.update({
+        where: { id: assetId },
+        data: { status: AssetStatus.AVAILABLE, updatedBy: userId },
+      });
+
+      return updated;
     });
   }
 }

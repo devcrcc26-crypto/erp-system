@@ -17,9 +17,13 @@ import type {
   CompanyAssetDetail,
   CompanyAssetListItem,
   CreateCompanyAssetPayload,
+  CompanyAssetAssignmentListItem,
   ListCompanyAssetsParams,
+  ListCompanyAssetAssignmentsParams,
   UpdateCompanyAssetPayload,
   UpdateCompanyAssetStatusPayload,
+  IssueCompanyAssetAssignmentPayload,
+  ReturnCompanyAssetAssignmentPayload,
 } from '@/lib/api/company-asset.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
@@ -128,6 +132,69 @@ export function useDeleteCompanyAsset() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: companyAssetKeys.lists(),
+      });
+    },
+  });
+}
+
+export function useCompanyAssetAssignments(
+  assetId: string,
+  params: ListCompanyAssetAssignmentsParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...companyAssetKeys.detail(assetId), 'assignments', params],
+    queryFn: () =>
+      apiGetPaginated<CompanyAssetAssignmentListItem>(
+        `${ASSETS_PATH}/${assetId}/assignments${toQueryString(params)}`,
+      ) as Promise<PaginatedResult<CompanyAssetAssignmentListItem>>,
+    enabled: Boolean(assetId) && enabled,
+    retry: false,
+  });
+}
+
+export function useIssueCompanyAssetAssignment(assetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: IssueCompanyAssetAssignmentPayload) =>
+      apiPost<CompanyAssetAssignmentListItem>(
+        `${ASSETS_PATH}/${assetId}/assignments/issue`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.detail(assetId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
+      });
+    },
+  });
+}
+
+export function useReturnCompanyAssetAssignment(
+  assetId: string,
+  assignmentId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ReturnCompanyAssetAssignmentPayload) =>
+      apiPost<CompanyAssetAssignmentListItem>(
+        `${ASSETS_PATH}/${assetId}/assignments/${assignmentId}/return`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.detail(assetId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
       });
     },
   });

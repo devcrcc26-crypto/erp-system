@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Select, Skeleton } from 'antd';
+import { Alert, Button, Input, Select, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,9 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { AssetStatus } from '@/lib/api/company-asset.types';
 import {
   useCompanyAsset,
+  useCompanyAssetAssignments,
+  useIssueCompanyAssetAssignment,
+  useReturnCompanyAssetAssignment,
   useDeleteCompanyAsset,
   useUpdateCompanyAssetStatus,
 } from '@/lib/query/company-asset';
@@ -29,6 +32,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { useFullUsersDirectory } from '@/lib/query/users';
 
 export default function CompanyAssetDetailPageContent({
   assetId,
@@ -42,11 +46,78 @@ export default function CompanyAssetDetailPageContent({
   const statusMutation = useUpdateCompanyAssetStatus(assetId);
   const deleteMutation = useDeleteCompanyAsset();
 
+  const assignmentsQuery = useCompanyAssetAssignments(assetId, {
+    page: 1,
+    limit: 1,
+    includeReturned: false,
+  });
+
+  const issueMutation = useIssueCompanyAssetAssignment(assetId);
+  const returnMutation = useReturnCompanyAssetAssignment(
+    assetId,
+    assignmentsQuery.data?.data?.[0]?.id ?? '',
+  );
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<AssetStatus | undefined>();
 
+  const { data: users } = useFullUsersDirectory({
+    enabled: true,
+    // keep cache
+  });
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [issueEmployeeId, setIssueEmployeeId] = useState<string | undefined>(
+    undefined,
+  );
+  const [issueNotes, setIssueNotes] = useState<string>('');
+
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnTo, setReturnTo] = useState<string>('');
+  const [returnNotes, setReturnNotes] = useState<string>('');
+
   const asset = detailQuery.data;
+  const activeAssignment = assignmentsQuery.data?.data?.[0];
+
+  async function handleIssueSubmit(): Promise<void> {
+    if (!issueEmployeeId) return;
+    try {
+      await issueMutation.mutateAsync({
+        employeeId: issueEmployeeId,
+        notes: issueNotes.trim() || undefined,
+      });
+      messageApi.success(t('hr.assetMessages.assignmentIssued'));
+      setIssueModalOpen(false);
+      setIssueEmployeeId(undefined);
+      setIssueNotes('');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.assetMessages.failedToIssueAssignment'),
+        messageApi,
+      );
+    }
+  }
+
+  async function handleReturnSubmit(): Promise<void> {
+    if (!activeAssignment) return;
+    try {
+      await returnMutation.mutateAsync({
+        returnedTo: returnTo.trim() || undefined,
+        returnedNotes: returnNotes.trim() || undefined,
+      });
+      messageApi.success(t('hr.assetMessages.assignmentReturned'));
+      setReturnModalOpen(false);
+      setReturnTo('');
+      setReturnNotes('');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.assetMessages.failedToReturnAssignment'),
+        messageApi,
+      );
+    }
+  }
 
   async function handleStatusChange(): Promise<void> {
     if (!pendingStatus) return;
@@ -218,6 +289,51 @@ export default function CompanyAssetDetailPageContent({
         </SectionCard>
       </div>
 
+      <SectionCard
+        title={t('hr.assetSection.assetAssignments')}
+        bodyClassName="px-5 py-4"
+      >
+        {activeAssignment ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">
+                {activeAssignment.employee.firstName}{' '}
+                {activeAssignment.employee.lastName}
+              </span>
+              <StatusBadge
+                label={t('hr.assetStatus.IN_USE')}
+                variant={assetStatusVariant('IN_USE')}
+              />
+            </div>
+            <p className="text-sm m-0 text-slate-600">
+              {t('hr.assetLabels.assignedAt')}: {formatProjectDate(activeAssignment.assignedAt)}
+            </p>
+            {activeAssignment.notes ? (
+              <p className="text-sm m-0 whitespace-pre-wrap">{activeAssignment.notes}</p>
+            ) : null}
+
+            <div className="flex justify-end">
+              <Button onClick={() => setReturnModalOpen(true)} type="primary">
+                {t('hr.assetButtons.returnAsset')}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Alert
+            type="info"
+            showIcon
+            message={t('hr.assetMessages.noActiveAssignment')}
+            action={
+              asset.status === 'AVAILABLE' ? (
+                <Button type="primary" onClick={() => setIssueModalOpen(true)}>
+                  {t('hr.assetButtons.issueAsset')}
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
+      </SectionCard>
+
       <ConfirmDialog
         open={statusModalOpen}
         title={t('hr.assetDialog.statusTitle')}
@@ -248,6 +364,71 @@ export default function CompanyAssetDetailPageContent({
         onConfirm={() => void handleDelete()}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      <ConfirmDialog
+        open={issueModalOpen}
+        title={t('hr.assetDialog.issueTitle')}
+        description={t('hr.assetDialog.issueDesc')}
+        confirmLabel={t('hr.assetButtons.issueAsset')}
+        confirmLoading={issueMutation.isPending}
+        onConfirm={() => void handleIssueSubmit()}
+        onCancel={() => setIssueModalOpen(false)}
+      >
+        {/* lazy import would be fine, keep minimal */}
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-medium">{t('hr.assetLabels.employee')}</label>
+          <Select
+            showSearch
+            placeholder={t('hr.assetPlaceholder.selectEmployee')}
+            optionFilterProp="label"
+            style={{ width: '100%' }}
+            value={issueEmployeeId}
+            onChange={(v) => setIssueEmployeeId(v)}
+            options={
+              users?.map((u) => ({
+                value: u.id,
+                label: `${u.firstName} ${u.lastName}`,
+              })) ?? []
+            }
+          />
+          <label className="text-sm font-medium">{t('hr.assetLabels.notes')}</label>
+          <Input.TextArea
+            rows={3}
+            maxLength={2000}
+            showCount
+            value={issueNotes}
+            onChange={(e) => setIssueNotes(e.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={returnModalOpen}
+        title={t('hr.assetDialog.returnTitle')}
+        description={t('hr.assetDialog.returnDesc')}
+        confirmLabel={t('hr.assetButtons.returnAsset')}
+        confirmLoading={returnMutation.isPending}
+        onConfirm={() => void handleReturnSubmit()}
+        onCancel={() => setReturnModalOpen(false)}
+      >
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-medium">{t('hr.assetLabels.returnedTo')}</label>
+          <Input
+            maxLength={2000}
+            value={returnTo}
+            onChange={(e) => setReturnTo(e.target.value)}
+            placeholder={t('hr.assetPlaceholder.returnedTo')}
+          />
+          <label className="text-sm font-medium">{t('hr.assetLabels.returnedNotes')}</label>
+          <Input.TextArea
+            rows={3}
+            maxLength={2000}
+            showCount
+            value={returnNotes}
+            onChange={(e) => setReturnNotes(e.target.value)}
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }
