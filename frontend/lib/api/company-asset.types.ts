@@ -17,6 +17,8 @@ export interface CompanyAssetAssignmentListItem {
   returnedAt?: string | null;
   returnedNotes?: string | null;
   employee: AssetUserRef;
+  issuedBy?: AssetUserRef | null;
+  returnedBy?: AssetUserRef | null;
 }
 
 export interface CompanyAssetListItem {

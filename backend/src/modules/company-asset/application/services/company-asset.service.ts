@@ -343,11 +343,15 @@ export class CompanyAssetService {
     const limit = query.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
 
+    const includeReturned =
+      query.includeReturned === true || String(query.includeReturned) === 'true';
+
     const whereBase: Prisma.AssetAssignmentWhereInput = {
       companyId,
       assetId,
       ...(query.employeeId ? { userId: query.employeeId } : {}),
-      ...(query.includeReturned ? {} : { returnedAt: null }),
+      // `includeReturned` may come through as string ("false"/"true") from query params.
+      ...(includeReturned ? {} : { returnedAt: null }),
     };
 
     const where = activeOnly(whereBase);

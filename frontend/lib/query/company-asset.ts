@@ -173,7 +173,7 @@ export function useIssueCompanyAssetAssignment(assetId: string) {
         queryKey: [
           ...companyAssetKeys.detail(assetId),
           'assignments',
-          { page: 1, limit: 1, includeReturned: false },
+          { page: 1, limit: 1, includeReturned: true },
         ],
       });
     },
@@ -203,7 +203,7 @@ export function useReturnCompanyAssetAssignment(
         queryKey: [
           ...companyAssetKeys.detail(assetId),
           'assignments',
-          { page: 1, limit: 1, includeReturned: false },
+          { page: 1, limit: 1, includeReturned: true },
         ],
       });
     },

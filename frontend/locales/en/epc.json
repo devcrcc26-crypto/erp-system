@@ -910,7 +910,10 @@
       "employee": "Employee",
       "notes": "Notes",
       "assignedAt": "Assigned At",
+      "issuedBy": "Issued By",
       "returnedTo": "Returned To",
+      "returnedAt": "Returned At",
+      "returnedBy": "Returned By",
       "returnedNotes": "Returned Notes",
       "createdAt": "Created At",
       "updatedAt": "Updated At"
@@ -972,7 +975,8 @@
     },
     "assetSection": {
       "assetDetails": "Asset Details",
-      "assetAssignments": "Asset Assignment"
+      "assetAssignments": "Asset Assignment",
+      "assignmentHistory": "Assignment History"
     },
     "status": {
       "DRAFT": "Draft",

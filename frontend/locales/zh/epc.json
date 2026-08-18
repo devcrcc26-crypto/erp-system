@@ -908,7 +908,10 @@
       "employee": "员工",
       "notes": "备注",
       "assignedAt": "分配时间",
+      "issuedBy": "发放人",
       "returnedTo": "归还位置",
+      "returnedAt": "归还时间",
+      "returnedBy": "归还处理人",
       "returnedNotes": "归还备注",
       "createdAt": "创建时间",
       "updatedAt": "更新时间"
@@ -970,7 +973,8 @@
     },
     "assetSection": {
       "assetDetails": "资产详情",
-      "assetAssignments": "资产分配"
+      "assetAssignments": "资产分配",
+      "assignmentHistory": "分配历史"
     },
     "status": {
       "DRAFT": "草稿",

@@ -14,7 +14,10 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { AssetStatus } from '@/lib/api/company-asset.types';
+import type {
+  AssetStatus,
+  CompanyAssetAssignmentListItem,
+} from '@/lib/api/company-asset.types';
 import {
   useCompanyAsset,
   useCompanyAssetAssignments,
@@ -48,8 +51,8 @@ export default function CompanyAssetDetailPageContent({
 
   const assignmentsQuery = useCompanyAssetAssignments(assetId, {
     page: 1,
-    limit: 1,
-    includeReturned: false,
+    limit: 20,
+    includeReturned: true,
   });
 
   const issueMutation = useIssueCompanyAssetAssignment(assetId);
@@ -77,7 +80,63 @@ export default function CompanyAssetDetailPageContent({
   const [returnNotes, setReturnNotes] = useState<string>('');
 
   const asset = detailQuery.data;
-  const activeAssignment = assignmentsQuery.data?.data?.[0];
+  const assignmentHistory = assignmentsQuery.data?.data ?? [];
+  const mostRecentAssignment = assignmentHistory[0];
+  const activeAssignment = mostRecentAssignment?.returnedAt
+    ? undefined
+    : mostRecentAssignment;
+  const returnedAssignment = mostRecentAssignment?.returnedAt
+    ? mostRecentAssignment
+    : undefined;
+
+  function formatUserName(user?: {
+    firstName: string;
+    lastName: string;
+  } | null): string {
+    if (!user) {
+      return '-';
+    }
+
+    return `${user.firstName} ${user.lastName}`;
+  }
+
+  function renderAssignmentMeta(
+    assignment: CompanyAssetAssignmentListItem,
+  ): React.ReactNode {
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        <p className="text-sm m-0 text-slate-600">
+          {t('hr.assetLabels.assignedAt')}: {formatProjectDate(assignment.assignedAt)}
+        </p>
+        <p className="text-sm m-0 text-slate-600">
+          {t('hr.assetLabels.issuedBy')}: {formatUserName(assignment.issuedBy)}
+        </p>
+        {assignment.notes ? (
+          <p className="text-sm m-0 whitespace-pre-wrap sm:col-span-2">
+            {t('hr.assetLabels.notes')}: {assignment.notes}
+          </p>
+        ) : null}
+        {assignment.returnedAt ? (
+          <>
+            <p className="text-sm m-0 text-slate-600">
+              {t('hr.assetLabels.returnedAt')}: {formatProjectDate(assignment.returnedAt)}
+            </p>
+            <p className="text-sm m-0 text-slate-600">
+              {t('hr.assetLabels.returnedBy')}: {formatUserName(assignment.returnedBy)}
+            </p>
+            <p className="text-sm m-0 text-slate-600">
+              {t('hr.assetLabels.returnedTo')}: {assignment.returnedTo ?? '-'}
+            </p>
+            {assignment.returnedNotes ? (
+              <p className="text-sm m-0 whitespace-pre-wrap sm:col-span-2">
+                {t('hr.assetLabels.returnedNotes')}: {assignment.returnedNotes}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    );
+  }
 
   async function handleIssueSubmit(): Promise<void> {
     if (!issueEmployeeId) return;
@@ -89,6 +148,7 @@ export default function CompanyAssetDetailPageContent({
       messageApi.success(t('hr.assetMessages.assignmentIssued'));
       // Make UI update immediately (don't rely only on query invalidation).
       await assignmentsQuery.refetch();
+      await detailQuery.refetch();
       setIssueModalOpen(false);
       setIssueEmployeeId(undefined);
       setIssueNotes('');
@@ -111,6 +171,7 @@ export default function CompanyAssetDetailPageContent({
       messageApi.success(t('hr.assetMessages.assignmentReturned'));
       // Make UI update immediately (don't rely only on query invalidation).
       await assignmentsQuery.refetch();
+      await detailQuery.refetch();
       setReturnModalOpen(false);
       setReturnTo('');
       setReturnNotes('');
@@ -309,17 +370,33 @@ export default function CompanyAssetDetailPageContent({
                 variant={assetStatusVariant('IN_USE')}
               />
             </div>
-            <p className="text-sm m-0 text-slate-600">
-              {t('hr.assetLabels.assignedAt')}: {formatProjectDate(activeAssignment.assignedAt)}
-            </p>
-            {activeAssignment.notes ? (
-              <p className="text-sm m-0 whitespace-pre-wrap">{activeAssignment.notes}</p>
-            ) : null}
+            {renderAssignmentMeta(activeAssignment)}
 
             <div className="flex justify-end">
               <Button onClick={() => setReturnModalOpen(true)} type="primary">
                 {t('hr.assetButtons.returnAsset')}
               </Button>
+            </div>
+          </div>
+        ) : returnedAssignment ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">
+                {returnedAssignment.employee.firstName}{' '}
+                {returnedAssignment.employee.lastName}
+              </span>
+              <StatusBadge
+                label={t('hr.assetStatus.AVAILABLE')}
+                variant={assetStatusVariant('AVAILABLE')}
+              />
+            </div>
+            {renderAssignmentMeta(returnedAssignment)}
+            <div className="flex justify-end">
+              {asset.status === 'AVAILABLE' ? (
+                <Button type="primary" onClick={() => setIssueModalOpen(true)}>
+                  {t('hr.assetButtons.issueAsset')}
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -336,6 +413,42 @@ export default function CompanyAssetDetailPageContent({
             }
           />
         )}
+
+        {assignmentHistory.length > 0 ? (
+          <div className="mt-5 border-t border-slate-200 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-700">
+              {t('hr.assetSection.assignmentHistory')}
+            </h3>
+            <div className="flex flex-col gap-3">
+              {assignmentHistory.map((assignment) => {
+                const isReturned = Boolean(assignment.returnedAt);
+                return (
+                  <div
+                    key={assignment.id}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="font-medium">
+                        {assignment.employee.firstName} {assignment.employee.lastName}
+                      </span>
+                      <StatusBadge
+                        label={t(
+                          isReturned
+                            ? 'hr.assetStatus.AVAILABLE'
+                            : 'hr.assetStatus.IN_USE',
+                        )}
+                        variant={assetStatusVariant(
+                          isReturned ? 'AVAILABLE' : 'IN_USE',
+                        )}
+                      />
+                    </div>
+                    {renderAssignmentMeta(assignment)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </SectionCard>
 
       <ConfirmDialog

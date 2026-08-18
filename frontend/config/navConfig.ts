@@ -399,13 +399,6 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
-        key: '/hr/inspection-repair',
-        labelKey: 'nav.hr.inspectionRepair',
-        href: '/hr/inspection-repair',
-        iconKey: 'hr-inspection',
-        visible: canViewHr,
-      },
-      {
         key: '/hr/company-asset',
         labelKey: 'nav.hr.companyAssets',
         href: '/hr/company-asset',
@@ -413,12 +406,19 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
-        key: '/hr/asset-management',
-        labelKey: 'nav.hr.assetManagement',
-        href: '/hr/asset-management',
-        iconKey: 'hr-asset-management',
+        key: '/hr/inspection-repair',
+        labelKey: 'nav.hr.inspectionRepair',
+        href: '/hr/inspection-repair',
+        iconKey: 'hr-inspection',
         visible: canViewHr,
       },
+      // {
+      //   key: '/hr/asset-management',
+      //   labelKey: 'nav.hr.assetManagement',
+      //   href: '/hr/asset-management',
+      //   iconKey: 'hr-asset-management',
+      //   visible: canViewHr,
+      // },
       {
         key: '/hr/attendance',
         labelKey: 'nav.hr.attendance',
