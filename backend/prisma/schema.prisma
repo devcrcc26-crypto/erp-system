@@ -701,7 +701,12 @@ model User {
   employeeContractEmployee        EmployeeContract[]        @relation("EmployeeContractEmployee")
 
   createdAssets                   CompanyAsset[]            @relation("AssetCreator")
+  updatedAssets                   CompanyAsset[]            @relation("AssetUpdater")
   assetAssignmentsAsEmployee      AssetAssignment[]         @relation("AssetAssignmentEmployee")
+  assetAssignmentsAsIssuedBy      AssetAssignment[]         @relation("AssetAssignmentIssuedBy")
+  assetAssignmentsAsReturnedBy    AssetAssignment[]         @relation("AssetAssignmentReturnedBy")
+  assetAssignmentsCreated         AssetAssignment[]         @relation("AssetAssignmentCreator")
+  assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
 
   
 
@@ -1080,6 +1085,8 @@ model Document {
   vehicleRefuelingReceipts    VehicleRefueling[]         @relation("RefuelingReceipt")
   officialSealedDocuments     OfficialSeal[]             @relation("OfficialSealSealedDocument")
   projectSealedDocuments      ProjectSeal[]              @relation("ProjectSealSealedDocument")
+
+  companyAssetPhotos         CompanyAsset[] @relation("CompanyAssetPhotoDocument")
   
 
 
@@ -4733,13 +4740,17 @@ model CompanyAsset {
     photoDocumentId String?           @map("photo_document_id")
 
     company       Company  @relation(fields: [companyId], references: [id])
-    creator       User     @relation('AssetCreator', fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-    photoDocument Document @relation(fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    creator       User     @relation("AssetCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater       User     @relation("AssetUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    photoDocument Document? @relation("CompanyAssetPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+    assetAssignments AssetAssignment[] @relation("AssetAssignment")
 
 
     @@unique([companyId, serialNumber])
     @@index([companyId], map: "idx_company_asset")
     @@index([companyId, deletedAt], map: "idx_company_asset_deleted")
+    @@index([photoDocumentId], map: "idx_company_asset_photo_document")
     @@index([status], map: "idx_company_asset_status")
     @@map("company_asset")
 
@@ -4767,14 +4778,18 @@ model AssetAssignment {
 
 
 
-    company           Company  @relation(fields: [companyId], references: [id])
-    asset             CompanyAsset    @relation("AssetAssignment", fields: [assetId], references: [id])
-    employee          User     @relation("AssetAssignmentEmployee", fields: [userId], references: [id])
-    issuedBy          User     @relation("AssetAssignmentIssuedBy", fields: [issuedBy], references: [id])
-    returnedBy          User     @relation("AssetAssignmentReturnedBy", fields: [returnedById], references: [id])
+    company           Company       @relation(fields: [companyId], references: [id])
+    asset             CompanyAsset  @relation("AssetAssignment", fields: [assetId], references: [id])
+    employee          User          @relation("AssetAssignmentEmployee", fields: [userId], references: [id])
+    issuedBy          User          @relation("AssetAssignmentIssuedBy", fields: [issuedById], references: [id])
+    returnedBy        User?         @relation("AssetAssignmentReturnedBy", fields: [returnedById], references: [id])
+    creator           User          @relation("AssetAssignmentCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater           User          @relation("AssetAssignmentUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
     @@index([companyId, assetId], map: "idx_company_asset_assignment_asset")
     @@index([companyId, userId], map: "idx_company_asset_assignment_user")
+    @@index([companyId, issuedById], map: "idx_company_asset_assignment_issued_by")
+    @@index([companyId, returnedById], map: "idx_company_asset_assignment_returned_by")
     @@index([companyId, deletedAt], map: "idx_company_asset_assignment_deleted")
     @@map("asset_assignment")
 }
