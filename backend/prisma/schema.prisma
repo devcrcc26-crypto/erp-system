@@ -256,6 +256,8 @@ model Company {
   officialSeals            OfficialSeal[]
   projectSeals             ProjectSeal[]
   EmployeeContracts        EmployeeContract[]
+  companyAssets            CompanyAsset[]
+  assetAssignments         AssetAssignment[]
   
 
   @@index([deletedAt], map: "idx_company_deleted_at")
@@ -698,6 +700,11 @@ model User {
   employeeContractsCreated        EmployeeContract[]        @relation("EmployeeContractCreator")
   employeeContractEmployee        EmployeeContract[]        @relation("EmployeeContractEmployee")
 
+  createdAssets                   CompanyAsset[]            @relation("AssetCreator")
+  assetAssignmentsAsEmployee      AssetAssignment[]         @relation("AssetAssignmentEmployee")
+
+  
+
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([companyId], map: "idx_user_company_id")
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
@@ -1023,6 +1030,7 @@ model DocumentFolder {
   projectSeals               ProjectSeal[]
   employeeContracts          EmployeeContract[]
 
+
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
   @@index([parentId], map: "idx_document_folder_parent_id")
@@ -1072,6 +1080,8 @@ model Document {
   vehicleRefuelingReceipts    VehicleRefueling[]         @relation("RefuelingReceipt")
   officialSealedDocuments     OfficialSeal[]             @relation("OfficialSealSealedDocument")
   projectSealedDocuments      ProjectSeal[]              @relation("ProjectSealSealedDocument")
+  
+
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -4693,4 +4703,78 @@ model EmployeeContract{
   @@index([companyId, status, endDate], map:"idx_employee_contract_expiring")
   
   @@map("employee_contract")
+}
+
+enum AssetStatus {
+    AVAILABLE
+    REPAIRING
+    DISPOSED
+    IN_USE
+}
+
+
+model CompanyAsset {
+    id            String            @id @default(uuid())
+    companyId     String            @map("company_id")
+    serialNumber  String            @map("serial_number")
+    brand         String            @map("brand")
+    model         String            @map("model")
+    year          Int               @map("year")
+    color         String            @map("color")
+    type          String         @map("type")
+    status        AssetStatus       @map("status")
+    description   String?           @map("description")
+    createdAt     DateTime          @default(now()) @map("created_at")
+    updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
+    updatedBy     String            @map("updated_by")
+    createdBy     String            @map("created_by")
+    deletedAt     DateTime?         @map("deleted_at")
+    deletedBy     String?            @map("deleted_by")
+    photoDocumentId String?           @map("photo_document_id")
+
+    company       Company  @relation(fields: [companyId], references: [id])
+    creator       User     @relation('AssetCreator', fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    photoDocument Document @relation(fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+
+    @@unique([companyId, serialNumber])
+    @@index([companyId], map: "idx_company_asset")
+    @@index([companyId, deletedAt], map: "idx_company_asset_deleted")
+    @@index([status], map: "idx_company_asset_status")
+    @@map("company_asset")
+
+}
+
+
+model AssetAssignment {
+    id            String            @id @default(uuid())
+    companyId     String            @map("company_id")
+    assetId       String            @map("asset_id")
+    userId        String            @map("user_id")
+    assignedAt    DateTime          @default(now()) @map("assigned_at")
+    returnedTo    String?           @map("returned_to")
+    notes         String?           @map("notes")
+    returnedById    String?           @map("returned_by_id")
+    returnedAt    DateTime?         @map("returned_at")
+    returnedNotes String?           @map("returned_notes")
+    issuedById      String            @map("issued_by_id")
+    createdBy     String            @map("created_by")
+    updatedBy     String            @map("updated_by")
+    createdAt     DateTime @default(now()) @map("created_at")
+    updatedAt     DateTime @updatedAt @map("updated_at")
+    deletedAt     DateTime? @map("deleted_at")
+    deletedBy     String?   @map("deleted_by")
+
+
+
+    company           Company  @relation(fields: [companyId], references: [id])
+    asset             CompanyAsset    @relation("AssetAssignment", fields: [assetId], references: [id])
+    employee          User     @relation("AssetAssignmentEmployee", fields: [userId], references: [id])
+    issuedBy          User     @relation("AssetAssignmentIssuedBy", fields: [issuedBy], references: [id])
+    returnedBy          User     @relation("AssetAssignmentReturnedBy", fields: [returnedById], references: [id])
+
+    @@index([companyId, assetId], map: "idx_company_asset_assignment_asset")
+    @@index([companyId, userId], map: "idx_company_asset_assignment_user")
+    @@index([companyId, deletedAt], map: "idx_company_asset_assignment_deleted")
+    @@map("asset_assignment")
 }
