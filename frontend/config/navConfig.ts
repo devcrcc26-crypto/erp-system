@@ -92,6 +92,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
   '/hr/per-diem-rates': 'nav.hr.perDiemRates',
+  '/hr/company-asset': 'nav.hr.companyAssets',
+  '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/asset-management': 'nav.hr.assetManagement',
   '/hr/attendance': 'nav.hr.attendance',
 };
@@ -401,6 +403,13 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.inspectionRepair',
         href: '/hr/inspection-repair',
         iconKey: 'hr-inspection',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/company-asset',
+        labelKey: 'nav.hr.companyAssets',
+        href: '/hr/company-asset',
+        iconKey: 'hr-company-asset',
         visible: canViewHr,
       },
       {

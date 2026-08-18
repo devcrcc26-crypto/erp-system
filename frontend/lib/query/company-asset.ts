@@ -1,0 +1,133 @@
+'use client';
+
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  apiDelete,
+  apiGet,
+  apiGetPaginated,
+  apiPatch,
+  apiPost,
+} from '@/lib/api/client';
+import type {
+  CompanyAssetDetail,
+  CompanyAssetListItem,
+  CreateCompanyAssetPayload,
+  ListCompanyAssetsParams,
+  UpdateCompanyAssetPayload,
+  UpdateCompanyAssetStatusPayload,
+} from '@/lib/api/company-asset.types';
+import type { PaginationMeta } from '@/lib/api/types';
+import { toQueryString } from '@/lib/query/pm-query-utils';
+
+type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
+
+const ASSETS_PATH = '/organization/assets';
+
+export const companyAssetKeys = {
+  all: ['company-assets'] as const,
+  lists: () => [...companyAssetKeys.all, 'list'] as const,
+  list: (params: ListCompanyAssetsParams) =>
+    [...companyAssetKeys.lists(), params] as const,
+  details: () => [...companyAssetKeys.all, 'detail'] as const,
+  detail: (id: string) => [...companyAssetKeys.details(), id] as const,
+  available: () => [...companyAssetKeys.all, 'available'] as const,
+};
+
+export function useCompanyAssets(
+  params: ListCompanyAssetsParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: companyAssetKeys.list(params),
+    queryFn: () =>
+      apiGetPaginated<CompanyAssetListItem>(
+        `${ASSETS_PATH}${toQueryString(params)}`,
+      ) as Promise<PaginatedResult<CompanyAssetListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+export function useCompanyAsset(id: string, enabled = true) {
+  return useQuery({
+    queryKey: companyAssetKeys.detail(id),
+    queryFn: () => apiGet<CompanyAssetDetail>(`${ASSETS_PATH}/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
+
+export function useAvailableAssets(enabled = true) {
+  return useQuery({
+    queryKey: companyAssetKeys.available(),
+    queryFn: () => apiGet<CompanyAssetListItem[]>(`${ASSETS_PATH}/available`),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useCreateCompanyAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateCompanyAssetPayload) =>
+      apiPost<CompanyAssetDetail>(ASSETS_PATH, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+    },
+  });
+}
+
+export function useUpdateCompanyAsset(assetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateCompanyAssetPayload) =>
+      apiPatch<CompanyAssetDetail>(`${ASSETS_PATH}/${assetId}`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.setQueryData(
+        companyAssetKeys.detail(assetId),
+        updated,
+      );
+    },
+  });
+}
+
+export function useUpdateCompanyAssetStatus(assetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateCompanyAssetStatusPayload) =>
+      apiPatch<CompanyAssetDetail>(
+        `${ASSETS_PATH}/${assetId}/status`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.detail(assetId),
+      });
+    },
+  });
+}
+
+export function useDeleteCompanyAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: string) =>
+      apiDelete<{ success: boolean }>(`${ASSETS_PATH}/${assetId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+    },
+  });
+}
