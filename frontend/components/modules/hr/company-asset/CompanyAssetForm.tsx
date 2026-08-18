@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Form, Input, InputNumber } from 'antd';
+import { Button, Form, Input, InputNumber, Upload } from 'antd';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -9,6 +9,7 @@ import type { CompanyAssetDetail } from '@/lib/api/company-asset.types';
 import {
   useCreateCompanyAsset,
   useUpdateCompanyAsset,
+  useUploadCompanyAssetPhoto,
 } from '@/lib/query/company-asset';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -40,6 +41,8 @@ export default function CompanyAssetForm({
 
   const createMutation = useCreateCompanyAsset();
   const updateMutation = useUpdateCompanyAsset(asset?.id ?? '');
+  const uploadPhotoMutation = useUploadCompanyAssetPhoto();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   async function handleSubmit(): Promise<void> {
     let values: FormValues;
@@ -61,16 +64,25 @@ export default function CompanyAssetForm({
         description: values.description?.trim() || undefined,
       };
 
-      const result =
+      const baseResult =
         mode === 'edit'
           ? await updateMutation.mutateAsync(payload)
           : await createMutation.mutateAsync(payload);
+
+      const result =
+        photoFile && 'id' in baseResult
+          ? await uploadPhotoMutation.mutateAsync({
+              assetId: baseResult.id,
+              file: photoFile,
+            })
+          : baseResult;
 
       messageApi.success(
         mode === 'edit'
           ? t('hr.assetMessages.updated')
           : t('hr.assetMessages.created'),
       );
+      setPhotoFile(null);
       onSuccess(result);
     } catch (error: unknown) {
       notifyApiError(
@@ -186,6 +198,21 @@ export default function CompanyAssetForm({
               showCount
               placeholder={t('hr.assetPlaceholder.description')}
             />
+          </Form.Item>
+
+          <Form.Item label={t('hr.assetLabels.photo')}>
+            <Upload
+              beforeUpload={(file) => {
+                setPhotoFile(file);
+                return false;
+              }}
+              showUploadList={false}
+              disabled={submitting || uploadPhotoMutation.isPending}
+            >
+              <Button type="default" disabled={submitting}>
+                {photoFile ? `Selected: ${photoFile.name}` : 'Upload Photo'}
+              </Button>
+            </Upload>
           </Form.Item>
         </Form>
       </SectionCard>

@@ -108,6 +108,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-per-diem': WalletOutlined,
   'hr-per-diem-rates': BankOutlined,
   'hr-asset-management': LaptopOutlined,
+  'hr-company-asset': LaptopOutlined,
   'hr-attendance': CalendarOutlined,
 };
 

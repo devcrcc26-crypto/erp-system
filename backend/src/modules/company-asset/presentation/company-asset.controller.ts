@@ -8,11 +8,16 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { UseInterceptors } from "@nestjs/common";
+import { ApiConsumes } from "@nestjs/swagger";
 
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
@@ -163,5 +168,42 @@ export class CompanyAssetController {
   ): Promise<{ success: boolean }> {
     await this.companyAssetService.deleteAsset(id, companyId, user.userId);
     return { success: true };
+  }
+
+  @Post(":id/photo")
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: "documents", action: "create" },
+    { module: "assets", action: "edit" },
+    { module: "hr", action: "edit" },
+  )
+  @ApiOperation({ summary: "Upload a photo for an asset" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("file", { storage: memoryStorage() }))
+  async uploadPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("id") id: string,
+    @Body() body: Record<string, unknown>,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<unknown> {
+    if (!file) {
+      throw new BadRequestException("Photo file is required");
+    }
+
+    // Allow future metadata via `body` without rejecting unknown keys.
+    void body;
+
+    return this.companyAssetService.uploadAssetPhoto(
+      id,
+      {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        buffer: file.buffer,
+      },
+      companyId,
+      user.userId,
+    );
   }
 }

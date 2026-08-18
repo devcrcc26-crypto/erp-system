@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AssetStatus, Prisma } from "@prisma/client";
+import { FolderContextType } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 
 import { buildPaginatedResult, buildPrismaPagination, PaginatedResult } from "@/shared/utils/pagination.util";
@@ -12,10 +13,21 @@ import {
   UpdateCompanyAssetDto,
 } from "../dtos/company-asset.dtos";
 import { UpdateCompanyAssetStatusDto } from "../dtos/company-asset.dtos";
+import { DocumentService } from "@/modules/documents/application/services/document.service";
+
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 @Injectable()
 export class CompanyAssetService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly documentService: DocumentService,
+  ) {}
 
   /** Lists company assets with optional search/status filters. */
   async listAssets(
@@ -246,6 +258,73 @@ export class CompanyAssetService {
       data: {
         deletedAt: new Date(),
         deletedBy: userId,
+        updatedBy: userId,
+      },
+    });
+  }
+
+  /**
+   * Uploads a single photo for an asset and links it via `photoDocumentId`.
+   * Reuses the `Documents` module upload pipeline to store a `Document` + version.
+   */
+  async uploadAssetPhoto(
+    assetId: string,
+    file: UploadedFile,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const asset = await this.prisma.companyAsset.findFirst({
+      where: activeOnly({ id: assetId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+
+    if (!asset) {
+      throw new NotFoundException("Asset not found");
+    }
+
+    const folderName = "Company Asset Photos";
+
+    // One company-level folder for all company assets photos.
+    const existingFolder = await this.prisma.documentFolder.findFirst({
+      where: {
+        companyId,
+        contextType: FolderContextType.COMPANY,
+        contextId: null,
+        name: folderName,
+        parentId: null,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    const folderId =
+      existingFolder?.id ??
+      (await this.prisma.documentFolder.create({
+        data: {
+          id: randomUUID(),
+          companyId,
+          parentId: null,
+          name: folderName,
+          path: `/${folderName}`,
+          contextType: FolderContextType.COMPANY,
+          contextId: null,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        select: { id: true },
+      })).id;
+
+    const uploadedDocument = await this.documentService.uploadDocument(
+      { companyId, userId },
+      folderId,
+      file,
+    );
+
+    return this.prisma.companyAsset.update({
+      where: { id: assetId },
+      data: {
+        photoDocumentId: (uploadedDocument as { id: string }).id,
         updatedBy: userId,
       },
     });

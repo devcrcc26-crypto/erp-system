@@ -59,6 +59,7 @@
       "perDiemRates": "差旅补贴标准",
       "attendance": "考勤",
       "assetManagement": "资产管理",
+      "companyAssets": "公司资产",
       "employeeContract": "劳动合同"
     }
   },
@@ -201,6 +202,14 @@
         "myListTitle": "我的加油申请",
         "listDescription": "审核并处理车辆加油申请。",
         "myListDescription": "提交并跟踪您的车辆加油审批流程。"
+      },
+      "companyAsset": {
+        "title": "公司资产",
+        "new": "新建资产",
+        "edit": "编辑资产",
+        "detail": "资产详情",
+        "listTitle": "公司资产",
+        "formDescription": "新增或更新公司资产记录。"
       },
       "employeeContract": {
         "new": "新建劳动合同",
@@ -880,6 +889,70 @@
     "description": "将用户组织为项目团队并管理团队成员。"
   },
   "hr": {
+    "assetStatus": {
+      "AVAILABLE": "可用",
+      "IN_USE": "使用中",
+      "REPAIRING": "维修中",
+      "DISPOSED": "已报废"
+    },
+    "assetLabels": {
+      "serialNumber": "序列号",
+      "brand": "品牌",
+      "model": "型号",
+      "year": "年份",
+      "color": "颜色",
+      "type": "类型",
+      "status": "状态",
+      "description": "描述",
+      "photo": "照片",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间"
+    },
+    "assetPlaceholder": {
+      "search": "搜索序列号、品牌或型号…",
+      "serialNumber": "如 SN-001234",
+      "brand": "如 戴尔",
+      "model": "如 Latitude 5540",
+      "year": "如 2024",
+      "color": "如 黑色",
+      "type": "如 笔记本电脑",
+      "description": "可选描述…",
+      "filterStatus": "按状态筛选",
+      "filterType": "按类型筛选"
+    },
+    "assetButtons": {
+      "newAsset": "新建资产",
+      "editAsset": "编辑资产",
+      "deleteAsset": "删除资产",
+      "changeStatus": "修改状态",
+      "save": "保存",
+      "create": "创建资产",
+      "cancel": "取消",
+      "back": "返回",
+      "backToList": "返回资产列表"
+    },
+    "assetMessages": {
+      "created": "资产创建成功",
+      "updated": "资产更新成功",
+      "deleted": "资产删除成功",
+      "statusUpdated": "资产状态已更新",
+      "notFound": "资产未找到",
+      "failedToCreate": "创建资产失败",
+      "failedToUpdate": "更新资产失败",
+      "failedToDelete": "删除资产失败",
+      "failedToUpdateStatus": "更新资产状态失败"
+    },
+    "assetDialog": {
+      "deleteTitle": "删除资产？",
+      "deleteDesc": "此操作将永久删除该资产记录，不可撤销。",
+      "statusTitle": "修改资产状态"
+    },
+    "assetEmpty": {
+      "noAssets": "暂无资产"
+    },
+    "assetSection": {
+      "assetDetails": "资产详情"
+    },
     "status": {
       "DRAFT": "草稿",
       "SUBMITTED": "已提交",

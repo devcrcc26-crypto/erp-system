@@ -11,6 +11,7 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
 } from '@/lib/api/client';
 import type {
   CompanyAssetDetail,
@@ -128,6 +129,35 @@ export function useDeleteCompanyAsset() {
       void queryClient.invalidateQueries({
         queryKey: companyAssetKeys.lists(),
       });
+    },
+  });
+}
+
+export function useUploadCompanyAssetPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assetId,
+      file,
+    }: {
+      assetId: string;
+      file: File;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<CompanyAssetDetail>(
+        `${ASSETS_PATH}/${assetId}/photo`,
+        formData,
+      );
+    },
+    onSuccess: (updated, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.setQueryData(
+        companyAssetKeys.detail(variables.assetId),
+        updated,
+      );
     },
   });
 }
