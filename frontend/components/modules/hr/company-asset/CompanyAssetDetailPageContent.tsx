@@ -87,6 +87,8 @@ export default function CompanyAssetDetailPageContent({
         notes: issueNotes.trim() || undefined,
       });
       messageApi.success(t('hr.assetMessages.assignmentIssued'));
+      // Make UI update immediately (don't rely only on query invalidation).
+      await assignmentsQuery.refetch();
       setIssueModalOpen(false);
       setIssueEmployeeId(undefined);
       setIssueNotes('');
@@ -107,6 +109,8 @@ export default function CompanyAssetDetailPageContent({
         returnedNotes: returnNotes.trim() || undefined,
       });
       messageApi.success(t('hr.assetMessages.assignmentReturned'));
+      // Make UI update immediately (don't rely only on query invalidation).
+      await assignmentsQuery.refetch();
       setReturnModalOpen(false);
       setReturnTo('');
       setReturnNotes('');
@@ -322,7 +326,7 @@ export default function CompanyAssetDetailPageContent({
           <Alert
             type="info"
             showIcon
-            message={t('hr.assetMessages.noActiveAssignment')}
+            title={t('hr.assetMessages.noActiveAssignment')}
             action={
               asset.status === 'AVAILABLE' ? (
                 <Button type="primary" onClick={() => setIssueModalOpen(true)}>
