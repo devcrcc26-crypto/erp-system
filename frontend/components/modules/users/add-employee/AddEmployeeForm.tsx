@@ -1,14 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Alert, Form, Input, Select, Switch } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Form, Input, Select, Skeleton, Switch } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
   buildEmployeeProfilePayload,
   EmployeeProfileFormFields,
+  employeeProfileInitialValues,
   GENDER_OPTIONS,
 } from '@/components/modules/users/EmployeeProfileFormFields';
+import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import AddEmployeePendingDocuments, {
   type PendingEmployeeDocument,
 } from '@/components/modules/users/add-employee/AddEmployeePendingDocuments';
@@ -20,11 +22,14 @@ import {
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { CreateUserRequest, Role } from '@/lib/api/types';
+import type { CreateUserRequest, Role, UpdateUserRequest, UserDetail } from '@/lib/api/types';
 import {
   useAssignRole,
   useCreateUser,
+  useRevokeRole,
+  useUpdateUser,
   useUploadUserDocuments,
+  useUser,
 } from '@/lib/query/users';
 import {
   useDepartments,
@@ -49,11 +54,38 @@ function optionalEmailRule(
   };
 }
 
+function resolvePrimaryRoleId(user: UserDetail): string | undefined {
+  return (
+    user.userRoles.find((assignment) => assignment.isPrimary)?.roleId ??
+    user.userRoles[0]?.roleId ??
+    user.userRoles[0]?.role?.id ??
+    undefined
+  );
+}
+
+function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
+  return {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    chineseName: user.chineseName ?? '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    departmentId: user.departmentId ?? undefined,
+    positionId: user.positionId ?? undefined,
+    engineeringDisciplineId: user.engineeringDisciplineId ?? undefined,
+    isActive: user.isActive,
+    roleId: resolvePrimaryRoleId(user),
+    ...employeeProfileInitialValues(user),
+  };
+}
+
 export interface AddEmployeeFormProps {
+  userId?: string;
   onSuccess: (result: { userId: string; email: string | null }) => void;
 }
 
 export default function AddEmployeeForm({
+  userId,
   onSuccess,
 }: AddEmployeeFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -61,14 +93,18 @@ export default function AddEmployeeForm({
   const [form] = Form.useForm<AddEmployeeFormValues>();
   const [error, setError] = useState<string | null>(null);
   const [pendingDocuments, setPendingDocuments] = useState<PendingEmployeeDocument[]>([]);
+  const isEdit = Boolean(userId);
 
   const emailValue = Form.useWatch('email', form);
   const departmentIdValue = Form.useWatch('departmentId', form);
   const hasEmail = Boolean(emailValue?.trim());
   const formValues = Form.useWatch([], form) as AddEmployeeFormValues | undefined;
 
+  const userQuery = useUser(userId ?? '', isEdit);
   const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
   const assignRole = useAssignRole();
+  const revokeRole = useRevokeRole();
   const uploadDocuments = useUploadUserDocuments();
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
@@ -94,8 +130,21 @@ export default function AddEmployeeForm({
     return filtered.map((position) => ({ value: position.id, label: position.title }));
   }, [allPositions, departmentIdValue]);
 
+  const currentRoleId = userQuery.data ? resolvePrimaryRoleId(userQuery.data) ?? '' : '';
+
+  useEffect(() => {
+    if (!isEdit || !userQuery.data) {
+      return;
+    }
+    form.setFieldsValue(buildFormValuesFromUser(userQuery.data));
+  }, [isEdit, userQuery.data, form]);
+
   const isSubmitting =
-    createUser.isPending || assignRole.isPending || uploadDocuments.isPending;
+    createUser.isPending ||
+    updateUser.isPending ||
+    assignRole.isPending ||
+    revokeRole.isPending ||
+    uploadDocuments.isPending;
 
   function handleDepartmentChange(nextDepartmentId?: string): void {
     const currentPositionId = form.getFieldValue('positionId') as string | undefined;
@@ -105,6 +154,17 @@ export default function AddEmployeeForm({
         form.setFieldValue('positionId', undefined);
       }
     }
+  }
+
+  function resetForm(): void {
+    if (isEdit && userQuery.data) {
+      form.setFieldsValue(buildFormValuesFromUser(userQuery.data));
+    } else {
+      form.resetFields();
+      form.setFieldsValue({ isActive: true, emergencyContacts: [] });
+    }
+    setPendingDocuments([]);
+    setError(null);
   }
 
   async function validateStep(stepIndex: number): Promise<boolean> {
@@ -130,23 +190,64 @@ export default function AddEmployeeForm({
       return;
     }
 
-    const invitedAddress = values.email?.trim().toLowerCase() || undefined;
-    const body: CreateUserRequest = {
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      chineseName: values.chineseName?.trim() || undefined,
-      phone: values.phone?.trim() || undefined,
-      departmentId: values.departmentId,
-      positionId: values.positionId,
-      engineeringDisciplineId: values.engineeringDisciplineId,
-      isActive: values.isActive,
-      ...buildEmployeeProfilePayload(values),
-    };
-    if (invitedAddress) {
-      body.email = invitedAddress;
-    }
-
     try {
+      if (isEdit && userId) {
+        const body: UpdateUserRequest = {
+          firstName: values.firstName.trim(),
+          lastName: values.lastName.trim(),
+          chineseName: values.chineseName?.trim() || undefined,
+          phone: values.phone?.trim() || undefined,
+          departmentId: values.departmentId,
+          positionId: values.positionId,
+          engineeringDisciplineId: values.engineeringDisciplineId ?? null,
+          isActive: values.isActive,
+          ...buildEmployeeProfilePayload(values),
+        };
+
+        await updateUser.mutateAsync({ userId, body });
+
+        if ((values.roleId ?? '') !== currentRoleId) {
+          if (currentRoleId) {
+            await revokeRole.mutateAsync({ userId, roleId: currentRoleId });
+          }
+          if (values.roleId) {
+            await assignRole.mutateAsync({ userId, roleId: values.roleId });
+          }
+        }
+
+        if (pendingDocuments.length > 0) {
+          await uploadDocuments.mutateAsync({
+            userId,
+            files: pendingDocuments.map((item) => item.file),
+            labels: pendingDocuments.map(
+              (item) => item.label.trim() || item.file.name,
+            ),
+          });
+        }
+
+        onSuccess({
+          userId,
+          email: userQuery.data?.email ?? values.email?.trim().toLowerCase() ?? null,
+        });
+        return;
+      }
+
+      const invitedAddress = values.email?.trim().toLowerCase() || undefined;
+      const body: CreateUserRequest = {
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        chineseName: values.chineseName?.trim() || undefined,
+        phone: values.phone?.trim() || undefined,
+        departmentId: values.departmentId,
+        positionId: values.positionId,
+        engineeringDisciplineId: values.engineeringDisciplineId,
+        isActive: values.isActive,
+        ...buildEmployeeProfilePayload(values),
+      };
+      if (invitedAddress) {
+        body.email = invitedAddress;
+      }
+
       const user = await createUser.mutateAsync(body);
 
       if (values.roleId) {
@@ -166,10 +267,16 @@ export default function AddEmployeeForm({
       onSuccess({ userId: user.id, email: invitedAddress ?? null });
     } catch (err) {
       setError(
-        err instanceof ApiRequestError ? err.message : t('users.createError'),
+        err instanceof ApiRequestError
+          ? err.message
+          : isEdit
+            ? t('users.updateError')
+            : t('users.createError'),
       );
     }
   }
+
+  const profileMode = isEdit ? 'edit' : 'create';
 
   const steps = useMemo(
     () => [
@@ -181,7 +288,11 @@ export default function AddEmployeeForm({
               variant="pro"
               title={t('users.sectionAccountIdentity')}
               description={
-                hasEmail ? t('users.form.accountInviteHelp') : t('users.form.accountRecordOnlyHelp')
+                isEdit
+                  ? undefined
+                  : hasEmail
+                    ? t('users.form.accountInviteHelp')
+                    : t('users.form.accountRecordOnlyHelp')
               }
             >
               <div className="erp-form-grid-3">
@@ -226,10 +337,15 @@ export default function AddEmployeeForm({
                   label={t('users.form.email')}
                   name="email"
                   normalize={(value: string) => value?.trim() ?? ''}
-                  rules={[optionalEmailRule(t('common.invalidEmail'))]}
-                  extra={t('users.form.emailHint')}
+                  rules={isEdit ? undefined : [optionalEmailRule(t('common.invalidEmail'))]}
+                  extra={
+                    isEdit ? t('users.form.emailReadOnlyHint') : t('users.form.emailHint')
+                  }
                 >
-                  <Input placeholder={t('users.form.emailPlaceholder')} />
+                  <Input
+                    placeholder={t('users.form.emailPlaceholder')}
+                    disabled={isEdit}
+                  />
                 </Form.Item>
                 <Form.Item label={t('users.form.phone')} name="phone">
                   <Input />
@@ -267,7 +383,7 @@ export default function AddEmployeeForm({
         title: t('users.steps.personal'),
         content: (
           <EmployeeProfileFormFields
-            mode="create"
+            mode={profileMode}
             sections={['personal', 'address', 'emergency']}
             layout="sections"
           />
@@ -279,9 +395,10 @@ export default function AddEmployeeForm({
         content: (
           <>
             <EmployeeProfileFormFields
-              mode="create"
+              mode={profileMode}
               sections={['employment']}
               layout="sections"
+              employeeIdReadOnly={isEdit}
             />
             <FormLayout variant="pro" title={t('users.sectionOrganizationAssignment')}>
               <div className="erp-form-grid-3">
@@ -327,7 +444,7 @@ export default function AddEmployeeForm({
         title: t('users.steps.education'),
         content: (
           <EmployeeProfileFormFields
-            mode="create"
+            mode={profileMode}
             sections={['education']}
             layout="sections"
           />
@@ -339,16 +456,28 @@ export default function AddEmployeeForm({
         content: (
           <>
             <EmployeeProfileFormFields
-              mode="create"
+              mode={profileMode}
               sections={['leave']}
               layout="sections"
             />
-            <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
-              <AddEmployeePendingDocuments
-                value={pendingDocuments}
-                onChange={setPendingDocuments}
-              />
-            </FormLayout>
+            {isEdit && userId ? (
+              <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
+                <EmployeeProfileDocuments userId={userId} />
+                <div className="mt-4">
+                  <AddEmployeePendingDocuments
+                    value={pendingDocuments}
+                    onChange={setPendingDocuments}
+                  />
+                </div>
+              </FormLayout>
+            ) : (
+              <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
+                <AddEmployeePendingDocuments
+                  value={pendingDocuments}
+                  onChange={setPendingDocuments}
+                />
+              </FormLayout>
+            )}
           </>
         ),
         validate: () => validateStep(4),
@@ -366,6 +495,7 @@ export default function AddEmployeeForm({
             }
             roles={roles}
             pendingDocuments={pendingDocuments}
+            mode={isEdit ? 'edit' : 'create'}
           />
         ),
         validate: () => true,
@@ -374,6 +504,9 @@ export default function AddEmployeeForm({
     [
       t,
       hasEmail,
+      isEdit,
+      userId,
+      profileMode,
       rolesQuery.isLoading,
       roles,
       departmentsQuery.isLoading,
@@ -390,6 +523,24 @@ export default function AddEmployeeForm({
     ],
   );
 
+  if (isEdit && userQuery.isLoading) {
+    return <Skeleton active paragraph={{ rows: 10 }} />;
+  }
+
+  if (isEdit && (userQuery.isError || !userQuery.data)) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title={
+          userQuery.error instanceof ApiRequestError
+            ? userQuery.error.message
+            : t('users.detailNotFound')
+        }
+      />
+    );
+  }
+
   return (
     <Form<AddEmployeeFormValues>
       form={form}
@@ -398,21 +549,27 @@ export default function AddEmployeeForm({
       initialValues={{ isActive: true, emergencyContacts: [] }}
     >
       {error ? (
-        <Alert type="error" showIcon title={error} className="mb-4" closable onClose={() => setError(null)} />
+        <Alert
+          type="error"
+          showIcon
+          title={error}
+          className="mb-4"
+          closable
+          onClose={() => setError(null)}
+        />
       ) : null}
       <StepperForm
         steps={steps}
         onSubmit={handleSubmit}
-        onReset={() => {
-          form.resetFields();
-          form.setFieldsValue({ isActive: true, emergencyContacts: [] });
-          setPendingDocuments([]);
-          setError(null);
-        }}
+        onReset={resetForm}
         isSubmitting={isSubmitting}
         contentVariant="sections"
         submitLabel={
-          hasEmail ? t('users.sendInvitation') : t('users.createUser')
+          isEdit
+            ? t('common.saveChanges')
+            : hasEmail
+              ? t('users.sendInvitation')
+              : t('users.createUser')
         }
       />
     </Form>

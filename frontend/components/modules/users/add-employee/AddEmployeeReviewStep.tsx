@@ -13,26 +13,32 @@ interface AddEmployeeReviewStepProps {
   values: AddEmployeeFormValues;
   roles: Role[];
   pendingDocuments: PendingEmployeeDocument[];
+  mode?: 'create' | 'edit';
 }
 
 export default function AddEmployeeReviewStep({
   values,
   roles,
   pendingDocuments,
+  mode = 'create',
 }: AddEmployeeReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const roleName = roles.find((role) => role.id === values.roleId)?.name ?? '-';
   const hasEmail = Boolean(values.email?.trim());
   const emergencyContacts = values.emergencyContacts ?? [];
+  const reviewDescription =
+    mode === 'edit'
+      ? t('users.form.reviewEditHelp')
+      : hasEmail
+        ? t('users.form.reviewInviteHelp')
+        : t('users.form.reviewRecordOnlyHelp');
 
   return (
     <div className="flex flex-col gap-6">
       <FormLayout
         variant="pro"
         title={t('users.steps.review')}
-        description={
-          hasEmail ? t('users.form.reviewInviteHelp') : t('users.form.reviewRecordOnlyHelp')
-        }
+        description={reviewDescription}
       >
         <Descriptions
           column={1}

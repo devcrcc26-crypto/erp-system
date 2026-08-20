@@ -5,11 +5,8 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Button,
-  Checkbox,
   Dropdown,
-  Form,
   Input,
-  Modal,
   Select,
   Space,
   Spin,
@@ -21,7 +18,7 @@ import type {
   SorterResult,
   TablePaginationConfig,
 } from 'antd/es/table/interface';
-import { FileExcelOutlined, MoreOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
@@ -30,32 +27,18 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import UserImportModal from '@/components/modules/users/UserImportModal';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useRoles } from '@/lib/query/roles';
-import UserImportModal from '@/components/modules/users/UserImportModal';
-import {
-  buildEmployeeProfilePayload,
-  EmployeeProfileFormFields,
-  employeeProfileInitialValues,
-  GENDER_OPTIONS,
-  type EmployeeProfileFormValues,
-} from '@/components/modules/users/EmployeeProfileFormFields';
-import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import {
   fetchAllUsers,
-  useAssignRole,
   useDeleteUser,
   useResendInvitation,
-  useRevokeRole,
-  useSetPrimaryRole,
-  useUpdateUser,
-  useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { Role, User } from '@/lib/api/types';
+import type { User } from '@/lib/api/types';
 import {
   useDepartments,
   useEngineeringDisciplineOptions,
@@ -63,6 +46,10 @@ import {
 } from '@/lib/query/org';
 import { exportUsersExcel } from '@/lib/utils/users-export-excel';
 import { pickTopLevelRoleName } from '@/lib/utils/user-display';
+import {
+  userStatusLabel,
+  userStatusVariant,
+} from '@/lib/utils/user-status';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -104,18 +91,6 @@ const COLUMN_SORT_FIELD: Record<string, string> = {
   status: 'isActive',
 };
 
-interface EditFormValues extends EmployeeProfileFormValues {
-  firstName: string;
-  lastName: string;
-  chineseName?: string;
-  phone?: string;
-  departmentId?: string;
-  positionId?: string;
-  roleId?: string;
-  engineeringDisciplineId?: string;
-  isActive: boolean;
-}
-
 function formatUserRoleNames(user: User): string {
   const roles =
     user.userRoles?.map((assignment) => ({
@@ -124,35 +99,6 @@ function formatUserRoleNames(user: User): string {
     })) ?? [];
   const top = pickTopLevelRoleName(roles, '');
   return top || '-';
-}
-
-function userStatusVariant(user: User): 'default' | 'warning' | 'success' {
-  if (!user.isActive) {
-    return 'default';
-  }
-  if (!user.email) {
-    return 'default';
-  }
-  if (!user.emailVerifiedAt) {
-    return 'warning';
-  }
-  return 'success';
-}
-
-function userStatusLabel(
-  user: User,
-  t: (key: string, vars?: Record<string, string | number>) => string,
-): string {
-  if (!user.isActive) {
-    return t('users.statusInactive');
-  }
-  if (!user.email) {
-    return t('users.statusNoLogin');
-  }
-  if (!user.emailVerifiedAt) {
-    return t('users.statusPending');
-  }
-  return t('users.statusActive');
 }
 
 function buildUsersExportLabels(
@@ -169,318 +115,6 @@ function buildUsersExportLabels(
   };
 }
 
-function EditEmployeeModal({
-  user,
-  roles,
-  open,
-  onClose,
-  onSaved,
-}: {
-  user: User;
-  roles: Role[];
-  open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const [form] = Form.useForm<EditFormValues>();
-  const userQuery = useUser(user.id);
-  const updateUser = useUpdateUser();
-  const assignRole = useAssignRole();
-  const revokeRole = useRevokeRole();
-  const setPrimaryRole = useSetPrimaryRole();
-  const { options: disciplineOptions, isLoading: disciplinesLoading } =
-    useEngineeringDisciplineOptions(true, open);
-  const departmentIdValue = Form.useWatch('departmentId', form);
-  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
-  const positionsQuery = usePositions({ page: 1, limit: 100 }, open);
-  const departmentOptions = useMemo(
-    () =>
-      (departmentsQuery.data?.data ?? []).map((department) => ({
-        value: department.id,
-        label: department.name,
-      })),
-    [departmentsQuery.data],
-  );
-  const allPositions = positionsQuery.data?.data ?? [];
-  const positionOptions = useMemo(() => {
-    const filtered = departmentIdValue
-      ? allPositions.filter((position) => position.departmentId === departmentIdValue)
-      : allPositions.filter((position) => position.isActive);
-    return filtered.map((position) => ({ value: position.id, label: position.title }));
-  }, [allPositions, departmentIdValue]);
-  const [error, setError] = useState<string | null>(null);
-
-  const currentRoleId =
-    userQuery.data?.userRoles.find((assignment) => assignment.isPrimary)
-      ?.roleId ??
-    userQuery.data?.userRoles[0]?.roleId ??
-    userQuery.data?.userRoles[0]?.role?.id ??
-    user.userRoles?.find((assignment) => assignment.isPrimary)?.roleId ??
-    user.userRoles?.[0]?.roleId ??
-    user.userRoles?.[0]?.role?.id ??
-    '';
-
-  const assignedRoles =
-    userQuery.data?.userRoles ?? user.userRoles ?? [];
-
-  function resetFormValues(): void {
-    const detail = userQuery.data ?? user;
-    form.setFieldsValue({
-      firstName: detail.firstName,
-      lastName: detail.lastName,
-      chineseName: detail.chineseName ?? '',
-      phone: detail.phone ?? '',
-      departmentId: detail.departmentId ?? undefined,
-      positionId: detail.positionId ?? undefined,
-      engineeringDisciplineId: detail.engineeringDisciplineId ?? undefined,
-      isActive: detail.isActive,
-      roleId: currentRoleId || undefined,
-      ...employeeProfileInitialValues(detail),
-    });
-  }
-
-  function handleDepartmentChange(nextDepartmentId?: string): void {
-    const currentPositionId = form.getFieldValue('positionId') as string | undefined;
-    if (currentPositionId) {
-      const currentPosition = allPositions.find((p) => p.id === currentPositionId);
-      if (currentPosition && currentPosition.departmentId !== nextDepartmentId) {
-        form.setFieldValue('positionId', undefined);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    resetFormValues();
-  }, [open, userQuery.data, currentRoleId]);
-
-  async function handleSubmit(values: EditFormValues): Promise<void> {
-    setError(null);
-
-    try {
-      await updateUser.mutateAsync({
-        userId: user.id,
-        body: {
-          firstName: values.firstName,
-          lastName: values.lastName,
-          chineseName: values.chineseName?.trim() || undefined,
-          phone: values.phone?.trim() || undefined,
-          departmentId: values.departmentId,
-          positionId: values.positionId,
-          engineeringDisciplineId: values.engineeringDisciplineId ?? null,
-          isActive: values.isActive,
-          ...buildEmployeeProfilePayload(values),
-        },
-      });
-
-      if ((values.roleId ?? '') !== currentRoleId) {
-        if (currentRoleId) {
-          await revokeRole.mutateAsync({ userId: user.id, roleId: currentRoleId });
-        }
-        if (values.roleId) {
-          await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
-        }
-      }
-
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(
-        err instanceof ApiRequestError ? err.message : t('users.updateError'),
-      );
-    }
-  }
-
-  const isSubmitting =
-    updateUser.isPending ||
-    assignRole.isPending ||
-    revokeRole.isPending ||
-    setPrimaryRole.isPending;
-
-  async function handleSetPrimary(roleId: string): Promise<void> {
-    setError(null);
-    try {
-      await setPrimaryRole.mutateAsync({ userId: user.id, roleId });
-    } catch (err) {
-      setError(
-        err instanceof ApiRequestError
-          ? err.message
-          : t('users.setPrimaryRoleError'),
-      );
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      title={t('users.updateEmployee')}
-      onCancel={onClose}
-      onOk={() => form.submit()}
-      okText={t('common.saveChanges')}
-      confirmLoading={isSubmitting}
-      className="erp-responsive-modal"
-      width={720}
-      styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: 4 } }}
-      destroyOnHidden
-      afterOpenChange={(visible: boolean) => {
-        if (!visible) {
-          return;
-        }
-        resetFormValues();
-      }}
-    >
-      <p className="mb-4 text-sm text-slate-500">
-        {user.email ?? t('users.noEmailNoLogin')}
-      </p>
-      {userQuery.data?.yearsOfExperience != null ? (
-        <p className="mb-4 text-sm text-slate-500">
-          {t('hr.labels.yearsOfExperience')}: {userQuery.data.yearsOfExperience}
-        </p>
-      ) : null}
-      <Form<EditFormValues>
-        form={form}
-        layout="vertical"
-        onFinish={(values: EditFormValues) => void handleSubmit(values)}
-      >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label={t('common.firstName')}
-            name="firstName"
-            rules={[{ required: true, message: t('common.requiredFirstName') }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label={t('common.lastName')}
-            name="lastName"
-            rules={[{ required: true, message: t('common.requiredLastName') }]}
-          >
-            <Input />
-          </Form.Item>
-        </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label={t('users.form.middleName')} name="middleName">
-            <Input />
-          </Form.Item>
-          <Form.Item label={t('users.form.gender')} name="gender">
-            <Select
-              allowClear
-              placeholder={t('common.select')}
-              options={GENDER_OPTIONS.map((value) => ({
-                value,
-                label: t(`hr.gender.${value}`),
-              }))}
-            />
-          </Form.Item>
-        </div>
-        <Form.Item label={t('common.chineseName')} name="chineseName">
-          <Input placeholder={t('users.chineseNamePlaceholder')} />
-        </Form.Item>
-        <Form.Item label={t('common.phone')} name="phone">
-          <Input type="tel" />
-        </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label={t('common.department')} name="departmentId">
-            <Select
-              allowClear
-              loading={departmentsQuery.isLoading}
-              placeholder={t('users.filterDepartment')}
-              options={departmentOptions}
-              optionFilterProp="label"
-              onChange={handleDepartmentChange}
-            />
-          </Form.Item>
-          <Form.Item label={t('common.position')} name="positionId">
-            <Select
-              allowClear
-              loading={positionsQuery.isLoading}
-              placeholder={t('users.filterPosition')}
-              options={positionOptions}
-              optionFilterProp="label"
-            />
-          </Form.Item>
-        </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label={t('common.discipline')}
-            name="engineeringDisciplineId"
-            extra={t('users.disciplineOptionalHint')}
-          >
-            <Select
-              allowClear
-              loading={disciplinesLoading}
-              placeholder={t('common.selectDiscipline')}
-              options={disciplineOptions}
-              optionFilterProp="label"
-            />
-          </Form.Item>
-          <Form.Item
-            label={t('users.roleOptional')}
-            name="roleId"
-            extra={t('users.roleOptionalHint')}
-          >
-            <Select
-              allowClear
-              loading={userQuery.isLoading}
-              options={roles.map((role) => ({ value: role.id, label: role.name }))}
-              placeholder={
-                userQuery.isLoading
-                  ? t('common.loadingRoles')
-                  : t('common.selectRole')
-              }
-            />
-          </Form.Item>
-        </div>
-        <EmployeeProfileFormFields mode="edit" employeeIdReadOnly />
-        <EmployeeProfileDocuments userId={user.id} />
-        {assignedRoles.length > 0 ? (
-          <div className="mb-4">
-            <div className="mb-2 text-sm font-medium text-slate-700">
-              {t('users.assignedRoles')}
-            </div>
-            <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-              {assignedRoles.map((assignment) => {
-                const roleId = assignment.roleId ?? assignment.role.id;
-                const isPrimary = Boolean(assignment.isPrimary);
-                return (
-                  <div
-                    key={assignment.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 px-3 py-2"
-                  >
-                    <Space size={8}>
-                      <span>{assignment.role.name}</span>
-                      {isPrimary ? (
-                        <Tag color="gold">{t('users.primaryRole')}</Tag>
-                      ) : null}
-                    </Space>
-                    {!isPrimary ? (
-                      <Button
-                        type="link"
-                        size="small"
-                        loading={setPrimaryRole.isPending}
-                        onClick={() => void handleSetPrimary(roleId)}
-                      >
-                        {t('users.setAsPrimary')}
-                      </Button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </Space>
-          </div>
-        ) : null}
-        <Form.Item name="isActive" valuePropName="checked">
-          <Checkbox>{t('common.activeAccount')}</Checkbox>
-        </Form.Item>
-        {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
-      </Form>
-    </Modal>
-  );
-}
-
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -488,7 +122,6 @@ export default function UsersPageContent(): React.ReactNode {
   const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta, resetPage } = useTablePagination();
   const [exportingUsers, setExportingUsers] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
     type: 'success' | 'error';
@@ -576,10 +209,6 @@ export default function UsersPageContent(): React.ReactNode {
     sortBy,
     sortOrder,
   });
-  const rolesQuery = useRoles(
-    { page: 1, limit: 100 },
-    { enabled: usersQuery.isSuccess },
-  );
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
   const { options: disciplineFilterOptions, nameById: disciplineNameById } =
@@ -603,7 +232,6 @@ export default function UsersPageContent(): React.ReactNode {
     [positionsQuery.data],
   );
 
-  const roles = rolesQuery.data?.data ?? [];
   const companyName = authUser?.companyName ?? 'Company';
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
@@ -629,9 +257,11 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading) {
     return (
-      <div className="flex justify-center rounded-md bg-white p-12 shadow-sm">
-        <Spin />
-      </div>
+      <FormLayout variant="pro">
+        <div className="flex justify-center p-12">
+          <Spin />
+        </div>
+      </FormLayout>
     );
   }
 
@@ -707,13 +337,7 @@ export default function UsersPageContent(): React.ReactNode {
 
   function buildActionMenu(user: User): MenuProps['items'] {
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
-    const items: MenuProps['items'] = [
-      {
-        key: 'update',
-        label: t('common.update'),
-        onClick: () => setEditingUser(user),
-      },
-    ];
+    const items: MenuProps['items'] = [];
 
     if (showResend) {
       items.push({
@@ -734,30 +358,12 @@ export default function UsersPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {importOpen && (
         <UserImportModal
           onClose={() => setImportOpen(false)}
           onImported={(summary) =>
             setActionMessage({ type: 'success', text: summary })
-          }
-        />
-      )}
-
-      {editingUser && (
-        <EditEmployeeModal
-          key={editingUser.id}
-          user={editingUser}
-          roles={roles}
-          open
-          onClose={() => setEditingUser(null)}
-          onSaved={() =>
-            setActionMessage({
-              type: 'success',
-              text: t('users.updated', {
-                name: `${editingUser.firstName} ${editingUser.lastName}`,
-              }),
-            })
           }
         />
       )}
@@ -791,6 +397,7 @@ export default function UsersPageContent(): React.ReactNode {
       )}
 
       <FormLayout
+        variant="pro"
         title={t('users.allUsers')}
         description={
           meta?.total === 1
@@ -798,31 +405,37 @@ export default function UsersPageContent(): React.ReactNode {
             : t('users.userCount', { count: meta?.total ?? 0 })
         }
         extra={
-          <Space wrap>
+          <Space wrap size={8}>
             <Button
               icon={<FileExcelOutlined />}
               loading={exportingUsers}
               onClick={() => void handleExportExcel()}
+              style={{ borderRadius: 2 }}
             >
               {t('users.exportExcel')}
             </Button>
-            <Button onClick={() => setImportOpen(true)}>
+            <Button onClick={() => setImportOpen(true)} style={{ borderRadius: 2 }}>
               {t('common.importFromExcel')}
             </Button>
-            <Button type="primary" onClick={() => router.push('/users/new')}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/users/new')}
+              style={{ borderRadius: 2 }}
+            >
               {t('users.addEmployee')}
             </Button>
           </Space>
         }
       >
-        <Input.Search
-          placeholder={t('users.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          allowClear
-          style={{ marginBottom: 12 }}
-        />
-        <div className="flex flex-wrap gap-2" style={{ marginBottom: 12 }}>
+        <div className="erp-pro-filter-bar">
+          <Input.Search
+            placeholder={t('users.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            allowClear
+            style={{ width: 240, maxWidth: '100%' }}
+          />
           <Select
             placeholder={t('users.filterDiscipline')}
             options={disciplineFilterOptions}
@@ -861,6 +474,8 @@ export default function UsersPageContent(): React.ReactNode {
         </div>
         <DataTable<User>
           rowKey="id"
+          className="erp-pro-table"
+          size="middle"
           dataSource={users}
           pagination={bindMeta(meta)}
           onChange={handleTableChange}
@@ -882,14 +497,31 @@ export default function UsersPageContent(): React.ReactNode {
               title: t('common.name'),
               key: 'name',
               sorter: true,
+              align: 'left',
               render: (_, record) => (
-                <div className="flex flex-col">
-                  <span className="font-medium text-slate-900">
+                <div className="flex flex-col items-start text-left">
+                  <Button
+                    type="link"
+                    className="!h-auto !justify-start !px-0 !py-0 font-medium"
+                    style={{
+                      borderRadius: 0,
+                      height: 'auto',
+                      paddingInline: 0,
+                      textAlign: 'left',
+                    }}
+                    onClick={() => router.push(`/users/${record.id}`)}
+                  >
                     {record.firstName} {record.lastName}
-                  </span>
+                  </Button>
                   {record.chineseName ? (
                     <span
-                      style={{ color: tokens.colorTextSecondary, fontSize: 12 }}
+                      className="block text-left"
+                      style={{
+                        color: tokens.colorTextSecondary,
+                        fontSize: 12,
+                        lineHeight: 1.4,
+                        marginTop: 2,
+                      }}
                     >
                       {record.chineseName}
                     </span>
@@ -903,7 +535,9 @@ export default function UsersPageContent(): React.ReactNode {
               ellipsis: { showTitle: true },
               sorter: true,
               render: (_, record) =>
-                record.department?.name ?? <span style={{ color: tokens.colorTextSecondary }}>-</span>,
+                record.department?.name ?? (
+                  <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                ),
             },
             {
               title: t('common.position'),
@@ -911,7 +545,9 @@ export default function UsersPageContent(): React.ReactNode {
               ellipsis: { showTitle: true },
               sorter: true,
               render: (_, record) =>
-                record.position?.title ?? <span style={{ color: tokens.colorTextSecondary }}>-</span>,
+                record.position?.title ?? (
+                  <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                ),
             },
             {
               title: t('common.email'),
@@ -993,21 +629,34 @@ export default function UsersPageContent(): React.ReactNode {
             {
               title: t('common.actions'),
               key: 'actions',
-              width: 80,
+              width: 120,
+              fixed: 'right',
               render: (_, record) => (
-                <Dropdown
-                  menu={{ items: buildActionMenu(record) }}
-                  trigger={['click']}
-                  disabled={resendInvitation.isPending}
-                >
+                <Space size={0}>
                   <Button
-                    type="text"
-                    icon={<MoreOutlined />}
-                    aria-label={t('users.actionsFor', {
-                      name: `${record.firstName} ${record.lastName}`,
-                    })}
-                  />
-                </Dropdown>
+                    type="link"
+                    size="small"
+                    onClick={() => router.push(`/users/${record.id}/edit`)}
+                    style={{ borderRadius: 2, paddingInline: 4 }}
+                  >
+                    {t('common.update')}
+                  </Button>
+                  <Dropdown
+                    menu={{ items: buildActionMenu(record) }}
+                    trigger={['click']}
+                    disabled={resendInvitation.isPending}
+                  >
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<MoreOutlined />}
+                      aria-label={t('users.actionsFor', {
+                        name: `${record.firstName} ${record.lastName}`,
+                      })}
+                      style={{ borderRadius: 2, paddingInline: 4 }}
+                    />
+                  </Dropdown>
+                </Space>
               ),
             },
           ]}

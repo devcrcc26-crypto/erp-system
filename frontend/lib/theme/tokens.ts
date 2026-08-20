@@ -59,11 +59,10 @@ export const tokens = {
   colorTextTertiary: 'rgba(0, 0, 0, 0.45)',
 
   /**
-   * Ant Design Pro / Ant Design default font stack
-   * (system UI fonts + CJK fallbacks for bilingual UI).
+   * Primary UI font — Segoe UI with system/CJK fallbacks.
    */
   fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",
+    "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",
 
   borderRadius: 6,
   borderRadiusCard: 8,
