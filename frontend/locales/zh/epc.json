@@ -996,6 +996,13 @@
       "PROBATION": "试用期",
       "RENEWAL": "续签"
     },
+    "leaveBalanceRules": {
+      "ownBalancesTitle": "独立假期余额",
+      "annualIncludesBroughtForward": "主余额，包含结转天数",
+      "separateBalance": "独立余额（不从年假扣除）",
+      "deductsFromAnnualTitle": "从年假余额扣除（无独立余额）",
+      "deductsFromAnnualDesc": "以下假期类型会减少员工的年假剩余天数。"
+    },
     "messages": {
       "requestApproved": "申请已批准",
       "requestSubmitted": "申请已提交审批",
@@ -1021,6 +1028,7 @@
       "failedToLoadProjectSeals": "加载项目章使用申请失败",
       "employeeContractNotFound": "未找到劳动合同",
       "failedToLoadEmployeeContracts": "加载劳动合同失败",
+      "failedToLoadLeaveBalances": "加载假期余额失败",
       "employeeContractCreated": "劳动合同已创建",
       "employeeContractUpdated": "劳动合同已更新",
       "employeeContractTerminated": "劳动合同已终止",
@@ -1225,6 +1233,7 @@
       "used": "已用天数",
       "pending": "待处理天数",
       "remaining": "剩余天数",
+      "annualLeave": "年假",
       "month": "月份",
       "year": "年份",
       "regularHours": "普通加班时长",
@@ -1364,6 +1373,8 @@
     },
     "tabs": {
       "allRequests": "全部申请",
+      "leaveRequests": "请假申请",
+      "leaveBalances": "假期余额",
       "allTrips": "全部出差",
       "allApplications": "全部申请",
       "allClaims": "全部报销",
@@ -1549,6 +1560,7 @@
       "searchFlight": "搜索申请编号或路线",
       "searchPerDiem": "搜索申请编号或目的地",
       "searchEmployeeContract": "搜索合同编号或员工",
+      "searchEmployee": "搜索员工姓名或邮箱",
       "status": "状态",
       "leaveType": "假期类型",
       "employee": "员工",
@@ -1586,6 +1598,7 @@
     },
     "empty": {
       "noLeaveRequests": "暂无请假申请。",
+      "noLeaveBalances": "未找到假期余额。",
       "noOvertimeSheets": "暂无加班表。",
       "noFlightApplications": "暂无机票申请。",
       "noBusinessTrips": "暂无出差申请。",

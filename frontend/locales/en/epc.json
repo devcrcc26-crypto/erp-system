@@ -998,6 +998,13 @@
       "PROBATION": "Probation",
       "RENEWAL": "Renewal"
     },
+    "leaveBalanceRules": {
+      "ownBalancesTitle": "Separate leave balances",
+      "annualIncludesBroughtForward": "main balance, includes brought forward days",
+      "separateBalance": "own balance (excluded from annual rule)",
+      "deductsFromAnnualTitle": "Deduct from annual balance (no separate balance)",
+      "deductsFromAnnualDesc": "These leave types reduce the employee's annual leave remaining."
+    },
     "messages": {
       "requestApproved": "Request approved",
       "requestSubmitted": "Request submitted for approval",
@@ -1023,6 +1030,7 @@
       "failedToLoadProjectSeals": "Failed to load project seal requests",
       "employeeContractNotFound": "Employee contract not found",
       "failedToLoadEmployeeContracts": "Failed to load employee contracts",
+      "failedToLoadLeaveBalances": "Failed to load leave balances",
       "employeeContractCreated": "Employee contract created",
       "employeeContractUpdated": "Employee contract updated",
       "employeeContractTerminated": "Employee contract terminated",
@@ -1228,6 +1236,7 @@
       "used": "Used",
       "pending": "Pending",
       "remaining": "Remaining",
+      "annualLeave": "Annual Leave",
       "month": "Month",
       "year": "Year",
       "regularHours": "Regular Hours",
@@ -1369,6 +1378,8 @@
     },
     "tabs": {
       "allRequests": "All Requests",
+      "leaveRequests": "Requests",
+      "leaveBalances": "Balances",
       "allTrips": "All Trips",
       "allApplications": "All Applications",
       "allClaims": "All Claims",
@@ -1554,6 +1565,7 @@
       "searchFlight": "Search application # or route",
       "searchPerDiem": "Search request # or destination",
       "searchEmployeeContract": "Search contract # or employee",
+      "searchEmployee": "Search employee name or email",
       "status": "Status",
       "leaveType": "Leave type",
       "employee": "Employee",
@@ -1591,6 +1603,7 @@
     },
     "empty": {
       "noLeaveRequests": "No leave requests yet.",
+      "noLeaveBalances": "No leave balances found.",
       "noOvertimeSheets": "No overtime sheets yet.",
       "noFlightApplications": "No flight applications yet.",
       "noBusinessTrips": "No business trips yet.",

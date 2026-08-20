@@ -15,6 +15,8 @@ import type {
   LeaveBalance,
   LeaveRequestDetail,
   LeaveRequestListItem,
+  EmployeeLeaveBalanceSummary,
+  ListLeaveBalancesParams,
   ListLeaveRequestsParams,
   SubmitLeaveRequestPayload,
   UpdateLeaveRequestPayload,
@@ -38,6 +40,8 @@ export const leaveKeys = {
   detail: (id: string) => [...leaveKeys.details(), id] as const,
   balances: () => [...leaveKeys.all, 'balances'] as const,
   myBalances: (year: number) => [...leaveKeys.balances(), 'me', year] as const,
+  companyBalances: (params: ListLeaveBalancesParams) =>
+    [...leaveKeys.balances(), 'company', params] as const,
 };
 
 function buildListQuery(params: ListLeaveRequestsParams): string {
@@ -109,6 +113,24 @@ export function useMyLeaveBalances(year: number, enabled = true) {
     queryKey: leaveKeys.myBalances(year),
     queryFn: () =>
       apiGet<LeaveBalance[]>(`${LEAVE_PATH}/balance?year=${year}`),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Company-wide leave balances for HR (annual, maternity, compassionate).
+ */
+export function useLeaveBalances(
+  params: ListLeaveBalancesParams = { page: 1, limit: 20 },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: leaveKeys.companyBalances(params),
+    queryFn: () =>
+      apiGetPaginated<EmployeeLeaveBalanceSummary>(
+        `${LEAVE_PATH}/balances${toQueryString(params)}`,
+      ),
     enabled,
     retry: false,
   });

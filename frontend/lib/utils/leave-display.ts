@@ -15,6 +15,12 @@ export const DEDUCTS_FROM_ANNUAL: LeaveType[] = [
   'UNPAID',
 ];
 
+export const OWN_BALANCE_LEAVE_TYPES: LeaveType[] = [
+  'ANNUAL',
+  'MATERNITY',
+  'COMPASSIONATE',
+];
+
 export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
   if (DEDUCTS_FROM_ANNUAL.includes(leaveType)) {
     return 'ANNUAL';

@@ -27,6 +27,7 @@ import { RequireAnyPermission } from '../../../../shared/permissions/require-any
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   LeaveBalanceQueryDto,
+  ListLeaveBalancesDto,
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
   UpdateLeaveRequestDto,
@@ -142,6 +143,19 @@ export class LeaveController {
     @Query() query: LeaveBalanceQueryDto,
   ): Promise<unknown> {
     return this.getMyBalance(user, companyId, query);
+  }
+
+  @Get('balances')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary:
+      'List employee leave balances (HR only — annual, maternity, compassionate)',
+  })
+  listBalances(
+    @CurrentCompany() companyId: string,
+    @Query() query: ListLeaveBalancesDto,
+  ): Promise<unknown> {
+    return this.leaveBalanceService.listCompanyBalances(query, companyId);
   }
 
   @Get(':id')

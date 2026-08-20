@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Select } from 'antd';
+import { Alert, Button, DatePicker, Select, Tabs } from 'antd';
 import { CalendarOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import LeaveRequestFormDrawer from '@/components/modules/hr/leave/LeaveRequestFormDrawer';
+import LeaveBalancesListPageContent from '@/components/modules/hr/leave/LeaveBalancesListPageContent';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
@@ -198,11 +199,11 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     );
   }
 
-  if (listQuery.isLoading && !listQuery.data) {
-    return <PageLoadingSkeleton />;
-  }
+  const showRequestsSkeleton = listQuery.isLoading && !listQuery.data;
 
-  return (
+  const requestsPanel = showRequestsSkeleton ? (
+    <PageLoadingSkeleton />
+  ) : (
     <div>
       {listQuery.isError ? (
         <Alert
@@ -318,4 +319,30 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       />
     </div>
   );
+
+  if (canViewHr) {
+    return (
+      <Tabs
+        defaultActiveKey="requests"
+        items={[
+          {
+            key: 'requests',
+            label: t('hr.tabs.leaveRequests'),
+            children: requestsPanel,
+          },
+          {
+            key: 'balances',
+            label: t('hr.tabs.leaveBalances'),
+            children: <LeaveBalancesListPageContent />,
+          },
+        ]}
+      />
+    );
+  }
+
+  if (showRequestsSkeleton) {
+    return <PageLoadingSkeleton />;
+  }
+
+  return requestsPanel;
 }

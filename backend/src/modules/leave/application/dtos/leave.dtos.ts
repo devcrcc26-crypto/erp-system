@@ -131,3 +131,39 @@ export class LeaveBalanceQueryDto {
   @Max(2100)
   year?: number;
 }
+
+export class ListLeaveBalancesDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Calendar year (defaults to current)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by employee user ID' })
+  @IsOptional()
+  @IsUUID()
+  employeeId?: string;
+
+  @ApiPropertyOptional({ description: 'Search employee name or email' })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  search?: string;
+}

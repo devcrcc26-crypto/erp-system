@@ -99,6 +99,23 @@ export interface LeaveBalance {
   remaining: number;
 }
 
+export interface EmployeeLeaveBalanceSummary {
+  employeeId: string;
+  employee: LeaveUserSummary;
+  year: number;
+  annual: LeaveBalance | null;
+  maternity: LeaveBalance | null;
+  compassionate: LeaveBalance | null;
+}
+
+export interface ListLeaveBalancesParams {
+  page?: number;
+  limit?: number;
+  year?: number;
+  employeeId?: string;
+  search?: string;
+}
+
 export interface ListLeaveRequestsParams {
   page?: number;
   limit?: number;
