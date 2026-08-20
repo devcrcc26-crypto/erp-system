@@ -122,7 +122,27 @@ export class CreateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  address?: string;
+  addressCountry?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  addressRegion?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  addressCity?: string;
+
+  @ApiPropertyOptional({ description: 'Subcity / Zone / Woreda' })
+  @IsOptional()
+  @IsString()
+  addressSubcity?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  addressHouseNumber?: string;
 
   @ApiPropertyOptional({ enum: Gender })
   @IsOptional()

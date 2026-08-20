@@ -725,7 +725,11 @@ export class UserManagementService {
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
       employeeId: true,
       middleName: true,
-      address: true,
+      addressCountry: true,
+      addressRegion: true,
+      addressCity: true,
+      addressSubcity: true,
+      addressHouseNumber: true,
       gender: true,
       dateOfBirth: true,
       nationalId: true,
@@ -798,7 +802,11 @@ export class UserManagementService {
     dto: CreateUserDto,
   ): Partial<{
     middleName?: string;
-    address?: string;
+    addressCountry?: string;
+    addressRegion?: string;
+    addressCity?: string;
+    addressSubcity?: string;
+    addressHouseNumber?: string;
     gender?: CreateUserDto['gender'];
     dateOfBirth?: string;
     nationalId?: string;
@@ -813,7 +821,11 @@ export class UserManagementService {
   }> {
     return {
       middleName: dto.middleName,
-      address: dto.address,
+      addressCountry: dto.addressCountry,
+      addressRegion: dto.addressRegion,
+      addressCity: dto.addressCity,
+      addressSubcity: dto.addressSubcity,
+      addressHouseNumber: dto.addressHouseNumber,
       gender: dto.gender,
       dateOfBirth: dto.dateOfBirth,
       nationalId: dto.nationalId,
@@ -881,7 +893,11 @@ export class UserManagementService {
         employeeId,
         profileFolderId: folder.id,
         middleName: profileInput.middleName?.trim() || null,
-        address: profileInput.address?.trim() || null,
+        addressCountry: profileInput.addressCountry?.trim() || null,
+        addressRegion: profileInput.addressRegion?.trim() || null,
+        addressCity: profileInput.addressCity?.trim() || null,
+        addressSubcity: profileInput.addressSubcity?.trim() || null,
+        addressHouseNumber: profileInput.addressHouseNumber?.trim() || null,
         gender: profileInput.gender as Prisma.UserUpdateInput['gender'],
         dateOfBirth: profileInput.dateOfBirth
           ? this.parseDateOnly(profileInput.dateOfBirth)
@@ -909,7 +925,11 @@ export class UserManagementService {
       | 'password'
       | 'employeeId'
       | 'middleName'
-      | 'address'
+      | 'addressCountry'
+      | 'addressRegion'
+      | 'addressCity'
+      | 'addressSubcity'
+      | 'addressHouseNumber'
       | 'gender'
       | 'dateOfBirth'
       | 'nationalId'
@@ -945,7 +965,11 @@ export class UserManagementService {
       Pick<
         UpdateUserDto,
         | 'middleName'
-        | 'address'
+        | 'addressCountry'
+        | 'addressRegion'
+        | 'addressCity'
+        | 'addressSubcity'
+        | 'addressHouseNumber'
         | 'gender'
         | 'dateOfBirth'
         | 'nationalId'
@@ -965,8 +989,20 @@ export class UserManagementService {
     if (rest.middleName !== undefined) {
       data.middleName = rest.middleName?.trim() || null;
     }
-    if (rest.address !== undefined) {
-      data.address = rest.address?.trim() || null;
+    if (rest.addressCountry !== undefined) {
+      data.addressCountry = rest.addressCountry?.trim() || null;
+    }
+    if (rest.addressRegion !== undefined) {
+      data.addressRegion = rest.addressRegion?.trim() || null;
+    }
+    if (rest.addressCity !== undefined) {
+      data.addressCity = rest.addressCity?.trim() || null;
+    }
+    if (rest.addressSubcity !== undefined) {
+      data.addressSubcity = rest.addressSubcity?.trim() || null;
+    }
+    if (rest.addressHouseNumber !== undefined) {
+      data.addressHouseNumber = rest.addressHouseNumber?.trim() || null;
     }
     if (rest.gender !== undefined) {
       data.gender = rest.gender;

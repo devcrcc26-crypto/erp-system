@@ -572,7 +572,11 @@ model User {
   email               String?
   pendingEmail        String?   @map("pending_email")
   phone               String?
-  address               String?
+  addressCountry        String?         @map("address_country")
+  addressRegion         String?         @map("address_region")
+  addressCity           String?         @map("address_city")
+  addressSubcity        String?         @map("address_subcity")
+  addressHouseNumber    String?         @map("address_house_number")
   gender                Gender?
   dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
   nationalId            String?         @map("national_id")
