@@ -5,7 +5,9 @@ export type LeaveType =
   | 'MATERNITY'
   | 'PATERNITY'
   | 'EMERGENCY'
-  | 'COMPASSIONATE';
+  | 'COMPASSIONATE'
+  | 'STUDY'
+  | 'EXAM';
 
 export type LeaveRequestStatus =
   | 'DRAFT'
@@ -91,6 +93,7 @@ export interface LeaveBalance {
   year: number;
   leaveType: LeaveType;
   entitled: number;
+  broughtForward: number;
   used: number;
   pending: number;
   remaining: number;

@@ -6,6 +6,7 @@ import {
 import { LeaveType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { resolveBalanceLeaveType } from './leave-balance-rules';
 
 const DEFAULT_ENTITLEMENTS: Record<LeaveType, number> = {
   ANNUAL: 20,
@@ -15,6 +16,8 @@ const DEFAULT_ENTITLEMENTS: Record<LeaveType, number> = {
   PATERNITY: 0,
   EMERGENCY: 0,
   COMPASSIONATE: 0,
+  STUDY: 0,
+  EXAM: 0,
 };
 
 export type LeaveBalanceField = 'entitled' | 'used' | 'pending';
@@ -115,6 +118,7 @@ export class LeaveBalanceService {
     amount: number,
     companyId: string,
   ): Promise<unknown> {
+    const balanceLeaveType = resolveBalanceLeaveType(leaveType);
     await this.initializeBalance(employeeId, year, companyId);
 
     const row = await this.prisma.leaveBalance.findUnique({
@@ -123,7 +127,7 @@ export class LeaveBalanceService {
           companyId,
           employeeId,
           year,
-          leaveType,
+          leaveType: balanceLeaveType,
         },
       },
     });
@@ -157,18 +161,15 @@ export class LeaveBalanceService {
     days: number,
     companyId: string,
   ): Promise<void> {
-    if (leaveType === LeaveType.UNPAID) {
-      return;
-    }
-
+    const balanceLeaveType = resolveBalanceLeaveType(leaveType);
     const balances = await this.getBalance(employeeId, year, companyId);
     const row = (balances as Array<{ leaveType: string; remaining: number }>).find(
-      (b) => b.leaveType === leaveType,
+      (b) => b.leaveType === balanceLeaveType,
     );
     const remaining = row?.remaining ?? 0;
     if (days > remaining) {
       throw new BadRequestException(
-        `Insufficient ${leaveType.toLowerCase()} leave balance. Remaining: ${remaining}, requested: ${days}`,
+        `Insufficient ${balanceLeaveType.toLowerCase()} leave balance. Remaining: ${remaining}, requested: ${days}`,
       );
     }
   }
@@ -193,16 +194,21 @@ export class LeaveBalanceService {
     year: number;
     leaveType: LeaveType;
     entitled: Prisma.Decimal;
+    broughtForward: Prisma.Decimal;
     used: Prisma.Decimal;
     pending: Prisma.Decimal;
     remaining: Prisma.Decimal | null;
     createdAt: Date;
     updatedAt: Date;
   }): Record<string, unknown> {
+    const entitled = Number(row.entitled);
+    const broughtForward = Number(row.broughtForward);
+    const used = Number(row.used);
+    const pending = Number(row.pending);
     const remaining =
       row.remaining != null
         ? Number(row.remaining)
-        : Number(row.entitled) - Number(row.used) - Number(row.pending);
+        : entitled + broughtForward - used - pending;
 
     return {
       id: row.id,
@@ -210,9 +216,10 @@ export class LeaveBalanceService {
       employeeId: row.employeeId,
       year: row.year,
       leaveType: row.leaveType,
-      entitled: Number(row.entitled),
-      used: Number(row.used),
-      pending: Number(row.pending),
+      entitled,
+      broughtForward,
+      used,
+      pending,
       remaining,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

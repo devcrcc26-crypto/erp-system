@@ -1339,10 +1339,7 @@ export class ApprovalsService {
       PRISMA_TX_OPTIONS,
     );
 
-    if (
-      request.leaveRequest &&
-      request.leaveRequest.leaveType !== LeaveType.UNPAID
-    ) {
+    if (request.leaveRequest) {
       const year = request.leaveRequest.startDate.getUTCFullYear();
       await this.leaveBalanceService.adjustBalance(
         request.leaveRequest.employeeId,

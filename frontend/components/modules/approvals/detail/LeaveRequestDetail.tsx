@@ -233,13 +233,16 @@ export default function LeaveRequestDetail({
         </>
       )}
 
-      <SectionCard title="Leave balance" bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-5 py-4">
         {balance ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-4">
-            <MetaItem label="Entitled">{balance.entitled}</MetaItem>
-            <MetaItem label="Used">{balance.used}</MetaItem>
-            <MetaItem label="Pending">{balance.pending}</MetaItem>
-            <MetaItem label="Remaining">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4">
+            <MetaItem label={t('hr.labels.entitled')}>{balance.entitled}</MetaItem>
+            <MetaItem label={t('hr.labels.broughtForward')}>
+              {balance.broughtForward}
+            </MetaItem>
+            <MetaItem label={t('hr.labels.used')}>{balance.used}</MetaItem>
+            <MetaItem label={t('hr.labels.pending')}>{balance.pending}</MetaItem>
+            <MetaItem label={t('hr.labels.remaining')}>
               <Typography.Text strong>{balance.remaining}</Typography.Text>
             </MetaItem>
           </div>

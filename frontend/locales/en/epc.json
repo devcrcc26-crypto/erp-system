@@ -1046,7 +1046,9 @@
       "MATERNITY": "Maternity",
       "PATERNITY": "Paternity",
       "EMERGENCY": "Emergency",
-      "COMPASSIONATE": "Compassionate"
+      "COMPASSIONATE": "Compassionate",
+      "STUDY": "Study Leave",
+      "EXAM": "Exam Leave"
     },
     "overtimeCategory": {
       "regular": "Regular",
@@ -1222,6 +1224,7 @@
       "reason": "Reason",
       "balance": "Balance",
       "entitled": "Entitled",
+      "broughtForward": "Brought Forward",
       "used": "Used",
       "pending": "Pending",
       "remaining": "Remaining",

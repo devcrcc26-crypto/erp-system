@@ -43,6 +43,9 @@ import {
   UpdateLeaveRequestDto,
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
+import { resolveBalanceLeaveType } from './leave-balance-rules';
+
+export { DEDUCTS_FROM_ANNUAL, resolveBalanceLeaveType } from './leave-balance-rules';
 
 type UploadedFile = {
   originalname: string;
@@ -142,20 +145,14 @@ export class LeaveService
     // Step 2 — initialize balance if needed (outside transaction)
     await this.leaveBalanceService.ensureBalance(userId, year, companyId);
 
-    // Step 3 — check balance (outside transaction; unpaid skips remaining)
-    if (dto.leaveType !== LeaveType.UNPAID) {
-      const balances = (await this.leaveBalanceService.getBalance(
-        userId,
-        year,
-        companyId,
-      )) as Array<{ leaveType: string; remaining: number }>;
-      const leaveBalance = balances.find((b) => b.leaveType === dto.leaveType);
-      if (!leaveBalance || leaveBalance.remaining < days) {
-        throw new BadRequestException(
-          `Insufficient ${dto.leaveType.toLowerCase()} leave balance. Remaining: ${leaveBalance?.remaining ?? 0}, requested: ${days}`,
-        );
-      }
-    }
+    // Step 3 — check balance (outside transaction)
+    await this.leaveBalanceService.assertSufficientBalance(
+      userId,
+      dto.leaveType,
+      year,
+      days,
+      companyId,
+    );
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
 
@@ -393,8 +390,9 @@ export class LeaveService
       year,
       companyId,
     )) as Array<Record<string, unknown>>;
+    const balanceLeaveType = resolveBalanceLeaveType(leave.leaveType);
     const balance =
-      balances.find((row) => row.leaveType === leave.leaveType) ?? null;
+      balances.find((row) => row.leaveType === balanceLeaveType) ?? null;
 
     return {
       ...mapped,

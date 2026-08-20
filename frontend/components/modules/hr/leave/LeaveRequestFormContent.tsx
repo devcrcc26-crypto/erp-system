@@ -27,6 +27,7 @@ import {
 import {
   calculateLeaveDays,
   formatLeaveType,
+  resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
@@ -69,6 +70,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       { value: 'PATERNITY' as const, label: t('hr.leaveType.PATERNITY') },
       { value: 'EMERGENCY' as const, label: t('hr.leaveType.EMERGENCY') },
       { value: 'COMPASSIONATE' as const, label: t('hr.leaveType.COMPASSIONATE') },
+      { value: 'STUDY' as const, label: t('hr.leaveType.STUDY') },
+      { value: 'EXAM' as const, label: t('hr.leaveType.EXAM') },
     ],
     [t],
   );
@@ -77,7 +80,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     if (!leaveType || !balancesQuery.data) {
       return undefined;
     }
-    return balancesQuery.data.find((row) => row.leaveType === leaveType);
+    const balanceLeaveType = resolveBalanceLeaveType(leaveType);
+    return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
 
   useEffect(() => {
@@ -162,6 +166,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         </Typography.Text>
         <Typography.Text type="secondary">
           {t('hr.labels.entitled')}: {selectedBalance.entitled}
+        </Typography.Text>
+        <Typography.Text type="secondary">
+          {t('hr.labels.broughtForward')}: {selectedBalance.broughtForward}
         </Typography.Text>
         {selectedBalance.pending > 0 ? (
           <Typography.Text type="secondary">

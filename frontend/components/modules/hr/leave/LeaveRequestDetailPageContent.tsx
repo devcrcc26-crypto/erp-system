@@ -280,6 +280,28 @@ export default function LeaveRequestDetailPageContent({
               ) : null}
             </div>
           </SectionCard>
+
+          {request.balance ? (
+            <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-5 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <MetaItem label={t('hr.labels.entitled')}>
+                  {request.balance.entitled}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.broughtForward')}>
+                  {request.balance.broughtForward}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.used')}>
+                  {request.balance.used}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.pending')}>
+                  {request.balance.pending}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.remaining')}>
+                  <span className="font-semibold">{request.balance.remaining}</span>
+                </MetaItem>
+              </div>
+            </SectionCard>
+          ) : null}
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">

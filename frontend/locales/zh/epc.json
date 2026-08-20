@@ -1044,7 +1044,9 @@
       "MATERNITY": "产假",
       "PATERNITY": "陪产假",
       "EMERGENCY": "紧急假",
-      "COMPASSIONATE": "丧假"
+      "COMPASSIONATE": "丧假",
+      "STUDY": "学习假",
+      "EXAM": "考试假"
     },
     "overtimeCategory": {
       "regular": "普通加班",
@@ -1219,6 +1221,7 @@
       "reason": "原因",
       "balance": "余额",
       "entitled": "应享天数",
+      "broughtForward": "结转天数",
       "used": "已用天数",
       "pending": "待处理天数",
       "remaining": "剩余天数",
