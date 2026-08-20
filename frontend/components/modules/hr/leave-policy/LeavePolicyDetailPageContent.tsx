@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Button, Descriptions, Space, Spin } from 'antd';
+import { useMemo } from 'react';
+import { Alert, Button, Descriptions, Spin } from 'antd';
 import { Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -41,8 +42,25 @@ export default function LeavePolicyDetailPageContent({
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const policyQuery = useLeavePolicy(policyId, canViewHr);
+  const policy = policyQuery.data;
 
-  useSetHeaderExtra(null);
+  const headerExtra = useMemo(() => {
+    if (!policy) {
+      return null;
+    }
+    return (
+      <Button
+        type="primary"
+        icon={<Pencil size={14} />}
+        onClick={() => router.push(`/hr/leave-policy/${policy.id}/edit`)}
+        style={{ borderRadius: 2 }}
+      >
+        {t('common.update')}
+      </Button>
+    );
+  }, [policy, router, t]);
+
+  useSetHeaderExtra(headerExtra);
 
   if (!canViewHr) {
     return (
@@ -50,7 +68,7 @@ export default function LeavePolicyDetailPageContent({
     );
   }
 
-  if (policyQuery.isLoading && !policyQuery.data) {
+  if (policyQuery.isLoading && !policy) {
     return (
       <div className="flex justify-center p-12">
         <Spin />
@@ -58,7 +76,7 @@ export default function LeavePolicyDetailPageContent({
     );
   }
 
-  if (policyQuery.isError || !policyQuery.data) {
+  if (policyQuery.isError || !policy) {
     return (
       <Alert
         type="error"
@@ -72,34 +90,10 @@ export default function LeavePolicyDetailPageContent({
     );
   }
 
-  const policy = policyQuery.data;
   const rules = sortRules(policy.rules);
 
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <h1
-            className="erp-pro-card-toolbar-title"
-            style={{ fontSize: 16, fontWeight: 600 }}
-          >
-            {policy.name}
-          </h1>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<Pencil size={14} />}
-              onClick={() =>
-                router.push(`/hr/leave-policy/${policy.id}/edit`)
-              }
-              style={{ borderRadius: 2 }}
-            >
-              {t('common.update')}
-            </Button>
-          </Space>
-        </div>
-      </div>
-
       <FormLayout variant="pro" dense title={t('hr.leavePolicy.detail')}>
         <Descriptions
           column={{ xs: 1, sm: 2 }}

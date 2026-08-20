@@ -12,7 +12,7 @@ import { tokens } from '@/lib/theme/tokens';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
 /**
- * Shell header: sticky actions bar only. Breadcrumb + page title scroll with content.
+ * Shell chrome: sticky actions header + sticky breadcrumb/title second header.
  */
 export default function MainContentHeader({
   breadcrumbs,
@@ -39,7 +39,7 @@ export default function MainContentHeader({
   return (
     <>
       <header
-        className="sticky top-0 z-20 shrink-0 bg-white"
+        className="sticky top-0 z-30 shrink-0 bg-white"
         style={{ borderBottom: `1px solid ${tokens.colorBorder}` }}
       >
         <div
@@ -65,7 +65,10 @@ export default function MainContentHeader({
           <div className="min-w-0 flex-1">
             <h1
               className="m-0 truncate text-[16px] font-semibold leading-tight tracking-tight"
-              style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
+              style={{
+                color: tokens.colorTextPrimary,
+                fontFamily: tokens.fontFamily,
+              }}
             >
               {pageTitle}
             </h1>
@@ -82,27 +85,39 @@ export default function MainContentHeader({
         </div>
       </header>
 
-      <div
-        className="shrink-0 px-3 pt-4 pb-0 sm:px-4 lg:px-6"
-        style={{ background: tokens.colorPageBg }}
-      >
+      <header>
+
+        
         {showBreadcrumbBar ? (
-          <div className="mb-2">
+          <div
+          className={`sticky z-20 shrink-0 bg-white px-3 py-2 sm:px-4 lg:px-6 ${
+            !showBreadcrumbBar && !headerExtra ? 'hidden lg:block' : ''
+          }`}
+          style={{
+            top: SHELL_TOP_HEADER_HEIGHT,
+            borderBottom: `1px solid ${tokens.colorBorder}`,
+          }}
+          >
             <Breadcrumbs segments={breadcrumbs} />
           </div>
         ) : null}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <h1
-            className="m-0 text-[20px] font-semibold leading-[32px] tracking-tight"
-            style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
+        <div className="sticky z-20 shrink-0  px-3 py-2 sm:px-4 lg:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          {/* <h1
+            className="m-0 hidden text-[20px] font-semibold leading-[32px] tracking-tight lg:block"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
           >
             {pageTitle}
-          </h1>
+          </h1> */}
           {headerExtra ? (
-            <div className="flex shrink-0 items-center">{headerExtra}</div>
+            <div className="flex shrink-0 items-center sm:ml-auto">
+              {headerExtra}
+            </div>
           ) : null}
         </div>
-      </div>
+      </header>
     </>
   );
 }

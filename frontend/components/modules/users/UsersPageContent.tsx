@@ -26,7 +26,7 @@ import {
   ReloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { Users } from 'lucide-react';
+import { User2, Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -552,11 +552,14 @@ export default function UsersPageContent(): React.ReactNode {
 
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
-          <h1 className="erp-pro-card-toolbar-title" style={{fontSize: '16px', fontWeight: 600}}>
+          {/* <h1 className="erp-pro-card-toolbar-title" style={{fontSize: '16px', fontWeight: 600}}>
             {meta?.total === 1
               ? t('users.userCountOne')
               : t('users.userCount', { count: meta?.total ?? 0 })} 
-          </h1>
+          </h1> */}
+          <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-xl">
+            <Users size={16} /> Users
+          </div>
           <Space wrap size={8}>
             <Button
               type="primary"
