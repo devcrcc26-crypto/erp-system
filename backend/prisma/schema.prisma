@@ -83,6 +83,32 @@ enum FolderContextType {
   OFFICIAL_SEAL
   PROJECT_SEAL
   EMPLOYEE_CONTRACT
+  EMPLOYEE_PROFILE
+}
+
+enum Nationality {
+  ETHIOPIAN
+  CHINESE
+}
+
+enum EmployeeType {
+  PERMANENT
+  CONTRACT
+  TEMPORARY
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EducationLevel {
+  PHD
+  MSC
+  BSC
+  DIPLOMA
+  CERTIFICATE
+  OTHER
 }
 
 enum NotificationChannel {
@@ -260,7 +286,7 @@ model Company {
   EmployeeContracts        EmployeeContract[]
   companyAssets            CompanyAsset[]
   assetAssignments         AssetAssignment[]
-  
+  leavePolicies            LeavePolicy[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -538,12 +564,27 @@ model User {
   positionId          String?   @map("position_id")
   /// @deprecated Use engineeringDisciplineId — retained for migration/audit.
   discipline          UserDiscipline? @map("discipline")
+  employeeId            String?         @unique @map("employee_id")
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
+  middleName            String?         @map("middle_name")
   chineseName         String?   @map("chinese_name")
   email               String?
   pendingEmail        String?   @map("pending_email")
   phone               String?
+  address               String?
+  gender                Gender?
+  dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
+  nationalId            String?         @map("national_id")
+  nationality           Nationality?
+  employeeType          EmployeeType?   @map("employee_type")
+  educationLevel        EducationLevel? @map("education_level")
+  fieldOfStudy          String?         @map("field_of_study")
+  experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
+  emergencyContactName  String?         @map("emergency_contact_name")
+  emergencyContactPhone String?         @map("emergency_contact_phone")
+  leavePolicyId         String?         @map("leave_policy_id")
+  profileFolderId       String?         @map("profile_folder_id")
   passwordHash        String    @map("password_hash")
   preferredLanguage   String?   @map("preferred_language")
   preferredTimezone   String?   @map("preferred_timezone")
@@ -709,10 +750,13 @@ model User {
   assetAssignmentsAsReturnedBy    AssetAssignment[]         @relation("AssetAssignmentReturnedBy")
   assetAssignmentsCreated         AssetAssignment[]         @relation("AssetAssignmentCreator")
   assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
-
-  
+  leavePolicy                     LeavePolicy?              @relation(fields: [leavePolicyId], references: [id])
+  profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
 
   @@unique([companyId, email], map: "uq_user_company_email")
+  @@index([leavePolicyId], map: "idx_user_leave_policy")
+  @@index([profileFolderId], map: "idx_user_profile_folder")
+  @@index([employeeId], map: "idx_user_employee_id")
   @@index([companyId], map: "idx_user_company_id")
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
   @@index([branchId], map: "idx_user_branch_id")
@@ -1036,7 +1080,7 @@ model DocumentFolder {
   officialSeals              OfficialSeal[]
   projectSeals               ProjectSeal[]
   employeeContracts          EmployeeContract[]
-
+  userProfiles               User[]                 @relation("UserProfileFolder")
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -3515,6 +3559,28 @@ model ApprovalResponseDocument {
 
 // ─── Leave / HR ──────────────────────────────────────────────────────────────
 
+model LeavePolicy {
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
+  name        String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String    @map("updated_by")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  users   User[]
+
+  @@index([companyId], map: "idx_leave_policy_company")
+  @@index([companyId, deletedAt], map: "idx_leave_policy_company_deleted")
+  @@index([companyId, isActive], map: "idx_leave_policy_company_active")
+  @@map("leave_policy")
+}
+
 model LeaveRequest {
   id                 String             @id @default(uuid())
   companyId          String             @map("company_id")
@@ -4689,6 +4755,12 @@ model EmployeeContract{
   terminatedAt              DateTime?                     @map("terminated_at") @db.Date
   terminationReason         String?                       @map("termination_reason")
   notes                     String?
+  basicSalary               Decimal?                      @map("basic_salary") @db.Decimal(14, 2)
+  transportationAllowance   Decimal?                      @map("transportation_allowance") @db.Decimal(14, 2)
+  monthlyBonus              Decimal?                      @map("monthly_bonus") @db.Decimal(14, 2)
+  netSalary                 Decimal?                      @map("net_salary") @db.Decimal(14, 2)
+  probationEndDate          DateTime?                     @map("probation_end_date") @db.Date
+  governedBy                String?                       @map("governed_by")
   lastWarnedAt              DateTime?                     @map("last_warned_at")
   attachmentFolderId       String?                        @map("attachment_folder_id")
   createdAt                 DateTime                      @default(now()) @map("created_at")

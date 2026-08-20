@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { FolderContextType, Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PasswordService } from '../../../auth/application/services/password.service';
+import { DocumentService } from '../../../documents/application/services/document.service';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -30,12 +32,20 @@ import { UserProvisioningService } from './user-provisioning.service';
 
 type AuditContext = { companyId: string; userId: string };
 
+interface UploadedFile {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
 @Injectable()
 export class UserManagementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
     private readonly userProvisioningService: UserProvisioningService,
+    private readonly documentService: DocumentService,
   ) {}
 
   async listUsers(
@@ -73,7 +83,12 @@ export class UserManagementService {
       }),
       this.prisma.user.count({ where }),
     ]);
-    return buildPaginatedResult(data, total, query.page, query.limit);
+    return buildPaginatedResult(
+      data.map((row) => this.mapUserResponse(row)),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   /**
@@ -117,11 +132,21 @@ export class UserManagementService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return user;
+    return this.mapUserResponse(user);
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
-    const { password, email, firstName, lastName, chineseName, ...rest } = dto;
+    const {
+      password,
+      email,
+      firstName,
+      lastName,
+      chineseName,
+      employeeId: requestedEmployeeId,
+      ...rest
+    } = dto;
+
+    const profileInput = this.extractProfileInput(dto);
 
     const sharedInput = {
       firstName,
@@ -139,44 +164,54 @@ export class UserManagementService {
       isActive: rest.isActive,
     };
 
-    // Record-only user (no email): no authentication, no invitation email.
+    let provisionedUser: { id: string };
+
     if (!email) {
-      const user = await this.userProvisioningService.provisionRecordOnlyUser(
+      provisionedUser = await this.userProvisioningService.provisionRecordOnlyUser(
         ctx,
         sharedInput,
       );
-
-      return this.prisma.user.findFirst({
-        where: activeOnly({ id: user.id, companyId: ctx.companyId }),
-        select: this.userSelect(),
-      });
-    }
-
-    if (password) {
-      const user = await this.userProvisioningService.provisionWithPassword(
+    } else if (password) {
+      provisionedUser = await this.userProvisioningService.provisionWithPassword(
         ctx,
         { email, password, ...sharedInput },
       );
-
-      return this.prisma.user.findFirst({
-        where: activeOnly({ id: user.id, companyId: ctx.companyId }),
-        select: this.userSelect(),
-      });
+    } else {
+      provisionedUser = await this.userProvisioningService.provisionInvitedUser(
+        ctx,
+        { email, ...sharedInput },
+      );
     }
 
-    const user = await this.userProvisioningService.provisionInvitedUser(ctx, {
-      email,
-      ...sharedInput,
-    });
+    await this.applyEmployeeProfileOnCreate(
+      ctx,
+      provisionedUser.id,
+      firstName,
+      lastName,
+      requestedEmployeeId,
+      profileInput,
+    );
 
-    await this.userProvisioningService.sendActivationInvite(user);
+    if (email && !password) {
+      const userForInvite = await this.prisma.user.findFirst({
+        where: activeOnly({ id: provisionedUser.id, companyId: ctx.companyId }),
+        select: { id: true, email: true, firstName: true, lastName: true },
+      });
+      if (userForInvite?.email) {
+        await this.userProvisioningService.sendActivationInvite(userForInvite);
+      }
+    }
 
     const created = await this.prisma.user.findFirst({
-      where: activeOnly({ id: user.id, companyId: ctx.companyId }),
+      where: activeOnly({ id: provisionedUser.id, companyId: ctx.companyId }),
       select: this.userSelect(),
     });
 
-    return { ...created, invitationSent: true };
+    const mapped = this.mapUserResponse(created!);
+    if (email && !password) {
+      return { ...mapped, invitationSent: true };
+    }
+    return mapped;
   }
 
   /**
@@ -226,20 +261,45 @@ export class UserManagementService {
     id: string,
     dto: UpdateUserDto,
   ): Promise<unknown> {
-    await this.getUser(ctx, id);
-    const { password, ...rest } = dto;
-    const data: Prisma.UserUpdateInput = {
-      ...rest,
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: { id: true, employeeId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { password, employeeId: dtoEmployeeId, ...rest } = dto;
+
+    if (rest.leavePolicyId) {
+      await this.assertLeavePolicy(ctx.companyId, rest.leavePolicyId);
+    }
+
+    const profileData = this.buildProfileUpdateData(rest);
+    const data: Prisma.UserUncheckedUpdateInput = {
+      ...this.buildBasicUpdateData(rest),
+      ...profileData,
       updatedBy: ctx.userId,
     };
+
+    if (dtoEmployeeId !== undefined && !existing.employeeId) {
+      const trimmed = dtoEmployeeId.trim();
+      if (trimmed) {
+        await this.assertEmployeeIdAvailable(ctx.companyId, trimmed, id);
+        data.employeeId = trimmed;
+      }
+    }
+
     if (password) {
       data.passwordHash = await this.passwordService.hash(password);
     }
-    return this.prisma.user.update({
+
+    const updated = await this.prisma.user.update({
       where: { id },
       data,
       select: this.userSelect(),
     });
+    return this.mapUserResponse(updated);
   }
 
   async deleteUser(ctx: AuditContext, id: string): Promise<void> {
@@ -554,6 +614,86 @@ export class UserManagementService {
     });
   }
 
+  /** Lists profile documents for an employee. */
+  async listUserDocuments(ctx: AuditContext, userId: string): Promise<unknown[]> {
+    const folderId = await this.resolveProfileFolderId(ctx, userId);
+    const documents = await this.prisma.document.findMany({
+      where: activeOnly({ companyId: ctx.companyId, folderId, isCurrent: true }),
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        fileType: true,
+        fileSizeBytes: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return documents;
+  }
+
+  /** Uploads one or more labelled files to the employee profile folder. */
+  async uploadUserDocuments(
+    ctx: AuditContext,
+    userId: string,
+    files: UploadedFile[],
+    labels: string[],
+  ): Promise<unknown[]> {
+    if (files.length === 0) {
+      throw new BadRequestException('At least one file is required');
+    }
+
+    const folderId = await this.resolveProfileFolderId(ctx, userId);
+    const uploaded: unknown[] = [];
+
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      const label = labels[index]?.trim() || file.originalname;
+      const document = (await this.documentService.uploadDocument(
+        ctx,
+        folderId,
+        file,
+      )) as { id: string };
+
+      const updated = await this.prisma.document.update({
+        where: { id: document.id },
+        data: { name: label, updatedBy: ctx.userId },
+        select: {
+          id: true,
+          name: true,
+          fileType: true,
+          fileSizeBytes: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      uploaded.push(updated);
+    }
+
+    return uploaded;
+  }
+
+  /** Soft-deletes a profile document belonging to the user. */
+  async deleteUserDocument(
+    ctx: AuditContext,
+    userId: string,
+    documentId: string,
+  ): Promise<void> {
+    const folderId = await this.resolveProfileFolderId(ctx, userId);
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({
+        id: documentId,
+        companyId: ctx.companyId,
+        folderId,
+      }),
+      select: { id: true },
+    });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    await this.documentService.deleteDocument(ctx, documentId);
+  }
+
   private async assertUserRole(
     ctx: AuditContext,
     userRoleId: string,
@@ -583,6 +723,22 @@ export class UserManagementService {
       discipline: true,
       engineeringDisciplineId: true,
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
+      employeeId: true,
+      middleName: true,
+      address: true,
+      gender: true,
+      dateOfBirth: true,
+      nationalId: true,
+      nationality: true,
+      employeeType: true,
+      educationLevel: true,
+      fieldOfStudy: true,
+      experienceStartDate: true,
+      emergencyContactName: true,
+      emergencyContactPhone: true,
+      leavePolicyId: true,
+      leavePolicy: { select: { id: true, name: true } },
+      profileFolderId: true,
       firstName: true,
       lastName: true,
       chineseName: true,
@@ -635,6 +791,347 @@ export class UserManagementService {
         role: { select: { id: true, name: true } },
       },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+    };
+  }
+
+  private extractProfileInput(
+    dto: CreateUserDto,
+  ): Partial<{
+    middleName?: string;
+    address?: string;
+    gender?: CreateUserDto['gender'];
+    dateOfBirth?: string;
+    nationalId?: string;
+    nationality?: CreateUserDto['nationality'];
+    employeeType?: CreateUserDto['employeeType'];
+    educationLevel?: CreateUserDto['educationLevel'];
+    fieldOfStudy?: string;
+    experienceStartDate?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    leavePolicyId?: string;
+  }> {
+    return {
+      middleName: dto.middleName,
+      address: dto.address,
+      gender: dto.gender,
+      dateOfBirth: dto.dateOfBirth,
+      nationalId: dto.nationalId,
+      nationality: dto.nationality,
+      employeeType: dto.employeeType,
+      educationLevel: dto.educationLevel,
+      fieldOfStudy: dto.fieldOfStudy,
+      experienceStartDate: dto.experienceStartDate,
+      emergencyContactName: dto.emergencyContactName,
+      emergencyContactPhone: dto.emergencyContactPhone,
+      leavePolicyId: dto.leavePolicyId,
+    };
+  }
+
+  private async applyEmployeeProfileOnCreate(
+    ctx: AuditContext,
+    userId: string,
+    firstName: string,
+    lastName: string,
+    requestedEmployeeId: string | undefined,
+    profileInput: Partial<{
+      middleName?: string;
+      address?: string;
+      gender?: CreateUserDto['gender'];
+      dateOfBirth?: string;
+      nationalId?: string;
+      nationality?: CreateUserDto['nationality'];
+      employeeType?: CreateUserDto['employeeType'];
+      educationLevel?: CreateUserDto['educationLevel'];
+      fieldOfStudy?: string;
+      experienceStartDate?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+      leavePolicyId?: string;
+    }>,
+  ): Promise<void> {
+    const employeeId =
+      requestedEmployeeId?.trim() || (await this.nextEmployeeId());
+    await this.assertEmployeeIdAvailable(ctx.companyId, employeeId, userId);
+
+    if (profileInput.leavePolicyId) {
+      await this.assertLeavePolicy(ctx.companyId, profileInput.leavePolicyId);
+    }
+
+    const folderName = `${firstName} ${lastName}`.trim() || 'Employee Profile';
+    const folder = await this.prisma.documentFolder.create({
+      data: {
+        id: randomUUID(),
+        companyId: ctx.companyId,
+        parentId: null,
+        name: folderName,
+        path: `/Employee Profiles/${userId}`,
+        contextType: FolderContextType.EMPLOYEE_PROFILE,
+        contextId: userId,
+        isSystem: false,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        employeeId,
+        profileFolderId: folder.id,
+        middleName: profileInput.middleName?.trim() || null,
+        address: profileInput.address?.trim() || null,
+        gender: profileInput.gender as Prisma.UserUpdateInput['gender'],
+        dateOfBirth: profileInput.dateOfBirth
+          ? this.parseDateOnly(profileInput.dateOfBirth)
+          : null,
+        nationalId: profileInput.nationalId?.trim() || null,
+        nationality: profileInput.nationality as Prisma.UserUpdateInput['nationality'],
+        employeeType: profileInput.employeeType as Prisma.UserUpdateInput['employeeType'],
+        educationLevel:
+          profileInput.educationLevel as Prisma.UserUpdateInput['educationLevel'],
+        fieldOfStudy: profileInput.fieldOfStudy?.trim() || null,
+        experienceStartDate: profileInput.experienceStartDate
+          ? this.parseDateOnly(profileInput.experienceStartDate)
+          : null,
+        emergencyContactName: profileInput.emergencyContactName?.trim() || null,
+        emergencyContactPhone: profileInput.emergencyContactPhone?.trim() || null,
+        leavePolicyId: profileInput.leavePolicyId ?? null,
+        updatedBy: ctx.userId,
+      },
+    });
+  }
+
+  private buildBasicUpdateData(
+    rest: Omit<
+      UpdateUserDto,
+      | 'password'
+      | 'employeeId'
+      | 'middleName'
+      | 'address'
+      | 'gender'
+      | 'dateOfBirth'
+      | 'nationalId'
+      | 'nationality'
+      | 'employeeType'
+      | 'educationLevel'
+      | 'fieldOfStudy'
+      | 'experienceStartDate'
+      | 'emergencyContactName'
+      | 'emergencyContactPhone'
+      | 'leavePolicyId'
+    >,
+  ): Prisma.UserUncheckedUpdateInput {
+    return {
+      firstName: rest.firstName,
+      lastName: rest.lastName,
+      chineseName: rest.chineseName?.trim() || undefined,
+      phone: rest.phone?.trim() || undefined,
+      branchId: rest.branchId,
+      departmentId: rest.departmentId,
+      positionId: rest.positionId,
+      discipline: rest.discipline,
+      engineeringDisciplineId: rest.engineeringDisciplineId,
+      preferredLanguage: rest.preferredLanguage,
+      preferredTimezone: rest.preferredTimezone,
+      preferredDateFormat: rest.preferredDateFormat,
+      isActive: rest.isActive,
+    };
+  }
+
+  private buildProfileUpdateData(
+    rest: Partial<
+      Pick<
+        UpdateUserDto,
+        | 'middleName'
+        | 'address'
+        | 'gender'
+        | 'dateOfBirth'
+        | 'nationalId'
+        | 'nationality'
+        | 'employeeType'
+        | 'educationLevel'
+        | 'fieldOfStudy'
+        | 'experienceStartDate'
+        | 'emergencyContactName'
+        | 'emergencyContactPhone'
+        | 'leavePolicyId'
+      >
+    >,
+  ): Prisma.UserUncheckedUpdateInput {
+    const data: Prisma.UserUncheckedUpdateInput = {};
+
+    if (rest.middleName !== undefined) {
+      data.middleName = rest.middleName?.trim() || null;
+    }
+    if (rest.address !== undefined) {
+      data.address = rest.address?.trim() || null;
+    }
+    if (rest.gender !== undefined) {
+      data.gender = rest.gender;
+    }
+    if (rest.dateOfBirth !== undefined) {
+      data.dateOfBirth = rest.dateOfBirth
+        ? this.parseDateOnly(rest.dateOfBirth)
+        : null;
+    }
+    if (rest.nationalId !== undefined) {
+      data.nationalId = rest.nationalId?.trim() || null;
+    }
+    if (rest.nationality !== undefined) {
+      data.nationality = rest.nationality;
+    }
+    if (rest.employeeType !== undefined) {
+      data.employeeType = rest.employeeType;
+    }
+    if (rest.educationLevel !== undefined) {
+      data.educationLevel = rest.educationLevel;
+    }
+    if (rest.fieldOfStudy !== undefined) {
+      data.fieldOfStudy = rest.fieldOfStudy?.trim() || null;
+    }
+    if (rest.experienceStartDate !== undefined) {
+      data.experienceStartDate = rest.experienceStartDate
+        ? this.parseDateOnly(rest.experienceStartDate)
+        : null;
+    }
+    if (rest.emergencyContactName !== undefined) {
+      data.emergencyContactName = rest.emergencyContactName?.trim() || null;
+    }
+    if (rest.emergencyContactPhone !== undefined) {
+      data.emergencyContactPhone = rest.emergencyContactPhone?.trim() || null;
+    }
+    if (rest.leavePolicyId !== undefined) {
+      data.leavePolicyId = rest.leavePolicyId || null;
+    }
+
+    return data;
+  }
+
+  private async resolveProfileFolderId(
+    ctx: AuditContext,
+    userId: string,
+  ): Promise<string> {
+    await this.getUser(ctx, userId);
+
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: {
+        id: true,
+        profileFolderId: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.profileFolderId) {
+      return user.profileFolderId;
+    }
+
+    const folderName = `${user.firstName} ${user.lastName}`.trim() || 'Employee Profile';
+    const folder = await this.prisma.documentFolder.create({
+      data: {
+        id: randomUUID(),
+        companyId: ctx.companyId,
+        parentId: null,
+        name: folderName,
+        path: `/Employee Profiles/${userId}`,
+        contextType: FolderContextType.EMPLOYEE_PROFILE,
+        contextId: userId,
+        isSystem: false,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileFolderId: folder.id, updatedBy: ctx.userId },
+    });
+
+    return folder.id;
+  }
+
+  private async nextEmployeeId(): Promise<string> {
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('employee_id_seq')
+    `;
+    const seq = Number(result[0].nextval);
+    return `EMP-${String(seq).padStart(4, '0')}`;
+  }
+
+  private async assertEmployeeIdAvailable(
+    companyId: string,
+    employeeId: string,
+    excludeUserId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        employeeId,
+        companyId,
+        deletedAt: null,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('Employee ID already in use');
+    }
+  }
+
+  private async assertLeavePolicy(
+    companyId: string,
+    leavePolicyId: string,
+  ): Promise<void> {
+    const policy = await this.prisma.leavePolicy.findFirst({
+      where: activeOnly({ id: leavePolicyId, companyId, isActive: true }),
+      select: { id: true },
+    });
+    if (!policy) {
+      throw new BadRequestException('Leave policy not found or inactive');
+    }
+  }
+
+  private parseDateOnly(value: string): Date {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (!match) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    );
+  }
+
+  private computeYearsOfExperience(startDate: Date | null): number | null {
+    if (!startDate) {
+      return null;
+    }
+    const now = new Date();
+    let years = now.getUTCFullYear() - startDate.getUTCFullYear();
+    const monthDiff = now.getUTCMonth() - startDate.getUTCMonth();
+    const dayDiff = now.getUTCDate() - startDate.getUTCDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      years -= 1;
+    }
+    return Math.max(0, years);
+  }
+
+  private mapUserResponse<T extends { experienceStartDate?: Date | null }>(
+    user: T | null,
+  ): (T & { yearsOfExperience: number | null }) | null {
+    if (!user) {
+      return null;
+    }
+    return {
+      ...user,
+      yearsOfExperience: this.computeYearsOfExperience(
+        user.experienceStartDate ?? null,
+      ),
     };
   }
 }

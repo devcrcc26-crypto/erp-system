@@ -7,9 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -63,6 +67,67 @@ export class UsersController {
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {
     return this.userManagementService.listUsersDirectory(this.ctx(user), query);
+  }
+
+  @Get(':id/documents')
+  @RequirePermission('users', 'view')
+  @ApiOperation({ summary: 'List employee profile documents' })
+  listDocuments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.userManagementService.listUserDocuments(this.ctx(user), id);
+  }
+
+  @Post(':id/documents')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Upload employee profile documents' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        labels: {
+          type: 'string',
+          description: 'JSON array of document labels matching file order',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 20, { storage: memoryStorage() }))
+  uploadDocuments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body('labels') labelsRaw: string | undefined,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ): Promise<unknown> {
+    const labels = this.parseLabels(labelsRaw, files?.length ?? 0);
+    return this.userManagementService.uploadUserDocuments(
+      this.ctx(user),
+      id,
+      files ?? [],
+      labels,
+    );
+  }
+
+  @Delete(':id/documents/:documentId')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Delete an employee profile document' })
+  async deleteDocument(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+  ): Promise<{ message: string }> {
+    await this.userManagementService.deleteUserDocument(
+      this.ctx(user),
+      id,
+      documentId,
+    );
+    return { message: 'Document deleted' };
   }
 
   @Get(':id')
@@ -146,5 +211,20 @@ export class UsersController {
   ): Promise<{ message: string }> {
     await this.userManagementService.revokeUserRole(this.ctx(user), id, roleId);
     return { message: 'Role revoked' };
+  }
+
+  private parseLabels(raw: string | undefined, fileCount: number): string[] {
+    if (!raw?.trim()) {
+      return Array.from({ length: fileCount }, () => '');
+    }
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return Array.from({ length: fileCount }, () => '');
+      }
+      return parsed.map((item) => (typeof item === 'string' ? item : ''));
+    } catch {
+      return Array.from({ length: fileCount }, () => '');
+    }
   }
 }

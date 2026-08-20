@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -62,6 +63,41 @@ export class CreateEmployeeContractDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({ example: 25000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  basicSalary?: number;
+
+  @ApiPropertyOptional({ example: 3000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  transportationAllowance?: number;
+
+  @ApiPropertyOptional({ example: 2000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  monthlyBonus?: number;
+
+  @ApiPropertyOptional({ example: 30000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  netSalary?: number;
+
+  @ApiPropertyOptional({ example: '2026-11-17' })
+  @IsOptional()
+  @IsDateString()
+  probationEndDate?: string;
+
+  @ApiPropertyOptional({ example: 'Ethiopian Labor Proclamation 1156/2019' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  governedBy?: string;
 }
 
 export class UpdateEmployeeContractDto {
@@ -90,6 +126,41 @@ export class UpdateEmployeeContractDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({ example: 25000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  basicSalary?: number;
+
+  @ApiPropertyOptional({ example: 3000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  transportationAllowance?: number;
+
+  @ApiPropertyOptional({ example: 2000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  monthlyBonus?: number;
+
+  @ApiPropertyOptional({ example: 30000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  netSalary?: number;
+
+  @ApiPropertyOptional({ example: '2026-11-17' })
+  @IsOptional()
+  @IsDateString()
+  probationEndDate?: string;
+
+  @ApiPropertyOptional({ example: 'Ethiopian Labor Proclamation 1156/2019' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  governedBy?: string;
 }
 
 export class TerminateEmployeeContractDto {

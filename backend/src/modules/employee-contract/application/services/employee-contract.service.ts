@@ -99,6 +99,14 @@ export class EmployeeContractService {
                 startDate,
                 endDate,
                 notes: dto.notes?.trim() || null,
+                basicSalary: this.toDecimal(dto.basicSalary),
+                transportationAllowance: this.toDecimal(dto.transportationAllowance),
+                monthlyBonus: this.toDecimal(dto.monthlyBonus),
+                netSalary: this.toDecimal(dto.netSalary),
+                probationEndDate: dto.probationEndDate
+                    ? this.parseDateOnly(dto.probationEndDate)
+                    : null,
+                governedBy: dto.governedBy?.trim() || null,
                 createdBy: userId,
                 updatedBy: userId,
             }
@@ -185,6 +193,28 @@ export class EmployeeContractService {
                 ...(dto.startDate !== undefined ? {startDate} : {}),
                 ...(dto.endDate !== undefined ? {endDate} : {}),
                 ...(dto.notes !== undefined ? {notes: dto.notes?.trim() || null} : {}),
+                ...(dto.basicSalary !== undefined
+                    ? { basicSalary: this.toDecimal(dto.basicSalary) }
+                    : {}),
+                ...(dto.transportationAllowance !== undefined
+                    ? { transportationAllowance: this.toDecimal(dto.transportationAllowance) }
+                    : {}),
+                ...(dto.monthlyBonus !== undefined
+                    ? { monthlyBonus: this.toDecimal(dto.monthlyBonus) }
+                    : {}),
+                ...(dto.netSalary !== undefined
+                    ? { netSalary: this.toDecimal(dto.netSalary) }
+                    : {}),
+                ...(dto.probationEndDate !== undefined
+                    ? {
+                        probationEndDate: dto.probationEndDate
+                            ? this.parseDateOnly(dto.probationEndDate)
+                            : null,
+                    }
+                    : {}),
+                ...(dto.governedBy !== undefined
+                    ? { governedBy: dto.governedBy?.trim() || null }
+                    : {}),
                 updatedBy: userId,
             }
         });
@@ -269,6 +299,13 @@ export class EmployeeContractService {
         return new Date(
             Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
         );
+    }
+
+    private toDecimal(value?: number): Prisma.Decimal | null {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        return new Prisma.Decimal(value);
     }
 
     private validateContractDates(

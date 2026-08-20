@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsOptional,
@@ -11,7 +12,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { UserDiscipline } from '@prisma/client';
+import {
+  EducationLevel,
+  EmployeeType,
+  Gender,
+  Nationality,
+  UserDiscipline,
+} from '@prisma/client';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -101,6 +108,76 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 'EMP-0001' })
+  @IsOptional()
+  @IsString()
+  employeeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({ enum: Gender })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
+
+  @ApiPropertyOptional({ example: '1990-05-15' })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  nationalId?: string;
+
+  @ApiPropertyOptional({ enum: Nationality })
+  @IsOptional()
+  @IsEnum(Nationality)
+  nationality?: Nationality;
+
+  @ApiPropertyOptional({ enum: EmployeeType })
+  @IsOptional()
+  @IsEnum(EmployeeType)
+  employeeType?: EmployeeType;
+
+  @ApiPropertyOptional({ enum: EducationLevel })
+  @IsOptional()
+  @IsEnum(EducationLevel)
+  educationLevel?: EducationLevel;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fieldOfStudy?: string;
+
+  @ApiPropertyOptional({ example: '2015-06-01' })
+  @IsOptional()
+  @IsDateString()
+  experienceStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  emergencyContactName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  emergencyContactPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  leavePolicyId?: string;
 }
 
 export class UpdateUserDto extends PartialType(
