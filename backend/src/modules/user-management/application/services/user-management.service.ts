@@ -738,8 +738,11 @@ export class UserManagementService {
       educationLevel: true,
       fieldOfStudy: true,
       experienceStartDate: true,
-      emergencyContactName: true,
+      emergencyContactFirstName: true,
+      emergencyContactMiddleName: true,
+      emergencyContactLastName: true,
       emergencyContactPhone: true,
+      emergencyContactEmail: true,
       leavePolicyId: true,
       leavePolicy: { select: { id: true, name: true } },
       profileFolderId: true,
@@ -815,8 +818,11 @@ export class UserManagementService {
     educationLevel?: CreateUserDto['educationLevel'];
     fieldOfStudy?: string;
     experienceStartDate?: string;
-    emergencyContactName?: string;
+    emergencyContactFirstName?: string;
+    emergencyContactMiddleName?: string;
+    emergencyContactLastName?: string;
     emergencyContactPhone?: string;
+    emergencyContactEmail?: string;
     leavePolicyId?: string;
   }> {
     return {
@@ -834,8 +840,11 @@ export class UserManagementService {
       educationLevel: dto.educationLevel,
       fieldOfStudy: dto.fieldOfStudy,
       experienceStartDate: dto.experienceStartDate,
-      emergencyContactName: dto.emergencyContactName,
+      emergencyContactFirstName: dto.emergencyContactFirstName,
+      emergencyContactMiddleName: dto.emergencyContactMiddleName,
+      emergencyContactLastName: dto.emergencyContactLastName,
       emergencyContactPhone: dto.emergencyContactPhone,
+      emergencyContactEmail: dto.emergencyContactEmail,
       leavePolicyId: dto.leavePolicyId,
     };
   }
@@ -861,8 +870,11 @@ export class UserManagementService {
       educationLevel?: CreateUserDto['educationLevel'];
       fieldOfStudy?: string;
       experienceStartDate?: string;
-      emergencyContactName?: string;
+      emergencyContactFirstName?: string;
+      emergencyContactMiddleName?: string;
+      emergencyContactLastName?: string;
       emergencyContactPhone?: string;
+      emergencyContactEmail?: string;
       leavePolicyId?: string;
     }>,
   ): Promise<void> {
@@ -915,8 +927,11 @@ export class UserManagementService {
         experienceStartDate: profileInput.experienceStartDate
           ? this.parseDateOnly(profileInput.experienceStartDate)
           : null,
-        emergencyContactName: profileInput.emergencyContactName?.trim() || null,
+        emergencyContactFirstName: profileInput.emergencyContactFirstName?.trim() || null,
+        emergencyContactMiddleName: profileInput.emergencyContactMiddleName?.trim() || null,
+        emergencyContactLastName: profileInput.emergencyContactLastName?.trim() || null,
         emergencyContactPhone: profileInput.emergencyContactPhone?.trim() || null,
+        emergencyContactEmail: profileInput.emergencyContactEmail?.trim() || null,
         leavePolicyId: profileInput.leavePolicyId ?? null,
         updatedBy: ctx.userId,
       },
@@ -942,8 +957,11 @@ export class UserManagementService {
       | 'educationLevel'
       | 'fieldOfStudy'
       | 'experienceStartDate'
-      | 'emergencyContactName'
+      | 'emergencyContactFirstName'
+      | 'emergencyContactMiddleName'
+      | 'emergencyContactLastName'
       | 'emergencyContactPhone'
+      | 'emergencyContactEmail'
       | 'leavePolicyId'
     >,
   ): Prisma.UserUncheckedUpdateInput {
@@ -982,8 +1000,11 @@ export class UserManagementService {
         | 'educationLevel'
         | 'fieldOfStudy'
         | 'experienceStartDate'
-        | 'emergencyContactName'
+        | 'emergencyContactFirstName'
+        | 'emergencyContactMiddleName'
+        | 'emergencyContactLastName'
         | 'emergencyContactPhone'
+        | 'emergencyContactEmail'
         | 'leavePolicyId'
       >
     >,
@@ -1036,11 +1057,20 @@ export class UserManagementService {
         ? this.parseDateOnly(rest.experienceStartDate)
         : null;
     }
-    if (rest.emergencyContactName !== undefined) {
-      data.emergencyContactName = rest.emergencyContactName?.trim() || null;
+    if (rest.emergencyContactFirstName !== undefined) {
+      data.emergencyContactFirstName = rest.emergencyContactFirstName?.trim() || null;
+    }
+    if (rest.emergencyContactMiddleName !== undefined) {
+      data.emergencyContactMiddleName = rest.emergencyContactMiddleName?.trim() || null;
+    }
+    if (rest.emergencyContactLastName !== undefined) {
+      data.emergencyContactLastName = rest.emergencyContactLastName?.trim() || null;
     }
     if (rest.emergencyContactPhone !== undefined) {
       data.emergencyContactPhone = rest.emergencyContactPhone?.trim() || null;
+    }
+    if (rest.emergencyContactEmail !== undefined) {
+      data.emergencyContactEmail = rest.emergencyContactEmail?.trim() || null;
     }
     if (rest.leavePolicyId !== undefined) {
       data.leavePolicyId = rest.leavePolicyId || null;

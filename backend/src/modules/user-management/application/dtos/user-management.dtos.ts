@@ -187,12 +187,28 @@ export class CreateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  emergencyContactName?: string;
+  emergencyContactFirstName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  emergencyContactMiddleName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  emergencyContactLastName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   emergencyContactPhone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  emergencyContactEmail?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

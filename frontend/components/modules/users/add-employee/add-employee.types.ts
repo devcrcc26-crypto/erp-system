@@ -26,8 +26,11 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'addressCity',
     'addressSubcity',
     'addressHouseNumber',
-    'emergencyContactName',
+    'emergencyContactFirstName',
+    'emergencyContactMiddleName',
+    'emergencyContactLastName',
     'emergencyContactPhone',
+    'emergencyContactEmail',
   ],
   [
     'employeeId',

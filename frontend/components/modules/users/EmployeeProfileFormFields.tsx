@@ -30,8 +30,11 @@ export interface EmployeeProfileFormValues {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   experienceStartDate?: Dayjs;
-  emergencyContactName?: string;
+  emergencyContactFirstName?: string;
+  emergencyContactMiddleName?: string;
+  emergencyContactLastName?: string;
   emergencyContactPhone?: string;
+  emergencyContactEmail?: string;
   leavePolicyId?: string;
 }
 
@@ -146,18 +149,52 @@ export function EmployeeProfileFormFields({
       {show('emergency') ? (
         <>
           {sectionTitle('users.sectionEmergencyContact')}
-          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <div className="grid gap-0 md:grid-cols-3 md:gap-x-4">
             <Form.Item
-              label={t('users.form.emergencyContactName')}
-              name="emergencyContactName"
+              label={t('users.form.emergencyContactFirstName')}
+              name="emergencyContactFirstName"
             >
               <Input />
             </Form.Item>
+            <Form.Item
+              label={t('users.form.emergencyContactMiddleName')}
+              name="emergencyContactMiddleName"
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.emergencyContactLastName')}
+              name="emergencyContactLastName"
+            >
+              <Input />
+            </Form.Item>
+          </div>
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
             <Form.Item
               label={t('users.form.emergencyContactPhone')}
               name="emergencyContactPhone"
             >
               <Input type="tel" />
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.emergencyContactEmail')}
+              name="emergencyContactEmail"
+              normalize={(value: string) => value?.trim() ?? ''}
+              rules={[
+                {
+                  validator: async (_rule, value: string | undefined) => {
+                    const trimmed = value?.trim() ?? '';
+                    if (!trimmed) {
+                      return;
+                    }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                      throw new Error(t('common.invalidEmail'));
+                    }
+                  },
+                },
+              ]}
+            >
+              <Input type="email" />
             </Form.Item>
           </div>
         </>
@@ -275,8 +312,11 @@ export function buildEmployeeProfilePayload(
   | 'educationLevel'
   | 'fieldOfStudy'
   | 'experienceStartDate'
-  | 'emergencyContactName'
+  | 'emergencyContactFirstName'
+  | 'emergencyContactMiddleName'
+  | 'emergencyContactLastName'
   | 'emergencyContactPhone'
+  | 'emergencyContactEmail'
   | 'leavePolicyId'
 > {
   return {
@@ -295,8 +335,11 @@ export function buildEmployeeProfilePayload(
     educationLevel: values.educationLevel,
     fieldOfStudy: values.fieldOfStudy?.trim() || undefined,
     experienceStartDate: values.experienceStartDate?.format('YYYY-MM-DD'),
-    emergencyContactName: values.emergencyContactName?.trim() || undefined,
+    emergencyContactFirstName: values.emergencyContactFirstName?.trim() || undefined,
+    emergencyContactMiddleName: values.emergencyContactMiddleName?.trim() || undefined,
+    emergencyContactLastName: values.emergencyContactLastName?.trim() || undefined,
     emergencyContactPhone: values.emergencyContactPhone?.trim() || undefined,
+    emergencyContactEmail: values.emergencyContactEmail?.trim() || undefined,
     leavePolicyId: values.leavePolicyId,
   };
 }
@@ -323,8 +366,11 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     experienceStartDate: user.experienceStartDate
       ? dayjs(user.experienceStartDate)
       : undefined,
-    emergencyContactName: user.emergencyContactName ?? undefined,
+    emergencyContactFirstName: user.emergencyContactFirstName ?? undefined,
+    emergencyContactMiddleName: user.emergencyContactMiddleName ?? undefined,
+    emergencyContactLastName: user.emergencyContactLastName ?? undefined,
     emergencyContactPhone: user.emergencyContactPhone ?? undefined,
+    emergencyContactEmail: user.emergencyContactEmail ?? undefined,
     leavePolicyId: user.leavePolicyId ?? undefined,
   };
 }
@@ -347,4 +393,20 @@ export function formatEmployeeAddress(values: Pick<
     .map((part) => part?.trim())
     .filter(Boolean)
     .join(', ');
+}
+
+export function formatEmergencyContactName(values: Pick<
+  EmployeeProfileFormValues,
+  | 'emergencyContactFirstName'
+  | 'emergencyContactMiddleName'
+  | 'emergencyContactLastName'
+>): string {
+  return [
+    values.emergencyContactFirstName,
+    values.emergencyContactMiddleName,
+    values.emergencyContactLastName,
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(' ');
 }

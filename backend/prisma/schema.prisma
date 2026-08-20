@@ -585,8 +585,11 @@ model User {
   educationLevel        EducationLevel? @map("education_level")
   fieldOfStudy          String?         @map("field_of_study")
   experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
-  emergencyContactName  String?         @map("emergency_contact_name")
-  emergencyContactPhone String?         @map("emergency_contact_phone")
+  emergencyContactFirstName  String?    @map("emergency_contact_first_name")
+  emergencyContactMiddleName String?    @map("emergency_contact_middle_name")
+  emergencyContactLastName   String?    @map("emergency_contact_last_name")
+  emergencyContactPhone      String?    @map("emergency_contact_phone")
+  emergencyContactEmail      String?    @map("emergency_contact_email")
   leavePolicyId         String?         @map("leave_policy_id")
   profileFolderId       String?         @map("profile_folder_id")
   passwordHash        String    @map("password_hash")

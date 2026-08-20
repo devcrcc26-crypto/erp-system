@@ -187,8 +187,11 @@ export interface User {
   fieldOfStudy?: string | null;
   experienceStartDate?: string | null;
   yearsOfExperience?: number | null;
-  emergencyContactName?: string | null;
+  emergencyContactFirstName?: string | null;
+  emergencyContactMiddleName?: string | null;
+  emergencyContactLastName?: string | null;
   emergencyContactPhone?: string | null;
+  emergencyContactEmail?: string | null;
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
   profileFolderId?: string | null;
@@ -266,8 +269,11 @@ export interface CreateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   experienceStartDate?: string;
-  emergencyContactName?: string;
+  emergencyContactFirstName?: string;
+  emergencyContactMiddleName?: string;
+  emergencyContactLastName?: string;
   emergencyContactPhone?: string;
+  emergencyContactEmail?: string;
   leavePolicyId?: string;
 }
 
@@ -300,8 +306,11 @@ export interface UpdateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   experienceStartDate?: string;
-  emergencyContactName?: string;
+  emergencyContactFirstName?: string;
+  emergencyContactMiddleName?: string;
+  emergencyContactLastName?: string;
   emergencyContactPhone?: string;
+  emergencyContactEmail?: string;
   leavePolicyId?: string | null;
 }
 
