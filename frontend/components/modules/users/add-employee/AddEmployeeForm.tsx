@@ -405,6 +405,12 @@ export default function AddEmployeeForm({
       <StepperForm
         steps={steps}
         onSubmit={handleSubmit}
+        onReset={() => {
+          form.resetFields();
+          form.setFieldsValue({ isActive: true, emergencyContacts: [] });
+          setPendingDocuments([]);
+          setError(null);
+        }}
         isSubmitting={isSubmitting}
         contentVariant="sections"
         submitLabel={
