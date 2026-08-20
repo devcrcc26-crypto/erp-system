@@ -159,6 +159,8 @@ enum LeaveType {
   PATERNITY
   EMERGENCY
   COMPASSIONATE
+  STUDY
+  EXAM
 }
 
 enum LeaveRequestStatus {
@@ -3570,11 +3572,12 @@ model LeaveBalance {
   companyId  String    @map("company_id")
   employeeId String    @map("employee_id")
   year       Int
-  leaveType  LeaveType @map("leave_type")
-  entitled   Decimal   @default(0) @db.Decimal(4, 1)
-  used       Decimal   @default(0) @db.Decimal(4, 1)
-  pending    Decimal   @default(0) @db.Decimal(4, 1)
-  remaining  Decimal?  @default(dbgenerated("((entitled - used) - pending)")) @db.Decimal(4, 1)
+  leaveType      LeaveType @map("leave_type")
+  entitled       Decimal   @default(0) @db.Decimal(4, 1)
+  broughtForward Decimal   @default(0) @map("brought_forward") @db.Decimal(4, 1)
+  used           Decimal   @default(0) @db.Decimal(4, 1)
+  pending        Decimal   @default(0) @db.Decimal(4, 1)
+  remaining      Decimal?  @default(dbgenerated("(((entitled + brought_forward) - used) - pending)")) @db.Decimal(4, 1)
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
 
