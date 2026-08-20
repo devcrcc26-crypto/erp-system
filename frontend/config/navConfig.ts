@@ -736,12 +736,28 @@ export function resolveRouteMeta(
   }
 
   if (pathname.match(/^\/hr\/leave-policy\/[^/]+\/edit$/)) {
+    const id = pathname.split('/')[3];
     return {
       titleKey: 'pages.hr.leavePolicy.edit',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        {
+          label: t('pages.hr.leavePolicy.detail'),
+          href: id ? `/hr/leave-policy/${id}` : undefined,
+        },
         { label: t('pages.hr.leavePolicy.edit') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/leave-policy\/[^/]+$/)) {
+    return {
+      titleKey: 'pages.hr.leavePolicy.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        { label: t('pages.hr.leavePolicy.detail') },
       ],
     };
   }

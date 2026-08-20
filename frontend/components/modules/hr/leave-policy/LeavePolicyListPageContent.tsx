@@ -22,9 +22,8 @@ import {
   useLeavePolicyList,
   useRefreshLeaveBalances,
 } from '@/lib/query/leave-policy';
-import {
-  filterLeavePolicies,
-} from '@/lib/utils/leave-policy-list-filter';
+import { tokens } from '@/lib/theme/tokens';
+import { filterLeavePolicies } from '@/lib/utils/leave-policy-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
@@ -124,6 +123,22 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         title: t('hr.leavePolicy.name'),
         dataIndex: 'name',
         key: 'name',
+        render: (_: unknown, row: LeavePolicy) => (
+          <Button
+            type="link"
+            className="!h-auto !justify-start !px-0 !py-0 font-medium"
+            style={{
+              borderRadius: 0,
+              height: 'auto',
+              paddingInline: 0,
+              textAlign: 'left',
+              color: tokens.colorPrimary,
+            }}
+            onClick={() => router.push(`/hr/leave-policy/${row.id}`)}
+          >
+            {row.name}
+          </Button>
+        ),
       },
       {
         title: t('hr.leavePolicy.governedBy'),
