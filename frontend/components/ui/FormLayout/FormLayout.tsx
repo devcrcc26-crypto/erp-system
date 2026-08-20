@@ -18,6 +18,7 @@ export default function FormLayout({
   children,
   className,
   variant = 'default',
+  dense = false,
 }: {
   title?: string;
   description?: ReactNode;
@@ -25,16 +26,39 @@ export default function FormLayout({
   children: ReactNode;
   className?: string;
   variant?: FormLayoutVariant;
+  /** Smaller padding for compact steppers and dense forms. */
+  dense?: boolean;
 }): React.ReactNode {
   const hasHeader = Boolean(title || extra);
   const isPro = variant === 'pro';
+  const headerPad = dense
+    ? isPro
+      ? 'px-4 py-3'
+      : 'px-3 py-2.5'
+    : isPro
+      ? 'px-6 py-4'
+      : 'px-[18px] py-[14px]';
+  const bodyPad = dense
+    ? isPro
+      ? 'px-4 py-3'
+      : 'px-3 py-3'
+    : isPro
+      ? 'px-6 py-6'
+      : 'px-[18px] py-4';
+  const bodyOnlyPad = dense
+    ? isPro
+      ? '12px 16px'
+      : '12px 14px'
+    : isPro
+      ? '24px'
+      : '16px 18px';
 
   return (
     <Card
       variant="borderless"
       className={`erp-responsive-card ${className ?? ''}`}
       styles={{
-        body: { padding: hasHeader ? '0' : isPro ? '24px' : '16px 18px' },
+        body: { padding: hasHeader ? '0' : bodyOnlyPad },
       }}
       style={{
         borderRadius: isPro ? 2 : tokens.borderRadiusCard,
@@ -47,15 +71,15 @@ export default function FormLayout({
     >
       {hasHeader && (
         <div
-          className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${
-            isPro ? 'px-6 py-4' : 'px-[18px] py-[14px]'
-          }`}
+          className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
           style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
         >
           <div className="min-w-0 flex-1">
             {title && (
               <div
-                className={`font-medium leading-[1.5] ${isPro ? 'text-[16px]' : 'text-[13px]'}`}
+                className={`font-medium leading-[1.5] ${
+                  isPro ? (dense ? 'text-[14px]' : 'text-[16px]') : 'text-[13px]'
+                }`}
                 style={{ color: tokens.colorTextPrimary }}
               >
                 {title}
@@ -77,9 +101,7 @@ export default function FormLayout({
           )}
         </div>
       )}
-      <div className={hasHeader ? (isPro ? 'px-6 py-6' : 'px-[18px] py-4') : undefined}>
-        {children}
-      </div>
+      <div className={hasHeader ? bodyPad : undefined}>{children}</div>
     </Card>
   );
 }

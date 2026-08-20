@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Alert, Button, Space, Spin } from 'antd';
+import { Alert, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
@@ -17,9 +16,6 @@ import {
   useUpdateLeavePolicy,
 } from '@/lib/query/leave-policy';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { tokens } from '@/lib/theme/tokens';
-
-const FORM_ID = 'leave-policy-form';
 
 interface LeavePolicyFormPageContentProps {
   policyId?: string;
@@ -41,29 +37,7 @@ export default function LeavePolicyFormPageContent({
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
-  const headerExtra = useMemo(
-    () => (
-      <Space size={8}>
-        <Button
-          onClick={() => router.push('/hr/leave-policy')}
-          style={{ borderRadius: 2 }}
-        >
-          {t('common.cancel')}
-        </Button>
-        <Button
-          type="primary"
-          htmlType="submit"
-          form={FORM_ID}
-          loading={saving}
-          style={{ borderRadius: 2 }}
-        >
-          {t('common.save')}
-        </Button>
-      </Space>
-    ),
-    [router, saving, t],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   async function handleSubmit(values: LeavePolicyFormValues): Promise<void> {
     const payload = {
@@ -86,7 +60,9 @@ export default function LeavePolicyFormPageContent({
     } catch (error: unknown) {
       notifyApiError(
         error,
-        isEdit ? t('hr.leavePolicy.updateFailed') : t('hr.leavePolicy.createFailed'),
+        isEdit
+          ? t('hr.leavePolicy.updateFailed')
+          : t('hr.leavePolicy.createFailed'),
         messageApi,
       );
     }
@@ -115,18 +91,11 @@ export default function LeavePolicyFormPageContent({
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <p
-        className="mb-0 mt-0 text-[14px] leading-relaxed"
-        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
-      >
-        {t('hr.leavePolicy.formDescription')}
-      </p>
-      <LeavePolicyForm
-        formId={FORM_ID}
-        policy={policyQuery.data}
-        onSubmit={handleSubmit}
-      />
-    </div>
+    <LeavePolicyForm
+      policy={policyQuery.data}
+      isSubmitting={saving}
+      submitLabel={t('common.save')}
+      onSubmit={handleSubmit}
+    />
   );
 }

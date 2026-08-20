@@ -21,6 +21,8 @@ export interface StepperFormProps {
   isSubmitting?: boolean;
   /** When `sections`, step content renders as stacked cards on the page background. */
   contentVariant?: 'card' | 'sections';
+  /** Tighter layout without forcing a full-viewport height. */
+  compact?: boolean;
 }
 
 const FOOTER_HEIGHT_PX = 56;
@@ -74,6 +76,7 @@ export function StepperForm({
   resetLabel,
   isSubmitting = false,
   contentVariant = 'card',
+  compact = false,
 }: StepperFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const resolvedSubmitLabel = submitLabel ?? t('hr.buttons.submitRequest');
@@ -188,17 +191,21 @@ export function StepperForm({
     <div
       className={`erp-stepper-form flex w-full min-h-0 flex-1 flex-col ${
         isSections ? 'erp-advanced-form' : ''
-      }`}
+      } ${compact ? 'erp-stepper-form--compact' : ''}`}
       style={{
-        minHeight: isSections ? 'calc(100dvh - 10.5rem)' : 'calc(100dvh - 9rem)',
+        minHeight: compact
+          ? undefined
+          : isSections
+            ? 'calc(100dvh - 10.5rem)'
+            : 'calc(100dvh - 9rem)',
         background: isSections ? 'transparent' : undefined,
         paddingBottom: isSections ? FOOTER_HEIGHT_PX + 16 : undefined,
       }}
     >
       <div
-        className={`sticky top-0 z-10 shrink-0 px-0 pb-4 pt-2 ${
-          isSections ? '' : 'border-b bg-white px-4 sm:px-6'
-        }`}
+        className={`sticky top-0 z-10 shrink-0 px-0 ${
+          compact ? 'pb-3 pt-1' : 'pb-4 pt-2'
+        } ${isSections ? '' : 'border-b bg-white px-4 sm:px-6'}`}
         style={isSections ? undefined : { borderColor: 'rgba(0,0,0,0.06)' }}
       >
         <Steps
@@ -212,14 +219,18 @@ export function StepperForm({
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto px-0 py-4"
+        className={`min-h-0 ${compact ? 'shrink-0' : 'flex-1'} overflow-y-auto px-0 ${
+          compact ? 'py-2' : 'py-4'
+        }`}
         style={{ background: isSections ? 'transparent' : tokens.colorPageBg }}
       >
         {isSections ? (
-          <div className="flex flex-col gap-6">{active.content}</div>
+          <div className={`flex flex-col ${compact ? 'gap-3' : 'gap-6'}`}>
+            {active.content}
+          </div>
         ) : (
           <div
-            className="rounded-lg border bg-white p-6"
+            className={`rounded-lg border bg-white ${compact ? 'p-4' : 'p-6'}`}
             style={{ borderColor: 'rgba(0,0,0,0.08)' }}
           >
             {active.content}

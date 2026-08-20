@@ -353,20 +353,6 @@ export function buildIconRailNav(
         visible: canViewHr,
       },
       {
-        key: '/hr/per-diem-rates',
-        labelKey: 'nav.hr.perDiemRates',
-        href: '/hr/per-diem-rates',
-        iconKey: 'hr-per-diem-rates',
-        visible: canManagePerDiemRates,
-      },
-      {
-        key: '/hr/leave-policy',
-        labelKey: 'nav.hr.leavePolicy',
-        href: '/hr/leave-policy',
-        iconKey: 'hr-leave-policy',
-        visible: canViewHr,
-      },
-      {
         key: '/hr/purchase-requests',
         labelKey: 'nav.hr.purchaseRequests',
         href: '/hr/purchase-requests',
@@ -490,6 +476,29 @@ export function buildIconRailNav(
     ],
   };
 
+  const hrConfiguration: IconRailGroup = {
+    key: 'hr-configuration',
+    labelKey: 'nav.groups.hrConfiguration',
+    storageKey: 'sidebar_hr_configuration_open',
+    defaultOpen: true,
+    items: [
+      {
+        key: '/hr/leave-policy',
+        labelKey: 'nav.hr.leavePolicy',
+        href: '/hr/leave-policy',
+        iconKey: 'hr-leave-policy',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/per-diem-rates',
+        labelKey: 'nav.hr.perDiemRates',
+        href: '/hr/per-diem-rates',
+        iconKey: 'hr-per-diem-rates',
+        visible: canManagePerDiemRates,
+      },
+    ],
+  };
+
   const standalone: IconRailItem[] = [
     {
       key: '/approvals',
@@ -520,11 +529,14 @@ export function buildIconRailNav(
     canViewDisciplinesCatalog ||
     canViewHr;
 
+  const showHrConfiguration = canViewHr || canManagePerDiemRates;
+
   return {
     topItems,
     groups: [
       projectManagement,
       ...(canViewHr || canManageUsers ? [humanResources] : []),
+      ...(showHrConfiguration ? [hrConfiguration] : []),
       ...(showOrganization ? [organization] : []),
     ],
     standalone,

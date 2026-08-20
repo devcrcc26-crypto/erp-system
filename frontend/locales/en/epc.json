@@ -35,6 +35,7 @@
     "groups": {
       "projectManagement": "Project Management",
       "humanResources": "Human Resources",
+      "hrConfiguration": "HR Configuration",
       "organization": "Organization"
     },
     "organization": {
@@ -1210,7 +1211,12 @@
       "refreshBalances": "Refresh balances",
       "refreshed": "Refreshed balances for {{count}} employees",
       "refreshFailed": "Failed to refresh leave balances",
-      "formDescription": "Define annual, maternity, and sick leave rules. Progressive annual leave increases entitlement with years of service."
+      "formDescription": "Define annual, maternity, and sick leave rules. Progressive annual leave increases entitlement with years of service.",
+      "steps": {
+        "details": "Policy details",
+        "annual": "Annual leave",
+        "otherRules": "Maternity & sick"
+      }
     },
     "messages": {
       "requestApproved": "Request approved",
