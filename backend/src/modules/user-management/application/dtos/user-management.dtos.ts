@@ -23,6 +23,32 @@ import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
+export class EmergencyContactDto {
+  @ApiProperty()
+  @IsString()
+  firstName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @ApiProperty()
+  @IsString()
+  lastName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  email?: string;
+}
+
 export class CreateUserDto {
   @ApiPropertyOptional({
     description:
@@ -134,10 +160,15 @@ export class CreateUserDto {
   @IsString()
   addressCity?: string;
 
-  @ApiPropertyOptional({ description: 'Subcity / Zone / Woreda' })
+  @ApiPropertyOptional({ description: 'Subcity / Zone' })
   @IsOptional()
   @IsString()
   addressSubcity?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  addressWoreda?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -184,31 +215,12 @@ export class CreateUserDto {
   @IsDateString()
   experienceStartDate?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: [EmergencyContactDto] })
   @IsOptional()
-  @IsString()
-  emergencyContactFirstName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  emergencyContactMiddleName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  emergencyContactLastName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  emergencyContactPhone?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEmail()
-  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
-  emergencyContactEmail?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EmergencyContactDto)
+  emergencyContacts?: EmergencyContactDto[];
 
   @ApiPropertyOptional()
   @IsOptional()

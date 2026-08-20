@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, Input, List, Upload } from 'antd';
+import { Button, Input, Upload } from 'antd';
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -49,22 +48,13 @@ export default function AddEmployeePendingDocuments({
         <Button icon={<UploadOutlined />}>{t('users.form.selectDocuments')}</Button>
       </Upload>
       {value.length > 0 ? (
-        <List
-          size="small"
-          dataSource={value}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
-                <Button
-                  key="remove"
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => remove(item.uid)}
-                />,
-              ]}
+        <div className="divide-y divide-slate-200 rounded border border-slate-200">
+          {value.map((item) => (
+            <div
+              key={item.uid}
+              className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
                 <span className="min-w-0 flex-1 truncate text-sm">{item.file.name}</span>
                 <Input
                   size="small"
@@ -73,9 +63,15 @@ export default function AddEmployeePendingDocuments({
                   onChange={(event) => updateLabel(item.uid, event.target.value)}
                 />
               </div>
-            </List.Item>
-          )}
-        />
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => remove(item.uid)}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
         <p className="text-sm text-slate-400">{t('users.form.noDocumentsSelected')}</p>
       )}

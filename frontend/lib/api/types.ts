@@ -144,6 +144,14 @@ export type Nationality = 'ETHIOPIAN' | 'CHINESE';
 export type EmployeeType = 'PERMANENT' | 'CONTRACT' | 'TEMPORARY';
 export type EducationLevel = 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER';
 
+export interface EmergencyContact {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface LeavePolicySummary {
   id: string;
   name: string;
@@ -177,6 +185,7 @@ export interface User {
   addressRegion?: string | null;
   addressCity?: string | null;
   addressSubcity?: string | null;
+  addressWoreda?: string | null;
   addressHouseNumber?: string | null;
   gender?: Gender | null;
   dateOfBirth?: string | null;
@@ -187,11 +196,7 @@ export interface User {
   fieldOfStudy?: string | null;
   experienceStartDate?: string | null;
   yearsOfExperience?: number | null;
-  emergencyContactFirstName?: string | null;
-  emergencyContactMiddleName?: string | null;
-  emergencyContactLastName?: string | null;
-  emergencyContactPhone?: string | null;
-  emergencyContactEmail?: string | null;
+  emergencyContacts?: EmergencyContact[] | null;
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
   profileFolderId?: string | null;
@@ -260,6 +265,7 @@ export interface CreateUserRequest {
   addressRegion?: string;
   addressCity?: string;
   addressSubcity?: string;
+  addressWoreda?: string;
   addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: string;
@@ -269,11 +275,7 @@ export interface CreateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   experienceStartDate?: string;
-  emergencyContactFirstName?: string;
-  emergencyContactMiddleName?: string;
-  emergencyContactLastName?: string;
-  emergencyContactPhone?: string;
-  emergencyContactEmail?: string;
+  emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
 }
 
@@ -297,6 +299,7 @@ export interface UpdateUserRequest {
   addressRegion?: string;
   addressCity?: string;
   addressSubcity?: string;
+  addressWoreda?: string;
   addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: string;
@@ -306,11 +309,7 @@ export interface UpdateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   experienceStartDate?: string;
-  emergencyContactFirstName?: string;
-  emergencyContactMiddleName?: string;
-  emergencyContactLastName?: string;
-  emergencyContactPhone?: string;
-  emergencyContactEmail?: string;
+  emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string | null;
 }
 

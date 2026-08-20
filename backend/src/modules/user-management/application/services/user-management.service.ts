@@ -729,6 +729,7 @@ export class UserManagementService {
       addressRegion: true,
       addressCity: true,
       addressSubcity: true,
+      addressWoreda: true,
       addressHouseNumber: true,
       gender: true,
       dateOfBirth: true,
@@ -738,11 +739,7 @@ export class UserManagementService {
       educationLevel: true,
       fieldOfStudy: true,
       experienceStartDate: true,
-      emergencyContactFirstName: true,
-      emergencyContactMiddleName: true,
-      emergencyContactLastName: true,
-      emergencyContactPhone: true,
-      emergencyContactEmail: true,
+      emergencyContacts: true,
       leavePolicyId: true,
       leavePolicy: { select: { id: true, name: true } },
       profileFolderId: true,
@@ -809,6 +806,7 @@ export class UserManagementService {
     addressRegion?: string;
     addressCity?: string;
     addressSubcity?: string;
+    addressWoreda?: string;
     addressHouseNumber?: string;
     gender?: CreateUserDto['gender'];
     dateOfBirth?: string;
@@ -818,11 +816,7 @@ export class UserManagementService {
     educationLevel?: CreateUserDto['educationLevel'];
     fieldOfStudy?: string;
     experienceStartDate?: string;
-    emergencyContactFirstName?: string;
-    emergencyContactMiddleName?: string;
-    emergencyContactLastName?: string;
-    emergencyContactPhone?: string;
-    emergencyContactEmail?: string;
+    emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
   }> {
     return {
@@ -831,6 +825,7 @@ export class UserManagementService {
       addressRegion: dto.addressRegion,
       addressCity: dto.addressCity,
       addressSubcity: dto.addressSubcity,
+      addressWoreda: dto.addressWoreda,
       addressHouseNumber: dto.addressHouseNumber,
       gender: dto.gender,
       dateOfBirth: dto.dateOfBirth,
@@ -840,11 +835,7 @@ export class UserManagementService {
       educationLevel: dto.educationLevel,
       fieldOfStudy: dto.fieldOfStudy,
       experienceStartDate: dto.experienceStartDate,
-      emergencyContactFirstName: dto.emergencyContactFirstName,
-      emergencyContactMiddleName: dto.emergencyContactMiddleName,
-      emergencyContactLastName: dto.emergencyContactLastName,
-      emergencyContactPhone: dto.emergencyContactPhone,
-      emergencyContactEmail: dto.emergencyContactEmail,
+      emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
     };
   }
@@ -861,6 +852,7 @@ export class UserManagementService {
       addressRegion?: string;
       addressCity?: string;
       addressSubcity?: string;
+      addressWoreda?: string;
       addressHouseNumber?: string;
       gender?: CreateUserDto['gender'];
       dateOfBirth?: string;
@@ -870,11 +862,7 @@ export class UserManagementService {
       educationLevel?: CreateUserDto['educationLevel'];
       fieldOfStudy?: string;
       experienceStartDate?: string;
-      emergencyContactFirstName?: string;
-      emergencyContactMiddleName?: string;
-      emergencyContactLastName?: string;
-      emergencyContactPhone?: string;
-      emergencyContactEmail?: string;
+      emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
     }>,
   ): Promise<void> {
@@ -913,6 +901,7 @@ export class UserManagementService {
         addressRegion: profileInput.addressRegion?.trim() || null,
         addressCity: profileInput.addressCity?.trim() || null,
         addressSubcity: profileInput.addressSubcity?.trim() || null,
+        addressWoreda: profileInput.addressWoreda?.trim() || null,
         addressHouseNumber: profileInput.addressHouseNumber?.trim() || null,
         gender: profileInput.gender as Prisma.UserUpdateInput['gender'],
         dateOfBirth: profileInput.dateOfBirth
@@ -927,11 +916,7 @@ export class UserManagementService {
         experienceStartDate: profileInput.experienceStartDate
           ? this.parseDateOnly(profileInput.experienceStartDate)
           : null,
-        emergencyContactFirstName: profileInput.emergencyContactFirstName?.trim() || null,
-        emergencyContactMiddleName: profileInput.emergencyContactMiddleName?.trim() || null,
-        emergencyContactLastName: profileInput.emergencyContactLastName?.trim() || null,
-        emergencyContactPhone: profileInput.emergencyContactPhone?.trim() || null,
-        emergencyContactEmail: profileInput.emergencyContactEmail?.trim() || null,
+        emergencyContacts: this.normalizeEmergencyContacts(profileInput.emergencyContacts),
         leavePolicyId: profileInput.leavePolicyId ?? null,
         updatedBy: ctx.userId,
       },
@@ -948,6 +933,7 @@ export class UserManagementService {
       | 'addressRegion'
       | 'addressCity'
       | 'addressSubcity'
+      | 'addressWoreda'
       | 'addressHouseNumber'
       | 'gender'
       | 'dateOfBirth'
@@ -957,11 +943,7 @@ export class UserManagementService {
       | 'educationLevel'
       | 'fieldOfStudy'
       | 'experienceStartDate'
-      | 'emergencyContactFirstName'
-      | 'emergencyContactMiddleName'
-      | 'emergencyContactLastName'
-      | 'emergencyContactPhone'
-      | 'emergencyContactEmail'
+      | 'emergencyContacts'
       | 'leavePolicyId'
     >,
   ): Prisma.UserUncheckedUpdateInput {
@@ -991,6 +973,7 @@ export class UserManagementService {
         | 'addressRegion'
         | 'addressCity'
         | 'addressSubcity'
+        | 'addressWoreda'
         | 'addressHouseNumber'
         | 'gender'
         | 'dateOfBirth'
@@ -1000,11 +983,7 @@ export class UserManagementService {
         | 'educationLevel'
         | 'fieldOfStudy'
         | 'experienceStartDate'
-        | 'emergencyContactFirstName'
-        | 'emergencyContactMiddleName'
-        | 'emergencyContactLastName'
-        | 'emergencyContactPhone'
-        | 'emergencyContactEmail'
+        | 'emergencyContacts'
         | 'leavePolicyId'
       >
     >,
@@ -1025,6 +1004,9 @@ export class UserManagementService {
     }
     if (rest.addressSubcity !== undefined) {
       data.addressSubcity = rest.addressSubcity?.trim() || null;
+    }
+    if (rest.addressWoreda !== undefined) {
+      data.addressWoreda = rest.addressWoreda?.trim() || null;
     }
     if (rest.addressHouseNumber !== undefined) {
       data.addressHouseNumber = rest.addressHouseNumber?.trim() || null;
@@ -1057,20 +1039,8 @@ export class UserManagementService {
         ? this.parseDateOnly(rest.experienceStartDate)
         : null;
     }
-    if (rest.emergencyContactFirstName !== undefined) {
-      data.emergencyContactFirstName = rest.emergencyContactFirstName?.trim() || null;
-    }
-    if (rest.emergencyContactMiddleName !== undefined) {
-      data.emergencyContactMiddleName = rest.emergencyContactMiddleName?.trim() || null;
-    }
-    if (rest.emergencyContactLastName !== undefined) {
-      data.emergencyContactLastName = rest.emergencyContactLastName?.trim() || null;
-    }
-    if (rest.emergencyContactPhone !== undefined) {
-      data.emergencyContactPhone = rest.emergencyContactPhone?.trim() || null;
-    }
-    if (rest.emergencyContactEmail !== undefined) {
-      data.emergencyContactEmail = rest.emergencyContactEmail?.trim() || null;
+    if (rest.emergencyContacts !== undefined) {
+      data.emergencyContacts = this.normalizeEmergencyContacts(rest.emergencyContacts);
     }
     if (rest.leavePolicyId !== undefined) {
       data.leavePolicyId = rest.leavePolicyId || null;
@@ -1189,6 +1159,33 @@ export class UserManagementService {
       years -= 1;
     }
     return Math.max(0, years);
+  }
+
+  private normalizeEmergencyContacts(
+    contacts: CreateUserDto['emergencyContacts'] | undefined,
+  ): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+    if (contacts === undefined) {
+      return undefined;
+    }
+
+    const normalized = contacts
+      .map((contact) => ({
+        firstName: contact.firstName?.trim() ?? '',
+        middleName: contact.middleName?.trim() || null,
+        lastName: contact.lastName?.trim() ?? '',
+        phone: contact.phone?.trim() || null,
+        email: contact.email?.trim() || null,
+      }))
+      .filter(
+        (contact) =>
+          contact.firstName ||
+          contact.middleName ||
+          contact.lastName ||
+          contact.phone ||
+          contact.email,
+      );
+
+    return normalized.length > 0 ? normalized : Prisma.DbNull;
   }
 
   private mapUserResponse<T extends { experienceStartDate?: Date | null }>(

@@ -576,6 +576,7 @@ model User {
   addressRegion         String?         @map("address_region")
   addressCity           String?         @map("address_city")
   addressSubcity        String?         @map("address_subcity")
+  addressWoreda         String?         @map("address_woreda")
   addressHouseNumber    String?         @map("address_house_number")
   gender                Gender?
   dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
@@ -585,11 +586,7 @@ model User {
   educationLevel        EducationLevel? @map("education_level")
   fieldOfStudy          String?         @map("field_of_study")
   experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
-  emergencyContactFirstName  String?    @map("emergency_contact_first_name")
-  emergencyContactMiddleName String?    @map("emergency_contact_middle_name")
-  emergencyContactLastName   String?    @map("emergency_contact_last_name")
-  emergencyContactPhone      String?    @map("emergency_contact_phone")
-  emergencyContactEmail      String?    @map("emergency_contact_email")
+  emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")
   profileFolderId       String?         @map("profile_folder_id")
   passwordHash        String    @map("password_hash")

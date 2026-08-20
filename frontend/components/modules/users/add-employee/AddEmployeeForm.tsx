@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Checkbox, Form, Input, Select, Switch } from 'antd';
+import { Alert, Form, Input, Select, Switch } from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
   buildEmployeeProfilePayload,
@@ -176,78 +177,88 @@ export default function AddEmployeeForm({
         title: t('users.steps.account'),
         content: (
           <>
-            <p className="mb-4 text-sm text-slate-500">
-              {hasEmail ? t('users.form.accountInviteHelp') : t('users.form.accountRecordOnlyHelp')}
-            </p>
-            <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-              <Form.Item
-                label={t('users.form.firstName')}
-                name="firstName"
-                rules={[{ required: true, message: t('common.requiredFirstName') }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item
-                label={t('users.form.lastName')}
-                name="lastName"
-                rules={[{ required: true, message: t('common.requiredLastName') }]}
-              >
-                <Input />
-              </Form.Item>
-            </div>
-            <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-              <Form.Item label={t('users.form.middleName')} name="middleName">
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('users.form.gender')} name="gender">
-                <Select
-                  allowClear
-                  placeholder={t('common.select')}
-                  options={GENDER_OPTIONS.map((value) => ({
-                    value,
-                    label: t(`hr.gender.${value}`),
-                  }))}
-                />
-              </Form.Item>
-            </div>
-            <Form.Item label={t('users.form.chineseName')} name="chineseName">
-              <Input placeholder={t('users.form.chineseNamePlaceholder')} />
-            </Form.Item>
-            <Form.Item
-              label={t('users.form.email')}
-              name="email"
-              normalize={(value: string) => value?.trim() ?? ''}
-              rules={[optionalEmailRule(t('common.invalidEmail'))]}
-              extra={t('users.form.emailHint')}
+            <FormLayout
+              variant="pro"
+              title={t('users.sectionAccountIdentity')}
+              description={
+                hasEmail ? t('users.form.accountInviteHelp') : t('users.form.accountRecordOnlyHelp')
+              }
             >
-              <Input placeholder={t('users.form.emailPlaceholder')} />
-            </Form.Item>
-            <Form.Item label={t('users.form.phone')} name="phone">
-              <Input />
-            </Form.Item>
-            <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-              <Form.Item label={t('users.form.role')} name="roleId" extra={t('users.form.roleHint')}>
-                <Select
-                  allowClear
-                  loading={rolesQuery.isLoading}
-                  options={roles.map((role: Role) => ({
-                    value: role.id,
-                    label: role.name,
-                  }))}
-                  placeholder={t('common.selectRole')}
-                />
-              </Form.Item>
-              <Form.Item
-                label={t('users.form.activeAccount')}
-                name="isActive"
-                valuePropName="checked"
-              >
-                <Switch
-                  checkedChildren={t('common.active')}
-                  unCheckedChildren={t('common.inactive')}
-                />
-              </Form.Item>
-            </div>
+              <div className="erp-form-grid-3">
+                <Form.Item
+                  label={t('users.form.firstName')}
+                  name="firstName"
+                  rules={[{ required: true, message: t('common.requiredFirstName') }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item label={t('users.form.middleName')} name="middleName">
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label={t('users.form.lastName')}
+                  name="lastName"
+                  rules={[{ required: true, message: t('common.requiredLastName') }]}
+                >
+                  <Input />
+                </Form.Item>
+              </div>
+              <div className="erp-form-grid-3">
+                <Form.Item label={t('users.form.gender')} name="gender">
+                  <Select
+                    allowClear
+                    placeholder={t('common.select')}
+                    options={GENDER_OPTIONS.map((value) => ({
+                      value,
+                      label: t(`hr.gender.${value}`),
+                    }))}
+                  />
+                </Form.Item>
+                <Form.Item label={t('users.form.chineseName')} name="chineseName">
+                  <Input placeholder={t('users.form.chineseNamePlaceholder')} />
+                </Form.Item>
+              </div>
+            </FormLayout>
+
+            <FormLayout variant="pro" title={t('users.sectionAccountAccess')}>
+              <div className="erp-form-grid-3">
+                <Form.Item
+                  label={t('users.form.email')}
+                  name="email"
+                  normalize={(value: string) => value?.trim() ?? ''}
+                  rules={[optionalEmailRule(t('common.invalidEmail'))]}
+                  extra={t('users.form.emailHint')}
+                >
+                  <Input placeholder={t('users.form.emailPlaceholder')} />
+                </Form.Item>
+                <Form.Item label={t('users.form.phone')} name="phone">
+                  <Input />
+                </Form.Item>
+                <Form.Item label={t('users.form.role')} name="roleId" extra={t('users.form.roleHint')}>
+                  <Select
+                    allowClear
+                    loading={rolesQuery.isLoading}
+                    options={roles.map((role: Role) => ({
+                      value: role.id,
+                      label: role.name,
+                    }))}
+                    placeholder={t('common.selectRole')}
+                  />
+                </Form.Item>
+              </div>
+              <div className="erp-form-grid-3">
+                <Form.Item
+                  label={t('users.form.activeAccount')}
+                  name="isActive"
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren={t('common.active')}
+                    unCheckedChildren={t('common.inactive')}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
           </>
         ),
         validate: () => validateStep(0),
@@ -258,7 +269,7 @@ export default function AddEmployeeForm({
           <EmployeeProfileFormFields
             mode="create"
             sections={['personal', 'address', 'emergency']}
-            showSectionTitles={false}
+            layout="sections"
           />
         ),
         validate: () => validateStep(1),
@@ -270,42 +281,44 @@ export default function AddEmployeeForm({
             <EmployeeProfileFormFields
               mode="create"
               sections={['employment']}
-              showSectionTitles={false}
+              layout="sections"
             />
-            <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-              <Form.Item label={t('users.form.department')} name="departmentId">
-                <Select
-                  allowClear
-                  loading={departmentsQuery.isLoading}
-                  placeholder={t('users.filterDepartment')}
-                  options={departmentOptions}
-                  optionFilterProp="label"
-                  onChange={handleDepartmentChange}
-                />
-              </Form.Item>
-              <Form.Item label={t('users.form.position')} name="positionId">
-                <Select
-                  allowClear
-                  loading={positionsQuery.isLoading}
-                  placeholder={t('users.filterPosition')}
-                  options={positionOptions}
-                  optionFilterProp="label"
-                />
-              </Form.Item>
-            </div>
-            <Form.Item
-              label={t('users.form.discipline')}
-              name="engineeringDisciplineId"
-              extra={t('users.form.disciplineHint')}
-            >
-              <Select
-                allowClear
-                loading={disciplinesLoading}
-                placeholder={t('common.selectDiscipline')}
-                options={disciplineOptions}
-                optionFilterProp="label"
-              />
-            </Form.Item>
+            <FormLayout variant="pro" title={t('users.sectionOrganizationAssignment')}>
+              <div className="erp-form-grid-3">
+                <Form.Item label={t('users.form.department')} name="departmentId">
+                  <Select
+                    allowClear
+                    loading={departmentsQuery.isLoading}
+                    placeholder={t('users.filterDepartment')}
+                    options={departmentOptions}
+                    optionFilterProp="label"
+                    onChange={handleDepartmentChange}
+                  />
+                </Form.Item>
+                <Form.Item label={t('users.form.position')} name="positionId">
+                  <Select
+                    allowClear
+                    loading={positionsQuery.isLoading}
+                    placeholder={t('users.filterPosition')}
+                    options={positionOptions}
+                    optionFilterProp="label"
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t('users.form.discipline')}
+                  name="engineeringDisciplineId"
+                  extra={t('users.form.disciplineHint')}
+                >
+                  <Select
+                    allowClear
+                    loading={disciplinesLoading}
+                    placeholder={t('common.selectDiscipline')}
+                    options={disciplineOptions}
+                    optionFilterProp="label"
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
           </>
         ),
         validate: () => validateStep(2),
@@ -316,7 +329,7 @@ export default function AddEmployeeForm({
           <EmployeeProfileFormFields
             mode="create"
             sections={['education']}
-            showSectionTitles={false}
+            layout="sections"
           />
         ),
         validate: () => validateStep(3),
@@ -328,17 +341,14 @@ export default function AddEmployeeForm({
             <EmployeeProfileFormFields
               mode="create"
               sections={['leave']}
-              showSectionTitles={false}
+              layout="sections"
             />
-            <div className="mt-6 border-t border-slate-100 pt-6">
-              <div className="mb-3 text-sm font-semibold text-slate-700">
-                {t('users.form.profileDocuments')}
-              </div>
+            <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
               <AddEmployeePendingDocuments
                 value={pendingDocuments}
                 onChange={setPendingDocuments}
               />
-            </div>
+            </FormLayout>
           </>
         ),
         validate: () => validateStep(4),
@@ -346,17 +356,19 @@ export default function AddEmployeeForm({
       {
         title: t('users.steps.review'),
         content: (
-          <AddEmployeeReviewStep
-            values={
-              formValues ?? {
-                firstName: '',
-                lastName: '',
-                isActive: true,
+          <FormLayout variant="pro" title={t('users.steps.review')}>
+            <AddEmployeeReviewStep
+              values={
+                formValues ?? {
+                  firstName: '',
+                  lastName: '',
+                  isActive: true,
+                }
               }
-            }
-            roles={roles}
-            pendingDocuments={pendingDocuments}
-          />
+              roles={roles}
+              pendingDocuments={pendingDocuments}
+            />
+          </FormLayout>
         ),
         validate: () => true,
       },
@@ -384,7 +396,8 @@ export default function AddEmployeeForm({
     <Form<AddEmployeeFormValues>
       form={form}
       layout="vertical"
-      initialValues={{ isActive: true }}
+      className="flex min-h-0 flex-1 flex-col"
+      initialValues={{ isActive: true, emergencyContacts: [] }}
     >
       {error ? (
         <Alert type="error" showIcon title={error} className="mb-4" closable onClose={() => setError(null)} />
@@ -393,6 +406,7 @@ export default function AddEmployeeForm({
         steps={steps}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
+        contentVariant="sections"
         submitLabel={
           hasEmail ? t('users.sendInvitation') : t('users.createUser')
         }

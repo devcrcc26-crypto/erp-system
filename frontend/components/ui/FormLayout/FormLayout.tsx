@@ -6,6 +6,8 @@ import Card from '@/components/ui/Card/Card';
 import { tokens } from '@/lib/theme/tokens';
 import type { ReactNode } from 'react';
 
+export type FormLayoutVariant = 'default' | 'pro';
+
 /**
  * White section card used for forms and settings panels.
  */
@@ -15,38 +17,45 @@ export default function FormLayout({
   extra,
   children,
   className,
+  variant = 'default',
 }: {
   title?: string;
   description?: ReactNode;
   extra?: ReactNode;
   children: ReactNode;
   className?: string;
+  variant?: FormLayoutVariant;
 }): React.ReactNode {
   const hasHeader = Boolean(title || extra);
+  const isPro = variant === 'pro';
 
   return (
     <Card
       variant="borderless"
       className={`erp-responsive-card ${className ?? ''}`}
       styles={{
-        body: { padding: hasHeader ? '0' : '16px 18px' },
+        body: { padding: hasHeader ? '0' : isPro ? '24px' : '16px 18px' },
       }}
       style={{
-        borderRadius: tokens.borderRadiusCard,
-        border: `0.5px solid ${tokens.colorBorder}`,
-        boxShadow: 'none',
+        borderRadius: isPro ? 2 : tokens.borderRadiusCard,
+        border: isPro ? 'none' : `0.5px solid ${tokens.colorBorder}`,
+        boxShadow: isPro
+          ? '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)'
+          : 'none',
         background: tokens.colorCardBg,
       }}
     >
       {hasHeader && (
         <div
-          className="flex flex-col gap-3 px-[18px] py-[14px] sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+          className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${
+            isPro ? 'px-6 py-4' : 'px-[18px] py-[14px]'
+          }`}
           style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
         >
           <div className="min-w-0 flex-1">
             {title && (
               <div
-                className="text-[13px] font-medium leading-[1.5]"
+                className={`font-medium leading-[1.5] ${isPro ? 'text-[16px]' : 'text-[13px]'}`}
                 style={{ color: tokens.colorTextPrimary }}
               >
                 {title}
@@ -68,7 +77,9 @@ export default function FormLayout({
           )}
         </div>
       )}
-      <div className={hasHeader ? 'px-[18px] py-4' : undefined}>{children}</div>
+      <div className={hasHeader ? (isPro ? 'px-6 py-6' : 'px-[18px] py-4') : undefined}>
+        {children}
+      </div>
     </Card>
   );
 }
