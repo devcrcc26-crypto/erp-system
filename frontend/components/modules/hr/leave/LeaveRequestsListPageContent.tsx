@@ -54,6 +54,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       { value: 'PATERNITY', label: t('hr.leaveType.PATERNITY') },
       { value: 'EMERGENCY', label: t('hr.leaveType.EMERGENCY') },
       { value: 'COMPASSIONATE', label: t('hr.leaveType.COMPASSIONATE') },
+      { value: 'STUDY', label: t('hr.leaveType.STUDY') },
+      { value: 'EXAM', label: t('hr.leaveType.EXAM') },
     ],
     [t],
   );
