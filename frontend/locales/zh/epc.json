@@ -658,7 +658,9 @@
     "search": "搜索",
     "loading": "加载中…",
     "select": "请选择",
-    "required": "必填"
+    "required": "必填",
+    "yes": "是",
+    "no": "否"
   },
   "shell": {
     "openNavigation": "打开导航菜单",
@@ -1200,6 +1202,10 @@
       "deleteBlocked": "无法删除 — 已有员工使用此政策",
       "employees": "员工数",
       "empty": "暂无假期政策",
+      "emptyFiltered": "没有符合筛选条件的假期政策",
+      "searchPlaceholder": "按名称、适用法规或描述搜索",
+      "filterStatus": "启用状态",
+      "filterProgressive": "累进年假",
       "deleted": "假期政策已删除",
       "created": "假期政策已创建",
       "updated": "假期政策已更新",

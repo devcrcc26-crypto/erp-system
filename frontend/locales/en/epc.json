@@ -658,7 +658,9 @@
     "search": "Search",
     "loading": "Loading…",
     "select": "Select",
-    "required": "Required"
+    "required": "Required",
+    "yes": "Yes",
+    "no": "No"
   },
   "shell": {
     "openNavigation": "Open navigation menu",
@@ -1200,6 +1202,10 @@
       "deleteBlocked": "Cannot delete — employees are assigned to this policy",
       "employees": "Employees",
       "empty": "No leave policies yet",
+      "emptyFiltered": "No leave policies match your filters",
+      "searchPlaceholder": "Search by name, governed by, or description",
+      "filterStatus": "Active status",
+      "filterProgressive": "Progressive annual",
       "deleted": "Leave policy deleted",
       "created": "Leave policy created",
       "updated": "Leave policy updated",

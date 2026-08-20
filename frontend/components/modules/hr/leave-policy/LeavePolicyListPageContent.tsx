@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Space, Switch, Spin } from 'antd';
+import { Alert, Button, Input, Select, Space, Spin } from 'antd';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { FileText, Pencil, Trash2 } from 'lucide-react';
@@ -13,17 +13,22 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeavePolicy } from '@/lib/api/leave-policy.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   useDeleteLeavePolicy,
   useLeavePolicyList,
   useRefreshLeaveBalances,
 } from '@/lib/query/leave-policy';
+import {
+  filterLeavePolicies,
+} from '@/lib/utils/leave-policy-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
- * HR leave policy configuration list.
+ * HR leave policy configuration list with search and filters.
  */
 export default function LeavePolicyListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -33,7 +38,42 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const listQuery = useLeavePolicyList(canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
   const refreshMutation = useRefreshLeaveBalances();
+  const { params, resetPage, bindMeta } = useTablePagination();
+
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<boolean | undefined>();
+  const [progressiveFilter, setProgressiveFilter] = useState<
+    boolean | undefined
+  >();
+
+  const filtered = useMemo(
+    () =>
+      filterLeavePolicies(listQuery.data ?? [], {
+        search: appliedSearch,
+        isActive: activeFilter,
+        isProgressive: progressiveFilter,
+      }),
+    [listQuery.data, appliedSearch, activeFilter, progressiveFilter],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 20;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const pageRows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   async function handleDelete(): Promise<void> {
     if (!deleteId) {
@@ -63,6 +103,19 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     } catch (error: unknown) {
       notifyApiError(error, t('hr.leavePolicy.refreshFailed'), messageApi);
     }
+  }
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setActiveFilter(undefined);
+    setProgressiveFilter(undefined);
+    resetPage();
+  }
+
+  function handleQuery(): void {
+    setAppliedSearch(search.trim());
+    resetPage();
   }
 
   const columns: ColumnsType<LeavePolicy> = useMemo(
@@ -151,12 +204,18 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     );
   }
 
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    activeFilter !== undefined ||
+    progressiveFilter !== undefined;
+
   return (
     <div className="erp-pro-list-page">
       {listQuery.isError ? (
         <Alert
           type="error"
           showIcon
+          style={{ marginBottom: 16 }}
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
@@ -177,6 +236,85 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       />
 
       <div className="erp-pro-card">
+        <div className="erp-pro-card-body">
+          <div className="erp-pro-filter-form">
+            <div className="erp-pro-filter-form-fields">
+              <div
+                className="erp-pro-filter-field"
+                style={{ minWidth: 220, flex: '1 1 220px' }}
+              >
+                <span className="erp-pro-filter-field-label">
+                  {t('common.search')}
+                </span>
+                <Input
+                  placeholder={t('hr.leavePolicy.searchPlaceholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onPressEnter={handleQuery}
+                  allowClear
+                  onClear={() => {
+                    setSearch('');
+                    setAppliedSearch('');
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">
+                  {t('common.status')}
+                </span>
+                <Select
+                  allowClear
+                  placeholder={t('hr.leavePolicy.filterStatus')}
+                  style={{ width: '100%', minWidth: 140 }}
+                  value={activeFilter}
+                  onChange={(value?: boolean) => {
+                    setActiveFilter(value);
+                    resetPage();
+                  }}
+                  options={[
+                    { value: true, label: t('common.active') },
+                    { value: false, label: t('common.inactive') },
+                  ]}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">
+                  {t('hr.leavePolicy.isProgressive')}
+                </span>
+                <Select
+                  allowClear
+                  placeholder={t('hr.leavePolicy.filterProgressive')}
+                  style={{ width: '100%', minWidth: 140 }}
+                  value={progressiveFilter}
+                  onChange={(value?: boolean) => {
+                    setProgressiveFilter(value);
+                    resetPage();
+                  }}
+                  options={[
+                    { value: true, label: t('common.yes') },
+                    { value: false, label: t('common.no') },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="erp-pro-filter-form-actions">
+              <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
+                {t('common.reset')}
+              </Button>
+              {/* <Button
+                type="primary"
+                onClick={handleQuery}
+                style={{ borderRadius: 2 }}
+              >
+                {t('common.query')}
+              </Button> */}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
           <h1
             className="erp-pro-card-toolbar-title"
@@ -185,14 +323,14 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
             {t('hr.leavePolicy.listTitle')}
           </h1>
           <Space wrap size={8}>
-            <Button
+            {/* <Button
               icon={<ReloadOutlined />}
               loading={refreshMutation.isPending}
               onClick={() => void handleRefreshBalances()}
               style={{ borderRadius: 2 }}
             >
               {t('hr.leavePolicy.refreshBalances')}
-            </Button>
+            </Button> */}
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -201,6 +339,14 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
             >
               {t('hr.leavePolicy.new')}
             </Button>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void listQuery.refetch()}
+              aria-label={t('common.refresh')}
+              style={{ borderRadius: 2 }}
+            />
           </Space>
         </div>
         <div className="erp-pro-table-card-body">
@@ -209,17 +355,28 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
             className="erp-pro-table"
             size="middle"
             columns={columns}
-            dataSource={listQuery.data ?? []}
-            pagination={false}
+            dataSource={pageRows}
+            pagination={bindMeta(meta)}
             locale={{
               emptyText: (
                 <TableEmptyState
                   icon={<FileText />}
-                  title={t('hr.leavePolicy.empty')}
-                  action={{
-                    label: t('hr.leavePolicy.new'),
-                    onClick: () => router.push('/hr/leave-policy/new'),
-                  }}
+                  title={
+                    hasFilters
+                      ? t('hr.leavePolicy.emptyFiltered')
+                      : t('hr.leavePolicy.empty')
+                  }
+                  action={
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: handleResetFilters,
+                        }
+                      : {
+                          label: t('hr.leavePolicy.new'),
+                          onClick: () => router.push('/hr/leave-policy/new'),
+                        }
+                  }
                 />
               ),
             }}

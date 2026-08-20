@@ -340,6 +340,7 @@ export default function LeavePolicyForm({
               </div>
               <Alert
                 className="mt-12"
+                style={{marginTop: '12px'}}
                 type="info"
                 showIcon
                 title={t('hr.leavePolicy.preview')}
