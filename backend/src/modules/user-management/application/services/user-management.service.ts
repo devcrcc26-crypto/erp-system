@@ -848,7 +848,11 @@ export class UserManagementService {
     requestedEmployeeId: string | undefined,
     profileInput: Partial<{
       middleName?: string;
-      address?: string;
+      addressCountry?: string;
+      addressRegion?: string;
+      addressCity?: string;
+      addressSubcity?: string;
+      addressHouseNumber?: string;
       gender?: CreateUserDto['gender'];
       dateOfBirth?: string;
       nationalId?: string;

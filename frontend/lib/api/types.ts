@@ -173,7 +173,11 @@ export interface User {
   engineeringDiscipline?: { id: string; name: string; nameZh: string | null } | null;
   employeeId?: string | null;
   middleName?: string | null;
-  address?: string | null;
+  addressCountry?: string | null;
+  addressRegion?: string | null;
+  addressCity?: string | null;
+  addressSubcity?: string | null;
+  addressHouseNumber?: string | null;
   gender?: Gender | null;
   dateOfBirth?: string | null;
   nationalId?: string | null;
@@ -249,7 +253,11 @@ export interface CreateUserRequest {
   isActive?: boolean;
   employeeId?: string;
   middleName?: string;
-  address?: string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;
@@ -279,7 +287,11 @@ export interface UpdateUserRequest {
   isActive?: boolean;
   employeeId?: string;
   middleName?: string;
-  address?: string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;

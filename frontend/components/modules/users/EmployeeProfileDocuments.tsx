@@ -100,11 +100,11 @@ export default function EmployeeProfileDocuments({
   return (
     <div className="mt-4 space-y-4">
       <div className="text-sm font-semibold text-slate-700">
-        {t('hr.labels.profileDocuments')}
+        {t('users.form.profileDocuments')}
       </div>
 
       <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
-        <Button icon={<UploadOutlined />}>{t('users.selectDocuments')}</Button>
+        <Button icon={<UploadOutlined />}>{t('users.form.selectDocuments')}</Button>
       </Upload>
 
       {pending.length > 0 ? (
@@ -127,7 +127,7 @@ export default function EmployeeProfileDocuments({
                 <span className="min-w-0 flex-1 truncate text-sm">{item.file.name}</span>
                 <Input
                   size="small"
-                  placeholder={t('hr.labels.documentLabel')}
+                  placeholder={t('users.form.documentLabel')}
                   value={item.label}
                   onChange={(event) => updateLabel(item.uid, event.target.value)}
                 />
@@ -143,7 +143,7 @@ export default function EmployeeProfileDocuments({
           loading={uploadMutation.isPending}
           onClick={() => void handleUpload()}
         >
-          {t('hr.labels.uploadDocuments')}
+          {t('users.form.uploadDocuments')}
         </Button>
       ) : null}
 

@@ -17,7 +17,11 @@ import type {
 export interface EmployeeProfileFormValues {
   employeeId?: string;
   middleName?: string;
-  address?: string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressHouseNumber?: string;
   gender?: Gender;
   dateOfBirth?: Dayjs;
   nationalId?: string;
@@ -31,7 +35,7 @@ export interface EmployeeProfileFormValues {
   leavePolicyId?: string;
 }
 
-const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
+export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
 const NATIONALITY_OPTIONS: Nationality[] = ['ETHIOPIAN', 'CHINESE'];
 const EMPLOYEE_TYPE_OPTIONS: EmployeeType[] = ['PERMANENT', 'CONTRACT', 'TEMPORARY'];
 const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
@@ -43,14 +47,26 @@ const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
   'OTHER',
 ];
 
+export type EmployeeProfileSection =
+  | 'personal'
+  | 'address'
+  | 'emergency'
+  | 'employment'
+  | 'education'
+  | 'leave';
+
 interface EmployeeProfileFormFieldsProps {
   mode: 'create' | 'edit';
   employeeIdReadOnly?: boolean;
+  sections?: EmployeeProfileSection[];
+  showSectionTitles?: boolean;
 }
 
 export function EmployeeProfileFormFields({
   mode,
   employeeIdReadOnly = false,
+  sections,
+  showSectionTitles = true,
 }: EmployeeProfileFormFieldsProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const leavePoliciesQuery = useLeavePolicies();
@@ -70,139 +86,172 @@ export function EmployeeProfileFormFields({
       ? dayjs().diff(experienceStartDate, 'year')
       : null;
 
+  const visibleSections = sections ?? [
+    'personal',
+    'address',
+    'emergency',
+    'employment',
+    'education',
+    'leave',
+  ];
+  const show = (section: EmployeeProfileSection): boolean =>
+    visibleSections.includes(section);
+
+  const sectionTitle = (key: string): React.ReactNode =>
+    showSectionTitles ? (
+      <div className="mb-2 mt-2 text-sm font-semibold text-slate-700">{t(key)}</div>
+    ) : null;
+
   return (
     <>
-      <div className="mb-2 mt-2 text-sm font-semibold text-slate-700">
-        {t('users.sectionPersonalInformation')}
-      </div>
-      <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label={t('hr.labels.middleName')} name="middleName">
-          <Input />
-        </Form.Item>
-        <Form.Item label={t('users.genderLabel')} name="gender">
-          <Select
-            allowClear
-            placeholder={t('common.select')}
-            options={GENDER_OPTIONS.map((value) => ({
-              value,
-              label: t(`hr.gender.${value}`),
-            }))}
-          />
-        </Form.Item>
-      </div>
-      <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label={t('hr.labels.dateOfBirth')} name="dateOfBirth">
-          <DatePicker style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item label={t('hr.labels.nationalId')} name="nationalId">
-          <Input />
-        </Form.Item>
-      </div>
-      <Form.Item label={t('hr.labels.address')} name="address">
-        <Input.TextArea rows={2} />
-      </Form.Item>
-
-      <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">
-        {t('users.sectionEmergencyContact')}
-      </div>
-      <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-        <Form.Item
-          label={t('hr.labels.emergencyContactName')}
-          name="emergencyContactName"
-        >
-          <Input />
-        </Form.Item>
-        <Form.Item
-          label={t('hr.labels.emergencyContactPhone')}
-          name="emergencyContactPhone"
-        >
-          <Input type="tel" />
-        </Form.Item>
-      </div>
-
-      <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">
-        {t('users.sectionEmploymentDetails')}
-      </div>
-      <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-        <Form.Item
-          label={t('hr.labels.employeeId')}
-          name="employeeId"
-          extra={
-            mode === 'create' && !employeeIdReadOnly
-              ? t('users.employeeIdAutoHint')
-              : undefined
-          }
-        >
-          <Input
-            readOnly={employeeIdReadOnly || mode === 'edit'}
-            placeholder={mode === 'create' ? t('users.employeeIdPlaceholder') : undefined}
-          />
-        </Form.Item>
-        <Form.Item label={t('hr.labels.nationality')} name="nationality">
-          <Select
-            allowClear
-            placeholder={t('common.select')}
-            options={NATIONALITY_OPTIONS.map((value) => ({
-              value,
-              label: t(`hr.nationality.${value}`),
-            }))}
-          />
-        </Form.Item>
-      </div>
-      <Form.Item label={t('hr.labels.employeeType')} name="employeeType">
-        <Select
-          allowClear
-          placeholder={t('common.select')}
-          options={EMPLOYEE_TYPE_OPTIONS.map((value) => ({
-            value,
-            label: t(`hr.employeeType.${value}`),
-          }))}
-        />
-      </Form.Item>
-
-      <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">
-        {t('users.sectionEducationExperience')}
-      </div>
-      <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-        <Form.Item label={t('hr.labels.educationLevel')} name="educationLevel">
-          <Select
-            allowClear
-            placeholder={t('common.select')}
-            options={EDUCATION_LEVEL_OPTIONS.map((value) => ({
-              value,
-              label: t(`hr.educationLevel.${value}`),
-            }))}
-          />
-        </Form.Item>
-        <Form.Item label={t('hr.labels.fieldOfStudy')} name="fieldOfStudy">
-          <Input placeholder={t('users.fieldOfStudyPlaceholder')} />
-        </Form.Item>
-      </div>
-      <Form.Item label={t('hr.labels.experienceStartDate')} name="experienceStartDate">
-        <DatePicker style={{ width: '100%' }} />
-      </Form.Item>
-      {yearsOfExperience !== null ? (
-        <span className="mb-4 block text-sm text-gray-500">
-          {t('hr.labels.yearsOfExperience')}: {yearsOfExperience}
-        </span>
+      {show('personal') ? (
+        <>
+          {sectionTitle('users.sectionPersonalInformation')}
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item label={t('users.form.dateOfBirth')} name="dateOfBirth">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label={t('users.form.nationalId')} name="nationalId">
+              <Input />
+            </Form.Item>
+          </div>
+        </>
       ) : null}
 
-      <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">
-        {t('users.sectionLeavePolicy')}
-      </div>
-      <Form.Item label={t('hr.labels.leavePolicyId')} name="leavePolicyId">
-        <Select
-          allowClear
-          loading={leavePoliciesQuery.isLoading}
-          placeholder={
-            leavePolicyOptions.length === 0
-              ? t('users.noLeavePoliciesHint')
-              : t('common.select')
-          }
-          options={leavePolicyOptions}
-          optionFilterProp="label"
-        />
-      </Form.Item>
+      {show('address') ? (
+        <>
+          {sectionTitle('users.sectionAddress')}
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item label={t('users.form.addressCountry')} name="addressCountry">
+              <Input />
+            </Form.Item>
+            <Form.Item label={t('users.form.addressRegion')} name="addressRegion">
+              <Input />
+            </Form.Item>
+          </div>
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item label={t('users.form.addressCity')} name="addressCity">
+              <Input />
+            </Form.Item>
+            <Form.Item label={t('users.form.addressSubcity')} name="addressSubcity">
+              <Input />
+            </Form.Item>
+          </div>
+          <Form.Item label={t('users.form.addressHouseNumber')} name="addressHouseNumber">
+            <Input />
+          </Form.Item>
+        </>
+      ) : null}
+
+      {show('emergency') ? (
+        <>
+          {sectionTitle('users.sectionEmergencyContact')}
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label={t('users.form.emergencyContactName')}
+              name="emergencyContactName"
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.emergencyContactPhone')}
+              name="emergencyContactPhone"
+            >
+              <Input type="tel" />
+            </Form.Item>
+          </div>
+        </>
+      ) : null}
+
+      {show('employment') ? (
+        <>
+          {sectionTitle('users.sectionEmploymentDetails')}
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item
+              label={t('users.form.employeeId')}
+              name="employeeId"
+              extra={
+                mode === 'create' && !employeeIdReadOnly
+                  ? t('users.form.employeeIdAutoHint')
+                  : undefined
+              }
+            >
+              <Input
+                readOnly={employeeIdReadOnly || mode === 'edit'}
+                placeholder={mode === 'create' ? t('users.form.employeeIdPlaceholder') : undefined}
+              />
+            </Form.Item>
+            <Form.Item label={t('users.form.nationality')} name="nationality">
+              <Select
+                allowClear
+                placeholder={t('common.select')}
+                options={NATIONALITY_OPTIONS.map((value) => ({
+                  value,
+                  label: t(`hr.nationality.${value}`),
+                }))}
+              />
+            </Form.Item>
+          </div>
+          <Form.Item label={t('users.form.employeeType')} name="employeeType">
+            <Select
+              allowClear
+              placeholder={t('common.select')}
+              options={EMPLOYEE_TYPE_OPTIONS.map((value) => ({
+                value,
+                label: t(`hr.employeeType.${value}`),
+              }))}
+            />
+          </Form.Item>
+        </>
+      ) : null}
+
+      {show('education') ? (
+        <>
+          {sectionTitle('users.sectionEducationExperience')}
+          <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+            <Form.Item label={t('users.form.educationLevel')} name="educationLevel">
+              <Select
+                allowClear
+                placeholder={t('common.select')}
+                options={EDUCATION_LEVEL_OPTIONS.map((value) => ({
+                  value,
+                  label: t(`hr.educationLevel.${value}`),
+                }))}
+              />
+            </Form.Item>
+            <Form.Item label={t('users.form.fieldOfStudy')} name="fieldOfStudy">
+              <Input placeholder={t('users.form.fieldOfStudyPlaceholder')} />
+            </Form.Item>
+          </div>
+          <Form.Item label={t('users.form.experienceStartDate')} name="experienceStartDate">
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          {yearsOfExperience !== null ? (
+            <span className="mb-4 block text-sm text-gray-500">
+              {t('users.form.yearsOfExperience')}: {yearsOfExperience}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+
+      {show('leave') ? (
+        <>
+          {sectionTitle('users.sectionLeavePolicy')}
+          <Form.Item label={t('users.form.leavePolicy')} name="leavePolicyId">
+            <Select
+              allowClear
+              loading={leavePoliciesQuery.isLoading}
+              placeholder={
+                leavePolicyOptions.length === 0
+                  ? t('users.form.noLeavePoliciesHint')
+                  : t('common.select')
+              }
+              options={leavePolicyOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        </>
+      ) : null}
     </>
   );
 }
@@ -213,7 +262,11 @@ export function buildEmployeeProfilePayload(
   CreateUserRequest,
   | 'employeeId'
   | 'middleName'
-  | 'address'
+  | 'addressCountry'
+  | 'addressRegion'
+  | 'addressCity'
+  | 'addressSubcity'
+  | 'addressHouseNumber'
   | 'gender'
   | 'dateOfBirth'
   | 'nationalId'
@@ -229,7 +282,11 @@ export function buildEmployeeProfilePayload(
   return {
     employeeId: values.employeeId?.trim() || undefined,
     middleName: values.middleName?.trim() || undefined,
-    address: values.address?.trim() || undefined,
+    addressCountry: values.addressCountry?.trim() || undefined,
+    addressRegion: values.addressRegion?.trim() || undefined,
+    addressCity: values.addressCity?.trim() || undefined,
+    addressSubcity: values.addressSubcity?.trim() || undefined,
+    addressHouseNumber: values.addressHouseNumber?.trim() || undefined,
     gender: values.gender,
     dateOfBirth: values.dateOfBirth?.format('YYYY-MM-DD'),
     nationalId: values.nationalId?.trim() || undefined,
@@ -251,7 +308,11 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
   return {
     employeeId: user.employeeId ?? undefined,
     middleName: user.middleName ?? undefined,
-    address: user.address ?? undefined,
+    addressCountry: user.addressCountry ?? undefined,
+    addressRegion: user.addressRegion ?? undefined,
+    addressCity: user.addressCity ?? undefined,
+    addressSubcity: user.addressSubcity ?? undefined,
+    addressHouseNumber: user.addressHouseNumber ?? undefined,
     gender: user.gender ?? undefined,
     dateOfBirth: user.dateOfBirth ? dayjs(user.dateOfBirth) : undefined,
     nationalId: user.nationalId ?? undefined,
@@ -266,4 +327,24 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     emergencyContactPhone: user.emergencyContactPhone ?? undefined,
     leavePolicyId: user.leavePolicyId ?? undefined,
   };
+}
+
+export function formatEmployeeAddress(values: Pick<
+  EmployeeProfileFormValues,
+  | 'addressCountry'
+  | 'addressRegion'
+  | 'addressCity'
+  | 'addressSubcity'
+  | 'addressHouseNumber'
+>): string {
+  return [
+    values.addressCountry,
+    values.addressRegion,
+    values.addressCity,
+    values.addressSubcity,
+    values.addressHouseNumber,
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(', ');
 }

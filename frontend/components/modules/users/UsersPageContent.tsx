@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -12,7 +13,6 @@ import {
   Select,
   Space,
   Spin,
-  Switch,
   Tag,
   type MenuProps,
 } from 'antd';
@@ -40,13 +40,13 @@ import {
   buildEmployeeProfilePayload,
   EmployeeProfileFormFields,
   employeeProfileInitialValues,
+  GENDER_OPTIONS,
   type EmployeeProfileFormValues,
 } from '@/components/modules/users/EmployeeProfileFormFields';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import {
   fetchAllUsers,
   useAssignRole,
-  useCreateUser,
   useDeleteUser,
   useResendInvitation,
   useRevokeRole,
@@ -55,7 +55,7 @@ import {
   useUser,
   useUsers,
 } from '@/lib/query/users';
-import type { CreateUserRequest, Role, User } from '@/lib/api/types';
+import type { Role, User } from '@/lib/api/types';
 import {
   useDepartments,
   useEngineeringDisciplineOptions,
@@ -104,11 +104,10 @@ const COLUMN_SORT_FIELD: Record<string, string> = {
   status: 'isActive',
 };
 
-interface InviteFormValues extends EmployeeProfileFormValues {
+interface EditFormValues extends EmployeeProfileFormValues {
   firstName: string;
   lastName: string;
   chineseName?: string;
-  email?: string;
   phone?: string;
   departmentId?: string;
   positionId?: string;
@@ -116,8 +115,6 @@ interface InviteFormValues extends EmployeeProfileFormValues {
   engineeringDisciplineId?: string;
   isActive: boolean;
 }
-
-interface EditFormValues extends InviteFormValues {}
 
 function formatUserRoleNames(user: User): string {
   const roles =
@@ -170,242 +167,6 @@ function buildUsersExportLabels(
     role: t('common.role'),
     lastLogin: t('users.exportTable.lastLogin'),
   };
-}
-
-function optionalEmailRule(
-  invalidMessage: string,
-): { validator: (_: unknown, value: string | undefined) => Promise<void> } {
-  return {
-    validator: async (_rule, value) => {
-      const trimmed = value?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-        throw new Error(invalidMessage);
-      }
-    },
-  };
-}
-
-function InviteEmployeeModal({
-  open,
-  onClose,
-  roles,
-  rolesLoading,
-  onInvited,
-}: {
-  open: boolean;
-  onClose: () => void;
-  roles: Role[];
-  rolesLoading: boolean;
-  onInvited: (email: string | null) => void;
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const [form] = Form.useForm<InviteFormValues>();
-  const [error, setError] = useState<string | null>(null);
-  const emailValue = Form.useWatch('email', form);
-  const hasEmail = Boolean(emailValue?.trim());
-  const departmentIdValue = Form.useWatch('departmentId', form);
-  const createUser = useCreateUser();
-  const assignRole = useAssignRole();
-  const { options: disciplineOptions, isLoading: disciplinesLoading } =
-    useEngineeringDisciplineOptions(true, open);
-  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
-  const positionsQuery = usePositions({ page: 1, limit: 100 }, open);
-  const departmentOptions = useMemo(
-    () =>
-      (departmentsQuery.data?.data ?? []).map((department) => ({
-        value: department.id,
-        label: department.name,
-      })),
-    [departmentsQuery.data],
-  );
-  const allPositions = positionsQuery.data?.data ?? [];
-  const positionOptions = useMemo(() => {
-    const filtered = departmentIdValue
-      ? allPositions.filter((position) => position.departmentId === departmentIdValue)
-      : allPositions.filter((position) => position.isActive);
-    return filtered.map((position) => ({ value: position.id, label: position.title }));
-  }, [allPositions, departmentIdValue]);
-
-  const isSubmitting = createUser.isPending || assignRole.isPending;
-
-  function resetForm(): void {
-    form.resetFields();
-    setError(null);
-  }
-
-  function handleDepartmentChange(nextDepartmentId?: string): void {
-    const currentPositionId = form.getFieldValue('positionId') as string | undefined;
-    if (currentPositionId) {
-      const currentPosition = allPositions.find((p) => p.id === currentPositionId);
-      if (currentPosition && currentPosition.departmentId !== nextDepartmentId) {
-        form.setFieldValue('positionId', undefined);
-      }
-    }
-  }
-
-  async function handleSubmit(values: InviteFormValues): Promise<void> {
-    setError(null);
-    const invitedAddress = values.email?.trim().toLowerCase() || undefined;
-
-    const body: CreateUserRequest = {
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      chineseName: values.chineseName?.trim() || undefined,
-      phone: values.phone?.trim() || undefined,
-      departmentId: values.departmentId,
-      positionId: values.positionId,
-      engineeringDisciplineId: values.engineeringDisciplineId,
-      isActive: values.isActive,
-      ...buildEmployeeProfilePayload(values),
-    };
-    if (invitedAddress) {
-      body.email = invitedAddress;
-    }
-
-    try {
-      const user = await createUser.mutateAsync(body);
-
-      if (values.roleId) {
-        await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
-      }
-
-      resetForm();
-      onInvited(invitedAddress ?? null);
-      onClose();
-    } catch (err) {
-      setError(
-        err instanceof ApiRequestError ? err.message : t('users.createError'),
-      );
-    }
-  }
-
-  return (
-    <Modal
-      open={open}
-      title={t('users.addEmployee')}
-      onCancel={onClose}
-      onOk={() => form.submit()}
-      okText={
-        isSubmitting
-          ? t('users.savingUser')
-          : hasEmail
-            ? t('users.sendInvitation')
-            : t('users.createUser')
-      }
-      confirmLoading={isSubmitting}
-      className="erp-responsive-modal"
-      width={720}
-      styles={{ body: { maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: 4 } }}
-      destroyOnHidden
-      afterOpenChange={(visible: boolean) => {
-        if (visible) {
-          resetForm();
-        }
-      }}
-    >
-      <p className="mb-4 text-sm text-slate-500">
-        {hasEmail ? t('users.inviteHelp') : t('users.recordOnlyHelp')}
-      </p>
-      <Form<InviteFormValues>
-        form={form}
-        layout="vertical"
-        initialValues={{ isActive: true }}
-        onFinish={(values: InviteFormValues) => void handleSubmit(values)}
-      >
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label={t('common.firstName')}
-            name="firstName"
-            rules={[{ required: true, message: t('common.requiredFirstName') }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label={t('common.lastName')}
-            name="lastName"
-            rules={[{ required: true, message: t('common.requiredLastName') }]}
-          >
-            <Input />
-          </Form.Item>
-        </div>
-        <Form.Item label={t('common.chineseName')} name="chineseName">
-          <Input placeholder={t('users.chineseNamePlaceholder')} />
-        </Form.Item>
-        <Form.Item
-          label={t('common.emailOptional')}
-          name="email"
-          normalize={(value: string) => value?.trim() ?? ''}
-          rules={[optionalEmailRule(t('common.invalidEmail'))]}
-          extra={t('users.emailOptionalHint')}
-        >
-          <Input placeholder={t('users.emailOptionalPlaceholder')} />
-        </Form.Item>
-        <Form.Item label={t('common.phone')} name="phone">
-          <Input />
-        </Form.Item>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item label={t('common.department')} name="departmentId">
-            <Select
-              allowClear
-              loading={departmentsQuery.isLoading}
-              placeholder={t('users.filterDepartment')}
-              options={departmentOptions}
-              optionFilterProp="label"
-              onChange={handleDepartmentChange}
-            />
-          </Form.Item>
-          <Form.Item label={t('common.position')} name="positionId">
-            <Select
-              allowClear
-              loading={positionsQuery.isLoading}
-              placeholder={t('users.filterPosition')}
-              options={positionOptions}
-              optionFilterProp="label"
-            />
-          </Form.Item>
-        </div>
-        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
-          <Form.Item
-            label={t('common.discipline')}
-            name="engineeringDisciplineId"
-            extra={t('users.disciplineOptionalHint')}
-          >
-            <Select
-              allowClear
-              loading={disciplinesLoading}
-              placeholder={t('common.selectDiscipline')}
-              options={disciplineOptions}
-              optionFilterProp="label"
-            />
-          </Form.Item>
-          <Form.Item
-            label={t('users.roleOptional')}
-            name="roleId"
-            extra={t('users.roleOptionalHint')}
-          >
-            <Select
-              allowClear
-              loading={rolesLoading}
-              options={roles.map((role) => ({ value: role.id, label: role.name }))}
-              placeholder={
-                roles.length === 0
-                  ? t('common.noRolesAvailable')
-                  : t('common.selectRole')
-              }
-            />
-          </Form.Item>
-        </div>
-        <EmployeeProfileFormFields mode="create" />
-        <Form.Item name="isActive" valuePropName="checked">
-          <Switch checkedChildren={t('common.active')} unCheckedChildren={t('common.inactive')} />
-        </Form.Item>
-        {error && <Alert type="error" showIcon title={error} className="!mb-0" />}
-      </Form>
-    </Modal>
-  );
 }
 
 function EditEmployeeModal({
@@ -600,6 +361,21 @@ function EditEmployeeModal({
             <Input />
           </Form.Item>
         </div>
+        <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+          <Form.Item label={t('users.form.middleName')} name="middleName">
+            <Input />
+          </Form.Item>
+          <Form.Item label={t('users.form.gender')} name="gender">
+            <Select
+              allowClear
+              placeholder={t('common.select')}
+              options={GENDER_OPTIONS.map((value) => ({
+                value,
+                label: t(`hr.gender.${value}`),
+              }))}
+            />
+          </Form.Item>
+        </div>
         <Form.Item label={t('common.chineseName')} name="chineseName">
           <Input placeholder={t('users.chineseNamePlaceholder')} />
         </Form.Item>
@@ -708,11 +484,10 @@ function EditEmployeeModal({
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta, resetPage } = useTablePagination();
   const [exportingUsers, setExportingUsers] = useState(false);
-  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -960,22 +735,6 @@ export default function UsersPageContent(): React.ReactNode {
 
   return (
     <div className="space-y-6">
-      <Modal
-        open={Boolean(invitedEmail)}
-        title={t('users.invitationSent')}
-        onCancel={() => setInvitedEmail(null)}
-        onOk={() => setInvitedEmail(null)}
-        okText={t('common.done')}
-        cancelButtonProps={{ style: { display: 'none' } }}
-      >
-        <p className="text-sm text-slate-600">
-          {t('users.invitationSentBody', { email: invitedEmail ?? '' })}
-        </p>
-        <p className="mt-2 text-xs text-slate-500">
-          {t('users.invitationDevHint')}
-        </p>
-      </Modal>
-
       {importOpen && (
         <UserImportModal
           onClose={() => setImportOpen(false)}
@@ -984,23 +743,6 @@ export default function UsersPageContent(): React.ReactNode {
           }
         />
       )}
-
-      <InviteEmployeeModal
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        roles={roles}
-        rolesLoading={rolesQuery.isLoading}
-        onInvited={(email) => {
-          if (email) {
-            setInvitedEmail(email);
-          } else {
-            setActionMessage({
-              type: 'success',
-              text: t('users.recordOnlyCreated'),
-            });
-          }
-        }}
-      />
 
       {editingUser && (
         <EditEmployeeModal
@@ -1067,7 +809,7 @@ export default function UsersPageContent(): React.ReactNode {
             <Button onClick={() => setImportOpen(true)}>
               {t('common.importFromExcel')}
             </Button>
-            <Button type="primary" onClick={() => setInviteOpen(true)}>
+            <Button type="primary" onClick={() => router.push('/users/new')}>
               {t('users.addEmployee')}
             </Button>
           </Space>
@@ -1130,7 +872,7 @@ export default function UsersPageContent(): React.ReactNode {
                 description={t('users.noTeamMembersDescription')}
                 action={{
                   label: t('users.addEmployee'),
-                  onClick: () => setInviteOpen(true),
+                  onClick: () => router.push('/users/new'),
                 }}
               />
             ),
