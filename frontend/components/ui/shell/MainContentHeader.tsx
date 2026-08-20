@@ -61,8 +61,8 @@ export default function MainContentHeader({
 
           <div className="min-w-0 flex-1">
             <h1
-              className="truncate text-[16px] font-semibold tracking-[-0.01em] leading-tight m-0"
-              style={{ color: tokens.colorTextPrimary }}
+              className="truncate text-[16px] font-semibold tracking-tight leading-tight m-0"
+              style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
             >
               {pageTitle}
             </h1>
@@ -75,8 +75,8 @@ export default function MainContentHeader({
         <div className="hidden min-h-[56px] items-center justify-between gap-6 px-6 py-3 lg:flex xl:px-6">
           <div className="min-w-0 flex-1">
             <h1
-              className="truncate text-[20px] font-semibold tracking-[-0.02em] leading-tight m-0"
-              style={{ color: tokens.colorTextPrimary }}
+              className="truncate text-[20px] font-semibold tracking-tight leading-tight m-0"
+              style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
             >
               {pageTitle}
             </h1>

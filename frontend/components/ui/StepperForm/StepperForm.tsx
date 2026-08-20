@@ -119,7 +119,7 @@ export function StepperForm({
 
   const footer = (
     <div
-      className="erp-stepper-form__footer flex items-center justify-end gap-2 border-t px-4 py-3 sm:px-6"
+      className="erp-stepper-form__footer flex items-center justify-between gap-3 border-t px-4 py-3 sm:px-6"
       style={{
         borderColor: 'rgba(0,0,0,0.06)',
         background: 'rgba(255, 255, 255, 0.4)',
@@ -149,36 +149,38 @@ export function StepperForm({
       >
         {t('hr.buttons.back')}
       </Button>
-      {onReset ? (
-        <Button
-          onClick={handleReset}
-          disabled={isSubmitting || validating}
-          style={{ borderRadius: 2 }}
-        >
-          {resolvedResetLabel}
-        </Button>
-      ) : null}
-      {current < steps.length - 1 ? (
-        <Button
-          type="primary"
-          onClick={() => void handleNext()}
-          loading={validating}
-          disabled={isSubmitting}
-          style={{ borderRadius: 2 }}
-        >
-          {t('hr.buttons.next')}
-        </Button>
-      ) : (
-        <Button
-          type="primary"
-          onClick={() => void handleSubmit()}
-          loading={isSubmitting}
-          disabled={validating}
-          style={{ borderRadius: 2 }}
-        >
-          {resolvedSubmitLabel}
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {onReset ? (
+          <Button
+            onClick={handleReset}
+            disabled={isSubmitting || validating}
+            style={{ borderRadius: 2 }}
+          >
+            {resolvedResetLabel}
+          </Button>
+        ) : null}
+        {current < steps.length - 1 ? (
+          <Button
+            type="primary"
+            onClick={() => void handleNext()}
+            loading={validating}
+            disabled={isSubmitting}
+            style={{ borderRadius: 2 }}
+          >
+            {t('hr.buttons.next')}
+          </Button>
+        ) : (
+          <Button
+            type="primary"
+            onClick={() => void handleSubmit()}
+            loading={isSubmitting}
+            disabled={validating}
+            style={{ borderRadius: 2 }}
+          >
+            {resolvedSubmitLabel}
+          </Button>
+        )}
+      </div>
     </div>
   );
 

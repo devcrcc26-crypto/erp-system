@@ -26,14 +26,14 @@ export default function AddEmployeeFormContent(): React.ReactNode {
       <div className="mb-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1
-            className="text-[20px] font-semibold leading-tight"
-            style={{ color: tokens.colorTextPrimary }}
+            className="truncate text-[20px] font-semibold tracking-tight leading-tight m-0"
+            style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
           >
             {t('users.addEmployee')}
           </h1>
           <p
-            className="mt-1 text-[13px] leading-relaxed"
-            style={{ color: tokens.colorTextSecondary }}
+            className="mt-1 text-[14px] leading-relaxed"
+            style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
           >
             {t('users.form.addEmployeeDescription')}
           </p>

@@ -107,10 +107,10 @@ function RailNavButton({
       className={[
         railItemClass(isActive, isExpanded),
         !isActive && isExpanded
-          ? 'hover:bg-[var(--color-surface-secondary)]'
+          ? 'hover:bg-[var(--color-sidebar-hover)]'
           : '',
         !isActive && !isExpanded
-          ? 'hover:bg-[var(--color-surface-secondary)]'
+          ? 'hover:bg-[var(--color-sidebar-hover)]'
           : '',
       ].join(' ')}
       style={railItemStyle(isActive)}
@@ -120,7 +120,7 @@ function RailNavButton({
         style={
           isActive
             ? { color: tokens.colorPrimaryHover }
-            : { color: tokens.colorTextSecondary }
+            : { color: tokens.colorSidebarText }
         }
       >
         {getNavIcon(item.iconKey)}
@@ -151,8 +151,8 @@ function RailGroupHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="mb-0.5 mt-2 flex w-full items-center gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--color-surface-secondary)] first:mt-0"
-      style={{ color: tokens.colorTextTertiary }}
+      className="mb-0.5 mt-2 flex w-full items-center gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--color-sidebar-hover)] first:mt-0"
+      style={{ color: tokens.colorSidebarText }}
     >
       <span className="min-w-0 flex-1 truncate text-[10px] font-medium uppercase tracking-[0.06em]">
         {label}
@@ -254,10 +254,10 @@ function RailActionButton({
       className={[
         'flex shrink-0 items-center transition-colors duration-150 disabled:opacity-60',
         isExpanded
-          ? 'w-full gap-2.5 rounded-lg border-transparent px-2.5 py-[7px] text-[13px] font-normal leading-[1.5] hover:bg-[var(--color-surface-secondary)]'
-          : 'mx-auto h-8 w-8 justify-center rounded-lg text-[16px] hover:bg-[var(--color-surface-secondary)]',
+          ? 'w-full gap-2.5 rounded-lg border-transparent px-2.5 py-[7px] text-[13px] font-normal leading-[1.5] hover:bg-[var(--color-sidebar-hover)]'
+          : 'mx-auto h-8 w-8 justify-center rounded-lg text-[16px] hover:bg-[var(--color-sidebar-hover)]',
       ].join(' ')}
-      style={{ color: tokens.colorTextSecondary }}
+      style={{ color: tokens.colorSidebarText }}
     >
       <span className="flex shrink-0 items-center justify-center leading-none">
         {icon}
@@ -388,7 +388,7 @@ export default function MainNavPanel({
       className="flex h-full flex-col"
       style={{
         background: tokens.colorSidebarBg,
-        borderRight: `0.5px solid ${tokens.colorBorder}`,
+        borderRight: `0.5px solid ${tokens.colorSidebarBorder}`,
       }}
     >
       <div
@@ -407,8 +407,8 @@ export default function MainNavPanel({
               {t('shell.brandShort')}
             </div>
             <h1
-              className="truncate text-[14px] font-medium tracking-[-0.01em]"
-              style={{ color: tokens.colorTextPrimary }}
+              className="truncate text-[14px] font-semibold tracking-[-0.01em]"
+              style={{ color: tokens.colorSidebarTextActive }}
             >
               {t('shell.brandTitle')}
             </h1>
@@ -425,7 +425,7 @@ export default function MainNavPanel({
         )}
       </div>
 
-      <hr style={{ border: 'none', borderTop: `0.5px solid ${tokens.colorBorder}` }} />
+      <hr style={{ border: 'none', borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }} />
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {permLoading ? (
@@ -475,7 +475,7 @@ export default function MainNavPanel({
                 ].join(' ')}
                 style={
                   isExpanded
-                    ? { borderTop: `0.5px solid ${tokens.colorBorder}` }
+                    ? { borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }
                     : undefined
                 }
               >
@@ -497,7 +497,7 @@ export default function MainNavPanel({
 
       <div
         className="flex flex-col gap-0.5 px-2 pb-3 pt-2"
-        style={{ borderTop: `0.5px solid ${tokens.colorBorder}` }}
+        style={{ borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }}
       >
         <Link
           href="/profile"
@@ -508,10 +508,10 @@ export default function MainNavPanel({
           className={[
             railItemClass(profileActive, isExpanded),
             !profileActive && isExpanded
-              ? 'hover:bg-[var(--color-surface-secondary)]'
+              ? 'hover:bg-[var(--color-sidebar-hover)]'
               : '',
             !profileActive && !isExpanded
-              ? 'hover:bg-[var(--color-surface-secondary)]'
+              ? 'hover:bg-[var(--color-sidebar-hover)]'
               : '',
           ].join(' ')}
           style={railItemStyle(profileActive)}
@@ -552,10 +552,10 @@ export default function MainNavPanel({
             aria-label={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
             aria-pressed={pinned}
             className={[
-              'mt-0.5 flex h-8 shrink-0 items-center rounded-lg transition-colors hover:bg-[var(--color-surface-secondary)]',
+              'mt-0.5 flex h-8 shrink-0 items-center rounded-lg transition-colors hover:bg-[var(--color-sidebar-hover)]',
               isExpanded ? 'w-full justify-end px-2.5' : 'mx-auto w-8 justify-center',
             ].join(' ')}
-            style={{ color: tokens.colorTextTertiary }}
+            style={{ color: tokens.colorSidebarText }}
           >
             {pinned ? (
               <LeftOutlined className="text-[12px]" />

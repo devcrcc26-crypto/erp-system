@@ -28,10 +28,10 @@ export default function EmergencyContactsField(): React.ReactNode {
     <Form.List name="emergencyContacts">
       {(fields, { add, remove }) => (
         <div className="space-y-3">
-          <div className="overflow-x-auto rounded border border-slate-200">
+          <div className="overflow-x-auto rounded-[2px] border border-[rgba(0,0,0,0.06)]">
             <table className="w-full min-w-[880px] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+                <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#fafafa] text-left text-[rgba(0,0,0,0.65)]">
                   <th className="px-3 py-2 font-medium">
                     {t('users.form.emergencyContactFirstName')}
                   </th>
@@ -53,13 +53,13 @@ export default function EmergencyContactsField(): React.ReactNode {
               <tbody>
                 {fields.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                    <td colSpan={6} className="px-3 py-6 text-center text-[rgba(0,0,0,0.45)]">
                       {t('users.form.noEmergencyContacts')}
                     </td>
                   </tr>
                 ) : (
                   fields.map((field) => (
-                    <tr key={field.key} className="border-b border-slate-100 align-top last:border-b-0">
+                    <tr key={field.key} className="border-b border-[rgba(0,0,0,0.06)] align-top last:border-b-0">
                       <td className="px-3 py-2">
                         <Form.Item
                           name={[field.name, 'firstName']}

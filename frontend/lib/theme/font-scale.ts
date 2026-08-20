@@ -1,5 +1,5 @@
-/** Default body font size (px) - matches design system base. */
-export const FONT_SIZE_BASE_PX = 13;
+/** Default body font size (px) - matches Ant Design Pro base. */
+export const FONT_SIZE_BASE_PX = 14;
 
 /** Minimum readable font size (px). */
 export const FONT_SIZE_MIN_PX = 13;

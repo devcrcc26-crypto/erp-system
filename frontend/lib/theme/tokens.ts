@@ -40,23 +40,33 @@ export const tokens = {
   colorGray600: '#5F5E5A',
 
   colorNavy: '#1B2B4B',
-  colorSidebarBg: '#FFFFFF',
-  colorSidebarActive: '#E1F5EE',
-  colorSidebarText: '#1A1A1A',
-  colorSidebarTextActive: '#0F6E56',
+  /** Ant Design Pro dark sider */
+  colorSidebarBg: '#001529',
+  colorSidebarActive: 'rgba(255, 255, 255, 0.08)',
+  colorSidebarHover: 'rgba(255, 255, 255, 0.08)',
+  colorSidebarBorder: 'rgba(255, 255, 255, 0.08)',
+  colorSidebarText: 'rgba(255, 255, 255, 0.65)',
+  colorSidebarTextActive: '#FFFFFF',
   colorSidebarAccent: '#1D9E75',
 
-  colorPageBg: '#FAFAFA',
+  colorPageBg: '#F5F5F5',
   colorCardBg: '#FFFFFF',
-  colorSurfaceSecondary: '#F8F7F4',
-  colorBorder: 'rgba(0, 0, 0, 0.12)',
-  colorBorderSecondary: 'rgba(0, 0, 0, 0.18)',
-  colorTextPrimary: '#1A1A1A',
-  colorTextSecondary: '#5F5E5A',
-  colorTextTertiary: '#888780',
+  colorSurfaceSecondary: '#FAFAFA',
+  colorBorder: 'rgba(0, 0, 0, 0.06)',
+  colorBorderSecondary: 'rgba(0, 0, 0, 0.15)',
+  colorTextPrimary: 'rgba(0, 0, 0, 0.88)',
+  colorTextSecondary: 'rgba(0, 0, 0, 0.65)',
+  colorTextTertiary: 'rgba(0, 0, 0, 0.45)',
 
-  borderRadius: 8,
-  borderRadiusCard: 12,
+  /**
+   * Ant Design Pro / Ant Design default font stack
+   * (system UI fonts + CJK fallbacks for bilingual UI).
+   */
+  fontFamily:
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei'",
+
+  borderRadius: 6,
+  borderRadiusCard: 8,
   sidebarWidth: 220,
 
   /** Outer page padding */

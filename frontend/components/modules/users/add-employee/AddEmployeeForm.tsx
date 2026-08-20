@@ -356,19 +356,17 @@ export default function AddEmployeeForm({
       {
         title: t('users.steps.review'),
         content: (
-          <FormLayout variant="pro" title={t('users.steps.review')}>
-            <AddEmployeeReviewStep
-              values={
-                formValues ?? {
-                  firstName: '',
-                  lastName: '',
-                  isActive: true,
-                }
+          <AddEmployeeReviewStep
+            values={
+              formValues ?? {
+                firstName: '',
+                lastName: '',
+                isActive: true,
               }
-              roles={roles}
-              pendingDocuments={pendingDocuments}
-            />
-          </FormLayout>
+            }
+            roles={roles}
+            pendingDocuments={pendingDocuments}
+          />
         ),
         validate: () => true,
       },
