@@ -37,6 +37,13 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { useRoles } from '@/lib/query/roles';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import {
+  buildEmployeeProfilePayload,
+  EmployeeProfileFormFields,
+  employeeProfileInitialValues,
+  type EmployeeProfileFormValues,
+} from '@/components/modules/users/EmployeeProfileFormFields';
+import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
+import {
   fetchAllUsers,
   useAssignRole,
   useCreateUser,
@@ -97,7 +104,7 @@ const COLUMN_SORT_FIELD: Record<string, string> = {
   status: 'isActive',
 };
 
-interface InviteFormValues {
+interface InviteFormValues extends EmployeeProfileFormValues {
   firstName: string;
   lastName: string;
   chineseName?: string;
@@ -110,17 +117,7 @@ interface InviteFormValues {
   isActive: boolean;
 }
 
-interface EditFormValues {
-  firstName: string;
-  lastName: string;
-  chineseName?: string;
-  phone?: string;
-  departmentId?: string;
-  positionId?: string;
-  roleId?: string;
-  engineeringDisciplineId?: string;
-  isActive: boolean;
-}
+interface EditFormValues extends InviteFormValues {}
 
 function formatUserRoleNames(user: User): string {
   const roles =
@@ -262,6 +259,7 @@ function InviteEmployeeModal({
       positionId: values.positionId,
       engineeringDisciplineId: values.engineeringDisciplineId,
       isActive: values.isActive,
+      ...buildEmployeeProfilePayload(values),
     };
     if (invitedAddress) {
       body.email = invitedAddress;
@@ -400,6 +398,7 @@ function InviteEmployeeModal({
             />
           </Form.Item>
         </div>
+        <EmployeeProfileFormFields mode="create" />
         <Form.Item name="isActive" valuePropName="checked">
           <Switch checkedChildren={t('common.active')} unCheckedChildren={t('common.inactive')} />
         </Form.Item>
@@ -476,6 +475,7 @@ function EditEmployeeModal({
       engineeringDisciplineId: detail.engineeringDisciplineId ?? undefined,
       isActive: detail.isActive,
       roleId: currentRoleId || undefined,
+      ...employeeProfileInitialValues(detail),
     });
   }
 
@@ -511,6 +511,7 @@ function EditEmployeeModal({
           positionId: values.positionId,
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
+          ...buildEmployeeProfilePayload(values),
         },
       });
 
@@ -573,6 +574,11 @@ function EditEmployeeModal({
       <p className="mb-4 text-sm text-slate-500">
         {user.email ?? t('users.noEmailNoLogin')}
       </p>
+      {userQuery.data?.yearsOfExperience != null ? (
+        <p className="mb-4 text-sm text-slate-500">
+          {t('hr.labels.yearsOfExperience')}: {userQuery.data.yearsOfExperience}
+        </p>
+      ) : null}
       <Form<EditFormValues>
         form={form}
         layout="vertical"
@@ -652,6 +658,8 @@ function EditEmployeeModal({
             />
           </Form.Item>
         </div>
+        <EmployeeProfileFormFields mode="edit" employeeIdReadOnly />
+        <EmployeeProfileDocuments userId={user.id} />
         {assignedRoles.length > 0 ? (
           <div className="mb-4">
             <div className="mb-2 text-sm font-medium text-slate-700">

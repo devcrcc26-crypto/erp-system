@@ -38,6 +38,12 @@ export interface EmployeeContractListItem {
     endDate?: string;
     terminatedAt?: string | null;
     notes?: string | null;
+    basicSalary?: string | number | null;
+    transportationAllowance?: string | number | null;
+    monthlyBonus?: string | number | null;
+    netSalary?: string | number | null;
+    probationEndDate?: string | null;
+    governedBy?: string | null;
     lastWarnedAt?: string | null;
     attachmentFolderId?: string | null;
     terminationReason?: string | null;
@@ -62,6 +68,12 @@ export interface CreateEmployeeContractPayload {
     startDate: string;
     endDate?: string;
     notes?: string;
+    basicSalary?: number;
+    transportationAllowance?: number;
+    monthlyBonus?: number;
+    netSalary?: number;
+    probationEndDate?: string;
+    governedBy?: string;
 }
 
 export interface UpdateEmployeeContractPayload {
@@ -70,6 +82,12 @@ export interface UpdateEmployeeContractPayload {
     startDate?: string;
     endDate?: string | null;
     notes?: string;
+    basicSalary?: number;
+    transportationAllowance?: number;
+    monthlyBonus?: number;
+    netSalary?: number;
+    probationEndDate?: string | null;
+    governedBy?: string;
 }
 
 export interface TerminateEmployeeContractPayload {

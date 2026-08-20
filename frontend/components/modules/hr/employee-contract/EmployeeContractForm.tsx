@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, DatePicker, Form, Input, Select } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -29,6 +29,12 @@ interface FormValues {
   startDate: dayjs.Dayjs;
   endDate?: dayjs.Dayjs | null;
   notes?: string;
+  basicSalary?: number;
+  transportationAllowance?: number;
+  monthlyBonus?: number;
+  netSalary?: number;
+  probationEndDate?: dayjs.Dayjs | null;
+  governedBy?: string;
 }
 
 interface EmployeeContractFormProps {
@@ -47,6 +53,9 @@ export default function EmployeeContractForm({
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
   const contractType = Form.useWatch('contractType', form) ?? contract?.contractType ?? 'FIXED_TERM';
+  const basicSalary = Form.useWatch('basicSalary', form);
+  const transportationAllowance = Form.useWatch('transportationAllowance', form);
+  const monthlyBonus = Form.useWatch('monthlyBonus', form);
   const requiresEndDate = contractTypeRequiresEndDate(contractType);
 
   const createMutation = useCreateEmployeeContract();
@@ -94,6 +103,23 @@ export default function EmployeeContractForm({
         ? values.endDate?.format('YYYY-MM-DD')
         : undefined;
 
+      const salaryPayload = {
+        basicSalary: values.basicSalary,
+        transportationAllowance: values.transportationAllowance,
+        monthlyBonus: values.monthlyBonus,
+        netSalary:
+          values.netSalary ??
+          (values.basicSalary != null &&
+          values.transportationAllowance != null &&
+          values.monthlyBonus != null
+            ? values.basicSalary +
+              values.transportationAllowance +
+              values.monthlyBonus
+            : undefined),
+        probationEndDate: values.probationEndDate?.format('YYYY-MM-DD'),
+        governedBy: values.governedBy?.trim() || undefined,
+      };
+
       const result =
         mode === 'edit'
           ? await updateMutation.mutateAsync({
@@ -102,6 +128,7 @@ export default function EmployeeContractForm({
               startDate: values.startDate.format('YYYY-MM-DD'),
               endDate: requiresEndDate ? endDate : null,
               notes: values.notes?.trim() || undefined,
+              ...salaryPayload,
             })
           : await createMutation.mutateAsync({
               employeeId: values.employeeId,
@@ -110,6 +137,7 @@ export default function EmployeeContractForm({
               startDate: values.startDate.format('YYYY-MM-DD'),
               endDate,
               notes: values.notes?.trim() || undefined,
+              ...salaryPayload,
             });
 
       messageApi.success(
@@ -149,6 +177,20 @@ export default function EmployeeContractForm({
                   startDate: dayjs(contract.startDate),
                   endDate: contract.endDate ? dayjs(contract.endDate) : undefined,
                   notes: contract.notes ?? undefined,
+                  basicSalary: contract.basicSalary
+                    ? Number(contract.basicSalary)
+                    : undefined,
+                  transportationAllowance: contract.transportationAllowance
+                    ? Number(contract.transportationAllowance)
+                    : undefined,
+                  monthlyBonus: contract.monthlyBonus
+                    ? Number(contract.monthlyBonus)
+                    : undefined,
+                  netSalary: contract.netSalary ? Number(contract.netSalary) : undefined,
+                  probationEndDate: contract.probationEndDate
+                    ? dayjs(contract.probationEndDate)
+                    : undefined,
+                  governedBy: contract.governedBy ?? undefined,
                 }
               : { contractType: 'FIXED_TERM' }
           }
@@ -215,6 +257,66 @@ export default function EmployeeContractForm({
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
           ) : null}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <Form.Item name="basicSalary" label={t('hr.labels.basicSalary')}>
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                precision={2}
+                addonAfter="ETB"
+              />
+            </Form.Item>
+            <Form.Item
+              name="transportationAllowance"
+              label={t('hr.labels.transportationAllowance')}
+            >
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                precision={2}
+                addonAfter="ETB"
+              />
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <Form.Item name="monthlyBonus" label={t('hr.labels.monthlyBonus')}>
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                precision={2}
+                addonAfter="ETB"
+              />
+            </Form.Item>
+            <Form.Item name="netSalary" label={t('hr.labels.netSalary')}>
+              <InputNumber
+                style={{ width: '100%' }}
+                min={0}
+                precision={2}
+                addonAfter="ETB"
+                placeholder={
+                  basicSalary != null &&
+                  transportationAllowance != null &&
+                  monthlyBonus != null
+                    ? String(basicSalary + transportationAllowance + monthlyBonus)
+                    : undefined
+                }
+              />
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <Form.Item
+              name="probationEndDate"
+              label={t('hr.labels.probationEndDate')}
+            >
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="governedBy" label={t('hr.labels.governedBy')}>
+              <Input placeholder="Ethiopian Labor Proclamation 1156/2019" />
+            </Form.Item>
+          </div>
 
           <Form.Item name="notes" label={t('hr.form.notes')}>
             <Input.TextArea rows={3} maxLength={2000} showCount />

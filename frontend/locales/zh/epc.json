@@ -734,6 +734,23 @@
       "phone": "电话",
       "lastLogin": "上次登录"
     },
+    "sectionPersonalInformation": "个人信息",
+    "sectionEmergencyContact": "紧急联系人",
+    "sectionEmploymentDetails": "雇佣信息",
+    "sectionEducationExperience": "教育与经验",
+    "sectionLeavePolicy": "假期政策",
+    "genderLabel": "性别",
+    "employeeIdAutoHint": "留空将自动生成（如 EMP-0001）",
+    "employeeIdPlaceholder": "留空则自动生成",
+    "fieldOfStudyPlaceholder": "例如：土木工程",
+    "noLeavePoliciesHint": "暂无可用政策 — 请在 HR → 假期政策 中创建",
+    "selectDocuments": "选择文件",
+    "documentsUploaded": "文件上传成功",
+    "documentsUploadError": "文件上传失败",
+    "documentDownloadError": "文件下载失败",
+    "documentDeleted": "文件已删除",
+    "documentDeleteError": "文件删除失败",
+    "noDocuments": "暂无员工档案文件",
     "import": {
       "title": "从 Excel 导入用户",
       "description": "上传电子表格批量添加员工。有邮箱的行将收到激活链接；无邮箱的行仅作为记录保存（无法登录）。",
@@ -894,6 +911,51 @@
       "IN_USE": "使用中",
       "REPAIRING": "维修中",
       "DISPOSED": "已报废"
+    },
+    "gender": {
+      "MALE": "男",
+      "FEMALE": "女"
+    },
+    "nationality": {
+      "ETHIOPIAN": "埃塞俄比亚",
+      "CHINESE": "中国"
+    },
+    "employeeType": {
+      "PERMANENT": "正式员工",
+      "CONTRACT": "合同工",
+      "TEMPORARY": "临时工"
+    },
+    "educationLevel": {
+      "PHD": "博士",
+      "MSC": "硕士",
+      "BSC": "学士",
+      "DIPLOMA": "大专",
+      "CERTIFICATE": "证书",
+      "OTHER": "其他"
+    },
+    "labels": {
+      "employeeId": "员工编号",
+      "middleName": "中间名",
+      "address": "地址",
+      "dateOfBirth": "出生日期",
+      "nationalId": "身份证号",
+      "emergencyContactName": "紧急联系人姓名",
+      "emergencyContactPhone": "紧急联系人电话",
+      "fieldOfStudy": "专业方向",
+      "experienceStartDate": "工作开始时间",
+      "yearsOfExperience": "工作年限",
+      "leavePolicyId": "假期政策",
+      "profileDocuments": "员工档案",
+      "uploadDocuments": "上传文件",
+      "documentLabel": "文件标签",
+      "employeeType": "员工类型",
+      "educationLevel": "学历",
+      "basicSalary": "基本工资",
+      "transportationAllowance": "交通补贴",
+      "monthlyBonus": "月度奖金",
+      "netSalary": "实发工资",
+      "probationEndDate": "试用期结束日期",
+      "governedBy": "适用法规"
     },
     "assetLabels": {
       "serialNumber": "序列号",

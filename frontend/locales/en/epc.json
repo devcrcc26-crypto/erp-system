@@ -736,6 +736,23 @@
       "phone": "Phone",
       "lastLogin": "Last login"
     },
+    "sectionPersonalInformation": "Personal Information",
+    "sectionEmergencyContact": "Emergency Contact",
+    "sectionEmploymentDetails": "Employment Details",
+    "sectionEducationExperience": "Education & Experience",
+    "sectionLeavePolicy": "Leave Policy",
+    "genderLabel": "Gender",
+    "employeeIdAutoHint": "Leave blank to auto-generate (e.g. EMP-0001)",
+    "employeeIdPlaceholder": "Auto-generated if blank",
+    "fieldOfStudyPlaceholder": "e.g. Civil Engineering",
+    "noLeavePoliciesHint": "No policies available — create one at HR → Leave Policy",
+    "selectDocuments": "Select documents",
+    "documentsUploaded": "Documents uploaded successfully",
+    "documentsUploadError": "Failed to upload documents",
+    "documentDownloadError": "Failed to download document",
+    "documentDeleted": "Document deleted",
+    "documentDeleteError": "Failed to delete document",
+    "noDocuments": "No profile documents uploaded yet",
     "import": {
       "title": "Import users from Excel",
       "description": "Upload a spreadsheet to add multiple employees. Rows with an email receive an activation link; rows without an email are saved as record-only (no login).",
@@ -896,6 +913,51 @@
       "IN_USE": "In Use",
       "REPAIRING": "Repairing",
       "DISPOSED": "Disposed"
+    },
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female"
+    },
+    "nationality": {
+      "ETHIOPIAN": "Ethiopian",
+      "CHINESE": "Chinese"
+    },
+    "employeeType": {
+      "PERMANENT": "Permanent",
+      "CONTRACT": "Contract",
+      "TEMPORARY": "Temporary"
+    },
+    "educationLevel": {
+      "PHD": "PhD",
+      "MSC": "MSc",
+      "BSC": "BSc",
+      "DIPLOMA": "Diploma",
+      "CERTIFICATE": "Certificate",
+      "OTHER": "Other"
+    },
+    "labels": {
+      "employeeId": "Employee ID",
+      "middleName": "Middle Name",
+      "address": "Address",
+      "dateOfBirth": "Date of Birth",
+      "nationalId": "National ID",
+      "emergencyContactName": "Emergency Contact Name",
+      "emergencyContactPhone": "Emergency Contact Phone",
+      "fieldOfStudy": "Field of Study",
+      "experienceStartDate": "Experience Since",
+      "yearsOfExperience": "Years of Experience",
+      "leavePolicyId": "Leave Policy",
+      "profileDocuments": "Profile Documents",
+      "uploadDocuments": "Upload Documents",
+      "documentLabel": "Document Label",
+      "employeeType": "Employee Type",
+      "educationLevel": "Education Level",
+      "basicSalary": "Basic Salary",
+      "transportationAllowance": "Transportation Allowance",
+      "monthlyBonus": "Monthly Bonus",
+      "netSalary": "Net Salary",
+      "probationEndDate": "Probation End Date",
+      "governedBy": "Governed By"
     },
     "assetLabels": {
       "serialNumber": "Serial Number",

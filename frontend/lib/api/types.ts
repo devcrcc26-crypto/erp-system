@@ -139,6 +139,27 @@ import type { UserDiscipline } from '@/lib/constants/user-discipline';
 
 export type { UserDiscipline };
 
+export type Gender = 'MALE' | 'FEMALE';
+export type Nationality = 'ETHIOPIAN' | 'CHINESE';
+export type EmployeeType = 'PERMANENT' | 'CONTRACT' | 'TEMPORARY';
+export type EducationLevel = 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER';
+
+export interface LeavePolicySummary {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+}
+
+export interface UserProfileDocument {
+  id: string;
+  name: string;
+  fileType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   companyId: string;
@@ -150,6 +171,23 @@ export interface User {
   discipline: UserDiscipline | null;
   engineeringDisciplineId: string | null;
   engineeringDiscipline?: { id: string; name: string; nameZh: string | null } | null;
+  employeeId?: string | null;
+  middleName?: string | null;
+  address?: string | null;
+  gender?: Gender | null;
+  dateOfBirth?: string | null;
+  nationalId?: string | null;
+  nationality?: Nationality | null;
+  employeeType?: EmployeeType | null;
+  educationLevel?: EducationLevel | null;
+  fieldOfStudy?: string | null;
+  experienceStartDate?: string | null;
+  yearsOfExperience?: number | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  leavePolicyId?: string | null;
+  leavePolicy?: { id: string; name: string } | null;
+  profileFolderId?: string | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
@@ -209,6 +247,20 @@ export interface CreateUserRequest {
   preferredTimezone?: string;
   preferredDateFormat?: string;
   isActive?: boolean;
+  employeeId?: string;
+  middleName?: string;
+  address?: string;
+  gender?: Gender;
+  dateOfBirth?: string;
+  nationalId?: string;
+  nationality?: Nationality;
+  employeeType?: EmployeeType;
+  educationLevel?: EducationLevel;
+  fieldOfStudy?: string;
+  experienceStartDate?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  leavePolicyId?: string;
 }
 
 export interface UpdateUserRequest {
@@ -225,6 +277,20 @@ export interface UpdateUserRequest {
   preferredTimezone?: string;
   preferredDateFormat?: string;
   isActive?: boolean;
+  employeeId?: string;
+  middleName?: string;
+  address?: string;
+  gender?: Gender;
+  dateOfBirth?: string;
+  nationalId?: string;
+  nationality?: Nationality;
+  employeeType?: EmployeeType;
+  educationLevel?: EducationLevel;
+  fieldOfStudy?: string;
+  experienceStartDate?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  leavePolicyId?: string | null;
 }
 
 export interface AssignUserRoleRequest {

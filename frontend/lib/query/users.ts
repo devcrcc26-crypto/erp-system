@@ -26,6 +26,7 @@ import type {
   UpdateUserRequest,
   User,
   UserDetail,
+  UserProfileDocument,
   UsersQueryParams,
 } from '@/lib/api/types';
 
@@ -40,6 +41,7 @@ export const userKeys = {
   directory: (params: PaginationParams) => [...userKeys.directories(), params] as const,
   details: () => [...userKeys.all, 'detail'] as const,
   detail: (id: string) => [...userKeys.details(), id] as const,
+  documents: (id: string) => [...userKeys.all, 'documents', id] as const,
 };
 
 function toQueryString(params: PaginationParams): string {
@@ -146,6 +148,62 @@ export function useUser(id: string, enabled = true) {
     queryFn: () => apiGet<UserDetail>(`/users/${id}`),
     enabled: Boolean(id) && enabled,
     retry: false,
+  });
+}
+
+export function useUserDocuments(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: userKeys.documents(userId),
+    queryFn: () => apiGet<UserProfileDocument[]>(`/users/${userId}/documents`),
+    enabled: Boolean(userId) && enabled,
+    retry: false,
+  });
+}
+
+export function useUploadUserDocuments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      files,
+      labels,
+    }: {
+      userId: string;
+      files: File[];
+      labels: string[];
+    }) => {
+      const formData = new FormData();
+      formData.append('labels', JSON.stringify(labels));
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<UserProfileDocument[]>(`/users/${userId}/documents`, formData);
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.documents(variables.userId),
+      });
+    },
+  });
+}
+
+export function useDeleteUserDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      documentId,
+    }: {
+      userId: string;
+      documentId: string;
+    }) => apiDelete<MessageResponse>(`/users/${userId}/documents/${documentId}`),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.documents(variables.userId),
+      });
+    },
   });
 }
 
