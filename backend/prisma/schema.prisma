@@ -754,7 +754,8 @@ model User {
   assetAssignmentsAsReturnedBy    AssetAssignment[]         @relation("AssetAssignmentReturnedBy")
   assetAssignmentsCreated         AssetAssignment[]         @relation("AssetAssignmentCreator")
   assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
-  leavePolicy                     LeavePolicy?              @relation(fields: [leavePolicyId], references: [id])
+  leavePolicy                     LeavePolicy?              @relation("EmployeeLeavePolicy", fields: [leavePolicyId], references: [id])
+  createdLeavePolicies            LeavePolicy[]             @relation("LeavePolicyCreator")
   profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
 
   @@unique([companyId, email], map: "uq_user_company_email")
@@ -3568,6 +3569,7 @@ model LeavePolicy {
   companyId   String    @map("company_id")
   name        String
   description String?
+  governedBy  String?   @map("governed_by")
   isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at")
   createdBy   String    @map("created_by")
@@ -3576,13 +3578,37 @@ model LeavePolicy {
   deletedAt   DateTime? @map("deleted_at")
   deletedBy   String?   @map("deleted_by")
 
-  company Company @relation(fields: [companyId], references: [id])
-  users   User[]
+  company   Company           @relation(fields: [companyId], references: [id])
+  creator   User              @relation("LeavePolicyCreator", fields: [createdBy], references: [id])
+  rules     LeavePolicyRule[]
+  employees User[]            @relation("EmployeeLeavePolicy")
 
   @@index([companyId], map: "idx_leave_policy_company")
   @@index([companyId, deletedAt], map: "idx_leave_policy_company_deleted")
   @@index([companyId, isActive], map: "idx_leave_policy_company_active")
   @@map("leave_policy")
+}
+
+model LeavePolicyRule {
+  id                   String    @id @default(uuid())
+  leavePolicyId        String    @map("leave_policy_id")
+  leaveType            LeaveType @map("leave_type")
+  baseDays             Decimal   @map("base_days") @db.Decimal(5, 1)
+  isProgressive        Boolean   @default(false) @map("is_progressive")
+  incrementDays        Decimal?  @map("increment_days") @db.Decimal(5, 1)
+  incrementEveryYears  Int?      @map("increment_every_years")
+  minimumServiceMonths Int       @default(0) @map("minimum_service_months")
+  maxDaysCap           Decimal?  @map("max_days_cap") @db.Decimal(5, 1)
+  maxCarryForwardDays  Decimal?  @map("max_carry_forward_days") @db.Decimal(5, 1)
+  requiresReceipt      Boolean   @default(false) @map("requires_receipt")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  policy LeavePolicy @relation(fields: [leavePolicyId], references: [id], onDelete: Cascade)
+
+  @@unique([leavePolicyId, leaveType], map: "uq_leave_policy_rule_policy_type")
+  @@index([leavePolicyId], map: "idx_leave_policy_rule_policy")
+  @@map("leave_policy_rule")
 }
 
 model LeaveRequest {

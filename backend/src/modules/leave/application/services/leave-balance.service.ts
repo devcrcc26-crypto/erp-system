@@ -152,7 +152,7 @@ export class LeaveBalanceService {
         year,
         annual: findRow(LeaveType.ANNUAL),
         maternity: findRow(LeaveType.MATERNITY),
-        compassionate: findRow(LeaveType.COMPASSIONATE),
+        sick: findRow(LeaveType.SICK),
       };
     });
 

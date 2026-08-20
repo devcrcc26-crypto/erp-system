@@ -8,6 +8,7 @@ import { FolderContextType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { DocumentService } from '../../../documents/application/services/document.service';
+import { LeavePolicyService } from '../../../leave-policy/application/services/leave-policy.service';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -46,6 +47,7 @@ export class UserManagementService {
     private readonly passwordService: PasswordService,
     private readonly userProvisioningService: UserProvisioningService,
     private readonly documentService: DocumentService,
+    private readonly leavePolicyService: LeavePolicyService,
   ) {}
 
   async listUsers(
@@ -263,7 +265,7 @@ export class UserManagementService {
   ): Promise<unknown> {
     const existing = await this.prisma.user.findFirst({
       where: activeOnly({ id, companyId: ctx.companyId }),
-      select: { id: true, employeeId: true },
+      select: { id: true, employeeId: true, leavePolicyId: true },
     });
     if (!existing) {
       throw new NotFoundException('User not found');
@@ -299,6 +301,19 @@ export class UserManagementService {
       data,
       select: this.userSelect(),
     });
+
+    const nextPolicyId =
+      rest.leavePolicyId !== undefined
+        ? rest.leavePolicyId || null
+        : existing.leavePolicyId;
+    if (nextPolicyId && nextPolicyId !== existing.leavePolicyId) {
+      await this.leavePolicyService.initializeBalances(
+        id,
+        ctx.companyId,
+        new Date().getFullYear(),
+      );
+    }
+
     return this.mapUserResponse(updated);
   }
 
@@ -921,6 +936,14 @@ export class UserManagementService {
         updatedBy: ctx.userId,
       },
     });
+
+    if (profileInput.leavePolicyId) {
+      await this.leavePolicyService.initializeBalances(
+        userId,
+        ctx.companyId,
+        new Date().getFullYear(),
+      );
+    }
   }
 
   private buildBasicUpdateData(
