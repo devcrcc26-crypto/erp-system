@@ -1,5 +1,12 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { Prisma, UserDiscipline } from '@prisma/client';
+import {
+  EducationLevel,
+  EmployeeType,
+  Gender,
+  Nationality,
+  Prisma,
+  UserDiscipline,
+} from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -13,6 +20,7 @@ import {
 import { UserInvitationDispatchService } from './user-invitation-dispatch.service';
 import {
   ProvisionedUser,
+  ProvisionRecordOnlyUserInput,
   UserProvisioningService,
 } from './user-provisioning.service';
 import { UserManagementService } from './user-management.service';
@@ -27,6 +35,11 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/octet-stream',
 ]);
 
+const GENDER_VALUES = Object.values(Gender);
+const NATIONALITY_VALUES = Object.values(Nationality);
+const EMPLOYEE_TYPE_VALUES = Object.values(EmployeeType);
+const EDUCATION_LEVEL_VALUES = Object.values(EducationLevel);
+
 const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   email: 'email',
   'e-mail': 'email',
@@ -36,6 +49,9 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   lastname: 'lastName',
   'last name': 'lastName',
   last_name: 'lastName',
+  middlename: 'middleName',
+  'middle name': 'middleName',
+  middle_name: 'middleName',
   chinesename: 'chineseName',
   'chinese name': 'chineseName',
   chinese_name: 'chineseName',
@@ -49,6 +65,63 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   mobile: 'phone',
   discipline: 'discipline',
   'engineering discipline': 'discipline',
+  gender: 'gender',
+  department: 'department',
+  'department name': 'department',
+  position: 'position',
+  'position title': 'position',
+  title: 'position',
+  employeeid: 'employeeId',
+  'employee id': 'employeeId',
+  employee_id: 'employeeId',
+  nationality: 'nationality',
+  employeetype: 'employeeType',
+  'employee type': 'employeeType',
+  employee_type: 'employeeType',
+  addresscountry: 'addressCountry',
+  'address country': 'addressCountry',
+  address_country: 'addressCountry',
+  country: 'addressCountry',
+  addressregion: 'addressRegion',
+  'address region': 'addressRegion',
+  address_region: 'addressRegion',
+  region: 'addressRegion',
+  addresscity: 'addressCity',
+  'address city': 'addressCity',
+  address_city: 'addressCity',
+  city: 'addressCity',
+  addresssubcity: 'addressSubcity',
+  'address subcity': 'addressSubcity',
+  address_subcity: 'addressSubcity',
+  subcity: 'addressSubcity',
+  addressworeda: 'addressWoreda',
+  'address woreda': 'addressWoreda',
+  address_woreda: 'addressWoreda',
+  woreda: 'addressWoreda',
+  addresshousenumber: 'addressHouseNumber',
+  'address house number': 'addressHouseNumber',
+  address_house_number: 'addressHouseNumber',
+  housenumber: 'addressHouseNumber',
+  'house number': 'addressHouseNumber',
+  dateofbirth: 'dateOfBirth',
+  'date of birth': 'dateOfBirth',
+  date_of_birth: 'dateOfBirth',
+  dob: 'dateOfBirth',
+  nationalid: 'nationalId',
+  'national id': 'nationalId',
+  national_id: 'nationalId',
+  educationlevel: 'educationLevel',
+  'education level': 'educationLevel',
+  education_level: 'educationLevel',
+  fieldofstudy: 'fieldOfStudy',
+  'field of study': 'fieldOfStudy',
+  field_of_study: 'fieldOfStudy',
+  experiencestartdate: 'experienceStartDate',
+  'experience start date': 'experienceStartDate',
+  experience_start_date: 'experienceStartDate',
+  leavepolicy: 'leavePolicy',
+  'leave policy': 'leavePolicy',
+  leave_policy: 'leavePolicy',
 };
 
 interface ParsedImportRow {
@@ -56,15 +129,47 @@ interface ParsedImportRow {
   email: string;
   firstName: string;
   lastName: string;
+  middleName?: string;
   chineseName?: string;
   role: string;
   phone?: string;
   discipline?: string;
+  gender?: string;
+  department?: string;
+  position?: string;
+  employeeId?: string;
+  nationality?: string;
+  employeeType?: string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressWoreda?: string;
+  addressHouseNumber?: string;
+  dateOfBirth?: string;
+  nationalId?: string;
+  educationLevel?: string;
+  fieldOfStudy?: string;
+  experienceStartDate?: string;
+  leavePolicy?: string;
 }
 
 interface RoleLookup {
   id: string;
   name: string;
+}
+
+interface NamedLookup {
+  id: string;
+  name: string;
+}
+
+interface ImportLookups {
+  roleByNormalizedName: Map<string, RoleLookup>;
+  departmentByNormalizedName: Map<string, NamedLookup>;
+  positionByNormalizedTitle: Map<string, NamedLookup>;
+  leavePolicyByNormalizedName: Map<string, NamedLookup>;
+  disciplineByNormalizedName: Map<string, NamedLookup>;
 }
 
 @Injectable()
@@ -85,31 +190,88 @@ export class UserImportService {
 
     sheet.columns = [
       { header: 'email', key: 'email', width: 32 },
-      { header: 'firstName', key: 'firstName', width: 18 },
-      { header: 'lastName', key: 'lastName', width: 18 },
-      { header: 'chineseName', key: 'chineseName', width: 18 },
-      { header: 'role', key: 'role', width: 22 },
-      { header: 'discipline', key: 'discipline', width: 24 },
-      { header: 'phone', key: 'phone', width: 16 },
+      { header: 'firstName', key: 'firstName', width: 16 },
+      { header: 'lastName', key: 'lastName', width: 16 },
+      { header: 'middleName', key: 'middleName', width: 16 },
+      { header: 'chineseName', key: 'chineseName', width: 16 },
+      { header: 'role', key: 'role', width: 20 },
+      { header: 'phone', key: 'phone', width: 14 },
+      { header: 'discipline', key: 'discipline', width: 20 },
+      { header: 'gender', key: 'gender', width: 10 },
+      { header: 'department', key: 'department', width: 20 },
+      { header: 'position', key: 'position', width: 20 },
+      { header: 'employeeId', key: 'employeeId', width: 14 },
+      { header: 'nationality', key: 'nationality', width: 12 },
+      { header: 'employeeType', key: 'employeeType', width: 14 },
+      { header: 'dateOfBirth', key: 'dateOfBirth', width: 14 },
+      { header: 'nationalId', key: 'nationalId', width: 16 },
+      { header: 'educationLevel', key: 'educationLevel', width: 14 },
+      { header: 'fieldOfStudy', key: 'fieldOfStudy', width: 18 },
+      { header: 'experienceStartDate', key: 'experienceStartDate', width: 18 },
+      { header: 'addressCountry', key: 'addressCountry', width: 14 },
+      { header: 'addressRegion', key: 'addressRegion', width: 14 },
+      { header: 'addressCity', key: 'addressCity', width: 14 },
+      { header: 'addressSubcity', key: 'addressSubcity', width: 14 },
+      { header: 'addressWoreda', key: 'addressWoreda', width: 14 },
+      { header: 'addressHouseNumber', key: 'addressHouseNumber', width: 16 },
+      { header: 'leavePolicy', key: 'leavePolicy', width: 18 },
     ];
 
     sheet.addRow({
       email: 'user@company.local',
       firstName: 'Jane',
       lastName: 'Doe',
+      middleName: 'A',
       chineseName: '',
       role: 'Employee',
-      discipline: 'Highway',
       phone: '',
+      discipline: 'Highway',
+      gender: 'FEMALE',
+      department: 'Engineering',
+      position: 'Site Engineer',
+      employeeId: '',
+      nationality: 'ETHIOPIAN',
+      employeeType: 'PERMANENT',
+      dateOfBirth: '1990-05-15',
+      nationalId: '',
+      educationLevel: 'BSC',
+      fieldOfStudy: 'Civil Engineering',
+      experienceStartDate: '2015-01-01',
+      addressCountry: 'Ethiopia',
+      addressRegion: 'Addis Ababa',
+      addressCity: 'Addis Ababa',
+      addressSubcity: '',
+      addressWoreda: '',
+      addressHouseNumber: '',
+      leavePolicy: '',
     });
     sheet.addRow({
       email: '',
       firstName: 'Wei',
       lastName: 'Zhang',
+      middleName: '',
       chineseName: '张伟',
       role: 'Employee',
-      discipline: 'Highway',
       phone: '',
+      discipline: 'Highway',
+      gender: 'MALE',
+      department: '',
+      position: '',
+      employeeId: '',
+      nationality: 'CHINESE',
+      employeeType: 'CONTRACT',
+      dateOfBirth: '',
+      nationalId: '',
+      educationLevel: 'MSC',
+      fieldOfStudy: '',
+      experienceStartDate: '',
+      addressCountry: '',
+      addressRegion: '',
+      addressCity: '',
+      addressSubcity: '',
+      addressWoreda: '',
+      addressHouseNumber: '',
+      leavePolicy: '',
     });
 
     const instructions = workbook.addWorksheet('Instructions');
@@ -121,6 +283,7 @@ export class UserImportService {
     ]);
     instructions.addRow(['firstName', 'Yes', '']);
     instructions.addRow(['lastName', 'Yes', '']);
+    instructions.addRow(['middleName', 'No', 'Optional middle name']);
     instructions.addRow([
       'chineseName',
       'No',
@@ -135,7 +298,45 @@ export class UserImportService {
     instructions.addRow([
       'discipline',
       'No',
-      'Optional engineering discipline label or key (e.g. Highway, STRUCTURE_ROAD)',
+      'UserDiscipline enum label/key (e.g. Highway) and/or engineering discipline catalog name',
+    ]);
+    instructions.addRow(['gender', 'No', 'MALE or FEMALE']);
+    instructions.addRow([
+      'department',
+      'No',
+      'Must match an existing department name (case-insensitive)',
+    ]);
+    instructions.addRow([
+      'position',
+      'No',
+      'Must match an existing position title (case-insensitive)',
+    ]);
+    instructions.addRow(['employeeId', 'No', 'Unique employee number when provided']);
+    instructions.addRow(['nationality', 'No', 'ETHIOPIAN or CHINESE']);
+    instructions.addRow([
+      'employeeType',
+      'No',
+      'PERMANENT, CONTRACT, or TEMPORARY',
+    ]);
+    instructions.addRow(['dateOfBirth', 'No', 'YYYY-MM-DD']);
+    instructions.addRow(['nationalId', 'No', 'National ID / passport number']);
+    instructions.addRow([
+      'educationLevel',
+      'No',
+      'PHD, MSC, BSC, DIPLOMA, CERTIFICATE, or OTHER',
+    ]);
+    instructions.addRow(['fieldOfStudy', 'No', '']);
+    instructions.addRow(['experienceStartDate', 'No', 'YYYY-MM-DD']);
+    instructions.addRow(['addressCountry', 'No', '']);
+    instructions.addRow(['addressRegion', 'No', '']);
+    instructions.addRow(['addressCity', 'No', '']);
+    instructions.addRow(['addressSubcity', 'No', '']);
+    instructions.addRow(['addressWoreda', 'No', '']);
+    instructions.addRow(['addressHouseNumber', 'No', '']);
+    instructions.addRow([
+      'leavePolicy',
+      'No',
+      'Must match an existing leave policy name (case-insensitive)',
     ]);
     instructions.addRow([]);
     instructions.addRow([
@@ -178,12 +379,32 @@ export class UserImportService {
 
     for (const row of validRows) {
       try {
-        const shared = {
+        const shared: ProvisionRecordOnlyUserInput = {
           firstName: row.firstName,
           lastName: row.lastName,
+          middleName: row.middleName,
           chineseName: row.chineseName,
           phone: row.phone,
+          departmentId: row.departmentId,
+          positionId: row.positionId,
+          leavePolicyId: row.leavePolicyId,
           discipline: row.discipline ?? undefined,
+          engineeringDisciplineId: row.engineeringDisciplineId,
+          employeeId: row.employeeId,
+          gender: row.gender ?? undefined,
+          nationality: row.nationality ?? undefined,
+          employeeType: row.employeeType ?? undefined,
+          educationLevel: row.educationLevel ?? undefined,
+          dateOfBirth: row.dateOfBirth,
+          nationalId: row.nationalId,
+          fieldOfStudy: row.fieldOfStudy,
+          experienceStartDate: row.experienceStartDate,
+          addressCountry: row.addressCountry,
+          addressRegion: row.addressRegion,
+          addressCity: row.addressCity,
+          addressSubcity: row.addressSubcity,
+          addressWoreda: row.addressWoreda,
+          addressHouseNumber: row.addressHouseNumber,
           isActive: true,
         };
 
@@ -290,7 +511,13 @@ export class UserImportService {
       };
 
       columnMap.forEach((field, colNumber) => {
-        const value = this.cellToString(row.getCell(colNumber).value).trim();
+        const cellValue = row.getCell(colNumber).value;
+        const isDateField =
+          field === 'dateOfBirth' || field === 'experienceStartDate';
+        const value = isDateField
+          ? this.cellToDateString(cellValue).trim()
+          : this.cellToString(cellValue).trim();
+
         switch (field) {
           case 'email':
             parsed.email = value;
@@ -300,6 +527,9 @@ export class UserImportService {
             break;
           case 'lastName':
             parsed.lastName = value;
+            break;
+          case 'middleName':
+            parsed.middleName = value || undefined;
             break;
           case 'chineseName':
             parsed.chineseName = value || undefined;
@@ -312,6 +542,60 @@ export class UserImportService {
             break;
           case 'discipline':
             parsed.discipline = value || undefined;
+            break;
+          case 'gender':
+            parsed.gender = value || undefined;
+            break;
+          case 'department':
+            parsed.department = value || undefined;
+            break;
+          case 'position':
+            parsed.position = value || undefined;
+            break;
+          case 'employeeId':
+            parsed.employeeId = value || undefined;
+            break;
+          case 'nationality':
+            parsed.nationality = value || undefined;
+            break;
+          case 'employeeType':
+            parsed.employeeType = value || undefined;
+            break;
+          case 'addressCountry':
+            parsed.addressCountry = value || undefined;
+            break;
+          case 'addressRegion':
+            parsed.addressRegion = value || undefined;
+            break;
+          case 'addressCity':
+            parsed.addressCity = value || undefined;
+            break;
+          case 'addressSubcity':
+            parsed.addressSubcity = value || undefined;
+            break;
+          case 'addressWoreda':
+            parsed.addressWoreda = value || undefined;
+            break;
+          case 'addressHouseNumber':
+            parsed.addressHouseNumber = value || undefined;
+            break;
+          case 'dateOfBirth':
+            parsed.dateOfBirth = value || undefined;
+            break;
+          case 'nationalId':
+            parsed.nationalId = value || undefined;
+            break;
+          case 'educationLevel':
+            parsed.educationLevel = value || undefined;
+            break;
+          case 'fieldOfStudy':
+            parsed.fieldOfStudy = value || undefined;
+            break;
+          case 'experienceStartDate':
+            parsed.experienceStartDate = value || undefined;
+            break;
+          case 'leavePolicy':
+            parsed.leavePolicy = value || undefined;
             break;
           default:
             break;
@@ -338,10 +622,7 @@ export class UserImportService {
     ctx: AuditContext,
     rows: ParsedImportRow[],
   ): Promise<ImportPreviewResponseDto> {
-    const roles = await this.loadRoles(ctx.companyId);
-    const roleByNormalizedName = new Map(
-      roles.map((role) => [this.normalizeRoleName(role.name), role]),
-    );
+    const lookups = await this.loadLookups(ctx.companyId);
 
     const emailsInFile = new Set<string>();
     const previewRows: ImportRowPreviewDto[] = [];
@@ -350,7 +631,7 @@ export class UserImportService {
       const preview = await this.validateRow(
         ctx,
         row,
-        roleByNormalizedName,
+        lookups,
         emailsInFile,
       );
       previewRows.push(preview);
@@ -376,17 +657,31 @@ export class UserImportService {
   private async validateRow(
     ctx: AuditContext,
     row: ParsedImportRow,
-    roleByNormalizedName: Map<string, RoleLookup>,
+    lookups: ImportLookups,
     emailsInFile: Set<string>,
   ): Promise<ImportRowPreviewDto> {
-    const base = {
+    const base: ImportRowPreviewDto = {
       line: row.line,
       email: row.email.trim() || undefined,
       firstName: row.firstName,
       lastName: row.lastName,
+      middleName: row.middleName,
       chineseName: row.chineseName,
       role: row.role,
       phone: row.phone,
+      department: row.department,
+      position: row.position,
+      employeeId: row.employeeId,
+      leavePolicy: row.leavePolicy,
+      nationalId: row.nationalId,
+      fieldOfStudy: row.fieldOfStudy,
+      addressCountry: row.addressCountry,
+      addressRegion: row.addressRegion,
+      addressCity: row.addressCity,
+      addressSubcity: row.addressSubcity,
+      addressWoreda: row.addressWoreda,
+      addressHouseNumber: row.addressHouseNumber,
+      status: 'error',
     };
 
     if (!row.firstName || !row.lastName) {
@@ -397,23 +692,137 @@ export class UserImportService {
       };
     }
 
+    const genderResult = this.parseEnumField(
+      row.gender,
+      GENDER_VALUES,
+      'gender',
+    );
+    if (!genderResult.ok) {
+      return { ...base, status: 'error', message: genderResult.message };
+    }
+
+    const nationalityResult = this.parseEnumField(
+      row.nationality,
+      NATIONALITY_VALUES,
+      'nationality',
+    );
+    if (!nationalityResult.ok) {
+      return { ...base, status: 'error', message: nationalityResult.message };
+    }
+
+    const employeeTypeResult = this.parseEnumField(
+      row.employeeType,
+      EMPLOYEE_TYPE_VALUES,
+      'employeeType',
+    );
+    if (!employeeTypeResult.ok) {
+      return { ...base, status: 'error', message: employeeTypeResult.message };
+    }
+
+    const educationLevelResult = this.parseEnumField(
+      row.educationLevel,
+      EDUCATION_LEVEL_VALUES,
+      'educationLevel',
+    );
+    if (!educationLevelResult.ok) {
+      return { ...base, status: 'error', message: educationLevelResult.message };
+    }
+
+    const dateOfBirthResult = this.parseImportDate(
+      row.dateOfBirth,
+      'dateOfBirth',
+    );
+    if (!dateOfBirthResult.ok) {
+      return { ...base, status: 'error', message: dateOfBirthResult.message };
+    }
+
+    const experienceStartDateResult = this.parseImportDate(
+      row.experienceStartDate,
+      'experienceStartDate',
+    );
+    if (!experienceStartDateResult.ok) {
+      return {
+        ...base,
+        status: 'error',
+        message: experienceStartDateResult.message,
+      };
+    }
+
     let discipline: UserDiscipline | null | undefined;
+    let engineeringDisciplineId: string | undefined;
     if (row.discipline !== undefined) {
-      const parsedDiscipline = parseUserDisciplineInput(row.discipline);
-      if (parsedDiscipline === undefined && row.discipline.trim() !== '') {
+      const trimmedDiscipline = row.discipline.trim();
+      if (trimmedDiscipline !== '') {
+        const parsedDiscipline = parseUserDisciplineInput(row.discipline);
+        const engineeringDiscipline =
+          lookups.disciplineByNormalizedName.get(
+            this.normalizeLookupKey(trimmedDiscipline),
+          ) ?? undefined;
+        if (parsedDiscipline === undefined && !engineeringDiscipline) {
+          return {
+            ...base,
+            status: 'error',
+            message: `Unknown discipline: ${row.discipline}`,
+          };
+        }
+        discipline = parsedDiscipline ?? null;
+        engineeringDisciplineId = engineeringDiscipline?.id;
+      } else {
+        discipline = null;
+      }
+    }
+
+    let departmentId: string | undefined;
+    if (row.department?.trim()) {
+      const department = lookups.departmentByNormalizedName.get(
+        this.normalizeLookupKey(row.department),
+      );
+      if (!department) {
         return {
           ...base,
           status: 'error',
-          message: `Unknown discipline: ${row.discipline}`,
+          message: `Unknown department: ${row.department}`,
         };
       }
-      discipline = parsedDiscipline ?? null;
+      departmentId = department.id;
+    }
+
+    let positionId: string | undefined;
+    if (row.position?.trim()) {
+      const position = lookups.positionByNormalizedTitle.get(
+        this.normalizeLookupKey(row.position),
+      );
+      if (!position) {
+        return {
+          ...base,
+          status: 'error',
+          message: `Unknown position: ${row.position}`,
+        };
+      }
+      positionId = position.id;
+    }
+
+    let leavePolicyId: string | undefined;
+    if (row.leavePolicy?.trim()) {
+      const leavePolicy = lookups.leavePolicyByNormalizedName.get(
+        this.normalizeLookupKey(row.leavePolicy),
+      );
+      if (!leavePolicy) {
+        return {
+          ...base,
+          status: 'error',
+          message: `Unknown leavePolicy: ${row.leavePolicy}`,
+        };
+      }
+      leavePolicyId = leavePolicy.id;
     }
 
     let roleId: string | undefined;
     const roleName = row.role.trim();
     if (roleName) {
-      const role = roleByNormalizedName.get(this.normalizeRoleName(roleName));
+      const role = lookups.roleByNormalizedName.get(
+        this.normalizeLookupKey(roleName),
+      );
       if (!role) {
         return {
           ...base,
@@ -424,17 +833,27 @@ export class UserImportService {
       roleId = role.id;
     }
 
-    const roleAssignment = roleId ? { roleId } : {};
-    const disciplineAssignment =
-      discipline !== undefined ? { discipline } : {};
+    const resolved: Partial<ImportRowPreviewDto> = {
+      roleId,
+      departmentId,
+      positionId,
+      leavePolicyId,
+      engineeringDisciplineId,
+      discipline: discipline ?? undefined,
+      gender: genderResult.value,
+      nationality: nationalityResult.value,
+      employeeType: employeeTypeResult.value,
+      educationLevel: educationLevelResult.value,
+      dateOfBirth: dateOfBirthResult.value,
+      experienceStartDate: experienceStartDateResult.value,
+    };
 
     const trimmedEmail = row.email.trim();
     if (!trimmedEmail) {
       return {
         ...base,
         status: 'ok',
-        ...roleAssignment,
-        ...disciplineAssignment,
+        ...resolved,
         message: 'Record-only user (no login access)',
       };
     }
@@ -469,8 +888,7 @@ export class UserImportService {
         ...base,
         email: normalizedEmail,
         status: 'ok',
-        ...roleAssignment,
-        ...disciplineAssignment,
+        ...resolved,
         message: 'Previously deleted user will be restored',
       };
     }
@@ -490,17 +908,122 @@ export class UserImportService {
       ...base,
       email: normalizedEmail,
       status: 'ok',
-      ...roleAssignment,
-      ...disciplineAssignment,
+      ...resolved,
     };
   }
 
-  private async loadRoles(companyId: string): Promise<RoleLookup[]> {
-    return this.prisma.role.findMany({
-      where: activeOnly({ companyId }),
-      select: { id: true, name: true },
-      orderBy: { name: Prisma.SortOrder.asc },
-    });
+  private async loadLookups(companyId: string): Promise<ImportLookups> {
+    const [roles, departments, positions, leavePolicies, disciplines] =
+      await Promise.all([
+        this.prisma.role.findMany({
+          where: activeOnly({ companyId }),
+          select: { id: true, name: true },
+          orderBy: { name: Prisma.SortOrder.asc },
+        }),
+        this.prisma.department.findMany({
+          where: activeOnly({ companyId }),
+          select: { id: true, name: true },
+        }),
+        this.prisma.position.findMany({
+          where: activeOnly({ companyId }),
+          select: { id: true, title: true },
+        }),
+        this.prisma.leavePolicy.findMany({
+          where: activeOnly({ companyId }),
+          select: { id: true, name: true },
+        }),
+        this.prisma.discipline.findMany({
+          where: activeOnly({ companyId }),
+          select: { id: true, name: true, nameZh: true },
+        }),
+      ]);
+
+    const roleByNormalizedName = new Map(
+      roles.map((role) => [this.normalizeLookupKey(role.name), role]),
+    );
+
+    const departmentByNormalizedName = new Map(
+      departments.map((department) => [
+        this.normalizeLookupKey(department.name),
+        { id: department.id, name: department.name },
+      ]),
+    );
+
+    const positionByNormalizedTitle = new Map(
+      positions.map((position) => [
+        this.normalizeLookupKey(position.title),
+        { id: position.id, name: position.title },
+      ]),
+    );
+
+    const leavePolicyByNormalizedName = new Map(
+      leavePolicies.map((policy) => [
+        this.normalizeLookupKey(policy.name),
+        { id: policy.id, name: policy.name },
+      ]),
+    );
+
+    const disciplineByNormalizedName = new Map<string, NamedLookup>();
+    for (const discipline of disciplines) {
+      disciplineByNormalizedName.set(this.normalizeLookupKey(discipline.name), {
+        id: discipline.id,
+        name: discipline.name,
+      });
+      if (discipline.nameZh?.trim()) {
+        disciplineByNormalizedName.set(
+          this.normalizeLookupKey(discipline.nameZh),
+          { id: discipline.id, name: discipline.name },
+        );
+      }
+    }
+
+    return {
+      roleByNormalizedName,
+      departmentByNormalizedName,
+      positionByNormalizedTitle,
+      leavePolicyByNormalizedName,
+      disciplineByNormalizedName,
+    };
+  }
+
+  private parseEnumField<T extends string>(
+    value: string | undefined,
+    allowed: readonly T[],
+    fieldLabel: string,
+  ):
+    | { ok: true; value: T | undefined }
+    | { ok: false; message: string } {
+    if (value === undefined || value.trim() === '') {
+      return { ok: true, value: undefined };
+    }
+    const normalized = value.trim().toUpperCase();
+    const match = allowed.find((entry) => entry === normalized);
+    if (!match) {
+      return {
+        ok: false,
+        message: `Unknown ${fieldLabel}: ${value}`,
+      };
+    }
+    return { ok: true, value: match };
+  }
+
+  private parseImportDate(
+    value: string | undefined,
+    fieldLabel: string,
+  ):
+    | { ok: true; value: string | undefined }
+    | { ok: false; message: string } {
+    if (value === undefined || value.trim() === '') {
+      return { ok: true, value: undefined };
+    }
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+    if (!match) {
+      return {
+        ok: false,
+        message: `Invalid ${fieldLabel}: use YYYY-MM-DD`,
+      };
+    }
+    return { ok: true, value: `${match[1]}-${match[2]}-${match[3]}` };
   }
 
   private async loadWorkbookFromBuffer(
@@ -536,7 +1059,7 @@ export class UserImportService {
     return value.trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
-  private normalizeRoleName(value: string): string {
+  private normalizeLookupKey(value: string): string {
     return value.trim().toLowerCase();
   }
 
@@ -551,6 +1074,30 @@ export class UserImportService {
       return value.toISOString();
     }
     return String(value);
+  }
+
+  private cellToDateString(value: ExcelJS.CellValue): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (value instanceof Date) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (typeof value === 'object' && 'text' in value) {
+      return this.cellToDateString(String(value.text ?? ''));
+    }
+    if (typeof value === 'object' && 'result' in value) {
+      return this.cellToDateString(value.result as ExcelJS.CellValue);
+    }
+    const asString = String(value).trim();
+    const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(asString);
+    if (isoMatch) {
+      return isoMatch[1];
+    }
+    return asString;
   }
 
   private isRowEmpty(row: ExcelJS.Row): boolean {

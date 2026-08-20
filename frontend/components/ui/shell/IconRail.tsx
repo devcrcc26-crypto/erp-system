@@ -2,79 +2,50 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import MainNavPanel from '@/components/ui/shell/MainNavPanel';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { tokens } from '@/lib/theme/tokens';
 import {
-  RAIL_COLLAPSED_WIDTH,
   RAIL_EXPANDED_WIDTH,
-  RAIL_PEEK_OVERLAY_WITH_CONTEXT,
+  SHELL_TOP_HEADER_HEIGHT,
 } from '@/components/ui/shell/shell-layout';
 
-const LG_BREAKPOINT_PX = 1024;
+const COLLAPSE_BUTTON_SIZE = 24;
 
 /**
- * Desktop icon rail with pin + hover-peek behaviour. Hidden below lg - use MainNavPanel in a drawer on mobile.
+ * Desktop icon rail. Hidden below lg — use MainNavPanel in a drawer on mobile.
  */
-export default function IconRail({
-  coverContextSidebar = false,
-}: {
-  coverContextSidebar?: boolean;
-}): React.ReactNode {
-  const {
-    pinned,
-    isExpanded,
-    layoutWidth,
-    togglePinned,
-    onPeekEnter,
-    onPeekLeave,
-  } = useRailExpanded();
+export default function IconRail(): React.ReactNode {
+  const { isExpanded, layoutWidth, toggleExpanded } = useRailExpanded();
   const { t } = useEpcTranslation();
 
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(min-width: ${LG_BREAKPOINT_PX}px)`);
-    const sync = (): void => setIsDesktop(mql.matches);
-    sync();
-    mql.addEventListener('change', sync);
-    return () => mql.removeEventListener('change', sync);
-  }, []);
-
-  const isOverlayPeek = isExpanded && !pinned;
-  const shouldCoverContext =
-    isOverlayPeek && coverContextSidebar && isDesktop;
-
-  const panelWidth = (() => {
-    if (!isExpanded) {
-      return RAIL_COLLAPSED_WIDTH;
+  function handleToggleKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+  ): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleExpanded();
     }
-    if (shouldCoverContext) {
-      return RAIL_PEEK_OVERLAY_WITH_CONTEXT;
-    }
-    return RAIL_EXPANDED_WIDTH;
-  })();
+  }
+
+  function handleToggleClick(event: React.MouseEvent<HTMLButtonElement>): void {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleExpanded();
+  }
 
   return (
     <div
-      className="relative z-40 hidden h-full shrink-0 lg:block"
+      className="relative z-40 hidden h-full shrink-0 overflow-visible lg:block"
       style={{ width: layoutWidth }}
     >
       <aside
-        onMouseEnter={onPeekEnter}
-        onMouseLeave={onPeekLeave}
-        className={[
-          'flex h-full flex-col transition-[width] duration-200 ease-in-out',
-          isOverlayPeek
-            ? 'absolute left-0 top-0 z-50 border-r'
-            : 'relative',
-        ].join(' ')}
+        className="relative flex h-full flex-col transition-[width] duration-200 ease-in-out"
         style={{
-          width: panelWidth,
+          width: layoutWidth,
           background: tokens.colorSidebarBg,
-          borderColor: isOverlayPeek ? tokens.colorBorder : undefined,
         }}
         aria-label={t('shell.mainNavigation')}
       >
@@ -82,14 +53,44 @@ export default function IconRail({
           className="flex h-full flex-col"
           style={{ maxWidth: RAIL_EXPANDED_WIDTH, width: '100%' }}
         >
-          <MainNavPanel
-            isExpanded={isExpanded}
-            showPinToggle
-            pinned={pinned}
-            onTogglePin={togglePinned}
-          />
+          <MainNavPanel isExpanded={isExpanded} />
         </div>
       </aside>
+
+      <button
+        type="button"
+        onClick={handleToggleClick}
+        onKeyDown={handleToggleKeyDown}
+        title={
+          isExpanded
+            ? t('shell.collapseNavigation')
+            : t('shell.expandNavigation')
+        }
+        aria-label={
+          isExpanded
+            ? t('shell.collapseNavigation')
+            : t('shell.expandNavigation')
+        }
+        aria-pressed={isExpanded}
+        className="absolute z-[60] flex items-center justify-center rounded-full transition-colors hover:opacity-95"
+        style={{
+          top: SHELL_TOP_HEADER_HEIGHT + 10,
+          left: layoutWidth - COLLAPSE_BUTTON_SIZE / 2,
+          width: COLLAPSE_BUTTON_SIZE,
+          height: COLLAPSE_BUTTON_SIZE,
+          background: tokens.colorCardBg,
+          color: tokens.colorTextSecondary,
+          border: `1px solid ${tokens.colorBorder}`,
+          boxShadow:
+            '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        {isExpanded ? (
+          <LeftOutlined style={{ fontSize: 11 }} />
+        ) : (
+          <RightOutlined style={{ fontSize: 11 }} />
+        )}
+      </button>
     </div>
   );
 }

@@ -1,6 +1,13 @@
 import { randomBytes } from 'crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
-import { Prisma, UserDiscipline } from '@prisma/client';
+import {
+  EducationLevel,
+  EmployeeType,
+  Gender,
+  Nationality,
+  Prisma,
+  UserDiscipline,
+} from '@prisma/client';
 import { AccountActivationService } from '../../../auth/application/services/account-activation.service';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -23,6 +30,23 @@ export interface ProvisionInvitedUserInput {
   preferredTimezone?: string;
   preferredDateFormat?: string;
   isActive?: boolean;
+  middleName?: string;
+  employeeId?: string;
+  gender?: Gender;
+  dateOfBirth?: Date | string;
+  nationalId?: string;
+  nationality?: Nationality;
+  employeeType?: EmployeeType;
+  educationLevel?: EducationLevel;
+  fieldOfStudy?: string;
+  experienceStartDate?: Date | string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressWoreda?: string;
+  addressHouseNumber?: string;
+  leavePolicyId?: string;
 }
 
 /** Record-only user (no email) — cannot authenticate or use email flows. */
@@ -89,6 +113,7 @@ export class UserProvisioningService {
         emailVerifiedAt: null,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
+        ...this.buildProfileWriteData(input),
       },
       select: {
         id: true,
@@ -136,6 +161,7 @@ export class UserProvisioningService {
         emailVerifiedAt: null,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
+        ...this.buildProfileWriteData(input),
       },
       select: {
         id: true,
@@ -181,6 +207,7 @@ export class UserProvisioningService {
         emailVerifiedAt: new Date(),
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
+        ...this.buildProfileWriteData(input),
       },
       select: {
         id: true,
@@ -262,6 +289,7 @@ export class UserProvisioningService {
         passwordHash,
         emailVerifiedAt: null,
         updatedBy: ctx.userId,
+        ...this.buildProfileWriteData(input),
       },
       select: {
         id: true,
@@ -270,6 +298,69 @@ export class UserProvisioningService {
         lastName: true,
       },
     });
+  }
+
+  private buildProfileWriteData(
+    input: ProvisionInvitedUserInput | ProvisionRecordOnlyUserInput,
+  ): Pick<
+    Prisma.UserUncheckedCreateInput,
+    | 'middleName'
+    | 'employeeId'
+    | 'gender'
+    | 'dateOfBirth'
+    | 'nationalId'
+    | 'nationality'
+    | 'employeeType'
+    | 'educationLevel'
+    | 'fieldOfStudy'
+    | 'experienceStartDate'
+    | 'addressCountry'
+    | 'addressRegion'
+    | 'addressCity'
+    | 'addressSubcity'
+    | 'addressWoreda'
+    | 'addressHouseNumber'
+    | 'leavePolicyId'
+  > {
+    return {
+      middleName: input.middleName?.trim() || null,
+      employeeId: input.employeeId?.trim() || null,
+      gender: input.gender ?? null,
+      dateOfBirth: this.toNullableDate(input.dateOfBirth),
+      nationalId: input.nationalId?.trim() || null,
+      nationality: input.nationality ?? null,
+      employeeType: input.employeeType ?? null,
+      educationLevel: input.educationLevel ?? null,
+      fieldOfStudy: input.fieldOfStudy?.trim() || null,
+      experienceStartDate: this.toNullableDate(input.experienceStartDate),
+      addressCountry: input.addressCountry?.trim() || null,
+      addressRegion: input.addressRegion?.trim() || null,
+      addressCity: input.addressCity?.trim() || null,
+      addressSubcity: input.addressSubcity?.trim() || null,
+      addressWoreda: input.addressWoreda?.trim() || null,
+      addressHouseNumber: input.addressHouseNumber?.trim() || null,
+      leavePolicyId: input.leavePolicyId ?? null,
+    };
+  }
+
+  private toNullableDate(value: Date | string | undefined): Date | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+    if (!match) {
+      return null;
+    }
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    );
   }
 
   private async assertEmailAvailable(

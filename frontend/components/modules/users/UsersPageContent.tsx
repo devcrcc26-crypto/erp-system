@@ -11,6 +11,7 @@ import {
   Space,
   Spin,
   Tag,
+  Tooltip,
   type MenuProps,
 } from 'antd';
 import type {
@@ -18,11 +19,16 @@ import type {
   SorterResult,
   TablePaginationConfig,
 } from 'antd/es/table/interface';
-import { FileExcelOutlined, MoreOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -130,7 +136,7 @@ export default function UsersPageContent(): React.ReactNode {
   const [importOpen, setImportOpen] = useState(false);
 
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [positionFilter, setPositionFilter] = useState<string | undefined>();
@@ -140,43 +146,16 @@ export default function UsersPageContent(): React.ReactNode {
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      setDebouncedSearch(search);
-      resetPage();
+      const next = search.trim();
+      setAppliedSearch((prev) => {
+        if (prev !== next) {
+          setTimeout(() => resetPage(), 0);
+        }
+        return next;
+      });
     }, 300);
     return () => clearTimeout(handle);
   }, [search, resetPage]);
-
-  const handleDisciplineFilterChange = useCallback(
-    (value?: string) => {
-      setDisciplineFilter(value);
-      resetPage();
-    },
-    [resetPage],
-  );
-
-  const handleDepartmentFilterChange = useCallback(
-    (value?: string) => {
-      setDepartmentFilter(value);
-      resetPage();
-    },
-    [resetPage],
-  );
-
-  const handlePositionFilterChange = useCallback(
-    (value?: string) => {
-      setPositionFilter(value);
-      resetPage();
-    },
-    [resetPage],
-  );
-
-  const handleStatusFilterChange = useCallback(
-    (value?: boolean) => {
-      setStatusFilter(value);
-      resetPage();
-    },
-    [resetPage],
-  );
 
   const handleTableChange = useCallback(
     (
@@ -201,7 +180,7 @@ export default function UsersPageContent(): React.ReactNode {
 
   const usersQuery = useUsers({
     ...params,
-    search: debouncedSearch || undefined,
+    search: appliedSearch || undefined,
     disciplineId: disciplineFilter,
     departmentId: departmentFilter,
     positionId: positionFilter,
@@ -255,13 +234,35 @@ export default function UsersPageContent(): React.ReactNode {
     }
   }, [companyName, messageApi, t]);
 
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setDisciplineFilter(undefined);
+    setDepartmentFilter(undefined);
+    setPositionFilter(undefined);
+    setStatusFilter(undefined);
+    resetPage();
+  }
+
+  function handleQuery(): void {
+    const next = search.trim();
+    setAppliedSearch(next);
+    resetPage();
+  }
+
+  async function handleRefresh(): Promise<void> {
+    await usersQuery.refetch();
+  }
+
   if (usersQuery.isLoading) {
     return (
-      <FormLayout variant="pro">
-        <div className="flex justify-center p-12">
-          <Spin />
+      <div className="erp-pro-list-page">
+        <div className="erp-pro-card">
+          <div className="flex justify-center p-12">
+            <Spin />
+          </div>
         </div>
-      </FormLayout>
+      </div>
     );
   }
 
@@ -337,7 +338,13 @@ export default function UsersPageContent(): React.ReactNode {
 
   function buildActionMenu(user: User): MenuProps['items'] {
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
-    const items: MenuProps['items'] = [];
+    const items: MenuProps['items'] = [
+      {
+        key: 'update',
+        label: t('common.update'),
+        onClick: () => router.push(`/users/${user.id}/edit`),
+      },
+    ];
 
     if (showResend) {
       items.push({
@@ -358,15 +365,16 @@ export default function UsersPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="space-y-4">
-      {importOpen && (
+    <div className="erp-pro-list-page">
+      {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}
-          onImported={(summary) =>
-            setActionMessage({ type: 'success', text: summary })
-          }
+          onImported={(summary) => {
+            setActionMessage({ type: 'success', text: summary });
+            void usersQuery.refetch();
+          }}
         />
-      )}
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(deletingUser)}
@@ -396,27 +404,114 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
-      <FormLayout
-        variant="pro"
-        title={t('users.allUsers')}
-        description={
-          meta?.total === 1
-            ? t('users.userCountOne')
-            : t('users.userCount', { count: meta?.total ?? 0 })
-        }
-        extra={
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-body">
+          <div className="erp-pro-filter-form">
+            <div className="erp-pro-filter-form-fields">
+              <div
+                className="erp-pro-filter-field"
+                style={{ minWidth: 220, flex: '1 1 220px' }}
+              >
+                <span className="erp-pro-filter-field-label">{t('common.name')}</span>
+                <Input
+                  placeholder={t('users.searchPlaceholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onPressEnter={handleQuery}
+                  allowClear
+                  onClear={() => {
+                    setSearch('');
+                    setAppliedSearch('');
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">
+                  {t('common.discipline')}
+                </span>
+                <Select
+                  placeholder={t('users.filterDiscipline')}
+                  options={disciplineFilterOptions}
+                  allowClear
+                  style={{ width: '100%', minWidth: 160 }}
+                  value={disciplineFilter}
+                  onChange={(value?: string) => {
+                    setDisciplineFilter(value);
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">
+                  {t('common.department')}
+                </span>
+                <Select
+                  placeholder={t('users.filterDepartment')}
+                  options={departmentFilterOptions}
+                  allowClear
+                  style={{ width: '100%', minWidth: 160 }}
+                  value={departmentFilter}
+                  onChange={(value?: string) => {
+                    setDepartmentFilter(value);
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">
+                  {t('common.position')}
+                </span>
+                <Select
+                  placeholder={t('users.filterPosition')}
+                  options={positionFilterOptions}
+                  allowClear
+                  style={{ width: '100%', minWidth: 160 }}
+                  value={positionFilter}
+                  onChange={(value?: string) => {
+                    setPositionFilter(value);
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="erp-pro-filter-field">
+                <span className="erp-pro-filter-field-label">{t('common.status')}</span>
+                <Select
+                  placeholder={t('users.filterStatus')}
+                  options={[
+                    { label: t('common.active'), value: true },
+                    { label: t('common.inactive'), value: false },
+                  ]}
+                  allowClear
+                  style={{ width: '100%', minWidth: 130 }}
+                  value={statusFilter}
+                  onChange={(value?: boolean) => {
+                    setStatusFilter(value);
+                    resetPage();
+                  }}
+                />
+              </div>
+            </div>
+            <div className="erp-pro-filter-form-actions">
+              <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
+                {t('common.reset')}
+              </Button>
+              <Button type="primary" onClick={handleQuery} style={{ borderRadius: 2 }}>
+                {t('common.query')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar">
+          <h1 className="erp-pro-card-toolbar-title" style={{fontSize: '16px', fontWeight: 600}}>
+            {/* {meta?.total === 1
+              ? t('users.userCountOne')
+              : t('users.userCount', { count: meta?.total ?? 0 })}  */}
+          </h1>
           <Space wrap size={8}>
-            <Button
-              icon={<FileExcelOutlined />}
-              loading={exportingUsers}
-              onClick={() => void handleExportExcel()}
-              style={{ borderRadius: 2 }}
-            >
-              {t('users.exportExcel')}
-            </Button>
-            <Button onClick={() => setImportOpen(true)} style={{ borderRadius: 2 }}>
-              {t('common.importFromExcel')}
-            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -425,243 +520,224 @@ export default function UsersPageContent(): React.ReactNode {
             >
               {t('users.addEmployee')}
             </Button>
-          </Space>
-        }
-      >
-        <div className="erp-pro-filter-bar">
-          <Input.Search
-            placeholder={t('users.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-            style={{ width: 240, maxWidth: '100%' }}
-          />
-          <Select
-            placeholder={t('users.filterDiscipline')}
-            options={disciplineFilterOptions}
-            allowClear
-            style={{ minWidth: 160 }}
-            value={disciplineFilter}
-            onChange={handleDisciplineFilterChange}
-          />
-          <Select
-            placeholder={t('users.filterDepartment')}
-            options={departmentFilterOptions}
-            allowClear
-            style={{ minWidth: 180 }}
-            value={departmentFilter}
-            onChange={handleDepartmentFilterChange}
-          />
-          <Select
-            placeholder={t('users.filterPosition')}
-            options={positionFilterOptions}
-            allowClear
-            style={{ minWidth: 180 }}
-            value={positionFilter}
-            onChange={handlePositionFilterChange}
-          />
-          <Select
-            placeholder={t('users.filterStatus')}
-            options={[
-              { label: t('common.active'), value: true },
-              { label: t('common.inactive'), value: false },
-            ]}
-            allowClear
-            style={{ minWidth: 130 }}
-            value={statusFilter}
-            onChange={handleStatusFilterChange}
-          />
-        </div>
-        <DataTable<User>
-          rowKey="id"
-          className="erp-pro-table"
-          size="middle"
-          dataSource={users}
-          pagination={bindMeta(meta)}
-          onChange={handleTableChange}
-          locale={{
-            emptyText: (
-              <TableEmptyState
-                icon={<Users />}
-                title={t('users.noTeamMembers')}
-                description={t('users.noTeamMembersDescription')}
-                action={{
-                  label: t('users.addEmployee'),
-                  onClick: () => router.push('/users/new'),
-                }}
+            <Tooltip title={t('users.exportExcel')}>
+              <Button
+                icon={<DownloadOutlined />}
+                loading={exportingUsers}
+                onClick={() => void handleExportExcel()}
+                style={{ borderRadius: 2 }}
+              >
+                {t('users.exportExcel')}
+              </Button>
+            </Tooltip>
+            <Tooltip title={t('common.importFromExcel')}>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                style={{ borderRadius: 2 }}
+              >
+                {t('common.importFromExcel')}
+              </Button>
+            </Tooltip>
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={usersQuery.isFetching && !usersQuery.isLoading}
+                onClick={() => void handleRefresh()}
+                aria-label={t('common.refresh')}
+                style={{ borderRadius: 2 }}
               />
-            ),
-          }}
-          columns={[
-            {
-              title: t('common.name'),
-              key: 'name',
-              sorter: true,
-              align: 'left',
-              render: (_, record) => (
-                <div className="flex flex-col items-start text-left">
-                  <Button
-                    type="link"
-                    className="!h-auto !justify-start !px-0 !py-0 font-medium"
-                    style={{
-                      borderRadius: 0,
-                      height: 'auto',
-                      paddingInline: 0,
-                      textAlign: 'left',
-                    }}
-                    onClick={() => router.push(`/users/${record.id}`)}
-                  >
-                    {record.firstName} {record.lastName}
-                  </Button>
-                  {record.chineseName ? (
-                    <span
-                      className="block text-left"
-                      style={{
-                        color: tokens.colorTextSecondary,
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        marginTop: 2,
-                      }}
-                    >
-                      {record.chineseName}
-                    </span>
-                  ) : null}
-                </div>
+            </Tooltip>
+          </Space>
+        </div>
+        <div className="erp-pro-table-card-body">
+          <DataTable<User>
+            rowKey="id"
+            className="erp-pro-table"
+            size="middle"
+            dataSource={users}
+            pagination={bindMeta(meta)}
+            onChange={handleTableChange}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<Users />}
+                  title={t('users.noTeamMembers')}
+                  description={t('users.noTeamMembersDescription')}
+                  action={{
+                    label: t('users.addEmployee'),
+                    onClick: () => router.push('/users/new'),
+                  }}
+                />
               ),
-            },
-            {
-              title: t('common.department'),
-              key: 'department',
-              ellipsis: { showTitle: true },
-              sorter: true,
-              render: (_, record) =>
-                record.department?.name ?? (
-                  <span style={{ color: tokens.colorTextSecondary }}>-</span>
-                ),
-            },
-            {
-              title: t('common.position'),
-              key: 'position',
-              ellipsis: { showTitle: true },
-              sorter: true,
-              render: (_, record) =>
-                record.position?.title ?? (
-                  <span style={{ color: tokens.colorTextSecondary }}>-</span>
-                ),
-            },
-            {
-              title: t('common.email'),
-              key: 'email',
-              ellipsis: { showTitle: true },
-              sorter: true,
-              render: (_, record) => record.email || '-',
-            },
-            {
-              title: t('common.discipline'),
-              key: 'discipline',
-              ellipsis: { showTitle: true },
-              render: (_, record) => {
-                if (!record.engineeringDisciplineId) {
-                  return '-';
-                }
-                const name =
-                  record.engineeringDiscipline?.name ??
-                  disciplineNameById.get(record.engineeringDisciplineId) ??
-                  '-';
-                const nameZh = record.engineeringDiscipline?.nameZh;
-                return (
-                  <div className="flex flex-col">
-                    <span>{name}</span>
-                    {nameZh ? (
+            }}
+            columns={[
+              {
+                title: t('common.name'),
+                key: 'name',
+                sorter: true,
+                align: 'left',
+                render: (_, record) => (
+                  <div className="flex flex-col items-start text-left">
+                    <Button
+                      type="link"
+                      className="!h-auto !justify-start !px-0 !py-0 font-medium"
+                      style={{
+                        borderRadius: 0,
+                        height: 'auto',
+                        paddingInline: 0,
+                        textAlign: 'left',
+                        color: tokens.colorPrimary,
+                      }}
+                      onClick={() => router.push(`/users/${record.id}`)}
+                    >
+                      {record.firstName} {record.lastName}
+                    </Button>
+                    {record.chineseName ? (
                       <span
-                        style={{ color: tokens.colorTextSecondary, fontSize: 12 }}
+                        className="block text-left"
+                        style={{
+                          color: tokens.colorTextSecondary,
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          marginTop: 2,
+                        }}
                       >
-                        {nameZh}
+                        {record.chineseName}
                       </span>
                     ) : null}
                   </div>
-                );
+                ),
               },
-            },
-            {
-              title: t('common.role'),
-              key: 'roles',
-              ellipsis: { showTitle: true },
-              render: (_, record) => {
-                const roles =
-                  record.userRoles?.map((assignment) => ({
-                    name: assignment.role.name,
-                    isPrimary: assignment.isPrimary,
-                  })) ?? [];
-                if (roles.length === 0) {
-                  return '-';
-                }
-                const topRole = pickTopLevelRoleName(roles, '');
-                if (!topRole) {
-                  return '-';
-                }
-                const isPrimary = roles.some(
-                  (role) => role.name === topRole && role.isPrimary,
-                );
-                return (
-                  <Space size={4}>
-                    <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
-                      {topRole}
-                    </Tag>
-                    {isPrimary ? (
-                      <Tag color="gold">{t('users.primaryRole')}</Tag>
-                    ) : null}
-                  </Space>
-                );
+              {
+                title: t('common.department'),
+                key: 'department',
+                ellipsis: { showTitle: true },
+                sorter: true,
+                render: (_, record) =>
+                  record.department?.name ?? (
+                    <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                  ),
               },
-            },
-            {
-              title: t('common.status'),
-              key: 'status',
-              sorter: true,
-              render: (_, record) => (
-                <StatusBadge
-                  label={userStatusLabel(record, t)}
-                  variant={userStatusVariant(record)}
-                />
-              ),
-            },
-            {
-              title: t('common.actions'),
-              key: 'actions',
-              width: 120,
-              fixed: 'right',
-              render: (_, record) => (
-                <Space size={0}>
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => router.push(`/users/${record.id}/edit`)}
-                    style={{ borderRadius: 2, paddingInline: 4 }}
-                  >
-                    {t('common.update')}
-                  </Button>
+              {
+                title: t('common.position'),
+                key: 'position',
+                ellipsis: { showTitle: true },
+                sorter: true,
+                render: (_, record) =>
+                  record.position?.title ?? (
+                    <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                  ),
+              },
+              {
+                title: t('common.email'),
+                key: 'email',
+                ellipsis: { showTitle: true },
+                sorter: true,
+                render: (_, record) => record.email || '-',
+              },
+              {
+                title: t('common.discipline'),
+                key: 'discipline',
+                ellipsis: { showTitle: true },
+                render: (_, record) => {
+                  if (!record.engineeringDisciplineId) {
+                    return '-';
+                  }
+                  const name =
+                    record.engineeringDiscipline?.name ??
+                    disciplineNameById.get(record.engineeringDisciplineId) ??
+                    '-';
+                  const nameZh = record.engineeringDiscipline?.nameZh;
+                  return (
+                    <div className="flex flex-col">
+                      <span>{name}</span>
+                      {nameZh ? (
+                        <span
+                          style={{
+                            color: tokens.colorTextSecondary,
+                            fontSize: 12,
+                          }}
+                        >
+                          {nameZh}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                },
+              },
+              {
+                title: t('common.role'),
+                key: 'roles',
+                ellipsis: { showTitle: true },
+                render: (_, record) => {
+                  const roles =
+                    record.userRoles?.map((assignment) => ({
+                      name: assignment.role.name,
+                      isPrimary: assignment.isPrimary,
+                    })) ?? [];
+                  if (roles.length === 0) {
+                    return '-';
+                  }
+                  const topRole = pickTopLevelRoleName(roles, '');
+                  if (!topRole) {
+                    return '-';
+                  }
+                  const isPrimary = roles.some(
+                    (role) => role.name === topRole && role.isPrimary,
+                  );
+                  return (
+                    <Space size={4}>
+                      <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
+                        {topRole}
+                      </Tag>
+                      {isPrimary ? (
+                        <Tag color="gold">{t('users.primaryRole')}</Tag>
+                      ) : null}
+                    </Space>
+                  );
+                },
+              },
+              {
+                title: t('common.status'),
+                key: 'status',
+                sorter: true,
+                render: (_, record) => (
+                  <StatusBadge
+                    label={userStatusLabel(record, t)}
+                    variant={userStatusVariant(record)}
+                  />
+                ),
+              },
+              {
+                title: t('common.actions'),
+                key: 'actions',
+                width: 64,
+                fixed: 'right',
+                align: 'center',
+                render: (_, record) => (
                   <Dropdown
                     menu={{ items: buildActionMenu(record) }}
                     trigger={['click']}
                     disabled={resendInvitation.isPending}
                   >
                     <Button
-                      type="link"
+                      type="text"
                       size="small"
                       icon={<MoreOutlined />}
                       aria-label={t('users.actionsFor', {
                         name: `${record.firstName} ${record.lastName}`,
                       })}
-                      style={{ borderRadius: 2, paddingInline: 4 }}
+                      style={{ borderRadius: 2 }}
                     />
                   </Dropdown>
-                </Space>
-              ),
-            },
-          ]}
-        />
-      </FormLayout>
+                ),
+              },
+            ]}
+          />
+        </div>
+      </div>
     </div>
   );
 }

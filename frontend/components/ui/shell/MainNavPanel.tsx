@@ -7,8 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LogoutOutlined,
   UserOutlined,
-  LeftOutlined,
-  RightOutlined,
   DownOutlined,
 } from '@ant-design/icons';
 import {
@@ -54,21 +52,22 @@ import { useSidebarGroupOpen } from '@/hooks/useSidebarGroupOpen';
 import { useLogout } from '@/lib/query/auth';
 import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { tokens } from '@/lib/theme/tokens';
+import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
 function railItemClass(isActive: boolean, isExpanded: boolean): string {
   const base =
-    'flex shrink-0 items-center no-underline transition-colors duration-150';
+    'relative flex shrink-0 items-center no-underline transition-colors duration-150';
   if (isExpanded) {
     return [
       base,
-      'w-full gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] leading-[1.5]',
-      isActive ? 'font-medium' : 'font-normal',
+      'w-full gap-2.5 rounded-md px-3 py-2 text-[14px] leading-[22px]',
+      isActive ? 'font-semibold' : 'font-normal',
     ].join(' ');
   }
   return [
     base,
-    'mx-auto h-8 w-8 justify-center rounded-lg text-[16px]',
-    isActive ? 'font-medium' : 'font-normal',
+    'mx-auto h-9 w-9 justify-center rounded-md text-[16px]',
+    isActive ? 'font-semibold' : 'font-normal',
   ].join(' ');
 }
 
@@ -77,10 +76,13 @@ function railItemStyle(isActive: boolean): React.CSSProperties {
     return {
       backgroundColor: tokens.colorSidebarActive,
       color: tokens.colorSidebarTextActive,
+      boxShadow: `inset 3px 0 0 ${tokens.colorSidebarAccent}`,
+      fontFamily: tokens.fontFamily,
     };
   }
   return {
     color: tokens.colorSidebarText,
+    fontFamily: tokens.fontFamily,
   };
 }
 
@@ -119,7 +121,7 @@ function RailNavButton({
         className={navIconClassName}
         style={
           isActive
-            ? { color: tokens.colorPrimaryHover }
+            ? { color: tokens.colorSidebarAccent }
             : { color: tokens.colorSidebarText }
         }
       >
@@ -130,6 +132,7 @@ function RailNavButton({
           'truncate transition-all duration-200 ease-in-out',
           isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
         ].join(' ')}
+        style={{ fontFamily: tokens.fontFamily }}
       >
         {label}
       </span>
@@ -151,14 +154,14 @@ function RailGroupHeader({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="mb-0.5 mt-2 flex w-full items-center gap-1 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--color-sidebar-hover)] first:mt-0"
-      style={{ color: tokens.colorSidebarText }}
+      className="mb-1 mt-3 flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-left transition-colors hover:bg-[var(--color-sidebar-hover)] first:mt-0"
+      style={{ color: tokens.colorSidebarGroupLabel, fontFamily: tokens.fontFamily }}
     >
-      <span className="min-w-0 flex-1 truncate text-[10px] font-medium uppercase tracking-[0.06em]">
+      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-[0.04em]">
         {label}
       </span>
       <DownOutlined
-        className="shrink-0 text-[9px] transition-transform duration-150"
+        className="shrink-0 text-[10px] transition-transform duration-150"
         style={{
           transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
         }}
@@ -211,7 +214,7 @@ function RailNavGroup({
   }
 
   return (
-    <section className="flex flex-col gap-0.5">
+    <section className="flex flex-col gap-0.5 pb-1">
       <RailGroupHeader
         label={t(group.labelKey)}
         open={showItems}
@@ -256,10 +259,10 @@ function RailActionButton({
       className={[
         'flex shrink-0 items-center transition-colors duration-150 disabled:opacity-60',
         isExpanded
-          ? 'w-full gap-2.5 rounded-lg border-transparent px-2.5 py-[7px] text-[13px] font-normal leading-[1.5] hover:bg-[var(--color-sidebar-hover)]'
-          : 'mx-auto h-8 w-8 justify-center rounded-lg text-[16px] hover:bg-[var(--color-sidebar-hover)]',
+          ? 'w-full gap-2.5 rounded-md border-transparent px-3 py-2 text-[14px] font-normal leading-[22px] hover:bg-[var(--color-sidebar-hover)]'
+          : 'mx-auto h-9 w-9 justify-center rounded-md text-[16px] hover:bg-[var(--color-sidebar-hover)]',
       ].join(' ')}
-      style={{ color: tokens.colorSidebarText }}
+      style={{ color: tokens.colorSidebarText, fontFamily: tokens.fontFamily }}
     >
       <span className="flex shrink-0 items-center justify-center leading-none">
         {icon}
@@ -282,15 +285,9 @@ function RailActionButton({
 export default function MainNavPanel({
   isExpanded,
   onNavigate,
-  showPinToggle = false,
-  pinned = false,
-  onTogglePin,
 }: {
   isExpanded: boolean;
   onNavigate?: () => void;
-  showPinToggle?: boolean;
-  pinned?: boolean;
-  onTogglePin?: () => void;
 }): React.ReactNode {
   const pathname = usePathname();
   const router = useRouter();
@@ -378,13 +375,6 @@ export default function MainNavPanel({
     router.replace('/login');
   }
 
-  function handleToggleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>): void {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onTogglePin?.();
-    }
-  }
-
   return (
     <div
       className="flex h-full flex-col"
@@ -395,9 +385,13 @@ export default function MainNavPanel({
     >
       <div
         className={[
-          'shrink-0 pb-4 pt-5',
-          isExpanded ? 'px-3' : 'flex justify-center px-2',
+          'flex shrink-0 items-center',
+          isExpanded ? 'px-3' : 'justify-center px-2',
         ].join(' ')}
+        style={{
+          height: SHELL_TOP_HEADER_HEIGHT,
+          borderBottom: `1px solid ${tokens.colorSidebarBorder}`,
+        }}
       >
         {isExpanded ? (
           <div className="flex min-w-0 items-center gap-2.5">
@@ -409,8 +403,11 @@ export default function MainNavPanel({
               {t('shell.brandShort')}
             </div>
             <h1
-              className="truncate text-[14px] font-semibold tracking-[-0.01em]"
-              style={{ color: tokens.colorSidebarTextActive }}
+              className="m-0 truncate text-[14px] font-semibold tracking-[-0.01em]"
+              style={{
+                color: tokens.colorSidebarTextActive,
+                fontFamily: tokens.fontFamily,
+              }}
             >
               {t('shell.brandTitle')}
             </h1>
@@ -427,23 +424,21 @@ export default function MainNavPanel({
         )}
       </div>
 
-      <hr style={{ border: 'none', borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }} />
-
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2.5 py-3">
         {permLoading ? (
           Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
               className={[
-                'erp-page-skeleton rounded-lg',
-                isExpanded ? 'h-9 w-full' : 'mx-auto h-8 w-8',
+                'erp-page-skeleton rounded-md',
+                isExpanded ? 'h-9 w-full' : 'mx-auto h-9 w-9',
               ].join(' ')}
             />
           ))
         ) : (
           <>
             {visibleTopItems.length > 0 ? (
-              <section className="mb-1 flex flex-col gap-0.5">
+              <section className="mb-2 flex flex-col gap-0.5">
                 {visibleTopItems.map((item) => (
                   <RailNavButton
                     key={item.key}
@@ -473,11 +468,11 @@ export default function MainNavPanel({
               <section
                 className={[
                   'flex flex-col gap-0.5',
-                  isExpanded ? 'mt-2 pt-2' : 'mt-1',
+                  isExpanded ? 'mt-3 pt-3' : 'mt-2',
                 ].join(' ')}
                 style={
                   isExpanded
-                    ? { borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }
+                    ? { borderTop: `1px solid ${tokens.colorSidebarBorder}` }
                     : undefined
                 }
               >
@@ -544,28 +539,6 @@ export default function MainNavPanel({
           onClick={() => void handleLogout()}
           disabled={logout.isPending}
         />
-
-        {showPinToggle && onTogglePin && (
-          <button
-            type="button"
-            onClick={onTogglePin}
-            onKeyDown={handleToggleKeyDown}
-            title={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
-            aria-label={pinned ? t('shell.collapseNavigation') : t('shell.expandNavigation')}
-            aria-pressed={pinned}
-            className={[
-              'mt-0.5 flex h-8 shrink-0 items-center rounded-lg transition-colors hover:bg-[var(--color-sidebar-hover)]',
-              isExpanded ? 'w-full justify-end px-2.5' : 'mx-auto w-8 justify-center',
-            ].join(' ')}
-            style={{ color: tokens.colorSidebarText }}
-          >
-            {pinned ? (
-              <LeftOutlined className="text-[12px]" />
-            ) : (
-              <RightOutlined className="text-[12px]" />
-            )}
-          </button>
-        )}
       </div>
     </div>
   );

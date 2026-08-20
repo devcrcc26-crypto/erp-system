@@ -1,7 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional } from 'class-validator';
-import { UserDiscipline } from '@prisma/client';
+import {
+  EducationLevel,
+  EmployeeType,
+  Gender,
+  Nationality,
+  UserDiscipline,
+} from '@prisma/client';
 
 export type ImportRowStatus =
   | 'ok'
@@ -30,6 +36,9 @@ export class ImportRowPreviewDto {
   @ApiProperty()
   lastName!: string;
 
+  @ApiPropertyOptional()
+  middleName?: string;
+
   @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)' })
   chineseName?: string;
 
@@ -39,8 +48,62 @@ export class ImportRowPreviewDto {
   @ApiPropertyOptional()
   phone?: string;
 
+  @ApiPropertyOptional()
+  department?: string;
+
+  @ApiPropertyOptional()
+  position?: string;
+
+  @ApiPropertyOptional()
+  employeeId?: string;
+
+  @ApiPropertyOptional()
+  leavePolicy?: string;
+
   @ApiPropertyOptional({ enum: UserDiscipline, nullable: true })
   discipline?: UserDiscipline | null;
+
+  @ApiPropertyOptional({ enum: Gender, nullable: true })
+  gender?: Gender | null;
+
+  @ApiPropertyOptional({ enum: Nationality, nullable: true })
+  nationality?: Nationality | null;
+
+  @ApiPropertyOptional({ enum: EmployeeType, nullable: true })
+  employeeType?: EmployeeType | null;
+
+  @ApiPropertyOptional({ enum: EducationLevel, nullable: true })
+  educationLevel?: EducationLevel | null;
+
+  @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional()
+  nationalId?: string;
+
+  @ApiPropertyOptional()
+  fieldOfStudy?: string;
+
+  @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
+  experienceStartDate?: string;
+
+  @ApiPropertyOptional()
+  addressCountry?: string;
+
+  @ApiPropertyOptional()
+  addressRegion?: string;
+
+  @ApiPropertyOptional()
+  addressCity?: string;
+
+  @ApiPropertyOptional()
+  addressSubcity?: string;
+
+  @ApiPropertyOptional()
+  addressWoreda?: string;
+
+  @ApiPropertyOptional()
+  addressHouseNumber?: string;
 
   @ApiProperty({ enum: ['ok', 'error', 'duplicate', 'duplicate_in_file'] })
   status!: ImportRowStatus;
@@ -50,6 +113,18 @@ export class ImportRowPreviewDto {
 
   @ApiPropertyOptional()
   roleId?: string;
+
+  @ApiPropertyOptional()
+  departmentId?: string;
+
+  @ApiPropertyOptional()
+  positionId?: string;
+
+  @ApiPropertyOptional()
+  leavePolicyId?: string;
+
+  @ApiPropertyOptional()
+  engineeringDisciplineId?: string;
 }
 
 export class ImportPreviewResponseDto {

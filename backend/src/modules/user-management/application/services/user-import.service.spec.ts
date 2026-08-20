@@ -9,6 +9,10 @@ describe('UserImportService', () => {
   let service: UserImportService;
   let prisma: {
     role: { findMany: jest.Mock };
+    department: { findMany: jest.Mock };
+    position: { findMany: jest.Mock };
+    leavePolicy: { findMany: jest.Mock };
+    discipline: { findMany: jest.Mock };
   };
   let userProvisioningService: jest.Mocked<
     Pick<
@@ -35,6 +39,10 @@ describe('UserImportService', () => {
           { id: 'role-admin', name: 'System Administrator' },
         ]),
       },
+      department: { findMany: jest.fn().mockResolvedValue([]) },
+      position: { findMany: jest.fn().mockResolvedValue([]) },
+      leavePolicy: { findMany: jest.fn().mockResolvedValue([]) },
+      discipline: { findMany: jest.fn().mockResolvedValue([]) },
     };
     userProvisioningService = {
       findExistingUserByEmail: jest.fn().mockResolvedValue(null),

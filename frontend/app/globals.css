@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar-bg: #001529;
-  --color-sidebar-active: rgba(255, 255, 255, 0.08);
-  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-bg: #0b1f17;
+  --color-sidebar-active: rgba(29, 158, 117, 0.22);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
   --color-sidebar-accent: #1d9e75;
-  --color-page-bg: #f5f5f5;
+  --color-page-bg: #f0f2f5;
   --color-fill-quaternary: #fafafa;
   --color-border-secondary: rgba(0, 0, 0, 0.15);
   --color-border-tertiary: rgba(0, 0, 0, 0.06);
@@ -69,12 +69,16 @@ h6 {
   margin: 0;
   width: 100%;
   border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72) !important;
 }
 
 .erp-sidebar-menu.ant-menu .ant-menu-item-selected {
   background-color: var(--color-sidebar-active) !important;
   color: #ffffff !important;
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--color-sidebar-accent);
 }
 
 .erp-sidebar-menu.ant-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
@@ -432,15 +436,93 @@ main::-webkit-scrollbar,
 
 /* ── Ant Design Pro–style data table ── */
 
+.erp-pro-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.erp-pro-card {
+  background: #fff;
+  border-radius: 2px;
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.03),
+    0 1px 6px -1px rgba(0, 0, 0, 0.02),
+    0 2px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.erp-pro-card-body {
+  padding: 24px;
+}
+
+.erp-pro-card-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px 8px;
+  border-bottom: none;
+}
+
+.erp-pro-card-toolbar-title {
+  margin: 0;
+  font-size:16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.erp-pro-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 24px;
+}
+
+.erp-pro-filter-form-fields {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  min-width: 0;
+}
+
+.erp-pro-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+}
+
+.erp-pro-filter-field-label {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.erp-pro-filter-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.erp-pro-table-card-body {
+  padding: 8px 24px 24px;
+  margin-top: 8px;
+}
+
 .erp-pro-table .ant-table-thead > tr > th {
   background: #fafafa !important;
-  padding: 12px 16px !important;
-  font-size: calc(14px * var(--erp-font-scale)) !important;
-  font-weight: 500 !important;
+  padding: 14px 16px !important;
+  font-size: calc(15px * var(--erp-font-scale)) !important;
+  font-weight: 700 !important;
   letter-spacing: normal;
   text-transform: none;
   color: rgba(0, 0, 0, 0.88) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-bottom: none !important;
 }
 
 .erp-pro-table .ant-table-thead > tr > th::before {
@@ -471,6 +553,10 @@ main::-webkit-scrollbar,
   border-radius: 2px;
 }
 
+.erp-pro-table .ant-table-container table {
+  border-top: none !important;
+}
+
 .erp-pro-table .ant-pagination {
   margin: 16px 0 0 !important;
 }
@@ -485,8 +571,11 @@ main::-webkit-scrollbar,
 }
 
 .erp-pro-filter-bar .ant-input-search,
-.erp-pro-filter-bar .ant-select {
-  border-radius: 2px;
+.erp-pro-filter-bar .ant-select,
+.erp-pro-filter-form .ant-input,
+.erp-pro-filter-form .ant-input-affix-wrapper,
+.erp-pro-filter-form .ant-select-selector {
+  border-radius: 2px !important;
 }
 
 /* ── ERP data table - design system ── */

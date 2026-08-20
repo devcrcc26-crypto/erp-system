@@ -2,7 +2,10 @@
 
 /** Icon rail layout widths (px). */
 export const RAIL_COLLAPSED_WIDTH = 64;
-export const RAIL_EXPANDED_WIDTH = 220;
+export const RAIL_EXPANDED_WIDTH = 256;
+
+/** Shared top header height for sidebar brand bar and main content actions bar (px). */
+export const SHELL_TOP_HEADER_HEIGHT = 56;
 
 /** Project context sidebar width (px). */
 export const CONTEXT_SIDEBAR_WIDTH = 220;

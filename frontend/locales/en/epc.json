@@ -105,13 +105,13 @@
   },
   "pages": {
     "users": {
-      "new": "Add employee",
-      "detail": "Employee detail",
-      "edit": "Update employee"
+      "new": "Add Employee",
+      "detail": "Employee Detail",
+      "edit": "Update Employee"
     },
     "approvals": {
-      "detail": "Request detail",
-      "new": "New request",
+      "detail": "Request Detail",
+      "new": "New Request",
       "tabs": {
         "pendingMyAction": "Pending My Action",
         "myRequests": "My Requests",
@@ -585,6 +585,9 @@
     "done": "Done",
     "delete": "Delete",
     "update": "Update",
+    "reset": "Reset",
+    "query": "Query",
+    "refresh": "Refresh",
     "active": "Active",
     "inactive": "Inactive",
     "verified": "Verified",
@@ -713,7 +716,7 @@
     "updated": "{{name}} updated successfully.",
     "resendError": "Failed to resend verification email.",
     "allUsers": "All users",
-    "userCount": "{{count}} users total",
+    "userCount": "{{count}} Users Total",
     "userCountOne": "1 user total",
     "noTeamMembers": "No team members",
     "noTeamMembersDescription": "Invite users to give them access to projects",

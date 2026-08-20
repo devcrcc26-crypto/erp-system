@@ -40,16 +40,17 @@ export const tokens = {
   colorGray600: '#5F5E5A',
 
   colorNavy: '#1B2B4B',
-  /** Ant Design Pro dark sider */
-  colorSidebarBg: '#001529',
-  colorSidebarActive: 'rgba(255, 255, 255, 0.08)',
-  colorSidebarHover: 'rgba(255, 255, 255, 0.08)',
+  /** Dark sider — brand-aligned with green active states */
+  colorSidebarBg: '#0B1F17',
+  colorSidebarActive: 'rgba(29, 158, 117, 0.22)',
+  colorSidebarHover: 'rgba(255, 255, 255, 0.06)',
   colorSidebarBorder: 'rgba(255, 255, 255, 0.08)',
-  colorSidebarText: 'rgba(255, 255, 255, 0.65)',
+  colorSidebarText: 'rgba(255, 255, 255, 0.72)',
   colorSidebarTextActive: '#FFFFFF',
   colorSidebarAccent: '#1D9E75',
+  colorSidebarGroupLabel: 'rgba(255, 255, 255, 0.45)',
 
-  colorPageBg: '#F5F5F5',
+  colorPageBg: '#F0F2F5',
   colorCardBg: '#FFFFFF',
   colorSurfaceSecondary: '#FAFAFA',
   colorBorder: 'rgba(0, 0, 0, 0.06)',
@@ -66,7 +67,7 @@ export const tokens = {
 
   borderRadius: 6,
   borderRadiusCard: 8,
-  sidebarWidth: 220,
+  sidebarWidth: 256,
 
   /** Outer page padding */
   pagePadding: 24,
