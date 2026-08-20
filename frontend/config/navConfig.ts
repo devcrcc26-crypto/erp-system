@@ -295,6 +295,13 @@ export function buildIconRailNav(
     defaultOpen: true,
     items: [
       {
+        key: '/users',
+        labelKey: 'nav.users',
+        href: '/users',
+        iconKey: 'users',
+        visible: canManageUsers,
+      },
+      {
         key: '/hr/leave-requests',
         labelKey: 'nav.hr.leaveRequests',
         href: '/hr/leave-requests',
@@ -444,13 +451,6 @@ export function buildIconRailNav(
     defaultOpen: true,
     items: [
       {
-        key: '/users',
-        labelKey: 'nav.users',
-        href: '/users',
-        iconKey: 'users',
-        visible: canManageUsers,
-      },
-      {
         key: '/departments',
         labelKey: 'nav.departments',
         href: '/departments',
@@ -506,7 +506,6 @@ export function buildIconRailNav(
   ];
 
   const showOrganization =
-    canManageUsers ||
     canViewDepartments ||
     canViewPositions ||
     canViewDisciplinesCatalog ||
@@ -516,7 +515,7 @@ export function buildIconRailNav(
     topItems,
     groups: [
       projectManagement,
-      ...(canViewHr ? [humanResources] : []),
+      ...(canViewHr || canManageUsers ? [humanResources] : []),
       ...(showOrganization ? [organization] : []),
     ],
     standalone,
