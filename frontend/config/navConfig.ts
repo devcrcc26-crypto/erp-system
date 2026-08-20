@@ -645,7 +645,19 @@ export function resolveRouteMeta(
   }
 
   if (
-    pathname === '/approvals/new/leave-request' ||
+    pathname === '/approvals/new/leave-request'
+  ) {
+    return {
+      titleKey: 'pages.hr.leave.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
+        { label: t('pages.hr.leave.new') },
+      ],
+    };
+  }
+
+  if (
     pathname === '/approvals/new/overtime' ||
     pathname === '/approvals/new/flight-application' ||
     pathname === '/approvals/new/business-trip' ||

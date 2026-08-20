@@ -14,10 +14,11 @@ import {
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import {
@@ -31,7 +32,6 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -43,8 +43,7 @@ interface LeaveFormValues {
 const DEFAULT_LEAVE_TYPE: LeaveType = 'ANNUAL';
 
 /**
- * Standalone leave request form under Approvals → New Request (no HR layout).
- * Auth alone is enough; leave/hr RBAC is enforced on HR list/detail pages.
+ * New leave request form (Approvals → New, or HR Leave Requests → New).
  */
 export default function LeaveRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -84,6 +83,29 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
 
+  const headerExtra = useMemo(
+    () => (
+      <Space size={8}>
+        <Button
+          onClick={() => router.push('/hr/leave-requests')}
+          style={{ borderRadius: 2 }}
+        >
+          {t('hr.buttons.cancel')}
+        </Button>
+        <Button
+          type="primary"
+          loading={submitMutation.isPending}
+          onClick={() => form.submit()}
+          style={{ borderRadius: 2 }}
+        >
+          {t('hr.buttons.submitRequest')}
+        </Button>
+      </Space>
+    ),
+    [form, router, submitMutation.isPending, t],
+  );
+  useSetHeaderExtra(headerExtra);
+
   useEffect(() => {
     form.setFieldsValue({ days: 1, leaveType: DEFAULT_LEAVE_TYPE });
   }, [form]);
@@ -111,21 +133,29 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         reason: values.reason?.trim() || undefined,
         files: selectedFiles,
       });
-      messageApi.success('Leave request submitted');
-      if (created.approvalRequestId) {
+      messageApi.success(t('hr.messages.leaveRequestSubmitted'));
+      if (created.id) {
+        router.push(`/hr/leave-requests/${created.id}`);
+      } else if (created.approvalRequestId) {
         router.push(`/approvals/${created.approvalRequestId}`);
       } else {
-        router.push('/approvals/new');
+        router.push('/hr/leave-requests');
       }
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit leave request', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSubmitLeaveRequest'),
+        messageApi,
+      );
     }
   }
 
   function renderBalancePanel(): React.ReactNode {
     if (balancesQuery.isLoading) {
       return (
-        <Typography.Text type="secondary">Loading balance…</Typography.Text>
+        <Typography.Text type="secondary">
+          {t('common.loading')}
+        </Typography.Text>
       );
     }
 
@@ -134,7 +164,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         <Typography.Text type="danger">
           {balancesQuery.error instanceof ApiRequestError
             ? balancesQuery.error.message
-            : 'Failed to load leave balance'}
+            : t('hr.messages.failedToLoadLeaveBalance')}
         </Typography.Text>
       );
     }
@@ -142,7 +172,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     if (!leaveType) {
       return (
         <Typography.Text type="secondary">
-          Select a leave type to view your balance.
+          {t('hr.messages.selectLeaveTypeForBalance')}
         </Typography.Text>
       );
     }
@@ -150,7 +180,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     if (!selectedBalance) {
       return (
         <Typography.Text type="secondary">
-          No balance record — contact HR
+          {t('hr.messages.noLeaveBalanceContactHr')}
         </Typography.Text>
       );
     }
@@ -180,49 +210,44 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
-      title={t('hr.buttons.newLeaveRequest')}
-      description="Short absences (≤ 3 days) need Discipline Lead and HR; longer leave escalates to General Manager."
-      extra={
-        <Space>
-          <Button onClick={() => router.push('/approvals/new')}>
-            {t('hr.buttons.cancel')}
-          </Button>
-          <Button
-            type="primary"
-            loading={submitMutation.isPending}
-            onClick={() => form.submit()}
-          >
-            {t('hr.buttons.submitRequest')}
-          </Button>
-        </Space>
-      }
-    >
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+      <p
+        className="mb-0 mt-0 text-[14px] leading-relaxed"
+        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
+      >
+        {t('pages.hr.leave.listDescription')}
+      </p>
+
       {submitMutation.isError ? (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
           title={
             submitMutation.error instanceof ApiRequestError
               ? submitMutation.error.message
-              : 'Submit failed'
+              : t('hr.messages.failedToSubmitLeaveRequest')
           }
         />
       ) : null}
 
-      <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-        <SectionCard title={t('hr.form.leaveDetails')} bodyClassName="px-5 py-4">
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
-            onFinish={(values) => void handleSubmit(values)}
-          >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
+        onFinish={(values) => void handleSubmit(values)}
+        className="flex flex-col gap-4"
+      >
+        <FormLayout variant="pro" title={t('hr.form.leaveDetails')}>
+          <div className="erp-form-grid-2">
             <Form.Item
               name="leaveType"
               label={t('hr.form.leaveType')}
-              rules={[{ required: true, message: 'Select a leave type' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectLeaveType'),
+                },
+              ]}
             >
               <Select
                 options={leaveTypeOptions}
@@ -230,39 +255,50 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               />
             </Form.Item>
 
-            <div
-              className="mb-6 rounded-md px-3 py-2"
-              style={{
-                background: tokens.colorPrimaryLight,
-                border: `1px solid ${tokens.colorBorder}`,
-              }}
-            >
-              <Typography.Text
-                strong
-                style={{ display: 'block', marginBottom: 4 }}
-              >
-                {leaveType
-                  ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')} (${year})`
-                  : `${t('hr.section.leaveBalance')} (${year})`}
-              </Typography.Text>
-              {renderBalancePanel()}
-            </div>
-
             <Form.Item
               name="dateRange"
               label={t('hr.form.leaveDates')}
-              rules={[{ required: true, message: 'Select start and end dates' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectLeaveDates'),
+                },
+              ]}
             >
               <DatePicker.RangePicker className="w-full" />
             </Form.Item>
+          </div>
 
+          <div
+            className="mb-6 rounded-sm px-3 py-2"
+            style={{
+              background: tokens.colorPrimaryLight,
+              border: `1px solid ${tokens.colorBorder}`,
+            }}
+          >
+            <Typography.Text
+              strong
+              style={{ display: 'block', marginBottom: 4 }}
+            >
+              {leaveType
+                ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')} (${year})`
+                : `${t('hr.section.leaveBalance')} (${year})`}
+            </Typography.Text>
+            {renderBalancePanel()}
+          </div>
+
+          <div className="erp-form-grid-2">
             <Form.Item
               name="days"
               label={t('hr.form.days')}
-              extra="Auto-calculated from dates; edit for half-days."
+              extra={t('hr.form.daysHint')}
               rules={[
-                { required: true, message: 'Enter days' },
-                { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
+                { required: true, message: t('hr.validation.enterDays') },
+                {
+                  type: 'number',
+                  min: 0.5,
+                  message: t('hr.validation.minHalfDay'),
+                },
               ]}
             >
               <InputNumber
@@ -272,28 +308,23 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 precision={1}
               />
             </Form.Item>
+          </div>
 
-            <Form.Item
-              name="reason"
-              label={t('hr.form.reason')}
-            >
-              <Input.TextArea
-                rows={4}
-                maxLength={4000}
-                showCount
-                placeholder={t('hr.placeholder.enterReason')}
-              />
-            </Form.Item>
-          </Form>
-        </SectionCard>
+          <Form.Item name="reason" label={t('hr.form.reason')}>
+            <Input.TextArea
+              rows={4}
+              maxLength={4000}
+              showCount
+              placeholder={t('hr.placeholder.enterReason')}
+            />
+          </Form.Item>
+        </FormLayout>
 
-        <SectionCard title={t('hr.section.supportingDocuments')} bodyClassName="px-5 py-4">
-          <Typography.Paragraph
-            type="secondary"
-            style={{ marginBottom: 12, fontSize: 13 }}
-          >
-            Upload supporting documents e.g. medical certificate for sick leave
-          </Typography.Paragraph>
+        <FormLayout
+          variant="pro"
+          title={t('hr.section.supportingDocuments')}
+          description={t('hr.form.supportingDocumentsHint')}
+        >
           <FileUploadInput
             files={selectedFiles}
             onChange={setSelectedFiles}
@@ -301,8 +332,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
             multiple
             disabled={submitMutation.isPending}
           />
-        </SectionCard>
-      </div>
-    </FormLayout>
+        </FormLayout>
+      </Form>
+    </div>
   );
 }

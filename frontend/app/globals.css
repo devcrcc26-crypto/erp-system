@@ -578,6 +578,20 @@ main::-webkit-scrollbar,
   border-radius: 2px !important;
 }
 
+.erp-pro-tabs.ant-tabs {
+  margin-top: 0;
+}
+
+.erp-pro-tabs > .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+.erp-pro-tabs .ant-tabs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ── ERP data table - design system ── */
 
 .erp-data-table .ant-table-thead > tr > th {
@@ -759,6 +773,12 @@ main::-webkit-scrollbar,
   border-radius: 2px;
 }
 
+.erp-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: 32px;
+}
+
 .erp-form-grid-3 {
   display: grid;
   grid-template-columns: 1fr;
@@ -766,6 +786,10 @@ main::-webkit-scrollbar,
 }
 
 @media (min-width: 768px) {
+  .erp-form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .erp-form-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
