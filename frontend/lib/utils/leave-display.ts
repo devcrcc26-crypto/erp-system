@@ -9,24 +9,37 @@ import { formatUserName } from '@/lib/utils/user-display';
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
 export const DEDUCTS_FROM_ANNUAL: LeaveType[] = [
-  'SICK',
   'STUDY',
   'EXAM',
   'UNPAID',
+  'EMERGENCY',
+  'PATERNITY',
+  'COMPASSIONATE',
 ];
 
 export const OWN_BALANCE_LEAVE_TYPES: LeaveType[] = [
   'ANNUAL',
   'MATERNITY',
-  'COMPASSIONATE',
+  'SICK',
 ];
 
 export function resolveBalanceLeaveType(leaveType: LeaveType): LeaveType {
-  if (DEDUCTS_FROM_ANNUAL.includes(leaveType)) {
-    return 'ANNUAL';
+  switch (leaveType) {
+    case 'ANNUAL':
+    case 'STUDY':
+    case 'EXAM':
+    case 'UNPAID':
+    case 'EMERGENCY':
+    case 'PATERNITY':
+    case 'COMPASSIONATE':
+      return 'ANNUAL';
+    case 'MATERNITY':
+      return 'MATERNITY';
+    case 'SICK':
+      return 'SICK';
+    default:
+      return 'ANNUAL';
   }
-
-  return leaveType;
 }
 
 export const LEAVE_TYPE_OPTIONS: Array<{ value: LeaveType; label: string }> = [

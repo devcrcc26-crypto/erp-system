@@ -119,7 +119,7 @@ export function useMyLeaveBalances(year: number, enabled = true) {
 }
 
 /**
- * Company-wide leave balances for HR (annual, maternity, compassionate).
+ * Company-wide leave balances for HR (annual, maternity, sick).
  */
 export function useLeaveBalances(
   params: ListLeaveBalancesParams = { page: 1, limit: 20 },

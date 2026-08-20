@@ -57,6 +57,7 @@
       "reports": "HR Reports",
       "perDiem": "Per Diem",
       "perDiemRates": "Per Diem Rates",
+      "leavePolicy": "Leave Policy",
       "noApprovalChain": "No approval chain required",
       "directApproved": "Approved directly - no approval required",
       "assetManagement": "Asset Management",
@@ -129,6 +130,11 @@
         "myListTitle": "My Leave Requests",
         "listDescription": "Submit and track employee leave through the approval workflow.",
         "myListDescription": "View and submit your own leave requests."
+      },
+      "leavePolicy": {
+        "new": "New Leave Policy",
+        "edit": "Edit Leave Policy",
+        "detail": "Leave Policy"
       },
       "overtime": {
         "new": "This month's sheet",
@@ -650,7 +656,8 @@
     "resetFontSize": "Reset font size",
     "search": "Search",
     "loading": "Loading…",
-    "select": "Select"
+    "select": "Select",
+    "required": "Required"
   },
   "shell": {
     "openNavigation": "Open navigation menu",
@@ -1168,6 +1175,42 @@
       "separateBalance": "own balance (excluded from annual rule)",
       "deductsFromAnnualTitle": "Deduct from annual balance (no separate balance)",
       "deductsFromAnnualDesc": "These leave types reduce the employee's annual leave remaining."
+    },
+    "leavePolicy": {
+      "listTitle": "Leave Policies",
+      "new": "New Leave Policy",
+      "detail": "Leave Policy",
+      "name": "Policy Name",
+      "governedBy": "Governed By",
+      "description": "Description",
+      "isActive": "Active",
+      "rules": "Leave Rules",
+      "baseDays": "Base Days",
+      "isProgressive": "Progressive Leave",
+      "incrementDays": "Increment Days",
+      "incrementEveryYears": "Increment Every (Years)",
+      "minimumServiceMonths": "Minimum Service (Months)",
+      "maxDaysCap": "Maximum Days Cap",
+      "maxCarryForwardDays": "Maximum Carry Forward Days",
+      "requiresReceipt": "Requires Receipt",
+      "preview": "Entitlement Preview",
+      "previewExample": "Example: Employee with {{years}} years of service — Annual leave entitlement: {{days}} days ({{base}} base + progressive increments).",
+      "noEmployees": "No employees are using this policy",
+      "deleteBlocked": "Cannot delete — employees are assigned to this policy",
+      "employees": "Employees",
+      "empty": "No leave policies yet",
+      "deleted": "Leave policy deleted",
+      "created": "Leave policy created",
+      "updated": "Leave policy updated",
+      "createFailed": "Failed to create leave policy",
+      "updateFailed": "Failed to update leave policy",
+      "loadError": "Failed to load leave policies",
+      "deleteTitle": "Delete leave policy?",
+      "deleteDescription": "This removes the policy if no employees are assigned.",
+      "refreshBalances": "Refresh balances",
+      "refreshed": "Refreshed balances for {{count}} employees",
+      "refreshFailed": "Failed to refresh leave balances",
+      "formDescription": "Define annual, maternity, and sick leave rules. Progressive annual leave increases entitlement with years of service."
     },
     "messages": {
       "requestApproved": "Request approved",

@@ -8,7 +8,7 @@ import EmergencyContactsField, {
   normalizeEmergencyContacts,
 } from '@/components/modules/users/EmergencyContactsField';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useLeavePolicies } from '@/lib/query/leave-policies';
+import { useLeavePolicies } from '@/lib/query/leave-policy';
 import type {
   CreateUserRequest,
   EducationLevel,

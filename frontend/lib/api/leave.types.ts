@@ -105,7 +105,7 @@ export interface EmployeeLeaveBalanceSummary {
   year: number;
   annual: LeaveBalance | null;
   maternity: LeaveBalance | null;
-  compassionate: LeaveBalance | null;
+  sick: LeaveBalance | null;
 }
 
 export interface ListLeaveBalancesParams {

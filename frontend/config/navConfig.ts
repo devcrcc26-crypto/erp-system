@@ -93,6 +93,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
   '/hr/per-diem-rates': 'nav.hr.perDiemRates',
+  '/hr/leave-policy': 'nav.hr.leavePolicy',
+  '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/asset-management': 'nav.hr.assetManagement',
@@ -356,6 +358,13 @@ export function buildIconRailNav(
         href: '/hr/per-diem-rates',
         iconKey: 'hr-per-diem-rates',
         visible: canManagePerDiemRates,
+      },
+      {
+        key: '/hr/leave-policy',
+        labelKey: 'nav.hr.leavePolicy',
+        href: '/hr/leave-policy',
+        iconKey: 'hr-leave-policy',
+        visible: canViewHr,
       },
       {
         key: '/hr/purchase-requests',
@@ -699,6 +708,28 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.approvals'), href: '/approvals' },
         { label: t('pages.approvals.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/leave-policy/new') {
+    return {
+      titleKey: 'pages.hr.leavePolicy.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        { label: t('pages.hr.leavePolicy.new') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/leave-policy\/[^/]+\/edit$/)) {
+    return {
+      titleKey: 'pages.hr.leavePolicy.edit',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        { label: t('pages.hr.leavePolicy.edit') },
       ],
     };
   }

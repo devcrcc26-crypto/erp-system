@@ -92,6 +92,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   closeout: FlagOutlined,
   approvals: AuditOutlined,
   'hr-leave': CalendarOutlined,
+  'hr-leave-policy': ScheduleOutlined,
   'hr-overtime': ClockCircleOutlined,
   'hr-employee-contract': FileTextOutlined,
   'hr-expense': DollarOutlined,

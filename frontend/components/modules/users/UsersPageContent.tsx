@@ -553,9 +553,9 @@ export default function UsersPageContent(): React.ReactNode {
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
           <h1 className="erp-pro-card-toolbar-title" style={{fontSize: '16px', fontWeight: 600}}>
-            {/* {meta?.total === 1
+            {meta?.total === 1
               ? t('users.userCountOne')
-              : t('users.userCount', { count: meta?.total ?? 0 })}  */}
+              : t('users.userCount', { count: meta?.total ?? 0 })} 
           </h1>
           <Space wrap size={8}>
             <Button

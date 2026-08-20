@@ -91,11 +91,11 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
           renderBalanceCell(row.maternity),
       },
       {
-        title: formatLeaveType('COMPASSIONATE', t),
-        key: 'compassionate',
-        width: 160,
+        title: formatLeaveType('SICK', t),
+        key: 'sick',
+        width: 140,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
-          renderBalanceCell(row.compassionate),
+          renderBalanceCell(row.sick),
       },
     ],
     [t],

@@ -57,6 +57,9 @@
       "reports": "人力资源报表",
       "perDiem": "差旅补贴",
       "perDiemRates": "差旅补贴标准",
+      "leavePolicy": "假期政策",
+      "noApprovalChain": "无需审批链",
+      "directApproved": "已直接批准 - 无需审批",
       "attendance": "考勤",
       "assetManagement": "资产管理",
       "companyAssets": "公司资产",
@@ -127,6 +130,11 @@
         "myListTitle": "我的请假申请",
         "listDescription": "通过审批流程提交并跟踪员工请假。",
         "myListDescription": "查看并提交您自己的请假申请。"
+      },
+      "leavePolicy": {
+        "new": "新建假期政策",
+        "edit": "编辑假期政策",
+        "detail": "假期政策"
       },
       "overtime": {
         "new": "本月加班表",
@@ -648,7 +656,8 @@
     "resetFontSize": "重置字体大小",
     "search": "搜索",
     "loading": "加载中…",
-    "select": "请选择"
+    "select": "请选择",
+    "required": "必填"
   },
   "shell": {
     "openNavigation": "打开导航菜单",
@@ -1166,6 +1175,42 @@
       "separateBalance": "独立余额（不从年假扣除）",
       "deductsFromAnnualTitle": "从年假余额扣除（无独立余额）",
       "deductsFromAnnualDesc": "以下假期类型会减少员工的年假剩余天数。"
+    },
+    "leavePolicy": {
+      "listTitle": "假期政策",
+      "new": "新建假期政策",
+      "detail": "假期政策",
+      "name": "政策名称",
+      "governedBy": "适用法规",
+      "description": "描述",
+      "isActive": "启用",
+      "rules": "假期规则",
+      "baseDays": "基础天数",
+      "isProgressive": "累进假期",
+      "incrementDays": "递增天数",
+      "incrementEveryYears": "每隔（年）递增",
+      "minimumServiceMonths": "最低服务年限（月）",
+      "maxDaysCap": "最高天数上限",
+      "maxCarryForwardDays": "最高结转天数",
+      "requiresReceipt": "需提供收据",
+      "preview": "假期天数预览",
+      "previewExample": "示例：司龄 {{years}} 年的员工 — 年假额度：{{days}} 天（基础 {{base}} 天 + 累进增加）。",
+      "noEmployees": "暂无员工使用此政策",
+      "deleteBlocked": "无法删除 — 已有员工使用此政策",
+      "employees": "员工数",
+      "empty": "暂无假期政策",
+      "deleted": "假期政策已删除",
+      "created": "假期政策已创建",
+      "updated": "假期政策已更新",
+      "createFailed": "创建假期政策失败",
+      "updateFailed": "更新假期政策失败",
+      "loadError": "加载假期政策失败",
+      "deleteTitle": "删除假期政策？",
+      "deleteDescription": "若无员工使用此政策，将删除该政策。",
+      "refreshBalances": "刷新余额",
+      "refreshed": "已为 {{count}} 名员工刷新余额",
+      "refreshFailed": "刷新假期余额失败",
+      "formDescription": "配置年假、产假与病假规则。累进年假会随司龄增加额度。"
     },
     "messages": {
       "requestApproved": "申请已批准",
