@@ -1214,8 +1214,7 @@
       "formDescription": "配置年假、产假与病假规则。累进年假会随司龄增加额度。",
       "steps": {
         "details": "政策详情",
-        "annual": "年假",
-        "otherRules": "产假与病假"
+        "leaveRules": "假期规则"
       }
     },
     "messages": {

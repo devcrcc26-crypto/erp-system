@@ -733,10 +733,6 @@ main::-webkit-scrollbar,
 }
 
 .erp-stepper-form--compact.erp-advanced-form .ant-form-item {
-  margin-bottom: 12px;
-}
-
-.erp-stepper-form--compact.erp-advanced-form .ant-form-item:last-child {
   margin-bottom: 0;
 }
 
@@ -784,13 +780,15 @@ main::-webkit-scrollbar,
 .erp-form-grid-2 {
   display: grid;
   grid-template-columns: 1fr;
-  column-gap: 32px;
+  column-gap: 24px;
+  row-gap: 12px;
 }
 
 .erp-form-grid-3 {
   display: grid;
   grid-template-columns: 1fr;
-  column-gap: 32px;
+  column-gap: 24px;
+  row-gap: 12px;
 }
 
 @media (min-width: 768px) {

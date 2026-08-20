@@ -1214,8 +1214,7 @@
       "formDescription": "Define annual, maternity, and sick leave rules. Progressive annual leave increases entitlement with years of service.",
       "steps": {
         "details": "Policy details",
-        "annual": "Annual leave",
-        "otherRules": "Maternity & sick"
+        "leaveRules": "Leave rules"
       }
     },
     "messages": {
