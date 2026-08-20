@@ -104,6 +104,11 @@
     }
   },
   "pages": {
+    "users": {
+      "new": "Add employee",
+      "detail": "Employee detail",
+      "edit": "Update employee"
+    },
     "approvals": {
       "detail": "Request detail",
       "new": "New request",

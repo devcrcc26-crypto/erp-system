@@ -62,6 +62,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/daily-logs': 'nav.dailyLogs',
   '/approvals': 'nav.approvals',
   '/users': 'nav.users',
+  '/users/new': 'pages.users.new',
   '/teams': 'nav.teams',
   '/reports': 'nav.reports',
   '/messages': 'nav.messages',
@@ -698,6 +699,43 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
         { label: t('pages.hr.leave.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/users/new') {
+    return {
+      titleKey: 'pages.users.new',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.users'), href: '/users' },
+        { label: t('pages.users.new') },
+      ],
+    };
+  }
+
+  const usersEditMatch = /^\/users\/([^/]+)\/edit$/.exec(pathname);
+  if (usersEditMatch) {
+    const userId = usersEditMatch[1];
+    return {
+      titleKey: 'pages.users.edit',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.users'), href: '/users' },
+        { label: t('pages.users.detail'), href: `/users/${userId}` },
+        { label: t('pages.users.edit') },
+      ],
+    };
+  }
+
+  const usersDetailMatch = /^\/users\/([^/]+)$/.exec(pathname);
+  if (usersDetailMatch) {
+    return {
+      titleKey: 'pages.users.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.users'), href: '/users' },
+        { label: t('pages.users.detail') },
       ],
     };
   }

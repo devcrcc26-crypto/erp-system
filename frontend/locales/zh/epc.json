@@ -102,6 +102,11 @@
     }
   },
   "pages": {
+    "users": {
+      "new": "添加员工",
+      "detail": "员工详情",
+      "edit": "更新员工"
+    },
     "approvals": {
       "detail": "审批详情",
       "new": "新建审批",

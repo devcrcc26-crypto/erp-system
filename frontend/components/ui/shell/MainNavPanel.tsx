@@ -186,6 +186,8 @@ function RailNavGroup({
     group.storageKey,
     group.defaultOpen,
   );
+  const hasActiveChild = visibleItems.some((item) => item.key === selectedKey);
+  const showItems = open || hasActiveChild;
 
   if (visibleItems.length === 0) {
     return null;
@@ -212,10 +214,10 @@ function RailNavGroup({
     <section className="flex flex-col gap-0.5">
       <RailGroupHeader
         label={t(group.labelKey)}
-        open={open}
+        open={showItems}
         onToggle={toggle}
       />
-      {open
+      {showItems
         ? visibleItems.map((item) => (
             <RailNavButton
               key={item.key}
