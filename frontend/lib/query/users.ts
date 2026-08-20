@@ -86,6 +86,22 @@ export function useUsers(
 }
 
 /**
+ * Full company user list for client-side search, filter, sort, and export.
+ * Scale target is ≤500 users per company — one load is faster than per-filter round trips.
+ */
+export function useAllUsers(
+  options?: Omit<UseQueryOptions<User[]>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: [...userKeys.lists(), 'all'] as const,
+    queryFn: fetchAllUsers,
+    retry: false,
+    staleTime: 60_000,
+    ...options,
+  });
+}
+
+/**
  * Loads every user in the company directory (paginates until complete).
  */
 export async function fetchAllUsersDirectory(): Promise<User[]> {

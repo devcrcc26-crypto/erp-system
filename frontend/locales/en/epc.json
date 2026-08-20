@@ -849,7 +849,7 @@
       "description": "Upload a spreadsheet to add multiple employees. Rows with an email receive an activation link; rows without an email are saved as record-only (no login).",
       "downloadTemplate": "Download template",
       "chooseFile": "Choose .xlsx file",
-      "requiredColumns": "Required columns: firstName, lastName. Optional: email, chineseName, role, phone.",
+      "requiredColumns": "Required: firstName, lastName. Optional: email, middleName, chineseName, role, phone, discipline, gender, department, position, employeeId, nationality, employeeType, dateOfBirth, nationalId, educationLevel, fieldOfStudy, experienceStartDate, addressCountry, addressRegion, addressCity, addressSubcity, addressWoreda, addressHouseNumber, leavePolicy.",
       "ready": "Ready",
       "invalid": "Invalid",
       "duplicate": "Duplicate",

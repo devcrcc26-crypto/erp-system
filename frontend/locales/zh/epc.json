@@ -847,7 +847,7 @@
       "description": "上传电子表格批量添加员工。有邮箱的行将收到激活链接；无邮箱的行仅作为记录保存（无法登录）。",
       "downloadTemplate": "下载模板",
       "chooseFile": "选择 .xlsx 文件",
-      "requiredColumns": "必填列：firstName、lastName。可选：email、chineseName、role、phone。",
+      "requiredColumns": "必填：firstName、lastName。可选：email、middleName、chineseName、role、phone、discipline、gender、department、position、employeeId、nationality、employeeType、dateOfBirth、nationalId、educationLevel、fieldOfStudy、experienceStartDate、addressCountry、addressRegion、addressCity、addressSubcity、addressWoreda、addressHouseNumber、leavePolicy。",
       "ready": "就绪",
       "invalid": "无效",
       "duplicate": "重复",

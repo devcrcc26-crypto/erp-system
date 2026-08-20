@@ -3,7 +3,7 @@ import { formatDisplayDateTime } from './date-format';
 import { buildUsersExportRows } from './users-export-excel';
 
 describe('buildUsersExportRows', () => {
-  it('exports only name, position, discipline, department, role, and last login', () => {
+  it('exports all profile columns including org, employment, and address fields', () => {
     const rows = buildUsersExportRows(
       [
         {
@@ -21,11 +21,37 @@ describe('buildUsersExportRows', () => {
             name: 'Architecture',
             nameZh: '建筑',
           },
+          employeeId: 'EMP-0001',
+          middleName: 'A',
+          gender: 'MALE',
+          nationality: 'ETHIOPIAN',
+          employeeType: 'PERMANENT',
+          dateOfBirth: '1990-05-15',
+          nationalId: 'ID-1',
+          educationLevel: 'BSC',
+          fieldOfStudy: 'Civil Engineering',
+          experienceStartDate: '2015-01-01',
+          yearsOfExperience: 10,
+          addressCountry: 'Ethiopia',
+          addressRegion: 'Addis Ababa',
+          addressCity: 'Addis Ababa',
+          addressSubcity: 'Bole',
+          addressWoreda: '03',
+          addressHouseNumber: '12',
+          leavePolicy: { id: 'lp-1', name: 'Standard Leave' },
+          emergencyContacts: [
+            {
+              firstName: 'Sara',
+              lastName: 'Cai',
+              phone: '0911000000',
+              email: 'sara@example.com',
+            },
+          ],
           firstName: 'Chengyu',
           lastName: 'Cai',
           chineseName: '蔡成禹',
           email: 'chengyu@example.com',
-          phone: null,
+          phone: '0911111111',
           preferredLanguage: null,
           preferredTimezone: null,
           preferredDateFormat: null,
@@ -63,36 +89,80 @@ describe('buildUsersExportRows', () => {
       ],
       (user) =>
         user.userRoles?.map((assignment) => assignment.role.name).join(', ') || '-',
+      (user) => (user.isActive ? 'Active' : 'Inactive'),
     );
 
     expect(rows).toHaveLength(2);
     expect(Object.keys(rows[0])).toEqual([
-      'name',
-      'position',
-      'discipline',
-      'department',
+      'email',
+      'firstName',
+      'lastName',
+      'middleName',
+      'chineseName',
       'role',
+      'phone',
+      'discipline',
+      'gender',
+      'department',
+      'position',
+      'employeeId',
+      'nationality',
+      'employeeType',
+      'dateOfBirth',
+      'nationalId',
+      'educationLevel',
+      'fieldOfStudy',
+      'experienceStartDate',
+      'yearsOfExperience',
+      'addressCountry',
+      'addressRegion',
+      'addressCity',
+      'addressSubcity',
+      'addressWoreda',
+      'addressHouseNumber',
+      'leavePolicy',
+      'emergencyContacts',
+      'status',
       'lastLogin',
     ]);
 
-    const cai = rows.find((row) => row.name.includes('Chengyu Cai'));
+    const cai = rows.find((row) => row.firstName === 'Chengyu');
     expect(cai).toEqual({
-      name: 'Chengyu Cai\n蔡成禹',
-      position: 'Senior Engineer',
-      discipline: 'Architecture\n建筑',
-      department: 'Architecture',
+      email: 'chengyu@example.com',
+      firstName: 'Chengyu',
+      lastName: 'Cai',
+      middleName: 'A',
+      chineseName: '蔡成禹',
       role: 'Site Engineer',
+      phone: '0911111111',
+      discipline: 'Architecture / 建筑',
+      gender: 'MALE',
+      department: 'Architecture',
+      position: 'Senior Engineer',
+      employeeId: 'EMP-0001',
+      nationality: 'ETHIOPIAN',
+      employeeType: 'PERMANENT',
+      dateOfBirth: '1990-05-15',
+      nationalId: 'ID-1',
+      educationLevel: 'BSC',
+      fieldOfStudy: 'Civil Engineering',
+      experienceStartDate: '2015-01-01',
+      yearsOfExperience: '10',
+      addressCountry: 'Ethiopia',
+      addressRegion: 'Addis Ababa',
+      addressCity: 'Addis Ababa',
+      addressSubcity: 'Bole',
+      addressWoreda: '03',
+      addressHouseNumber: '12',
+      leavePolicy: 'Standard Leave',
+      emergencyContacts: 'Sara Cai | 0911000000 | sara@example.com',
+      status: 'Active',
       lastLogin: formatDisplayDateTime('2024-06-01T10:00:00.000Z'),
     });
 
-    const shimeles = rows.find((row) => row.name === 'Shimeles Ayele');
-    expect(shimeles).toEqual({
-      name: 'Shimeles Ayele',
-      position: '-',
-      discipline: '-',
-      department: '-',
-      role: '-',
-      lastLogin: '-',
-    });
+    const shimeles = rows.find((row) => row.firstName === 'Shimeles');
+    expect(shimeles?.email).toBe('shimeles@example.com');
+    expect(shimeles?.role).toBe('');
+    expect(shimeles?.lastLogin).toBe('');
   });
 });

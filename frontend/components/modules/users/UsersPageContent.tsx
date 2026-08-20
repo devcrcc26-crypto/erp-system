@@ -39,10 +39,9 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
-  fetchAllUsers,
+  useAllUsers,
   useDeleteUser,
   useResendInvitation,
-  useUsers,
 } from '@/lib/query/users';
 import type { User } from '@/lib/api/types';
 import {
@@ -51,6 +50,11 @@ import {
   usePositions,
 } from '@/lib/query/org';
 import { exportUsersExcel } from '@/lib/utils/users-export-excel';
+import {
+  filterAndSortUsers,
+  paginateUsers,
+  type UsersListSortField,
+} from '@/lib/utils/users-list-filter';
 import { pickTopLevelRoleName } from '@/lib/utils/user-display';
 import {
   userStatusLabel,
@@ -89,12 +93,12 @@ const ROLE_COLOR_MAP: Record<string, string> = {
   Employee: 'default',
 };
 
-const COLUMN_SORT_FIELD: Record<string, string> = {
-  name: 'firstName',
+const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
+  name: 'name',
   email: 'email',
-  department: 'departmentId',
-  position: 'positionId',
-  status: 'isActive',
+  department: 'department',
+  position: 'position',
+  status: 'status',
 };
 
 function formatUserRoleNames(user: User): string {
@@ -112,11 +116,35 @@ function buildUsersExportLabels(
 ) {
   return {
     sheetName: t('users.exportSheetName'),
-    name: t('common.name'),
-    position: t('common.position'),
-    discipline: t('common.discipline'),
-    department: t('common.department'),
+    email: t('common.email'),
+    firstName: t('users.form.firstName'),
+    lastName: t('users.form.lastName'),
+    middleName: t('users.form.middleName'),
+    chineseName: t('users.form.chineseName'),
     role: t('common.role'),
+    phone: t('users.exportTable.phone'),
+    discipline: t('common.discipline'),
+    gender: t('users.form.gender'),
+    department: t('common.department'),
+    position: t('common.position'),
+    employeeId: t('users.form.employeeId'),
+    nationality: t('users.form.nationality'),
+    employeeType: t('users.form.employeeType'),
+    dateOfBirth: t('users.form.dateOfBirth'),
+    nationalId: t('users.form.nationalId'),
+    educationLevel: t('users.form.educationLevel'),
+    fieldOfStudy: t('users.form.fieldOfStudy'),
+    experienceStartDate: t('users.form.experienceStartDate'),
+    yearsOfExperience: t('users.form.yearsOfExperience'),
+    addressCountry: t('users.form.addressCountry'),
+    addressRegion: t('users.form.addressRegion'),
+    addressCity: t('users.form.addressCity'),
+    addressSubcity: t('users.form.addressSubcity'),
+    addressWoreda: t('users.form.addressWoreda'),
+    addressHouseNumber: t('users.form.addressHouseNumber'),
+    leavePolicy: t('users.form.leavePolicy'),
+    emergencyContacts: t('users.sectionEmergencyContact'),
+    status: t('common.status'),
     lastLogin: t('users.exportTable.lastLogin'),
   };
 }
@@ -141,7 +169,7 @@ export default function UsersPageContent(): React.ReactNode {
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [positionFilter, setPositionFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<boolean | undefined>();
-  const [sortBy, setSortBy] = useState<string | undefined>();
+  const [sortBy, setSortBy] = useState<UsersListSortField | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
 
   useEffect(() => {
@@ -178,16 +206,7 @@ export default function UsersPageContent(): React.ReactNode {
     [],
   );
 
-  const usersQuery = useUsers({
-    ...params,
-    search: appliedSearch || undefined,
-    disciplineId: disciplineFilter,
-    departmentId: departmentFilter,
-    positionId: positionFilter,
-    isActive: statusFilter,
-    sortBy,
-    sortOrder,
-  });
+  const usersQuery = useAllUsers();
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
   const { options: disciplineFilterOptions, nameById: disciplineNameById } =
@@ -211,12 +230,41 @@ export default function UsersPageContent(): React.ReactNode {
     [positionsQuery.data],
   );
 
+  const filteredUsers = useMemo(
+    () =>
+      filterAndSortUsers({
+        users: usersQuery.data ?? [],
+        search: appliedSearch,
+        disciplineId: disciplineFilter,
+        departmentId: departmentFilter,
+        positionId: positionFilter,
+        isActive: statusFilter,
+        sortBy,
+        sortOrder,
+      }),
+    [
+      usersQuery.data,
+      appliedSearch,
+      disciplineFilter,
+      departmentFilter,
+      positionFilter,
+      statusFilter,
+      sortBy,
+      sortOrder,
+    ],
+  );
+
+  const { data: users, meta } = useMemo(
+    () => paginateUsers(filteredUsers, params.page ?? 1, params.limit ?? 20),
+    [filteredUsers, params.page, params.limit],
+  );
+
   const companyName = authUser?.companyName ?? 'Company';
 
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingUsers(true);
     try {
-      const allUsers = await fetchAllUsers();
+      const allUsers = usersQuery.data ?? [];
       const generatedAt = new Date().toISOString();
 
       await exportUsersExcel({
@@ -225,6 +273,7 @@ export default function UsersPageContent(): React.ReactNode {
         labels: buildUsersExportLabels(t),
         users: allUsers,
         formatUserRoles: formatUserRoleNames,
+        statusLabel: (user) => userStatusLabel(user, t),
       });
       messageApi.success(t('users.exportSuccess'));
     } catch {
@@ -232,7 +281,7 @@ export default function UsersPageContent(): React.ReactNode {
     } finally {
       setExportingUsers(false);
     }
-  }, [companyName, messageApi, t]);
+  }, [companyName, messageApi, t, usersQuery.data]);
 
   function handleResetFilters(): void {
     setSearch('');
@@ -254,7 +303,7 @@ export default function UsersPageContent(): React.ReactNode {
     await usersQuery.refetch();
   }
 
-  if (usersQuery.isLoading) {
+  if (usersQuery.isLoading && !usersQuery.data) {
     return (
       <div className="erp-pro-list-page">
         <div className="erp-pro-card">
@@ -266,7 +315,7 @@ export default function UsersPageContent(): React.ReactNode {
     );
   }
 
-  if (usersQuery.isError) {
+  if (usersQuery.isError && !usersQuery.data) {
     const status =
       usersQuery.error instanceof ApiRequestError
         ? usersQuery.error.status
@@ -290,9 +339,6 @@ export default function UsersPageContent(): React.ReactNode {
       />
     );
   }
-
-  const users = usersQuery.data?.data ?? [];
-  const meta = usersQuery.data?.meta;
 
   async function handleResendVerification(user: User): Promise<void> {
     setActionMessage(null);
@@ -496,9 +542,9 @@ export default function UsersPageContent(): React.ReactNode {
               <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
                 {t('common.reset')}
               </Button>
-              <Button type="primary" onClick={handleQuery} style={{ borderRadius: 2 }}>
+              {/* <Button type="primary" onClick={handleQuery} style={{ borderRadius: 2 }}>
                 {t('common.query')}
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
