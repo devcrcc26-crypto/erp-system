@@ -211,12 +211,23 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <p
-        className="mb-0 mt-0 text-[14px] leading-relaxed"
-        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
-      >
-        {t('pages.hr.leave.listDescription')}
-      </p>
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {t('pages.hr.leave.new')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {t('pages.hr.leave.listDescription')}
+        </p>
+      </div>
 
       {submitMutation.isError ? (
         <Alert

@@ -34,13 +34,24 @@ export default function AddEmployeeFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col">
-      <p
-        className="mb-4 mt-0 text-[14px] leading-relaxed"
-        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
-      >
-        {t('users.form.addEmployeeDescription')}
-      </p>
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {t('users.addEmployee')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {t('users.form.addEmployeeDescription')}
+        </p>
+      </div>
       <AddEmployeeForm onSuccess={handleSuccess} />
     </div>
   );

@@ -16,6 +16,7 @@ import {
   useUpdateLeavePolicy,
 } from '@/lib/query/leave-policy';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { tokens } from '@/lib/theme/tokens';
 
 interface LeavePolicyFormPageContentProps {
   policyId?: string;
@@ -91,11 +92,32 @@ export default function LeavePolicyFormPageContent({
   }
 
   return (
-    <LeavePolicyForm
-      policy={policyQuery.data}
-      isSubmitting={saving}
-      submitLabel={t('common.save')}
-      onSubmit={handleSubmit}
-    />
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {isEdit
+            ? t('pages.hr.leavePolicy.edit')
+            : t('hr.leavePolicy.new')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {t('hr.leavePolicy.formDescription')}
+        </p>
+      </div>
+      <LeavePolicyForm
+        policy={policyQuery.data}
+        isSubmitting={saving}
+        submitLabel={t('common.save')}
+        onSubmit={handleSubmit}
+      />
+    </div>
   );
 }
