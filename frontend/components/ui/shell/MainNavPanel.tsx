@@ -3,10 +3,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-  LogoutOutlined,
-  UserOutlined,
   DownOutlined,
 } from '@ant-design/icons';
 import {
@@ -49,8 +47,6 @@ import {
 import { canViewGlobalNavKey } from '@/lib/navigation/project-nav-visibility';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSidebarGroupOpen } from '@/hooks/useSidebarGroupOpen';
-import { useLogout } from '@/lib/query/auth';
-import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { tokens } from '@/lib/theme/tokens';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
@@ -236,49 +232,6 @@ function RailNavGroup({
   );
 }
 
-function RailActionButton({
-  label,
-  icon,
-  isExpanded,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  isExpanded: boolean;
-  onClick?: () => void;
-  disabled?: boolean;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      aria-label={label}
-      className={[
-        'flex shrink-0 items-center transition-colors duration-150 disabled:opacity-60',
-        isExpanded
-          ? 'w-full gap-2.5 rounded-md border-transparent px-3 py-2 text-[14px] font-normal leading-[22px] hover:bg-[var(--color-sidebar-hover)]'
-          : 'mx-auto h-9 w-9 justify-center rounded-md text-[16px] hover:bg-[var(--color-sidebar-hover)]',
-      ].join(' ')}
-      style={{ color: tokens.colorSidebarText, fontFamily: tokens.fontFamily }}
-    >
-      <span className="flex shrink-0 items-center justify-center leading-none">
-        {icon}
-      </span>
-      <span
-        className={[
-          'truncate transition-all duration-200 ease-in-out',
-          isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
-        ].join(' ')}
-      >
-        {label}
-      </span>
-    </button>
-  );
-}
-
 /**
  * Shared main navigation panel - icon rail (desktop) and drawer (mobile).
  */
@@ -290,8 +243,6 @@ export default function MainNavPanel({
   onNavigate?: () => void;
 }): React.ReactNode {
   const pathname = usePathname();
-  const router = useRouter();
-  const logout = useLogout();
   const { t } = useEpcTranslation();
   const permLoading = usePermissionsLoading();
   const pm = usePmCapabilities();
@@ -360,20 +311,6 @@ export default function MainNavPanel({
     standalone: visibleStandalone,
   });
   const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
-  const profileActive = pathname === '/profile';
-
-  async function handleLogout(): Promise<void> {
-    try {
-      await logout.mutateAsync();
-    } catch {
-      // swallowed; cleared below
-    }
-    // TanStack Query v5 global onSettled is not awaited by mutateAsync, so
-    // call explicitly here to guarantee cache + auth are cleared before navigation.
-    signOutLocally();
-    onNavigate?.();
-    router.replace('/login');
-  }
 
   return (
     <div
@@ -491,55 +428,6 @@ export default function MainNavPanel({
           </>
         )}
       </nav>
-
-      <div
-        className="flex flex-col gap-0.5 px-2 pb-3 pt-2"
-        style={{ borderTop: `0.5px solid ${tokens.colorSidebarBorder}` }}
-      >
-        <Link
-          href="/profile"
-          onClick={onNavigate}
-          title={t('nav.profile')}
-          aria-label={t('nav.profile')}
-          aria-current={profileActive ? 'page' : undefined}
-          className={[
-            railItemClass(profileActive, isExpanded),
-            !profileActive && isExpanded
-              ? 'hover:bg-[var(--color-sidebar-hover)]'
-              : '',
-            !profileActive && !isExpanded
-              ? 'hover:bg-[var(--color-sidebar-hover)]'
-              : '',
-          ].join(' ')}
-          style={railItemStyle(profileActive)}
-        >
-          <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium"
-            style={{
-              backgroundColor: tokens.colorBlue50,
-              color: tokens.colorBlue800,
-            }}
-          >
-            <UserOutlined className="text-[12px]" />
-          </span>
-          <span
-            className={[
-              'truncate transition-all duration-200 ease-in-out',
-              isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
-            ].join(' ')}
-          >
-            {t('nav.profile')}
-          </span>
-        </Link>
-
-        <RailActionButton
-          label={logout.isPending ? t('nav.signingOut') : t('nav.logout')}
-          icon={<LogoutOutlined />}
-          isExpanded={isExpanded}
-          onClick={() => void handleLogout()}
-          disabled={logout.isPending}
-        />
-      </div>
     </div>
   );
 }

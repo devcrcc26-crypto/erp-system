@@ -520,16 +520,31 @@ main::-webkit-scrollbar,
   margin-top: 8px;
 }
 
+.erp-pro-table,
+.erp-pro-table .ant-table,
+.erp-pro-table .ant-table-container,
+.erp-pro-table .ant-table-content,
+.erp-pro-table .ant-table-thead > tr > th:first-child,
+.erp-pro-table .ant-table-thead > tr > th:last-child,
+.erp-pro-table .ant-table-tbody > tr:last-child > td:first-child,
+.erp-pro-table .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
 .erp-pro-table .ant-table-thead > tr > th {
   background: #fafafa !important;
   padding: 14px 16px !important;
-  font-size: calc(15px * var(--erp-font-scale)) !important;
+  font-size: calc(16px * var(--erp-font-scale)) !important;
   font-weight: 700 !important;
   letter-spacing: normal;
   text-transform: none;
   color: rgba(0, 0, 0, 0.88) !important;
   border-bottom: none !important;
+}
 
+.erp-pro-table .ant-table-tbody > tr > td:hover {
+  background: #fafafa !important;
+  cursor: pointer;
 }
 
 .erp-pro-table .ant-table-thead > tr > th::before {
@@ -537,7 +552,7 @@ main::-webkit-scrollbar,
 }
 
 .erp-pro-table .ant-table-tbody > tr > td {
-  padding: 12px 16px !important;
+  padding: 52px 16px !important;
   height: auto;
   min-height: 48px;
   font-size: calc(14px * var(--erp-font-scale));
@@ -553,12 +568,12 @@ main::-webkit-scrollbar,
 
 .erp-pro-table .ant-table {
   background: transparent;
-  border-radius: 2px;
+  border-radius: 0 !important;
 }
 
 .erp-pro-table .ant-table-container {
   border: none !important;
-  border-radius: 2px;
+  border-radius: 0 !important;
 }
 
 .erp-pro-table .ant-table-container table {
@@ -629,6 +644,26 @@ main::-webkit-scrollbar,
 
 .erp-data-table .ant-table-tbody > tr:hover > td {
   background: var(--color-surface-secondary) !important;
+}
+
+/* Pro list tables — must follow erp-data-table so these win when both classes apply */
+.erp-data-table.erp-pro-table .ant-table-thead > tr > th,
+.erp-data-table.erp-pro-table .ant-table-thead > tr > th.ant-table-cell {
+  background: #fafafa !important;
+  padding: 14px 16px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.erp-data-table.erp-pro-table .ant-table-tbody > tr > td {
+  padding: 14px 16px !important;
+  height: auto;
+  min-height: 48px;
+  font-size: calc(14px * var(--erp-font-scale));
 }
 
 .erp-data-table .ant-table {

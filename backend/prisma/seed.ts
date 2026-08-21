@@ -1123,7 +1123,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Organization sidebar (Users / Departments / Positions) — HR Officer view access.
+  // Organization sidebar — HR Officer manages user accounts; view org catalogs for assignment.
   const departmentsView = permissions.find(
     (permission) =>
       permission.module === 'departments' && permission.action === 'view',
@@ -1131,13 +1131,68 @@ async function main(): Promise<void> {
   const usersView = permissions.find(
     (permission) => permission.module === 'users' && permission.action === 'view',
   );
+  const usersCreate = permissions.find(
+    (permission) =>
+      permission.module === 'users' && permission.action === 'create',
+  );
+  const usersEdit = permissions.find(
+    (permission) => permission.module === 'users' && permission.action === 'edit',
+  );
+  const usersDelete = permissions.find(
+    (permission) =>
+      permission.module === 'users' && permission.action === 'delete',
+  );
+  const rolesView = permissions.find(
+    (permission) => permission.module === 'roles' && permission.action === 'view',
+  );
   const hrOrgRoleId = roleMap.get('HR Officer');
   if (hrOrgRoleId) {
     if (departmentsView) {
       await upsertRolePermission(hrOrgRoleId, departmentsView.id, viewOnlyFlags());
     }
+    if (rolesView) {
+      await upsertRolePermission(hrOrgRoleId, rolesView.id, viewOnlyFlags());
+    }
+    const usersManageFlags = {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+      canDelete: true,
+      canApprove: false,
+      canExport: true,
+    };
     if (usersView) {
-      await upsertRolePermission(hrOrgRoleId, usersView.id, viewOnlyFlags());
+      await upsertRolePermission(hrOrgRoleId, usersView.id, usersManageFlags);
+    }
+    if (usersCreate) {
+      await upsertRolePermission(hrOrgRoleId, usersCreate.id, {
+        canView: true,
+        canCreate: true,
+        canEdit: false,
+        canDelete: false,
+        canApprove: false,
+        canExport: false,
+      });
+    }
+    if (usersEdit) {
+      await upsertRolePermission(hrOrgRoleId, usersEdit.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: true,
+        canDelete: false,
+        canApprove: false,
+        canExport: true,
+      });
+    }
+    if (usersDelete) {
+      await upsertRolePermission(hrOrgRoleId, usersDelete.id, {
+        canView: true,
+        canCreate: false,
+        canEdit: false,
+        canDelete: true,
+        canApprove: false,
+        canExport: false,
+      });
     }
   }
 

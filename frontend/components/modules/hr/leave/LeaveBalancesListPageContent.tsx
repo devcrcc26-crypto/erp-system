@@ -1,8 +1,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, InputNumber, Select, Spin } from 'antd';
+import {
+  Alert,
+  Button,
+  Input,
+  InputNumber,
+  Select,
+  Spin,
+  Tooltip,
+} from 'antd';
+import {
+  CalendarOutlined,
+  ClockCircleOutlined,
+  ReloadOutlined,
+  UserOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -21,15 +37,32 @@ import {
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
+const LOW_BALANCE_THRESHOLD = 5;
+
 function renderBalanceCell(balance: LeaveBalance | null): React.ReactNode {
   if (!balance) {
     return <span style={{ color: tokens.colorTextSecondary }}>—</span>;
   }
 
+  const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
+
   return (
     <div className="leading-5">
       <div>
-        <span className="font-medium">{balance.remaining}</span>
+        <span
+          className="text-sm font-medium"
+          style={{
+            color: isLow ? '#BA7517' : tokens.colorTextPrimary,
+          }}
+        >
+          {balance.remaining}
+        </span>
+        <span
+          className="ml-1 text-xs"
+          style={{ color: tokens.colorTextTertiary }}
+        >
+          / {balance.entitled + balance.broughtForward}
+        </span>
       </div>
       <span className="text-xs" style={{ color: tokens.colorTextSecondary }}>
         {balance.used} used · {balance.pending} pending
@@ -39,11 +72,11 @@ function renderBalanceCell(balance: LeaveBalance | null): React.ReactNode {
 }
 
 /**
- * HR-only tab listing employee leave balances with rule guidance.
+ * HR-only tab listing employee leave balances — layout aligned with Users page.
  */
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
@@ -61,39 +94,85 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   );
 
   const balancesQuery = useLeaveBalances(listParams, true);
-  const usersQuery = useUsersDirectory({ page: 1, limit: 100 }, { enabled: true });
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: true },
+  );
 
   const rows = balancesQuery.data?.data ?? [];
   const meta = balancesQuery.data?.meta;
+  const totalCount = meta?.total ?? 0;
+
+  const pageStats = useMemo(() => {
+    let lowBalance = 0;
+    let withPending = 0;
+    let annualRemainingSum = 0;
+    let annualCount = 0;
+
+    for (const row of rows) {
+      if (row.annual) {
+        annualRemainingSum += row.annual.remaining;
+        annualCount += 1;
+        if (row.annual.remaining <= LOW_BALANCE_THRESHOLD) {
+          lowBalance += 1;
+        }
+        if (row.annual.pending > 0) {
+          withPending += 1;
+        }
+      }
+    }
+
+    return {
+      lowBalance,
+      withPending,
+      avgRemaining:
+        annualCount > 0 ? Math.round(annualRemainingSum / annualCount) : 0,
+    };
+  }, [rows]);
 
   const columns: ColumnsType<EmployeeLeaveBalanceSummary> = useMemo(
     () => [
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        fixed: 'left',
-        width: 200,
-        render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
-          formatLeaveEmployeeName(row.employee),
+        width: 220,
+        render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
+          <div className="min-w-0 py-0.5">
+            <p
+              className="m-0 text-sm font-medium"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {formatLeaveEmployeeName(row.employee)}
+            </p>
+            {row.employee.email ? (
+              <p
+                className="m-0 truncate text-xs"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {row.employee.email}
+              </p>
+            ) : null}
+          </div>
+        ),
       },
       {
         title: formatLeaveType('ANNUAL', t),
         key: 'annual',
-        width: 140,
+        width: 150,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           renderBalanceCell(row.annual),
       },
       {
         title: formatLeaveType('MATERNITY', t),
         key: 'maternity',
-        width: 140,
+        width: 150,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           renderBalanceCell(row.maternity),
       },
       {
         title: formatLeaveType('SICK', t),
         key: 'sick',
-        width: 140,
+        width: 150,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           renderBalanceCell(row.sick),
       },
@@ -109,102 +188,21 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  function handleQuery(): void {
-    setAppliedSearch(search.trim());
-    resetPage();
-  }
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    Boolean(employeeId) ||
+    year !== currentYear;
 
   if (balancesQuery.isLoading && !balancesQuery.data) {
     return (
-      <div className="erp-pro-card">
-        <div className="flex justify-center p-12">
-          <Spin />
-        </div>
+      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+        <Spin />
       </div>
     );
   }
 
   return (
-    <>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-body">
-          <div className="erp-pro-filter-form">
-            <div className="erp-pro-filter-form-fields">
-              <div
-                className="erp-pro-filter-field"
-                style={{ minWidth: 200, flex: '1 1 200px' }}
-              >
-                <span className="erp-pro-filter-field-label">
-                  {t('common.search')}
-                </span>
-                <Input
-                  placeholder={t('hr.placeholder.searchEmployee')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onPressEnter={handleQuery}
-                  allowClear
-                  onClear={() => {
-                    setSearch('');
-                    setAppliedSearch('');
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('hr.table.employee')}
-                </span>
-                <Select
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder={t('hr.placeholder.employee')}
-                  style={{ width: '100%', minWidth: 180 }}
-                  options={(usersQuery.data?.data ?? []).map((user) => ({
-                    value: user.id,
-                    label: formatUserName(user),
-                  }))}
-                  value={employeeId}
-                  onChange={(value: string | undefined) => {
-                    setEmployeeId(value);
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field" style={{ minWidth: 120 }}>
-                <span className="erp-pro-filter-field-label">
-                  {t('hr.labels.year')}
-                </span>
-                <InputNumber
-                  min={2000}
-                  max={2100}
-                  value={year}
-                  onChange={(value) => {
-                    if (value != null) {
-                      setYear(value);
-                      resetPage();
-                    }
-                  }}
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-            <div className="erp-pro-filter-form-actions">
-              <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
-                {t('common.reset')}
-              </Button>
-              <Button
-                type="primary"
-                onClick={handleQuery}
-                style={{ borderRadius: 2 }}
-              >
-                {t('common.query')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-4">
       {balancesQuery.isError ? (
         <Alert
           type="error"
@@ -217,32 +215,190 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <h1
-            className="erp-pro-card-toolbar-title"
-            style={{ fontSize: 16, fontWeight: 600 }}
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {t('hr.tabs.leaveBalances')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          Track entitled, used, and remaining leave by employee for {year}.
+        </p>
+      </div>
+
+      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label="Employees"
+          value={totalCount}
+          color="teal"
+          icon={<UserOutlined />}
+        />
+        <StatCard
+          label="Year"
+          value={year}
+          color="blue"
+          icon={<CalendarOutlined />}
+        />
+        <StatCard
+          label="Low balance"
+          value={pageStats.lowBalance}
+          sub={
+            rows.length > 0
+              ? `≤ ${LOW_BALANCE_THRESHOLD} days on this page`
+              : undefined
+          }
+          color="amber"
+          icon={<WarningOutlined />}
+        />
+        <StatCard
+          label="With pending"
+          value={pageStats.withPending}
+          sub={
+            rows.length > 0 ? 'Annual leave on this page' : undefined
+          }
+          color="default"
+          icon={<ClockCircleOutlined />}
+        />
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input.Search
+            placeholder={t('hr.placeholder.searchEmployee')}
+            className="w-72"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={(value) => {
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder={t('hr.placeholder.employee')}
+            className="w-48"
+            options={(usersQuery.data?.data ?? []).map((user) => ({
+              value: user.id,
+              label: formatUserName(user),
+            }))}
+            value={employeeId}
+            onChange={(value: string | undefined) => {
+              setEmployeeId(value);
+              resetPage();
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <span
+              className="text-sm whitespace-nowrap"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {t('hr.labels.year')}
+            </span>
+            <InputNumber
+              min={2000}
+              max={2100}
+              value={year}
+              onChange={(value) => {
+                if (value != null) {
+                  setYear(value);
+                  resetPage();
+                }
+              }}
+              className="w-28"
+              style={{ borderRadius: 0 }}
+            />
+          </div>
+          <Button
+            onClick={handleResetFilters}
+            disabled={!hasFilters}
+            style={{ borderRadius: 0 }}
           >
-            {t('hr.tabs.leaveBalances')}
-          </h1>
+            {t('common.reset')}
+          </Button>
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={balancesQuery.isFetching && !balancesQuery.isLoading}
+              onClick={() => void balancesQuery.refetch()}
+              aria-label={t('common.refresh')}
+              style={{ borderRadius: 0 }}
+            />
+          </Tooltip>
         </div>
-        <div className="erp-pro-table-card-body">
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CalendarOutlined style={{ color: tokens.colorPrimary }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {t('hr.tabs.leaveBalances')}
+            </h3>
+            <span
+              className="text-xs"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {totalCount}{' '}
+              {totalCount === 1 ? 'employee' : 'employees'} · {year}
+            </span>
+          </div>
+        </div>
+
+        <div className="px-0">
           <DataTable<EmployeeLeaveBalanceSummary>
             rowKey="employeeId"
             className="erp-pro-table"
-            size="middle"
+            size="small"
             columns={columns}
             dataSource={rows}
-            scroll={{ x: 900 }}
+            scroll={false}
             locale={{
               emptyText: (
-                <TableEmptyState title={t('hr.empty.noLeaveBalances')} />
+                <TableEmptyState
+                  icon={<CalendarOutlined />}
+                  title={t('hr.empty.noLeaveBalances')}
+                  action={
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: handleResetFilters,
+                        }
+                      : undefined
+                  }
+                />
               ),
             }}
-            pagination={bindMeta(meta)}
+            pagination={
+              meta
+                ? {
+                    ...bindMeta(meta),
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }
+                : false
+            }
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }

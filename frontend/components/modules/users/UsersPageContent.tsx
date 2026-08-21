@@ -191,7 +191,7 @@ export default function UsersPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
-  const { params, bindMeta, resetPage } = useTablePagination(50);
+  const { params, bindMeta, resetPage } = useTablePagination(10);
   const [exportingUsers, setExportingUsers] = useState(false);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -747,7 +747,7 @@ export default function UsersPageContent(): React.ReactNode {
             onChange={handleTableChange}
             onRow={(record) => ({
               onClick: () => router.push(`/users/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4] ',
             })}
             locale={{
               emptyText: (

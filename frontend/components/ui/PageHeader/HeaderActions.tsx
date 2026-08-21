@@ -1,18 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Avatar, Dropdown } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
 import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
+import { useLogout } from '@/lib/query/auth';
 import { useCurrentUser, useMyProfilePhotoUrl } from '@/lib/query/profile';
+import { signOutLocally } from '@/lib/auth/sign-out-locally';
 import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Notifications bell and signed-in user menu (profile + display preferences).
+ * Notifications bell and signed-in user menu (profile + logout + display preferences).
  */
 export default function HeaderActions({
   compact = false,
@@ -20,21 +23,33 @@ export default function HeaderActions({
   compact?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
+  const logout = useLogout();
   const user = useAuthStore((state) => state.user);
   const { data: profile, isLoading: profileLoading } = useCurrentUser();
   const sessionProfile =
     profile && user && profile.id === user.id ? profile : undefined;
-  const photoQuery = useMyProfilePhotoUrl(Boolean(sessionProfile?.photoDocumentId));
+  const photoQuery = useMyProfilePhotoUrl(
+    Boolean(sessionProfile?.photoDocumentId),
+  );
 
-  const displayName = user
-    ? formatUserName(user)
-    : t('common.defaultUser');
+  const displayName = user ? formatUserName(user) : t('common.defaultUser');
   const avatarInitial = user?.firstName?.charAt(0)?.toUpperCase() ?? 'U';
   const roleName = sessionProfile
     ? pickTopLevelRoleName(sessionProfile.roles, t('common.defaultUser'))
     : profileLoading
       ? '…'
       : t('common.defaultUser');
+
+  async function handleLogout(): Promise<void> {
+    try {
+      await logout.mutateAsync();
+    } catch {
+      // swallowed; cleared below
+    }
+    signOutLocally();
+    router.replace('/login');
+  }
 
   const profileTrigger = (
     <button
@@ -66,13 +81,13 @@ export default function HeaderActions({
         ].join(' ')}
       >
         <p
-          className="font-medium leading-[1.4] m-0"
+          className="m-0 font-medium leading-[1.4]"
           style={{ color: tokens.colorTextPrimary }}
         >
           {displayName}
         </p>
         <p
-          className="text-[10px] font-normal leading-[1.4] m-0"
+          className="m-0 text-[10px] font-normal leading-[1.4]"
           style={{ color: tokens.colorTextTertiary }}
         >
           {roleName}
@@ -97,15 +112,15 @@ export default function HeaderActions({
             className="min-w-[240px] rounded-lg border border-[rgba(0,0,0,0.08)] bg-white py-1 shadow-lg"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="px-3 py-2.5 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-2.5">
               <p
-                className="text-sm font-medium m-0 truncate"
+                className="m-0 truncate text-sm font-medium"
                 style={{ color: tokens.colorTextPrimary }}
               >
                 {displayName}
               </p>
               <p
-                className="text-xs m-0 mt-0.5 truncate"
+                className="m-0 mt-0.5 truncate text-xs"
                 style={{ color: tokens.colorTextTertiary }}
               >
                 {roleName}
@@ -118,20 +133,35 @@ export default function HeaderActions({
               style={{ color: tokens.colorTextPrimary }}
             >
               <UserOutlined />
-              {t('common.openProfile')}
+              {t('nav.profile')}
             </Link>
 
             <div className="mx-2 my-1 border-t border-[rgba(0,0,0,0.06)]" />
 
             <div className="px-3 py-2">
               <p
-                className="text-xs font-medium uppercase tracking-wide m-0 mb-2"
+                className="m-0 mb-2 text-xs font-medium uppercase tracking-wide"
                 style={{ color: tokens.colorTextTertiary }}
               >
                 {t('common.fontSize')}
               </p>
-              <FontSizeControl />
+              <div className="flex justify-center">
+                  <FontSizeControl compact={compact}/>
+              </div>
             </div>
+
+            <div className="mx-2 my-1 border-t border-[rgba(0,0,0,0.06)]" />
+
+            <button
+              type="button"
+              disabled={logout.isPending}
+              onClick={() => void handleLogout()}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--color-surface-secondary)] disabled:opacity-60"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              <LogoutOutlined />
+              {logout.isPending ? t('nav.signingOut') : t('nav.logout')}
+            </button>
           </div>
         )}
       >
