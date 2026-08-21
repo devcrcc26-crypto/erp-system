@@ -1,18 +1,28 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Alert, Button, Descriptions, Spin } from 'antd';
-import { Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { Alert, Button, Descriptions, Space, Spin } from 'antd';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  SectionCard,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeavePolicyRule } from '@/lib/api/leave-policy.types';
-import { useLeavePolicy } from '@/lib/query/leave-policy';
+import {
+  useDeleteLeavePolicy,
+  useLeavePolicy,
+} from '@/lib/query/leave-policy';
 import { formatLeaveType } from '@/lib/utils/leave-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { tokens } from '@/lib/theme/tokens';
 
 const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
 
@@ -33,34 +43,32 @@ interface LeavePolicyDetailPageContentProps {
 }
 
 /**
- * Read-only leave policy detail with rules breakdown.
+ * Read-only leave policy detail — chrome aligned with employee detail.
  */
 export default function LeavePolicyDetailPageContent({
   policyId,
 }: LeavePolicyDetailPageContentProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const policyQuery = useLeavePolicy(policyId, canViewHr);
+  const deleteMutation = useDeleteLeavePolicy();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const policy = policyQuery.data;
 
-  const headerExtra = useMemo(() => {
-    if (!policy) {
-      return null;
-    }
-    return (
-      <Button
-        type="primary"
-        icon={<Pencil size={14} />}
-        onClick={() => router.push(`/hr/leave-policy/${policy.id}/edit`)}
-        style={{ borderRadius: 2 }}
-      >
-        {t('common.update')}
-      </Button>
-    );
-  }, [policy, router, t]);
+  useSetHeaderExtra(null);
 
-  useSetHeaderExtra(headerExtra);
+  async function handleDelete(): Promise<void> {
+    try {
+      await deleteMutation.mutateAsync(policyId);
+      messageApi.success(t('hr.leavePolicy.deleted'));
+      setConfirmDelete(false);
+      router.push('/hr/leave-policy');
+    } catch (error: unknown) {
+      notifyApiError(error, t('hr.leavePolicy.deleteBlocked'), messageApi);
+    }
+  }
 
   if (!canViewHr) {
     return (
@@ -86,6 +94,11 @@ export default function LeavePolicyDetailPageContent({
             ? policyQuery.error.message
             : t('hr.leavePolicy.loadError')
         }
+        action={
+          <Button onClick={() => router.push('/hr/leave-policy')}>
+            {t('hr.leavePolicy.backToList')}
+          </Button>
+        }
       />
     );
   }
@@ -93,55 +106,95 @@ export default function LeavePolicyDetailPageContent({
   const rules = sortRules(policy.rules);
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <FormLayout variant="pro" dense title={t('hr.leavePolicy.detail')}>
-        <Descriptions
-          column={{ xs: 1, sm: 2 }}
-          size="small"
-          items={[
-            {
-              key: 'name',
-              label: t('hr.leavePolicy.name'),
-              children: policy.name,
-            },
-            {
-              key: 'status',
-              label: t('common.status'),
-              children: (
-                <StatusBadge
-                  label={
-                    policy.isActive ? t('common.active') : t('common.inactive')
-                  }
-                  variant={policy.isActive ? 'success' : 'default'}
-                />
-              ),
-            },
-            {
-              key: 'governedBy',
-              label: t('hr.leavePolicy.governedBy'),
-              children: policy.governedBy || '—',
-            },
-            {
-              key: 'employees',
-              label: t('hr.leavePolicy.employees'),
-              children: policy.employeeCount,
-            },
-            {
-              key: 'description',
-              label: t('hr.leavePolicy.description'),
-              span: 2,
-              children: policy.description || '—',
-            },
-          ]}
-        />
-      </FormLayout>
+    <div className="flex flex-col gap-4">
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t('hr.leavePolicy.deleteTitle')}
+        description={t('hr.leavePolicy.deleteDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmDelete(false)}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/leave-policy')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.leavePolicy.backToList')}
+        </Button>
+        <Space wrap className="ml-auto" size={8}>
+          <Button
+            type="primary"
+            icon={<Pencil size={14} />}
+            onClick={() => router.push(`/hr/leave-policy/${policy.id}/edit`)}
+            style={{ borderRadius: 0 }}
+          >
+            {t('common.update')}
+          </Button>
+          <Button
+            danger
+            icon={<Trash2 size={14} />}
+            onClick={() => setConfirmDelete(true)}
+            style={{ borderRadius: 0 }}
+          >
+            {t('common.delete')}
+          </Button>
+        </Space>
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <StatusBadge
+            label={
+              policy.isActive ? t('common.active') : t('common.inactive')
+            }
+            variant={policy.isActive ? 'success' : 'default'}
+          />
+        </div>
+        <h1
+          className="m-0 text-lg font-semibold"
+          style={{ color: tokens.colorTextPrimary }}
+        >
+          {policy.name}
+        </h1>
+        {policy.description ? (
+          <p
+            className="mb-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {policy.description}
+          </p>
+        ) : null}
+        <div className="mt-4">
+          <SummaryStrip
+            items={[
+              {
+                label: t('hr.leavePolicy.governedBy'),
+                value: policy.governedBy || '—',
+              },
+              {
+                label: t('hr.leavePolicy.employees'),
+                value: policy.employeeCount,
+              },
+              {
+                label: t('hr.leavePolicy.rules'),
+                value: policy.ruleCount,
+              },
+            ]}
+          />
+        </div>
+      </div>
 
       {rules.map((rule) => (
-        <FormLayout
+        <SectionCard
           key={rule.leaveType}
-          variant="pro"
-          dense
           title={formatLeaveType(rule.leaveType, t)}
+          bodyClassName="px-5 py-4"
         >
           <Descriptions
             column={{ xs: 1, sm: 2 }}
@@ -205,7 +258,7 @@ export default function LeavePolicyDetailPageContent({
                 : []),
             ]}
           />
-        </FormLayout>
+        </SectionCard>
       ))}
     </div>
   );

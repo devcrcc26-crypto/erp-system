@@ -83,28 +83,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
 
-  const headerExtra = useMemo(
-    () => (
-      <Space size={8}>
-        <Button
-          onClick={() => router.push('/hr/leave-requests')}
-          style={{ borderRadius: 2 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-        <Button
-          type="primary"
-          loading={submitMutation.isPending}
-          onClick={() => form.submit()}
-          style={{ borderRadius: 2 }}
-        >
-          {t('hr.buttons.submitRequest')}
-        </Button>
-      </Space>
-    ),
-    [form, router, submitMutation.isPending, t],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   useEffect(() => {
     form.setFieldsValue({ days: 1, leaveType: DEFAULT_LEAVE_TYPE });
@@ -211,22 +190,40 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {t('pages.hr.leave.new')}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {t('pages.hr.leave.listDescription')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-xl font-semibold tracking-tight"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
+          >
+            {t('pages.hr.leave.new')}
+          </h1>
+          <p
+            className="mb-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {t('pages.hr.leave.listDescription')}
+          </p>
+        </div>
+        <Space size={8} className="shrink-0" wrap>
+          <Button
+            onClick={() => router.push('/hr/leave-requests')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.cancel')}
+          </Button>
+          <Button
+            type="primary"
+            loading={submitMutation.isPending}
+            onClick={() => form.submit()}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.submitRequest')}
+          </Button>
+        </Space>
       </div>
 
       {submitMutation.isError ? (

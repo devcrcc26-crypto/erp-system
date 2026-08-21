@@ -1237,6 +1237,9 @@
       "refreshed": "Refreshed balances for {{count}} employees",
       "refreshFailed": "Failed to refresh leave balances",
       "formDescription": "Define annual, maternity, and sick leave rules. Progressive annual leave increases entitlement with years of service.",
+      "backToList": "Back to leave policies",
+      "policyCount": "{{count}} policies",
+      "policyCountOne": "1 policy",
       "steps": {
         "details": "Policy details",
         "leaveRules": "Leave rules"

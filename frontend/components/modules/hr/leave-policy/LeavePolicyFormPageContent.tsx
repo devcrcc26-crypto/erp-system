@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Spin } from 'antd';
+import { Alert, Button, Space, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
@@ -93,30 +93,51 @@ export default function LeavePolicyFormPageContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {isEdit
-            ? t('pages.hr.leavePolicy.edit')
-            : t('hr.leavePolicy.new')}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {t('hr.leavePolicy.formDescription')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-xl font-semibold tracking-tight"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
+          >
+            {isEdit
+              ? t('pages.hr.leavePolicy.edit')
+              : t('hr.leavePolicy.new')}
+          </h1>
+          <p
+            className="mb-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {t('hr.leavePolicy.formDescription')}
+          </p>
+        </div>
+        <Space size={8} className="shrink-0" wrap>
+          <Button
+            onClick={() => router.push('/hr/leave-policy')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            form="leave-policy-form"
+            loading={saving}
+            style={{ borderRadius: 0 }}
+          >
+            {t('common.save')}
+          </Button>
+        </Space>
       </div>
       <LeavePolicyForm
         policy={policyQuery.data}
         isSubmitting={saving}
         submitLabel={t('common.save')}
         onSubmit={handleSubmit}
+        formId="leave-policy-form"
+        showFooterActions={false}
       />
     </div>
   );

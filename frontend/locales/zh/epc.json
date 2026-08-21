@@ -1236,6 +1236,9 @@
       "refreshed": "已为 {{count}} 名员工刷新余额",
       "refreshFailed": "刷新假期余额失败",
       "formDescription": "配置年假、产假与病假规则。累进年假会随司龄增加额度。",
+      "backToList": "返回请假政策",
+      "policyCount": "{{count}} 项政策",
+      "policyCountOne": "1 项政策",
       "steps": {
         "details": "政策详情",
         "leaveRules": "假期规则"

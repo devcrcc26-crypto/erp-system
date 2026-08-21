@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Skeleton, Tag } from 'antd';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import {
@@ -183,16 +183,18 @@ export default function LeaveRequestDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => router.push('/hr/leave-requests')}
-        className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] self-start transition-colors"
-      >
-        <ArrowLeft size={14} />
-        <span>Leave Requests</span>
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/leave-requests')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.backToList')}
+        </Button>
+      </div>
 
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white overflow-hidden">
         <div className="px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -220,13 +222,15 @@ export default function LeaveRequestDetailPageContent({
               ) : null}
               {canEdit ? (
                 <Button
+                  type="primary"
                   size="small"
+                  icon={<Pencil size={14} />}
                   onClick={() =>
                     router.push(`/hr/leave-requests/${requestId}/edit`)
                   }
                   style={{ borderRadius: 0 }}
                 >
-                  {t('hr.buttons.editLeaveRequest')}
+                  {t('common.update')}
                 </Button>
               ) : null}
               {canCancel ? (
@@ -243,10 +247,11 @@ export default function LeaveRequestDetailPageContent({
                 <Button
                   danger
                   size="small"
+                  icon={<Trash2 size={14} />}
                   onClick={() => setConfirmDelete(true)}
                   style={{ borderRadius: 0 }}
                 >
-                  {t('hr.buttons.deleteLeaveRequest')}
+                  {t('common.delete')}
                 </Button>
               ) : null}
             </div>

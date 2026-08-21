@@ -1,11 +1,31 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Select, Space, Spin } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Tooltip,
+  type MenuProps,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { FileText, Pencil, Trash2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -27,7 +47,7 @@ import { filterLeavePolicies } from '@/lib/utils/leave-policy-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
- * HR leave policy configuration list with search and filters.
+ * HR leave policy list — layout aligned with Users page.
  */
 export default function LeavePolicyListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -37,7 +57,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const listQuery = useLeavePolicyList(canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
   const refreshMutation = useRefreshLeaveBalances();
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -57,15 +77,27 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     [listQuery.data, appliedSearch, activeFilter, progressiveFilter],
   );
 
+  const stats = useMemo(() => {
+    const all = listQuery.data ?? [];
+    return {
+      total: all.length,
+      active: all.filter((p) => p.isActive).length,
+      inactive: all.filter((p) => !p.isActive).length,
+      progressive: all.filter((p) =>
+        p.rules.some((r) => r.leaveType === 'ANNUAL' && r.isProgressive),
+      ).length,
+    };
+  }, [listQuery.data]);
+
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
-    const limit = params.limit ?? 20;
+    const limit = params.limit ?? 10;
     const page = params.page ?? 1;
     return {
       total,
       page,
       limit,
-      pages: Math.max(1, Math.ceil(total / limit)),
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
     };
   }, [filtered.length, params.limit, params.page]);
 
@@ -83,11 +115,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       messageApi.success(t('hr.leavePolicy.deleted'));
       setDeleteId(null);
     } catch (error: unknown) {
-      notifyApiError(
-        error,
-        t('hr.leavePolicy.deleteBlocked'),
-        messageApi,
-      );
+      notifyApiError(error, t('hr.leavePolicy.deleteBlocked'), messageApi);
     }
   }
 
@@ -112,9 +140,22 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  function handleQuery(): void {
-    setAppliedSearch(search.trim());
-    resetPage();
+  function buildActionMenu(row: LeavePolicy): MenuProps['items'] {
+    return [
+      {
+        key: 'update',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () => router.push(`/hr/leave-policy/${row.id}/edit`),
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeleteId(row.id),
+      },
+    ];
   }
 
   const columns: ColumnsType<LeavePolicy> = useMemo(
@@ -124,20 +165,22 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         dataIndex: 'name',
         key: 'name',
         render: (_: unknown, row: LeavePolicy) => (
-          <Button
-            type="link"
-            className="!h-auto !justify-start !px-0 !py-0 font-medium"
-            style={{
-              borderRadius: 0,
-              height: 'auto',
-              paddingInline: 0,
-              textAlign: 'left',
-              color: tokens.colorPrimary,
-            }}
-            onClick={() => router.push(`/hr/leave-policy/${row.id}`)}
-          >
-            {row.name}
-          </Button>
+          <div className="min-w-0 py-0.5">
+            <p
+              className="m-0 text-sm font-medium"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {row.name}
+            </p>
+            {row.description ? (
+              <p
+                className="m-0 truncate text-xs"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {row.description}
+              </p>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -162,10 +205,10 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         align: 'right',
       },
       {
-        title: t('hr.leavePolicy.isActive'),
+        title: t('common.status'),
         dataIndex: 'isActive',
         key: 'isActive',
-        width: 100,
+        width: 110,
         render: (value: boolean) => (
           <StatusBadge
             label={value ? t('common.active') : t('common.inactive')}
@@ -174,27 +217,28 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('common.actions'),
+        title: '',
         key: 'actions',
-        width: 100,
+        width: 56,
         render: (_: unknown, row: LeavePolicy) => (
-          <Space size={4}>
-            <Button
-              type="text"
-              size="small"
-              icon={<Pencil size={14} />}
-              onClick={() => router.push(`/hr/leave-policy/${row.id}/edit`)}
-              aria-label={t('common.update')}
-            />
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<Trash2 size={14} />}
-              onClick={() => setDeleteId(row.id)}
-              aria-label={t('common.delete')}
-            />
-          </Space>
+          <div
+            className="flex items-center justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Dropdown
+              menu={{ items: buildActionMenu(row) }}
+              trigger={['click']}
+            >
+              <Button
+                size="small"
+                type="text"
+                icon={<MoreOutlined />}
+                aria-label={t('common.actions')}
+                style={{ borderRadius: 0 }}
+              />
+            </Dropdown>
+          </div>
         ),
       },
     ],
@@ -209,12 +253,8 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page">
-        <div className="erp-pro-card">
-          <div className="flex justify-center p-12">
-            <Spin />
-          </div>
-        </div>
+      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+        <Spin />
       </div>
     );
   }
@@ -225,12 +265,11 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     progressiveFilter !== undefined;
 
   return (
-    <div className="erp-pro-list-page">
+    <div className="flex flex-col gap-4">
       {listQuery.isError ? (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
@@ -250,128 +289,173 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         onCancel={() => setDeleteId(null)}
       />
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-body">
-          <div className="erp-pro-filter-form">
-            <div className="erp-pro-filter-form-fields">
-              <div
-                className="erp-pro-filter-field"
-                style={{ minWidth: 220, flex: '1 1 220px' }}
-              >
-                <span className="erp-pro-filter-field-label">
-                  {t('common.search')}
-                </span>
-                <Input
-                  placeholder={t('hr.leavePolicy.searchPlaceholder')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onPressEnter={handleQuery}
-                  allowClear
-                  onClear={() => {
-                    setSearch('');
-                    setAppliedSearch('');
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('common.status')}
-                </span>
-                <Select
-                  allowClear
-                  placeholder={t('hr.leavePolicy.filterStatus')}
-                  style={{ width: '100%', minWidth: 140 }}
-                  value={activeFilter}
-                  onChange={(value?: boolean) => {
-                    setActiveFilter(value);
-                    resetPage();
-                  }}
-                  options={[
-                    { value: true, label: t('common.active') },
-                    { value: false, label: t('common.inactive') },
-                  ]}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('hr.leavePolicy.isProgressive')}
-                </span>
-                <Select
-                  allowClear
-                  placeholder={t('hr.leavePolicy.filterProgressive')}
-                  style={{ width: '100%', minWidth: 140 }}
-                  value={progressiveFilter}
-                  onChange={(value?: boolean) => {
-                    setProgressiveFilter(value);
-                    resetPage();
-                  }}
-                  options={[
-                    { value: true, label: t('common.yes') },
-                    { value: false, label: t('common.no') },
-                  ]}
-                />
-              </div>
-            </div>
-            <div className="erp-pro-filter-form-actions">
-              <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
-                {t('common.reset')}
-              </Button>
-              {/* <Button
-                type="primary"
-                onClick={handleQuery}
-                style={{ borderRadius: 2 }}
-              >
-                {t('common.query')}
-              </Button> */}
-            </div>
-          </div>
-        </div>
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {t('hr.leavePolicy.listTitle')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {t('hr.leavePolicy.formDescription')}
+        </p>
       </div>
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <h1
-            className="erp-pro-card-toolbar-title"
-            style={{ fontSize: 16, fontWeight: 600 }}
+      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label="Total"
+          value={stats.total}
+          color="teal"
+          icon={<FileTextOutlined />}
+        />
+        <StatCard
+          label="Active"
+          value={stats.active}
+          color="green"
+          icon={<CheckCircleOutlined />}
+        />
+        <StatCard
+          label="Inactive"
+          value={stats.inactive}
+          color="default"
+          icon={<StopOutlined />}
+        />
+        <StatCard
+          label="Progressive"
+          value={stats.progressive}
+          color="blue"
+          icon={<ReloadOutlined />}
+        />
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input.Search
+            placeholder={t('hr.leavePolicy.searchPlaceholder')}
+            className="w-72"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={(value) => {
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <Select
+            allowClear
+            placeholder={t('hr.leavePolicy.filterStatus')}
+            className="w-36"
+            value={activeFilter}
+            onChange={(value?: boolean) => {
+              setActiveFilter(value);
+              resetPage();
+            }}
+            options={[
+              { value: true, label: t('common.active') },
+              { value: false, label: t('common.inactive') },
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder={t('hr.leavePolicy.filterProgressive')}
+            className="w-40"
+            value={progressiveFilter}
+            onChange={(value?: boolean) => {
+              setProgressiveFilter(value);
+              resetPage();
+            }}
+            options={[
+              { value: true, label: t('common.yes') },
+              { value: false, label: t('common.no') },
+            ]}
+          />
+          <Button
+            onClick={handleResetFilters}
+            disabled={!hasFilters}
+            style={{ borderRadius: 0 }}
           >
-            {t('hr.leavePolicy.listTitle')}
-          </h1>
-          <Space wrap size={8}>
-            {/* <Button
-              icon={<ReloadOutlined />}
-              loading={refreshMutation.isPending}
-              onClick={() => void handleRefreshBalances()}
-              style={{ borderRadius: 2 }}
-            >
-              {t('hr.leavePolicy.refreshBalances')}
-            </Button> */}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/hr/leave-policy/new')}
-              style={{ borderRadius: 2 }}
-            >
-              {t('hr.leavePolicy.new')}
-            </Button>
+            {t('common.reset')}
+          </Button>
+          <Tooltip title={t('common.refresh')}>
             <Button
               type="text"
               icon={<ReloadOutlined />}
               loading={listQuery.isFetching && !listQuery.isLoading}
               onClick={() => void listQuery.refetch()}
               aria-label={t('common.refresh')}
-              style={{ borderRadius: 2 }}
+              style={{ borderRadius: 0 }}
             />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <FileTextOutlined style={{ color: tokens.colorPrimary }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {t('hr.leavePolicy.listTitle')}
+            </h3>
+            <span
+              className="text-xs"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {meta.total === 1
+                ? t('hr.leavePolicy.policyCountOne')
+                : t('hr.leavePolicy.policyCount', { count: meta.total })}
+            </span>
+          </div>
+          <Space wrap size={8}>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={refreshMutation.isPending}
+              onClick={() => void handleRefreshBalances()}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.leavePolicy.refreshBalances')}
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/hr/leave-policy/new')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.leavePolicy.new')}
+            </Button>
           </Space>
         </div>
-        <div className="erp-pro-table-card-body">
+
+        <div className="px-0">
           <DataTable<LeavePolicy>
             rowKey="id"
             className="erp-pro-table"
-            size="middle"
+            size="small"
             columns={columns}
             dataSource={pageRows}
-            pagination={bindMeta(meta)}
+            scroll={false}
+            onRow={(record) => ({
+              onClick: () => router.push(`/hr/leave-policy/${record.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
             locale={{
               emptyText: (
                 <TableEmptyState

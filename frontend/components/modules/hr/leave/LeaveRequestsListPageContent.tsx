@@ -5,12 +5,14 @@ import {
   Alert,
   Button,
   DatePicker,
+  Dropdown,
   Input,
   Select,
   Space,
   Spin,
   Tabs,
   Tooltip,
+  type MenuProps,
 } from 'antd';
 import {
   CalendarOutlined,
@@ -19,6 +21,7 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   WalletOutlined,
@@ -280,43 +283,42 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             {
               title: '',
               key: 'actions',
-              width: 88,
+              width: 56,
               render: (_: unknown, record: LeaveRequestListItem) => {
                 const canEditRow =
                   record.status === 'DRAFT' || record.status === 'RETURNED';
+                const items: MenuProps['items'] = [];
+                if (canEditRow) {
+                  items.push({
+                    key: 'update',
+                    icon: <EditOutlined />,
+                    label: t('common.update'),
+                    onClick: () =>
+                      router.push(`/hr/leave-requests/${record.id}/edit`),
+                  });
+                }
+                items.push({
+                  key: 'delete',
+                  icon: <DeleteOutlined />,
+                  label: t('common.delete'),
+                  danger: true,
+                  onClick: () => setDeletingRequest(record),
+                });
                 return (
                   <div
-                    className="flex items-center gap-1"
+                    className="flex items-center justify-end"
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    {canEditRow ? (
-                      <Tooltip title={t('common.update')}>
-                        <Button
-                          size="small"
-                          type="text"
-                          icon={<EditOutlined />}
-                          onClick={() =>
-                            router.push(
-                              `/hr/leave-requests/${record.id}/edit`,
-                            )
-                          }
-                          aria-label={t('common.update')}
-                          style={{ borderRadius: 0 }}
-                        />
-                      </Tooltip>
-                    ) : null}
-                    <Tooltip title={t('common.delete')}>
+                    <Dropdown menu={{ items }} trigger={['click']}>
                       <Button
                         size="small"
                         type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => setDeletingRequest(record)}
-                        aria-label={t('common.delete')}
+                        icon={<MoreOutlined />}
+                        aria-label={t('common.actions')}
                         style={{ borderRadius: 0 }}
                       />
-                    </Tooltip>
+                    </Dropdown>
                   </div>
                 );
               },

@@ -453,11 +453,19 @@ export default function UsersPageContent(): React.ReactNode {
 
   function buildActionMenu(user: User): MenuProps['items'] {
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
-    const items: MenuProps['items'] = [];
+    const items: MenuProps['items'] = [
+      {
+        key: 'update',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () => router.push(`/users/${user.id}/edit`),
+      },
+    ];
 
     if (showResend) {
       items.push({
         key: 'resend',
+        icon: <ReloadOutlined />,
         label: t('users.resendVerification'),
         onClick: () => void handleResendVerification(user),
       });
@@ -465,6 +473,7 @@ export default function UsersPageContent(): React.ReactNode {
 
     items.push({
       key: 'delete',
+      icon: <UserDeleteOutlined />,
       label: t('common.delete'),
       danger: true,
       onClick: () => setDeletingUser(user),
@@ -924,23 +933,13 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: '',
                 key: 'actions',
-                width: 80,
+                width: 56,
                 render: (_, record) => (
                   <div
-                    className="flex items-center gap-1"
+                    className="flex items-center justify-end"
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    <Tooltip title={t('common.update')}>
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<EditOutlined />}
-                        onClick={() => router.push(`/users/${record.id}/edit`)}
-                        aria-label={t('common.update')}
-                        style={{ borderRadius: 0 }}
-                      />
-                    </Tooltip>
                     <Dropdown
                       menu={{ items: buildActionMenu(record) }}
                       trigger={['click']}

@@ -115,29 +115,7 @@ export default function LeaveRequestEditPageContent({
     }
   }, [dateRange, form]);
 
-  const headerExtra = useMemo(
-    () => (
-      <Space size={8}>
-        <Button
-          onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-        <Button
-          type="primary"
-          loading={updateMutation.isPending}
-          disabled={!canEdit}
-          onClick={() => form.submit()}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.saveLeaveRequest')}
-        </Button>
-      </Space>
-    ),
-    [canEdit, form, requestId, router, t, updateMutation.isPending],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   async function handleSubmit(values: LeaveFormValues): Promise<void> {
     try {
@@ -199,22 +177,41 @@ export default function LeaveRequestEditPageContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {t('pages.hr.leave.edit')}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {request.requestNumber}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-xl font-semibold tracking-tight"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
+          >
+            {t('pages.hr.leave.edit')}
+          </h1>
+          <p
+            className="mb-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {request.requestNumber}
+          </p>
+        </div>
+        <Space size={8} className="shrink-0" wrap>
+          <Button
+            onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.cancel')}
+          </Button>
+          <Button
+            type="primary"
+            loading={updateMutation.isPending}
+            disabled={!canEdit}
+            onClick={() => form.submit()}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.saveLeaveRequest')}
+          </Button>
+        </Space>
       </div>
 
       {updateMutation.isError ? (

@@ -3,13 +3,13 @@
 import { useEffect, useMemo } from 'react';
 import {
   Alert,
+  Button,
   Form,
   Input,
   InputNumber,
   Switch,
 } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   LeavePolicy,
@@ -38,8 +38,6 @@ export interface LeavePolicyFormValues {
 }
 
 const PREVIEW_YEARS = 3;
-
-const DETAIL_FIELDS = ['name', 'governedBy', 'description', 'isActive'] as const;
 
 function defaultValues(): LeavePolicyFormValues {
   return {
@@ -130,16 +128,20 @@ interface LeavePolicyFormProps {
   isSubmitting?: boolean;
   submitLabel: string;
   onSubmit: (values: LeavePolicyFormValues) => void | Promise<void>;
+  formId?: string;
+  showFooterActions?: boolean;
 }
 
 /**
- * Leave policy create/edit stepper with policy details and leave rules.
+ * Leave policy create/edit — multi-section FormLayout (no stepper).
  */
 export default function LeavePolicyForm({
   policy,
   isSubmitting = false,
   submitLabel,
   onSubmit,
+  formId = 'leave-policy-form',
+  showFooterActions = false,
 }: LeavePolicyFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const [form] = Form.useForm<LeavePolicyFormValues>();
@@ -181,238 +183,168 @@ export default function LeavePolicyForm({
     annualMinimumServiceMonths,
   ]);
 
-  async function validateFields(
-    names: readonly string[],
-  ): Promise<boolean> {
-    try {
-      await form.validateFields([...names]);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function resetForm(): void {
-    form.setFieldsValue(policy ? valuesFromPolicy(policy) : defaultValues());
-  }
-
-  async function validateRulesStep(): Promise<boolean> {
-    const progressive = form.getFieldValue('annualIsProgressive');
-    const fields: string[] = [
-      'annualBaseDays',
-      'annualMinimumServiceMonths',
-      'annualIsProgressive',
-      'annualMaxCarryForwardDays',
-      'maternityBaseDays',
-      'maternityMinimumServiceMonths',
-      'sickBaseDays',
-      'sickRequiresReceipt',
-    ];
-    if (progressive) {
-      fields.splice(
-        3,
-        0,
-        'annualIncrementDays',
-        'annualIncrementEveryYears',
-        'annualMaxDaysCap',
-      );
-    }
-    return validateFields(fields);
-  }
-
-  async function handleSubmit(): Promise<void> {
-    const detailsOk = await validateFields(DETAIL_FIELDS);
-    if (!detailsOk) {
-      return;
-    }
-    const rulesOk = await validateRulesStep();
-    if (!rulesOk) {
-      return;
-    }
-    const values = form.getFieldsValue(true) as LeavePolicyFormValues;
-    await onSubmit(values);
-  }
-
   function ruleTitle(leaveType: LeavePolicyLeaveType): string {
     return formatLeaveType(leaveType, t);
   }
 
-  const steps = useMemo(
-    () => [
-      {
-        title: t('hr.leavePolicy.steps.details'),
-        content: (
-          <FormLayout variant="pro" dense title={t('hr.leavePolicy.detail')}>
-            <div className="erp-form-grid-2">
-              <Form.Item
-                name="name"
-                label={t('hr.leavePolicy.name')}
-                rules={[{ required: true, message: t('common.required') }]}
-              >
-                <Input maxLength={200} />
-              </Form.Item>
-              <Form.Item
-                name="governedBy"
-                label={t('hr.leavePolicy.governedBy')}
-              >
-                <Input maxLength={500} />
-              </Form.Item>
-              <Form.Item
-                name="description"
-                label={t('hr.leavePolicy.description')}
-                className="md:col-span-2"
-              >
-                <Input.TextArea rows={2} maxLength={2000} showCount />
-              </Form.Item>
-              <Form.Item
-                name="isActive"
-                label={t('hr.leavePolicy.isActive')}
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </div>
-          </FormLayout>
-        ),
-        validate: () => validateFields(DETAIL_FIELDS),
-      },
-      {
-        title: t('hr.leavePolicy.steps.leaveRules'),
-        content: (
-          <div className="flex flex-col gap-3">
-            <FormLayout variant="pro" dense title={ruleTitle('ANNUAL')}>
-              <div className="erp-form-grid-2">
-                <Form.Item
-                  name="annualBaseDays"
-                  label={t('hr.leavePolicy.baseDays')}
-                  rules={[{ required: true, message: t('common.required') }]}
-                >
-                  <InputNumber className="w-full" min={0} step={0.5} />
-                </Form.Item>
-                <Form.Item
-                  name="annualMinimumServiceMonths"
-                  label={t('hr.leavePolicy.minimumServiceMonths')}
-                >
-                  <InputNumber className="w-full" min={0} step={1} />
-                </Form.Item>
-                <Form.Item
-                  name="annualIsProgressive"
-                  label={t('hr.leavePolicy.isProgressive')}
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-                <Form.Item
-                  name="annualMaxCarryForwardDays"
-                  label={t('hr.leavePolicy.maxCarryForwardDays')}
-                >
-                  <InputNumber className="w-full" min={0} step={0.5} />
-                </Form.Item>
-                {annualIsProgressive ? (
-                  <>
-                    <Form.Item
-                      name="annualIncrementDays"
-                      label={t('hr.leavePolicy.incrementDays')}
-                      rules={[
-                        { required: true, message: t('common.required') },
-                      ]}
-                    >
-                      <InputNumber className="w-full" min={0} step={0.5} />
-                    </Form.Item>
-                    <Form.Item
-                      name="annualIncrementEveryYears"
-                      label={t('hr.leavePolicy.incrementEveryYears')}
-                      rules={[
-                        { required: true, message: t('common.required') },
-                      ]}
-                    >
-                      <InputNumber className="w-full" min={1} step={1} />
-                    </Form.Item>
-                    <Form.Item
-                      name="annualMaxDaysCap"
-                      label={t('hr.leavePolicy.maxDaysCap')}
-                      className="md:col-span-2"
-                    >
-                      <InputNumber className="w-full" min={0} step={0.5} />
-                    </Form.Item>
-                  </>
-                ) : null}
-              </div>
-              <Alert
-                className="mt-12"
-                style={{marginTop: '12px'}}
-                type="info"
-                showIcon
-                title={t('hr.leavePolicy.preview')}
-                description={t('hr.leavePolicy.previewExample', {
-                  years: PREVIEW_YEARS,
-                  days: previewDays,
-                  base: annualBaseDays ?? 0,
-                })}
-              />
-            </FormLayout>
-
-            <FormLayout variant="pro" dense title={ruleTitle('MATERNITY')}>
-              <div className="erp-form-grid-2">
-                <Form.Item
-                  name="maternityBaseDays"
-                  label={t('hr.leavePolicy.baseDays')}
-                  rules={[{ required: true, message: t('common.required') }]}
-                >
-                  <InputNumber className="w-full" min={0} step={0.5} />
-                </Form.Item>
-                <Form.Item
-                  name="maternityMinimumServiceMonths"
-                  label={t('hr.leavePolicy.minimumServiceMonths')}
-                >
-                  <InputNumber className="w-full" min={0} step={1} />
-                </Form.Item>
-              </div>
-            </FormLayout>
-
-            <FormLayout variant="pro" dense title={ruleTitle('SICK')}>
-              <div className="erp-form-grid-2">
-                <Form.Item
-                  name="sickBaseDays"
-                  label={t('hr.leavePolicy.baseDays')}
-                  rules={[{ required: true, message: t('common.required') }]}
-                >
-                  <InputNumber className="w-full" min={0} step={0.5} />
-                </Form.Item>
-                <Form.Item
-                  name="sickRequiresReceipt"
-                  label={t('hr.leavePolicy.requiresReceipt')}
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </div>
-            </FormLayout>
-          </div>
-        ),
-        validate: () => validateRulesStep(),
-      },
-    ],
-    [t, annualIsProgressive, annualBaseDays, previewDays],
-  );
+  async function handleFinish(values: LeavePolicyFormValues): Promise<void> {
+    await onSubmit(values);
+  }
 
   return (
     <Form<LeavePolicyFormValues>
+      id={formId}
       form={form}
       layout="vertical"
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 flex-1 flex-col gap-4"
       initialValues={defaultValues()}
+      onFinish={(values) => void handleFinish(values)}
     >
-      <StepperForm
-        steps={steps}
-        onSubmit={handleSubmit}
-        onReset={resetForm}
-        isSubmitting={isSubmitting}
-        contentVariant="sections"
-        compact
-        submitLabel={submitLabel}
-        resetLabel={t('hr.buttons.reset')}
-      />
+      <FormLayout variant="pro" dense title={t('hr.leavePolicy.detail')}>
+        <div className="erp-form-grid-2">
+          <Form.Item
+            name="name"
+            label={t('hr.leavePolicy.name')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item name="governedBy" label={t('hr.leavePolicy.governedBy')}>
+            <Input maxLength={500} />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label={t('hr.leavePolicy.description')}
+            className="md:col-span-2"
+          >
+            <Input.TextArea rows={2} maxLength={2000} showCount />
+          </Form.Item>
+          <Form.Item
+            name="isActive"
+            label={t('hr.leavePolicy.isActive')}
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        </div>
+      </FormLayout>
+
+      <FormLayout variant="pro" dense title={ruleTitle('ANNUAL')}>
+        <div className="erp-form-grid-2">
+          <Form.Item
+            name="annualBaseDays"
+            label={t('hr.leavePolicy.baseDays')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <InputNumber className="w-full" min={0} step={0.5} />
+          </Form.Item>
+          <Form.Item
+            name="annualMinimumServiceMonths"
+            label={t('hr.leavePolicy.minimumServiceMonths')}
+          >
+            <InputNumber className="w-full" min={0} step={1} />
+          </Form.Item>
+          <Form.Item
+            name="annualIsProgressive"
+            label={t('hr.leavePolicy.isProgressive')}
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+          <Form.Item
+            name="annualMaxCarryForwardDays"
+            label={t('hr.leavePolicy.maxCarryForwardDays')}
+          >
+            <InputNumber className="w-full" min={0} step={0.5} />
+          </Form.Item>
+          {annualIsProgressive ? (
+            <>
+              <Form.Item
+                name="annualIncrementDays"
+                label={t('hr.leavePolicy.incrementDays')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <InputNumber className="w-full" min={0} step={0.5} />
+              </Form.Item>
+              <Form.Item
+                name="annualIncrementEveryYears"
+                label={t('hr.leavePolicy.incrementEveryYears')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <InputNumber className="w-full" min={1} step={1} />
+              </Form.Item>
+              <Form.Item
+                name="annualMaxDaysCap"
+                label={t('hr.leavePolicy.maxDaysCap')}
+                className="md:col-span-2"
+              >
+                <InputNumber className="w-full" min={0} step={0.5} />
+              </Form.Item>
+            </>
+          ) : null}
+        </div>
+        <Alert
+          className="mt-3"
+          type="info"
+          showIcon
+          title={t('hr.leavePolicy.preview')}
+          description={t('hr.leavePolicy.previewExample', {
+            years: PREVIEW_YEARS,
+            days: previewDays,
+            base: annualBaseDays ?? 0,
+          })}
+        />
+      </FormLayout>
+
+      <FormLayout variant="pro" dense title={ruleTitle('MATERNITY')}>
+        <div className="erp-form-grid-2">
+          <Form.Item
+            name="maternityBaseDays"
+            label={t('hr.leavePolicy.baseDays')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <InputNumber className="w-full" min={0} step={0.5} />
+          </Form.Item>
+          <Form.Item
+            name="maternityMinimumServiceMonths"
+            label={t('hr.leavePolicy.minimumServiceMonths')}
+          >
+            <InputNumber className="w-full" min={0} step={1} />
+          </Form.Item>
+        </div>
+      </FormLayout>
+
+      <FormLayout variant="pro" dense title={ruleTitle('SICK')}>
+        <div className="erp-form-grid-2">
+          <Form.Item
+            name="sickBaseDays"
+            label={t('hr.leavePolicy.baseDays')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <InputNumber className="w-full" min={0} step={0.5} />
+          </Form.Item>
+          <Form.Item
+            name="sickRequiresReceipt"
+            label={t('hr.leavePolicy.requiresReceipt')}
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        </div>
+      </FormLayout>
+
+      {showFooterActions ? (
+        <div className="flex justify-end">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isSubmitting}
+            style={{ borderRadius: 0 }}
+          >
+            {submitLabel}
+          </Button>
+        </div>
+      ) : null}
     </Form>
   );
 }
