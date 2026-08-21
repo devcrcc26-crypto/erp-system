@@ -114,6 +114,7 @@ export interface UserProfile {
   preferredTimezone: string | null;
   preferredDateFormat: string | null;
   emailVerifiedAt: string | null;
+  photoDocumentId?: string | null;
   roles: ProfileRole[];
 }
 
@@ -200,6 +201,7 @@ export interface User {
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
   profileFolderId?: string | null;
+  photoDocumentId?: string | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;

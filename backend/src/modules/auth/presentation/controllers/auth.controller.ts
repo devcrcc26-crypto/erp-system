@@ -100,6 +100,18 @@ export class AuthController {
     });
   }
 
+  @Get('me/photo/download-url')
+  @ApiOperation({ summary: 'Get presigned URL for the current user profile photo' })
+  async getProfilePhotoDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.profileService.getProfilePhotoDownloadUrl({
+      userId: user.userId,
+      companyId: user.companyId,
+      sessionId: user.sessionId,
+    });
+  }
+
   @Patch('me')
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiResponse({ status: 200, type: ProfileResponseDto })

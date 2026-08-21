@@ -42,6 +42,7 @@ export const userKeys = {
   details: () => [...userKeys.all, 'detail'] as const,
   detail: (id: string) => [...userKeys.details(), id] as const,
   documents: (id: string) => [...userKeys.all, 'documents', id] as const,
+  photoUrl: (id: string) => [...userKeys.all, 'photo-url', id] as const,
 };
 
 function toQueryString(params: PaginationParams): string {
@@ -219,6 +220,67 @@ export function useDeleteUserDocument() {
       void queryClient.invalidateQueries({
         queryKey: userKeys.documents(variables.userId),
       });
+    },
+  });
+}
+
+/**
+ * Presigned profile photo URL when the user has photoDocumentId set.
+ */
+export function useUserPhotoUrl(
+  userId: string,
+  photoDocumentId: string | null | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: userKeys.photoUrl(userId),
+    queryFn: () =>
+      apiGet<{ url: string; expiresIn: number }>(
+        `/users/${userId}/photo/download-url`,
+      ),
+    enabled: Boolean(userId) && Boolean(photoDocumentId) && enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
+export function useUploadUserPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, file }: { userId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<User>(`/users/${userId}/photo`, formData);
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.detail(variables.userId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.photoUrl(variables.userId),
+      });
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
+export function useDeleteUserPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiDelete<MessageResponse>(`/users/${userId}/photo`),
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.detail(userId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.photoUrl(userId),
+      });
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 }

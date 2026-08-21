@@ -5,6 +5,7 @@ import { Alert, Button, Skeleton, Space, Tag } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
+import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
   MetaItem,
   SectionCard,
@@ -177,45 +178,57 @@ export default function EmployeeDetailPageContent({
         }}
       >
         <div className="px-5 py-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            {user.employeeId ? (
-              <>
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {user.employeeId}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>|</span>
-              </>
-            ) : null}
-            <StatusBadge
-              label={userStatusLabel(user, t)}
-              variant={userStatusVariant(user)}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <EmployeeProfilePhoto
+              userId={user.id}
+              photoDocumentId={user.photoDocumentId}
+              firstName={user.firstName}
+              lastName={user.lastName}
+              canEdit
+              size={88}
             />
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                {user.employeeId ? (
+                  <>
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: tokens.colorTextTertiary }}
+                    >
+                      {user.employeeId}
+                    </span>
+                    <span style={{ color: tokens.colorBorder }}>|</span>
+                  </>
+                ) : null}
+                <StatusBadge
+                  label={userStatusLabel(user, t)}
+                  variant={userStatusVariant(user)}
+                />
+              </div>
+              <h2
+                className="m-0 text-lg font-semibold leading-snug"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {fullName}
+              </h2>
+              {user.chineseName ? (
+                <p
+                  className="m-0 mt-1 text-sm"
+                  style={{ color: tokens.colorTextSecondary }}
+                >
+                  {user.chineseName}
+                </p>
+              ) : null}
+              <p
+                className="m-0 mt-1 text-sm"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {user.email ?? t('users.noEmailNoLogin')}
+                {user.position?.title ? ` · ${user.position.title}` : ''}
+                {user.department?.name ? ` · ${user.department.name}` : ''}
+              </p>
+            </div>
           </div>
-          <h2
-            className="m-0 text-lg font-semibold leading-snug"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {fullName}
-          </h2>
-          {user.chineseName ? (
-            <p
-              className="m-0 mt-1 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {user.chineseName}
-            </p>
-          ) : null}
-          <p
-            className="m-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {user.email ?? t('users.noEmailNoLogin')}
-            {user.position?.title ? ` · ${user.position.title}` : ''}
-            {user.department?.name ? ` · ${user.department.name}` : ''}
-          </p>
         </div>
       </div>
 

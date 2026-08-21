@@ -8,6 +8,7 @@ import {
 import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { DocumentService } from '../../../documents/application/services/document.service';
 import {
   AUTH_REPOSITORY,
   IAuthRepository,
@@ -35,6 +36,7 @@ export class ProfileService {
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly authMailService: AuthMailService,
+    private readonly documentService: DocumentService,
   ) {}
 
   /**
@@ -57,6 +59,22 @@ export class ProfileService {
     }
 
     return this.mapProfile(user);
+  }
+
+  /**
+   * Presigned download URL for the signed-in user's profile picture.
+   */
+  async getProfilePhotoDownloadUrl(
+    ctx: SessionContext,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
+      select: { photoDocumentId: true },
+    });
+    if (!user?.photoDocumentId) {
+      throw new NotFoundException('Profile photo not found');
+    }
+    return this.documentService.getDownloadUrl(ctx, user.photoDocumentId);
   }
 
   /**
@@ -228,6 +246,7 @@ export class ProfileService {
     preferredTimezone: string | null;
     preferredDateFormat: string | null;
     emailVerifiedAt: Date | null;
+    photoDocumentId: string | null;
     company: { legalName: string };
     userRoles: Array<{ role: { id: string; name: string } }>;
   }): ProfileResponseDto {
@@ -245,6 +264,7 @@ export class ProfileService {
       preferredTimezone: user.preferredTimezone,
       preferredDateFormat: user.preferredDateFormat,
       emailVerifiedAt: user.emailVerifiedAt,
+      photoDocumentId: user.photoDocumentId,
       roles: user.userRoles.map((assignment) => ({
         id: assignment.role.id,
         name: assignment.role.name,

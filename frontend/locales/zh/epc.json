@@ -786,6 +786,19 @@
     "deleteDocumentTitle": "删除文件？",
     "deleteDocumentDescription": "将从该员工档案中移除“{{name}}”。此操作不可撤销。",
     "noDocuments": "暂无员工档案文件",
+    "profilePhoto": "头像",
+    "uploadPhoto": "上传头像",
+    "changePhoto": "更换头像",
+    "removePhoto": "移除头像",
+    "photoHelp": "支持 JPEG、PNG、WebP 或 GIF，最大 5 MB。",
+    "photoInvalidType": "请选择 JPEG、PNG、WebP 或 GIF 图片。",
+    "photoTooLarge": "头像不能超过 5 MB。",
+    "photoUploaded": "头像已更新",
+    "photoUploadError": "上传头像失败",
+    "photoRemoved": "头像已移除",
+    "photoRemoveError": "移除头像失败",
+    "removePhotoTitle": "移除头像？",
+    "removePhotoDescription": "将从该员工档案中移除当前头像。",
     "steps": {
       "account": "账户与权限",
       "personal": "个人信息",
@@ -858,6 +871,7 @@
       "documentsHelp": "可选。员工创建后将上传所选文件。",
       "noDocumentsSelected": "未选择文件",
       "documentsCount": "准备上传 {{count}} 个文件",
+      "noPhotoSelected": "未选择头像",
       "noEmail": "无邮箱（仅记录）"
     },
     "import": {

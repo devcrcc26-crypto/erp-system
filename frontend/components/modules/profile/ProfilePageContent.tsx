@@ -17,6 +17,7 @@ import {
   useChangeEmail,
   useChangePassword,
   useCurrentUser,
+  useMyProfilePhotoUrl,
   useUpdateProfile,
 } from '@/lib/query/profile';
 import type { UserProfile } from '@/lib/api/types';
@@ -49,6 +50,7 @@ function ProfileSummaryCard({ profile }: { profile: UserProfile }): React.ReactN
   const { t } = useEpcTranslation();
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
   const roleNames = profile.roles.map((role) => role.name);
+  const photoQuery = useMyProfilePhotoUrl(Boolean(profile.photoDocumentId));
 
   return (
     <div className={`${layout.cardSurface} overflow-hidden`}>
@@ -56,8 +58,13 @@ function ProfileSummaryCard({ profile }: { profile: UserProfile }): React.ReactN
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
         <Avatar
           size={72}
+          src={photoQuery.data?.url}
           className="shrink-0 !text-xl !font-semibold"
-          style={{ backgroundColor: tokens.colorSidebarBg }}
+          style={{
+            backgroundColor: photoQuery.data?.url
+              ? undefined
+              : tokens.colorSidebarBg,
+          }}
         >
           {profileInitials(profile)}
         </Avatar>

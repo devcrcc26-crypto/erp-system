@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuditModule } from '../audit/audit.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { AUTH_REPOSITORY } from './domain/repositories/auth.repository.interface';
 import { AuthRepository } from './infrastructure/repositories/auth.repository';
 import { ActivateAccountHandler } from './application/commands/activate-account.handler';
@@ -35,6 +36,7 @@ const CommandHandlers = [
 @Module({
   imports: [
     AuditModule,
+    forwardRef(() => DocumentsModule),
     CqrsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

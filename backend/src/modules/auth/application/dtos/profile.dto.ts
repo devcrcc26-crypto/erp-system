@@ -49,6 +49,9 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true })
   emailVerifiedAt!: Date | null;
 
+  @ApiProperty({ nullable: true, required: false })
+  photoDocumentId!: string | null;
+
   @ApiProperty({ type: [ProfileRoleDto] })
   roles!: ProfileRoleDto[];
 }

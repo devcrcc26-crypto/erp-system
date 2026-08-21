@@ -7,7 +7,7 @@ import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPan
 import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
-import { useCurrentUser } from '@/lib/query/profile';
+import { useCurrentUser, useMyProfilePhotoUrl } from '@/lib/query/profile';
 import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -24,6 +24,7 @@ export default function HeaderActions({
   const { data: profile, isLoading: profileLoading } = useCurrentUser();
   const sessionProfile =
     profile && user && profile.id === user.id ? profile : undefined;
+  const photoQuery = useMyProfilePhotoUrl(Boolean(sessionProfile?.photoDocumentId));
 
   const displayName = user
     ? formatUserName(user)
@@ -46,8 +47,11 @@ export default function HeaderActions({
     >
       <Avatar
         size={28}
+        src={photoQuery.data?.url}
         style={{
-          backgroundColor: tokens.colorBlue50,
+          backgroundColor: photoQuery.data?.url
+            ? undefined
+            : tokens.colorBlue50,
           color: tokens.colorBlue800,
           fontWeight: 500,
           fontSize: 11,

@@ -13,6 +13,7 @@ interface AddEmployeeReviewStepProps {
   values: AddEmployeeFormValues;
   roles: Role[];
   pendingDocuments: PendingEmployeeDocument[];
+  pendingPhoto?: File | null;
   mode?: 'create' | 'edit';
 }
 
@@ -20,6 +21,7 @@ export default function AddEmployeeReviewStep({
   values,
   roles,
   pendingDocuments,
+  pendingPhoto = null,
   mode = 'create',
 }: AddEmployeeReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -91,6 +93,11 @@ export default function AddEmployeeReviewStep({
             {values.experienceStartDate
               ? dayjs(values.experienceStartDate).format('YYYY-MM-DD')
               : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.profilePhoto')}>
+            {pendingPhoto
+              ? pendingPhoto.name
+              : t('users.form.noPhotoSelected')}
           </Descriptions.Item>
           <Descriptions.Item label={t('users.form.profileDocuments')}>
             {pendingDocuments.length > 0

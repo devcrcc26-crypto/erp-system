@@ -589,6 +589,7 @@ model User {
   emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")
   profileFolderId       String?         @map("profile_folder_id")
+  photoDocumentId       String?         @map("photo_document_id")
   passwordHash        String    @map("password_hash")
   preferredLanguage   String?   @map("preferred_language")
   preferredTimezone   String?   @map("preferred_timezone")
@@ -757,10 +758,12 @@ model User {
   leavePolicy                     LeavePolicy?              @relation("EmployeeLeavePolicy", fields: [leavePolicyId], references: [id])
   createdLeavePolicies            LeavePolicy[]             @relation("LeavePolicyCreator")
   profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
+  photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
   @@index([profileFolderId], map: "idx_user_profile_folder")
+  @@index([photoDocumentId], map: "idx_user_photo_document")
   @@index([employeeId], map: "idx_user_employee_id")
   @@index([companyId], map: "idx_user_company_id")
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
@@ -1138,8 +1141,7 @@ model Document {
   projectSealedDocuments      ProjectSeal[]              @relation("ProjectSealSealedDocument")
 
   companyAssetPhotos         CompanyAsset[] @relation("CompanyAssetPhotoDocument")
-  
-
+  userPhotos                 User[]         @relation("UserPhotoDocument")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")

@@ -732,6 +732,109 @@ export class UserManagementService {
     return this.documentService.getDownloadUrl(ctx, documentId);
   }
 
+  private static readonly PROFILE_PHOTO_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ]);
+
+  /**
+   * Uploads (or replaces) the employee profile picture.
+   */
+  async uploadUserPhoto(
+    ctx: AuditContext,
+    userId: string,
+    file: UploadedFile,
+  ): Promise<unknown> {
+    if (!UserManagementService.PROFILE_PHOTO_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Profile photo must be a JPEG, PNG, WebP, or GIF image',
+      );
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('Profile photo must be 5 MB or smaller');
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const folderId = await this.resolveProfileFolderId(ctx, userId);
+    const uploaded = (await this.documentService.uploadDocument(
+      ctx,
+      folderId,
+      file,
+    )) as { id: string };
+
+    await this.prisma.document.update({
+      where: { id: uploaded.id },
+      data: {
+        name: 'Profile photo',
+        updatedBy: ctx.userId,
+      },
+    });
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        photoDocumentId: uploaded.id,
+        updatedBy: ctx.userId,
+      },
+      select: this.userSelect(),
+    });
+
+    if (existing.photoDocumentId && existing.photoDocumentId !== uploaded.id) {
+      await this.documentService.deleteDocument(ctx, existing.photoDocumentId);
+    }
+
+    return this.mapUserResponse(updated);
+  }
+
+  /**
+   * Presigned download URL for the employee's profile picture.
+   */
+  async getUserPhotoDownloadUrl(
+    ctx: AuditContext,
+    userId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: { photoDocumentId: true },
+    });
+    if (!user?.photoDocumentId) {
+      throw new NotFoundException('Profile photo not found');
+    }
+    return this.documentService.getDownloadUrl(ctx, user.photoDocumentId);
+  }
+
+  /**
+   * Removes the employee profile picture link and soft-deletes the document.
+   */
+  async deleteUserPhoto(ctx: AuditContext, userId: string): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId: ctx.companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!user.photoDocumentId) {
+      return;
+    }
+
+    const documentId = user.photoDocumentId;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { photoDocumentId: null, updatedBy: ctx.userId },
+    });
+    await this.documentService.deleteDocument(ctx, documentId);
+  }
+
   private async assertUserRole(
     ctx: AuditContext,
     userRoleId: string,
@@ -781,6 +884,7 @@ export class UserManagementService {
       leavePolicyId: true,
       leavePolicy: { select: { id: true, name: true } },
       profileFolderId: true,
+      photoDocumentId: true,
       firstName: true,
       lastName: true,
       chineseName: true,

@@ -11,9 +11,11 @@ import {
   GENDER_OPTIONS,
 } from '@/components/modules/users/EmployeeProfileFormFields';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
+import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import AddEmployeePendingDocuments, {
   type PendingEmployeeDocument,
 } from '@/components/modules/users/add-employee/AddEmployeePendingDocuments';
+import AddEmployeePendingPhoto from '@/components/modules/users/add-employee/AddEmployeePendingPhoto';
 import AddEmployeeReviewStep from '@/components/modules/users/add-employee/AddEmployeeReviewStep';
 import {
   ADD_EMPLOYEE_STEP_FIELDS,
@@ -29,6 +31,7 @@ import {
   useRevokeRole,
   useUpdateUser,
   useUploadUserDocuments,
+  useUploadUserPhoto,
   useUser,
 } from '@/lib/query/users';
 import {
@@ -93,6 +96,7 @@ export default function AddEmployeeForm({
   const [form] = Form.useForm<AddEmployeeFormValues>();
   const [error, setError] = useState<string | null>(null);
   const [pendingDocuments, setPendingDocuments] = useState<PendingEmployeeDocument[]>([]);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
   const isEdit = Boolean(userId);
 
   const emailValue = Form.useWatch('email', form);
@@ -106,6 +110,7 @@ export default function AddEmployeeForm({
   const assignRole = useAssignRole();
   const revokeRole = useRevokeRole();
   const uploadDocuments = useUploadUserDocuments();
+  const uploadPhoto = useUploadUserPhoto();
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
@@ -144,7 +149,8 @@ export default function AddEmployeeForm({
     updateUser.isPending ||
     assignRole.isPending ||
     revokeRole.isPending ||
-    uploadDocuments.isPending;
+    uploadDocuments.isPending ||
+    uploadPhoto.isPending;
 
   function handleDepartmentChange(nextDepartmentId?: string): void {
     const currentPositionId = form.getFieldValue('positionId') as string | undefined;
@@ -164,6 +170,7 @@ export default function AddEmployeeForm({
       form.setFieldsValue({ isActive: true, emergencyContacts: [] });
     }
     setPendingDocuments([]);
+    setPendingPhoto(null);
     setError(null);
   }
 
@@ -225,6 +232,10 @@ export default function AddEmployeeForm({
           });
         }
 
+        if (pendingPhoto) {
+          await uploadPhoto.mutateAsync({ userId, file: pendingPhoto });
+        }
+
         onSuccess({
           userId,
           email: userQuery.data?.email ?? values.email?.trim().toLowerCase() ?? null,
@@ -262,6 +273,10 @@ export default function AddEmployeeForm({
             (item) => item.label.trim() || item.file.name,
           ),
         });
+      }
+
+      if (pendingPhoto) {
+        await uploadPhoto.mutateAsync({ userId: user.id, file: pendingPhoto });
       }
 
       onSuccess({ userId: user.id, email: invitedAddress ?? null });
@@ -461,22 +476,42 @@ export default function AddEmployeeForm({
               layout="sections"
             />
             {isEdit && userId ? (
-              <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
-                <EmployeeProfileDocuments userId={userId} />
-                <div className="mt-4">
+              <>
+                <FormLayout variant="pro" title={t('users.profilePhoto')}>
+                  <EmployeeProfilePhoto
+                    userId={userId}
+                    photoDocumentId={userQuery.data?.photoDocumentId}
+                    firstName={userQuery.data?.firstName}
+                    lastName={userQuery.data?.lastName}
+                    canEdit
+                    size={88}
+                  />
+                </FormLayout>
+                <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
+                  <EmployeeProfileDocuments userId={userId} />
+                  <div className="mt-4">
+                    <AddEmployeePendingDocuments
+                      value={pendingDocuments}
+                      onChange={setPendingDocuments}
+                    />
+                  </div>
+                </FormLayout>
+              </>
+            ) : (
+              <>
+                <FormLayout variant="pro" title={t('users.profilePhoto')}>
+                  <AddEmployeePendingPhoto
+                    value={pendingPhoto}
+                    onChange={setPendingPhoto}
+                  />
+                </FormLayout>
+                <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
                   <AddEmployeePendingDocuments
                     value={pendingDocuments}
                     onChange={setPendingDocuments}
                   />
-                </div>
-              </FormLayout>
-            ) : (
-              <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
-                <AddEmployeePendingDocuments
-                  value={pendingDocuments}
-                  onChange={setPendingDocuments}
-                />
-              </FormLayout>
+                </FormLayout>
+              </>
             )}
           </>
         ),
@@ -495,6 +530,7 @@ export default function AddEmployeeForm({
             }
             roles={roles}
             pendingDocuments={pendingDocuments}
+            pendingPhoto={pendingPhoto}
             mode={isEdit ? 'edit' : 'create'}
           />
         ),
@@ -506,6 +542,7 @@ export default function AddEmployeeForm({
       hasEmail,
       isEdit,
       userId,
+      userQuery.data,
       profileMode,
       rolesQuery.isLoading,
       roles,
@@ -516,6 +553,7 @@ export default function AddEmployeeForm({
       disciplinesLoading,
       disciplineOptions,
       pendingDocuments,
+      pendingPhoto,
       formValues,
       departmentIdValue,
       allPositions,

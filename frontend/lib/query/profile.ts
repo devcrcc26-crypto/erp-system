@@ -19,6 +19,8 @@ export const profileKeys = {
   all: ['profile'] as const,
   me: (sessionId: string | null) =>
     [...profileKeys.all, 'me', sessionId] as const,
+  photoUrl: (sessionId: string | null) =>
+    [...profileKeys.all, 'photo-url', sessionId] as const,
 };
 
 export function useCurrentUser() {
@@ -28,6 +30,28 @@ export function useCurrentUser() {
     queryKey: profileKeys.me(sessionId),
     queryFn: (): Promise<UserProfile> => apiGet<UserProfile>('/auth/me'),
     enabled: Boolean(accessToken && sessionId),
+  });
+}
+
+/**
+ * Presigned URL for the signed-in user's profile picture.
+ */
+export function useMyProfilePhotoUrl(enabled = true) {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const sessionId = useAuthStore((state) => state.sessionId);
+  const { data: profile } = useCurrentUser();
+
+  return useQuery({
+    queryKey: profileKeys.photoUrl(sessionId),
+    queryFn: () =>
+      apiGet<{ url: string; expiresIn: number }>(
+        '/auth/me/photo/download-url',
+      ),
+    enabled:
+      enabled &&
+      Boolean(accessToken && sessionId && profile?.photoDocumentId),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 

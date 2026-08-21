@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,11 +8,12 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
@@ -143,6 +145,60 @@ export class UsersController {
       id,
       documentId,
     );
+  }
+
+  @Post(':id/photo')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Upload or replace employee profile picture' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<unknown> {
+    if (!file) {
+      throw new BadRequestException('Photo file is required');
+    }
+    return this.userManagementService.uploadUserPhoto(this.ctx(user), id, {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      buffer: file.buffer,
+    });
+  }
+
+  @Get(':id/photo/download-url')
+  @RequirePermission('users', 'view')
+  @ApiOperation({ summary: 'Get presigned download URL for profile picture' })
+  getPhotoDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.userManagementService.getUserPhotoDownloadUrl(
+      this.ctx(user),
+      id,
+    );
+  }
+
+  @Delete(':id/photo')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Remove employee profile picture' })
+  async deletePhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.userManagementService.deleteUserPhoto(this.ctx(user), id);
+    return { message: 'Profile photo removed' };
   }
 
   @Get(':id')
