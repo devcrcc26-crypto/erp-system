@@ -686,6 +686,57 @@ main::-webkit-scrollbar,
   margin-top: 0;
 }
 
+.erp-list-tabs .ant-tabs-nav-wrap {
+  overflow: visible !important;
+}
+
+.erp-list-tabs .ant-tabs-nav-list {
+  transform: none !important;
+  flex-wrap: wrap;
+}
+
+.erp-list-tabs .ant-tabs-nav-operations {
+  display: none !important;
+}
+
+.erp-profile-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.erp-profile-tabbar button {
+  margin: 0;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.erp-profile-tabbar button + button {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.erp-profile-tabbar button:hover {
+  color: var(--color-text-primary);
+}
+
+.erp-profile-tabbar button[aria-selected='true'] {
+  background: var(--color-teal-50);
+  color: var(--color-teal-600);
+  font-weight: 600;
+}
+
 /* ── ERP data table - design system ── */
 
 .erp-data-table .ant-table-thead > tr > th {

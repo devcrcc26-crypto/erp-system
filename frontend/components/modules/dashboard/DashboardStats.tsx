@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   BellOutlined,
   CheckCircleOutlined,
@@ -19,8 +17,7 @@ import type {
   MyDashboardActivityItem,
   PortfolioDashboardStats,
 } from '@/lib/api/reporting.types';
-
-dayjs.extend(relativeTime);
+import { formatRelativeTime } from '@/lib/utils/date-format';
 
 /** Shared recharts style constants — flat axes, subtle grid, clean tooltip. */
 export const CHART_AXIS_STYLE = { fontSize: 11, fill: '#888780' };
@@ -324,7 +321,7 @@ export function RecentActivity({
                   {item.title}
                 </p>
                 <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5 m-0">
-                  {dayjs(item.date).fromNow()}
+                  {formatRelativeTime(item.date)}
                 </p>
               </div>
             </Link>

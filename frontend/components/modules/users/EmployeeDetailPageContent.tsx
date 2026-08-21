@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Skeleton, Space, Tabs, Tag } from 'antd';
+import { Alert, Button, Skeleton, Space, Tag } from 'antd';
 import { CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -31,7 +31,6 @@ import {
   userStatusVariant,
 } from '@/lib/utils/user-status';
 import { tokens } from '@/lib/theme/tokens';
-import { useAuthStore } from '@/stores/auth.store';
 
 function displayValue(value: string | number | null | undefined): string {
   if (value == null || value === '') {
@@ -67,7 +66,6 @@ export default function EmployeeDetailPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
-  const currentUserId = useAuthStore((state) => state.user?.id);
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
@@ -152,7 +150,6 @@ export default function EmployeeDetailPageContent({
 
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const emergencyContacts = user.emergencyContacts ?? [];
-  const canSeeLeave = canViewHr || currentUserId === user.id;
 
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
@@ -295,20 +292,33 @@ export default function EmployeeDetailPageContent({
         ]}
       />
 
-      <Tabs
-        className="erp-list-tabs"
-        activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as 'overview' | 'leave')}
-        items={[
-          {
-            key: 'overview',
-            label: (
-              <span className="flex items-center gap-2">
-                <UserOutlined />
-                {t('users.tabOverview')}
-              </span>
-            ),
-            children: (
+      <div className="erp-profile-tabbar" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'overview'}
+          onClick={() => setActiveTab('overview')}
+        >
+          <UserOutlined />
+          {t('users.tabOverview')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'leave'}
+          onClick={() => setActiveTab('leave')}
+        >
+          <CalendarOutlined />
+          {t('users.tabLeave')}
+        </button>
+      </div>
+      {activeTab === 'leave' ? (
+        canViewHr ? (
+          <EmployeeLeaveProfileSection mode="employee" employeeId={user.id} />
+        ) : (
+          <EmployeeLeaveProfileSection mode="self" />
+        )
+      ) : (
               <div className="flex flex-col gap-3">
       <div className="grid gap-3 lg:grid-cols-2">
         <SectionCard title={t('users.sectionPersonalInformation')} bodyClassName="p-4">
@@ -518,31 +528,7 @@ export default function EmployeeDetailPageContent({
         <EmployeeProfileDocuments userId={user.id} />
       </SectionCard>
               </div>
-            ),
-          },
-          ...(canSeeLeave
-            ? [
-                {
-                  key: 'leave' as const,
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <CalendarOutlined />
-                      {t('users.tabLeave')}
-                    </span>
-                  ),
-                  children: canViewHr ? (
-                    <EmployeeLeaveProfileSection
-                      mode="employee"
-                      employeeId={user.id}
-                    />
-                  ) : (
-                    <EmployeeLeaveProfileSection mode="self" />
-                  ),
-                },
-              ]
-            : []),
-        ]}
-      />
+      )}
 
       <ConfirmDialog
         open={confirmDelete}

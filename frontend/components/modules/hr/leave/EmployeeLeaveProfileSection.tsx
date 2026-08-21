@@ -8,7 +8,7 @@ import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import { useCanCreateLeave, useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -139,7 +139,6 @@ export default function EmployeeLeaveProfileSection({
 }: EmployeeLeaveProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const canCreateLeave = useCanCreateLeave();
   const canViewHr = useCanViewHr();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
@@ -304,16 +303,14 @@ export default function EmployeeLeaveProfileSection({
   }
 
   const historyAction = isSelf ? (
-    canCreateLeave ? (
-      <Button
-        type="primary"
-        size="small"
-        onClick={handleNewLeaveRequest}
-        style={{ borderRadius: 2 }}
-      >
-        {t('hr.buttons.newLeaveRequest')}
-      </Button>
-    ) : null
+    <Button
+      type="primary"
+      size="small"
+      onClick={handleNewLeaveRequest}
+      style={{ borderRadius: 2 }}
+    >
+      {t('hr.buttons.newLeaveRequest')}
+    </Button>
   ) : canViewHr ? (
     <Button type="link" size="small" className="!px-0" onClick={handleViewAll}>
       {t('hr.leave.viewAllHistory')}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Input, Select, Spin, Tabs } from 'antd';
+import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import { CalendarOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -657,33 +657,31 @@ export default function ProfilePageContent(): React.ReactNode {
         ]}
       />
 
-      <Tabs
-        className="erp-list-tabs"
-        activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as 'account' | 'leave')}
-        items={[
-          {
-            key: 'account',
-            label: (
-              <span className="flex items-center gap-2">
-                <UserOutlined />
-                {t('profile.tabAccount')}
-              </span>
-            ),
-            children: accountTab,
-          },
-          {
-            key: 'leave',
-            label: (
-              <span className="flex items-center gap-2">
-                <CalendarOutlined />
-                {t('profile.tabLeave')}
-              </span>
-            ),
-            children: <EmployeeLeaveProfileSection mode="self" />,
-          },
-        ]}
-      />
+      <div className="erp-profile-tabbar" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'account'}
+          onClick={() => setActiveTab('account')}
+        >
+          <UserOutlined />
+          {t('profile.tabAccount')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'leave'}
+          onClick={() => setActiveTab('leave')}
+        >
+          <CalendarOutlined />
+          {t('profile.tabLeave')}
+        </button>
+      </div>
+      {activeTab === 'leave' ? (
+        <EmployeeLeaveProfileSection mode="self" />
+      ) : (
+        accountTab
+      )}
     </div>
   );
 }

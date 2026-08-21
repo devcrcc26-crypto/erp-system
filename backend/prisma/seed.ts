@@ -908,6 +908,17 @@ function employeePermissionFlags(
     };
   }
 
+  if (module === 'leave' && (action === 'view' || action === 'create')) {
+    return {
+      canView: true,
+      canCreate: action === 'create',
+      canEdit: false,
+      canDelete: false,
+      canApprove: false,
+      canExport: false,
+    };
+  }
+
   return null;
 }
 

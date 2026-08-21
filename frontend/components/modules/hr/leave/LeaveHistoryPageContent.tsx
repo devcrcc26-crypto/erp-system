@@ -13,7 +13,6 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
-  useCanAccessLeave,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -149,7 +148,6 @@ export default function LeaveHistoryPageContent({
 }: LeaveHistoryPageContentProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
   const currentUserQuery = useCurrentUser();
   const currentYear = new Date().getFullYear();
@@ -168,9 +166,7 @@ export default function LeaveHistoryPageContent({
     Boolean(targetEmployeeId) &&
     targetEmployeeId === currentUserQuery.data?.id;
 
-  const allowed =
-    canAccess &&
-    (isSelf || canViewHr || isOwnEmployeePage);
+  const allowed = isSelf || canViewHr || isOwnEmployeePage;
 
   const employeeQuery = useUser(
     targetEmployeeId ?? '',

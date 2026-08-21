@@ -1,16 +1,13 @@
 'use client';
 
 import { Spin } from 'antd';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   SectionCard,
   StatCard,
 } from '@/components/modules/dashboard/DashboardStats';
 import { useMyDashboard } from '@/lib/query/dashboard';
 import { layout } from '@/lib/theme/layout';
-
-dayjs.extend(relativeTime);
+import { formatRelativeTime } from '@/lib/utils/date-format';
 
 /**
  * Personal dashboard for FK-scoped roles (Designer, Discipline Lead, Reviewer).
@@ -89,7 +86,7 @@ export default function PersonalDashboard({
                     {item.title}
                   </p>
                   <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5 m-0">
-                    {dayjs(item.date).fromNow()}
+                    {formatRelativeTime(item.date)}
                   </p>
                 </div>
                 <span className="text-xs text-[#1D9E75] font-medium flex-shrink-0">
