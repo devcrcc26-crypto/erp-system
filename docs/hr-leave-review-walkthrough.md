@@ -201,4 +201,7 @@ General Manager is **not** in the leave chain.
 - Leave policy form uses a **sticky Save footer** (same idea as Add Employee).  
 - List **actions** use a **⋮** menu (Update / Delete).  
 - Leave submit requires the employee to have an **engineering discipline with an active leader**.  
+- Approvers get `approval.pending` when leave is waiting on them.  
+- The employee gets `approval.returned` if leave is returned.  
+- The employee gets `approval.approved` / `approval.rejected` on final decision.  
 - Prefer dedicated accounts above rather than `admin@company.local` for approvals, because admin holds many roles and may appear as multiple approvers.

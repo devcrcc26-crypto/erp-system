@@ -57,6 +57,8 @@ import {
 const APPROVAL_RETURNED_EVENT = 'approval.returned';
 const APPROVAL_PENDING_EVENT = 'approval.pending';
 const APPROVAL_CONDITION_RESPONSE_EVENT = 'approval.condition_response';
+const APPROVAL_APPROVED_EVENT = 'approval.approved';
+const APPROVAL_REJECTED_EVENT = 'approval.rejected';
 
 export const RESPONSE_TYPE_RESUBMIT = 'RESUBMIT';
 export const RESPONSE_TYPE_CONDITION = 'CONDITION_RESPONSE';
@@ -823,6 +825,21 @@ export class ApprovalsService {
         },
       });
     } else {
+      if (request.requestedBy !== userId) {
+        await this.notifySafe(request.companyId, userId, {
+          recipientId: request.requestedBy,
+          eventType: APPROVAL_APPROVED_EVENT,
+          subject: `Approved — ${request.requestNumber}`,
+          body:
+            note?.trim() ||
+            `Your approval request ${request.requestNumber} has been fully approved.`,
+          link: `/approvals/${request.id}`,
+          variables: {
+            requestId: request.id,
+            requestNumber: request.requestNumber,
+          },
+        });
+      }
       await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
@@ -877,6 +894,22 @@ export class ApprovalsService {
       },
       PRISMA_TX_OPTIONS,
     );
+
+    if (request.requestedBy !== userId) {
+      await this.notifySafe(request.companyId, userId, {
+        recipientId: request.requestedBy,
+        eventType: APPROVAL_REJECTED_EVENT,
+        subject: `Rejected — ${request.requestNumber}`,
+        body:
+          note?.trim() ||
+          `Your approval request ${request.requestNumber} was rejected.`,
+        link: `/approvals/${request.id}`,
+        variables: {
+          requestId: request.id,
+          requestNumber: request.requestNumber,
+        },
+      });
+    }
 
     await this.dispatchFinalDecision(request.id, 'REJECTED');
 
@@ -1010,6 +1043,7 @@ export class ApprovalsService {
             status: true,
             currentTier: true,
             requestedBy: true,
+            requestNumber: true,
           },
         },
       },
@@ -1099,6 +1133,19 @@ export class ApprovalsService {
         variables: { requestId: request.id },
       });
     } else if (shouldAdvance) {
+      if (request.requestedBy !== userId) {
+        await this.notifySafe(request.companyId, userId, {
+          recipientId: request.requestedBy,
+          eventType: APPROVAL_APPROVED_EVENT,
+          subject: `Approved — ${request.requestNumber}`,
+          body: `Your approval request ${request.requestNumber} has been fully approved.`,
+          link: `/approvals/${request.id}`,
+          variables: {
+            requestId: request.id,
+            requestNumber: request.requestNumber,
+          },
+        });
+      }
       await this.dispatchFinalDecision(request.id, 'APPROVED');
     }
 
