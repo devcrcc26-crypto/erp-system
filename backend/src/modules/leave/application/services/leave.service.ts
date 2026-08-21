@@ -136,10 +136,11 @@ export class LeaveService
     const days = dto.days;
 
     // Step 1 — resolve chain BEFORE opening any transaction
+    // Leave: Discipline Lead → HR Officer (no General Manager tier)
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
       companyId,
-      days > 3,
+      false,
     );
 
     // Step 2 — initialize balance if needed (outside transaction)

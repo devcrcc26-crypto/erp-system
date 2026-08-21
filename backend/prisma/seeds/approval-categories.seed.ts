@@ -93,7 +93,10 @@ const CATEGORIES: CategorySeedDef[] = [
       {
         name: 'Short leave (≤ 3 days)',
         when: { days: { lte: 3 } },
-        tiers: [tier('Department Head', 'DEPARTMENT_HEAD', 1)],
+        tiers: [
+          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('HR Manager', 'HR_MANAGER', 2),
+        ],
       },
       {
         name: 'Long leave (> 3 days)',
@@ -101,7 +104,6 @@ const CATEGORIES: CategorySeedDef[] = [
         tiers: [
           tier('Department Head', 'DEPARTMENT_HEAD', 1),
           tier('HR Manager', 'HR_MANAGER', 2),
-          tier('General Manager', 'GENERAL_MANAGER', 3),
         ],
       },
       {
@@ -109,7 +111,6 @@ const CATEGORIES: CategorySeedDef[] = [
         tiers: [
           tier('Department Head', 'DEPARTMENT_HEAD', 1),
           tier('HR Manager', 'HR_MANAGER', 2),
-          tier('General Manager', 'GENERAL_MANAGER', 3),
         ],
       },
     ],

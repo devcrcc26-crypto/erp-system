@@ -139,7 +139,12 @@ async function createApprovalChain(
   })) as UserWithDisciplineLeader | null;
 
   const disciplineLead = employee?.engineeringDiscipline?.leader;
-  const includeGm = days !== undefined ? days > 3 : true;
+  const includeGm =
+    categoryCode === 'LEAVE_REQUEST'
+      ? false
+      : days !== undefined
+        ? days > 3
+        : true;
 
   const draftTiers = [
     {
