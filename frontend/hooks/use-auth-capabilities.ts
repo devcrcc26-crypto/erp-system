@@ -39,6 +39,17 @@ export function useCanCreateLeave(): boolean {
 }
 
 /**
+ * True when HR / system admin can edit or delete any leave request.
+ */
+export function useCanManageLeaveRequests(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr ||
+      state.capabilities.isSystemAdministrator,
+  );
+}
+
+/**
  * True when the session can open HR overtime pages (view, create, or full HR).
  */
 export function useCanAccessOvertime(): boolean {

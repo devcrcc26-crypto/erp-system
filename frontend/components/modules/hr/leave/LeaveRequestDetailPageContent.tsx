@@ -13,11 +13,15 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import {
+  useCanManageLeaveRequests,
+  useCanViewHr,
+} from '@/hooks/use-auth-capabilities';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
   useCancelLeaveRequest,
+  useDeleteLeaveRequest,
   useLeaveRequest,
 } from '@/lib/query/leave';
 import { useApprovalRequest } from '@/lib/query/approvals';
@@ -45,10 +49,13 @@ export default function LeaveRequestDetailPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
+  const canManage = useCanManageLeaveRequests();
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const cancelMutation = useCancelLeaveRequest(requestId);
+  const deleteMutation = useDeleteLeaveRequest();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const request = detailQuery.data;
   const approvalRequestId = request?.approvalRequestId ?? null;
@@ -100,11 +107,22 @@ export default function LeaveRequestDetailPageContent({
     router,
   ]);
 
-  const canCancel =
+  const isOwner =
     Boolean(request) &&
     Boolean(currentUser.data?.id) &&
-    request?.employeeId === currentUser.data?.id &&
-    (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
+    request?.employeeId === currentUser.data?.id;
+
+  const canEdit =
+    Boolean(request) &&
+    (request?.status === 'DRAFT' || request?.status === 'RETURNED') &&
+    (canManage || isOwner);
+
+  const canCancel =
+    Boolean(request) &&
+    (canManage || isOwner) &&
+    (request?.status === 'DRAFT' ||
+      request?.status === 'SUBMITTED' ||
+      request?.status === 'IN_REVIEW');
 
   async function handleCancel(): Promise<void> {
     try {
@@ -113,6 +131,21 @@ export default function LeaveRequestDetailPageContent({
       setConfirmCancel(false);
     } catch (error: unknown) {
       notifyApiError(error, 'Failed to cancel leave request', messageApi);
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    try {
+      await deleteMutation.mutateAsync(requestId);
+      messageApi.success(t('hr.messages.leaveRequestDeleted'));
+      setConfirmDelete(false);
+      router.push('/hr/leave-requests');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteLeaveRequest'),
+        messageApi,
+      );
     }
   }
 
@@ -183,8 +216,20 @@ export default function LeaveRequestDetailPageContent({
                   onClick={() =>
                     router.push(`/approvals/${request.approvalRequestId}`)
                   }
+                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.viewInApprovals')}
+                </Button>
+              ) : null}
+              {canEdit ? (
+                <Button
+                  size="small"
+                  onClick={() =>
+                    router.push(`/hr/leave-requests/${requestId}/edit`)
+                  }
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('hr.buttons.editLeaveRequest')}
                 </Button>
               ) : null}
               {canCancel ? (
@@ -192,8 +237,19 @@ export default function LeaveRequestDetailPageContent({
                   danger
                   size="small"
                   onClick={() => setConfirmCancel(true)}
+                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.cancelRequest')}
+                </Button>
+              ) : null}
+              {canManage ? (
+                <Button
+                  danger
+                  size="small"
+                  onClick={() => setConfirmDelete(true)}
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('hr.buttons.deleteLeaveRequest')}
                 </Button>
               ) : null}
             </div>
@@ -329,6 +385,17 @@ export default function LeaveRequestDetailPageContent({
         confirmLoading={cancelMutation.isPending}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => void handleCancel()}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t('hr.empty.deleteLeaveTitle')}
+        description={t('hr.empty.deleteLeaveDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void handleDelete()}
       />
     </div>
   );

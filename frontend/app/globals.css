@@ -534,7 +534,7 @@ main::-webkit-scrollbar,
 .erp-pro-table .ant-table-thead > tr > th {
   background: #fafafa !important;
   padding: 14px 16px !important;
-  font-size: calc(16px * var(--erp-font-scale)) !important;
+  font-size: calc(15px * var(--erp-font-scale)) !important;
   font-weight: 700 !important;
   letter-spacing: normal;
   text-transform: none;
@@ -616,6 +616,76 @@ main::-webkit-scrollbar,
   gap: 16px;
 }
 
+/* Square segment tabs — leave / list module switchers */
+.erp-list-tabs.ant-tabs {
+  margin-top: 0;
+}
+
+.erp-list-tabs > .ant-tabs-nav {
+  margin: 0 0 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+}
+
+.erp-list-tabs > .ant-tabs-nav::before {
+  border-bottom: none !important;
+}
+
+.erp-list-tabs .ant-tabs-nav-wrap {
+  padding: 0;
+}
+
+.erp-list-tabs .ant-tabs-nav-list {
+  gap: 0;
+}
+
+.erp-list-tabs .ant-tabs-tab {
+  margin: 0 !important;
+  padding: 12px 20px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.erp-list-tabs .ant-tabs-tab + .ant-tabs-tab {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.erp-list-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.erp-list-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
+  color: var(--color-text-primary);
+}
+
+.erp-list-tabs .ant-tabs-tab-active {
+  background: var(--color-teal-50) !important;
+}
+
+.erp-list-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--color-teal-600) !important;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.erp-list-tabs .ant-tabs-ink-bar {
+  height: 2px !important;
+  background: var(--color-teal-400) !important;
+  border-radius: 0;
+}
+
+.erp-list-tabs .ant-tabs-content-holder {
+  margin-top: 0;
+}
+
 /* ── ERP data table - design system ── */
 
 .erp-data-table .ant-table-thead > tr > th {
@@ -651,7 +721,7 @@ main::-webkit-scrollbar,
 .erp-data-table.erp-pro-table .ant-table-thead > tr > th.ant-table-cell {
   background: #fafafa !important;
   padding: 14px 16px !important;
-  font-size: 15px !important;
+  font-size: calc(13.5px * var(--erp-font-scale)) !important;
   font-weight: 700 !important;
   letter-spacing: normal !important;
   text-transform: none !important;

@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  apiDelete,
   apiGet,
   apiGetPaginated,
   apiPatch,
@@ -191,6 +192,22 @@ export function useUpdateLeaveRequest(id: string) {
       void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
       void queryClient.setQueryData(leaveKeys.detail(id), updated);
+    },
+  });
+}
+
+/**
+ * Soft-deletes a leave request (HR only).
+ */
+export function useDeleteLeaveRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<void>(`${LEAVE_PATH}/${id}`),
+    onSuccess: (_data, id) => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+      void queryClient.removeQueries({ queryKey: leaveKeys.detail(id) });
     },
   });
 }

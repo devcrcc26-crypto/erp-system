@@ -287,7 +287,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Select
+          {/* <Select
             allowClear
             showSearch
             optionFilterProp="label"
@@ -302,7 +302,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
               setEmployeeId(value);
               resetPage();
             }}
-          />
+          /> */}
           <div className="flex items-center gap-2">
             <span
               className="text-sm whitespace-nowrap"

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -175,7 +176,14 @@ export class LeaveController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a draft or returned leave request' })
+  @RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'leave', action: 'create' },
+  )
+  @ApiOperation({
+    summary:
+      'Update a draft or returned leave request (owner or HR)',
+  })
   update(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
@@ -186,12 +194,33 @@ export class LeaveController {
   }
 
   @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Cancel a draft or submitted leave request' })
+  @RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'leave', action: 'create' },
+  )
+  @ApiOperation({
+    summary:
+      'Cancel a draft, submitted, or in-review leave request (owner or HR)',
+  })
   cancel(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.leaveService.cancelRequest(id, companyId, user.userId);
+  }
+
+  @Delete(':id')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Soft-delete a leave request (HR only) and reverse balance impact',
+  })
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.leaveService.deleteRequest(id, companyId, user.userId);
+    return { message: 'Leave request deleted' };
   }
 }

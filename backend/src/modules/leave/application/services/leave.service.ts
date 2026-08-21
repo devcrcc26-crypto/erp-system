@@ -239,7 +239,8 @@ export class LeaveService
   }
 
   /**
-   * Cancels a DRAFT or SUBMITTED leave request owned by the actor.
+   * Cancels a DRAFT, SUBMITTED, or IN_REVIEW leave request.
+   * Owner or HR (hr.view) may cancel.
    */
   async cancelRequest(
     id: string,
@@ -252,15 +253,14 @@ export class LeaveService
     if (!leave) {
       throw new NotFoundException('Leave request not found');
     }
-    if (leave.employeeId !== userId) {
-      throw new ForbiddenException('Only the requester can cancel this leave');
-    }
+    await this.assertCanManageLeaveRequest(leave.employeeId, companyId, userId);
     if (
       leave.status !== LeaveRequestStatus.DRAFT &&
-      leave.status !== LeaveRequestStatus.SUBMITTED
+      leave.status !== LeaveRequestStatus.SUBMITTED &&
+      leave.status !== LeaveRequestStatus.IN_REVIEW
     ) {
       throw new BadRequestException(
-        'Only draft or submitted leave requests can be cancelled',
+        'Only draft, submitted, or in-review leave requests can be cancelled',
       );
     }
 
@@ -288,7 +288,10 @@ export class LeaveService
       }
     });
 
-    if (previousStatus === LeaveRequestStatus.SUBMITTED) {
+    if (
+      previousStatus === LeaveRequestStatus.SUBMITTED ||
+      previousStatus === LeaveRequestStatus.IN_REVIEW
+    ) {
       await this.leaveBalanceService.adjustBalance(
         leave.employeeId,
         leave.leaveType,
@@ -303,7 +306,8 @@ export class LeaveService
   }
 
   /**
-   * Updates a DRAFT or RETURNED leave request owned by the actor (before resubmit).
+   * Updates a DRAFT or RETURNED leave request.
+   * Owner or HR (hr.view) may edit.
    */
   async updateRequest(
     id: string,
@@ -317,9 +321,7 @@ export class LeaveService
     if (!leave) {
       throw new NotFoundException('Leave request not found');
     }
-    if (leave.employeeId !== userId) {
-      throw new ForbiddenException('Only the requester can edit this leave');
-    }
+    await this.assertCanManageLeaveRequest(leave.employeeId, companyId, userId);
     if (
       leave.status !== LeaveRequestStatus.DRAFT &&
       leave.status !== LeaveRequestStatus.RETURNED
@@ -362,6 +364,107 @@ export class LeaveService
     });
 
     return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Soft-deletes a leave request (HR / full access only) and reverses balance impact.
+   */
+  async deleteRequest(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const leave = await this.prisma.leaveRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!leave) {
+      throw new NotFoundException('Leave request not found');
+    }
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'Only HR can delete leave requests',
+      );
+    }
+
+    const year = leave.startDate.getUTCFullYear();
+    const days = Number(leave.days);
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.leaveRequest.update({
+        where: { id: leave.id },
+        data: {
+          deletedAt: now,
+          deletedBy: userId,
+          updatedBy: userId,
+        },
+      });
+
+      if (leave.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: leave.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+
+    if (
+      leave.status === LeaveRequestStatus.SUBMITTED ||
+      leave.status === LeaveRequestStatus.IN_REVIEW
+    ) {
+      await this.leaveBalanceService.adjustBalance(
+        leave.employeeId,
+        leave.leaveType,
+        year,
+        'pending',
+        -days,
+        companyId,
+      );
+    } else if (leave.status === LeaveRequestStatus.APPROVED) {
+      await this.leaveBalanceService.adjustBalance(
+        leave.employeeId,
+        leave.leaveType,
+        year,
+        'used',
+        -days,
+        companyId,
+      );
+    }
+  }
+
+  /**
+   * Owner or HR may mutate a leave request (edit / cancel).
+   */
+  private async assertCanManageLeaveRequest(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (employeeId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this leave request',
+      );
+    }
   }
 
   /**

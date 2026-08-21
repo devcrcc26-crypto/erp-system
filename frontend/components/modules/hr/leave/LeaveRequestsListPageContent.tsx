@@ -17,20 +17,26 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
   PlusOutlined,
   ReloadOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import LeaveBalancesListPageContent from '@/components/modules/hr/leave/LeaveBalancesListPageContent';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessLeave,
   useCanCreateLeave,
+  useCanManageLeaveRequests,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -41,7 +47,11 @@ import type {
   LeaveRequestStatus,
   LeaveType,
 } from '@/lib/api/leave.types';
-import { useLeaveRequests, useMyLeaveRequests } from '@/lib/query/leave';
+import {
+  useDeleteLeaveRequest,
+  useLeaveRequests,
+  useMyLeaveRequests,
+} from '@/lib/query/leave';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
   formatLeaveEmployeeName,
@@ -50,6 +60,7 @@ import {
   leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
@@ -102,8 +113,11 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
+  const canManage = useCanManageLeaveRequests();
   const canCreate = useCanCreateLeave();
+  const messageApi = useAppMessage();
   const { params, resetPage, bindMeta } = useTablePagination(10);
+  const deleteMutation = useDeleteLeaveRequest();
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -113,6 +127,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [deletingRequest, setDeletingRequest] =
+    useState<LeaveRequestListItem | null>(null);
   const [cachedTotals, setCachedTotals] = useState({
     all: 0,
     pending: 0,
@@ -193,6 +209,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             {
               title: t('hr.table.employee'),
               key: 'employee',
+              width: 220,
               render: (_: unknown, row: LeaveRequestListItem) => (
                 <div className="min-w-0">
                   <p
@@ -230,28 +247,27 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         title: t('hr.table.startDate'),
         dataIndex: 'startDate',
         key: 'startDate',
-        width: 120,
+        width: 140,
         render: (value: string) => formatProjectDate(value),
       },
       {
         title: t('hr.table.endDate'),
         dataIndex: 'endDate',
         key: 'endDate',
-        width: 120,
+        width: 140,
         render: (value: string) => formatProjectDate(value),
       },
       {
         title: t('hr.table.days'),
         dataIndex: 'days',
         key: 'days',
-        width: 80,
-        align: 'right' as const,
+        width: 140,
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: 140,
         render: (value: LeaveRequestStatus) => (
           <StatusBadge
             label={formatLeaveStatus(value, t)}
@@ -259,9 +275,74 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           />
         ),
       },
+      ...(canManage
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 88,
+              render: (_: unknown, record: LeaveRequestListItem) => {
+                const canEditRow =
+                  record.status === 'DRAFT' || record.status === 'RETURNED';
+                return (
+                  <div
+                    className="flex items-center gap-1"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    {canEditRow ? (
+                      <Tooltip title={t('common.update')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<EditOutlined />}
+                          onClick={() =>
+                            router.push(
+                              `/hr/leave-requests/${record.id}/edit`,
+                            )
+                          }
+                          aria-label={t('common.update')}
+                          style={{ borderRadius: 0 }}
+                        />
+                      </Tooltip>
+                    ) : null}
+                    <Tooltip title={t('common.delete')}>
+                      <Button
+                        size="small"
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => setDeletingRequest(record)}
+                        aria-label={t('common.delete')}
+                        style={{ borderRadius: 0 }}
+                      />
+                    </Tooltip>
+                  </div>
+                );
+              },
+            } satisfies ColumnsType<LeaveRequestListItem>[number],
+          ]
+        : []),
     ],
-    [canViewHr, t],
+    [canManage, canViewHr, router, t],
   );
+
+  async function handleDeleteRequest(): Promise<void> {
+    if (!deletingRequest) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(deletingRequest.id);
+      messageApi.success(t('hr.messages.leaveRequestDeleted'));
+      setDeletingRequest(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteLeaveRequest'),
+        messageApi,
+      );
+    }
+  }
 
   function handleResetFilters(): void {
     setSearch('');
@@ -308,6 +389,17 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     </div>
   ) : (
     <div className="flex flex-col gap-4">
+      <ConfirmDialog
+        open={Boolean(deletingRequest)}
+        title={t('hr.empty.deleteLeaveTitle')}
+        description={t('hr.empty.deleteLeaveDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDeleteRequest()}
+        onCancel={() => setDeletingRequest(null)}
+      />
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -556,16 +648,27 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     return (
       <div className="flex flex-col gap-4">
         <Tabs
+          className="erp-list-tabs"
           defaultActiveKey="requests"
           items={[
             {
               key: 'requests',
-              label: t('hr.tabs.leaveRequests'),
+              label: (
+                <span className="flex items-center gap-2">
+                  <CalendarOutlined />
+                  {t('hr.tabs.leaveRequests')}
+                </span>
+              ),
               children: requestsPanel,
             },
             {
               key: 'balances',
-              label: t('hr.tabs.leaveBalances'),
+              label: (
+                <span className="flex items-center gap-2">
+                  <WalletOutlined />
+                  {t('hr.tabs.leaveBalances')}
+                </span>
+              ),
               children: <LeaveBalancesListPageContent />,
             },
           ]}
