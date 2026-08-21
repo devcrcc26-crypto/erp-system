@@ -11,6 +11,7 @@ import { defaultTablePagination } from '@/lib/theme/table-pagination';
 /**
  * Thin wrapper around Ant Design Table with consistent ERP styling and mobile scroll.
  * Pagination is enabled by default; pass `pagination={false}` to disable.
+ * Pass `scroll={false}` to skip Ant Design’s internal scroll container (page scrolls normally).
  */
 export default function DataTable<T extends object>({
   scroll,
@@ -18,15 +19,19 @@ export default function DataTable<T extends object>({
   className,
   pagination,
   ...props
-}: TableProps<T>): React.ReactNode {
+}: Omit<TableProps<T>, 'scroll'> & {
+  scroll?: TableProps<T>['scroll'] | false;
+}): React.ReactNode {
   const isLgUp = useIsLgUp();
   const { t } = useEpcTranslation();
   const paginationRangeLabel = t('pagination.range');
 
   const resolvedScroll =
-    scroll === undefined
-      ? { x: 'max-content' as const }
-      : scroll;
+    scroll === false
+      ? undefined
+      : scroll === undefined
+        ? { x: 'max-content' as const }
+        : scroll;
 
   const resolvedSize = size ?? (isLgUp ? 'middle' : 'small');
 
@@ -36,7 +41,7 @@ export default function DataTable<T extends object>({
       : pagination ?? defaultTablePagination(undefined, paginationRangeLabel);
 
   return (
-    <div className="erp-table-scroll min-w-0 w-full overflow-x-auto">
+    <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
       <Table<T>
         size={resolvedSize}
         pagination={resolvedPagination}

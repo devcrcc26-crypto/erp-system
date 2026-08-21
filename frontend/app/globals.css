@@ -382,6 +382,12 @@ main::-webkit-scrollbar,
   -webkit-overflow-scrolling: touch;
 }
 
+/* Keep horizontal table scroll without trapping vertical page wheel events */
+.erp-table-scroll .ant-table-content,
+.erp-table-scroll .ant-table-body {
+  overflow-y: visible !important;
+}
+
 /* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: calc(13px * var(--erp-font-scale));

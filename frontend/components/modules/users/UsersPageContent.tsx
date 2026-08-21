@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
+  Avatar,
   Button,
   Dropdown,
   Input,
@@ -20,15 +21,21 @@ import type {
   TablePaginationConfig,
 } from 'antd/es/table/interface';
 import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   DownloadOutlined,
+  EditOutlined,
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   UploadOutlined,
+  UserDeleteOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
-import { User2, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -42,8 +49,9 @@ import {
   useAllUsers,
   useDeleteUser,
   useResendInvitation,
+  useUserPhotoUrl,
 } from '@/lib/query/users';
-import type { User } from '@/lib/api/types';
+import type { EmployeeType, Nationality, User } from '@/lib/api/types';
 import {
   useDepartments,
   useEngineeringDisciplineOptions,
@@ -149,12 +157,41 @@ function buildUsersExportLabels(
   };
 }
 
+function isPendingActivation(user: User): boolean {
+  return Boolean(user.isActive && user.email && !user.emailVerifiedAt);
+}
+
+function UserListAvatar({ user }: { user: User }): React.ReactNode {
+  const photoQuery = useUserPhotoUrl(user.id, user.photoDocumentId);
+  const initials =
+    `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
+
+  return (
+    <Avatar
+      size={32}
+      src={photoQuery.data?.url}
+      icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
+      style={{
+        backgroundColor: photoQuery.data?.url
+          ? undefined
+          : tokens.colorPrimaryLight,
+        color: tokens.colorPrimary,
+        fontSize: 12,
+        fontWeight: 600,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </Avatar>
+  );
+}
+
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
-  const { params, bindMeta, resetPage } = useTablePagination();
+  const { params, bindMeta, resetPage } = useTablePagination(50);
   const [exportingUsers, setExportingUsers] = useState(false);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -169,6 +206,12 @@ export default function UsersPageContent(): React.ReactNode {
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [positionFilter, setPositionFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<boolean | undefined>();
+  const [employeeTypeFilter, setEmployeeTypeFilter] = useState<
+    EmployeeType | undefined
+  >();
+  const [nationalityFilter, setNationalityFilter] = useState<
+    Nationality | undefined
+  >();
   const [sortBy, setSortBy] = useState<UsersListSortField | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
 
@@ -230,32 +273,65 @@ export default function UsersPageContent(): React.ReactNode {
     [positionsQuery.data],
   );
 
-  const filteredUsers = useMemo(
-    () =>
-      filterAndSortUsers({
-        users: usersQuery.data ?? [],
-        search: appliedSearch,
-        disciplineId: disciplineFilter,
-        departmentId: departmentFilter,
-        positionId: positionFilter,
-        isActive: statusFilter,
-        sortBy,
-        sortOrder,
-      }),
-    [
-      usersQuery.data,
-      appliedSearch,
-      disciplineFilter,
-      departmentFilter,
-      positionFilter,
-      statusFilter,
+  const allUsers = usersQuery.data ?? [];
+
+  const userStats = useMemo(() => {
+    let activeCount = 0;
+    let pendingCount = 0;
+    let inactiveCount = 0;
+    for (const user of allUsers) {
+      if (!user.isActive) {
+        inactiveCount += 1;
+      } else if (isPendingActivation(user)) {
+        pendingCount += 1;
+      } else {
+        activeCount += 1;
+      }
+    }
+    return {
+      totalCount: allUsers.length,
+      activeCount,
+      pendingCount,
+      inactiveCount,
+    };
+  }, [allUsers]);
+
+  const filteredUsers = useMemo(() => {
+    const base = filterAndSortUsers({
+      users: allUsers,
+      search: appliedSearch,
+      disciplineId: disciplineFilter,
+      departmentId: departmentFilter,
+      positionId: positionFilter,
+      isActive: statusFilter,
       sortBy,
       sortOrder,
-    ],
-  );
+    });
+
+    return base.filter((user) => {
+      if (employeeTypeFilter && user.employeeType !== employeeTypeFilter) {
+        return false;
+      }
+      if (nationalityFilter && user.nationality !== nationalityFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    allUsers,
+    appliedSearch,
+    disciplineFilter,
+    departmentFilter,
+    positionFilter,
+    statusFilter,
+    employeeTypeFilter,
+    nationalityFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const { data: users, meta } = useMemo(
-    () => paginateUsers(filteredUsers, params.page ?? 1, params.limit ?? 20),
+    () => paginateUsers(filteredUsers, params.page ?? 1, params.limit ?? 50),
     [filteredUsers, params.page, params.limit],
   );
 
@@ -264,7 +340,6 @@ export default function UsersPageContent(): React.ReactNode {
   const handleExportExcel = useCallback(async (): Promise<void> => {
     setExportingUsers(true);
     try {
-      const allUsers = usersQuery.data ?? [];
       const generatedAt = new Date().toISOString();
 
       await exportUsersExcel({
@@ -281,7 +356,7 @@ export default function UsersPageContent(): React.ReactNode {
     } finally {
       setExportingUsers(false);
     }
-  }, [companyName, messageApi, t, usersQuery.data]);
+  }, [allUsers, companyName, messageApi, t]);
 
   function handleResetFilters(): void {
     setSearch('');
@@ -290,12 +365,8 @@ export default function UsersPageContent(): React.ReactNode {
     setDepartmentFilter(undefined);
     setPositionFilter(undefined);
     setStatusFilter(undefined);
-    resetPage();
-  }
-
-  function handleQuery(): void {
-    const next = search.trim();
-    setAppliedSearch(next);
+    setEmployeeTypeFilter(undefined);
+    setNationalityFilter(undefined);
     resetPage();
   }
 
@@ -305,11 +376,9 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
-      <div className="erp-pro-list-page">
-        <div className="erp-pro-card">
-          <div className="flex justify-center p-12">
-            <Spin />
-          </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-center rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-12">
+          <Spin />
         </div>
       </div>
     );
@@ -384,13 +453,7 @@ export default function UsersPageContent(): React.ReactNode {
 
   function buildActionMenu(user: User): MenuProps['items'] {
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
-    const items: MenuProps['items'] = [
-      {
-        key: 'update',
-        label: t('common.update'),
-        onClick: () => router.push(`/users/${user.id}/edit`),
-      },
-    ];
+    const items: MenuProps['items'] = [];
 
     if (showResend) {
       items.push({
@@ -410,8 +473,10 @@ export default function UsersPageContent(): React.ReactNode {
     return items;
   }
 
+  const pagination = bindMeta(meta);
+
   return (
-    <div className="erp-pro-list-page">
+    <div className="flex flex-col gap-4">
       {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}
@@ -450,117 +515,209 @@ export default function UsersPageContent(): React.ReactNode {
         />
       )}
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-body">
-          <div className="erp-pro-filter-form">
-            <div className="erp-pro-filter-form-fields">
-              <div
-                className="erp-pro-filter-field"
-                style={{ minWidth: 220, flex: '1 1 220px' }}
-              >
-                <span className="erp-pro-filter-field-label">{t('common.name')}</span>
-                <Input
-                  placeholder={t('users.searchPlaceholder')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onPressEnter={handleQuery}
-                  allowClear
-                  onClear={() => {
-                    setSearch('');
-                    setAppliedSearch('');
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('common.discipline')}
-                </span>
-                <Select
-                  placeholder={t('users.filterDiscipline')}
-                  options={disciplineFilterOptions}
-                  allowClear
-                  style={{ width: '100%', minWidth: 160 }}
-                  value={disciplineFilter}
-                  onChange={(value?: string) => {
-                    setDisciplineFilter(value);
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('common.department')}
-                </span>
-                <Select
-                  placeholder={t('users.filterDepartment')}
-                  options={departmentFilterOptions}
-                  allowClear
-                  style={{ width: '100%', minWidth: 160 }}
-                  value={departmentFilter}
-                  onChange={(value?: string) => {
-                    setDepartmentFilter(value);
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">
-                  {t('common.position')}
-                </span>
-                <Select
-                  placeholder={t('users.filterPosition')}
-                  options={positionFilterOptions}
-                  allowClear
-                  style={{ width: '100%', minWidth: 160 }}
-                  value={positionFilter}
-                  onChange={(value?: string) => {
-                    setPositionFilter(value);
-                    resetPage();
-                  }}
-                />
-              </div>
-              <div className="erp-pro-filter-field">
-                <span className="erp-pro-filter-field-label">{t('common.status')}</span>
-                <Select
-                  placeholder={t('users.filterStatus')}
-                  options={[
-                    { label: t('common.active'), value: true },
-                    { label: t('common.inactive'), value: false },
-                  ]}
-                  allowClear
-                  style={{ width: '100%', minWidth: 130 }}
-                  value={statusFilter}
-                  onChange={(value?: boolean) => {
-                    setStatusFilter(value);
-                    resetPage();
-                  }}
-                />
-              </div>
-            </div>
-            <div className="erp-pro-filter-form-actions">
-              <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
-                {t('common.reset')}
-              </Button>
-              {/* <Button type="primary" onClick={handleQuery} style={{ borderRadius: 2 }}>
-                {t('common.query')}
-              </Button> */}
-            </div>
-          </div>
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
+        >
+          {t('users.title')}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          Manage employees, roles, and access across the organization.
+        </p>
+      </div>
+
+      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label="Total Employees"
+          value={userStats.totalCount}
+          color="teal"
+          icon={<Users size={14} />}
+        />
+        <StatCard
+          label="Active"
+          value={userStats.activeCount}
+          color="green"
+          icon={<CheckCircleOutlined />}
+        />
+        <StatCard
+          label="Pending Activation"
+          value={userStats.pendingCount}
+          color="amber"
+          icon={<ClockCircleOutlined />}
+        />
+        <StatCard
+          label="Inactive"
+          value={userStats.inactiveCount}
+          color="default"
+          icon={<UserDeleteOutlined />}
+        />
+      </div>
+
+      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input.Search
+            placeholder={t('users.searchPlaceholder')}
+            className="w-72"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={(value) => {
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.filterDiscipline')}
+            className="w-40"
+            allowClear
+            options={disciplineFilterOptions}
+            value={disciplineFilter}
+            onChange={(value?: string) => {
+              setDisciplineFilter(value);
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.filterDepartment')}
+            className="w-40"
+            allowClear
+            options={departmentFilterOptions}
+            value={departmentFilter}
+            onChange={(value?: string) => {
+              setDepartmentFilter(value);
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.filterPosition')}
+            className="w-44"
+            allowClear
+            options={positionFilterOptions}
+            value={positionFilter}
+            onChange={(value?: string) => {
+              setPositionFilter(value);
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.filterStatus')}
+            className="w-36"
+            allowClear
+            options={[
+              { label: t('common.active'), value: true },
+              { label: t('common.inactive'), value: false },
+            ]}
+            value={statusFilter}
+            onChange={(value?: boolean) => {
+              setStatusFilter(value);
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.form.employeeType')}
+            className="w-36"
+            allowClear
+            options={[
+              {
+                value: 'PERMANENT',
+                label: t('hr.employeeType.PERMANENT'),
+              },
+              {
+                value: 'CONTRACT',
+                label: t('hr.employeeType.CONTRACT'),
+              },
+              {
+                value: 'TEMPORARY',
+                label: t('hr.employeeType.TEMPORARY'),
+              },
+            ]}
+            value={employeeTypeFilter}
+            onChange={(value?: EmployeeType) => {
+              setEmployeeTypeFilter(value);
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('users.form.nationality')}
+            className="w-36"
+            allowClear
+            options={[
+              {
+                value: 'ETHIOPIAN',
+                label: t('hr.nationality.ETHIOPIAN'),
+              },
+              {
+                value: 'CHINESE',
+                label: t('hr.nationality.CHINESE'),
+              },
+            ]}
+            value={nationalityFilter}
+            onChange={(value?: Nationality) => {
+              setNationalityFilter(value);
+              resetPage();
+            }}
+          />
+          <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
+            {t('common.reset')}
+          </Button>
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={usersQuery.isFetching && !usersQuery.isLoading}
+              onClick={() => void handleRefresh()}
+              aria-label={t('common.refresh')}
+              style={{ borderRadius: 2 }}
+            />
+          </Tooltip>
         </div>
       </div>
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          {/* <h1 className="erp-pro-card-toolbar-title" style={{fontSize: '16px', fontWeight: 600}}>
-            {meta?.total === 1
-              ? t('users.userCountOne')
-              : t('users.userCount', { count: meta?.total ?? 0 })} 
-          </h1> */}
-          <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-xl">
-            <Users size={16} /> Users
+      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Users size={16} style={{ color: tokens.colorPrimary }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {t('users.allUsers')}
+            </h3>
+            <span
+              className="text-xs"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {meta.total === 1
+                ? t('users.userCountOne')
+                : t('users.userCount', { count: meta.total })}
+            </span>
           </div>
           <Space wrap size={8}>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exportingUsers}
+              onClick={() => void handleExportExcel()}
+              style={{ borderRadius: 2 }}
+            >
+              {t('users.exportExcel')}
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportOpen(true)}
+              style={{ borderRadius: 2 }}
+            >
+              {t('common.importFromExcel')}
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -569,45 +726,29 @@ export default function UsersPageContent(): React.ReactNode {
             >
               {t('users.addEmployee')}
             </Button>
-            <Tooltip title={t('users.exportExcel')}>
-              <Button
-                icon={<DownloadOutlined />}
-                loading={exportingUsers}
-                onClick={() => void handleExportExcel()}
-                style={{ borderRadius: 2 }}
-              >
-                {t('users.exportExcel')}
-              </Button>
-            </Tooltip>
-            <Tooltip title={t('common.importFromExcel')}>
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-                style={{ borderRadius: 2 }}
-              >
-                {t('common.importFromExcel')}
-              </Button>
-            </Tooltip>
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={usersQuery.isFetching && !usersQuery.isLoading}
-                onClick={() => void handleRefresh()}
-                aria-label={t('common.refresh')}
-                style={{ borderRadius: 2 }}
-              />
-            </Tooltip>
           </Space>
         </div>
-        <div className="erp-pro-table-card-body">
+
+        <div className="px-0">
           <DataTable<User>
             rowKey="id"
             className="erp-pro-table"
-            size="middle"
+            size="small"
             dataSource={users}
-            pagination={bindMeta(meta)}
+            scroll={false}
+            pagination={
+              pagination
+                ? {
+                    ...pagination,
+                    pageSizeOptions: ['20', '50', '100'],
+                  }
+                : undefined
+            }
             onChange={handleTableChange}
+            onRow={(record) => ({
+              onClick: () => router.push(`/users/${record.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
             locale={{
               emptyText: (
                 <TableEmptyState
@@ -623,40 +764,52 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             columns={[
               {
+                title: '',
+                key: 'avatar',
+                width: 48,
+                render: (_, record) => <UserListAvatar user={record} />,
+              },
+              {
                 title: t('common.name'),
                 key: 'name',
                 sorter: true,
-                align: 'left',
                 render: (_, record) => (
-                  <div className="flex flex-col items-start text-left">
-                    <Button
-                      type="link"
-                      className="!h-auto !justify-start !px-0 !py-0 font-medium"
-                      style={{
-                        borderRadius: 0,
-                        height: 'auto',
-                        paddingInline: 0,
-                        textAlign: 'left',
-                        color: tokens.colorPrimary,
-                      }}
-                      onClick={() => router.push(`/users/${record.id}`)}
+                  <div className="min-w-0 py-0.5">
+                    <p
+                      className="m-0 text-sm font-medium"
+                      style={{ color: tokens.colorTextPrimary }}
                     >
                       {record.firstName} {record.lastName}
-                    </Button>
+                    </p>
                     {record.chineseName ? (
-                      <span
-                        className="block text-left"
-                        style={{
-                          color: tokens.colorTextSecondary,
-                          fontSize: 12,
-                          lineHeight: 1.4,
-                          marginTop: 2,
-                        }}
+                      <p
+                        className="m-0 text-xs"
+                        style={{ color: tokens.colorTextTertiary }}
                       >
                         {record.chineseName}
-                      </span>
+                      </p>
                     ) : null}
+                    <p
+                      className="m-0 truncate text-xs"
+                      style={{ color: tokens.colorTextTertiary }}
+                    >
+                      {record.email ?? t('users.noEmailNoLogin')}
+                    </p>
                   </div>
+                ),
+              },
+              {
+                title: 'ID',
+                dataIndex: 'employeeId',
+                key: 'employeeId',
+                width: 100,
+                render: (id: string | null | undefined) => (
+                  <span
+                    className="font-[family-name:var(--font-mono)] text-xs"
+                    style={{ color: tokens.colorTextSecondary }}
+                  >
+                    {id ?? '—'}
+                  </span>
                 ),
               },
               {
@@ -666,7 +819,7 @@ export default function UsersPageContent(): React.ReactNode {
                 sorter: true,
                 render: (_, record) =>
                   record.department?.name ?? (
-                    <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                    <span style={{ color: tokens.colorTextSecondary }}>—</span>
                   ),
               },
               {
@@ -676,15 +829,25 @@ export default function UsersPageContent(): React.ReactNode {
                 sorter: true,
                 render: (_, record) =>
                   record.position?.title ?? (
-                    <span style={{ color: tokens.colorTextSecondary }}>-</span>
+                    <span style={{ color: tokens.colorTextSecondary }}>—</span>
                   ),
               },
               {
-                title: t('common.email'),
-                key: 'email',
-                ellipsis: { showTitle: true },
-                sorter: true,
-                render: (_, record) => record.email || '-',
+                title: 'Type',
+                dataIndex: 'employeeType',
+                key: 'employeeType',
+                width: 110,
+                render: (type: EmployeeType | null | undefined) =>
+                  type ? (
+                    <span
+                      className="text-xs"
+                      style={{ color: tokens.colorTextSecondary }}
+                    >
+                      {t(`hr.employeeType.${type}`)}
+                    </span>
+                  ) : (
+                    '—'
+                  ),
               },
               {
                 title: t('common.discipline'),
@@ -692,22 +855,20 @@ export default function UsersPageContent(): React.ReactNode {
                 ellipsis: { showTitle: true },
                 render: (_, record) => {
                   if (!record.engineeringDisciplineId) {
-                    return '-';
+                    return '—';
                   }
                   const name =
                     record.engineeringDiscipline?.name ??
                     disciplineNameById.get(record.engineeringDisciplineId) ??
-                    '-';
+                    '—';
                   const nameZh = record.engineeringDiscipline?.nameZh;
                   return (
                     <div className="flex flex-col">
-                      <span>{name}</span>
+                      <span className="text-sm">{name}</span>
                       {nameZh ? (
                         <span
-                          style={{
-                            color: tokens.colorTextSecondary,
-                            fontSize: 12,
-                          }}
+                          className="text-xs"
+                          style={{ color: tokens.colorTextSecondary }}
                         >
                           {nameZh}
                         </span>
@@ -727,11 +888,11 @@ export default function UsersPageContent(): React.ReactNode {
                       isPrimary: assignment.isPrimary,
                     })) ?? [];
                   if (roles.length === 0) {
-                    return '-';
+                    return '—';
                   }
                   const topRole = pickTopLevelRoleName(roles, '');
                   if (!topRole) {
-                    return '-';
+                    return '—';
                   }
                   const isPrimary = roles.some(
                     (role) => role.name === topRole && role.isPrimary,
@@ -751,6 +912,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.status'),
                 key: 'status',
+                width: 120,
                 sorter: true,
                 render: (_, record) => (
                   <StatusBadge
@@ -760,27 +922,41 @@ export default function UsersPageContent(): React.ReactNode {
                 ),
               },
               {
-                title: t('common.actions'),
+                title: '',
                 key: 'actions',
-                width: 64,
-                fixed: 'right',
-                align: 'center',
+                width: 80,
                 render: (_, record) => (
-                  <Dropdown
-                    menu={{ items: buildActionMenu(record) }}
-                    trigger={['click']}
-                    disabled={resendInvitation.isPending}
+                  <div
+                    className="flex items-center gap-1"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
                   >
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<MoreOutlined />}
-                      aria-label={t('users.actionsFor', {
-                        name: `${record.firstName} ${record.lastName}`,
-                      })}
-                      style={{ borderRadius: 2 }}
-                    />
-                  </Dropdown>
+                    <Tooltip title={t('common.update')}>
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<EditOutlined />}
+                        onClick={() => router.push(`/users/${record.id}/edit`)}
+                        aria-label={t('common.update')}
+                        style={{ borderRadius: 2 }}
+                      />
+                    </Tooltip>
+                    <Dropdown
+                      menu={{ items: buildActionMenu(record) }}
+                      trigger={['click']}
+                      disabled={resendInvitation.isPending}
+                    >
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<MoreOutlined />}
+                        aria-label={t('users.actionsFor', {
+                          name: `${record.firstName} ${record.lastName}`,
+                        })}
+                        style={{ borderRadius: 2 }}
+                      />
+                    </Dropdown>
+                  </div>
                 ),
               },
             ]}
