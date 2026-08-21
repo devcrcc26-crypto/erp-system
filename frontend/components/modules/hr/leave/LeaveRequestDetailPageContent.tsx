@@ -13,10 +13,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
-import {
-  useCanManageLeaveRequests,
-  useCanViewHr,
-} from '@/hooks/use-auth-capabilities';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
@@ -49,7 +46,7 @@ export default function LeaveRequestDetailPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
-  const canManage = useCanManageLeaveRequests();
+  const canManage = canViewHr;
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const cancelMutation = useCancelLeaveRequest(requestId);

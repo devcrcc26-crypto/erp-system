@@ -36,7 +36,6 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessLeave,
   useCanCreateLeave,
-  useCanManageLeaveRequests,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -113,7 +112,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
-  const canManage = useCanManageLeaveRequests();
+  /** HR / System Admin (hr.view) may edit/delete company leave requests. */
+  const canManage = canViewHr;
   const canCreate = useCanCreateLeave();
   const messageApi = useAppMessage();
   const { params, resetPage, bindMeta } = useTablePagination(10);

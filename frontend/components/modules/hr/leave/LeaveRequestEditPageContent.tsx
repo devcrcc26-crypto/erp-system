@@ -16,9 +16,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
-import {
-  useCanManageLeaveRequests,
-} from '@/hooks/use-auth-capabilities';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -54,7 +52,7 @@ export default function LeaveRequestEditPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
-  const canManage = useCanManageLeaveRequests();
+  const canManage = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const updateMutation = useUpdateLeaveRequest(requestId);
