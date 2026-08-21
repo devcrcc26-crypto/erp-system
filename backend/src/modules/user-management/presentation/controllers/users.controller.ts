@@ -130,6 +130,21 @@ export class UsersController {
     return { message: 'Document deleted' };
   }
 
+  @Get(':id/documents/:documentId/download-url')
+  @RequirePermission('users', 'view')
+  @ApiOperation({ summary: 'Get presigned download URL for a profile document' })
+  getDocumentDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.userManagementService.getUserDocumentDownloadUrl(
+      this.ctx(user),
+      id,
+      documentId,
+    );
+  }
+
   @Get(':id')
   @RequirePermission('users', 'view')
   get(

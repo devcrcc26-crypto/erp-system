@@ -596,7 +596,7 @@ export class DocumentService {
         folder?.contextType === FolderContextType.PER_DIEM ||
         folder?.contextType === FolderContextType.VEHICLE_APPLICATION ||
         folder?.contextType === FolderContextType.INSPECTION_REPAIR ||
-        folder?.contextType === FolderContextType.EMPLOYEE_PROFILE
+        folder?.contextType === FolderContextType.EMPLOYEE_CONTRACT
       ) {
         bucket = STORAGE_BUCKETS.HR;
       }

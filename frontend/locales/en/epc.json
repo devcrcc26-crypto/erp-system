@@ -660,7 +660,8 @@
     "select": "Select",
     "required": "Required",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "download": "Download"
   },
   "shell": {
     "openNavigation": "Open navigation menu",
@@ -782,6 +783,8 @@
     "documentDownloadError": "Failed to download document",
     "documentDeleted": "Document deleted",
     "documentDeleteError": "Failed to delete document",
+    "deleteDocumentTitle": "Delete document?",
+    "deleteDocumentDescription": "Remove \"{{name}}\" from this employee profile. This cannot be undone.",
     "noDocuments": "No profile documents uploaded yet",
     "steps": {
       "account": "Account & Access",

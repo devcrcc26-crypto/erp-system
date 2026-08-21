@@ -709,6 +709,29 @@ export class UserManagementService {
     await this.documentService.deleteDocument(ctx, documentId);
   }
 
+  /**
+   * Presigned download URL for a profile document (users.view; no documents.view).
+   */
+  async getUserDocumentDownloadUrl(
+    ctx: AuditContext,
+    userId: string,
+    documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const folderId = await this.resolveProfileFolderId(ctx, userId);
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({
+        id: documentId,
+        companyId: ctx.companyId,
+        folderId,
+      }),
+      select: { id: true },
+    });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    return this.documentService.getDownloadUrl(ctx, documentId);
+  }
+
   private async assertUserRole(
     ctx: AuditContext,
     userRoleId: string,

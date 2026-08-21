@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Input, Spin, Upload } from 'antd';
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { apiGet } from '@/lib/api/client';
@@ -58,6 +59,7 @@ function SavedDocumentRow({
   document,
   canDelete,
   isDeleting,
+  isDownloading,
   onDownload,
   onDelete,
   downloadLabel,
@@ -66,6 +68,7 @@ function SavedDocumentRow({
   document: UserProfileDocument;
   canDelete: boolean;
   isDeleting: boolean;
+  isDownloading: boolean;
   onDownload: () => void;
   onDelete: () => void;
   downloadLabel: string;
@@ -80,7 +83,12 @@ function SavedDocumentRow({
         </div>
       </div>
       <div className="flex shrink-0 gap-1">
-        <Button type="link" icon={<DownloadOutlined />} onClick={onDownload}>
+        <Button
+          type="link"
+          icon={<DownloadOutlined />}
+          loading={isDownloading}
+          onClick={onDownload}
+        >
           {downloadLabel}
         </Button>
         {canDelete ? (
@@ -93,6 +101,9 @@ function SavedDocumentRow({
   );
 }
 
+/**
+ * Upload, download, and delete employee profile documents.
+ */
 export default function EmployeeProfileDocuments({
   userId,
   canDelete = true,
@@ -103,6 +114,12 @@ export default function EmployeeProfileDocuments({
   const uploadMutation = useUploadUserDocuments();
   const deleteMutation = useDeleteUserDocument();
   const [pending, setPending] = useState<PendingUpload[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const documentPendingDelete =
+    documentsQuery.data?.find((doc) => doc.id === confirmDeleteId) ?? null;
 
   function handleSelectFiles(file: File): false {
     setPending((current) => [
@@ -144,22 +161,40 @@ export default function EmployeeProfileDocuments({
   }
 
   async function handleDownload(document: UserProfileDocument): Promise<void> {
+    setDownloadingId(document.id);
     try {
-      const result = await apiGet<{ url: string }>(
-        `/documents/${document.id}/download-url`,
+      const { url } = await apiGet<{ url: string; expiresIn: number }>(
+        `/users/${userId}/documents/${document.id}/download-url`,
       );
-      window.open(result.url, '_blank', 'noopener,noreferrer');
+      const anchor = window.document.createElement('a');
+      anchor.href = url;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.download = document.name;
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
     } catch (error: unknown) {
       notifyApiError(error, t('users.documentDownloadError'), messageApi);
+    } finally {
+      setDownloadingId(null);
     }
   }
 
-  async function handleDelete(documentId: string): Promise<void> {
+  async function handleConfirmDelete(): Promise<void> {
+    if (!confirmDeleteId) {
+      return;
+    }
+    const documentId = confirmDeleteId;
+    setDeletingId(documentId);
     try {
       await deleteMutation.mutateAsync({ userId, documentId });
       messageApi.success(t('users.documentDeleted'));
+      setConfirmDeleteId(null);
     } catch (error: unknown) {
       notifyApiError(error, t('users.documentDeleteError'), messageApi);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -200,6 +235,24 @@ export default function EmployeeProfileDocuments({
         </Button>
       ) : null}
 
+      <ConfirmDialog
+        open={Boolean(confirmDeleteId)}
+        title={t('users.deleteDocumentTitle')}
+        description={t('users.deleteDocumentDescription', {
+          name: documentPendingDelete?.name ?? '',
+        })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        danger
+        confirmLoading={deletingId === confirmDeleteId && deleteMutation.isPending}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => {
+          if (!deleteMutation.isPending) {
+            setConfirmDeleteId(null);
+          }
+        }}
+      />
+
       <Spin spinning={documentsQuery.isLoading}>
         {documents.length > 0 ? (
           <div className="divide-y divide-slate-200 rounded border border-slate-200">
@@ -208,11 +261,12 @@ export default function EmployeeProfileDocuments({
                 key={document.id}
                 document={document}
                 canDelete={canDelete}
-                isDeleting={deleteMutation.isPending}
+                isDeleting={deletingId === document.id}
+                isDownloading={downloadingId === document.id}
                 downloadLabel={t('common.download')}
                 deleteLabel={t('common.delete')}
                 onDownload={() => void handleDownload(document)}
-                onDelete={() => void handleDelete(document.id)}
+                onDelete={() => setConfirmDeleteId(document.id)}
               />
             ))}
           </div>

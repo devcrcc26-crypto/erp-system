@@ -660,7 +660,8 @@
     "select": "请选择",
     "required": "必填",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "download": "下载"
   },
   "shell": {
     "openNavigation": "打开导航菜单",
@@ -782,6 +783,8 @@
     "documentDownloadError": "文件下载失败",
     "documentDeleted": "文件已删除",
     "documentDeleteError": "文件删除失败",
+    "deleteDocumentTitle": "删除文件？",
+    "deleteDocumentDescription": "将从该员工档案中移除“{{name}}”。此操作不可撤销。",
     "noDocuments": "暂无员工档案文件",
     "steps": {
       "account": "账户与权限",

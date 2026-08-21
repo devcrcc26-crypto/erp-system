@@ -939,8 +939,9 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Leave / overtime / approval / seal attachment folders: HR viewers, owner,
-   * or assigned approval-tier approver may download without documents.view.
+   * Leave / overtime / approval / seal / employee profile attachment folders:
+   * HR viewers, user managers, owner, or assigned approval-tier approver may
+   * download without documents.view.
    */
   private async canAccessHrAttachmentFolder(
     userId: string,
@@ -948,6 +949,24 @@ export class DocumentPermissionService {
     contextType: FolderContextType,
     contextId: string | null,
   ): Promise<boolean> {
+    if (
+      contextType === FolderContextType.EMPLOYEE_PROFILE ||
+      contextType === FolderContextType.EMPLOYEE_CONTRACT
+    ) {
+      if (!contextId) {
+        return false;
+      }
+      if (contextId === userId) {
+        return true;
+      }
+      const [usersView, usersEdit, hrView] = await Promise.all([
+        this.permissionService.hasPermission(userId, companyId, 'users', 'view'),
+        this.permissionService.hasPermission(userId, companyId, 'users', 'edit'),
+        this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),
+      ]);
+      return usersView || usersEdit || hrView;
+    }
+
     if (
       contextType !== FolderContextType.LEAVE &&
       contextType !== FolderContextType.OVERTIME &&
