@@ -8,6 +8,7 @@ import IconRail from '@/components/ui/shell/IconRail';
 import MobileNavDrawer from '@/components/ui/shell/MobileNavDrawer';
 import ContextSidebar from '@/components/ui/shell/ContextSidebar';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
+import PageContentActions from '@/components/ui/shell/PageContentActions';
 import {
   extractProjectId,
   resolveRouteMeta,
@@ -124,6 +125,7 @@ export default function AppShell({
         />
 
         <div className="flex flex-col px-3 pb-3 pt-3 sm:px-4 sm:pb-4 lg:px-6 lg:pb-6">
+          <PageContentActions />
           <div className="min-w-0 flex-1">{children}</div>
         </div>
       </main>

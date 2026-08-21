@@ -7,12 +7,11 @@ import Breadcrumbs from '@/components/ui/shell/Breadcrumbs';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
-import { useHeaderExtraStore } from '@/stores/header-extra.store';
 import { tokens } from '@/lib/theme/tokens';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
 /**
- * Shell chrome: sticky actions header + sticky breadcrumb/title second header.
+ * Shell chrome: sticky actions header + sticky breadcrumbs second header.
  */
 export default function MainContentHeader({
   breadcrumbs,
@@ -24,7 +23,6 @@ export default function MainContentHeader({
   onOpenMobileNav?: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const headerExtra = useHeaderExtraStore((state) => state.extra);
   const showBreadcrumbBar = breadcrumbs.length > 0;
 
   function handleMobileNavKeyDown(
@@ -85,39 +83,17 @@ export default function MainContentHeader({
         </div>
       </header>
 
-      <header>
-
-        
-        {showBreadcrumbBar ? (
-          <div
-          className={`sticky z-20 shrink-0 bg-white px-3 py-2 sm:px-4 lg:px-6 ${
-            !showBreadcrumbBar && !headerExtra ? 'hidden lg:block' : ''
-          }`}
+      {showBreadcrumbBar ? (
+        <header
+          className="sticky z-30 shrink-0 bg-white px-3 py-2 sm:px-4 lg:px-6"
           style={{
             top: SHELL_TOP_HEADER_HEIGHT,
             borderBottom: `1px solid ${tokens.colorBorder}`,
           }}
-          >
-            <Breadcrumbs segments={breadcrumbs} />
-          </div>
-        ) : null}
-        <div className="sticky z-20 shrink-0  px-3 py-2 sm:px-4 lg:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          {/* <h1
-            className="m-0 hidden text-[20px] font-semibold leading-[32px] tracking-tight lg:block"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
-          >
-            {pageTitle}
-          </h1> */}
-          {headerExtra ? (
-            <div className="flex shrink-0 items-center sm:ml-auto">
-              {headerExtra}
-            </div>
-          ) : null}
-        </div>
-      </header>
+        >
+          <Breadcrumbs segments={breadcrumbs} />
+        </header>
+      ) : null}
     </>
   );
 }
