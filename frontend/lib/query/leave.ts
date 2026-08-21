@@ -58,6 +58,109 @@ function buildListQuery(params: ListLeaveRequestsParams): string {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for a leave list endpoint (no client search — filter locally).
+ */
+async function fetchAllLeaveRequestPages(
+  path: string,
+  params: Omit<ListLeaveRequestsParams, 'page' | 'limit' | 'search'>,
+): Promise<LeaveRequestListItem[]> {
+  const first = await apiGetPaginated<LeaveRequestListItem>(
+    `${path}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<LeaveRequestListItem>(
+        `${path}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/**
+ * Loads every page of company leave balances for a year.
+ */
+async function fetchAllLeaveBalancePages(
+  params: Omit<ListLeaveBalancesParams, 'page' | 'limit' | 'search'>,
+): Promise<EmployeeLeaveBalanceSummary[]> {
+  const first = await apiGetPaginated<EmployeeLeaveBalanceSummary>(
+    `${LEAVE_PATH}/balances${toQueryString({
+      ...params,
+      page: 1,
+      limit: FETCH_PAGE_SIZE,
+    })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<EmployeeLeaveBalanceSummary>(
+        `${LEAVE_PATH}/balances${toQueryString({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/**
+ * Company-wide leave requests (all pages) for client-side filter/search.
+ */
+export function useLeaveRequestsAll(
+  params: Omit<ListLeaveRequestsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...leaveKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllLeaveRequestPages(LEAVE_PATH, params),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Current user's leave requests (all pages) for client-side filter/search.
+ */
+export function useMyLeaveRequestsAll(
+  params: Omit<ListLeaveRequestsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...leaveKeys.myLists(), 'all', params] as const,
+    queryFn: () => fetchAllLeaveRequestPages(`${LEAVE_PATH}/my`, params),
+    enabled,
+    retry: false,
+  });
+}
+
 /**
  * Paginated leave requests (company-wide).
  */
@@ -132,6 +235,21 @@ export function useLeaveBalances(
       apiGetPaginated<EmployeeLeaveBalanceSummary>(
         `${LEAVE_PATH}/balances${toQueryString(params)}`,
       ),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * All company leave balances for a year (for client-side search/filter).
+ */
+export function useLeaveBalancesAll(
+  params: Omit<ListLeaveBalancesParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...leaveKeys.balances(), 'company', 'all', params] as const,
+    queryFn: () => fetchAllLeaveBalancePages(params),
     enabled,
     retry: false,
   });

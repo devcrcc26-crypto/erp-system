@@ -656,6 +656,8 @@
     "increaseFontSize": "Increase font size",
     "decreaseFontSize": "Decrease font size",
     "resetFontSize": "Reset font size",
+    "switchToLanguage": "Switch to {{language}}",
+    "languageChangeFailed": "Could not update language preference",
     "search": "Search",
     "loading": "Loading…",
     "select": "Select",
@@ -1812,7 +1814,7 @@
       "terminationReason": "Termination Reason"
     },
     "placeholder": {
-      "searchRequest": "Search request # or reason",
+      "searchRequest": "Search by name or request #",
       "searchSheet": "Search sheet number",
       "searchClaim": "Search claim # or title",
       "searchPurchase": "Search request # or title",
@@ -1826,7 +1828,7 @@
       "searchFlight": "Search application # or route",
       "searchPerDiem": "Search request # or destination",
       "searchEmployeeContract": "Search contract # or employee",
-      "searchEmployee": "Search employee name or email",
+      "searchEmployee": "Search by name or employee ID",
       "status": "Status",
       "leaveType": "Leave type",
       "employee": "Employee",

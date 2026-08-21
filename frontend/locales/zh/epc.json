@@ -655,6 +655,8 @@
     "increaseFontSize": "增大字体",
     "decreaseFontSize": "减小字体",
     "resetFontSize": "重置字体大小",
+    "switchToLanguage": "切换到{{language}}",
+    "languageChangeFailed": "无法更新语言偏好",
     "search": "搜索",
     "loading": "加载中…",
     "select": "请选择",
@@ -1800,7 +1802,7 @@
       "terminationReason": "终止原因"
     },
     "placeholder": {
-      "searchRequest": "搜索申请编号或原因",
+      "searchRequest": "按姓名或申请编号搜索",
       "searchSheet": "搜索表单编号",
       "searchClaim": "搜索报销编号或标题",
       "searchPurchase": "搜索申请编号或标题",
@@ -1814,7 +1816,7 @@
       "searchFlight": "搜索申请编号或路线",
       "searchPerDiem": "搜索申请编号或目的地",
       "searchEmployeeContract": "搜索合同编号或员工",
-      "searchEmployee": "搜索员工姓名或邮箱",
+      "searchEmployee": "按姓名或员工 ID 搜索",
       "status": "状态",
       "leaveType": "假期类型",
       "employee": "员工",

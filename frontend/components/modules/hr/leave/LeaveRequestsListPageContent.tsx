@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -49,10 +49,11 @@ import type {
   LeaveRequestStatus,
   LeaveType,
 } from '@/lib/api/leave.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   useDeleteLeaveRequest,
-  useLeaveRequests,
-  useMyLeaveRequests,
+  useLeaveRequestsAll,
+  useMyLeaveRequestsAll,
 } from '@/lib/query/leave';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
@@ -62,6 +63,7 @@ import {
   leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
+import { filterLeaveRequests } from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -132,42 +134,20 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   >(null);
   const [deletingRequest, setDeletingRequest] =
     useState<LeaveRequestListItem | null>(null);
-  const [cachedTotals, setCachedTotals] = useState({
-    all: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  });
 
-  const statusFilter = useMemo(
-    () => statusesForMode(statusMode),
-    [statusMode],
-  );
-
-  const listParams = useMemo(
+  const fetchParams = useMemo(
     () => ({
-      ...params,
-      search: appliedSearch.trim() || undefined,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
       leaveType,
       employeeId: canViewHr ? employeeId : undefined,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
-    [
-      params,
-      appliedSearch,
-      statusFilter,
-      leaveType,
-      employeeId,
-      dateRange,
-      canViewHr,
-    ],
+    [leaveType, employeeId, dateRange, canViewHr],
   );
 
-  const companyListQuery = useLeaveRequests(listParams, canViewHr);
-  const myListQuery = useMyLeaveRequests(
-    listParams,
+  const companyListQuery = useLeaveRequestsAll(fetchParams, canViewHr);
+  const myListQuery = useMyLeaveRequestsAll(
+    fetchParams,
     !canViewHr && canAccess,
   );
   const listQuery = canViewHr ? companyListQuery : myListQuery;
@@ -177,19 +157,65 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     { enabled: canViewHr },
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? 0;
+  const allRows = listQuery.data ?? [];
 
-  useEffect(() => {
-    if (listQuery.isFetching || !meta) {
-      return;
-    }
-    setCachedTotals((prev) => ({
-      ...prev,
-      [statusMode === 'all' ? 'all' : statusMode]: meta.total,
-    }));
-  }, [listQuery.isFetching, meta, statusMode]);
+  const statusCounts = useMemo(() => {
+    const pending = allRows.filter((row) =>
+      PENDING_STATUSES.includes(row.status),
+    ).length;
+    const approved = allRows.filter((row) =>
+      APPROVED_STATUSES.includes(row.status),
+    ).length;
+    const rejected = allRows.filter((row) =>
+      REJECTED_STATUSES.includes(row.status),
+    ).length;
+    return {
+      all: allRows.length,
+      pending,
+      approved,
+      rejected,
+    };
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterLeaveRequests(allRows, {
+        search: appliedSearch,
+        statuses: statusesForMode(statusMode),
+        leaveType,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [
+      allRows,
+      appliedSearch,
+      statusMode,
+      leaveType,
+      employeeId,
+      dateRange,
+      canViewHr,
+    ],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
+
+  const totalCount = meta.total;
 
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
     () => [
@@ -440,9 +466,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         >
           <StatCard
             label="Total"
-            value={
-              statusMode === 'all' ? totalCount : cachedTotals.all || totalCount
-            }
+            value={statusCounts.all}
             color="teal"
             icon={<CalendarOutlined />}
           />
@@ -454,7 +478,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         >
           <StatCard
             label="Pending"
-            value={statusMode === 'pending' ? totalCount : cachedTotals.pending}
+            value={statusCounts.pending}
             color="amber"
             icon={<ClockCircleOutlined />}
           />
@@ -466,9 +490,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         >
           <StatCard
             label="Approved"
-            value={
-              statusMode === 'approved' ? totalCount : cachedTotals.approved
-            }
+            value={statusCounts.approved}
             color="green"
             icon={<CheckCircleOutlined />}
           />
@@ -480,9 +502,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         >
           <StatCard
             label="Rejected"
-            value={
-              statusMode === 'rejected' ? totalCount : cachedTotals.rejected
-            }
+            value={statusCounts.rejected}
             color="red"
             icon={<CloseCircleOutlined />}
           />
@@ -496,7 +516,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             className="w-72"
             allowClear
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
             onSearch={(value) => {
               setSearch(value);
               setAppliedSearch(value.trim());
@@ -632,14 +657,10 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : false
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
           />
         </div>
       </div>

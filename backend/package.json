@@ -17,6 +17,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
     "prisma:seed-approval-categories": "ts-node --transpile-only prisma/seed-approval-categories.ts",
+    "prisma:seed-leave-policies": "ts-node --transpile-only prisma/seed-leave-policies.ts",
     "prisma:seed-employee-contract-permissions": "ts-node --transpile-only prisma/seed-employee-contract-permissions.ts",
     "prisma:seed-hr-users-permissions": "ts-node --transpile-only prisma/seed-hr-users-permissions.ts",
     "prisma:seed-full-project": "ts-node --transpile-only prisma/seed-full-project.ts",

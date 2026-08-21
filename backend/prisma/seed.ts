@@ -5,6 +5,7 @@ import { seedAllProjectTypes } from './seed-all-project-types';
 import { appendRichDemoProjects } from './seed-demo-projects';
 import { seedComment8Walkthrough } from './seed-comment8-walkthrough';
 import { seedApprovalCategories } from './seeds/approval-categories.seed';
+import { seedLeavePolicies } from './seed-leave-policies';
 
 const prisma = new PrismaClient();
 
@@ -1938,6 +1939,12 @@ async function main(): Promise<void> {
   console.log(`  Permissions seeded: ${permissions.length}`);
 
   await seedApprovalCategories(prisma, {
+    companyId: company.id,
+    actorUserId: adminUser.id,
+  });
+
+  await seedLeavePolicies({
+    prisma,
     companyId: company.id,
     actorUserId: adminUser.id,
   });

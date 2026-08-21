@@ -6,6 +6,7 @@ import { Avatar, Dropdown } from 'antd';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
 import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
+import LanguageControl from '@/components/ui/LanguageControl/LanguageControl';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useLogout } from '@/lib/query/auth';
@@ -103,6 +104,7 @@ export default function HeaderActions({
         compact ? 'gap-1' : 'gap-2',
       ].join(' ')}
     >
+      <LanguageControl compact={compact} />
       <NotificationPanel />
       <Dropdown
         trigger={['click']}
@@ -143,10 +145,24 @@ export default function HeaderActions({
                 className="m-0 mb-2 text-xs font-medium uppercase tracking-wide"
                 style={{ color: tokens.colorTextTertiary }}
               >
+                {t('common.language')}
+              </p>
+              <div className="flex justify-center">
+                <LanguageControl />
+              </div>
+            </div>
+
+            <div className="mx-2 my-1 border-t border-[rgba(0,0,0,0.06)]" />
+
+            <div className="px-3 py-2">
+              <p
+                className="m-0 mb-2 text-xs font-medium uppercase tracking-wide"
+                style={{ color: tokens.colorTextTertiary }}
+              >
                 {t('common.fontSize')}
               </p>
               <div className="flex justify-center">
-                  <FontSizeControl compact={compact}/>
+                <FontSizeControl compact={compact} />
               </div>
             </div>
 

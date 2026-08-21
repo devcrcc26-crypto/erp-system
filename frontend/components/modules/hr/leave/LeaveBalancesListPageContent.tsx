@@ -6,7 +6,6 @@ import {
   Button,
   Input,
   InputNumber,
-  Select,
   Spin,
   Tooltip,
 } from 'antd';
@@ -28,13 +27,13 @@ import type {
   EmployeeLeaveBalanceSummary,
   LeaveBalance,
 } from '@/lib/api/leave.types';
-import { useLeaveBalances } from '@/lib/query/leave';
-import { useUsersDirectory } from '@/lib/query/users';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useLeaveBalancesAll } from '@/lib/query/leave';
 import {
   formatLeaveEmployeeName,
   formatLeaveType,
 } from '@/lib/utils/leave-display';
-import { formatUserName } from '@/lib/utils/user-display';
+import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
 import { tokens } from '@/lib/theme/tokens';
 
 const LOW_BALANCE_THRESHOLD = 5;
@@ -81,27 +80,36 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [employeeId, setEmployeeId] = useState<string | undefined>();
 
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      year,
-      search: appliedSearch.trim() || undefined,
-      employeeId,
-    }),
-    [params, year, appliedSearch, employeeId],
+  const balancesQuery = useLeaveBalancesAll({ year }, true);
+  const allRows = balancesQuery.data ?? [];
+
+  const filtered = useMemo(
+    () =>
+      filterLeaveBalances(allRows, {
+        search: appliedSearch,
+      }),
+    [allRows, appliedSearch],
   );
 
-  const balancesQuery = useLeaveBalances(listParams, true);
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: true },
-  );
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
 
-  const rows = balancesQuery.data?.data ?? [];
-  const meta = balancesQuery.data?.meta;
-  const totalCount = meta?.total ?? 0;
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
+
+  const totalCount = meta.total;
 
   const pageStats = useMemo(() => {
     let lowBalance = 0;
@@ -109,7 +117,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     let annualRemainingSum = 0;
     let annualCount = 0;
 
-    for (const row of rows) {
+    for (const row of filtered) {
       if (row.annual) {
         annualRemainingSum += row.annual.remaining;
         annualCount += 1;
@@ -128,7 +136,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       avgRemaining:
         annualCount > 0 ? Math.round(annualRemainingSum / annualCount) : 0,
     };
-  }, [rows]);
+  }, [filtered]);
 
   const columns: ColumnsType<EmployeeLeaveBalanceSummary> = useMemo(
     () => [
@@ -183,15 +191,12 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   function handleResetFilters(): void {
     setSearch('');
     setAppliedSearch('');
-    setEmployeeId(undefined);
     setYear(currentYear);
     resetPage();
   }
 
   const hasFilters =
-    Boolean(appliedSearch.trim()) ||
-    Boolean(employeeId) ||
-    year !== currentYear;
+    Boolean(appliedSearch.trim()) || year !== currentYear;
 
   if (balancesQuery.isLoading && !balancesQuery.data) {
     return (
@@ -249,20 +254,14 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         <StatCard
           label="Low balance"
           value={pageStats.lowBalance}
-          sub={
-            rows.length > 0
-              ? `≤ ${LOW_BALANCE_THRESHOLD} days on this page`
-              : undefined
-          }
+          sub={`≤ ${LOW_BALANCE_THRESHOLD} days`}
           color="amber"
           icon={<WarningOutlined />}
         />
         <StatCard
           label="With pending"
           value={pageStats.withPending}
-          sub={
-            rows.length > 0 ? 'Annual leave on this page' : undefined
-          }
+          sub="Annual leave"
           color="default"
           icon={<ClockCircleOutlined />}
         />
@@ -275,7 +274,12 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             className="w-72"
             allowClear
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
             onSearch={(value) => {
               setSearch(value);
               setAppliedSearch(value.trim());
@@ -287,22 +291,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          {/* <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            placeholder={t('hr.placeholder.employee')}
-            className="w-48"
-            options={(usersQuery.data?.data ?? []).map((user) => ({
-              value: user.id,
-              label: formatUserName(user),
-            }))}
-            value={employeeId}
-            onChange={(value: string | undefined) => {
-              setEmployeeId(value);
-              resetPage();
-            }}
-          /> */}
           <div className="flex items-center gap-2">
             <span
               className="text-sm whitespace-nowrap"
@@ -388,14 +376,10 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : false
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
           />
         </div>
       </div>
