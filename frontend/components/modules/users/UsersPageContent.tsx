@@ -377,7 +377,7 @@ export default function UsersPageContent(): React.ReactNode {
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex justify-center rounded-xl border border-[rgba(0,0,0,0.08)] bg-white p-12">
+        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -557,7 +557,7 @@ export default function UsersPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
         <div className="flex flex-wrap items-center gap-3">
           <Input.Search
             placeholder={t('users.searchPlaceholder')}
@@ -667,7 +667,7 @@ export default function UsersPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Button onClick={handleResetFilters} style={{ borderRadius: 2 }}>
+          <Button onClick={handleResetFilters} style={{ borderRadius: 0 }}>
             {t('common.reset')}
           </Button>
           <Tooltip title={t('common.refresh')}>
@@ -677,13 +677,13 @@ export default function UsersPageContent(): React.ReactNode {
               loading={usersQuery.isFetching && !usersQuery.isLoading}
               onClick={() => void handleRefresh()}
               aria-label={t('common.refresh')}
-              style={{ borderRadius: 2 }}
+              style={{ borderRadius: 0 }}
             />
           </Tooltip>
         </div>
       </div>
 
-      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Users size={16} style={{ color: tokens.colorPrimary }} />
@@ -707,14 +707,14 @@ export default function UsersPageContent(): React.ReactNode {
               icon={<DownloadOutlined />}
               loading={exportingUsers}
               onClick={() => void handleExportExcel()}
-              style={{ borderRadius: 2 }}
+              style={{ borderRadius: 0 }}
             >
               {t('users.exportExcel')}
             </Button>
             <Button
               icon={<UploadOutlined />}
               onClick={() => setImportOpen(true)}
-              style={{ borderRadius: 2 }}
+              style={{ borderRadius: 0 }}
             >
               {t('common.importFromExcel')}
             </Button>
@@ -722,7 +722,7 @@ export default function UsersPageContent(): React.ReactNode {
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push('/users/new')}
-              style={{ borderRadius: 2 }}
+              style={{ borderRadius: 0 }}
             >
               {t('users.addEmployee')}
             </Button>
@@ -740,7 +740,7 @@ export default function UsersPageContent(): React.ReactNode {
               pagination
                 ? {
                     ...pagination,
-                    pageSizeOptions: ['20', '50', '100'],
+                    pageSizeOptions: ['10', '20', '50', '100'],
                   }
                 : undefined
             }
@@ -902,9 +902,9 @@ export default function UsersPageContent(): React.ReactNode {
                       <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
                         {topRole}
                       </Tag>
-                      {isPrimary ? (
+                      {/* {isPrimary ? (
                         <Tag color="gold">{t('users.primaryRole')}</Tag>
-                      ) : null}
+                      ) : null} */}
                     </Space>
                   );
                 },
@@ -938,7 +938,7 @@ export default function UsersPageContent(): React.ReactNode {
                         icon={<EditOutlined />}
                         onClick={() => router.push(`/users/${record.id}/edit`)}
                         aria-label={t('common.update')}
-                        style={{ borderRadius: 2 }}
+                        style={{ borderRadius: 0 }}
                       />
                     </Tooltip>
                     <Dropdown
@@ -953,7 +953,7 @@ export default function UsersPageContent(): React.ReactNode {
                         aria-label={t('users.actionsFor', {
                           name: `${record.firstName} ${record.lastName}`,
                         })}
-                        style={{ borderRadius: 2 }}
+                        style={{ borderRadius: 0 }}
                       />
                     </Dropdown>
                   </div>
