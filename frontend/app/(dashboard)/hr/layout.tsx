@@ -27,6 +27,7 @@ export default function HrSectionLayout({
   const isEmployeeSelfServiceRoute =
     pathname.startsWith('/hr/overtime') ||
     pathname.startsWith('/hr/leave-requests') ||
+    pathname.startsWith('/hr/leave-history') ||
     pathname.startsWith('/hr/employee-contract');
 
   const allowed = canViewHr || isEmployeeSelfServiceRoute;

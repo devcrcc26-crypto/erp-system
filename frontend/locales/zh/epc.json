@@ -132,6 +132,13 @@
         "listDescription": "通过审批流程提交并跟踪员工请假。",
         "myListDescription": "查看并提交您自己的请假申请。"
       },
+      "leaveHistory": {
+        "title": "假期余额与记录",
+        "description": "{{name}} 的假期余额与请假申请记录。",
+        "myTitle": "我的假期余额与记录",
+        "myDescription": "查看您的假期余额与请假申请记录。",
+        "you": "我"
+      },
       "leavePolicy": {
         "new": "新建假期政策",
         "edit": "编辑假期政策",
@@ -710,6 +717,8 @@
     "roleOptional": "角色（可选）",
     "roleOptionalHint": "若此人暂不需要系统权限可留空，稍后可再分配角色。",
     "assignedRoles": "已分配角色",
+    "tabOverview": "概览",
+    "tabLeave": "请假",
     "primaryRole": "主角色",
     "setAsPrimary": "设为主角色",
     "setPrimaryRoleError": "更新主角色失败。",
@@ -996,7 +1005,9 @@
     "timezoneLondon": "欧洲/伦敦 (GMT/BST)",
     "dateDmy": "日/月/年",
     "dateMdy": "月/日/年",
-    "dateIso": "年-月-日"
+    "dateIso": "年-月-日",
+    "tabAccount": "账户",
+    "tabLeave": "请假"
   },
   "settings": {
     "title": "设置",
@@ -1630,6 +1641,14 @@
       "allSheets": "全部表单",
       "needsTicket": "待上传机票",
       "myRequests": "我的申请"
+    },
+    "leave": {
+      "historyTitle": "请假记录",
+      "historyDescription": "{{name}} 的全部请假申请。",
+      "viewAllHistory": "查看全部",
+      "noHistory": "暂无请假申请。",
+      "profileLoadError": "无法加载假期信息。",
+      "usedPending": "已用 {{used}} · 待批 {{pending}}"
     },
     "buttons": {
       "newRequest": "新建申请",

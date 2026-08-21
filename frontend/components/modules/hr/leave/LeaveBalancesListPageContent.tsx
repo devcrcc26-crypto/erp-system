@@ -17,6 +17,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -34,6 +35,7 @@ import {
   formatLeaveType,
 } from '@/lib/utils/leave-display';
 import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
+import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 import { tokens } from '@/lib/theme/tokens';
 
 const LOW_BALANCE_THRESHOLD = 5;
@@ -75,6 +77,7 @@ function renderBalanceCell(balance: LeaveBalance | null): React.ReactNode {
  */
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
@@ -360,6 +363,11 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             scroll={false}
+            onRow={(record) => ({
+              onClick: () =>
+                router.push(leaveHistoryPath(record.employeeId)),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
             locale={{
               emptyText: (
                 <TableEmptyState

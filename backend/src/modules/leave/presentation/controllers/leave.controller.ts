@@ -160,13 +160,11 @@ export class LeaveController {
   }
 
   @Get(':id')
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'leave', action: 'view' },
-    { module: 'leave', action: 'create' },
-    { module: 'approvals', action: 'view' },
-  )
-  @ApiOperation({ summary: 'Get a leave request with approval tiers' })
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Get a leave request with approval tiers (owner, approver, or HR)',
+  })
   getOne(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,

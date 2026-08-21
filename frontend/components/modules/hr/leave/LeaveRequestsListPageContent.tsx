@@ -129,6 +129,9 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const [statusMode, setStatusMode] = useState<StatusMode>('all');
   const [leaveType, setLeaveType] = useState<LeaveType | undefined>();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<'requests' | 'balances'>(
+    'requests',
+  );
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
@@ -377,8 +380,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     setAppliedSearch('');
     setStatusMode('all');
     setLeaveType(undefined);
-    setEmployeeId(undefined);
     setDateRange(null);
+    setEmployeeId(undefined);
     resetPage();
   }
 
@@ -672,7 +675,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       <div className="flex flex-col gap-4">
         <Tabs
           className="erp-list-tabs"
-          defaultActiveKey="requests"
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'requests' | 'balances')}
           items={[
             {
               key: 'requests',

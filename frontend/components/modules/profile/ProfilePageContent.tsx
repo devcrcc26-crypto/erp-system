@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Input, Select, Spin } from 'antd';
-import { MailOutlined } from '@ant-design/icons';
+import { Alert, Button, Form, Input, Select, Spin, Tabs } from 'antd';
+import { CalendarOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
+import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
   MetaItem,
@@ -144,6 +145,7 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const profile = profileQuery.data;
 
+  const [activeTab, setActiveTab] = useState<'account' | 'leave'>('account');
   const [showChangeEmail, setShowChangeEmail] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
@@ -312,6 +314,295 @@ export default function ProfilePageContent(): React.ReactNode {
     }
   }
 
+  const accountTab = (
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className="flex flex-col gap-3 lg:col-span-2">
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('profile.personalDetails')}
+          description={t('profile.personalDetailsDescription')}
+        >
+          <Form
+            form={accountForm}
+            key={`account-${profile.id}`}
+            layout="vertical"
+            requiredMark={false}
+            initialValues={{
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+              phone: profile.phone ?? '',
+            }}
+            onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
+          >
+            <div className="grid gap-x-3 md:grid-cols-2">
+              <Form.Item
+                label={t('common.firstName')}
+                name="firstName"
+                rules={[{ required: true, message: t('common.requiredFirstName') }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item
+                label={t('common.lastName')}
+                name="lastName"
+                rules={[{ required: true, message: t('common.requiredLastName') }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item label={t('common.phone')} name="phone" className="md:col-span-2">
+                <Input type="tel" />
+              </Form.Item>
+            </div>
+
+            {accountError && (
+              <Alert type="error" showIcon title={accountError} className="!mb-3" />
+            )}
+            {accountSuccess && (
+              <Alert type="success" showIcon title={accountSuccess} className="!mb-3" />
+            )}
+
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updateProfile.isPending}
+              style={{ borderRadius: 2 }}
+            >
+              {t('profile.saveDetails')}
+            </Button>
+          </Form>
+        </FormLayout>
+
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('profile.regionalPreferences')}
+          description={t('profile.regionalPreferencesDescription')}
+        >
+          <Form
+            form={prefsForm}
+            key={`prefs-${profile.id}`}
+            layout="vertical"
+            requiredMark={false}
+            initialValues={{
+              preferredLanguage: profile.preferredLanguage ?? '',
+              preferredTimezone: profile.preferredTimezone ?? '',
+              preferredDateFormat: profile.preferredDateFormat ?? '',
+            }}
+            onFinish={(values: PreferencesFormValues) =>
+              void handlePreferencesSubmit(values)
+            }
+          >
+            <div className="grid gap-x-3 md:grid-cols-2">
+              <Form.Item label={t('common.language')} name="preferredLanguage">
+                <Select options={LANGUAGE_OPTIONS} />
+              </Form.Item>
+              <Form.Item label={t('common.timezone')} name="preferredTimezone">
+                <Select options={TIMEZONE_OPTIONS} />
+              </Form.Item>
+              <Form.Item
+                label={t('common.dateFormat')}
+                name="preferredDateFormat"
+                className="md:col-span-2"
+              >
+                <Select options={DATE_FORMAT_OPTIONS} />
+              </Form.Item>
+            </div>
+
+            {prefsError && (
+              <Alert type="error" showIcon title={prefsError} className="!mb-3" />
+            )}
+            {prefsSuccess && (
+              <Alert type="success" showIcon title={prefsSuccess} className="!mb-3" />
+            )}
+
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updateProfile.isPending}
+              style={{ borderRadius: 2 }}
+            >
+              {t('profile.savePreferences')}
+            </Button>
+          </Form>
+        </FormLayout>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('profile.emailAddress')}
+          description={t('profile.emailAddressDescription')}
+        >
+          <div className="flex flex-col gap-3">
+            <div
+              className="rounded p-3"
+              style={{
+                border: `1px solid ${tokens.colorBorder}`,
+                background: tokens.colorPageBg,
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <span style={{ color: tokens.colorTextTertiary }}>
+                  <MailOutlined aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <MetaItem label={t('common.email')}>
+                    <span className="break-all">{profile.email}</span>
+                  </MetaItem>
+                  <div className="mt-2">
+                    <StatusBadge
+                      label={
+                        isEmailVerified
+                          ? t('common.verified')
+                          : t('common.unverified')
+                      }
+                      variant={isEmailVerified ? 'success' : 'warning'}
+                    />
+                  </div>
+                  {profile.pendingEmail && (
+                    <p
+                      className="mt-2 mb-0 text-xs"
+                      style={{ color: tokens.colorTextSecondary }}
+                    >
+                      {t('common.pendingConfirmation', {
+                        email: profile.pendingEmail,
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!showChangeEmail ? (
+              <Button
+                type="default"
+                block
+                onClick={() => {
+                  setShowChangeEmail(true);
+                  setEmailError(null);
+                  setEmailSuccess(null);
+                }}
+                style={{ borderRadius: 2 }}
+              >
+                {t('common.changeEmail')}
+              </Button>
+            ) : (
+              <Form
+                form={emailForm}
+                layout="vertical"
+                requiredMark={false}
+                className="rounded p-3"
+                style={{
+                  border: `1px solid ${tokens.colorBorder}`,
+                  background: tokens.colorCardBg,
+                }}
+                onFinish={(values: { newEmail: string }) =>
+                  void handleEmailChangeSubmit(values)
+                }
+              >
+                <Form.Item
+                  label={t('common.newEmailAddress')}
+                  name="newEmail"
+                  rules={[
+                    { required: true, message: t('common.requiredEmail') },
+                    { type: 'email', message: t('common.invalidEmail') },
+                  ]}
+                  extra={t('common.emailChangeHint')}
+                >
+                  <Input type="email" />
+                </Form.Item>
+                <DemoEmailWarning email={watchedNewEmail} />
+                {emailError && (
+                  <Alert type="error" showIcon title={emailError} className="!mb-3" />
+                )}
+                {emailSuccess && (
+                  <Alert type="success" showIcon title={emailSuccess} className="!mb-3" />
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={changeEmail.isPending}
+                    style={{ borderRadius: 2 }}
+                  >
+                    {t('common.sendConfirmation')}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowChangeEmail(false);
+                      setEmailError(null);
+                      emailForm.resetFields();
+                    }}
+                    style={{ borderRadius: 2 }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </Form>
+            )}
+          </div>
+        </FormLayout>
+
+        <FormLayout
+          variant="pro"
+          dense
+          title={t('profile.passwordSection')}
+          description={t('profile.passwordDescription')}
+        >
+          <Form
+            form={passwordForm}
+            layout="vertical"
+            requiredMark={false}
+            onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
+          >
+            <Form.Item
+              label={t('common.currentPassword')}
+              name="currentPassword"
+              rules={[{ required: true, message: t('common.requiredCurrentPassword') }]}
+            >
+              <Input.Password autoComplete="current-password" />
+            </Form.Item>
+            <Form.Item
+              label={t('common.newPassword')}
+              name="newPassword"
+              rules={[
+                { required: true, message: t('common.requiredNewPassword') },
+                { min: 8, message: t('common.passwordMinLength') },
+              ]}
+            >
+              <Input.Password autoComplete="new-password" />
+            </Form.Item>
+            <Form.Item
+              label={t('common.confirmPassword')}
+              name="confirmPassword"
+              rules={[{ required: true, message: t('common.requiredConfirmPassword') }]}
+            >
+              <Input.Password autoComplete="new-password" />
+            </Form.Item>
+
+            {passwordError && (
+              <Alert type="error" showIcon title={passwordError} className="!mb-3" />
+            )}
+            {passwordSuccess && (
+              <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
+            )}
+
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={changePassword.isPending}
+              style={{ borderRadius: 2 }}
+            >
+              {t('profile.changePassword')}
+            </Button>
+          </Form>
+        </FormLayout>
+      </div>
+    </div>
+  );
+
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
       {!isEmailVerified && (
@@ -366,292 +657,33 @@ export default function ProfilePageContent(): React.ReactNode {
         ]}
       />
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="flex flex-col gap-3 lg:col-span-2">
-          <FormLayout
-            variant="pro"
-            dense
-            title={t('profile.personalDetails')}
-            description={t('profile.personalDetailsDescription')}
-          >
-            <Form<AccountFormValues>
-              form={accountForm}
-              key={`account-${profile.id}`}
-              layout="vertical"
-              requiredMark={false}
-              initialValues={{
-                firstName: profile.firstName,
-                lastName: profile.lastName,
-                phone: profile.phone ?? '',
-              }}
-              onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
-            >
-              <div className="grid gap-x-3 md:grid-cols-2">
-                <Form.Item
-                  label={t('common.firstName')}
-                  name="firstName"
-                  rules={[{ required: true, message: t('common.requiredFirstName') }]}
-                >
-                  <Input />
-                </Form.Item>
-                <Form.Item
-                  label={t('common.lastName')}
-                  name="lastName"
-                  rules={[{ required: true, message: t('common.requiredLastName') }]}
-                >
-                  <Input />
-                </Form.Item>
-                <Form.Item label={t('common.phone')} name="phone" className="md:col-span-2">
-                  <Input type="tel" />
-                </Form.Item>
-              </div>
-
-              {accountError && (
-                <Alert type="error" showIcon title={accountError} className="!mb-3" />
-              )}
-              {accountSuccess && (
-                <Alert type="success" showIcon title={accountSuccess} className="!mb-3" />
-              )}
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={updateProfile.isPending}
-                style={{ borderRadius: 2 }}
-              >
-                {t('profile.saveDetails')}
-              </Button>
-            </Form>
-          </FormLayout>
-
-          <FormLayout
-            variant="pro"
-            dense
-            title={t('profile.regionalPreferences')}
-            description={t('profile.regionalPreferencesDescription')}
-          >
-            <Form<PreferencesFormValues>
-              form={prefsForm}
-              key={`prefs-${profile.id}`}
-              layout="vertical"
-              requiredMark={false}
-              initialValues={{
-                preferredLanguage: profile.preferredLanguage ?? '',
-                preferredTimezone: profile.preferredTimezone ?? '',
-                preferredDateFormat: profile.preferredDateFormat ?? '',
-              }}
-              onFinish={(values: PreferencesFormValues) =>
-                void handlePreferencesSubmit(values)
-              }
-            >
-              <div className="grid gap-x-3 md:grid-cols-2">
-                <Form.Item label={t('common.language')} name="preferredLanguage">
-                  <Select options={LANGUAGE_OPTIONS} />
-                </Form.Item>
-                <Form.Item label={t('common.timezone')} name="preferredTimezone">
-                  <Select options={TIMEZONE_OPTIONS} />
-                </Form.Item>
-                <Form.Item
-                  label={t('common.dateFormat')}
-                  name="preferredDateFormat"
-                  className="md:col-span-2"
-                >
-                  <Select options={DATE_FORMAT_OPTIONS} />
-                </Form.Item>
-              </div>
-
-              {prefsError && (
-                <Alert type="error" showIcon title={prefsError} className="!mb-3" />
-              )}
-              {prefsSuccess && (
-                <Alert type="success" showIcon title={prefsSuccess} className="!mb-3" />
-              )}
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={updateProfile.isPending}
-                style={{ borderRadius: 2 }}
-              >
-                {t('profile.savePreferences')}
-              </Button>
-            </Form>
-          </FormLayout>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <FormLayout
-            variant="pro"
-            dense
-            title={t('profile.emailAddress')}
-            description={t('profile.emailAddressDescription')}
-          >
-            <div className="flex flex-col gap-3">
-              <div
-                className="rounded p-3"
-                style={{
-                  border: `1px solid ${tokens.colorBorder}`,
-                  background: tokens.colorPageBg,
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <span style={{ color: tokens.colorTextTertiary }}>
-                    <MailOutlined aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <MetaItem label={t('common.email')}>
-                      <span className="break-all">{profile.email}</span>
-                    </MetaItem>
-                    <div className="mt-2">
-                      <StatusBadge
-                        label={
-                          isEmailVerified
-                            ? t('common.verified')
-                            : t('common.unverified')
-                        }
-                        variant={isEmailVerified ? 'success' : 'warning'}
-                      />
-                    </div>
-                    {profile.pendingEmail && (
-                      <p
-                        className="mt-2 mb-0 text-xs"
-                        style={{ color: tokens.colorTextSecondary }}
-                      >
-                        {t('common.pendingConfirmation', {
-                          email: profile.pendingEmail,
-                        })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {!showChangeEmail ? (
-                <Button
-                  type="default"
-                  block
-                  onClick={() => {
-                    setShowChangeEmail(true);
-                    setEmailError(null);
-                    setEmailSuccess(null);
-                  }}
-                  style={{ borderRadius: 2 }}
-                >
-                  {t('common.changeEmail')}
-                </Button>
-              ) : (
-                <Form
-                  form={emailForm}
-                  layout="vertical"
-                  requiredMark={false}
-                  className="rounded p-3"
-                  style={{
-                    border: `1px solid ${tokens.colorBorder}`,
-                    background: tokens.colorCardBg,
-                  }}
-                  onFinish={(values: { newEmail: string }) =>
-                    void handleEmailChangeSubmit(values)
-                  }
-                >
-                  <Form.Item
-                    label={t('common.newEmailAddress')}
-                    name="newEmail"
-                    rules={[
-                      { required: true, message: t('common.requiredEmail') },
-                      { type: 'email', message: t('common.invalidEmail') },
-                    ]}
-                    extra={t('common.emailChangeHint')}
-                  >
-                    <Input type="email" />
-                  </Form.Item>
-                  <DemoEmailWarning email={watchedNewEmail} />
-                  {emailError && (
-                    <Alert type="error" showIcon title={emailError} className="!mb-3" />
-                  )}
-                  {emailSuccess && (
-                    <Alert type="success" showIcon title={emailSuccess} className="!mb-3" />
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={changeEmail.isPending}
-                      style={{ borderRadius: 2 }}
-                    >
-                      {t('common.sendConfirmation')}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowChangeEmail(false);
-                        setEmailError(null);
-                        emailForm.resetFields();
-                      }}
-                      style={{ borderRadius: 2 }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                  </div>
-                </Form>
-              )}
-            </div>
-          </FormLayout>
-
-          <FormLayout
-            variant="pro"
-            dense
-            title={t('profile.passwordSection')}
-            description={t('profile.passwordDescription')}
-          >
-            <Form<PasswordFormValues>
-              form={passwordForm}
-              layout="vertical"
-              requiredMark={false}
-              onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
-            >
-              <Form.Item
-                label={t('common.currentPassword')}
-                name="currentPassword"
-                rules={[{ required: true, message: t('common.requiredCurrentPassword') }]}
-              >
-                <Input.Password autoComplete="current-password" />
-              </Form.Item>
-              <Form.Item
-                label={t('common.newPassword')}
-                name="newPassword"
-                rules={[
-                  { required: true, message: t('common.requiredNewPassword') },
-                  { min: 8, message: t('common.passwordMinLength') },
-                ]}
-              >
-                <Input.Password autoComplete="new-password" />
-              </Form.Item>
-              <Form.Item
-                label={t('common.confirmPassword')}
-                name="confirmPassword"
-                rules={[{ required: true, message: t('common.requiredConfirmPassword') }]}
-              >
-                <Input.Password autoComplete="new-password" />
-              </Form.Item>
-
-              {passwordError && (
-                <Alert type="error" showIcon title={passwordError} className="!mb-3" />
-              )}
-              {passwordSuccess && (
-                <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
-              )}
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={changePassword.isPending}
-                style={{ borderRadius: 2 }}
-              >
-                {t('profile.changePassword')}
-              </Button>
-            </Form>
-          </FormLayout>
-        </div>
-      </div>
+      <Tabs
+        className="erp-list-tabs"
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as 'account' | 'leave')}
+        items={[
+          {
+            key: 'account',
+            label: (
+              <span className="flex items-center gap-2">
+                <UserOutlined />
+                {t('profile.tabAccount')}
+              </span>
+            ),
+            children: accountTab,
+          },
+          {
+            key: 'leave',
+            label: (
+              <span className="flex items-center gap-2">
+                <CalendarOutlined />
+                {t('profile.tabLeave')}
+              </span>
+            ),
+            children: <EmployeeLeaveProfileSection mode="self" />,
+          },
+        ]}
+      />
     </div>
   );
 }

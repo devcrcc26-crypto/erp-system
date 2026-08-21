@@ -74,6 +74,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/positions': 'pages.positions.title',
   '/disciplines': 'pages.disciplinesCatalog.title',
   '/hr/leave-requests': 'nav.hr.leaveRequests',
+  '/hr/leave-history/me': 'pages.hr.leaveHistory.myTitle',
   '/hr/overtime': 'nav.hr.overtime',
   '/hr/expense-claims': 'nav.hr.expenseClaims',
   '/hr/purchase-requests': 'nav.hr.purchaseRequests',
@@ -602,8 +603,12 @@ export function resolveIconRailKey(
   pathname: string,
   visibleItems: IconRailItem[],
 ): string {
-  if (pathname === '/profile') {
+  if (pathname === '/profile' || pathname === '/hr/leave-history/me') {
     return '/profile';
+  }
+
+  if (pathname.startsWith('/hr/leave-history/')) {
+    return '/hr/leave-requests';
   }
 
   let best: IconRailItem | undefined;
@@ -758,6 +763,28 @@ export function resolveRouteMeta(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
         { label: t('pages.hr.leavePolicy.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/leave-history/me') {
+    return {
+      titleKey: 'pages.hr.leaveHistory.myTitle',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.profile'), href: '/profile' },
+        { label: t('pages.hr.leaveHistory.myTitle') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/leave-history/')) {
+    return {
+      titleKey: 'pages.hr.leaveHistory.title',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
+        { label: t('pages.hr.leaveHistory.title') },
       ],
     };
   }

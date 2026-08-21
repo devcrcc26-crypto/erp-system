@@ -133,6 +133,13 @@
         "listDescription": "Submit and track employee leave through the approval workflow.",
         "myListDescription": "View and submit your own leave requests."
       },
+      "leaveHistory": {
+        "title": "Leave balance & history",
+        "description": "Balances and leave requests for {{name}}.",
+        "myTitle": "My leave balance & history",
+        "myDescription": "Your leave balances and request history.",
+        "you": "You"
+      },
       "leavePolicy": {
         "new": "New Leave Policy",
         "edit": "Edit Leave Policy",
@@ -711,6 +718,8 @@
     "roleOptional": "Role (optional)",
     "roleOptionalHint": "Leave blank if this person does not need system access yet. You can assign a role later.",
     "assignedRoles": "Assigned roles",
+    "tabOverview": "Overview",
+    "tabLeave": "Leave",
     "primaryRole": "Primary",
     "setAsPrimary": "Set as Primary",
     "setPrimaryRoleError": "Failed to update primary role.",
@@ -997,7 +1006,9 @@
     "timezoneLondon": "Europe/London (GMT/BST)",
     "dateDmy": "DD/MM/YYYY",
     "dateMdy": "MM/DD/YYYY",
-    "dateIso": "YYYY-MM-DD"
+    "dateIso": "YYYY-MM-DD",
+    "tabAccount": "Account",
+    "tabLeave": "Leave"
   },
   "settings": {
     "title": "Settings",
@@ -1639,6 +1650,14 @@
       "allSheets": "All Sheets",
       "needsTicket": "Needs Ticket",
       "myRequests": "My Requests"
+    },
+    "leave": {
+      "historyTitle": "Leave history",
+      "historyDescription": "All leave requests for {{name}}.",
+      "viewAllHistory": "View all",
+      "noHistory": "No leave requests yet.",
+      "profileLoadError": "Unable to load leave information.",
+      "usedPending": "{{used}} used · {{pending}} pending"
     },
     "buttons": {
       "newRequest": "New Request",

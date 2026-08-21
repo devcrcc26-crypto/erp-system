@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Skeleton, Space, Tag } from 'antd';
+import { Alert, Button, Skeleton, Space, Tabs, Tag } from 'antd';
+import { CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
@@ -14,6 +16,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
@@ -28,6 +31,7 @@ import {
   userStatusVariant,
 } from '@/lib/utils/user-status';
 import { tokens } from '@/lib/theme/tokens';
+import { useAuthStore } from '@/stores/auth.store';
 
 function displayValue(value: string | number | null | undefined): string {
   if (value == null || value === '') {
@@ -62,10 +66,13 @@ export default function EmployeeDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'leave'>('overview');
 
   const user = detailQuery.data;
   const showResend =
@@ -145,6 +152,7 @@ export default function EmployeeDetailPageContent({
 
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const emergencyContacts = user.emergencyContacts ?? [];
+  const canSeeLeave = canViewHr || currentUserId === user.id;
 
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
@@ -287,6 +295,21 @@ export default function EmployeeDetailPageContent({
         ]}
       />
 
+      <Tabs
+        className="erp-list-tabs"
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as 'overview' | 'leave')}
+        items={[
+          {
+            key: 'overview',
+            label: (
+              <span className="flex items-center gap-2">
+                <UserOutlined />
+                {t('users.tabOverview')}
+              </span>
+            ),
+            children: (
+              <div className="flex flex-col gap-3">
       <div className="grid gap-3 lg:grid-cols-2">
         <SectionCard title={t('users.sectionPersonalInformation')} bodyClassName="p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -494,6 +517,32 @@ export default function EmployeeDetailPageContent({
       <SectionCard title={t('users.form.profileDocuments')} bodyClassName="p-4">
         <EmployeeProfileDocuments userId={user.id} />
       </SectionCard>
+              </div>
+            ),
+          },
+          ...(canSeeLeave
+            ? [
+                {
+                  key: 'leave' as const,
+                  label: (
+                    <span className="flex items-center gap-2">
+                      <CalendarOutlined />
+                      {t('users.tabLeave')}
+                    </span>
+                  ),
+                  children: canViewHr ? (
+                    <EmployeeLeaveProfileSection
+                      mode="employee"
+                      employeeId={user.id}
+                    />
+                  ) : (
+                    <EmployeeLeaveProfileSection mode="self" />
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
 
       <ConfirmDialog
         open={confirmDelete}
