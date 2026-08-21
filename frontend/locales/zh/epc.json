@@ -960,6 +960,7 @@
   "profile": {
     "title": "个人资料",
     "loadError": "无法加载个人资料，请稍后重试。",
+    "companyLabel": "公司",
     "emailVerified": "邮箱已验证",
     "emailUnverified": "邮箱未验证",
     "emailNotVerified": "邮箱未验证",

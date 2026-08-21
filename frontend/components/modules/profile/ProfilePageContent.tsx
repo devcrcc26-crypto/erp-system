@@ -1,23 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Avatar, Button, Form, Input, Select, Spin } from 'antd';
+import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
+import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
+import {
+  MetaItem,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import { useResendActivation } from '@/lib/query/auth';
 import {
   useChangeEmail,
   useChangePassword,
   useCurrentUser,
-  useMyProfilePhotoUrl,
   useUpdateProfile,
 } from '@/lib/query/profile';
 import type { UserProfile } from '@/lib/api/types';
@@ -40,54 +43,84 @@ interface PasswordFormValues {
   confirmPassword: string;
 }
 
-function profileInitials(profile: UserProfile): string {
-  const first = profile.firstName.charAt(0).toUpperCase();
-  const last = profile.lastName.charAt(0).toUpperCase();
-  return `${first}${last}`;
-}
-
-function ProfileSummaryCard({ profile }: { profile: UserProfile }): React.ReactNode {
+function ProfileIdentityHero({
+  profile,
+}: {
+  profile: UserProfile;
+}): React.ReactNode {
   const { t } = useEpcTranslation();
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
   const roleNames = profile.roles.map((role) => role.name);
-  const photoQuery = useMyProfilePhotoUrl(Boolean(profile.photoDocumentId));
 
   return (
-    <div className={`${layout.cardSurface} overflow-hidden`}>
-      <div className="h-1.5 w-full" style={{ backgroundColor: tokens.colorPrimary }} />
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
-        <Avatar
-          size={72}
-          src={photoQuery.data?.url}
-          className="shrink-0 !text-xl !font-semibold"
-          style={{
-            backgroundColor: photoQuery.data?.url
-              ? undefined
-              : tokens.colorSidebarBg,
-          }}
-        >
-          {profileInitials(profile)}
-        </Avatar>
-
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
-            {profile.firstName} {profile.lastName}
+    <div
+      className="overflow-hidden rounded-lg"
+      style={{
+        background: tokens.colorCardBg,
+        border: `1px solid ${tokens.colorBorder}`,
+      }}
+    >
+      <div
+        className="h-1 w-full"
+        style={{ backgroundColor: tokens.colorPrimary }}
+      />
+      <div className="px-5 py-5">
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+          <EmployeeProfilePhoto
+            source="self"
+            photoDocumentId={profile.photoDocumentId}
+            firstName={profile.firstName}
+            lastName={profile.lastName}
+            canEdit
+            size={104}
+            variant="hero"
+          />
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <StatusBadge
+                label={
+                  isEmailVerified
+                    ? t('profile.emailVerified')
+                    : t('profile.emailUnverified')
+                }
+                variant={isEmailVerified ? 'success' : 'warning'}
+              />
+              {roleNames.slice(0, 4).map((name) => (
+                <StatusBadge key={name} label={name} variant="default" />
+              ))}
+              {roleNames.length > 4 ? (
+                <StatusBadge
+                  label={`+${roleNames.length - 4}`}
+                  variant="default"
+                />
+              ) : null}
+            </div>
+            <h2
+              className="m-0 text-xl font-semibold leading-snug tracking-tight"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {profile.firstName} {profile.lastName}
+            </h2>
             {profile.chineseName ? (
-              <span className="ml-2 font-semibold text-slate-500">
+              <p
+                className="m-0 mt-1 text-sm"
+                style={{ color: tokens.colorTextSecondary }}
+              >
                 {profile.chineseName}
-              </span>
+              </p>
             ) : null}
-          </h2>
-          <p className="mt-1 truncate text-sm text-slate-600">{profile.email}</p>
-          <p className="mt-1 text-sm text-slate-500">{profile.companyName}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <StatusBadge
-              label={isEmailVerified ? t('profile.emailVerified') : t('profile.emailUnverified')}
-              variant={isEmailVerified ? 'success' : 'warning'}
-            />
-            {roleNames.map((name) => (
-              <StatusBadge key={name} label={name} variant="default" />
-            ))}
+            <p
+              className="m-0 mt-2 text-sm"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {profile.email}
+            </p>
+            <p
+              className="m-0 mt-1 text-sm"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {profile.companyName}
+            </p>
           </div>
         </div>
       </div>
@@ -155,7 +188,7 @@ export default function ProfilePageContent(): React.ReactNode {
 
   if (profileQuery.isLoading) {
     return (
-      <div className={layout.loadingCard}>
+      <div className="erp-pro-list-page flex justify-center p-12">
         <Spin />
       </div>
     );
@@ -280,7 +313,7 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   return (
-    <div className={layout.pageStack}>
+    <div className="erp-pro-list-page flex flex-col gap-3">
       {!isEmailVerified && (
         <Alert
           type="warning"
@@ -288,7 +321,7 @@ export default function ProfilePageContent(): React.ReactNode {
           title={t('profile.emailNotVerified')}
           description={
             <div>
-              <p>{t('profile.emailNotVerifiedBody')}</p>
+              <p className="m-0">{t('profile.emailNotVerifiedBody')}</p>
               <DemoEmailWarning email={profile.email} />
               <Button
                 type="primary"
@@ -296,20 +329,48 @@ export default function ProfilePageContent(): React.ReactNode {
                 className="!mt-3"
                 loading={resendActivation.isPending}
                 onClick={() => void handleResendActivation()}
+                style={{ borderRadius: 2 }}
               >
                 {t('profile.resendActivation')}
               </Button>
-              {resendMessage && <p className="mt-2">{resendMessage}</p>}
+              {resendMessage && <p className="mt-2 mb-0">{resendMessage}</p>}
             </div>
           }
         />
       )}
 
-      <ProfileSummaryCard profile={profile} />
+      <ProfileIdentityHero profile={profile} />
 
-      <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-        <div className={`${layout.sectionStack} lg:col-span-2`}>
+      <SummaryStrip
+        items={[
+          {
+            label: t('profile.companyLabel'),
+            value: profile.companyName,
+          },
+          {
+            label: t('common.email'),
+            value: profile.email,
+          },
+          {
+            label: t('common.phone'),
+            value: profile.phone?.trim() || '—',
+          },
+          {
+            label: t('common.language'),
+            value: profile.preferredLanguage
+              ? profile.preferredLanguage === 'zh'
+                ? t('profile.languageZh')
+                : t('profile.languageEn')
+              : t('common.companyDefault'),
+          },
+        ]}
+      />
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="flex flex-col gap-3 lg:col-span-2">
           <FormLayout
+            variant="pro"
+            dense
             title={t('profile.personalDetails')}
             description={t('profile.personalDetailsDescription')}
           >
@@ -317,6 +378,7 @@ export default function ProfilePageContent(): React.ReactNode {
               form={accountForm}
               key={`account-${profile.id}`}
               layout="vertical"
+              requiredMark={false}
               initialValues={{
                 firstName: profile.firstName,
                 lastName: profile.lastName,
@@ -324,7 +386,7 @@ export default function ProfilePageContent(): React.ReactNode {
               }}
               onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
             >
-              <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+              <div className="grid gap-x-3 md:grid-cols-2">
                 <Form.Item
                   label={t('common.firstName')}
                   name="firstName"
@@ -345,19 +407,26 @@ export default function ProfilePageContent(): React.ReactNode {
               </div>
 
               {accountError && (
-                <Alert type="error" showIcon title={accountError} className="!mb-4" />
+                <Alert type="error" showIcon title={accountError} className="!mb-3" />
               )}
               {accountSuccess && (
-                <Alert type="success" showIcon title={accountSuccess} className="!mb-4" />
+                <Alert type="success" showIcon title={accountSuccess} className="!mb-3" />
               )}
 
-              <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={updateProfile.isPending}
+                style={{ borderRadius: 2 }}
+              >
                 {t('profile.saveDetails')}
               </Button>
             </Form>
           </FormLayout>
 
           <FormLayout
+            variant="pro"
+            dense
             title={t('profile.regionalPreferences')}
             description={t('profile.regionalPreferencesDescription')}
           >
@@ -365,6 +434,7 @@ export default function ProfilePageContent(): React.ReactNode {
               form={prefsForm}
               key={`prefs-${profile.id}`}
               layout="vertical"
+              requiredMark={false}
               initialValues={{
                 preferredLanguage: profile.preferredLanguage ?? '',
                 preferredTimezone: profile.preferredTimezone ?? '',
@@ -374,7 +444,7 @@ export default function ProfilePageContent(): React.ReactNode {
                 void handlePreferencesSubmit(values)
               }
             >
-              <div className="grid gap-0 md:grid-cols-2 md:gap-x-4">
+              <div className="grid gap-x-3 md:grid-cols-2">
                 <Form.Item label={t('common.language')} name="preferredLanguage">
                   <Select options={LANGUAGE_OPTIONS} />
                 </Form.Item>
@@ -391,43 +461,65 @@ export default function ProfilePageContent(): React.ReactNode {
               </div>
 
               {prefsError && (
-                <Alert type="error" showIcon title={prefsError} className="!mb-4" />
+                <Alert type="error" showIcon title={prefsError} className="!mb-3" />
               )}
               {prefsSuccess && (
-                <Alert type="success" showIcon title={prefsSuccess} className="!mb-4" />
+                <Alert type="success" showIcon title={prefsSuccess} className="!mb-3" />
               )}
 
-              <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={updateProfile.isPending}
+                style={{ borderRadius: 2 }}
+              >
                 {t('profile.savePreferences')}
               </Button>
             </Form>
           </FormLayout>
         </div>
 
-        <div className={layout.sectionStack}>
+        <div className="flex flex-col gap-3">
           <FormLayout
+            variant="pro"
+            dense
             title={t('profile.emailAddress')}
             description={t('profile.emailAddressDescription')}
           >
-            <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-3">
+              <div
+                className="rounded p-3"
+                style={{
+                  border: `1px solid ${tokens.colorBorder}`,
+                  background: tokens.colorPageBg,
+                }}
+              >
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 text-slate-400">
+                  <span style={{ color: tokens.colorTextTertiary }}>
                     <MailOutlined aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">
-                      {profile.email}
-                    </p>
+                    <MetaItem label={t('common.email')}>
+                      <span className="break-all">{profile.email}</span>
+                    </MetaItem>
                     <div className="mt-2">
                       <StatusBadge
-                        label={isEmailVerified ? t('common.verified') : t('common.unverified')}
+                        label={
+                          isEmailVerified
+                            ? t('common.verified')
+                            : t('common.unverified')
+                        }
                         variant={isEmailVerified ? 'success' : 'warning'}
                       />
                     </div>
                     {profile.pendingEmail && (
-                      <p className="mt-2 text-xs text-slate-500">
-                        {t('common.pendingConfirmation', { email: profile.pendingEmail })}
+                      <p
+                        className="mt-2 mb-0 text-xs"
+                        style={{ color: tokens.colorTextSecondary }}
+                      >
+                        {t('common.pendingConfirmation', {
+                          email: profile.pendingEmail,
+                        })}
                       </p>
                     )}
                   </div>
@@ -443,6 +535,7 @@ export default function ProfilePageContent(): React.ReactNode {
                     setEmailError(null);
                     setEmailSuccess(null);
                   }}
+                  style={{ borderRadius: 2 }}
                 >
                   {t('common.changeEmail')}
                 </Button>
@@ -450,7 +543,12 @@ export default function ProfilePageContent(): React.ReactNode {
                 <Form
                   form={emailForm}
                   layout="vertical"
-                  className="rounded-lg border border-slate-200 bg-white p-4"
+                  requiredMark={false}
+                  className="rounded p-3"
+                  style={{
+                    border: `1px solid ${tokens.colorBorder}`,
+                    background: tokens.colorCardBg,
+                  }}
                   onFinish={(values: { newEmail: string }) =>
                     void handleEmailChangeSubmit(values)
                   }
@@ -468,13 +566,18 @@ export default function ProfilePageContent(): React.ReactNode {
                   </Form.Item>
                   <DemoEmailWarning email={watchedNewEmail} />
                   {emailError && (
-                    <Alert type="error" showIcon title={emailError} className="!mb-4" />
+                    <Alert type="error" showIcon title={emailError} className="!mb-3" />
                   )}
                   {emailSuccess && (
-                    <Alert type="success" showIcon title={emailSuccess} className="!mb-4" />
+                    <Alert type="success" showIcon title={emailSuccess} className="!mb-3" />
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Button type="primary" htmlType="submit" loading={changeEmail.isPending}>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={changeEmail.isPending}
+                      style={{ borderRadius: 2 }}
+                    >
                       {t('common.sendConfirmation')}
                     </Button>
                     <Button
@@ -483,6 +586,7 @@ export default function ProfilePageContent(): React.ReactNode {
                         setEmailError(null);
                         emailForm.resetFields();
                       }}
+                      style={{ borderRadius: 2 }}
                     >
                       {t('common.cancel')}
                     </Button>
@@ -493,12 +597,15 @@ export default function ProfilePageContent(): React.ReactNode {
           </FormLayout>
 
           <FormLayout
+            variant="pro"
+            dense
             title={t('profile.passwordSection')}
             description={t('profile.passwordDescription')}
           >
             <Form<PasswordFormValues>
               form={passwordForm}
               layout="vertical"
+              requiredMark={false}
               onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
             >
               <Form.Item
@@ -527,13 +634,18 @@ export default function ProfilePageContent(): React.ReactNode {
               </Form.Item>
 
               {passwordError && (
-                <Alert type="error" showIcon title={passwordError} className="!mb-4" />
+                <Alert type="error" showIcon title={passwordError} className="!mb-3" />
               )}
               {passwordSuccess && (
-                <Alert type="success" showIcon title={passwordSuccess} className="!mb-4" />
+                <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
               )}
 
-              <Button type="primary" htmlType="submit" loading={changePassword.isPending}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={changePassword.isPending}
+                style={{ borderRadius: 2 }}
+              >
                 {t('profile.changePassword')}
               </Button>
             </Form>

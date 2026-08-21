@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { apiGet, apiPatch, apiPost } from '@/lib/api/client';
+import { apiDelete, apiGet, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth.store';
 import type {
   ChangeEmailRequest,
@@ -52,6 +52,50 @@ export function useMyProfilePhotoUrl(enabled = true) {
       Boolean(accessToken && sessionId && profile?.photoDocumentId),
     staleTime: 5 * 60 * 1000,
     retry: false,
+  });
+}
+
+export function useUploadMyProfilePhoto() {
+  const queryClient = useQueryClient();
+  const sessionId = useAuthStore((state) => state.sessionId);
+  const updateUser = useAuthStore((state) => state.updateUser);
+
+  return useMutation({
+    mutationFn: async (file: File): Promise<UserProfile> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<UserProfile>('/auth/me/photo', formData);
+    },
+    onSuccess: (profile) => {
+      if (sessionId) {
+        queryClient.setQueryData(profileKeys.me(sessionId), profile);
+        void queryClient.invalidateQueries({
+          queryKey: profileKeys.photoUrl(sessionId),
+        });
+      }
+      updateUser({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+      });
+    },
+  });
+}
+
+export function useDeleteMyProfilePhoto() {
+  const queryClient = useQueryClient();
+  const sessionId = useAuthStore((state) => state.sessionId);
+
+  return useMutation({
+    mutationFn: (): Promise<UserProfile> =>
+      apiDelete<UserProfile>('/auth/me/photo'),
+    onSuccess: (profile) => {
+      if (sessionId) {
+        queryClient.setQueryData(profileKeys.me(sessionId), profile);
+        void queryClient.invalidateQueries({
+          queryKey: profileKeys.photoUrl(sessionId),
+        });
+      }
+    },
   });
 }
 

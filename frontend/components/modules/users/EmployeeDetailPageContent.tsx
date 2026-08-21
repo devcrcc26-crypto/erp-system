@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Alert, Button, Skeleton, Space, Tag } from 'antd';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
@@ -110,7 +110,11 @@ export default function EmployeeDetailPageContent({
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 10 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Skeleton active avatar paragraph={{ rows: 8 }} />
+      </div>
+    );
   }
 
   if (detailQuery.isError || !user) {
@@ -143,12 +147,13 @@ export default function EmployeeDetailPageContent({
   const emergencyContacts = user.emergencyContacts ?? [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/users')}
+          style={{ borderRadius: 2 }}
         >
           {t('users.backToList')}
         </Button>
@@ -157,19 +162,31 @@ export default function EmployeeDetailPageContent({
             <Button
               loading={resendInvitation.isPending}
               onClick={() => void handleResend()}
+              style={{ borderRadius: 2 }}
             >
               {t('users.resendVerification')}
             </Button>
           ) : null}
-          <Button type="primary" onClick={() => router.push(`/users/${user.id}/edit`)}>
+          <Button
+            type="primary"
+            icon={<Pencil size={14} />}
+            onClick={() => router.push(`/users/${user.id}/edit`)}
+            style={{ borderRadius: 2 }}
+          >
             {t('common.update')}
           </Button>
-          <Button danger onClick={() => setConfirmDelete(true)}>
+          <Button
+            danger
+            icon={<Trash2 size={14} />}
+            onClick={() => setConfirmDelete(true)}
+            style={{ borderRadius: 2 }}
+          >
             {t('common.delete')}
           </Button>
         </Space>
       </div>
 
+      {/* Identity hero */}
       <div
         className="overflow-hidden rounded-lg"
         style={{
@@ -177,28 +194,33 @@ export default function EmployeeDetailPageContent({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-5 py-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div
+          className="h-1 w-full"
+          style={{ backgroundColor: tokens.colorPrimary }}
+        />
+        <div className="px-5 py-5">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
             <EmployeeProfilePhoto
               userId={user.id}
               photoDocumentId={user.photoDocumentId}
               firstName={user.firstName}
               lastName={user.lastName}
               canEdit
-              size={88}
+              size={104}
+              variant="hero"
             />
-            <div className="min-w-0 flex-1">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 {user.employeeId ? (
-                  <>
-                    <span
-                      className="text-xs font-semibold uppercase tracking-wide"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
-                      {user.employeeId}
-                    </span>
-                    <span style={{ color: tokens.colorBorder }}>|</span>
-                  </>
+                  <span
+                    className="rounded px-2 py-0.5 font-[family-name:var(--font-mono)] text-xs font-medium"
+                    style={{
+                      background: tokens.colorPrimaryLight,
+                      color: tokens.colorPrimary,
+                    }}
+                  >
+                    {user.employeeId}
+                  </span>
                 ) : null}
                 <StatusBadge
                   label={userStatusLabel(user, t)}
@@ -206,7 +228,7 @@ export default function EmployeeDetailPageContent({
                 />
               </div>
               <h2
-                className="m-0 text-lg font-semibold leading-snug"
+                className="m-0 text-xl font-semibold leading-snug tracking-tight"
                 style={{ color: tokens.colorTextPrimary }}
               >
                 {fullName}
@@ -220,12 +242,18 @@ export default function EmployeeDetailPageContent({
                 </p>
               ) : null}
               <p
-                className="m-0 mt-1 text-sm"
+                className="m-0 mt-2 text-sm"
                 style={{ color: tokens.colorTextSecondary }}
               >
                 {user.email ?? t('users.noEmailNoLogin')}
-                {user.position?.title ? ` · ${user.position.title}` : ''}
-                {user.department?.name ? ` · ${user.department.name}` : ''}
+              </p>
+              <p
+                className="m-0 mt-1 text-sm"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {[user.position?.title, user.department?.name]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
               </p>
             </div>
           </div>
@@ -259,9 +287,9 @@ export default function EmployeeDetailPageContent({
         ]}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard title={t('users.sectionPersonalInformation')} bodyClassName="p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <SectionCard title={t('users.sectionPersonalInformation')} bodyClassName="p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MetaItem label={t('users.form.firstName')}>{user.firstName}</MetaItem>
             <MetaItem label={t('users.form.middleName')}>
               {displayValue(user.middleName)}
@@ -285,8 +313,8 @@ export default function EmployeeDetailPageContent({
           </div>
         </SectionCard>
 
-        <SectionCard title={t('users.sectionAddress')} bodyClassName="p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SectionCard title={t('users.sectionAddress')} bodyClassName="p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MetaItem label={t('users.form.addressCountry')}>
               {displayValue(user.addressCountry)}
             </MetaItem>
@@ -313,8 +341,8 @@ export default function EmployeeDetailPageContent({
           </div>
         </SectionCard>
 
-        <SectionCard title={t('users.sectionOrganizationAssignment')} bodyClassName="p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SectionCard title={t('users.sectionOrganizationAssignment')} bodyClassName="p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MetaItem label={t('users.form.employeeId')}>
               {displayValue(user.employeeId)}
             </MetaItem>
@@ -352,8 +380,8 @@ export default function EmployeeDetailPageContent({
           </div>
         </SectionCard>
 
-        <SectionCard title={t('users.sectionEducationExperience')} bodyClassName="p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SectionCard title={t('users.sectionEducationExperience')} bodyClassName="p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MetaItem label={t('users.form.educationLevel')}>
               {user.educationLevel
                 ? t(`hr.educationLevel.${user.educationLevel}`)
@@ -375,8 +403,8 @@ export default function EmployeeDetailPageContent({
           </div>
         </SectionCard>
 
-        <SectionCard title={t('users.sectionAccountAccess')} bodyClassName="p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SectionCard title={t('users.sectionAccountAccess')} bodyClassName="p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MetaItem label={t('users.form.email')}>
               {displayValue(user.email)}
             </MetaItem>
@@ -403,7 +431,7 @@ export default function EmployeeDetailPageContent({
           </div>
         </SectionCard>
 
-        <SectionCard title={t('users.assignedRoles')} bodyClassName="p-5">
+        <SectionCard title={t('users.assignedRoles')} bodyClassName="p-4">
           {user.userRoles.length === 0 ? (
             <p className="m-0 text-sm" style={{ color: tokens.colorTextSecondary }}>
               {t('users.noRoleAssigned')}
@@ -413,9 +441,13 @@ export default function EmployeeDetailPageContent({
               {user.userRoles.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="flex flex-wrap items-center gap-2 rounded border border-[rgba(0,0,0,0.08)] px-3 py-2"
+                  className="flex flex-wrap items-center gap-2 rounded px-3 py-2"
+                  style={{
+                    border: `1px solid ${tokens.colorBorder}`,
+                    background: tokens.colorPageBg,
+                  }}
                 >
-                  <span className="text-sm">{assignment.role.name}</span>
+                  <span className="text-sm font-medium">{assignment.role.name}</span>
                   {assignment.isPrimary ? (
                     <Tag color="gold">{t('users.primaryRole')}</Tag>
                   ) : null}
@@ -426,19 +458,23 @@ export default function EmployeeDetailPageContent({
         </SectionCard>
       </div>
 
-      <SectionCard title={t('users.sectionEmergencyContact')} bodyClassName="p-5">
+      <SectionCard title={t('users.sectionEmergencyContact')} bodyClassName="p-4">
         {emergencyContacts.length === 0 ? (
           <p className="m-0 text-sm" style={{ color: tokens.colorTextSecondary }}>
             {t('users.form.noEmergencyContacts')}
           </p>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {emergencyContacts.map((contact, index) => (
               <div
                 key={`${formatEmergencyContactName(contact)}-${index}`}
-                className="rounded border border-[rgba(0,0,0,0.08)] p-4"
+                className="rounded p-4"
+                style={{
+                  border: `1px solid ${tokens.colorBorder}`,
+                  background: tokens.colorPageBg,
+                }}
               >
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <MetaItem label={t('users.form.fullName')}>
                     {formatEmergencyContactName(contact)}
                   </MetaItem>
@@ -455,7 +491,7 @@ export default function EmployeeDetailPageContent({
         )}
       </SectionCard>
 
-      <SectionCard title={t('users.form.profileDocuments')} bodyClassName="p-5">
+      <SectionCard title={t('users.form.profileDocuments')} bodyClassName="p-4">
         <EmployeeProfileDocuments userId={user.id} />
       </SectionCard>
 

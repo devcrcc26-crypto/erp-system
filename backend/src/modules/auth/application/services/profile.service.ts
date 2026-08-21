@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { FolderContextType } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -75,6 +78,122 @@ export class ProfileService {
       throw new NotFoundException('Profile photo not found');
     }
     return this.documentService.getDownloadUrl(ctx, user.photoDocumentId);
+  }
+
+  private static readonly PROFILE_PHOTO_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ]);
+
+  /**
+   * Uploads or replaces the signed-in user's profile picture.
+   */
+  async uploadProfilePhoto(
+    ctx: SessionContext,
+    file: {
+      originalname: string;
+      mimetype: string;
+      size: number;
+      buffer: Buffer;
+    },
+  ): Promise<ProfileResponseDto> {
+    if (!ProfileService.PROFILE_PHOTO_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Profile photo must be a JPEG, PNG, WebP, or GIF image',
+      );
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('Profile photo must be 5 MB or smaller');
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
+      select: {
+        id: true,
+        photoDocumentId: true,
+        profileFolderId: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    let folderId = existing.profileFolderId;
+    if (!folderId) {
+      const folderName =
+        `${existing.firstName} ${existing.lastName}`.trim() || 'Employee Profile';
+      const folder = await this.prisma.documentFolder.create({
+        data: {
+          id: randomUUID(),
+          companyId: ctx.companyId,
+          parentId: null,
+          name: folderName,
+          path: `/Employee Profiles/${ctx.userId}`,
+          contextType: FolderContextType.EMPLOYEE_PROFILE,
+          contextId: ctx.userId,
+          isSystem: false,
+          createdBy: ctx.userId,
+          updatedBy: ctx.userId,
+        },
+        select: { id: true },
+      });
+      folderId = folder.id;
+      await this.prisma.user.update({
+        where: { id: ctx.userId },
+        data: { profileFolderId: folderId, updatedBy: ctx.userId },
+      });
+    }
+
+    const uploaded = (await this.documentService.uploadDocument(
+      ctx,
+      folderId,
+      file,
+    )) as { id: string };
+
+    await this.prisma.document.update({
+      where: { id: uploaded.id },
+      data: { name: 'Profile photo', updatedBy: ctx.userId },
+    });
+
+    await this.prisma.user.update({
+      where: { id: ctx.userId },
+      data: {
+        photoDocumentId: uploaded.id,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    if (existing.photoDocumentId && existing.photoDocumentId !== uploaded.id) {
+      await this.documentService.deleteDocument(ctx, existing.photoDocumentId);
+    }
+
+    return this.getProfile(ctx);
+  }
+
+  /**
+   * Removes the signed-in user's profile picture.
+   */
+  async deleteProfilePhoto(ctx: SessionContext): Promise<ProfileResponseDto> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
+      select: { photoDocumentId: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.photoDocumentId) {
+      const documentId = user.photoDocumentId;
+      await this.prisma.user.update({
+        where: { id: ctx.userId },
+        data: { photoDocumentId: null, updatedBy: ctx.userId },
+      });
+      await this.documentService.deleteDocument(ctx, documentId);
+    }
+    return this.getProfile(ctx);
   }
 
   /**

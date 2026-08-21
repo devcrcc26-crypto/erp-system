@@ -960,6 +960,7 @@
   "profile": {
     "title": "Profile",
     "loadError": "Unable to load your profile. Please try again later.",
+    "companyLabel": "Company",
     "emailVerified": "Email verified",
     "emailUnverified": "Email unverified",
     "emailNotVerified": "Email not verified",

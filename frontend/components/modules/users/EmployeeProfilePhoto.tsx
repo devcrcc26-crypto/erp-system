@@ -1,11 +1,16 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Avatar, Button, Space, Spin, Upload } from 'antd';
+import { Avatar, Button, Space, Spin, Tooltip, Upload } from 'antd';
 import { CameraOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import {
+  useDeleteMyProfilePhoto,
+  useMyProfilePhotoUrl,
+  useUploadMyProfilePhoto,
+} from '@/lib/query/profile';
 import {
   useDeleteUserPhoto,
   useUploadUserPhoto,
@@ -17,18 +22,32 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/gif';
 const MAX_BYTES = 5 * 1024 * 1024;
 
+export type EmployeeProfilePhotoVariant = 'hero' | 'panel';
+export type EmployeeProfilePhotoSource = 'user' | 'self';
+
 interface EmployeeProfilePhotoProps {
-  userId: string;
+  /** Required when `source` is `user` (admin editing another employee). */
+  userId?: string;
   photoDocumentId?: string | null;
   firstName?: string;
   lastName?: string;
   /** When false, only shows the avatar (no upload/remove). */
   canEdit?: boolean;
   size?: number;
+  /**
+   * `hero` — avatar with compact icon actions under it (identity headers).
+   * `panel` — avatar beside labelled controls (form sections).
+   */
+  variant?: EmployeeProfilePhotoVariant;
+  /**
+   * `user` — `/users/:id/photo` (requires users.edit).
+   * `self` — `/auth/me/photo` (signed-in user).
+   */
+  source?: EmployeeProfilePhotoSource;
 }
 
 /**
- * Dedicated profile picture upload / preview for an employee.
+ * Dedicated profile picture upload / preview for an employee or self.
  */
 export default function EmployeeProfilePhoto({
   userId,
@@ -37,21 +56,49 @@ export default function EmployeeProfilePhoto({
   lastName,
   canEdit = true,
   size = 96,
+  variant = 'panel',
+  source = 'user',
 }: EmployeeProfilePhotoProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const uploadMutation = useUploadUserPhoto();
-  const deleteMutation = useDeleteUserPhoto();
-  const photoQuery = useUserPhotoUrl(userId, photoDocumentId);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+
+  const isSelf = source === 'self';
+
+  const uploadUserMutation = useUploadUserPhoto();
+  const deleteUserMutation = useDeleteUserPhoto();
+  const userPhotoQuery = useUserPhotoUrl(
+    userId ?? '',
+    photoDocumentId,
+    !isSelf && Boolean(userId),
+  );
+
+  const uploadSelfMutation = useUploadMyProfilePhoto();
+  const deleteSelfMutation = useDeleteMyProfilePhoto();
+  const selfPhotoQuery = useMyProfilePhotoUrl(
+    isSelf && Boolean(photoDocumentId),
+  );
+
+  const uploadPending = isSelf
+    ? uploadSelfMutation.isPending
+    : uploadUserMutation.isPending;
+  const deletePending = isSelf
+    ? deleteSelfMutation.isPending
+    : deleteUserMutation.isPending;
+  const photoLoading = isSelf
+    ? selfPhotoQuery.isLoading
+    : userPhotoQuery.isLoading;
+  const imageFromQuery = isSelf
+    ? selfPhotoQuery.data?.url
+    : userPhotoQuery.data?.url;
 
   const initials =
     `${firstName?.charAt(0) ?? ''}${lastName?.charAt(0) ?? ''}`.toUpperCase() ||
     undefined;
 
-  const imageSrc = localPreview ?? photoQuery.data?.url ?? undefined;
+  const imageSrc = localPreview ?? imageFromQuery ?? undefined;
 
   function revokeLocalPreview(): void {
     if (objectUrlRef.current) {
@@ -70,6 +117,10 @@ export default function EmployeeProfilePhoto({
       messageApi.error(t('users.photoTooLarge'));
       return false;
     }
+    if (!isSelf && !userId) {
+      messageApi.error(t('users.photoUploadError'));
+      return false;
+    }
 
     revokeLocalPreview();
     const preview = URL.createObjectURL(file);
@@ -77,7 +128,11 @@ export default function EmployeeProfilePhoto({
     setLocalPreview(preview);
 
     try {
-      await uploadMutation.mutateAsync({ userId, file });
+      if (isSelf) {
+        await uploadSelfMutation.mutateAsync(file);
+      } else {
+        await uploadUserMutation.mutateAsync({ userId: userId!, file });
+      }
       messageApi.success(t('users.photoUploaded'));
       revokeLocalPreview();
     } catch (error: unknown) {
@@ -89,7 +144,11 @@ export default function EmployeeProfilePhoto({
 
   async function handleRemove(): Promise<void> {
     try {
-      await deleteMutation.mutateAsync(userId);
+      if (isSelf) {
+        await deleteSelfMutation.mutateAsync();
+      } else if (userId) {
+        await deleteUserMutation.mutateAsync(userId);
+      }
       messageApi.success(t('users.photoRemoved'));
       setConfirmRemove(false);
     } catch (error: unknown) {
@@ -98,29 +157,125 @@ export default function EmployeeProfilePhoto({
   }
 
   const busy =
-    uploadMutation.isPending ||
-    deleteMutation.isPending ||
-    (Boolean(photoDocumentId) && photoQuery.isLoading);
+    uploadPending ||
+    deletePending ||
+    (Boolean(photoDocumentId) && photoLoading);
+
+  const avatar = (
+    <Spin spinning={busy}>
+      <Avatar
+        size={size}
+        src={imageSrc}
+        icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
+        style={{
+          backgroundColor: imageSrc ? undefined : tokens.colorPrimary,
+          flexShrink: 0,
+          border: `1px solid ${tokens.colorBorder}`,
+          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+        }}
+      >
+        {initials}
+      </Avatar>
+    </Spin>
+  );
+
+  const uploadControl = (
+    <Upload
+      accept={ACCEPTED_TYPES}
+      showUploadList={false}
+      beforeUpload={(file) => {
+        void handleUpload(file);
+        return false;
+      }}
+    >
+      {variant === 'hero' ? (
+        <Tooltip
+          title={
+            photoDocumentId ? t('users.changePhoto') : t('users.uploadPhoto')
+          }
+        >
+          <Button
+            type="default"
+            size="small"
+            icon={<CameraOutlined />}
+            loading={uploadPending}
+            style={{ borderRadius: 2 }}
+          />
+        </Tooltip>
+      ) : (
+        <Button
+          icon={<CameraOutlined />}
+          loading={uploadPending}
+          style={{ borderRadius: 2 }}
+        >
+          {photoDocumentId ? t('users.changePhoto') : t('users.uploadPhoto')}
+        </Button>
+      )}
+    </Upload>
+  );
+
+  const removeControl =
+    photoDocumentId && canEdit ? (
+      variant === 'hero' ? (
+        <Tooltip title={t('users.removePhoto')}>
+          <Button
+            danger
+            size="small"
+            icon={<DeleteOutlined />}
+            loading={deletePending}
+            onClick={() => setConfirmRemove(true)}
+            style={{ borderRadius: 2 }}
+          />
+        </Tooltip>
+      ) : (
+        <Button
+          danger
+          icon={<DeleteOutlined />}
+          loading={deletePending}
+          onClick={() => setConfirmRemove(true)}
+          style={{ borderRadius: 2 }}
+        >
+          {t('users.removePhoto')}
+        </Button>
+      )
+    ) : null;
+
+  const dialog = (
+    <ConfirmDialog
+      open={confirmRemove}
+      title={t('users.removePhotoTitle')}
+      description={t('users.removePhotoDescription')}
+      confirmLabel={t('common.delete')}
+      cancelLabel={t('common.cancel')}
+      danger
+      confirmLoading={deletePending}
+      onConfirm={() => void handleRemove()}
+      onCancel={() => {
+        if (!deletePending) {
+          setConfirmRemove(false);
+        }
+      }}
+    />
+  );
+
+  if (variant === 'hero') {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        {avatar}
+        {canEdit ? (
+          <Space size={6}>
+            {uploadControl}
+            {removeControl}
+          </Space>
+        ) : null}
+        {dialog}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-      <Spin spinning={busy}>
-        <Avatar
-          size={size}
-          src={imageSrc}
-          icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
-          style={{
-            backgroundColor: imageSrc
-              ? undefined
-              : tokens.colorPrimary,
-            flexShrink: 0,
-            border: `1px solid ${tokens.colorBorder}`,
-          }}
-        >
-          {initials}
-        </Avatar>
-      </Spin>
-
+      {avatar}
       {canEdit ? (
         <div className="flex flex-col gap-1">
           <div
@@ -136,54 +291,12 @@ export default function EmployeeProfilePhoto({
             {t('users.photoHelp')}
           </p>
           <Space wrap size={8} className="mt-1">
-            <Upload
-              accept={ACCEPTED_TYPES}
-              showUploadList={false}
-              beforeUpload={(file) => {
-                void handleUpload(file);
-                return false;
-              }}
-            >
-              <Button
-                icon={<CameraOutlined />}
-                loading={uploadMutation.isPending}
-                style={{ borderRadius: 2 }}
-              >
-                {photoDocumentId
-                  ? t('users.changePhoto')
-                  : t('users.uploadPhoto')}
-              </Button>
-            </Upload>
-            {photoDocumentId ? (
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-                loading={deleteMutation.isPending}
-                onClick={() => setConfirmRemove(true)}
-                style={{ borderRadius: 2 }}
-              >
-                {t('users.removePhoto')}
-              </Button>
-            ) : null}
+            {uploadControl}
+            {removeControl}
           </Space>
         </div>
       ) : null}
-
-      <ConfirmDialog
-        open={confirmRemove}
-        title={t('users.removePhotoTitle')}
-        description={t('users.removePhotoDescription')}
-        confirmLabel={t('common.delete')}
-        cancelLabel={t('common.cancel')}
-        danger
-        confirmLoading={deleteMutation.isPending}
-        onConfirm={() => void handleRemove()}
-        onCancel={() => {
-          if (!deleteMutation.isPending) {
-            setConfirmRemove(false);
-          }
-        }}
-      />
+      {dialog}
     </div>
   );
 }
