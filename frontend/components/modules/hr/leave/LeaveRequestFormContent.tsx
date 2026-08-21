@@ -15,6 +15,7 @@ import {
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -208,22 +209,13 @@ export default function LeaveRequestFormContent(): React.ReactNode {
             {t('pages.hr.leave.listDescription')}
           </p>
         </div>
-        <Space size={8} className="shrink-0" wrap>
-          <Button
-            onClick={() => router.push('/hr/leave-requests')}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
-          <Button
-            type="primary"
-            loading={submitMutation.isPending}
-            onClick={() => form.submit()}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.submitRequest')}
-          </Button>
-        </Space>
+        <Button
+          onClick={() => router.push('/hr/leave-requests')}
+          className="shrink-0"
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.cancel')}
+        </Button>
       </div>
 
       {submitMutation.isError ? (
@@ -239,6 +231,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       ) : null}
 
       <Form
+        id="leave-request-form"
         form={form}
         layout="vertical"
         initialValues={{ leaveType: DEFAULT_LEAVE_TYPE, days: 1 }}
@@ -342,6 +335,14 @@ export default function LeaveRequestFormContent(): React.ReactNode {
           />
         </FormLayout>
       </Form>
+
+      <FormPageFooter
+        submitLabel={t('hr.buttons.submitRequest')}
+        formId="leave-request-form"
+        useFormAttribute
+        isSubmitting={submitMutation.isPending}
+        onSubmit={() => form.submit()}
+      />
     </div>
   );
 }

@@ -1,11 +1,12 @@
 'use client';
 
-import { Alert, Button, Space, Spin } from 'antd';
+import { Alert, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
   type LeavePolicyFormValues,
 } from '@/components/modules/hr/leave-policy/LeavePolicyForm';
+import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -113,23 +114,13 @@ export default function LeavePolicyFormPageContent({
             {t('hr.leavePolicy.formDescription')}
           </p>
         </div>
-        <Space size={8} className="shrink-0" wrap>
-          <Button
-            onClick={() => router.push('/hr/leave-policy')}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            form="leave-policy-form"
-            loading={saving}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.save')}
-          </Button>
-        </Space>
+        <Button
+          onClick={() => router.push('/hr/leave-policy')}
+          className="shrink-0"
+          style={{ borderRadius: 0 }}
+        >
+          {t('common.cancel')}
+        </Button>
       </div>
       <LeavePolicyForm
         policy={policyQuery.data}
@@ -138,6 +129,12 @@ export default function LeavePolicyFormPageContent({
         onSubmit={handleSubmit}
         formId="leave-policy-form"
         showFooterActions={false}
+      />
+      <FormPageFooter
+        submitLabel={t('common.save')}
+        formId="leave-policy-form"
+        useFormAttribute
+        isSubmitting={saving}
       />
     </div>
   );

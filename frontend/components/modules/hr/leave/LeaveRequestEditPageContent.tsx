@@ -10,11 +10,11 @@ import {
   InputNumber,
   Select,
   Skeleton,
-  Space,
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -195,23 +195,13 @@ export default function LeaveRequestEditPageContent({
             {request.requestNumber}
           </p>
         </div>
-        <Space size={8} className="shrink-0" wrap>
-          <Button
-            onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
-          <Button
-            type="primary"
-            loading={updateMutation.isPending}
-            disabled={!canEdit}
-            onClick={() => form.submit()}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.saveLeaveRequest')}
-          </Button>
-        </Space>
+        <Button
+          onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
+          className="shrink-0"
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.cancel')}
+        </Button>
       </div>
 
       {updateMutation.isError ? (
@@ -227,6 +217,7 @@ export default function LeaveRequestEditPageContent({
       ) : null}
 
       <Form
+        id="leave-request-edit-form"
         form={form}
         layout="vertical"
         onFinish={(values) => void handleSubmit(values)}
@@ -289,6 +280,15 @@ export default function LeaveRequestEditPageContent({
           </Form.Item>
         </FormLayout>
       </Form>
+
+      <FormPageFooter
+        submitLabel={t('hr.buttons.saveLeaveRequest')}
+        formId="leave-request-edit-form"
+        useFormAttribute
+        isSubmitting={updateMutation.isPending}
+        submitDisabled={!canEdit}
+        onSubmit={() => form.submit()}
+      />
     </div>
   );
 }
