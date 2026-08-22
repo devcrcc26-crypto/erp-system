@@ -102,7 +102,7 @@ export default function MaterialRequisitionDetail({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
@@ -157,7 +157,7 @@ export default function MaterialRequisitionDetail({
         ]}
       />
 
-      <SectionCard title="Purpose" bodyClassName="px-5 py-4">
+      <SectionCard title="Purpose" bodyClassName="px-3 py-4 sm:px-5">
         <MetaItem label="What are the materials needed for?">
           <p className="whitespace-pre-wrap leading-relaxed m-0">
             {requisition.purpose}
@@ -165,7 +165,7 @@ export default function MaterialRequisitionDetail({
         </MetaItem>
       </SectionCard>
 
-      <SectionCard title="Items" bodyClassName="px-5 py-4">
+      <SectionCard title="Items" bodyClassName="px-3 py-4 sm:px-5">
         <Table<MaterialRequisitionItem>
           rowKey="id"
           size="small"
@@ -176,7 +176,7 @@ export default function MaterialRequisitionDetail({
       </SectionCard>
 
       {(requisition.documents?.length ?? 0) > 0 ? (
-        <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+        <SectionCard title="Attachments" bodyClassName="px-3 py-4 sm:px-5">
           <AttachmentDownloadList documents={requisition.documents} />
         </SectionCard>
       ) : null}

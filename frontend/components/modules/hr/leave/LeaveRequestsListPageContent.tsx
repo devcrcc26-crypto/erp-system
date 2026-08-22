@@ -242,6 +242,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               title: t('hr.table.employee'),
               key: 'employee',
               width: 220,
+              responsive: ['md'],
               render: (_: unknown, row: LeaveRequestListItem) => (
                 <div className="min-w-0">
                   <p
@@ -287,6 +288,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         dataIndex: 'endDate',
         key: 'endDate',
         width: 140,
+        responsive: ['md'],
         render: (value: string) => formatProjectDate(value),
       },
       {
@@ -464,7 +466,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button
           type="button"
-          className="m-0 border-0 bg-transparent p-0 text-left"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
           onClick={() => handleStatusMode('all')}
         >
           <StatCard
@@ -476,7 +478,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         </button>
         <button
           type="button"
-          className="m-0 border-0 bg-transparent p-0 text-left"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
           onClick={() => handleStatusMode('pending')}
         >
           <StatCard
@@ -488,7 +490,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         </button>
         <button
           type="button"
-          className="m-0 border-0 bg-transparent p-0 text-left"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
           onClick={() => handleStatusMode('approved')}
         >
           <StatCard
@@ -500,7 +502,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         </button>
         <button
           type="button"
-          className="m-0 border-0 bg-transparent p-0 text-left"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
           onClick={() => handleStatusMode('rejected')}
         >
           <StatCard
@@ -512,11 +514,11 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         </button>
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
           <Input.Search
             placeholder={t('hr.placeholder.searchRequest')}
-            className="w-72"
+            className="w-full min-w-0 sm:w-72"
             allowClear
             value={search}
             onChange={(e) => {
@@ -538,7 +540,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('hr.placeholder.leaveType')}
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             allowClear
             options={leaveTypeOptions}
             value={leaveType}
@@ -553,7 +555,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-48"
+              className="w-full min-w-0 sm:w-48"
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -567,7 +569,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           ) : null}
           <DatePicker.RangePicker
             value={dateRange}
-            className="w-[260px]"
+            className="w-full min-w-0 sm:w-[260px]"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
@@ -594,7 +596,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       </div>
 
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CalendarOutlined style={{ color: tokens.colorPrimary }} />
             <h3

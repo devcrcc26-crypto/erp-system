@@ -5,7 +5,7 @@
 import { Table } from 'antd';
 import type { TableProps } from 'antd';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useIsLgUp } from '@/hooks/useMediaQuery';
+import { useIsLgUp, useIsMdUp } from '@/hooks/useMediaQuery';
 import { defaultTablePagination } from '@/lib/theme/table-pagination';
 
 /**
@@ -23,6 +23,7 @@ export default function DataTable<T extends object>({
   scroll?: TableProps<T>['scroll'] | false;
 }): React.ReactNode {
   const isLgUp = useIsLgUp();
+  const isMdUp = useIsMdUp();
   const { t } = useEpcTranslation();
   const paginationRangeLabel = t('pagination.range');
 
@@ -35,10 +36,22 @@ export default function DataTable<T extends object>({
 
   const resolvedSize = size ?? (isLgUp ? 'middle' : 'small');
 
-  const resolvedPagination =
+  const basePagination =
     pagination === false
       ? false
-      : pagination ?? defaultTablePagination(undefined, paginationRangeLabel);
+      : (pagination ?? defaultTablePagination(undefined, paginationRangeLabel));
+
+  const resolvedPagination =
+    basePagination === false
+      ? false
+      : {
+          ...basePagination,
+          simple: !isMdUp,
+          showSizeChanger: isMdUp
+            ? (basePagination.showSizeChanger ?? true)
+            : false,
+          showTotal: isMdUp ? basePagination.showTotal : undefined,
+        };
 
   return (
     <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">

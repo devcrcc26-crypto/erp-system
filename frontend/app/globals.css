@@ -857,10 +857,19 @@ main::-webkit-scrollbar,
   overflow-y: auto;
 }
 
+.erp-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 767px) {
   .erp-drawer-form .ant-picker,
   .erp-drawer-form .ant-select,
-  .erp-drawer-form .ant-input {
+  .erp-drawer-form .ant-input,
+  .erp-drawer-form .ant-input-number,
+  .erp-drawer-form .ant-input-number-affix-wrapper {
     width: 100% !important;
   }
 
@@ -871,6 +880,12 @@ main::-webkit-scrollbar,
 
   .erp-responsive-drawer .ant-drawer-header {
     padding-inline: 16px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .erp-responsive-drawer .ant-drawer-extra {
+    margin-inline-start: 0 !important;
   }
 
   .erp-responsive-drawer .ant-drawer-body {
@@ -889,6 +904,114 @@ main::-webkit-scrollbar,
   .erp-responsive-modal .ant-modal-content {
     max-height: calc(100vh - 16px);
     overflow-y: auto;
+  }
+
+  .erp-pro-list-page {
+    gap: 12px;
+  }
+
+  .erp-pro-card-body,
+  .erp-pro-table-card-body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .erp-pro-card-toolbar {
+    padding: 12px;
+  }
+
+  .erp-pro-filter-field {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .erp-pro-filter-form-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .erp-filter-bar > .ant-input-search,
+  .erp-filter-bar > .ant-input-affix-wrapper,
+  .erp-filter-bar > .ant-select,
+  .erp-filter-bar > .ant-picker,
+  .erp-filter-bar > .ant-input-number,
+  .erp-filter-bar > .ant-input-number-affix-wrapper {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .erp-pro-table .ant-table-thead > tr > th,
+  .erp-data-table.erp-pro-table .ant-table-thead > tr > th,
+  .erp-data-table.erp-pro-table .ant-table-thead > tr > th.ant-table-cell {
+    padding: 10px 12px !important;
+  }
+
+  .erp-pro-table .ant-table-tbody > tr > td,
+  .erp-data-table.erp-pro-table .ant-table-tbody > tr > td {
+    padding: 10px 12px !important;
+  }
+
+  .erp-pro-table .ant-pagination,
+  .erp-data-table .ant-pagination {
+    margin: 12px 8px !important;
+    justify-content: center;
+  }
+
+  .erp-list-tabs > .ant-tabs-nav {
+    margin-bottom: 12px;
+  }
+
+  .erp-list-tabs .ant-tabs-nav-list {
+    width: 100%;
+  }
+
+  .erp-list-tabs .ant-tabs-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 10px 12px !important;
+  }
+
+  .erp-list-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .erp-profile-tabbar button {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 10px 12px;
+  }
+
+  .erp-form-page-footer,
+  .erp-stepper-form__footer {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .erp-stepper-form .ant-steps-item-title {
+    font-size: 12px;
+  }
+
+  .ant-picker-panels {
+    flex-direction: column !important;
+  }
+
+  .ant-picker-dropdown {
+    max-width: calc(100vw - 16px);
+  }
+
+  .ant-select-dropdown {
+    max-width: calc(100vw - 16px);
+  }
+
+  .ant-pagination {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .ant-descriptions-item {
+    padding-bottom: 8px !important;
   }
 }
 

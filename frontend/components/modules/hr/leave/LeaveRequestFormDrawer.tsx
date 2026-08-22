@@ -191,6 +191,7 @@ export default function LeaveRequestFormDrawer({
           <Form
             form={form}
             layout="vertical"
+            className="erp-drawer-form"
             onFinish={(values) => void handleSubmit(values)}
           >
             <Form.Item

@@ -41,7 +41,7 @@ export default function OvertimeRequestDetail({
 
   if (detailQuery.isLoading && !sheet) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-5 py-4">
+      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-3 py-4 sm:px-5">
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
     );
@@ -113,7 +113,7 @@ export default function OvertimeRequestDetail({
 
       <SectionCard
         title="Overtime Sheet"
-        bodyClassName="px-5 py-4"
+        bodyClassName="px-3 py-4 sm:px-5"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
@@ -167,7 +167,7 @@ export default function OvertimeRequestDetail({
         ]}
       />
 
-      <SectionCard title="Entries" bodyClassName="px-5 py-4">
+      <SectionCard title="Entries" bodyClassName="px-3 py-4 sm:px-5">
         <Table<OvertimeEntry>
           rowKey="id"
           size="small"

@@ -118,7 +118,7 @@ export default function PurchaseRequestDetail({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
@@ -176,7 +176,7 @@ export default function PurchaseRequestDetail({
         ]}
       />
 
-      <SectionCard title="Justification" bodyClassName="px-5 py-4">
+      <SectionCard title="Justification" bodyClassName="px-3 py-4 sm:px-5">
         <MetaItem label="Reason for Purchase">
           <p className="whitespace-pre-wrap leading-relaxed m-0">
             {request.justification}
@@ -199,7 +199,7 @@ export default function PurchaseRequestDetail({
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Line Items" bodyClassName="px-5 py-4">
+      <SectionCard title="Line Items" bodyClassName="px-3 py-4 sm:px-5">
         <Table<PurchaseRequestItem>
           rowKey="id"
           size="small"
@@ -228,7 +228,7 @@ export default function PurchaseRequestDetail({
       </SectionCard>
 
       {(request.documents?.length ?? 0) > 0 ? (
-        <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+        <SectionCard title="Attachments" bodyClassName="px-3 py-4 sm:px-5">
           <AttachmentDownloadList documents={request.documents} />
         </SectionCard>
       ) : null}

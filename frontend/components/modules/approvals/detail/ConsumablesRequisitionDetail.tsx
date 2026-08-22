@@ -101,7 +101,7 @@ export default function ConsumablesRequisitionDetail({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
@@ -155,7 +155,7 @@ export default function ConsumablesRequisitionDetail({
         ]}
       />
 
-      <SectionCard title="Purpose" bodyClassName="px-5 py-4">
+      <SectionCard title="Purpose" bodyClassName="px-3 py-4 sm:px-5">
         <MetaItem label="What are these consumables needed for?">
           <p className="whitespace-pre-wrap leading-relaxed m-0">
             {requisition.purpose}
@@ -163,7 +163,7 @@ export default function ConsumablesRequisitionDetail({
         </MetaItem>
       </SectionCard>
 
-      <SectionCard title="Items" bodyClassName="px-5 py-4">
+      <SectionCard title="Items" bodyClassName="px-3 py-4 sm:px-5">
         <Table<ConsumablesRequisitionItem>
           rowKey="id"
           size="small"

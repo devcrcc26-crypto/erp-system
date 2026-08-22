@@ -147,7 +147,7 @@ export default function LeavePolicyDetailPageContent({
         </Space>
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-4 sm:px-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <StatusBadge
             label={
@@ -194,10 +194,10 @@ export default function LeavePolicyDetailPageContent({
         <SectionCard
           key={rule.leaveType}
           title={formatLeaveType(rule.leaveType, t)}
-          bodyClassName="px-5 py-4"
+          bodyClassName="px-3 py-4 sm:px-5"
         >
           <Descriptions
-            column={{ xs: 1, sm: 2 }}
+            column={{ xs: 1, sm: 1, md: 2 }}
             size="small"
             items={[
               {

@@ -195,7 +195,7 @@ export default function LeaveRequestDetailPageContent({
       </div>
 
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white overflow-hidden">
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -295,7 +295,7 @@ export default function LeaveRequestDetailPageContent({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <div className="flex flex-col gap-4 min-w-0">
-          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
+          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-3 py-4 sm:px-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <MetaItem label={t('hr.labels.employee')}>
                 {formatLeaveEmployeeName(request.employee)}
@@ -340,7 +340,7 @@ export default function LeaveRequestDetailPageContent({
           </SectionCard>
 
           {request.balance ? (
-            <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-3 py-4 sm:px-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
                 <MetaItem label={t('hr.labels.entitled')}>
                   {request.balance.entitled}
@@ -369,7 +369,7 @@ export default function LeaveRequestDetailPageContent({
               currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-3 py-4 sm:px-5">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
                 {t('hr.empty.noApprovalChain')}
               </p>

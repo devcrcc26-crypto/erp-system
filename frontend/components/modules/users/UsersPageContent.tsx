@@ -566,11 +566,11 @@ export default function UsersPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
           <Input.Search
             placeholder={t('users.searchPlaceholder')}
-            className="w-72"
+            className="w-full min-w-0 sm:w-72"
             allowClear
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -587,7 +587,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.filterDiscipline')}
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             allowClear
             options={disciplineFilterOptions}
             value={disciplineFilter}
@@ -598,7 +598,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.filterDepartment')}
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             allowClear
             options={departmentFilterOptions}
             value={departmentFilter}
@@ -609,7 +609,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.filterPosition')}
-            className="w-44"
+            className="w-full min-w-0 sm:w-44"
             allowClear
             options={positionFilterOptions}
             value={positionFilter}
@@ -620,7 +620,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.filterStatus')}
-            className="w-36"
+            className="w-full min-w-0 sm:w-36"
             allowClear
             options={[
               { label: t('common.active'), value: true },
@@ -634,7 +634,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.form.employeeType')}
-            className="w-36"
+            className="w-full min-w-0 sm:w-36"
             allowClear
             options={[
               {
@@ -658,7 +658,7 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Select
             placeholder={t('users.form.nationality')}
-            className="w-36"
+            className="w-full min-w-0 sm:w-36"
             allowClear
             options={[
               {
@@ -693,7 +693,7 @@ export default function UsersPageContent(): React.ReactNode {
       </div>
 
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Users size={16} style={{ color: tokens.colorPrimary }} />
             <h3
@@ -812,6 +812,7 @@ export default function UsersPageContent(): React.ReactNode {
                 dataIndex: 'employeeId',
                 key: 'employeeId',
                 width: 100,
+                responsive: ['md'],
                 render: (id: string | null | undefined) => (
                   <span
                     className="font-[family-name:var(--font-mono)] text-xs"
@@ -825,6 +826,7 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.department'),
                 key: 'department',
                 ellipsis: { showTitle: true },
+                responsive: ['md'],
                 sorter: true,
                 render: (_, record) =>
                   record.department?.name ?? (
@@ -835,6 +837,7 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.position'),
                 key: 'position',
                 ellipsis: { showTitle: true },
+                responsive: ['lg'],
                 sorter: true,
                 render: (_, record) =>
                   record.position?.title ?? (
@@ -846,6 +849,7 @@ export default function UsersPageContent(): React.ReactNode {
                 dataIndex: 'employeeType',
                 key: 'employeeType',
                 width: 110,
+                responsive: ['lg'],
                 render: (type: EmployeeType | null | undefined) =>
                   type ? (
                     <span
@@ -862,6 +866,7 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.discipline'),
                 key: 'discipline',
                 ellipsis: { showTitle: true },
+                responsive: ['lg'],
                 render: (_, record) => {
                   if (!record.engineeringDisciplineId) {
                     return '—';
@@ -890,6 +895,7 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.role'),
                 key: 'roles',
                 ellipsis: { showTitle: true },
+                responsive: ['md'],
                 render: (_, record) => {
                   const roles =
                     record.userRoles?.map((assignment) => ({

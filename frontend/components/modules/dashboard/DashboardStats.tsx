@@ -68,26 +68,28 @@ export function StatCard({
   const accent = STAT_ACCENT[color];
 
   const body = (
-    <div className="h-full bg-white rounded-xl border border-[rgba(0,0,0,0.08)] overflow-hidden transition-colors hover:border-[rgba(0,0,0,0.14)]">
+    <div className="h-full min-w-0 overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white transition-colors hover:border-[rgba(0,0,0,0.14)]">
       <div className={`h-1 w-full ${accent.bar}`} />
-      <div className="px-4 pt-3 pb-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)] m-0">
+      <div className="px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="m-0 min-w-0 truncate text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">
             {label}
           </p>
           {icon ? (
             <div
-              className={`w-7 h-7 rounded-lg ${accent.bg} flex items-center justify-center flex-shrink-0`}
+              className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${accent.bg}`}
             >
               <span className={`text-sm ${accent.text}`}>{icon}</span>
             </div>
           ) : null}
         </div>
-        <p className={`text-3xl font-bold ${accent.text} leading-none`}>
+        <p
+          className={`m-0 text-2xl font-bold leading-none tabular-nums sm:text-3xl ${accent.text}`}
+        >
           {value.toLocaleString()}
         </p>
         {sub ? (
-          <p className="text-xs text-[var(--color-text-tertiary)] mt-1.5 m-0">
+          <p className="mt-1.5 m-0 truncate text-xs text-[var(--color-text-tertiary)]">
             {sub}
           </p>
         ) : null}

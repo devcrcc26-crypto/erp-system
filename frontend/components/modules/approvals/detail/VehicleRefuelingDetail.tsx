@@ -66,7 +66,7 @@ export default function VehicleRefuelingDetail({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
@@ -116,7 +116,7 @@ export default function VehicleRefuelingDetail({
         ]}
       />
 
-      <SectionCard title="Refueling Details" bodyClassName="px-5 py-4">
+      <SectionCard title="Refueling Details" bodyClassName="px-3 py-4 sm:px-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <MetaItem label="Fuel Date">
             {formatProjectDate(refueling.fuelDate)}

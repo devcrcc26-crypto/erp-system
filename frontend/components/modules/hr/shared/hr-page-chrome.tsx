@@ -16,12 +16,12 @@ export function SectionCard({
   bodyClassName?: string;
 }): React.ReactNode {
   return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
+    <div className="overflow-hidden rounded-lg border border-[rgba(0,0,0,0.08)] bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
+        <h3 className="m-0 min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
           {title}
         </h3>
-        {action}
+        {action ? <div className="min-w-0 shrink-0">{action}</div> : null}
       </div>
       <div className={bodyClassName}>{children}</div>
     </div>
@@ -94,7 +94,7 @@ export function SummaryStrip({
       {items.map(({ label, value, emphasize }) => (
         <div
           key={label}
-          className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3"
+          className="min-w-0 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-4"
         >
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
             {label}

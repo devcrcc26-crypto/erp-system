@@ -36,6 +36,8 @@ export default function ConfirmDialog({
       cancelText={cancelLabel}
       confirmLoading={confirmLoading}
       okButtonProps={{ danger }}
+      centered
+      className="erp-responsive-modal"
       destroyOnHidden
     >
       {description && <p className="text-sm text-slate-600">{description}</p>}

@@ -96,7 +96,7 @@ export default function ExpenseClaimDetail({
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
               {claim.claimNumber}
@@ -130,7 +130,7 @@ export default function ExpenseClaimDetail({
       />
 
       {claim.description ? (
-        <SectionCard title="Description" bodyClassName="px-5 py-4">
+        <SectionCard title="Description" bodyClassName="px-3 py-4 sm:px-5">
           <MetaItem label="Notes">
             <p className="whitespace-pre-wrap leading-relaxed m-0">
               {claim.description}
@@ -139,7 +139,7 @@ export default function ExpenseClaimDetail({
         </SectionCard>
       ) : null}
 
-      <SectionCard title="Expense Items" bodyClassName="px-5 py-4">
+      <SectionCard title="Expense Items" bodyClassName="px-3 py-4 sm:px-5">
         <Table<ExpenseClaimItem>
           rowKey="id"
           size="small"

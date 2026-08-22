@@ -163,18 +163,21 @@ export default function ApprovalsListPageContent(): React.ReactNode {
       title: 'Category',
       key: 'category',
       width: 180,
+      responsive: ['md'],
       render: (_, row) => row.category?.name ?? '—',
     },
     {
       title: 'Submitted by',
       key: 'requester',
       width: 160,
+      responsive: ['md'],
       render: (_, row) => formatApprovalUserName(row.requester),
     },
     {
       title: 'Submitted',
       key: 'submittedAt',
       width: 120,
+      responsive: ['lg'],
       render: (_, row) =>
         formatProjectDate(row.submittedAt ?? row.createdAt ?? null),
     },
@@ -210,6 +213,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
       title: 'Current tier',
       key: 'currentTier',
       width: 160,
+      responsive: ['lg'],
       render: (_, row) => {
         const current = findCurrentTier(
           row.tiers as ApprovalTier[] | undefined,
@@ -293,10 +297,10 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               ]
             : []),
         ]}
-        className="mb-2"
+        className="erp-list-tabs mb-2"
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="erp-filter-bar mb-4">
         <ListSearchInput
           committedValue={search}
           placeholder="Search title or request #"
@@ -310,7 +314,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           mode="multiple"
           allowClear
           placeholder="Status"
-          className="min-w-[200px]"
+          className="w-full min-w-0 sm:min-w-[200px] sm:w-auto"
           options={STATUS_FILTER_OPTIONS}
           value={statusFilter}
           onChange={(value: ApprovalRequestStatus[]) => {
@@ -324,7 +328,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           showSearch
           optionFilterProp="label"
           placeholder="Category"
-          className="min-w-[200px]"
+          className="w-full min-w-0 sm:min-w-[200px] sm:w-auto"
           options={categoryOptions}
           value={categoryId}
           loading={categoriesQuery.isLoading}
@@ -339,7 +343,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
             setDateRange(value);
             resetPage();
           }}
-          className="min-w-[260px]"
+          className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
         />
         <TableUpdatingIndicator active={listQuery.isFetching} />
       </div>

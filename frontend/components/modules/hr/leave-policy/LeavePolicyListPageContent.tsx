@@ -188,6 +188,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         dataIndex: 'governedBy',
         key: 'governedBy',
         ellipsis: true,
+        responsive: ['lg'],
         render: (value: string | null) => value || '—',
       },
       {
@@ -196,6 +197,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         key: 'ruleCount',
         width: 100,
         align: 'right',
+        responsive: ['md'],
       },
       {
         title: t('hr.leavePolicy.employees'),
@@ -203,6 +205,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         key: 'employeeCount',
         width: 120,
         align: 'right',
+        responsive: ['md'],
       },
       {
         title: t('common.status'),
@@ -334,11 +337,11 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
           <Input.Search
             placeholder={t('hr.leavePolicy.searchPlaceholder')}
-            className="w-72"
+            className="w-full min-w-0 sm:w-72"
             allowClear
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -356,7 +359,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
           <Select
             allowClear
             placeholder={t('hr.leavePolicy.filterStatus')}
-            className="w-36"
+            className="w-full min-w-0 sm:w-36"
             value={activeFilter}
             onChange={(value?: boolean) => {
               setActiveFilter(value);
@@ -370,7 +373,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
           <Select
             allowClear
             placeholder={t('hr.leavePolicy.filterProgressive')}
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             value={progressiveFilter}
             onChange={(value?: boolean) => {
               setProgressiveFilter(value);
@@ -402,7 +405,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       </div>
 
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <FileTextOutlined style={{ color: tokens.colorPrimary }} />
             <h3
@@ -421,14 +424,14 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
             </span>
           </div>
           <Space wrap size={8}>
-            <Button
+            {/* <Button
               icon={<ReloadOutlined />}
               loading={refreshMutation.isPending}
               onClick={() => void handleRefreshBalances()}
               style={{ borderRadius: 0 }}
             >
               {t('hr.leavePolicy.refreshBalances')}
-            </Button>
+            </Button> */}
             <Button
               type="primary"
               icon={<PlusOutlined />}

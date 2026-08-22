@@ -411,7 +411,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="p-4 sm:p-[18px]">
+      <div className="min-w-0">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -423,7 +423,7 @@ export default function ApprovalDetailPageContent({
         ? detailQuery.error.message
         : 'Approval request not found';
     return (
-      <div className="p-4 sm:p-[18px]">
+      <div className="min-w-0">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
@@ -438,7 +438,7 @@ export default function ApprovalDetailPageContent({
   }
 
   return (
-    <div className="p-4 sm:p-[18px]">
+    <div className="min-w-0">
       <Button
         type="text"
         icon={<ArrowLeft size={16} />}
@@ -455,7 +455,11 @@ export default function ApprovalDetailPageContent({
             {request.category?.name ? ` - ${request.category.name}` : ''}
           </Typography.Text>
           <Space wrap align="center">
-            <Typography.Title level={3} style={{ margin: 0 }}>
+            <Typography.Title
+              level={3}
+              className="!mb-0 min-w-0 !text-lg break-words sm:!text-2xl"
+              style={{ margin: 0 }}
+            >
               {request.title}
             </Typography.Title>
             {displayStatus ? (
@@ -487,8 +491,8 @@ export default function ApprovalDetailPageContent({
         <RejectedBanner note={rejectNote} />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div>
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-6">
+        <div className="min-w-0">
           {renderTypedDetail(request)}
 
           {isRequester && request.status === 'RETURNED' ? (
@@ -517,13 +521,11 @@ export default function ApprovalDetailPageContent({
         </div>
 
         <aside
+          className="min-w-0 p-4 sm:p-5 xl:sticky xl:top-4"
           style={{
             background: tokens.colorCardBg,
             border: `1px solid ${tokens.colorBorder}`,
             borderRadius: 8,
-            padding: 20,
-            position: 'sticky',
-            top: 16,
           }}
         >
           <Typography.Title level={5} style={{ marginTop: 0 }}>

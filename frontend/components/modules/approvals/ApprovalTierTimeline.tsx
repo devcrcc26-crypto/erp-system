@@ -35,13 +35,11 @@ export default function ApprovalTierTimeline({
 
   return (
     <aside
+      className="min-w-0 p-4 sm:p-5 xl:sticky xl:top-4"
       style={{
         background: tokens.colorCardBg,
         border: `1px solid ${tokens.colorBorder}`,
         borderRadius: 8,
-        padding: 20,
-        position: 'sticky',
-        top: 16,
       }}
     >
       <Typography.Title level={5} style={{ marginTop: 0 }}>

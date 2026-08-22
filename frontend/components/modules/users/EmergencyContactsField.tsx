@@ -28,93 +28,83 @@ export default function EmergencyContactsField(): React.ReactNode {
     <Form.List name="emergencyContacts">
       {(fields, { add, remove }) => (
         <div className="space-y-3">
-          <div className="overflow-x-auto rounded-[2px] border border-[rgba(0,0,0,0.06)]">
-            <table className="w-full min-w-[880px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#fafafa] text-left text-[rgba(0,0,0,0.65)]">
-                  <th className="px-3 py-2 font-medium">
-                    {t('users.form.emergencyContactFirstName')}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t('users.form.emergencyContactMiddleName')}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t('users.form.emergencyContactLastName')}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t('users.form.emergencyContactPhone')}
-                  </th>
-                  <th className="px-3 py-2 font-medium">
-                    {t('users.form.emergencyContactEmail')}
-                  </th>
-                  <th className="px-3 py-2 font-medium">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fields.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-[rgba(0,0,0,0.45)]">
-                      {t('users.form.noEmergencyContacts')}
-                    </td>
-                  </tr>
-                ) : (
-                  fields.map((field) => (
-                    <tr key={field.key} className="border-b border-[rgba(0,0,0,0.06)] align-top last:border-b-0">
-                      <td className="px-3 py-2">
-                        <Form.Item
-                          name={[field.name, 'firstName']}
-                          className="mb-0"
-                          rules={[{ required: true, message: t('common.requiredFirstName') }]}
-                        >
-                          <Input size="small" />
-                        </Form.Item>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Form.Item name={[field.name, 'middleName']} className="mb-0">
-                          <Input size="small" />
-                        </Form.Item>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Form.Item
-                          name={[field.name, 'lastName']}
-                          className="mb-0"
-                          rules={[{ required: true, message: t('common.requiredLastName') }]}
-                        >
-                          <Input size="small" />
-                        </Form.Item>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Form.Item name={[field.name, 'phone']} className="mb-0">
-                          <Input size="small" type="tel" />
-                        </Form.Item>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Form.Item
-                          name={[field.name, 'email']}
-                          className="mb-0"
-                          normalize={(value: string) => value?.trim() ?? ''}
-                          rules={[optionalEmailRule(t('common.invalidEmail'))]}
-                        >
-                          <Input size="small" type="email" />
-                        </Form.Item>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => remove(field.name)}
-                        >
-                          {t('common.delete')}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {fields.length === 0 ? (
+            <div className="rounded-[2px] border border-[rgba(0,0,0,0.06)] px-3 py-6 text-center text-sm text-[rgba(0,0,0,0.45)]">
+              {t('users.form.noEmergencyContacts')}
+            </div>
+          ) : (
+            fields.map((field) => (
+              <div
+                key={field.key}
+                className="rounded-[2px] border border-[rgba(0,0,0,0.06)] p-3"
+              >
+                <div className="erp-form-grid-3">
+                  <Form.Item
+                    name={[field.name, 'firstName']}
+                    label={t('users.form.emergencyContactFirstName')}
+                    className="mb-0"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('common.requiredFirstName'),
+                      },
+                    ]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    name={[field.name, 'middleName']}
+                    label={t('users.form.emergencyContactMiddleName')}
+                    className="mb-0"
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    name={[field.name, 'lastName']}
+                    label={t('users.form.emergencyContactLastName')}
+                    className="mb-0"
+                    rules={[
+                      {
+                        required: true,
+                        message: t('common.requiredLastName'),
+                      },
+                    ]}
+                  >
+                    <Input />
+                  </Form.Item>
+                </div>
+                <div className="erp-form-grid-2 mt-3">
+                  <Form.Item
+                    name={[field.name, 'phone']}
+                    label={t('users.form.emergencyContactPhone')}
+                    className="mb-0"
+                  >
+                    <Input type="tel" />
+                  </Form.Item>
+                  <Form.Item
+                    name={[field.name, 'email']}
+                    label={t('users.form.emergencyContactEmail')}
+                    className="mb-0"
+                    normalize={(value: string) => value?.trim() ?? ''}
+                    rules={[optionalEmailRule(t('common.invalidEmail'))]}
+                  >
+                    <Input type="email" />
+                  </Form.Item>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    type="link"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(field.name)}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
           <Button
             type="dashed"
             block

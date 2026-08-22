@@ -63,7 +63,7 @@ export default function PerDiemDetail({
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
               {request.requestNumber}
@@ -104,7 +104,7 @@ export default function PerDiemDetail({
         ]}
       />
 
-      <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+      <SectionCard title="Request Details" bodyClassName="px-3 py-4 sm:px-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
           <MetaItem label="Destination Category">
             {request.destinationCategory}

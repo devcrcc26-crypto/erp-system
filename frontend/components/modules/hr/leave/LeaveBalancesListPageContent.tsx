@@ -177,6 +177,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         title: formatLeaveType('MATERNITY', t),
         key: 'maternity',
         width: 150,
+        responsive: ['md'],
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           renderBalanceCell(row.maternity),
       },
@@ -184,6 +185,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         title: formatLeaveType('SICK', t),
         key: 'sick',
         width: 150,
+        responsive: ['md'],
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           renderBalanceCell(row.sick),
       },
@@ -270,11 +272,11 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-5 py-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
           <Input.Search
             placeholder={t('hr.placeholder.searchEmployee')}
-            className="w-72"
+            className="w-full min-w-0 sm:w-72"
             allowClear
             value={search}
             onChange={(e) => {
@@ -336,7 +338,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       </div>
 
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CalendarOutlined style={{ color: tokens.colorPrimary }} />
             <h3

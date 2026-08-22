@@ -122,7 +122,7 @@ export function StepperForm({
 
   const footer = (
     <div
-      className="erp-stepper-form__footer flex items-center justify-between gap-3 border-t px-4 py-3 sm:px-6"
+      className="erp-stepper-form__footer flex flex-wrap items-center justify-between gap-3 border-t px-3 py-3 sm:px-6"
       style={{
         borderColor: 'rgba(0,0,0,0.06)',
         background: 'rgba(255, 255, 255, 0.4)',
@@ -152,7 +152,7 @@ export function StepperForm({
       >
         {t('hr.buttons.back')}
       </Button>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {onReset ? (
           <Button
             onClick={handleReset}
@@ -208,14 +208,17 @@ export function StepperForm({
         } ${isSections ? '' : 'border-b bg-white px-4 sm:px-6'}`}
         style={isSections ? undefined : { borderColor: 'rgba(0,0,0,0.06)' }}
       >
-        <Steps
-          current={current}
-          size="small"
-          items={steps.map((step) => ({
-            title: step.title,
-            icon: step.icon,
-          }))}
-        />
+        <div className="min-w-0 overflow-x-auto">
+          <Steps
+            current={current}
+            size="small"
+            responsive={false}
+            items={steps.map((step) => ({
+              title: step.title,
+              icon: step.icon,
+            }))}
+          />
+        </div>
       </div>
 
       <div

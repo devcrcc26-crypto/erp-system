@@ -275,7 +275,7 @@ export default function BusinessTripDetail({
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
               {trip.tripNumber}
@@ -337,7 +337,7 @@ export default function BusinessTripDetail({
       </div>
 
       {canAcknowledge && currentUserPassenger ? (
-        <div className="rounded-lg border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-5 py-4">
+        <div className="rounded-lg border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
           <p className="text-sm font-semibold text-[var(--color-amber-400)] m-0 mb-1">
             Your ticket is ready — please acknowledge receipt
           </p>
@@ -383,7 +383,7 @@ export default function BusinessTripDetail({
 
       {/* Travel Details */}
       <SectionCard title="Travel Details">
-        <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+        <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
           <SubsectionHeader icon={<MapPin size={15} />} title="Route & Schedule" />
           <div className="rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3 mb-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -435,7 +435,7 @@ export default function BusinessTripDetail({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+        <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
           <SubsectionHeader icon={<Plane size={15} />} title="Flight" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
             <MetaItem label="Trip Type">
@@ -447,7 +447,7 @@ export default function BusinessTripDetail({
           </div>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <SubsectionHeader
             icon={<BedDouble size={15} />}
             title="Stay & Allowances"
@@ -498,7 +498,7 @@ export default function BusinessTripDetail({
       {/* Purpose & Host */}
       {hasPurposeContent ? (
         <SectionCard title="Purpose & Host">
-          <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+          <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
             <SubsectionHeader icon={<FileText size={15} />} title="Purpose" />
             <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
               {trip.purpose}
@@ -506,7 +506,7 @@ export default function BusinessTripDetail({
           </div>
 
           {hasHost ? (
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader icon={<Building2 size={15} />} title="Host" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
                 {trip.hostOrganization ? (
@@ -522,7 +522,7 @@ export default function BusinessTripDetail({
           ) : null}
 
           {trip.expectedOutcomes ? (
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
               <SubsectionHeader
                 icon={<Target size={15} />}
                 title="Expected Outcomes"
@@ -534,7 +534,7 @@ export default function BusinessTripDetail({
           ) : null}
 
           {trip.itinerary ? (
-            <div className="px-5 py-4">
+            <div className="px-3 py-4 sm:px-5">
               <SubsectionHeader
                 icon={<Calendar size={15} />}
                 title="Itinerary"
@@ -607,7 +607,7 @@ export default function BusinessTripDetail({
               (row.tickets?.length ?? 0) > 0;
 
             return (
-              <li key={row.id} className="px-5 py-4">
+              <li key={row.id} className="px-3 py-4 sm:px-5">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
@@ -671,7 +671,7 @@ export default function BusinessTripDetail({
       ) : null}
 
       {(trip.documents?.length ?? 0) > 0 ? (
-        <SectionCard title="Supporting Attachments" bodyClassName="px-5 py-4">
+        <SectionCard title="Supporting Attachments" bodyClassName="px-3 py-4 sm:px-5">
           <AttachmentDownloadList documents={trip.documents} />
         </SectionCard>
       ) : null}

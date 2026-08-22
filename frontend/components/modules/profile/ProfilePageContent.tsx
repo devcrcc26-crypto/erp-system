@@ -65,7 +65,7 @@ function ProfileIdentityHero({
         className="h-1 w-full"
         style={{ backgroundColor: tokens.colorPrimary }}
       />
-      <div className="px-5 py-5">
+      <div className="px-3 py-4 sm:px-5">
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
           <EmployeeProfilePhoto
             source="self"

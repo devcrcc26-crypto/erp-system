@@ -64,7 +64,7 @@ export default function OfficialSealDetail({
           border: `1px solid ${tokens.colorBorder}`,
         }}
         >
-            <div className="px-5 py-4">
+            <div className="px-3 py-4 sm:px-5">
                 <span
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: tokens.colorTextTertiary }}
@@ -90,7 +90,7 @@ export default function OfficialSealDetail({
             {label: t('hr.labels.sealedDocument'), value: sealedDocumentLink},
         ]} />
 
-        <SectionCard title={t('hr.section.officialSealDetails')} bodyClassName="px-5 py-4">
+        <SectionCard title={t('hr.section.officialSealDetails')} bodyClassName="px-3 py-4 sm:px-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">   
                 <MetaItem label={t('hr.form.description')}>
                     {seal.description}
@@ -115,7 +115,7 @@ export default function OfficialSealDetail({
         </SectionCard>
         
         {(seal.documents?.length ?? 0) > 0 ? (
-            <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.documentToSeal')} bodyClassName="px-3 py-4 sm:px-5">
                 <AttachmentDownloadList
                     documents={seal.documents}
                     emptyLabel={t('hr.empty.noAttachments')}
@@ -123,7 +123,7 @@ export default function OfficialSealDetail({
             </SectionCard>
         ) : null}
         {seal.sealedDocument ? (
-            <SectionCard title={t('hr.section.sealedProof')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.section.sealedProof')} bodyClassName="px-3 py-4 sm:px-5">
                 <AttachmentDownloadList
                     documents={[seal.sealedDocument]}
                     emptyLabel={t('hr.empty.noAttachments')}

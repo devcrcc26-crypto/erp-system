@@ -79,7 +79,7 @@ export default function FormPageFooter({
     <>
       <div style={{ height: FOOTER_HEIGHT_PX + 16 }} aria-hidden />
       <div
-        className="erp-form-page-footer flex items-center justify-end gap-3 border-t px-4 py-3 sm:px-6"
+        className="erp-form-page-footer flex flex-wrap items-center justify-end gap-3 border-t px-3 py-3 sm:px-6"
         style={{
           borderColor: 'rgba(0,0,0,0.06)',
           background: 'rgba(255, 255, 255, 0.4)',
@@ -94,7 +94,7 @@ export default function FormPageFooter({
           minHeight: FOOTER_HEIGHT_PX,
         }}
       >
-        <Space size={8}>
+        <Space size={8} wrap>
           {secondaryLabel && onSecondary ? (
             <Button
               onClick={onSecondary}

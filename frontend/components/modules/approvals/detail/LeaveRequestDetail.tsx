@@ -108,7 +108,7 @@ export default function LeaveRequestDetail({
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -157,7 +157,7 @@ export default function LeaveRequestDetail({
       ) : null}
 
       {editing ? (
-        <SectionCard title="Edit request" bodyClassName="px-5 py-4">
+        <SectionCard title="Edit request" bodyClassName="px-3 py-4 sm:px-5">
           <Form form={form} layout="vertical" requiredMark={false}>
             <Form.Item
               name="leaveType"
@@ -193,7 +193,7 @@ export default function LeaveRequestDetail({
         </SectionCard>
       ) : (
         <>
-          <SectionCard title="Request Details" bodyClassName="px-5 py-4">
+          <SectionCard title="Request Details" bodyClassName="px-3 py-4 sm:px-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <MetaItem label="Employee">
                 {formatLeaveEmployeeName(leave.employee)}
@@ -221,7 +221,7 @@ export default function LeaveRequestDetail({
             </div>
           </SectionCard>
 
-          <SectionCard title="Attachments" bodyClassName="px-5 py-4">
+          <SectionCard title="Attachments" bodyClassName="px-3 py-4 sm:px-5">
             {(leave.documents?.length ?? 0) > 0 ? (
               <AttachmentDownloadList documents={leave.documents} />
             ) : (
@@ -233,7 +233,7 @@ export default function LeaveRequestDetail({
         </>
       )}
 
-      <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-5 py-4">
+      <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-3 py-4 sm:px-5">
         {balance ? (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-8 gap-y-4">
             <MetaItem label={t('hr.labels.entitled')}>{balance.entitled}</MetaItem>

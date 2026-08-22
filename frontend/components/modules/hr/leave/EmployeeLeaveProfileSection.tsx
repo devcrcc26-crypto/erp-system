@@ -260,6 +260,7 @@ export default function EmployeeLeaveProfileSection({
         dataIndex: 'endDate',
         key: 'endDate',
         width: 120,
+        responsive: ['md'],
         render: (value: string) => formatProjectDate(value),
       },
       {
@@ -327,7 +328,7 @@ export default function EmployeeLeaveProfileSection({
         title={t('hr.section.leaveBalance')}
         bodyClassName="p-4"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className="text-xs"
               style={{ color: tokens.colorTextSecondary }}

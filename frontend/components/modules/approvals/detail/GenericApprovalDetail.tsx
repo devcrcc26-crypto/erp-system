@@ -31,11 +31,10 @@ export default function GenericApprovalDetail({
 
   return (
     <div
+      className="rounded-lg p-4 sm:p-6"
       style={{
         background: tokens.colorCardBg,
         border: `1px solid ${tokens.colorBorder}`,
-        borderRadius: 8,
-        padding: 24,
       }}
     >
       <Typography.Title level={5} style={{ marginTop: 0 }}>

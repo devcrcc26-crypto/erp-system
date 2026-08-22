@@ -33,18 +33,18 @@ export default function FormLayout({
   const isPro = variant === 'pro';
   const headerPad = dense
     ? isPro
-      ? 'px-4 py-3'
+      ? 'px-3 py-3 sm:px-4'
       : 'px-3 py-2.5'
     : isPro
-      ? 'px-6 py-4'
-      : 'px-[18px] py-[14px]';
+      ? 'px-3 py-3 sm:px-6 sm:py-4'
+      : 'px-3 py-3 sm:px-[18px] sm:py-[14px]';
   const bodyPad = dense
     ? isPro
-      ? 'px-4 py-3'
+      ? 'px-3 py-3 sm:px-4'
       : 'px-3 py-3'
     : isPro
-      ? 'px-6 py-6'
-      : 'px-[18px] py-4';
+      ? 'px-3 py-4 sm:px-6 sm:py-6'
+      : 'px-3 py-4 sm:px-[18px]';
   const bodyOnlyPad = dense
     ? isPro
       ? '12px 16px'
@@ -95,7 +95,7 @@ export default function FormLayout({
             )}
           </div>
           {extra && (
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end [&>.ant-btn]:w-full sm:[&>.ant-btn]:w-auto">
               {extra}
             </div>
           )}

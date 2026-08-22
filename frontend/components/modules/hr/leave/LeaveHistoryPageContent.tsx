@@ -370,6 +370,7 @@ export default function LeaveHistoryPageContent({
         dataIndex: 'endDate',
         key: 'endDate',
         width: 120,
+        responsive: ['md'],
         render: (value: string) => formatProjectDate(value),
       },
       {
@@ -557,13 +558,13 @@ export default function LeaveHistoryPageContent({
 
       <SectionCard title={t('hr.leave.historyTitle')} bodyClassName="p-0">
         <div
-          className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
+          className="erp-filter-bar border-b px-3 py-3 sm:px-4"
           style={{ borderColor: tokens.colorBorder }}
         >
           <Select
             allowClear
             placeholder={t('hr.placeholder.leaveType')}
-            className="w-44"
+            className="w-full min-w-0 sm:w-44"
             options={leaveTypeOptions}
             value={leaveTypeFilter}
             onChange={(value) => {
@@ -574,7 +575,7 @@ export default function LeaveHistoryPageContent({
           <Select
             allowClear
             placeholder={t('common.status')}
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             options={statusOptions}
             value={statusFilter}
             onChange={(value) => {
