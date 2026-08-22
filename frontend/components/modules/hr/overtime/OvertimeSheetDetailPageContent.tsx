@@ -1,24 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   Dropdown,
   Empty,
-  Form,
   Spin,
   Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
 import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import OvertimeEntryForm, {
-  type OvertimeEntryFormValues,
-} from '@/components/modules/hr/overtime/OvertimeEntryForm';
+import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
 import {
   SectionCard,
   SummaryStrip,
@@ -27,7 +23,6 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
-import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -35,18 +30,13 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import type {
-  OvertimeEntry,
-  UpsertOvertimeEntryPayload,
-} from '@/lib/api/overtime.types';
+import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import {
-  useAddOvertimeEntry,
   useCancelOvertimeSheet,
   useDeleteOvertimeEntry,
   useOvertimeSheet,
   useSubmitOvertimeSheet,
-  useUpdateOvertimeEntry,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -57,10 +47,6 @@ import {
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
-import {
-  calculateOvertimeHours,
-  parseOvertimeDateOnly,
-} from '@/lib/utils/overtime-hours.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -121,8 +107,6 @@ export default function OvertimeSheetDetailPageContent({
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sheetId);
-  const addMutation = useAddOvertimeEntry(sheetId);
-  const updateMutation = useUpdateOvertimeEntry(sheetId);
   const deleteMutation = useDeleteOvertimeEntry(sheetId);
   const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
   const submitMutation = useSubmitOvertimeSheet(sheetId);
@@ -130,11 +114,10 @@ export default function OvertimeSheetDetailPageContent({
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
-  const [entryFormOpen, setEntryFormOpen] = useState(false);
+  const [entryDrawerOpen, setEntryDrawerOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
-  const [form] = Form.useForm<OvertimeEntryFormValues>();
 
   useSetHeaderExtra(null);
 
@@ -196,96 +179,20 @@ export default function OvertimeSheetDetailPageContent({
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
   const canSubmit = canEdit && (sheet?.entries?.length ?? 0) > 0;
-  const savingEntry = addMutation.isPending || updateMutation.isPending;
 
-  const watchedDate = Form.useWatch('date', form);
-  const watchedStart = Form.useWatch('startTime', form);
-  const watchedEnd = Form.useWatch('endTime', form);
-  const watchedHoliday = Form.useWatch('isHoliday', form);
-
-  const liveHours = useMemo(() => {
-    if (!watchedDate || !watchedStart || !watchedEnd) {
-      return null;
-    }
-    const date = parseOvertimeDateOnly(watchedDate.format('YYYY-MM-DD'));
-    if (!date) {
-      return null;
-    }
-    return calculateOvertimeHours(
-      date,
-      watchedStart.format('HH:mm'),
-      watchedEnd.format('HH:mm'),
-      Boolean(watchedHoliday),
-    );
-  }, [watchedDate, watchedStart, watchedEnd, watchedHoliday]);
-
-  const closeEntryForm = useCallback((): void => {
-    setEntryFormOpen(false);
+  function closeEntryDrawer(): void {
+    setEntryDrawerOpen(false);
     setEditingEntry(null);
-    form.resetFields();
-  }, [form]);
-
-  useEffect(() => {
-    if (!entryFormOpen) {
-      return;
-    }
-    if (editingEntry) {
-      form.setFieldsValue({
-        date: dayjs(editingEntry.date),
-        startTime: dayjs(editingEntry.startTime, 'HH:mm'),
-        endTime: dayjs(editingEntry.endTime, 'HH:mm'),
-        isHoliday: editingEntry.isHoliday,
-        taskDescription: editingEntry.taskDescription,
-      });
-    } else {
-      form.resetFields();
-      form.setFieldsValue({
-        isHoliday: false,
-        date: dayjs(
-          `${sheet?.year ?? dayjs().year()}-${String(sheet?.month ?? dayjs().month() + 1).padStart(2, '0')}-01`,
-        ),
-      });
-    }
-  }, [entryFormOpen, editingEntry, form, sheet?.month, sheet?.year]);
+  }
 
   function openAddEntry(): void {
     setEditingEntry(null);
-    setEntryFormOpen(true);
+    setEntryDrawerOpen(true);
   }
 
   function openEditEntry(entry: OvertimeEntry): void {
     setEditingEntry(entry);
-    setEntryFormOpen(true);
-  }
-
-  async function handleSaveEntry(): Promise<void> {
-    try {
-      const values = await form.validateFields();
-      const payload: UpsertOvertimeEntryPayload = {
-        date: values.date.format('YYYY-MM-DD'),
-        startTime: values.startTime.format('HH:mm'),
-        endTime: values.endTime.format('HH:mm'),
-        isHoliday: Boolean(values.isHoliday),
-        taskDescription: values.taskDescription.trim(),
-      };
-
-      if (editingEntry) {
-        await updateMutation.mutateAsync({
-          entryId: editingEntry.id,
-          payload,
-        });
-        messageApi.success(t('hr.messages.overtimeEntryUpdated'));
-      } else {
-        await addMutation.mutateAsync(payload);
-        messageApi.success(t('hr.messages.overtimeEntryAdded'));
-      }
-      closeEntryForm();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
-        return;
-      }
-      notifyApiError(error, t('hr.messages.failedToSaveOvertimeEntry'), messageApi);
-    }
+    setEntryDrawerOpen(true);
   }
 
   async function handleDeleteEntry(): Promise<void> {
@@ -351,18 +258,6 @@ export default function OvertimeSheetDetailPageContent({
       );
     }
   }
-
-  const disabledDate = useCallback(
-    (current: Dayjs | null): boolean => {
-      if (!current || !sheet) {
-        return false;
-      }
-      return (
-        current.month() + 1 !== sheet.month || current.year() !== sheet.year
-      );
-    },
-    [sheet],
-  );
 
   const columns: ColumnsType<OvertimeEntry> = useMemo(
     () => [
@@ -562,7 +457,7 @@ export default function OvertimeSheetDetailPageContent({
                 <Button
                   type="primary"
                   size="small"
-                  disabled={!canSubmit || entryFormOpen}
+                  disabled={!canSubmit}
                   onClick={() => setConfirmSubmit(true)}
                   style={{ borderRadius: 0 }}
                 >
@@ -592,46 +487,12 @@ export default function OvertimeSheetDetailPageContent({
         total={sheet.totalHours}
       />
 
-      {entryFormOpen ? (
-        <>
-          <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-              <h3 className="m-0 min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                {editingEntry
-                  ? t('hr.form.editEntry')
-                  : t('hr.buttons.addEntry')}
-              </h3>
-              <Button
-                size="small"
-                onClick={closeEntryForm}
-                style={{ borderRadius: 0 }}
-              >
-                {t('common.cancel')}
-              </Button>
-            </div>
-            <OvertimeEntryForm
-              form={form}
-              disabledDate={disabledDate}
-              liveHours={liveHours}
-            />
-          </div>
-          <FormPageFooter
-            submitLabel={t('hr.buttons.save')}
-            onSubmit={() => void handleSaveEntry()}
-            isSubmitting={savingEntry}
-            secondaryLabel={t('common.cancel')}
-            onSecondary={closeEntryForm}
-            secondaryDisabled={savingEntry}
-          />
-        </>
-      ) : null}
-
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1fr_300px]">
         <SectionCard
           title={t('hr.section.entries')}
           bodyClassName="p-0"
           action={
-            canEdit && !entryFormOpen ? (
+            canEdit ? (
               <Button
                 type="primary"
                 size="small"
@@ -714,6 +575,15 @@ export default function OvertimeSheetDetailPageContent({
           )}
         </aside>
       </div>
+
+      <OvertimeEntryFormDrawer
+        open={entryDrawerOpen}
+        sheetId={sheetId}
+        sheetMonth={sheet.month}
+        sheetYear={sheet.year}
+        editingEntry={editingEntry}
+        onClose={closeEntryDrawer}
+      />
 
       <ConfirmDialog
         open={confirmSubmit}

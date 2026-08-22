@@ -23,6 +23,7 @@ interface OvertimeEntryFormProps {
   formId?: string;
   disabledDate: (current: Dayjs | null) => boolean;
   liveHours: LiveHours | null;
+  onFinish?: (values: OvertimeEntryFormValues) => void | Promise<void>;
 }
 
 export default function OvertimeEntryForm({
@@ -30,6 +31,7 @@ export default function OvertimeEntryForm({
   formId = 'overtime-entry-form',
   disabledDate,
   liveHours,
+  onFinish,
 }: OvertimeEntryFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -39,7 +41,7 @@ export default function OvertimeEntryForm({
       form={form}
       layout="vertical"
       requiredMark={false}
-      onFinish={() => undefined}
+      onFinish={(values) => void onFinish?.(values)}
     >
       <FormLayout variant="pro" dense title={t('hr.section.entryDetails')}>
         <div className="erp-form-grid-2">
