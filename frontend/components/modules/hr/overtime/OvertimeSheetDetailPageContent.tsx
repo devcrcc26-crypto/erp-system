@@ -1,42 +1,45 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Checkbox,
-  DatePicker,
+  Dropdown,
   Empty,
   Form,
-  Input,
-  Modal,
-  Skeleton,
-  Space,
-  Table,
-  TimePicker,
+  Spin,
   Typography,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import OvertimeEntryForm, {
+  type OvertimeEntryFormValues,
+} from '@/components/modules/hr/overtime/OvertimeEntryForm';
 import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type {
   OvertimeEntry,
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
+import { useApprovalRequest } from '@/lib/query/approvals';
 import {
   useAddOvertimeEntry,
   useCancelOvertimeSheet,
@@ -46,7 +49,6 @@ import {
   useUpdateOvertimeEntry,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
-import { useApprovalRequest } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatOvertimeEmployeeName,
@@ -61,15 +63,6 @@ import {
 } from '@/lib/utils/overtime-hours.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-interface EntryFormValues {
-  date: Dayjs;
-  startTime: Dayjs;
-  endTime: Dayjs;
-  isHoliday: boolean;
-  taskDescription: string;
-}
 
 function HoursSummaryCards({
   regular,
@@ -137,13 +130,13 @@ export default function OvertimeSheetDetailPageContent({
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
-  const [entryModalOpen, setEntryModalOpen] = useState(false);
+  const [entryFormOpen, setEntryFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
-  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>(
-    {},
-  );
-  const [form] = Form.useForm<EntryFormValues>();
+  const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
+  const [form] = Form.useForm<OvertimeEntryFormValues>();
+
+  useSetHeaderExtra(null);
 
   const sheet = detailQuery.data;
   const approvalRequestId = sheet?.approvalRequestId ?? null;
@@ -203,6 +196,7 @@ export default function OvertimeSheetDetailPageContent({
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
   const canSubmit = canEdit && (sheet?.entries?.length ?? 0) > 0;
+  const savingEntry = addMutation.isPending || updateMutation.isPending;
 
   const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
@@ -225,8 +219,14 @@ export default function OvertimeSheetDetailPageContent({
     );
   }, [watchedDate, watchedStart, watchedEnd, watchedHoliday]);
 
+  const closeEntryForm = useCallback((): void => {
+    setEntryFormOpen(false);
+    setEditingEntry(null);
+    form.resetFields();
+  }, [form]);
+
   useEffect(() => {
-    if (!entryModalOpen) {
+    if (!entryFormOpen) {
       return;
     }
     if (editingEntry) {
@@ -246,16 +246,16 @@ export default function OvertimeSheetDetailPageContent({
         ),
       });
     }
-  }, [entryModalOpen, editingEntry, form, sheet?.month, sheet?.year]);
+  }, [entryFormOpen, editingEntry, form, sheet?.month, sheet?.year]);
 
   function openAddEntry(): void {
     setEditingEntry(null);
-    setEntryModalOpen(true);
+    setEntryFormOpen(true);
   }
 
   function openEditEntry(entry: OvertimeEntry): void {
     setEditingEntry(entry);
-    setEntryModalOpen(true);
+    setEntryFormOpen(true);
   }
 
   async function handleSaveEntry(): Promise<void> {
@@ -274,18 +274,17 @@ export default function OvertimeSheetDetailPageContent({
           entryId: editingEntry.id,
           payload,
         });
-        messageApi.success('Entry updated');
+        messageApi.success(t('hr.messages.overtimeEntryUpdated'));
       } else {
         await addMutation.mutateAsync(payload);
-        messageApi.success('Entry added');
+        messageApi.success(t('hr.messages.overtimeEntryAdded'));
       }
-      setEntryModalOpen(false);
-      setEditingEntry(null);
+      closeEntryForm();
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
         return;
       }
-      notifyApiError(error, 'Failed to save entry', messageApi);
+      notifyApiError(error, t('hr.messages.failedToSaveOvertimeEntry'), messageApi);
     }
   }
 
@@ -295,47 +294,75 @@ export default function OvertimeSheetDetailPageContent({
     }
     try {
       await deleteMutation.mutateAsync(deleteEntryId);
-      messageApi.success('Entry deleted');
+      messageApi.success(t('hr.messages.overtimeEntryDeleted'));
       setDeleteEntryId(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to delete entry', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteOvertimeEntry'),
+        messageApi,
+      );
     }
   }
 
   async function handleSubmit(): Promise<void> {
     try {
       await submitMutation.mutateAsync();
-      messageApi.success('Overtime sheet submitted for approval');
+      messageApi.success(t('hr.messages.overtimeSheetSubmitted'));
       setConfirmSubmit(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit sheet', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSubmitOvertimeSheet'),
+        messageApi,
+      );
     }
   }
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Overtime sheet cancelled');
+      messageApi.success(t('hr.messages.overtimeSheetCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel sheet', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCancelOvertimeSheet'),
+        messageApi,
+      );
     }
   }
 
   async function handleUploadEntryFiles(entryId: string): Promise<void> {
     const files = entryFiles[entryId] ?? [];
     if (files.length === 0) {
-      messageApi.warning('Select files to upload');
+      messageApi.warning(t('hr.messages.selectFilesToUpload'));
       return;
     }
     try {
       await uploadAttachmentsMutation.mutateAsync({ entryId, files });
-      messageApi.success('Attachments uploaded');
+      messageApi.success(t('hr.messages.attachmentsUploaded'));
       setEntryFiles((prev) => ({ ...prev, [entryId]: [] }));
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to upload attachments', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToUploadAttachments'),
+        messageApi,
+      );
     }
   }
+
+  const disabledDate = useCallback(
+    (current: Dayjs | null): boolean => {
+      if (!current || !sheet) {
+        return false;
+      }
+      return (
+        current.month() + 1 !== sheet.month || current.year() !== sheet.year
+      );
+    },
+    [sheet],
+  );
 
   const columns: ColumnsType<OvertimeEntry> = useMemo(
     () => [
@@ -347,13 +374,13 @@ export default function OvertimeSheetDetailPageContent({
         render: (v: string) => formatProjectDate(v),
       },
       {
-        title: 'Start',
+        title: t('hr.form.startTime'),
         dataIndex: 'startTime',
         key: 'startTime',
         width: 80,
       },
       {
-        title: 'End',
+        title: t('hr.form.endTime'),
         dataIndex: 'endTime',
         key: 'endTime',
         width: 80,
@@ -417,20 +444,35 @@ export default function OvertimeSheetDetailPageContent({
               title: t('hr.table.actions'),
               key: 'actions',
               width: 140,
-              render: (_: unknown, row: OvertimeEntry) => (
-                <Space size={4}>
-                  <Button type="link" size="small" onClick={() => openEditEntry(row)}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="link"
-                    size="small"
-                    danger
-                    icon={<Trash2 size={14} />}
-                    onClick={() => setDeleteEntryId(row.id)}
-                  />
-                </Space>
-              ),
+              fixed: 'right' as const,
+              render: (_: unknown, row: OvertimeEntry) => {
+                const items: MenuProps['items'] = [
+                  {
+                    key: 'edit',
+                    label: t('common.update'),
+                    icon: <Pencil size={14} />,
+                    onClick: () => openEditEntry(row),
+                  },
+                  {
+                    key: 'delete',
+                    label: t('common.delete'),
+                    icon: <Trash2 size={14} />,
+                    danger: true,
+                    onClick: () => setDeleteEntryId(row.id),
+                  },
+                ];
+                return (
+                  <Dropdown menu={{ items }} trigger={['click']}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<MoreHorizontal size={16} />}
+                      onClick={(event) => event.stopPropagation()}
+                      style={{ borderRadius: 0 }}
+                    />
+                  </Dropdown>
+                );
+              },
             } satisfies ColumnsType<OvertimeEntry>[number],
           ]
         : []),
@@ -439,7 +481,11 @@ export default function OvertimeSheetDetailPageContent({
   );
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 10 }} />;
+    return (
+      <div className="flex justify-center p-12">
+        <Spin />
+      </div>
+    );
   }
 
   if (detailQuery.isError || !sheet) {
@@ -450,11 +496,14 @@ export default function OvertimeSheetDetailPageContent({
         title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Overtime sheet not found'
+            : t('hr.messages.overtimeSheetNotFound')
         }
         action={
-          <Button onClick={() => router.push('/hr/overtime')}>
-            Back to list
+          <Button
+            onClick={() => router.push('/hr/overtime')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.backToList')}
           </Button>
         }
       />
@@ -468,35 +517,28 @@ export default function OvertimeSheetDetailPageContent({
   ) {
     return (
       <div className="flex min-h-[240px] items-center justify-center">
-        <Skeleton active paragraph={{ rows: 4 }} />
+        <Spin />
       </div>
     );
   }
 
-  const disabledDate = (current: Dayjs | null): boolean => {
-    if (!current) {
-      return false;
-    }
-    return (
-      current.month() + 1 !== sheet.month || current.year() !== sheet.year
-    );
-  };
-
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => router.push('/hr/overtime')}
-        className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] self-start transition-colors"
-      >
-        <ArrowLeft size={14} />
-        <span>Overtime</span>
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/overtime')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.backToList')}
+        </Button>
+      </div>
 
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
+      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="px-3 py-4 sm:px-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
                 {sheet.sheetNumber}
               </span>
@@ -505,9 +547,14 @@ export default function OvertimeSheetDetailPageContent({
                 variant={overtimeStatusVariant(sheet.status)}
               />
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
               {canCancel ? (
-                <Button danger size="small" onClick={() => setConfirmCancel(true)}>
+                <Button
+                  danger
+                  size="small"
+                  onClick={() => setConfirmCancel(true)}
+                  style={{ borderRadius: 0 }}
+                >
                   {t('hr.buttons.cancelSheet')}
                 </Button>
               ) : null}
@@ -515,8 +562,9 @@ export default function OvertimeSheetDetailPageContent({
                 <Button
                   type="primary"
                   size="small"
-                  disabled={!canSubmit}
+                  disabled={!canSubmit || entryFormOpen}
                   onClick={() => setConfirmSubmit(true)}
+                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.submitSheet')}
                 </Button>
@@ -524,11 +572,11 @@ export default function OvertimeSheetDetailPageContent({
             </div>
           </div>
 
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
+          <h1 className="m-0 text-lg font-semibold leading-snug text-[var(--color-text-primary)]">
             {formatOvertimePeriod(sheet.month, sheet.year, t)}
           </h1>
 
-          <p className="text-sm text-[var(--color-text-secondary)] mt-2 mb-0">
+          <p className="mb-0 mt-2 text-sm text-[var(--color-text-secondary)]">
             <span className="font-medium text-[var(--color-text-primary)]">
               {formatOvertimeEmployeeName(sheet.employee)}
             </span>
@@ -544,25 +592,61 @@ export default function OvertimeSheetDetailPageContent({
         total={sheet.totalHours}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
+      {entryFormOpen ? (
+        <>
+          <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
+              <h3 className="m-0 min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                {editingEntry
+                  ? t('hr.form.editEntry')
+                  : t('hr.buttons.addEntry')}
+              </h3>
+              <Button
+                size="small"
+                onClick={closeEntryForm}
+                style={{ borderRadius: 0 }}
+              >
+                {t('common.cancel')}
+              </Button>
+            </div>
+            <OvertimeEntryForm
+              form={form}
+              disabledDate={disabledDate}
+              liveHours={liveHours}
+            />
+          </div>
+          <FormPageFooter
+            submitLabel={t('hr.buttons.save')}
+            onSubmit={() => void handleSaveEntry()}
+            isSubmitting={savingEntry}
+            secondaryLabel={t('common.cancel')}
+            onSecondary={closeEntryForm}
+            secondaryDisabled={savingEntry}
+          />
+        </>
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1fr_300px]">
         <SectionCard
           title={t('hr.section.entries')}
-          bodyClassName="px-5 py-4"
+          bodyClassName="p-0"
           action={
-            canEdit ? (
+            canEdit && !entryFormOpen ? (
               <Button
                 type="primary"
                 size="small"
                 icon={<Plus size={16} />}
                 onClick={openAddEntry}
+                style={{ borderRadius: 0 }}
               >
                 {t('hr.buttons.addEntry')}
               </Button>
             ) : undefined
           }
         >
-          <Table<OvertimeEntry>
+          <DataTable<OvertimeEntry>
             rowKey="id"
+            className="erp-pro-table"
             size="small"
             columns={columns}
             dataSource={sheet.entries ?? []}
@@ -597,8 +681,9 @@ export default function OvertimeSheetDetailPageContent({
                         loading={uploadAttachmentsMutation.isPending}
                         disabled={(entryFiles[entry.id] ?? []).length === 0}
                         onClick={() => void handleUploadEntryFiles(entry.id)}
+                        style={{ borderRadius: 0 }}
                       >
-                        Upload
+                        {t('hr.buttons.uploadAttachments')}
                       </Button>
                     </div>
                   ) : null}
@@ -606,17 +691,18 @@ export default function OvertimeSheetDetailPageContent({
               ),
             }}
             locale={{
-              emptyText: (
-                <Empty description={t('hr.empty.noEntries')} />
-              ),
+              emptyText: <Empty description={t('hr.empty.noEntries')} />,
             }}
           />
         </SectionCard>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
           {!sheet.approvalRequestId ? (
-            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-5 py-4">
-              <p className="text-sm text-[var(--color-text-tertiary)] m-0">
+            <SectionCard
+              title={t('hr.section.approvalChain')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
+              <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
                 {t('hr.empty.noApprovalChain')}
               </p>
             </SectionCard>
@@ -629,79 +715,10 @@ export default function OvertimeSheetDetailPageContent({
         </aside>
       </div>
 
-      <Modal
-        title={editingEntry ? 'Edit entry' : t('hr.buttons.addEntry')}
-        open={entryModalOpen}
-        onCancel={() => {
-          setEntryModalOpen(false);
-          setEditingEntry(null);
-        }}
-        onOk={() => void handleSaveEntry()}
-        confirmLoading={addMutation.isPending || updateMutation.isPending}
-        destroyOnHidden
-        width={560}
-      >
-        <Form form={form} layout="vertical" requiredMark={false}>
-          <Form.Item
-            name="date"
-            label={t('hr.table.date')}
-            rules={[{ required: true, message: 'Date is required' }]}
-          >
-            <DatePicker
-              className="w-full"
-              format="DD/MM/YYYY"
-              disabledDate={disabledDate}
-            />
-          </Form.Item>
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item
-              name="startTime"
-              label="Start"
-              rules={[{ required: true, message: 'Start time is required' }]}
-            >
-              <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
-            </Form.Item>
-            <Form.Item
-              name="endTime"
-              label="End"
-              rules={[{ required: true, message: 'End time is required' }]}
-            >
-              <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
-            </Form.Item>
-          </div>
-          <Form.Item name="isHoliday" valuePropName="checked">
-            <Checkbox>{t('hr.overtimeCategory.holiday')}</Checkbox>
-          </Form.Item>
-          {liveHours ? (
-            <Alert
-              type="info"
-              showIcon
-              className="mb-4"
-              title={
-                `Live breakdown — ${t('hr.overtimeCategory.regular')} ${formatOvertimeHours(liveHours.regularHours)} · ` +
-                `${t('hr.overtimeCategory.night')} ${formatOvertimeHours(liveHours.nightHours)} · ` +
-                `${t('hr.overtimeCategory.weekend')} ${formatOvertimeHours(liveHours.weekendHours)} · ` +
-                `${t('hr.overtimeCategory.holiday')} ${formatOvertimeHours(liveHours.holidayHours)}`
-              }
-            />
-          ) : null}
-          <Form.Item
-            name="taskDescription"
-            label={t('hr.labels.taskDescription')}
-            rules={[
-              { required: true, message: 'Describe the work performed' },
-              { max: 4000 },
-            ]}
-          >
-            <Input.TextArea rows={3} maxLength={4000} showCount />
-          </Form.Item>
-        </Form>
-      </Modal>
-
       <ConfirmDialog
         open={confirmSubmit}
-        title="Submit overtime sheet?"
-        description="This will start the approval workflow. You will not be able to edit entries until the sheet is returned."
+        title={t('hr.dialog.submitOvertimeSheetTitle')}
+        description={t('hr.dialog.submitOvertimeSheetDesc')}
         confirmLabel={t('hr.buttons.submitSheet')}
         confirmLoading={submitMutation.isPending}
         onConfirm={() => void handleSubmit()}
@@ -710,8 +727,8 @@ export default function OvertimeSheetDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel overtime sheet?"
-        description="This cancels the sheet and any linked approval request."
+        title={t('hr.dialog.cancelOvertimeSheetTitle')}
+        description={t('hr.dialog.cancelOvertimeSheetDesc')}
         confirmLabel={t('hr.buttons.cancelSheet')}
         danger
         confirmLoading={cancelMutation.isPending}
@@ -721,9 +738,9 @@ export default function OvertimeSheetDetailPageContent({
 
       <ConfirmDialog
         open={Boolean(deleteEntryId)}
-        title="Delete entry?"
-        description="This entry will be removed and sheet totals recalculated."
-        confirmLabel="Delete"
+        title={t('hr.dialog.deleteOvertimeEntryTitle')}
+        description={t('hr.dialog.deleteOvertimeEntryDesc')}
+        confirmLabel={t('common.delete')}
         danger
         confirmLoading={deleteMutation.isPending}
         onConfirm={() => void handleDeleteEntry()}

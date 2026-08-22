@@ -152,6 +152,7 @@
         "myListTitle": "My Overtime Sheets",
         "listDescription": "Monthly overtime sheets with hour categories and approval workflow.",
         "myListDescription": "Log overtime sessions for each month and submit for approval.",
+        "openingSheet": "Opening this month's overtime sheet…",
         "sheetCount": "{{count}} sheets",
         "sheetCountOne": "1 sheet",
         "emptyFiltered": "No overtime sheets match your filters"
@@ -1292,6 +1293,20 @@
       "failedToLoadLeaveBalances": "Failed to load leave balances",
       "failedToLoadLeaveRequests": "Failed to load leave requests",
       "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
+      "failedToOpenOvertimeSheet": "Failed to open overtime sheet",
+      "overtimeSheetNotFound": "Overtime sheet not found",
+      "overtimeEntryAdded": "Entry added",
+      "overtimeEntryUpdated": "Entry updated",
+      "overtimeEntryDeleted": "Entry deleted",
+      "failedToSaveOvertimeEntry": "Failed to save entry",
+      "failedToDeleteOvertimeEntry": "Failed to delete entry",
+      "overtimeSheetSubmitted": "Overtime sheet submitted for approval",
+      "overtimeSheetCancelled": "Overtime sheet cancelled",
+      "failedToSubmitOvertimeSheet": "Failed to submit sheet",
+      "failedToCancelOvertimeSheet": "Failed to cancel sheet",
+      "selectFilesToUpload": "Select files to upload",
+      "attachmentsUploaded": "Attachments uploaded",
+      "failedToUploadAttachments": "Failed to upload attachments",
       "failedToLoadLeaveBalance": "Failed to load leave balance",
       "leaveRequestSubmitted": "Leave request submitted",
       "leaveRequestUpdated": "Leave request updated",
@@ -1522,6 +1537,7 @@
       "holidayHours": "Holiday Hours",
       "totalHours": "Total Hours",
       "taskDescription": "Task Description",
+      "liveHoursBreakdown": "Live breakdown — Regular {{regular}} · Night {{night}} · Weekend {{weekend}} · Holiday {{holiday}}",
       "vendor": "Vendor",
       "vendorContact": "Vendor Contact",
       "requiredByDate": "Required By",
@@ -1704,6 +1720,7 @@
       "save": "Save",
       "addItem": "Add Item",
       "addEntry": "Add entry",
+      "uploadAttachments": "Upload",
       "removeItem": "Remove",
       "uploadTicket": "Upload Ticket",
       "uploadCombinedTicket": "Upload Combined Ticket",
@@ -1741,7 +1758,10 @@
       "endDateRequired": "End date is required for this contract type",
       "startAfterSigned": "Start date must be on or after the signing date",
       "endAfterStart": "End date must be on or after the start date",
-      "terminationReasonRequired": "Enter a termination reason"
+      "terminationReasonRequired": "Enter a termination reason",
+      "startTimeRequired": "Start time is required",
+      "endTimeRequired": "End time is required",
+      "taskDescriptionRequired": "Describe the work performed"
     },
     "dialog": {
       "cancelOfficialSealTitle": "Cancel request?",
@@ -1751,7 +1771,13 @@
       "terminateContractTitle": "Terminate contract?",
       "terminateContractDesc": "This will mark the active contract as terminated. This cannot be undone.",
       "deleteContractTitle": "Delete contract?",
-      "deleteContractDesc": "This will remove this active contract record."
+      "deleteContractDesc": "This will remove this active contract record.",
+      "submitOvertimeSheetTitle": "Submit overtime sheet?",
+      "submitOvertimeSheetDesc": "This will start the approval workflow. You will not be able to edit entries until the sheet is returned.",
+      "cancelOvertimeSheetTitle": "Cancel overtime sheet?",
+      "cancelOvertimeSheetDesc": "This cancels the sheet and any linked approval request.",
+      "deleteOvertimeEntryTitle": "Delete entry?",
+      "deleteOvertimeEntryDesc": "This entry will be removed and sheet totals recalculated."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -1763,6 +1789,9 @@
       "supportingDocuments": "Supporting Documents",
       "supportingDocumentsHint": "Upload supporting documents e.g. medical certificate for sick leave",
       "leaveDetails": "Leave details",
+      "startTime": "Start",
+      "endTime": "End",
+      "editEntry": "Edit entry",
       "tripDetails": "Trip Details",
       "purposeBudget": "Purpose & Budget",
       "reviewSubmit": "Review & Submit",
@@ -1950,7 +1979,8 @@
       "documentToSeal": "Document to Seal",
       "sealedProof": "Sealed Document (Proof)",
       "sealedDocument": "Sealed Document",
-      "contractDetails": "Contract Details"
+      "contractDetails": "Contract Details",
+      "entryDetails": "Entry details"
     }
   }
 }

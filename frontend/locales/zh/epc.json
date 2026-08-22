@@ -151,6 +151,7 @@
         "myListTitle": "我的加班表",
         "listDescription": "按月登记加班时长（平时/夜班/周末/节假日）并提交审批。",
         "myListDescription": "按月登记加班时段并提交审批。",
+        "openingSheet": "正在打开本月加班表…",
         "sheetCount": "{{count}} 张加班表",
         "sheetCountOne": "1 张加班表",
         "emptyFiltered": "没有符合筛选条件的加班表"
@@ -1291,6 +1292,20 @@
       "failedToLoadLeaveBalances": "加载假期余额失败",
       "failedToLoadLeaveRequests": "加载请假申请失败",
       "failedToLoadOvertimeSheets": "加载加班表失败",
+      "failedToOpenOvertimeSheet": "打开加班表失败",
+      "overtimeSheetNotFound": "未找到加班表",
+      "overtimeEntryAdded": "记录已添加",
+      "overtimeEntryUpdated": "记录已更新",
+      "overtimeEntryDeleted": "记录已删除",
+      "failedToSaveOvertimeEntry": "保存记录失败",
+      "failedToDeleteOvertimeEntry": "删除记录失败",
+      "overtimeSheetSubmitted": "加班表已提交审批",
+      "overtimeSheetCancelled": "加班表已取消",
+      "failedToSubmitOvertimeSheet": "提交加班表失败",
+      "failedToCancelOvertimeSheet": "取消加班表失败",
+      "selectFilesToUpload": "请选择要上传的文件",
+      "attachmentsUploaded": "附件已上传",
+      "failedToUploadAttachments": "上传附件失败",
       "failedToLoadLeaveBalance": "加载假期余额失败",
       "leaveRequestSubmitted": "请假申请已提交",
       "failedToSubmitLeaveRequest": "提交请假申请失败",
@@ -1515,6 +1530,7 @@
       "holidayHours": "节假日加班时长",
       "totalHours": "总时长",
       "taskDescription": "工作内容",
+      "liveHoursBreakdown": "实时分类 — 常规 {{regular}} · 夜间 {{night}} · 周末 {{weekend}} · 假日 {{holiday}}",
       "vendor": "供应商",
       "vendorContact": "供应商联系方式",
       "requiredByDate": "需求日期",
@@ -1692,6 +1708,7 @@
       "save": "保存",
       "addItem": "添加物品",
       "addEntry": "添加记录",
+      "uploadAttachments": "上传",
       "removeItem": "删除",
       "uploadTicket": "上传机票",
       "uploadCombinedTicket": "上传合并机票",
@@ -1729,7 +1746,10 @@
       "endDateRequired": "该合同类型必须填写结束日期",
       "startAfterSigned": "开始日期不得早于签署日期",
       "endAfterStart": "结束日期不得早于开始日期",
-      "terminationReasonRequired": "请填写终止原因"
+      "terminationReasonRequired": "请填写终止原因",
+      "startTimeRequired": "请填写开始时间",
+      "endTimeRequired": "请填写结束时间",
+      "taskDescriptionRequired": "请描述完成的工作内容"
     },
     "dialog": {
       "cancelOfficialSealTitle": "取消申请？",
@@ -1739,7 +1759,13 @@
       "terminateContractTitle": "终止合同？",
       "terminateContractDesc": "生效中的合同将被标记为已终止，此操作无法撤销。",
       "deleteContractTitle": "删除合同？",
-      "deleteContractDesc": "这将删除该生效中的合同记录。"
+      "deleteContractDesc": "这将删除该生效中的合同记录。",
+      "submitOvertimeSheetTitle": "提交加班表？",
+      "submitOvertimeSheetDesc": "这将启动审批流程。在表单被退回之前，您将无法编辑记录。",
+      "cancelOvertimeSheetTitle": "取消加班表？",
+      "cancelOvertimeSheetDesc": "这将取消加班表及所有关联的审批申请。",
+      "deleteOvertimeEntryTitle": "删除记录？",
+      "deleteOvertimeEntryDesc": "该记录将被删除，表内工时合计将重新计算。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -1751,6 +1777,9 @@
       "supportingDocuments": "附件材料",
       "supportingDocumentsHint": "上传证明材料，例如病假的医疗证明",
       "leaveDetails": "请假详情",
+      "startTime": "开始",
+      "endTime": "结束",
+      "editEntry": "编辑记录",
       "tripDetails": "出行详情",
       "purposeBudget": "目的与预算",
       "reviewSubmit": "确认并提交",
@@ -1936,7 +1965,8 @@
       "documentToSeal": "待用印文件",
       "sealedProof": "已用印文件（凭证）",
       "sealedDocument": "已用印文件",
-      "contractDetails": "合同详情"
+      "contractDetails": "合同详情",
+      "entryDetails": "记录详情"
     }
   }
 }
