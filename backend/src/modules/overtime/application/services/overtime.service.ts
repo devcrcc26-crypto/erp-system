@@ -720,6 +720,55 @@ export class OvertimeService
   }
 
   /**
+   * Soft-deletes an overtime sheet (HR only) and cancels any linked approval.
+   */
+  async deleteSheet(
+    sheetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const row = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
+    });
+    if (!row) {
+      throw new NotFoundException('Overtime sheet not found');
+    }
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException('Only HR can delete overtime sheets');
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.overtimeSheet.update({
+        where: { id: row.id },
+        data: {
+          deletedAt: now,
+          deletedBy: userId,
+          updatedBy: userId,
+        },
+      });
+
+      if (row.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: row.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+  }
+
+  /**
    * Called when a linked approval request reaches a terminal decision.
    */
   async onApprovalDecision(

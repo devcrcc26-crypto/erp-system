@@ -77,6 +77,11 @@ export interface CreateExpenseClaimPayload {
   description?: string;
 }
 
+export interface UpdateExpenseClaimPayload {
+  title?: string;
+  description?: string;
+}
+
 export interface AddExpenseClaimItemPayload {
   category: string;
   description: string;

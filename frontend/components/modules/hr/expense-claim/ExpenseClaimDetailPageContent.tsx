@@ -31,6 +31,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
 import {
   useCancelExpenseClaim,
+  useDeleteExpenseClaim,
   useDeleteExpenseClaimItem,
   useExpenseClaim,
   useSubmitExpenseClaim,
@@ -62,6 +63,7 @@ export default function ExpenseClaimDetailPageContent({
   const detailQuery = useExpenseClaim(claimId);
   const submitMutation = useSubmitExpenseClaim(claimId);
   const cancelMutation = useCancelExpenseClaim(claimId);
+  const deleteClaimMutation = useDeleteExpenseClaim();
   const deleteItemMutation = useDeleteExpenseClaimItem(claimId);
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
@@ -69,12 +71,18 @@ export default function ExpenseClaimDetailPageContent({
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDeleteClaim, setConfirmDeleteClaim] = useState(false);
 
   useSetHeaderExtra(null);
 
   const claim = detailQuery.data;
   const isOwner = Boolean(claim) && claim?.employeeId === currentUser.data?.id;
   const isDraft = claim?.status === 'DRAFT';
+  const canManage = canViewHr;
+  const canEditHeader =
+    Boolean(claim) &&
+    (claim?.status === 'DRAFT' || claim?.status === 'RETURNED') &&
+    (canManage || isOwner);
   const canEdit = isOwner && isDraft;
   const canCancel =
     isOwner && (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
@@ -166,6 +174,21 @@ export default function ExpenseClaimDetailPageContent({
       notifyApiError(
         error,
         t('hr.messages.failedToCancelExpenseClaim'),
+        messageApi,
+      );
+    }
+  }
+
+  async function handleDeleteClaim(): Promise<void> {
+    try {
+      await deleteClaimMutation.mutateAsync(claimId);
+      messageApi.success(t('hr.messages.expenseClaimDeleted'));
+      setConfirmDeleteClaim(false);
+      router.push('/hr/expense-claims');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteExpenseClaim'),
         messageApi,
       );
     }
@@ -333,6 +356,18 @@ export default function ExpenseClaimDetailPageContent({
               />
             </div>
             <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+              {canEditHeader ? (
+                <Button
+                  size="small"
+                  icon={<Pencil size={14} />}
+                  onClick={() =>
+                    router.push(`/hr/expense-claims/${claimId}/edit`)
+                  }
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('common.update')}
+                </Button>
+              ) : null}
               {canCancel ? (
                 <Button
                   danger
@@ -352,6 +387,17 @@ export default function ExpenseClaimDetailPageContent({
                   style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.submitClaim')}
+                </Button>
+              ) : null}
+              {canManage ? (
+                <Button
+                  danger
+                  size="small"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmDeleteClaim(true)}
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('common.delete')}
                 </Button>
               ) : null}
             </div>
@@ -485,6 +531,17 @@ export default function ExpenseClaimDetailPageContent({
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => void handleCancel()}
         onCancel={() => setConfirmCancel(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteClaim}
+        title={t('hr.empty.deleteExpenseClaimTitle')}
+        description={t('hr.empty.deleteExpenseClaimDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteClaimMutation.isPending}
+        onConfirm={() => void handleDeleteClaim()}
+        onCancel={() => setConfirmDeleteClaim(false)}
       />
 
       <ConfirmDialog

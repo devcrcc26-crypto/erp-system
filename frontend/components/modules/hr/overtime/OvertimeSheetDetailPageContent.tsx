@@ -35,6 +35,7 @@ import { useApprovalRequest } from '@/lib/query/approvals';
 import {
   useCancelOvertimeSheet,
   useDeleteOvertimeEntry,
+  useDeleteOvertimeSheet,
   useOvertimeSheet,
   useSubmitOvertimeSheet,
   useUploadOvertimeEntryAttachments,
@@ -111,9 +112,11 @@ export default function OvertimeSheetDetailPageContent({
   const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
   const submitMutation = useSubmitOvertimeSheet(sheetId);
   const cancelMutation = useCancelOvertimeSheet(sheetId);
+  const deleteSheetMutation = useDeleteOvertimeSheet();
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [confirmDeleteSheet, setConfirmDeleteSheet] = useState(false);
   const [entryDrawerOpen, setEntryDrawerOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
@@ -175,6 +178,7 @@ export default function OvertimeSheetDetailPageContent({
 
   const canEdit =
     isOwner && (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
+  const canManage = canViewHr;
   const canCancel =
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
@@ -235,6 +239,21 @@ export default function OvertimeSheetDetailPageContent({
       notifyApiError(
         error,
         t('hr.messages.failedToCancelOvertimeSheet'),
+        messageApi,
+      );
+    }
+  }
+
+  async function handleDeleteSheet(): Promise<void> {
+    try {
+      await deleteSheetMutation.mutateAsync(sheetId);
+      messageApi.success(t('hr.messages.overtimeSheetDeleted'));
+      setConfirmDeleteSheet(false);
+      router.push('/hr/overtime');
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteOvertimeSheet'),
         messageApi,
       );
     }
@@ -464,6 +483,17 @@ export default function OvertimeSheetDetailPageContent({
                   {t('hr.buttons.submitSheet')}
                 </Button>
               ) : null}
+              {canManage ? (
+                <Button
+                  danger
+                  size="small"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmDeleteSheet(true)}
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('common.delete')}
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -604,6 +634,17 @@ export default function OvertimeSheetDetailPageContent({
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => void handleCancel()}
         onCancel={() => setConfirmCancel(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteSheet}
+        title={t('hr.empty.deleteOvertimeSheetTitle')}
+        description={t('hr.empty.deleteOvertimeSheetDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteSheetMutation.isPending}
+        onConfirm={() => void handleDeleteSheet()}
+        onCancel={() => setConfirmDeleteSheet(false)}
       />
 
       <ConfirmDialog

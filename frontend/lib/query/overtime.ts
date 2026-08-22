@@ -20,6 +20,7 @@ import type {
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
+import { approvalKeys } from '@/lib/query/approvals';
 
 const OVERTIME_PATH = '/hr/overtime';
 
@@ -244,6 +245,21 @@ export function useSubmitOvertimeSheet(sheetId: string) {
     onSuccess: (updated) => {
       invalidateSheetLists(queryClient);
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+    },
+  });
+}
+
+/**
+ * Soft-deletes an overtime sheet (HR only).
+ */
+export function useDeleteOvertimeSheet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sheetId: string) =>
+      apiDelete<{ message: string }>(`${OVERTIME_PATH}/${sheetId}`),
+    onSuccess: () => {
+      invalidateSheetLists(queryClient);
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
     },
   });
 }

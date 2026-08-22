@@ -33,6 +33,7 @@ import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
   ListExpenseClaimsDto,
+  UpdateExpenseClaimDto,
   UpdateExpenseClaimItemDto,
 } from '../../application/dtos/expense-claim.dtos';
 import { ExpenseClaimService } from '../../application/services/expense-claim.service';
@@ -102,6 +103,19 @@ export class ExpenseClaimController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.expenseClaimService.getClaim(id, companyId, user.userId);
+  }
+
+  @Patch(':id')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Update a draft or returned claim header' })
+  async update(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const dto = await parseDto(UpdateExpenseClaimDto, body);
+    return this.expenseClaimService.updateClaim(id, dto, companyId, user.userId);
   }
 
   @Post(':id/items')
@@ -214,5 +228,16 @@ export class ExpenseClaimController {
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.expenseClaimService.cancelClaim(id, companyId, user.userId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft-delete an expense claim (HR only)' })
+  async delete(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.expenseClaimService.deleteClaim(id, companyId, user.userId);
+    return { message: 'Expense claim deleted' };
   }
 }

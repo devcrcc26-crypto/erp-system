@@ -20,6 +20,7 @@ import type {
   ExpenseClaimDetail,
   ExpenseClaimListItem,
   ListExpenseClaimsParams,
+  UpdateExpenseClaimPayload,
   UpdateExpenseClaimItemPayload,
 } from '@/lib/api/expense-claim.types';
 import type { PaginationMeta } from '@/lib/api/types';
@@ -206,6 +207,35 @@ export function useSubmitExpenseClaim(claimId: string) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
       void queryClient.setQueryData(expenseClaimKeys.detail(claimId), updated);
+    },
+  });
+}
+
+/** Updates claim header on a draft or returned claim. */
+export function useUpdateExpenseClaim(claimId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateExpenseClaimPayload) =>
+      apiPatch<ExpenseClaimDetail>(
+        `${EXPENSE_CLAIM_PATH}/${claimId}`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
+      void queryClient.setQueryData(expenseClaimKeys.detail(claimId), updated);
+    },
+  });
+}
+
+/** Soft-deletes an expense claim (HR only). */
+export function useDeleteExpenseClaim() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (claimId: string) =>
+      apiDelete<{ message: string }>(`${EXPENSE_CLAIM_PATH}/${claimId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
     },
   });
 }

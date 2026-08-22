@@ -41,6 +41,7 @@ import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
   ListExpenseClaimsDto,
+  UpdateExpenseClaimDto,
   UpdateExpenseClaimItemDto,
 } from '../dtos/expense-claim.dtos';
 
@@ -446,6 +447,97 @@ export class ExpenseClaimService
   }
 
   /**
+   * Updates claim header fields on a DRAFT or RETURNED claim.
+   * Owner or HR (hr.view) may edit.
+   */
+  async updateClaim(
+    id: string,
+    dto: UpdateExpenseClaimDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+    await this.assertCanManageClaim(claim.employeeId, companyId, userId);
+    if (
+      claim.status !== ExpenseClaimStatus.DRAFT &&
+      claim.status !== ExpenseClaimStatus.RETURNED
+    ) {
+      throw new BadRequestException(
+        'Claim cannot be edited in its current status',
+      );
+    }
+    if (dto.title === undefined && dto.description === undefined) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    await this.prisma.expenseClaim.update({
+      where: { id: claim.id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description.trim() || null }
+          : {}),
+        updatedBy: userId,
+      },
+    });
+
+    return this.getClaim(id, companyId, userId);
+  }
+
+  /**
+   * Soft-deletes an expense claim (HR only) and cancels any linked approval.
+   */
+  async deleteClaim(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const claim = await this.prisma.expenseClaim.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!claim) {
+      throw new NotFoundException('Expense claim not found');
+    }
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException('Only HR can delete expense claims');
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.expenseClaim.update({
+        where: { id: claim.id },
+        data: {
+          deletedAt: now,
+          deletedBy: userId,
+          updatedBy: userId,
+        },
+      });
+      if (claim.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: claim.approvalRequestId },
+          data: {
+            status: ApprovalRequestStatus.CANCELLED,
+            completedAt: now,
+            updatedBy: userId,
+          },
+        });
+      }
+    });
+  }
+
+  /**
    * Cancels a DRAFT or SUBMITTED claim. Only the owner may cancel.
    */
   async cancelClaim(
@@ -536,6 +628,27 @@ export class ExpenseClaimService
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async assertCanManageClaim(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (employeeId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this expense claim',
+      );
+    }
+  }
 
   private async assertDraftOwner(
     claimId: string,

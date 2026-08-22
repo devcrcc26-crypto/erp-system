@@ -4,25 +4,32 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Dropdown,
   Input,
   Select,
   Spin,
   Tooltip,
+  type MenuProps,
 } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
   DollarOutlined,
+  EditOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -30,7 +37,11 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimListItem } from '@/lib/api/expense-claim.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useExpenseClaimsAll } from '@/lib/query/expense-claim';
+import {
+  useDeleteExpenseClaim,
+  useExpenseClaimsAll,
+} from '@/lib/query/expense-claim';
+import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -44,8 +55,13 @@ import {
   statusesForExpenseClaimMode,
   type ExpenseClaimStatusMode,
 } from '@/lib/utils/expense-claim-list-filter';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+
+function isEditableClaimStatus(status: ExpenseClaimListItem['status']): boolean {
+  return status === 'DRAFT' || status === 'RETURNED';
+}
 
 const PENDING_STATUSES = statusesForExpenseClaimMode('pending');
 const APPROVED_STATUSES = statusesForExpenseClaimMode('approved');
@@ -57,13 +73,20 @@ const REJECTED_STATUSES = statusesForExpenseClaimMode('rejected');
 export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
+  const canManage = canViewHr;
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.data?.id;
+  const deleteMutation = useDeleteExpenseClaim();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusMode, setStatusMode] = useState<ExpenseClaimStatusMode>('all');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [deletingClaim, setDeletingClaim] =
+    useState<ExpenseClaimListItem | null>(null);
 
   useSetHeaderExtra(null);
 
@@ -145,6 +168,48 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
     Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
     Boolean(employeeId);
+
+  function buildActionMenu(row: ExpenseClaimListItem): MenuProps['items'] {
+    const isOwner = Boolean(currentUserId) && row.employeeId === currentUserId;
+    const canEditRow =
+      isEditableClaimStatus(row.status) && (canManage || isOwner);
+    const items: MenuProps['items'] = [];
+    if (canEditRow) {
+      items.push({
+        key: 'update',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () => router.push(`/hr/expense-claims/${row.id}/edit`),
+      });
+    }
+    if (canManage) {
+      items.push({
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeletingClaim(row),
+      });
+    }
+    return items;
+  }
+
+  async function handleDeleteClaim(): Promise<void> {
+    if (!deletingClaim) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(deletingClaim.id);
+      messageApi.success(t('hr.messages.expenseClaimDeleted'));
+      setDeletingClaim(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteExpenseClaim'),
+        messageApi,
+      );
+    }
+  }
 
   const columns: ColumnsType<ExpenseClaimListItem> = useMemo(
     () => [
@@ -239,8 +304,36 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         responsive: ['lg'],
         render: (value: string) => formatProjectDate(value),
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 56,
+        render: (_: unknown, row: ExpenseClaimListItem) => {
+          const items = buildActionMenu(row);
+          if (!items || items.length === 0) {
+            return null;
+          }
+          return (
+            <div
+              className="flex items-center justify-end"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <Dropdown menu={{ items }} trigger={['click']}>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                  style={{ borderRadius: 0 }}
+                />
+              </Dropdown>
+            </div>
+          );
+        },
+      },
     ],
-    [canViewHr, t],
+    [canManage, currentUserId, router, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -266,6 +359,17 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deletingClaim)}
+        title={t('hr.empty.deleteExpenseClaimTitle')}
+        description={t('hr.empty.deleteExpenseClaimDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDeleteClaim()}
+        onCancel={() => setDeletingClaim(null)}
+      />
 
       <div>
         <h1

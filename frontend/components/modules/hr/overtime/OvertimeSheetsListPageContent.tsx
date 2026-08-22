@@ -4,25 +4,32 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Dropdown,
   Input,
   Select,
   Space,
   Spin,
   Tooltip,
+  type MenuProps,
 } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessOvertime,
   useCanCreateOvertime,
@@ -33,7 +40,8 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeSheetListItem } from '@/lib/api/overtime.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useOvertimeSheetsAll } from '@/lib/query/overtime';
+import { useDeleteOvertimeSheet, useOvertimeSheetsAll } from '@/lib/query/overtime';
+import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -48,7 +56,12 @@ import {
   statusesForOvertimeMode,
   type OvertimeStatusMode,
 } from '@/lib/utils/overtime-list-filter';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
+
+function isEditableSheetStatus(status: OvertimeSheetListItem['status']): boolean {
+  return status === 'DRAFT' || status === 'RETURNED';
+}
 
 const PENDING_STATUSES = statusesForOvertimeMode('pending');
 const APPROVED_STATUSES = statusesForOvertimeMode('approved');
@@ -60,10 +73,15 @@ const REJECTED_STATUSES = statusesForOvertimeMode('rejected');
 export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
 
   const canAccess = useCanAccessOvertime();
   const canViewHr = useCanViewHr();
+  const canManage = canViewHr;
   const canCreate = useCanCreateOvertime();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.data?.id;
+  const deleteMutation = useDeleteOvertimeSheet();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -72,6 +90,8 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [month, setMonth] = useState<number | undefined>();
   const [year, setYear] = useState<number | undefined>();
+  const [deletingSheet, setDeletingSheet] =
+    useState<OvertimeSheetListItem | null>(null);
 
   const monthOptions = useMemo(
     () =>
@@ -171,6 +191,48 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
     Boolean(employeeId) ||
     month != null ||
     year != null;
+
+  function buildActionMenu(row: OvertimeSheetListItem): MenuProps['items'] {
+    const isOwner = Boolean(currentUserId) && row.employeeId === currentUserId;
+    const canEditRow =
+      isEditableSheetStatus(row.status) && (canManage || isOwner);
+    const items: MenuProps['items'] = [];
+    if (canEditRow) {
+      items.push({
+        key: 'update',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () => router.push(`/hr/overtime/${row.id}`),
+      });
+    }
+    if (canManage) {
+      items.push({
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeletingSheet(row),
+      });
+    }
+    return items;
+  }
+
+  async function handleDeleteSheet(): Promise<void> {
+    if (!deletingSheet) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(deletingSheet.id);
+      messageApi.success(t('hr.messages.overtimeSheetDeleted'));
+      setDeletingSheet(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteOvertimeSheet'),
+        messageApi,
+      );
+    }
+  }
 
   const columns: ColumnsType<OvertimeSheetListItem> = useMemo(
     () => [
@@ -292,8 +354,36 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             ? String(row.approvalRequest.currentTier)
             : '—',
       },
+      {
+        title: '',
+        key: 'actions',
+        width: 56,
+        render: (_: unknown, row: OvertimeSheetListItem) => {
+          const items = buildActionMenu(row);
+          if (!items || items.length === 0) {
+            return null;
+          }
+          return (
+            <div
+              className="flex items-center justify-end"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <Dropdown menu={{ items }} trigger={['click']}>
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                  style={{ borderRadius: 0 }}
+                />
+              </Dropdown>
+            </div>
+          );
+        },
+      },
     ],
-    [canViewHr, t],
+    [canManage, canViewHr, currentUserId, router, t],
   );
 
   if (!canAccess) {
@@ -327,6 +417,17 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deletingSheet)}
+        title={t('hr.empty.deleteOvertimeSheetTitle')}
+        description={t('hr.empty.deleteOvertimeSheetDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDeleteSheet()}
+        onCancel={() => setDeletingSheet(null)}
+      />
 
       <div>
         <h1

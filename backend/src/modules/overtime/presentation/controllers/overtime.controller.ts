@@ -180,4 +180,15 @@ export class OvertimeController {
   ): Promise<unknown> {
     return this.overtimeService.cancelSheet(id, companyId, user.userId);
   }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft-delete an overtime sheet (HR only)' })
+  async deleteSheet(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.overtimeService.deleteSheet(id, companyId, user.userId);
+    return { message: 'Overtime sheet deleted' };
+  }
 }

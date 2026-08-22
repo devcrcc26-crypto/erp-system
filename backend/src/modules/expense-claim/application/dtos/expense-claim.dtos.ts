@@ -29,6 +29,21 @@ export class CreateExpenseClaimDto {
   description?: string;
 }
 
+export class UpdateExpenseClaimDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  description?: string;
+}
+
 export class AddExpenseClaimItemDto {
   @ApiProperty()
   @IsString()
